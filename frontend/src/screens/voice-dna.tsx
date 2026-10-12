@@ -7,12 +7,7 @@ import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import {
-  Panel,
-  PanelBody,
-  PanelGroupHead,
-  PanelIntro,
-} from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
   type SettingControlProps,
   SettingList,
@@ -227,7 +222,6 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
             intakeBusy={intakeBusy}
           />
         </SettingList>
-        <PanelGroupHead title={t("voice.history.label")} level="h3" />
         <VoiceHistory
           profileId={profile.id}
           canEdit={canEdit}

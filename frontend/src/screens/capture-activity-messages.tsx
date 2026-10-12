@@ -118,12 +118,22 @@ export function CaptureMessages({
       headerHidden: true,
       align: "end",
       fold: "end",
-      render: (entry) => (
-        <RowOpen
-          label={t("captureActivity.openTrace")}
-          onOpen={() => onOpen(entry)}
-        />
-      ),
+      render: (entry) => {
+        const at = formatDateTime(entry.occurred_at, locale, zone);
+        return (
+          <RowOpen
+            label={
+              entry.counterparty
+                ? t("captureActivity.openTraceFrom", {
+                    sender: entry.counterparty,
+                    at,
+                  })
+                : t("captureActivity.openTraceAt", { at })
+            }
+            onOpen={() => onOpen(entry)}
+          />
+        );
+      },
     },
   ];
   return (

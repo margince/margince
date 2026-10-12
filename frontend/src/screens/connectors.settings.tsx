@@ -46,11 +46,13 @@ export function ConnectionDrawer({
   const accountId = useId();
   const connected = conn.status === "connected";
   const mailbox = isMailbox(conn.provider);
+  // The account names the drawer only when its line renders.
+  const accountRef = conn.account_label ? ` ${accountId}` : "";
   return (
     <Modal
       open={open}
       onClose={onClose}
-      labelledBy={`${titleId} ${accountId}`}
+      labelledBy={`${titleId}${accountRef}`}
       intent="drawer"
     >
       <DrawerHead>

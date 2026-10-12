@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -75,31 +76,34 @@ type reindexAvailabilityWire struct {
 	} `json:"settings_availability"`
 }
 
+// readEmbedAgreement answers what /me and the corpus list say about the embed
+// lane, over the one corpus the caller created.
+func readEmbedAgreement(t *testing.T, e *apptest.AppEnv) (bool, string) {
+	t.Helper()
+	var me reindexAvailabilityWire
+	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
+		t.Fatalf("GET /me: status %d", status)
+	}
+	var corpora embedStateWire
+	if status := e.Call(t, "GET", "/v1/knowledge/corpora", nil, nil, &corpora); status != http.StatusOK {
+		t.Fatalf("GET /knowledge/corpora: status %d", status)
+	}
+	if me.SettingsAvailability.EmbeddingReindex == nil || len(corpora.Items) != 1 {
+		t.Fatalf("/me availability = %v, corpora = %+v, want one of each", me.SettingsAvailability.EmbeddingReindex, corpora)
+	}
+	return *me.SettingsAvailability.EmbeddingReindex, corpora.Items[0].Coverage.EmbedState
+}
+
 // Wired the way cmd/api wires both, so the two pages are proven to read one
 // embed lane.
 func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.T) {
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	read := func(t *testing.T, e *apptest.AppEnv) (bool, string) {
-		t.Helper()
-		createCorpusOverHTTP(t, e)
-		var me reindexAvailabilityWire
-		if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-			t.Fatalf("GET /me: status %d", status)
-		}
-		var corpora embedStateWire
-		if status := e.Call(t, "GET", "/v1/knowledge/corpora", nil, nil, &corpora); status != http.StatusOK {
-			t.Fatalf("GET /knowledge/corpora: status %d", status)
-		}
-		if me.SettingsAvailability.EmbeddingReindex == nil || len(corpora.Items) != 1 {
-			t.Fatalf("/me availability = %v, corpora = %+v, want one of each", me.SettingsAvailability.EmbeddingReindex, corpora)
-		}
-		return *me.SettingsAvailability.EmbeddingReindex, corpora.Items[0].Coverage.EmbedState
-	}
 
 	t.Run("unbound", func(t *testing.T) {
 		e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(nil, nil), compose.WithCorpusAsk(nil, nil, quiet))
 		e.BootstrapWorkspace(t)
-		offered, state := read(t, e)
+		createCorpusOverHTTP(t, e)
+		offered, state := readEmbedAgreement(t, e)
 		if offered || state != string(crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel) {
 			t.Errorf("unbound: reindex offered = %v, embed_state = %q, want false and no_embedding_model", offered, state)
 		}
@@ -110,9 +114,50 @@ func TestKnowledgeAndSystemHealthAgreeWhetherAnEmbeddingModelIsBound(t *testing.
 		e := apptest.SetupAppWithOptions(t,
 			compose.WithEmbedReindex(router, insertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
 		e.BootstrapWorkspace(t)
-		offered, state := read(t, e)
+		createCorpusOverHTTP(t, e)
+		offered, state := readEmbedAgreement(t, e)
 		if !offered || state != string(crmcontracts.KnowledgeCoverageEmbedStateComplete) {
 			t.Errorf("bound: reindex offered = %v, embed_state = %q, want true and an empty corpus complete", offered, state)
 		}
 	})
+}
+
+// The routing watcher rebinds a running role, so a lane bound or unbound after
+// boot moves both pages together.
+func TestKnowledgeAndSystemHealthAgreeAcrossARebind(t *testing.T) {
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	modelPath, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithoutResultCache())
+	if err != nil {
+		t.Fatalf("NewLocalModelPath: %v", err)
+	}
+	router := modelPath.Router()
+	e := apptest.SetupAppWithOptions(t,
+		compose.WithEmbedReindex(router, insertOnlyRunner(t)), compose.WithCorpusAsk(router, nil, quiet))
+	e.BootstrapWorkspace(t)
+	createCorpusOverHTTP(t, e)
+
+	steps := []struct {
+		name    string
+		routing ai.RoutingConfig
+		offered bool
+		state   crmcontracts.KnowledgeCoverageEmbedState
+	}{
+		{"booted unbound", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel},
+		{"bound after boot", boundEmbedRouting("embed-rebound"), true, crmcontracts.KnowledgeCoverageEmbedStateComplete},
+		{"unbound again", ai.FakeRoutingConfig(), false, crmcontracts.KnowledgeCoverageEmbedStateNoEmbeddingModel},
+	}
+	for _, step := range steps {
+		if err := router.Rebind(step.routing); err != nil {
+			t.Fatalf("%s: rebind: %v", step.name, err)
+		}
+		offered, state := readEmbedAgreement(t, e)
+		if offered != step.offered || state != string(step.state) {
+			t.Errorf("%s: reindex offered = %v, embed_state = %q, want %v and %q",
+				step.name, offered, state, step.offered, step.state)
+		}
+		status := e.Call(t, "GET", "/v1/embeddings/reindex/status", nil, nil, nil)
+		if served := status != http.StatusNotImplemented; served != step.offered {
+			t.Errorf("%s: reindex status answered %d while /me offers the surface = %v", step.name, status, step.offered)
+		}
+	}
 }

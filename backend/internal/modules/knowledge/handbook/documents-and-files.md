@@ -239,10 +239,10 @@ and is not answered from part of the set.
 
 ### Removing things from a document set
 
-**Archive set**, in the set's **…** menu: "Archive {name}? The set and its
+**Archive set**, in the set's **…** (**Actions**) menu: "Archive {name}? The set and its
 documents are no longer searchable. Nothing is deleted."
 
-**Delete**, in a document's **…** menu: "Delete {name}? The file, its extracted
+**Delete**, in a document's **…** (**Actions**) menu: "Delete {name}? The file, its extracted
 text and its search index are permanently deleted."
 
 ### Who can see which sets exist

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
@@ -28,7 +28,12 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { captureValueMessage } from "./capturevalue";
 import { QueryGate, throwProblem, unwrap } from "./common";
-import { type MutationOutcome, useUndoableRemoval } from "./undoableremoval";
+import {
+  type MutationOutcome,
+  neighbourVerb,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
 import "./capture-owner-identities.css";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
@@ -138,12 +143,20 @@ function useIdentityRemoval() {
   );
 }
 
+// Outlives the dialog's close, so its title keeps the address while it fades.
+type Asking = Readonly<{ identity: OwnerIdentity; from: HTMLElement | null }>;
+
 export function OwnerIdentitiesCard() {
   const t = useT();
   const query = useOwnerIdentities();
   const remove = useIdentityRemoval();
   const [declaring, setDeclaring] = useState(false);
-  const [confirming, setConfirming] = useState<OwnerIdentity | null>(null);
+  const [asking, setAsking] = useState<Asking | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Set once a confirmed removal lands; the dialog hands focus there on close.
+  const handoff = useRef<HTMLElement | null>(null);
+  const addVerb = useRef<HTMLButtonElement>(null);
+  const landing = () => addVerb.current;
   return (
     <Panel title={t("ownerIdentities.title")}>
       <PanelBody>
@@ -154,7 +167,7 @@ export function OwnerIdentitiesCard() {
           label={t("ownerIdentities.addLabel")}
           description={t("ownerIdentities.addDescription")}
           control={
-            <Button onClick={() => setDeclaring(true)}>
+            <Button ref={addVerb} onClick={() => setDeclaring(true)}>
               {t("ownerIdentities.add")}
             </Button>
           }
@@ -169,27 +182,40 @@ export function OwnerIdentitiesCard() {
         {(list) => (
           <IdentityRows
             list={list.data}
-            pending={remove.isPending}
-            onRemove={(identity) =>
-              identity.source === "user"
-                ? remove.mutate(identity)
-                : setConfirming(identity)
-            }
+            removing={remove.isPending ? remove.variables?.id : undefined}
+            landing={landing}
+            onRemove={(identity, from) => {
+              if (identity.source === "user") {
+                remove.mutate(identity);
+                return;
+              }
+              handoff.current = null;
+              setAsking({ identity, from });
+              setConfirmOpen(true);
+            }}
           />
         )}
       </QueryGate>
       <ConfirmModal
-        open={confirming !== null}
-        onClose={() => setConfirming(null)}
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
         title={t("ownerIdentities.removeLearnedTitle", {
-          value: confirming?.value ?? "",
+          value: asking?.identity.value ?? "",
         })}
         confirmLabel={t("ownerIdentities.removeConfirm")}
         confirmVariant="danger"
         pending={remove.isPending}
+        returnFocusTo={() => handoff.current}
         onConfirm={() => {
-          if (confirming) {
-            remove.mutate(confirming, { onSettled: () => setConfirming(null) });
+          if (asking) {
+            // Read now: the refetch can detach the row before the dialog closes.
+            const next = neighbourVerb(asking.from);
+            remove.mutate(asking.identity, {
+              onSuccess: () => {
+                handoff.current = next?.isConnected ? next : landing();
+              },
+              onSettled: () => setConfirmOpen(false),
+            });
           }
         }}
       >
@@ -230,15 +256,16 @@ function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
  */
 function IdentityRows({
   list,
-  pending,
+  removing,
+  landing,
   onRemove,
 }: Readonly<{
   list: OwnerIdentity[];
-  pending: boolean;
-  onRemove: (identity: OwnerIdentity) => void;
+  removing: string | undefined;
+  landing: () => HTMLElement | null;
+  onRemove: (identity: OwnerIdentity, from: HTMLElement | null) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   if (list.length === 0) {
     // A reading, not a failed read: "I have declared no other addresses" is
     // what a reader opens this card to confirm.
@@ -250,34 +277,56 @@ function IdentityRows({
   }
   return (
     <SettingList bleed="records" testId="owner-identities-list">
-      {list.map((identity) => {
-        const learned = learnedNote(identity.source);
-        return (
-          <SettingRow
-            key={identity.id}
-            label={identity.value}
-            description={
-              <span className="owner-identity-caption">
-                <span>{t(kindLabel[identity.kind])}</span>
-                <span>
-                  {formatDate(identity.created_at, locale, viewerZone())}
-                </span>
-                {learned !== null && <span>{t(learned)}</span>}
-              </span>
-            }
-            control={
-              <IconAction
-                variant="ghost"
-                disabled={pending}
-                label={t("ownerIdentities.remove", { value: identity.value })}
-                icon={<Trash2 aria-hidden />}
-                onClick={() => onRemove(identity)}
-              />
-            }
-          />
-        );
-      })}
+      {list.map((identity) => (
+        <IdentityRow
+          key={identity.id}
+          identity={identity}
+          pending={removing === identity.id}
+          landing={landing}
+          onRemove={onRemove}
+        />
+      ))}
     </SettingList>
+  );
+}
+
+function IdentityRow({
+  identity,
+  pending,
+  landing,
+  onRemove,
+}: Readonly<{
+  identity: OwnerIdentity;
+  pending: boolean;
+  landing: () => HTMLElement | null;
+  onRemove: (identity: OwnerIdentity, from: HTMLElement | null) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const verbs = useRowHandoff(landing);
+  const learned = learnedNote(identity.source);
+  return (
+    <SettingRow
+      label={identity.value}
+      description={
+        <span className="owner-identity-caption">
+          <span>{t(kindLabel[identity.kind])}</span>
+          <span>{formatDate(identity.created_at, locale, viewerZone())}</span>
+          {learned !== null && <span>{t(learned)}</span>}
+        </span>
+      }
+      control={
+        <span className="cell-actions" ref={verbs}>
+          <IconAction
+            variant="ghost"
+            pending={pending}
+            label={t("ownerIdentities.remove", { value: identity.value })}
+            icon={<Trash2 aria-hidden />}
+            onClick={() => onRemove(identity, verbs.current)}
+          />
+        </span>
+      }
+    />
   );
 }
 

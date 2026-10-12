@@ -62,7 +62,9 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
         return jsonResponse(meFixture({ allow }));
       }
       if (req.method === "DELETE") {
-        deleted.push(decodeURIComponent(url.pathname.split("/").pop() ?? ""));
+        const domain = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+        deleted.push(domain);
+        state.data = state.data.filter((row) => row.domain !== domain);
         return new Response(null, { status: 204 });
       }
       if (url.pathname.endsWith("/capture/email-domains")) {
@@ -223,6 +225,31 @@ describe("OwnDomainsCard", () => {
       await screen.findByRole("button", { name: en["common.undo"] }),
     );
     await waitFor(() => expect(post()).toEqual({ domain: "brandt.de" }));
+  });
+
+  // The removed row takes its verb with it, so focus moves on rather than
+  // dropping to the page.
+  it("hands focus to the next domain's verb, then to the add verb", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(CAPTURE_EDITOR, {
+      domains: [
+        { domain: "brandt.de", source: "admin", verified: true },
+        { domain: "seen.de", source: "mailbox", verified: false },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /remove brandt\.de/i }),
+    );
+    const next = screen.getByRole("button", { name: /remove seen\.de/i });
+    await waitFor(() => expect(document.activeElement).toBe(next));
+
+    await user.click(next);
+    const add = screen.getByRole("button", { name: en["ownDomains.addOpen"] });
+    await waitFor(() => expect(document.activeElement).toBe(add));
   });
 
   // Adding a candidate again would confirm it, which is not the inverse.

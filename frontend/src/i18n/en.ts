@@ -6136,7 +6136,7 @@ export const en = {
   "captureHealth.fact.pending": "Senders waiting for the check",
   "captureHealth.fact.unsure": "Senders the check is unsure of",
   "captureHealth.fact.exhausted": "Senders with no retries left",
-  "captureHealth.oldestWaited": "oldest waited {age}",
+  "captureHealth.oldestWaited": "oldest has waited {age}",
   "captureHealth.contactsWaiting_one": "{count} contact waiting",
   "captureHealth.contactsWaiting_other": "{count} contacts waiting",
   "captureHealth.threadsWaiting_one": "{count} thread waiting",
@@ -7060,6 +7060,7 @@ export const en = {
   "senders.waiting.moreAddresses_one": "+{count} more",
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
+  "senders.waiting.openUnnamed": "Open contact",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default, so deal work can be shared.",
@@ -7111,6 +7112,7 @@ export const en = {
   "connectors.notConfigured":
     "Mail capture is not configured on this installation.",
   "connectors.reconnect": "Reconnect",
+  "connectors.reconnectNamed": "Reconnect {name}",
   "connectors.disconnect": "Disconnect",
   "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.contextTag.label": "Tag for created contacts",
@@ -7358,6 +7360,8 @@ export const en = {
   "blockedDomains.reopenFailed": "Domain not checked again",
   "blockedDomains.reason.companyCreated":
     "A colleague created a company on this domain",
+  "blockedDomains.reason.keptAsCompany":
+    "A colleague answered its open question and kept it as a company",
   "blockedDomains.reason.bulkSender":
     "Mail from this domain was judged bulk or automated",
   "blockedDomains.reason.bulkNewsletter":
@@ -8882,7 +8886,10 @@ export const en = {
     "Counted from when a connector hands a message to this CRM. Items a connector filtered on its own side, such as a chat reaction or a mail rule, are not included. Covers messages only; lead capture is not shown here.",
   "captureActivity.filtered":
     "Showing {shown} of {total} {outcome} in this window.",
-  "captureActivity.openTrace": "Show every processing step for this message",
+  "captureActivity.openTraceFrom":
+    "Show every processing step for the message from {sender} at {at}",
+  "captureActivity.openTraceAt":
+    "Show every processing step for the message at {at}",
   "captureActivity.emptyFiltered":
     "No loaded rows match. Load more to see the rest of the window.",
   "captureActivity.loadMore": "Load more",

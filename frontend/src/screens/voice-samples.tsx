@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
@@ -12,6 +12,7 @@ import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { PanelBody } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
 import { formatDate, formatNumber } from "../format/format";
 import {
   type Locale,
@@ -274,6 +275,10 @@ export function VoiceSamples({
   const zone = useRecordZone();
   const sources = useVoiceSources(profileId);
   const [removing, setRemoving] = useState<VoiceCorpusSource | null>(null);
+  const asked = useLastSubject(removing);
+  // A removed sample takes its row's menu with it; focus lands on the new total.
+  const removed = useRef(false);
+  const meterId = useId();
   const remove = useMutation({
     mutationFn: async (sample: Readonly<{ id: string; version: number }>) => {
       unwrap(
@@ -286,6 +291,7 @@ export function VoiceSamples({
       );
     },
     onSuccess: () => {
+      removed.current = true;
       setRemoving(null);
       onChanged();
     },
@@ -298,6 +304,7 @@ export function VoiceSamples({
     canEdit,
     onRemove: (source) => {
       remove.reset();
+      removed.current = false;
       setRemoving(source);
     },
   });
@@ -306,14 +313,13 @@ export function VoiceSamples({
     <QueryGate query={sources} pendingLabel={t("settings.voice.corpusLabel")}>
       {({ sources: rows, summary }) => {
         const bandAfter =
-          removing &&
-          bandFor(Math.max(0, summary.total_words - removing.word_count));
+          asked && bandFor(Math.max(0, summary.total_words - asked.word_count));
         const drops =
-          removing?.included === true && bandAfter !== summary.quality_band;
+          asked?.included === true && bandAfter !== summary.quality_band;
         return (
           <>
             <PanelBody>
-              <p className="t-caption">
+              <p className="t-caption" id={meterId} tabIndex={-1}>
                 {t("settings.voice.meter", {
                   count: formatNumber(summary.total_words, locale),
                   target: formatNumber(summary.target_words, locale),
@@ -338,13 +344,16 @@ export function VoiceSamples({
             <ConfirmModal
               open={removing !== null}
               title={t("settings.voice.removeConfirm.title", {
-                name: removing?.source_label ?? "",
+                name: asked?.source_label ?? "",
               })}
               confirmLabel={t("settings.voice.removeSource")}
               confirmVariant="danger"
               pending={remove.isPending}
               error={remove.isError ? problemMessageOf(remove.error, t) : null}
               onClose={() => setRemoving(null)}
+              returnFocusTo={() =>
+                removed.current ? document.getElementById(meterId) : null
+              }
               onConfirm={() =>
                 removing &&
                 remove.mutate({ id: removing.id, version: removing.version })

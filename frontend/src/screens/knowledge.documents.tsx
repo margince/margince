@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
@@ -16,6 +16,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { FileDropzone } from "../design-system/filedropzone";
 import { PanelBody } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
 import { forReader } from "../format/collate";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -231,13 +232,22 @@ export function DocumentList({
   corpusId,
   setName,
   canManage,
-}: Readonly<{ corpusId: string; setName: string; canManage: boolean }>) {
+  afterDelete,
+}: Readonly<{
+  corpusId: string;
+  setName: string;
+  canManage: boolean;
+  // A deleted document takes its row's menu with it; focus lands here instead.
+  afterDelete: () => HTMLElement | null;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const query = useDocuments(corpusId);
   const remove = useDocumentWrite(corpusId, deleteDocument);
   const [deleting, setDeleting] = useState<CorpusDocument | null>(null);
+  const asked = useLastSubject(deleting);
+  const deleted = useRef(false);
   const label = t("knowledge.documentsIn", { set: setName });
   const documents = [...(query.data?.items ?? [])].sort((a, b) =>
     forReader(a.filename, b.filename, locale),
@@ -257,6 +267,7 @@ export function DocumentList({
             canManage,
             onDelete: (doc) => {
               remove.reset();
+              deleted.current = false;
               setDeleting(doc);
             },
           })}
@@ -278,18 +289,24 @@ export function DocumentList({
       <ConfirmModal
         open={deleting !== null}
         title={t("knowledge.deleteConfirm.title", {
-          name: deleting?.filename ?? "",
+          name: asked?.filename ?? "",
         })}
         confirmLabel={t("knowledge.deleteDocument")}
         confirmVariant="danger"
         pending={remove.isPending}
         error={remove.isError ? problemMessageOf(remove.error, t) : null}
         onClose={() => setDeleting(null)}
+        returnFocusTo={() => (deleted.current ? afterDelete() : null)}
         onConfirm={() => {
           if (deleting) {
             remove.mutate(
               { id: deleting.id },
-              { onSuccess: () => setDeleting(null) },
+              {
+                onSuccess: () => {
+                  deleted.current = true;
+                  setDeleting(null);
+                },
+              },
             );
           }
         }}

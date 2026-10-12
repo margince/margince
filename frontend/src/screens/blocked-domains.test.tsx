@@ -328,7 +328,7 @@ describe("BlockedDomainsCard", () => {
     expect(within(dialog).getByTestId("blocked-domain-reason")).toHaveValue("");
   });
 
-  it("offers an undecided domain both decisions and a re-ask", async () => {
+  it("offers an undecided domain a re-ask rather than a decision it has no grounds for", async () => {
     const user = userEvent.setup();
     const asked: string[] = [];
     mount(OPS, {
@@ -341,12 +341,14 @@ describe("BlockedDomainsCard", () => {
 
     await screen.findByText("pwc.example");
     const menu = await openRowMenu(user, "pwc.example");
+    // Not knowing yet is why the row is listed. A call either way would have
+    // no grounds.
     expect(
-      menu.getByRole("button", { name: en["blockedDomains.rowAdmit"] }),
-    ).toBeInTheDocument();
+      menu.queryByRole("button", { name: en["blockedDomains.rowAdmit"] }),
+    ).toBeNull();
     expect(
-      menu.getByRole("button", { name: en["blockedDomains.rowRefuse"] }),
-    ).toBeInTheDocument();
+      menu.queryByRole("button", { name: en["blockedDomains.rowRefuse"] }),
+    ).toBeNull();
 
     await user.click(
       menu.getByRole("button", { name: en["blockedDomains.rowReopen"] }),
@@ -386,6 +388,59 @@ describe("BlockedDomainsCard", () => {
       within(row).getByText(en["blockedDomains.source.unevidenced"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(UNDECIDED.reason)).toBeNull();
+  });
+
+  it("says a colleague kept the domain when they answered its question", async () => {
+    mount(OPS, {
+      [LIST]: () =>
+        jsonResponse({
+          data: [
+            {
+              ...BY_HUMAN,
+              reason_code: "kept_as_company",
+              note: undefined,
+              reason: "kept from the question",
+            },
+          ],
+          total: 1,
+        }),
+    });
+
+    await screen.findByText("mckinsey.example");
+    expect(
+      within(rowFor("mckinsey.example")).getByText(
+        en["blockedDomains.reason.keptAsCompany"],
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // A reason the server has no code for keeps the sentence it stored.
+  it("shows the stored sentence for a reason the server cannot name", async () => {
+    mount(OPS, {
+      [LIST]: () =>
+        jsonResponse({
+          data: [{ ...UNDECIDED, reason_code: "unknown" }],
+          total: 1,
+        }),
+    });
+
+    await screen.findByText("pwc.example");
+    expect(
+      within(rowFor("pwc.example")).getByText(UNDECIDED.reason),
+    ).toBeInTheDocument();
+  });
+
+  // A server older than `reason_code` still sends its sentence.
+  it("shows the stored sentence when the server sends no reason code", async () => {
+    const { reason_code: _absent, ...older } = UNDECIDED;
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [older], total: 1 }),
+    });
+
+    await screen.findByText("pwc.example");
+    expect(
+      within(rowFor("pwc.example")).getByText(UNDECIDED.reason),
+    ).toBeInTheDocument();
   });
 
   it("keeps the list readable for a seat that may not change it, and says so", async () => {

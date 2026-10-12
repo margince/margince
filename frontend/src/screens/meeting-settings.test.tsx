@@ -581,7 +581,7 @@ it("offers the booking link once, in its own panel", async () => {
   expect(screen.queryAllByText(bookingProfile.public_url ?? "")).toHaveLength(
     0,
   );
-  expect((link as HTMLInputElement).value).toBe(bookingProfile.public_url);
+  expect(link).toHaveValue(bookingProfile.public_url);
   const copies = screen.getAllByRole("button", { name: /^Copy/ });
   expect(copies).toHaveLength(1);
   await user.click(copies[0]);

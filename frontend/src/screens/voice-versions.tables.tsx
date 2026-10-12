@@ -62,7 +62,7 @@ type Columns = Readonly<{
 }>;
 
 // Only a version that asks something of the reader carries a badge. Superseded
-// is history, and active is the normal reading.
+// is history; active is quiet text, so the reader still finds the live version.
 export function versionColumns({
   t,
   plural,
@@ -88,13 +88,19 @@ export function versionColumns({
       key: "status",
       header: t("voice.history.col.status"),
       fold: "end",
-      render: (version) =>
-        version.status !== "superseded" &&
-        version.status !== "active" && (
+      render: (version) => {
+        if (version.status === "superseded") {
+          return null;
+        }
+        const label = labelOf(t, STATUS_LABEL, version.status);
+        return version.status === "active" ? (
+          <span className="t-caption">{label}</span>
+        ) : (
           <Badge tone={version.status === "rejected" ? undefined : "info"}>
-            {labelOf(t, STATUS_LABEL, version.status)}
+            {label}
           </Badge>
-        ),
+        );
+      },
     },
     {
       key: "created",

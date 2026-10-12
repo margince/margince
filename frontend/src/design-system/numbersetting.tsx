@@ -63,29 +63,21 @@ export function NumberSetting({
   const readingId = useId();
   const live = draft !== null && draft.over === value ? draft : null;
   const shown = live?.text ?? String(value);
-  const typed = Number(shown.trim());
-  const words =
-    reading && shown.trim() !== "" && Number.isInteger(typed)
-      ? reading(typed)
-      : null;
+  const bounds = { min, max, lowestOn };
+  const typed = acceptedNumber(shown, bounds);
+  const words = reading && typed !== null ? reading(typed) : null;
   const commit = (by: "enter" | "blur") => {
     if (live === null) {
       setRefused(false);
       return;
     }
-    const next = Number(live.text.trim());
-    if (next === value) {
+    if (Number(live.text.trim()) === value) {
       setDraft(null);
       setRefused(false);
       return;
     }
-    if (
-      live.text.trim() === "" ||
-      !Number.isInteger(next) ||
-      next < min ||
-      next > max ||
-      (lowestOn !== undefined && next !== 0 && next < lowestOn)
-    ) {
+    const next = acceptedNumber(live.text, bounds);
+    if (next === null) {
       setRefused(true);
       return;
     }
@@ -132,6 +124,26 @@ export function NumberSetting({
       <ErrorLine id={refusalId}>{refused ? refusal : null}</ErrorLine>
     </div>
   );
+}
+
+// Digits only: `Number` would also read "1e3", "0x10" and " -5 " as numbers.
+function acceptedNumber(
+  text: string,
+  {
+    min,
+    max,
+    lowestOn,
+  }: Readonly<{ min: number; max: number; lowestOn?: number }>,
+): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const next = Number(trimmed);
+  if (next < min || next > max) {
+    return null;
+  }
+  return lowestOn !== undefined && next !== 0 && next < lowestOn ? null : next;
 }
 
 /**

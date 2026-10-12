@@ -161,8 +161,7 @@ type embedReindexEngine struct {
 // currentIdentity is the embedder's cheap, no-API-call stamp — the value
 // every read and the confirm's drift check compares against.
 func (e *embedReindexEngine) currentIdentity() string {
-	identity, _ := e.embedder.EmbedIdentity()
-	return identity
+	return embedLaneIdentity(e.embedder)
 }
 
 // status answers the binding marker plus the derived reindex-needed
@@ -379,15 +378,20 @@ func embedReindexPreviewWire(rows []costestimate.Row, total costestimate.Row, no
 }
 
 // embedReindexHandlers shadows the generated EmbedReindexStatus /
-// EmbedReindexPreview / EmbedReindexStart stubs. engine nil means no
-// model path is configured on this role (WithEmbedReindex never ran) —
-// every op stays its explicit 501, never a silent 404 or a nil-deref.
+// EmbedReindexPreview / EmbedReindexStart stubs. Each op answers its explicit
+// 501 while serving() is false, never a silent 404 or a nil-deref.
 type embedReindexHandlers struct {
 	engine *embedReindexEngine
 }
 
+// serving is whether the reindex ops answer now. It reads the embed lane on
+// every call, because a routing edit can bind or unbind one without a restart.
+func (h embedReindexHandlers) serving() bool {
+	return h.engine != nil && h.engine.currentIdentity() != ""
+}
+
 func (h embedReindexHandlers) EmbedReindexStatus(w http.ResponseWriter, r *http.Request) {
-	if h.engine == nil {
+	if !h.serving() {
 		httperr.NotImplemented(w, r, "EmbedReindexStatus")
 		return
 	}
@@ -395,7 +399,7 @@ func (h embedReindexHandlers) EmbedReindexStatus(w http.ResponseWriter, r *http.
 }
 
 func (h embedReindexHandlers) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
-	if h.engine == nil {
+	if !h.serving() {
 		httperr.NotImplemented(w, r, "EmbedReindexPreview")
 		return
 	}
@@ -403,31 +407,18 @@ func (h embedReindexHandlers) EmbedReindexPreview(w http.ResponseWriter, r *http
 }
 
 func (h embedReindexHandlers) EmbedReindexStart(w http.ResponseWriter, r *http.Request) {
-	if h.engine == nil {
+	if !h.serving() {
 		httperr.NotImplemented(w, r, "EmbedReindexStart")
 		return
 	}
 	h.engine.confirm(w, r)
 }
 
-// WithEmbedReindex wires the /embeddings/reindex* ops over the resolved
-// embed lane's identity/estimator and an insert-only River client (the
-// api enqueues, the worker re-embeds — WithDeepRead's own split, this
-// module's own confirm/worker pair). Without a router (an AI-unconfigured
-// role), OR with a router whose EmbedIdentity() is "" (--ai-fake, or any
-// routing config that never bound an embeddings model — brain.go's
-// seedEmbedBinding never plants a marker for this shape either), there is
-// no embed lane to report on or trigger, so the three ops stay their
-// generated 501 — the same declared-by-omission posture as
-// WithColdStart/WithScrape. Without this second self-gating nil, an
-// unbound router would still wire the handlers, and every one of them
-// would 500 reading a marker that was never seeded.
+// WithEmbedReindex wires the reindex ops whenever a router exists. serving()
+// decides per request, because the routing watcher rebinds the lane at runtime.
 func WithEmbedReindex(router *ai.Router, inserter *jobs.Runner) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		if router == nil || inserter == nil {
-			return
-		}
-		if embedLaneIdentity(router) == "" {
 			return
 		}
 		store := search.NewStore(InstallationDB(pool))
@@ -441,8 +432,7 @@ func WithEmbedReindex(router *ai.Router, inserter *jobs.Runner) Option {
 			enqueue:   inserter,
 			clock:     systemClock{},
 		}}
-		// Set beside the engine, past the same two gates, so /me's answer and the
-		// routes' 501 are one predicate rather than two that could drift.
-		s.authHandlers = s.WithEmbedReindexAvailable(true)
+		// /me reads the same predicate the routes answer by, so the two cannot drift.
+		s.authHandlers = s.WithEmbedReindexAvailable(s.serving)
 	}
 }

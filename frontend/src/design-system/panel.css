@@ -15,24 +15,14 @@
 
 /* The header band, and its rule runs the full width of the card.
  *
- * ONE height, and it is fixed: --panel-head-h, whatever the head carries. The
- * head is a title and, optionally, the verbs that act on it — never a
- * description — so a title alone and a title beside a badge or a button draw
- * the same band, and a reader scanning a page of panels reads a column of
- * titles at one interval instead of a ragged one. A floor is what this used
- * to be, and a floor is an invitation: a description raised the band here, two
- * screens then re-spaced it there, and the same card stood at three heights.
- * What does not fit on one band is not header content — a toolbar row or a
- * `PanelBody` under the head is where it belongs.
+ * Wider than 720px it holds one height, --panel-head-h, so a page of panels
+ * reads as one column of titles. The phone rule below says why a phone wraps.
  *
  * Its rule divides the CARD from its content, so it runs edge to edge; where a
  * rule between two pieces of content stops is the seam rule's call, below. */
 .panel-head {
   display: flex;
   align-items: center;
-  /* The band is one row. Wrapping is what a head reached for when its content
-     stopped fitting, and a second row is a second height — the thing this band
-     exists to refuse. */
   flex-wrap: nowrap;
   gap: var(--space-3);
   height: var(--panel-head-h);
@@ -48,11 +38,8 @@
  * only move ONE node, so a pair of actions splits with one of them still
  * crowding the title.
  *
- * It ends in an ellipsis rather than in a second row: the band's height is
- * fixed, so a title long enough to wrap would otherwise be clipped mid-letter
- * with nothing to say it had been. A record named by a legal entity is the case
- * — the ellipsis is what tells a reader the name goes on, and the full string is
- * still the element's text for a screen reader and for the pointer. */
+ * Wider than 720px it ends in an ellipsis, because the band's height is fixed;
+ * the full string stays the element's text for a screen reader. */
 .panel-head .panel-title {
   font-family: var(--fontFamilyHeading);
   color: var(--textPrimary);

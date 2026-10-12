@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -28,7 +28,11 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { captureValueMessage } from "./capturevalue";
 import { QueryGate, throwProblem, unwrap } from "./common";
-import { type MutationOutcome, useUndoableRemoval } from "./undoableremoval";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.
@@ -118,6 +122,7 @@ export function OwnDomainsCard() {
   const canManage = useCanWrite("capture_settings", "update");
   const query = useOwnDomains();
   const [adding, setAdding] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   // The denial, said once and POINTED AT. A control that is refused with its
   // reason floating somewhere further down the card has told a screen reader
   // nothing: the reason is read only if the reader happens to arrive at that
@@ -144,7 +149,11 @@ export function OwnDomainsCard() {
       // button says the same thing twice a hand apart. Refused, never hidden:
       // `reasonId` names the one sentence under the rows.
       titleAction={
-        <Button reasonId={refusal} onClick={() => setAdding(true)}>
+        <Button
+          ref={addVerb}
+          reasonId={refusal}
+          onClick={() => setAdding(true)}
+        >
           {t("ownDomains.addOpen")}
         </Button>
       }
@@ -175,7 +184,13 @@ export function OwnDomainsCard() {
         <PanelIntro>{t("ownDomains.irreversible")}</PanelIntro>
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("ownDomains.curatedTitle")}>
-        {(list) => <CuratedDomains list={list.data} refusal={refusal} />}
+        {(list) => (
+          <CuratedDomains
+            list={list.data}
+            refusal={refusal}
+            landing={() => addVerb.current}
+          />
+        )}
       </QueryGate>
       {!canManage && (
         <PanelBody>
@@ -191,10 +206,12 @@ export function OwnDomainsCard() {
 function CuratedDomains({
   list,
   refusal,
+  landing,
 }: Readonly<{
   list: WorkspaceEmailDomain[];
   /** The id of the one sentence saying why removal is refused, when it is. */
   refusal: string | undefined;
+  landing: () => HTMLElement | null;
 }>) {
   const t = useT();
   if (list.length === 0) {
@@ -209,7 +226,12 @@ function CuratedDomains({
   return (
     <SettingList bleed="records" testId="own-domains-list">
       {list.map((domain) => (
-        <CuratedDomain key={domain.domain} domain={domain} refusal={refusal} />
+        <CuratedDomain
+          key={domain.domain}
+          domain={domain}
+          refusal={refusal}
+          landing={landing}
+        />
       ))}
     </SettingList>
   );
@@ -220,8 +242,14 @@ function CuratedDomains({
 function CuratedDomain({
   domain,
   refusal,
-}: Readonly<{ domain: WorkspaceEmailDomain; refusal: string | undefined }>) {
+  landing,
+}: Readonly<{
+  domain: WorkspaceEmailDomain;
+  refusal: string | undefined;
+  landing: () => HTMLElement | null;
+}>) {
   const t = useT();
+  const verbs = useRowHandoff(landing);
   const toasts = useUndoableRemoval<string>({
     removed: t("settings.removedItem", { name: domain.domain }),
     restored: t("settings.addedItem", { name: domain.domain }),
@@ -238,14 +266,16 @@ function CuratedDomain({
         domain.verified ? undefined : <Badge>{t("ownDomains.candidate")}</Badge>
       }
       control={
-        <IconAction
-          variant="ghost"
-          label={t("ownDomains.remove", { domain: domain.domain })}
-          icon={<Trash2 aria-hidden />}
-          disabled={remove.isPending}
-          reasonId={refusal}
-          onClick={() => remove.mutate(domain.domain)}
-        />
+        <span className="cell-actions" ref={verbs}>
+          <IconAction
+            variant="ghost"
+            label={t("ownDomains.remove", { domain: domain.domain })}
+            icon={<Trash2 aria-hidden />}
+            pending={remove.isPending}
+            reasonId={refusal}
+            onClick={() => remove.mutate(domain.domain)}
+          />
+        </span>
       }
     />
   );

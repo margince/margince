@@ -371,8 +371,7 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 			embedder = unboundEmbedder{}
 		}
 		if log != nil {
-			identity, _ := embedder.EmbedIdentity()
-			knowledge.WarnIfUngated(log, identity)
+			knowledge.WarnIfUngated(log, embedLaneIdentity(embedder))
 		}
 		s.module = s.module.WithEmbedIdentity(func() string { return embedLaneIdentity(embedder) })
 		engine := &corpusAskEngine{

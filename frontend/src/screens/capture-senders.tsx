@@ -307,6 +307,12 @@ function AwaitingDecision() {
     row.display_name ?? row.emails[0] ?? null;
   const open = (row: AwaitingContact) =>
     navigate({ screen: "contacts", id: row.contact_id });
+  const openLabel = (row: AwaitingContact) => {
+    const named = name(row);
+    return named
+      ? t("senders.waiting.openNamed", { name: named })
+      : t("senders.waiting.openUnnamed");
+  };
   return (
     <>
       <PanelGroupHead title={t("senders.waiting.title")} level="h3" />
@@ -357,12 +363,7 @@ function AwaitingDecision() {
                 align: "end",
                 fold: "end",
                 render: (row) => (
-                  <RowOpen
-                    label={t("senders.waiting.openNamed", {
-                      name: name(row) ?? "",
-                    })}
-                    onOpen={() => open(row)}
-                  />
+                  <RowOpen label={openLabel(row)} onOpen={() => open(row)} />
                 ),
               },
             ]}

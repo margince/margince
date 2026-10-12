@@ -15,6 +15,7 @@ import (
 // capture settings screen.
 func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 	kind := concern.Kind
+	medium := captureMedium(concern.Calendar)
 	item := crmcontracts.AttentionItem{
 		Id:      concern.ConnectionID.String(),
 		Source:  crmcontracts.AttentionItemSource("capture_health"),
@@ -22,15 +23,16 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		Actions: []crmcontracts.AttentionItemActions{},
 		Connection: &crmcontracts.AttentionConnectionFacts{
 			Provider: concern.Provider,
-			Medium:   captureMedium(concern.Calendar),
+			Medium:   medium,
 		},
 	}
 	// Two broken connections are two things to reconnect, so the identity names
-	// the connection itself where no account label tells them apart.
+	// the connection itself where no account label tells them apart. One
+	// account's mailbox and calendar share a label and are still two.
 	cause := "capture_health:" + kind + ":" + concern.ConnectionID.String()
 	if label := concern.AccountLabel; label != "" {
 		item.Detail = &label
-		cause = "capture_health:" + kind + ":" + label
+		cause = "capture_health:" + kind + ":" + string(medium) + ":" + label
 		item.CauseLabel = &label
 	}
 	item.CauseRef = &cause

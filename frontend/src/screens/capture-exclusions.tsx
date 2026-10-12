@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
@@ -29,7 +29,11 @@ import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
 import { QueryGate, throwProblem, unwrap } from "./common";
-import { type MutationOutcome, useUndoableRemoval } from "./undoableremoval";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
 import "./capture-exclusions.css";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
@@ -132,6 +136,7 @@ export function CaptureExclusionsCard() {
   const canManageWorkspace = useCanWrite("capture_settings", "update");
   const query = useExclusions();
   const [excluding, setExcluding] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   // The rule whose already-captured mail is being destroyed, held by id AND
   // value so the dialog can name what it is about to act on.
   const [purging, setPurging] = useState<{ id: string; value: string } | null>(
@@ -161,7 +166,7 @@ export function CaptureExclusionsCard() {
       // their OWN correspondent out — the dialog refuses the scope that binds
       // everyone, where that choice is made.
       titleAction={
-        <Button onClick={() => setExcluding(true)}>
+        <Button ref={addVerb} onClick={() => setExcluding(true)}>
           {t("captureExclusions.addOpen")}
         </Button>
       }
@@ -179,6 +184,7 @@ export function CaptureExclusionsCard() {
             list={list.data}
             canManageWorkspace={canManageWorkspace}
             denialId={denialId}
+            landing={() => addVerb.current}
             onPurge={(id, value) => setPurging({ id, value })}
           />
         )}
@@ -210,12 +216,14 @@ function ExclusionRows({
   list,
   canManageWorkspace,
   denialId,
+  landing,
   onPurge,
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
   /** The one sentence saying why a company-wide rule is not this reader's. */
   denialId: string;
+  landing: () => HTMLElement | null;
   onPurge: (id: string, value: string) => void;
 }>) {
   const t = useT();
@@ -239,6 +247,7 @@ function ExclusionRows({
           refusal={
             bindsEveryone(rule) && !canManageWorkspace ? denialId : undefined
           }
+          landing={landing}
           onPurge={() => onPurge(rule.id, rule.value)}
         />
       ))}
@@ -251,13 +260,16 @@ function ExclusionRows({
 function ExclusionRow({
   rule,
   refusal,
+  landing,
   onPurge,
 }: Readonly<{
   rule: CaptureExclusion;
   refusal: string | undefined;
+  landing: () => HTMLElement | null;
   onPurge: () => void;
 }>) {
   const t = useT();
+  const verbs = useRowHandoff(landing);
   const words = useRuleWords();
   const toasts = useUndoableRemoval<ExclusionBody>({
     removed: t("settings.removedItem", { name: rule.value }),
@@ -278,18 +290,20 @@ function ExclusionRow({
       }
       description={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
       control={
-        <OverflowMenu label={t("table.rowActions", { name: rule.value })}>
-          <Button
-            disabled={remove.isPending}
-            reasonId={refusal}
-            onClick={() => remove.mutate(rule)}
-          >
-            {t("captureExclusions.removeRule")}
-          </Button>
-          <Button aria-haspopup="dialog" reasonId={refusal} onClick={onPurge}>
-            {t("capturePurge.openShort")}
-          </Button>
-        </OverflowMenu>
+        <span className="cell-actions" ref={verbs}>
+          <OverflowMenu label={t("table.rowActions", { name: rule.value })}>
+            <Button
+              disabled={remove.isPending}
+              reasonId={refusal}
+              onClick={() => remove.mutate(rule)}
+            >
+              {t("captureExclusions.removeRule")}
+            </Button>
+            <Button aria-haspopup="dialog" reasonId={refusal} onClick={onPurge}>
+              {t("capturePurge.openShort")}
+            </Button>
+          </OverflowMenu>
+        </span>
       }
     />
   );

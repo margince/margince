@@ -244,6 +244,24 @@ describe("held threads", () => {
     expect(screen.queryByText(/first message erased/i)).not.toBeInTheDocument();
   });
 
+  // Every row's verb reads the same, so each carries its thread's subject.
+  it("describes each share verb by the thread it releases", async () => {
+    renderCard([
+      JUDGED,
+      {
+        ...JUDGED,
+        thread_key: "t-offer",
+        subject: "Angebot Q4",
+        activity_id: "01a05500-0000-7000-8000-0000000000b2",
+      },
+    ]);
+    const verbs = await screen.findAllByRole("button", {
+      name: /share with the team/i,
+    });
+    expect(verbs[0]).toHaveAccessibleDescription(/Entwurf Aufhebungsvertrag/);
+    expect(verbs[1]).toHaveAccessibleDescription(/Angebot Q4/);
+  });
+
   it("refuses the release when there is no message left to share", async () => {
     // The release works on the seat's own messages on the thread, so with none
     // left it answers not-found. A control whose only outcome is an error is

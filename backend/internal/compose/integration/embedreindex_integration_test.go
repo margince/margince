@@ -79,16 +79,22 @@ type embedReindexProblem struct {
 // distinct identities, the raw material the identity-drift scenarios need.
 func embedReindexRouter(t *testing.T, modelName string) *ai.Router {
 	t.Helper()
+	modelPath, err := compose.NewLocalModelPath(boundEmbedRouting(modelName), ai.WithoutResultCache())
+	if err != nil {
+		t.Fatalf("NewLocalModelPath: %v", err)
+	}
+	return modelPath.Router()
+}
+
+// boundEmbedRouting is the --ai-fake routing with modelName bound on the embed
+// lane.
+func boundEmbedRouting(modelName string) ai.RoutingConfig {
 	cfg := ai.FakeRoutingConfig()
 	cfg.Embeddings = ai.EmbeddingsConfig{
 		Provider: ai.ProviderFake, Model: modelName,
 		Dimensions: fakeEmbedDims,
 	}
-	modelPath, err := compose.NewLocalModelPath(cfg, ai.WithoutResultCache())
-	if err != nil {
-		t.Fatalf("NewLocalModelPath: %v", err)
-	}
-	return modelPath.Router()
+	return cfg
 }
 
 // setupEmbedReindex boots the HTTP harness with the embed-reindex ops

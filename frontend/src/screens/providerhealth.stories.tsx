@@ -46,6 +46,15 @@ export const NoneConfigured: Story = {
   render: story([], { ai_diagnostics: ["read"] }, []),
 };
 
+// The worker reports a provider this process binds none of: the failure still shows.
+export const FailingWithNoneConfigured: Story = {
+  render: story(
+    [{ provider: "openai", health: "down", since: ago(45) }],
+    { ai_diagnostics: ["read"] },
+    [],
+  ),
+};
+
 export const EveryFailure: Story = {
   render: story([
     { provider: "anthropic", health: "degraded", since: ago(20) },

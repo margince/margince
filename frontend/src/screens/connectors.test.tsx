@@ -19,6 +19,7 @@ import { locationDouble } from "../testing/locationdouble";
 import { useMe } from "./common";
 import { ConnectorsCard } from "./connectors";
 import { type RouteMap, stubWithSession } from "./story-utils";
+import { openRowMenu } from "./tablerow.testkit";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a
@@ -199,21 +200,6 @@ async function openAddDialog() {
   return screen.getByRole("dialog", { name: "Add connector" });
 }
 
-// A row's verbs live in its "…" menu; the menu is named after the row.
-async function openRowMenu(name: string) {
-  const trigger = await screen.findByRole("button", {
-    name: `Actions for ${name}`,
-  });
-  await userEvent.click(trigger);
-  const items = document.getElementById(
-    trigger.getAttribute("aria-controls") ?? "",
-  );
-  if (!items) {
-    throw new Error(`the menu for ${name} drew no items`);
-  }
-  return within(items);
-}
-
 // A row's settings live behind its chevron, in a drawer named after it.
 async function openRowDrawer(name: string) {
   await userEvent.click(
@@ -265,11 +251,14 @@ describe("the connected-inboxes card", () => {
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
     expect(document.querySelector(".backfill-setup")).toBeNull();
 
-    const menu = await openRowMenu("Gmail");
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
     await userEvent.click(
       menu.getByRole("button", { name: "Import old emails" }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Gmail" });
+    // Named for the task and the connection, so two imports are told apart.
+    const dialog = await screen.findByRole("dialog", {
+      name: "Import old emails Gmail",
+    });
     expect(
       within(dialog).getByRole("heading", { name: /Import old emails/ }),
     ).toBeTruthy();
@@ -279,7 +268,7 @@ describe("the connected-inboxes card", () => {
   it("draws no mail-shaped verb or setting against a calendar connection", async () => {
     stubApi([gcalConnected]);
     render(<ConnectorsCard />);
-    const menu = await openRowMenu("Google Calendar");
+    const menu = await openRowMenu(userEvent.setup(), "Google Calendar");
     expect(
       menu.queryByRole("button", { name: "Import old emails" }),
     ).toBeNull();
@@ -292,13 +281,18 @@ describe("the connected-inboxes card", () => {
   it("draws the mail-shaped verb and settings against a mailbox", async () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
-    const menu = await openRowMenu("Gmail");
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
     expect(
       menu.getByRole("button", { name: "Import old emails" }),
     ).toBeTruthy();
     await userEvent.keyboard("{Escape}");
     const drawer = await openRowDrawer("Gmail");
     expect(drawer.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+    // No account label: every id naming the drawer must still resolve.
+    const names = screen.getByRole("dialog").getAttribute("aria-labelledby");
+    for (const id of names?.split(" ") ?? []) {
+      expect(document.getElementById(id)).not.toBeNull();
+    }
   });
 
   // A meeting brings in contacts as a message does, so a calendar keeps a tag.
@@ -483,7 +477,7 @@ describe("the connected-inboxes card", () => {
     render(<ConnectorsCard />);
 
     // The row's Disconnect opens a confirm; nothing is called yet.
-    const menu = await openRowMenu("Gmail");
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
     await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(requestsTo(calls, "/disconnect", "POST").length).toBe(0);
 
@@ -572,7 +566,7 @@ describe("the connected-inboxes card's richer health line", () => {
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
-    const menu = await openRowMenu("Gmail");
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
     await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(
       await screen.findByText(/deletes the stored credential/i),
@@ -586,7 +580,7 @@ describe("the connected-inboxes card's richer health line", () => {
         jsonResponse({ data: [{ ...gmailConnected, provider: "imap" }] }),
     });
     render(<ConnectorsCard />);
-    const menu = await openRowMenu("IMAP mailbox");
+    const menu = await openRowMenu(userEvent.setup(), "IMAP mailbox");
     await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(
       await screen.findByText(/deletes the stored credential/i),
@@ -826,7 +820,7 @@ describe("the Telegram connector panel", () => {
     // One shared Disconnect for two bots could only ever remove one of them,
     // which is exactly the state an admin is here to escape.
     for (const bot of ["@acme_sales_bot", "@acme_support_bot"]) {
-      const menu = await openRowMenu(bot);
+      const menu = await openRowMenu(userEvent.setup(), bot);
       expect(menu.getByRole("button", { name: "Disconnect" })).toBeTruthy();
       await userEvent.keyboard("{Escape}");
     }
@@ -836,7 +830,7 @@ describe("the Telegram connector panel", () => {
     stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
-    const menu = await openRowMenu("@acme_support_bot");
+    const menu = await openRowMenu(userEvent.setup(), "@acme_support_bot");
     await userEvent.click(menu.getByRole("button", { name: "Replace token" }));
     // The second bot is the pending one: the form showing its status is the
     // observable proof it bound to that row and not to the first.
@@ -906,7 +900,7 @@ describe("the Telegram connector panel", () => {
       me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
     });
     render(<ConnectorsCard />);
-    const menu = await openRowMenu("@acme_sales_bot");
+    const menu = await openRowMenu(userEvent.setup(), "@acme_sales_bot");
     expect(menu.getByRole("button", { name: "Replace token" })).toBeTruthy();
     expect(menu.queryByRole("button", { name: "Disconnect" })).toBeNull();
     expect(screen.queryByText(readOnlyNote)).toBeNull();
@@ -995,5 +989,7 @@ it("offers reconnect for a healthy read-only calendar", async () => {
   stubApi([gcalConnected]);
   render(<ConnectorsCard />);
   expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Reconnect Google Calendar" }),
+  ).toBeEnabled();
 });

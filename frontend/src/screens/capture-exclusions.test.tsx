@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { translate } from "../i18n";
 import { en } from "../i18n/en";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import {
@@ -102,6 +103,32 @@ describe("CaptureExclusionsCard", () => {
         }),
       ]),
     );
+  });
+
+  // The removed row takes its menu with it, so focus moves to the next row's.
+  it("hands focus to the next rule's menu once a rule is removed", async () => {
+    const user = userEvent.setup();
+    const rules = [...RULES];
+    const { fetchMock } = backend(CAPTURE_EDITOR, rules);
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (request.method === "DELETE") {
+        rules.shift();
+      }
+      return fetchMock(input, init);
+    });
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await user.click(await removeVerb(user, "ex@partner.test"));
+    const next = screen.getByRole("button", {
+      name: translate("en", "table.rowActions", { name: "recruiter.test" }),
+    });
+    await waitFor(() => expect(document.activeElement).toBe(next));
   });
 
   // The sentence is a claim about this reader, so it is only made when a row on

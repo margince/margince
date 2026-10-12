@@ -94,6 +94,7 @@ export function ConnectorRow({
             {needsReconnect(conn) && (
               <Button
                 className="connector-reconnect"
+                aria-label={t("connectors.reconnectNamed", { name: identity })}
                 pending={connectPending}
                 onClick={onReconnect}
               >
@@ -205,8 +206,18 @@ function ImportDialog({
 }: Readonly<{ conn: CaptureConnection; onClose: () => void }>) {
   const t = useT();
   const titleId = useId();
+  const taskId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="form">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={`${taskId} ${titleId}`}
+      intent="form"
+    >
+      {/* The panel draws this heading itself, and only once it has loaded. */}
+      <span id={taskId} className="sr-only">
+        {t("backfill.title")}
+      </span>
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {conn.account_label ?? providerName(conn.provider, t)}
       </Heading>

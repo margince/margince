@@ -65,12 +65,13 @@ const DECIDER_LABEL: Partial<Record<BlockedDomain["source"], MessageKey>> = {
 };
 
 // Why the domain stands where it does, in the reader's language. `stated`
-// carries the decider's own words in `note` instead.
+// carries the decider's own words in `note`; `unknown` keeps the stored sentence.
 const REASON_LABEL: Record<
-  Exclude<BlockedDomain["reason_code"], "stated" | "bulk_sender">,
+  Exclude<BlockedDomain["reason_code"], "stated" | "bulk_sender" | "unknown">,
   MessageKey
 > = {
   company_created: "blockedDomains.reason.companyCreated",
+  kept_as_company: "blockedDomains.reason.keptAsCompany",
   unevidenced: "blockedDomains.source.unevidenced",
   stale_evidence: "blockedDomains.source.staleEvidence",
   near_duplicate: "blockedDomains.source.nearDuplicate",
@@ -367,50 +368,52 @@ function reasonWords(row: BlockedDomain, t: ReturnType<typeof useT>): string {
   switch (row.reason_code) {
     case "stated":
       return row.note ?? "";
+    case "unknown":
+      return row.reason;
     case "bulk_sender":
       return t(
         row.sender_kind
           ? BULK_LABEL[row.sender_kind]
           : "blockedDomains.reason.bulkSender",
       );
-    default:
-      return REASON_LABEL[row.reason_code]
-        ? t(REASON_LABEL[row.reason_code])
-        : "";
+    default: {
+      // An older server sends no code: its English sentence beats a blank.
+      const label = REASON_LABEL[row.reason_code];
+      return label ? t(label) : row.reason;
+    }
   }
 }
 
-// Allow and Refuse owe a reason, so they open the dialog. Ask again runs at
-// once, and only on an open question: a decided domain answers it 409.
+const OPPOSITE: Record<
+  BlockedDomain["admission"],
+  { admission: Decision["admission"]; verb: MessageKey } | null
+> = {
+  admitted: { admission: "suppressed", verb: "blockedDomains.rowRefuse" },
+  suppressed: { admission: "admitted", verb: "blockedDomains.rowAdmit" },
+  undecided: null,
+};
+
+// An undecided domain offers only Ask again: nobody has grounds to decide it.
+// A decided one offers its opposite, which owes a reason in the dialog.
 function DecisionMenu({
   row,
   verbs: { revise, refusal, set, reopen },
 }: Readonly<{ row: BlockedDomain; verbs: RowVerbs }>) {
   const t = useT();
+  const opposite = OPPOSITE[row.admission];
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: row.domain })}>
-        {row.admission !== "admitted" && (
+        {opposite ? (
           <Button
             aria-haspopup="dialog"
             disabled={set.isPending}
             reasonId={refusal}
-            onClick={() => revise(row, "admitted")}
+            onClick={() => revise(row, opposite.admission)}
           >
-            {t("blockedDomains.rowAdmit")}
+            {t(opposite.verb)}
           </Button>
-        )}
-        {row.admission !== "suppressed" && (
-          <Button
-            aria-haspopup="dialog"
-            disabled={set.isPending}
-            reasonId={refusal}
-            onClick={() => revise(row, "suppressed")}
-          >
-            {t("blockedDomains.rowRefuse")}
-          </Button>
-        )}
-        {row.admission === "undecided" && (
+        ) : (
           <Button
             disabled={reopen.isPending}
             reasonId={refusal}

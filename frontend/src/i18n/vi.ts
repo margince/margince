@@ -5838,7 +5838,7 @@ export const vi = {
   "captureHealth.warn.skipped": "Lần chạy cuối bị bỏ qua",
   "captureHealth.warn.overdue": "Quá hạn",
   "captureHealth.warn.backlog": "Còn tồn đọng",
-  "captureHealth.col.pass": "Tác vụ",
+  "captureHealth.col.pass": "Lượt quét",
   "captureHealth.col.lastSuccess": "Thành công gần nhất",
   "captureHealth.col.runsEvery": "Chu kỳ chạy",
   "captureHealth.col.processed": "Đã xử lý",
@@ -5854,7 +5854,7 @@ export const vi = {
   "captureHealth.fact.pending": "Người gửi chờ kiểm tra",
   "captureHealth.fact.unsure": "Người gửi chưa kiểm tra chắc chắn được",
   "captureHealth.fact.exhausted": "Người gửi đã hết lượt thử lại",
-  "captureHealth.oldestWaited": "chờ lâu nhất {age}",
+  "captureHealth.oldestWaited": "mục cũ nhất đã chờ {age}",
   "captureHealth.contactsWaiting_one": "{count} liên hệ đang chờ",
   "captureHealth.contactsWaiting_other": "{count} liên hệ đang chờ",
   "captureHealth.threadsWaiting_one": "{count} chuỗi thư đang chờ",
@@ -6775,6 +6775,7 @@ export const vi = {
   "senders.waiting.moreAddresses_one": "+{count} địa chỉ khác",
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
+  "senders.waiting.openUnnamed": "Mở liên hệ",
   "mailSharing.title": "Chia sẻ email",
   "mailSharing.sub":
     "Mọi đồng nghiệp xem được liên hệ đều đọc được email đã thu thập. Mặc định bật, để công việc về deal được chia sẻ.",
@@ -6827,6 +6828,7 @@ export const vi = {
   "connectors.pushRenewal": "Gia hạn thông báo đẩy trước {at}",
   "connectors.notConfigured": "Bản cài đặt này chưa cấu hình thu thập thư.",
   "connectors.reconnect": "Kết nối lại",
+  "connectors.reconnectNamed": "Kết nối lại {name}",
   "connectors.disconnect": "Ngắt kết nối",
   "connectors.signatureEnrich.label": "Đọc thông tin liên hệ từ hộp thư này",
   "connectors.contextTag.label": "Thẻ cho liên hệ được tạo",
@@ -7067,6 +7069,8 @@ export const vi = {
   "blockedDomains.reopenFailed": "Không thể kiểm tra lại tên miền",
   "blockedDomains.reason.companyCreated":
     "Một đồng nghiệp đã tạo công ty với tên miền này",
+  "blockedDomains.reason.keptAsCompany":
+    "Một đồng nghiệp đã trả lời câu hỏi còn mở và giữ tên miền này là công ty",
   "blockedDomains.reason.bulkSender":
     "Thư từ tên miền này được xác định là thư hàng loạt hoặc tự động",
   "blockedDomains.reason.bulkNewsletter":
@@ -8537,7 +8541,10 @@ export const vi = {
     "Tính từ lúc trình kết nối chuyển tin nhắn cho CRM này. Không tính các mục đã bị lọc ngay tại trình kết nối, ví dụ một biểu tượng cảm xúc trong chat hay một quy tắc thư. Chỉ gồm tin nhắn; thu thập lead không hiển thị ở đây.",
   "captureActivity.filtered":
     "Đang hiển thị {shown} trên {total} {outcome} trong khoảng thời gian này.",
-  "captureActivity.openTrace": "Hiển thị mọi bước xử lý của tin nhắn này",
+  "captureActivity.openTraceFrom":
+    "Hiển thị mọi bước xử lý của tin nhắn từ {sender} lúc {at}",
+  "captureActivity.openTraceAt":
+    "Hiển thị mọi bước xử lý của tin nhắn lúc {at}",
   "captureActivity.emptyFiltered":
     "Không có dòng nào đã tải khớp. Tải thêm để xem phần còn lại của khoảng thời gian.",
   "captureActivity.loadMore": "Tải thêm",

@@ -16,6 +16,10 @@ import (
 // back as reason_code company_created.
 const claimedDomainReason = "a contact put this domain on a company they created"
 
+// KeptDomainReason is the reason keeping an open domain question records, read
+// back as reason_code kept_as_company.
+const KeptDomainReason = "Kept from the open domain question: a colleague judged this domain a company."
+
 // The stored sentence a bulk-sender refusal carries. One pair writes it and
 // reads the sender kind back, so the list names the kind in any language.
 const (
@@ -40,19 +44,29 @@ func bulkSenderKind(reason string) (crmcontracts.BlockedDomainSenderKind, bool) 
 // the reader's language. Only a reason somebody wrote travels as their words.
 func reasonCodeOf(e BlockedDomain) (crmcontracts.BlockedDomainReasonCode, *string, *crmcontracts.BlockedDomainSenderKind) {
 	if e.Admission == DomainUndecided {
-		if code := crmcontracts.BlockedDomainReasonCode(e.Source); code.Valid() {
-			return code, nil, nil
+		switch e.Source {
+		case PendingUnevidenced, PendingStaleEvidence, PendingNearDuplicate:
+			return crmcontracts.BlockedDomainReasonCode(e.Source), nil, nil
 		}
+		return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
 	}
-	switch {
-	case e.Source == AdmissionSourceVerdict:
+	switch e.Source {
+	case AdmissionSourceVerdict:
 		if kind, ok := bulkSenderKind(e.Reason); ok {
 			return crmcontracts.BlockedDomainReasonCodeBulkSender, nil, &kind
 		}
 		return crmcontracts.BlockedDomainReasonCodeBulkSender, nil, nil
-	case e.Source == AdmissionSourceHuman && e.Reason == claimedDomainReason:
-		return crmcontracts.BlockedDomainReasonCodeCompanyCreated, nil, nil
+	case AdmissionSourceHuman:
+		switch e.Reason {
+		case claimedDomainReason:
+			return crmcontracts.BlockedDomainReasonCodeCompanyCreated, nil, nil
+		case KeptDomainReason:
+			return crmcontracts.BlockedDomainReasonCodeKeptAsCompany, nil, nil
+		case "":
+			return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
+		}
+		note := e.Reason
+		return crmcontracts.BlockedDomainReasonCodeStated, &note, nil
 	}
-	note := e.Reason
-	return crmcontracts.BlockedDomainReasonCodeStated, &note, nil
+	return crmcontracts.BlockedDomainReasonCodeUnknown, nil, nil
 }

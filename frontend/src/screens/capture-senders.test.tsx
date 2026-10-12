@@ -101,6 +101,19 @@ it("opens the waiting contact from its row", async () => {
   expect(globalThis.location.hash).toContain(WAITING.contact_id);
 });
 
+// A contact with no name and no address still needs a verb that says something.
+it("names the open verb generically when the contact has no name", async () => {
+  stubRoutes([{ ...WAITING, display_name: undefined, emails: [] }]);
+
+  render(<CaptureSendersCard />);
+
+  expect(
+    await screen.findByRole("button", {
+      name: en["senders.waiting.openUnnamed"],
+    }),
+  ).toBeInTheDocument();
+});
+
 it("draws no waiting group when nothing waits", async () => {
   stubRoutes([]);
 

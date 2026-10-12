@@ -143,6 +143,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   const [openEmail, setOpenEmail] = useOpenEmail();
   const base = useId();
   const erasedId = (row: HeldThread) => `${base}-${row.thread_key}`;
+  const subjectId = (row: HeldThread) => `${base}-subject-${row.thread_key}`;
   return (
     <>
       <DataTable<HeldThread>
@@ -159,7 +160,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
             render: (row) => (
               // Three states, not two: a subject, a message that carries none,
               // and no message at all, which still governs later mail.
-              <span className="held-threads-subject">
+              <span className="held-threads-subject" id={subjectId(row)}>
                 {row.has_message ? (
                   <ThreadSubject row={row} onOpen={setOpenEmail} />
                 ) : (
@@ -198,6 +199,7 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
                 // The release endpoint works on the seat's messages on the
                 // thread, so with none left it could only answer not-found.
                 reasonId={row.has_message ? undefined : erasedId(row)}
+                aria-describedby={subjectId(row)}
                 pending={
                   release.isPending &&
                   release.variables?.threadKey === row.thread_key

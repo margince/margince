@@ -32,7 +32,7 @@ type Entry = {
 function stubBackend(
   providers: Entry[],
   allow: GrantSpec = DIAGNOSER,
-  configured: string[] = ["gemini", "openai"],
+  configured: string[] | "absent" = ["gemini", "openai"],
 ) {
   const sent: string[] = [];
   vi.stubGlobal(
@@ -44,7 +44,9 @@ function stubBackend(
       sent.push(path);
       if (path === "/me") return jsonResponse(meFixture({ allow }));
       if (path === "/ai/provider-health")
-        return jsonResponse({ configured, providers });
+        return jsonResponse(
+          configured === "absent" ? { providers } : { configured, providers },
+        );
       if (path === "/ai/provider-keys")
         return jsonResponse({
           providers: [
@@ -112,6 +114,51 @@ describe("ProviderHealthCard", () => {
     expect(
       screen.queryByText("All AI providers are answering."),
     ).not.toBeInTheDocument();
+  });
+
+  it("lists a failing provider even when none is configured here", async () => {
+    stubBackend(
+      [{ provider: "openai", health: "down", since: "2026-10-05T11:00:00Z" }],
+      DIAGNOSER,
+      [],
+    );
+    render(<ProviderHealthCard />);
+    const notice = await screen.findByTestId("ai-provider-health-openai");
+    expect(within(notice).getByText("Unreachable")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  // A server older than the `configured` field answers with failures alone.
+  it("reads a reply without the configured list as none configured", async () => {
+    stubBackend([], DIAGNOSER, "absent");
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByText(
+        "No AI provider is set up, so there is nothing to check.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("lists failures from a reply without the configured list", async () => {
+    stubBackend(
+      [
+        {
+          provider: "openai",
+          health: "degraded",
+          since: "2026-10-05T11:00:00Z",
+        },
+      ],
+      DIAGNOSER,
+      "absent",
+    );
+    render(<ProviderHealthCard />);
+    expect(
+      await screen.findByTestId("ai-provider-health-openai"),
+    ).toHaveTextContent("Degraded");
   });
 
   it.each([

@@ -218,6 +218,11 @@ describe("VoiceSamples", () => {
         "DELETE /voice-profiles/vp-1/sources/vs-1 If-Match 3",
       ]),
     );
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toMatch(
+        /^[\d,]+ of [\d,]+ words$/,
+      ),
+    );
   });
 
   it("offers no verbs to a seat that cannot edit", async () => {
@@ -234,12 +239,18 @@ describe("VoiceSamples", () => {
 });
 
 describe("VoiceHistory", () => {
-  it("badges only a version that asks something of the reader", async () => {
+  it("badges only a version that asks something of the reader, and names the active one", async () => {
     stubApi();
     render(<VoiceHistory profileId="vp-1" canEdit onChanged={() => {}} />);
 
     const active = await tableRowCells("Versions and learning", "Version 2");
-    expect(active.Status).toBeEmptyDOMElement();
+    expect(active.Status).toHaveTextContent("Active");
+    expect(active.Status.querySelector(".badge-label")).toBeNull();
+    const superseded = await tableRowCells(
+      "Versions and learning",
+      "Version 1",
+    );
+    expect(superseded.Status).toBeEmptyDOMElement();
     const candidate = await tableRowCells("Versions and learning", "Version 3");
     expect(candidate.Status).toHaveTextContent("Awaiting review");
   });
@@ -265,5 +276,26 @@ describe("VoiceHistory", () => {
     await waitFor(() =>
       expect(writes).toEqual(["POST /voice-profiles/vp-1/versions/1/rollback"]),
     );
+    await waitFor(() =>
+      expect(document.activeElement?.textContent).toBe("Versions and learning"),
+    );
+  });
+
+  it("returns focus to the menu when the rollback is called off", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<VoiceHistory profileId="vp-1" canEdit onChanged={() => {}} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Version 1" }),
+    );
+    const verb = screen.getByRole("button", { name: "Roll back to version 1" });
+    await user.click(verb);
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(verb));
   });
 });

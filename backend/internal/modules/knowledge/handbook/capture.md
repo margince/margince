@@ -11,7 +11,7 @@ page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
 There is no address to forward to and no step to copy and paste. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
-To bring in older mail, use **Import old emails** in the mailbox's **…** menu; to see what happened to one message, open **Settings → Capture activity**.
+To bring in older mail, use **Import old emails** in the mailbox's **…** (**Actions**) menu; to see what happened to one message, open **Settings → Capture activity**.
 Also called: email logging, sync email to CRM, auto-log emails.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
@@ -44,7 +44,7 @@ records that this happened, never the subject or the body.
 
 You can watch all of this in **Settings → Capture activity**, in **Last 24
 hours**. Under **Messages**, press a message's row, or its **Show every
-processing step for this message** button. **How this
+processing step** button. **How this
 message was handled** lists every step in order, each marked Done, Skipped,
 Waiting, Failed, Not applicable, or Unknown.
 
@@ -281,14 +281,14 @@ To stop Margince capturing mail from a domain or address, open **Settings → Ca
 2. In **Capture exclusions**, press **New exclusion**.
 3. Choose **Applies to** (**Your mailboxes** or **Whole company**) and the **Kind** (**Address**, **Domain**, or **Label, folder or mailbox**).
 4. Enter the value and press **Exclude**.
-It applies from the next message; captured mail stays. **Whole company** rules belong to an administrator. To take a rule back, open its **Actions** menu and choose **Remove rule**; **Undo** on the notice puts it back. **Delete matching mail** in the same menu destroys the mail the rule already matched, after a check.
+It applies from the next message; captured mail stays. **Whole company** rules belong to an administrator. To take a rule back, open its **…** (**Actions**) menu and choose **Remove rule**; **Undo** on the notice puts it back. **Delete matching mail** in the same menu destroys the mail the rule already matched, after a check.
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Connections** and find the address in **Senders**. In its **Actions** menu, choose **Mark as business** to let it back in, or **Exclude** to keep it out.
+To correct what Margince decided about a sender, open **Settings → Connections** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to keep it out.
 1. Open **Settings**, then **Connections**, and go down to **Senders**.
 2. Find the address; the **Decision** column shows what was decided.
-3. Open its **Actions** menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
+3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. **Withdraw my answer** takes back your answer. A later verdict never writes over a decision you make.
 Also called: mark as not spam, whitelist a sender.
 

@@ -170,8 +170,9 @@ it("shows when each address was declared, under the address", async () => {
 it("removes a typed address at once and declares it again through Undo", async () => {
   const user = userEvent.setup();
   const removed = vi.fn(() => new Response(null, { status: 204 }));
-  const declared = vi.fn((body: unknown) =>
-    jsonResponse(identity({ id: "oi-2", ...(body as object) }), 201),
+  // The restored row is the same address, so the reply need not echo the body.
+  const declared = vi.fn((_body: unknown) =>
+    jsonResponse(identity({ id: "oi-2" }), 201),
   );
   showing([identity({})], {
     "DELETE /capture/owner-identities/oi-1": removed,
@@ -222,4 +223,71 @@ it("asks before removing an address the product learned", async () => {
     }),
   );
   await waitFor(() => expect(removed).toHaveBeenCalledTimes(1));
+});
+
+// The removed row takes its verb with it, so focus moves on to the next one.
+it("hands focus to the next address once a typed one is gone", async () => {
+  const user = userEvent.setup();
+  const rows = [
+    identity({}),
+    identity({ id: "oi-2", value: "me@side-project.example" }),
+  ];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const next = screen.getByRole("button", {
+    name: "Remove me@side-project.example",
+  });
+  await waitFor(() => expect(document.activeElement).toBe(next));
+});
+
+// The confirm outlives its row, so it names where focus lands instead.
+it("returns focus to the add verb after a confirmed removal empties the list", async () => {
+  const user = userEvent.setup();
+  const rows = [identity({ source: "delivered_to" })];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["ownerIdentities.removeConfirm"],
+    }),
+  );
+  const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
+  await waitFor(() => expect(document.activeElement).toBe(add));
+  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
+});
+
+it("keeps the address in the confirm's title while it closes", async () => {
+  const user = userEvent.setup();
+  showing([identity({ source: "delivered_to" })]);
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const title = within(dialog).getByRole("heading");
+  await user.keyboard("{Escape}");
+  expect(title.textContent).toContain("founder@previous-employer.example");
 });

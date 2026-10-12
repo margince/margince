@@ -67,6 +67,16 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 	e.inTx(ctx, t, "claiming the domain for a company", func(tx pgx.Tx) error {
 		return admitClaimedDomainTx(ctx, tx, "claimed.example")
 	})
+	if _, err := e.store.SetDomainAdmission(ctx, "kept.example", DomainAdmitted, KeptDomainReason); err != nil {
+		t.Fatalf("keeping an open question as a company: %v", err)
+	}
+	// No writer stamps heuristic today, and the schema still admits it.
+	e.inTx(ctx, t, "recording a heuristic refusal", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO company_domain_disposition (domain, admission, admission_reason, admission_source, admission_at)
+			VALUES ('guessed.example', 'suppressed', 'looked like a mailing list', 'heuristic', now())`)
+		return err
+	})
 
 	e.withholdUnreadable(ctx, t, "hello@unevidenced.example", "unevidenced.example")
 	e.releaseQuestion(ctx, t, "unevidenced.example")
@@ -96,6 +106,8 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 		"stated.example":      crmcontracts.BlockedDomainReasonCodeStated,
 		"bulk.example":        crmcontracts.BlockedDomainReasonCodeBulkSender,
 		"claimed.example":     crmcontracts.BlockedDomainReasonCodeCompanyCreated,
+		"kept.example":        crmcontracts.BlockedDomainReasonCodeKeptAsCompany,
+		"guessed.example":     crmcontracts.BlockedDomainReasonCodeUnknown,
 		"unevidenced.example": crmcontracts.BlockedDomainReasonCodeUnevidenced,
 		"stale.example":       crmcontracts.BlockedDomainReasonCodeStaleEvidence,
 		"twin.example":        crmcontracts.BlockedDomainReasonCodeNearDuplicate,
@@ -132,15 +144,7 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 	if _, err := e.store.SetDomainAdmission(ctx, "named.example", DomainSuppressed, "Not a customer"); err != nil {
 		t.Fatalf("refusing the domain: %v", err)
 	}
-	company := ids.New[ids.CompanyKind]()
-	e.inTx(ctx, t, "settling the domain onto an owner-private company", func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO company (id, display_name, owner_id, source, captured_by, visibility)
-			VALUES ($1, 'Named Co', $2, 'capture', 'connector:gmail', 'owner')`, company, e.rep); err != nil {
-			return err
-		}
-		return adoptDispositionForCompany(ctx, tx, "named.example", company)
-	})
+	e.settleOnPrivateCompany(ctx, t, "named.example", "Named Co")
 
 	mine := e.listedByDomain(ctx, t)["named.example"]
 	if mine.CompanyId == nil || mine.CompanyName == nil || *mine.CompanyName != "Named Co" {
@@ -153,5 +157,90 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 	if theirs.CompanyId != nil || theirs.CompanyName != nil {
 		t.Errorf("the colleague's row = id %v, name %v, want both withheld for a company they may not open",
 			theirs.CompanyId, theirs.CompanyName)
+	}
+}
+
+// The open question a name twin leaves reaches its owner with the same sentence
+// the operator's list gives it once nobody owns it.
+func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
+	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
+		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "twin.example"},
+			CompanyCandidateScore{CandidateValue: "Twin", IncumbentValue: "Twin GmbH"})
+	})
+
+	backlog, err := e.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatalf("owner backlog: %v", err)
+	}
+	if len(backlog) != 1 || backlog[0].Domain != "twin.example" || backlog[0].Reason == "" {
+		t.Fatalf("owner backlog = %+v, want twin.example with the reason it was left open", backlog)
+	}
+	e.releaseQuestion(ctx, t, "twin.example")
+	if listed := e.listedByDomain(ctx, t)["twin.example"]; listed.Reason != backlog[0].Reason {
+		t.Errorf("operator list reason %q, owner backlog reason %q, want one sentence on both", listed.Reason, backlog[0].Reason)
+	}
+}
+
+// privateCompany is a company captured from the first rep's mail, which stays
+// private to them, so the second rep may not open it.
+func (e *dedupeEnv) privateCompany(ctx context.Context, t *testing.T, name string) ids.CompanyID {
+	t.Helper()
+	company := ids.New[ids.CompanyKind]()
+	e.inTx(ctx, t, "capturing an owner-private company", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO company (id, display_name, owner_id, source, captured_by, visibility)
+			VALUES ($1, $2, $3, 'capture', 'connector:gmail', 'owner')`, company, name, e.rep)
+		return err
+	})
+	return company
+}
+
+func (e *dedupeEnv) settleOnPrivateCompany(ctx context.Context, t *testing.T, domain, name string) {
+	t.Helper()
+	company := e.privateCompany(ctx, t, name)
+	e.inTx(ctx, t, "settling the domain onto the company", func(tx pgx.Tx) error {
+		return adoptDispositionForCompany(ctx, tx, domain, company)
+	})
+}
+
+// A colleague may decide a domain or re-ask its question without learning which
+// private company it sits on: each write answers with the company withheld.
+func TestADecisionAnswersWithoutACompanyTheCallerMayNotOpen(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriage(ctx, t, "hello@decided.example", "", "decided.example")
+	e.settleOnPrivateCompany(ctx, t, "decided.example", "Private Co")
+
+	mine, err := e.store.SetDomainAdmission(ctx, "decided.example", DomainSuppressed, "Not a customer")
+	if err != nil {
+		t.Fatalf("the owner's decision: %v", err)
+	}
+	if mine.CompanyID == nil || mine.CompanyName == nil {
+		t.Fatalf("the owner's read-back = id %v, name %v, want the company named", mine.CompanyID, mine.CompanyName)
+	}
+	theirs, err := e.store.SetDomainAdmission(e.asOther(), "decided.example", DomainSuppressed, "Still not a customer")
+	if err != nil {
+		t.Fatalf("the colleague's decision: %v", err)
+	}
+	if theirs.CompanyID != nil || theirs.CompanyName != nil {
+		t.Errorf("the colleague's read-back = id %v, name %v, want both withheld", theirs.CompanyID, theirs.CompanyName)
+	}
+
+	e.withholdUnreadable(ctx, t, "hello@reasked.example", "reasked.example")
+	company := e.privateCompany(ctx, t, "Elsewhere Co")
+	// No writer leaves a company on an open question, and the schema allows one.
+	e.inTx(ctx, t, "pointing the open question at the private company", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE company_domain_disposition SET company_id = $1 WHERE domain = 'reasked.example'`, company)
+		return err
+	})
+	reasked, err := e.store.ReopenWithheldDomain(e.asOther(), "reasked.example")
+	if err != nil {
+		t.Fatalf("the colleague's re-ask: %v", err)
+	}
+	if reasked.CompanyID != nil || reasked.CompanyName != nil {
+		t.Errorf("the colleague's re-ask = id %v, name %v, want both withheld", reasked.CompanyID, reasked.CompanyName)
 	}
 }

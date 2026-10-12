@@ -735,13 +735,29 @@ describe("the pipeline drill-down", () => {
     expect(list.queryByText("Dropped as internal")).not.toBeInTheDocument();
   });
 
+  // Every row's chevron would read alike, so each names its sender and time.
+  it("names each row's trace verb by the message it opens", async () => {
+    renderTab(
+      windowBody({
+        payload_capture_enabled: true,
+        data: [{ ...ROW, counterparty: "anna@kunde.example" }],
+      }),
+    );
+    await messagesTable();
+    expect(
+      screen.getByRole("button", {
+        name: /every processing step for the message from anna@kunde\.example at \S/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("opens one message's whole path from its row", async () => {
     const user = userEvent.setup();
     renderTab(windowBody());
     await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(
@@ -762,7 +778,7 @@ describe("the pipeline drill-down", () => {
     await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(await screen.findByText("Sentiment scoring")).toBeInTheDocument();
@@ -777,7 +793,7 @@ describe("the pipeline drill-down", () => {
     await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(
@@ -809,7 +825,7 @@ describe("the pipeline drill-down", () => {
     await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message from dana@acme\.test at \S/i,
       }),
     );
 
@@ -850,7 +866,7 @@ describe("the pipeline drill-down", () => {
     await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message from dana@acme\.test at \S/i,
       }),
     );
 

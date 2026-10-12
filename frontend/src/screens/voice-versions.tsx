@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
@@ -7,7 +7,8 @@ import { Button, Card, Disclosure } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { PanelBody } from "../design-system/panel";
+import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber, identifierNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
@@ -226,8 +227,7 @@ function CandidateBanner({
   );
 }
 
-// Stands straight in the builds panel so its table bleeds; the group head
-// above it names it.
+// Stands straight in the builds panel so its table bleeds, under its own group head.
 export function VoiceHistory({
   profileId,
   canEdit,
@@ -244,6 +244,9 @@ export function VoiceHistory({
   const [versionCursor, setVersionCursor] = useState<string | undefined>();
   const [allVersions, setAllVersions] = useState<VoiceProfileVersion[]>([]);
   const [restoring, setRestoring] = useState<VoiceProfileVersion | null>(null);
+  // A rolled-back version turns active and loses its menu; focus lands on the head.
+  const rolledBack = useRef(false);
+  const headingId = useId();
   const versions = useQuery({
     queryKey: ["voice-versions", profileId, versionCursor ?? ""],
     queryFn: async (): Promise<VersionsPage> => {
@@ -279,14 +282,24 @@ export function VoiceHistory({
       );
     },
     onSuccess: () => {
+      rolledBack.current = true;
       setRestoring(null);
       onChanged();
     },
   });
-  const restoringLabel = identifierNumber(restoring?.profile_version ?? 0);
+  const asked = useLastSubject(restoring);
+  const restoringLabel = identifierNumber(asked?.profile_version ?? 0);
 
   return (
     <>
+      <PanelGroupHead
+        level="h3"
+        title={
+          <span id={headingId} tabIndex={-1}>
+            {t("voice.history.label")}
+          </span>
+        }
+      />
       <QueryGate query={versions} pendingLabel={t("voice.history.label")}>
         {(page) =>
           allVersions.length === 0 ? (
@@ -313,6 +326,7 @@ export function VoiceHistory({
                   canEdit,
                   onRestore: (version) => {
                     rollback.reset();
+                    rolledBack.current = false;
                     setRestoring(version);
                   },
                 })}
@@ -354,6 +368,9 @@ export function VoiceHistory({
         pending={rollback.isPending}
         error={rollback.isError ? problemMessageOf(rollback.error, t) : null}
         onClose={() => setRestoring(null)}
+        returnFocusTo={() =>
+          rolledBack.current ? document.getElementById(headingId) : null
+        }
         onConfirm={() =>
           restoring && rollback.mutate(restoring.profile_version)
         }

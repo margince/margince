@@ -3026,10 +3026,12 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
 	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
 	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
 	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3039,6 +3041,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
 		return true
+	case BlockedDomainReasonCodeKeptAsCompany:
+		return true
 	case BlockedDomainReasonCodeNearDuplicate:
 		return true
 	case BlockedDomainReasonCodeStaleEvidence:
@@ -3046,6 +3050,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeStated:
 		return true
 	case BlockedDomainReasonCodeUnevidenced:
+		return true
+	case BlockedDomainReasonCodeUnknown:
 		return true
 	default:
 		return false
@@ -23532,7 +23538,8 @@ type AiProviderHealth struct {
 	// `providers` means every provider answers only when this list is not empty too.
 	Configured []string `json:"configured"`
 
-	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	// Providers Providers that are not answering normally, in name order. Empty when every provider
+	// in `configured` answers, and empty too when `configured` is.
 	Providers []AiProviderHealthEntry `json:"providers"`
 }
 
@@ -24751,9 +24758,10 @@ type Attention struct {
 	// CaptureHealth The reader's OWN capture connections needing the reader's hand: a mailbox
 	// wanting re-authentication, a connection in error, a sync failing, a history
 	// import that ended in error. One card per connection, carrying its worst
-	// condition; `kind` names the condition and `detail` carries the mailbox (its
-	// account label, or the provider where none was recorded). Fixing the
-	// connection lives on the capture settings screen, so the card offers no verbs.
+	// condition; `kind` names the condition, `detail` carries the account label when
+	// the connector recorded one, and `connection` names the provider and whether it
+	// is a mailbox or a calendar. Fixing the connection lives on the capture settings
+	// screen, so the card offers no verbs.
 	//
 	// Capture is per-user, so this lane is each reader's own mailboxes and nobody
 	// else's. Withheld — named in `lanes_omitted` — for a caller with no human
@@ -26157,10 +26165,14 @@ type BlockedDomain struct {
 	//
 	// - `stated`: whoever decided wrote the reason down; it travels as `note`.
 	// - `company_created`: a colleague created a company on this domain, which let it in.
+	// - `kept_as_company`: a colleague answered the domain's open question by keeping it
+	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
 	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
 	//   question, as `source` describes each one.
+	// - `unknown`: the row records a reason this server has no word for. `reason` still
+	//   carries its stored sentence.
 	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
 
 	// SenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
@@ -26184,10 +26196,14 @@ type BlockedDomainAdmission string
 //
 //   - `stated`: whoever decided wrote the reason down; it travels as `note`.
 //   - `company_created`: a colleague created a company on this domain, which let it in.
+//   - `kept_as_company`: a colleague answered the domain's open question by keeping it
+//     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
 //   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
 //     question, as `source` describes each one.
+//   - `unknown`: the row records a reason this server has no word for. `reason` still
+//     carries its stored sentence.
 type BlockedDomainReasonCode string
 
 // BlockedDomainSenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
@@ -48725,7 +48741,9 @@ type WorklistItem struct {
 	// have them, which is not the same as never.
 	Company *WorklistCompanyFacts `json:"company,omitempty"`
 
-	// Connection The connection a `capture_health` row is about, carried from the attention item. Sent only on `capture_health` rows.
+	// Connection The connection a `capture_health` row is about, carried from the attention item. Sent
+	// only on a single `capture_health` row: a folded incident's members are connections of
+	// different providers, so `batch.label` names the account they share instead.
 	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per

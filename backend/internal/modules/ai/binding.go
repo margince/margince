@@ -10,7 +10,6 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
-	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -184,9 +183,31 @@ func (r *Router) RoutingVersion() string { return r.binding().configSnapshot.Rou
 
 // providers names every provider this binding's tiers are bound to.
 func (b *binding) providers() []string {
-	seen := map[string]bool{}
-	for _, meta := range b.routeMeta {
-		seen[meta.provider] = true
+	return laneProviders(b.boundModels())
+}
+
+// boundModels maps each lane's tier to the (provider, model) it serves.
+func (b *binding) boundModels() map[Tier]ModelRef {
+	out := make(map[Tier]ModelRef, len(b.routeMeta))
+	for tier, m := range b.routeMeta {
+		out[tier] = ModelRef{Provider: m.provider, Model: m.model}
 	}
-	return slices.Sorted(maps.Keys(seen))
+	return out
+}
+
+// laneProviders names each provider the lanes bind once, in name order, and
+// never nil. A lane bound to no provider names none.
+func laneProviders(lanes map[Tier]ModelRef) []string {
+	seen := map[string]bool{}
+	for _, ref := range lanes {
+		if ref.Provider != "" {
+			seen[ref.Provider] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for provider := range seen {
+		out = append(out, provider)
+	}
+	slices.Sort(out)
+	return out
 }

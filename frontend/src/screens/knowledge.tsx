@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -90,7 +90,8 @@ function useCreateDocumentSet() {
   });
 }
 
-function useArchiveDocumentSet() {
+// `onArchived` runs before the refetch that unmounts the archived row and its dialog.
+function useArchiveDocumentSet(onArchived: () => void) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { id: string }) => {
@@ -100,7 +101,10 @@ function useArchiveDocumentSet() {
         }),
       );
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: SETS_KEY }),
+    onSuccess: () => {
+      onArchived();
+      return client.invalidateQueries({ queryKey: SETS_KEY });
+    },
   });
 }
 
@@ -127,6 +131,7 @@ export function KnowledgeCard() {
   const canSee = useCan("knowledge_corpus", "read");
   const canManage = useCanWrite("knowledge_corpus", "create");
   const query = useDocumentSets(canSee);
+  const titleId = useId();
 
   if (!canSee) {
     // Withheld, not absent: an empty card would claim the workspace has none.
@@ -143,14 +148,25 @@ export function KnowledgeCard() {
   // No empty state: every installation is filed with the shipped handbook, so
   // "no document sets yet" could only ever hide a reconciliation that failed.
   return (
-    <Panel title={t("knowledge.title")}>
+    <Panel
+      title={
+        <span id={titleId} tabIndex={-1}>
+          {t("knowledge.title")}
+        </span>
+      }
+    >
       <PanelBody>
         <PanelIntro>{t("knowledge.sub")}</PanelIntro>
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("knowledge.title")}>
         {(data) =>
           data.items.map((set) => (
-            <DocumentSet key={set.id} set={set} canManage={canManage} />
+            <DocumentSet
+              key={set.id}
+              set={set}
+              canManage={canManage}
+              afterArchive={() => document.getElementById(titleId)}
+            />
           ))
         }
       </QueryGate>
@@ -190,14 +206,24 @@ function Passages({ set }: Readonly<{ set: Corpus }>) {
 function DocumentSet({
   set,
   canManage,
-}: Readonly<{ set: Corpus; canManage: boolean }>) {
+  afterArchive,
+}: Readonly<{
+  set: Corpus;
+  canManage: boolean;
+  // The archived row and its menu leave with the refetch; focus lands here.
+  afterArchive: () => HTMLElement | null;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const archive = useArchiveDocumentSet();
+  const archived = useRef(false);
+  const archive = useArchiveDocumentSet(() => {
+    archived.current = true;
+  });
   const documentsId = useId();
+  const toggleId = useId();
   const toggle = () => setOpen((was) => !was);
   return (
     <>
@@ -223,6 +249,7 @@ function DocumentSet({
                 aria-haspopup="dialog"
                 onClick={() => {
                   archive.reset();
+                  archived.current = false;
                   setConfirming(true);
                 }}
               >
@@ -231,7 +258,7 @@ function DocumentSet({
             </OverflowMenu>
           </span>
         )}
-        <span className="knowledge-set-open">
+        <span className="knowledge-set-open" id={toggleId}>
           <IconAction
             label={t("knowledge.documentsIn", { set: set.name })}
             icon={<ChevronDown aria-hidden className="expander-chevron" />}
@@ -258,6 +285,9 @@ function DocumentSet({
             corpusId={set.id}
             setName={set.name}
             canManage={canManage}
+            afterDelete={() =>
+              document.getElementById(toggleId)?.querySelector("button") ?? null
+            }
           />
         </>
       ) : (
@@ -270,6 +300,7 @@ function DocumentSet({
         pending={archive.isPending}
         error={archive.isError ? problemMessageOf(archive.error, t) : null}
         onClose={() => setConfirming(false)}
+        returnFocusTo={() => (archived.current ? afterArchive() : null)}
         onConfirm={() =>
           archive.mutate(
             { id: set.id },

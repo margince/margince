@@ -89,6 +89,8 @@ function backendFor(
 ) {
   const posts: string[] = [];
   const deletes: string[] = [];
+  let sets = opts.sets ?? [corpus()];
+  let documents = opts.documents ?? [document()];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -98,6 +100,7 @@ function backendFor(
       }
       if (req.url.includes("/knowledge/documents/")) {
         deletes.push(req.url);
+        documents = documents.filter((doc) => !req.url.endsWith(doc.id));
         return new Response(null, { status: 204 });
       }
       if (req.url.includes("/documents")) {
@@ -105,7 +108,7 @@ function backendFor(
           posts.push(req.url);
           return jsonResponse(document({ ingest_status: "queued" }), 202);
         }
-        return jsonResponse({ items: opts.documents ?? [document()] });
+        return jsonResponse({ items: documents });
       }
       if (req.url.includes("/knowledge/corpora")) {
         if (req.method === "POST") {
@@ -114,9 +117,10 @@ function backendFor(
         }
         if (req.method === "DELETE") {
           deletes.push(req.url);
+          sets = sets.filter((set) => !req.url.endsWith(set.id));
           return new Response(null, { status: 204 });
         }
-        return jsonResponse({ items: opts.sets ?? [corpus()] });
+        return jsonResponse({ items: sets });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -290,6 +294,45 @@ describe("KnowledgeCard", () => {
     await waitFor(() => expect(backend.deletes.length).toBeGreaterThan(0));
   });
 
+  // The archived row takes its menu with it, so focus cannot go back there.
+  it("hands focus to the card's title once a set is archived", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^archive set$/i,
+      }),
+    );
+    await waitFor(() => expect(screen.queryByText("How-to")).toBeNull());
+    expect(globalThis.document.activeElement?.textContent).toBe(
+      "Document sets",
+    );
+  });
+
+  it("returns focus to the menu when the archive is called off", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    const archive = screen.getByRole("button", { name: /archive set/i });
+    await user.click(archive);
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+    await waitFor(() =>
+      expect(globalThis.document.activeElement).toBe(archive),
+    );
+  });
+
   it("keeps two files that share a name, because the server dedupes on content", async () => {
     // The client used to drop the second file whose NAME matched an earlier
     // one. The server refuses a duplicate by CHECKSUM and names the document
@@ -384,5 +427,9 @@ describe("KnowledgeCard documents", () => {
     expect(backend.deletes).toHaveLength(0);
     await user.click(dialog.getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(backend.deletes).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByText("operating.md")).toBeNull());
+    expect(globalThis.document.activeElement).toBe(
+      screen.getByRole("button", { name: "Documents in How-to" }),
+    );
   });
 });

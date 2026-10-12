@@ -350,35 +350,31 @@ func TestAGroupTakesItsScreenFromItsMembers(t *testing.T) {
 	}
 }
 
-// A folded capture incident has no title to sample, so only the connection its
-// members share lets the client name it.
-func TestAFoldedCaptureIncidentCarriesTheConnectionItsMembersShare(t *testing.T) {
-	incident := func(providers ...string) crmcontracts.WorklistItem {
-		t.Helper()
-		rows := []crmcontracts.AttentionItem{}
-		for i, provider := range providers {
-			row := item(provider+string(rune('a'+i)), "capture_health", withKind("reauth_required"))
-			cause := "capture_health:reauth_required:sales@acme.test"
-			row.CauseRef = &cause
-			row.Connection = &crmcontracts.AttentionConnectionFacts{
-				Provider: provider, Medium: crmcontracts.AttentionConnectionFactsMediumCalendar,
-			}
-			rows = append(rows, row)
-		}
-		day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
-		got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
-		if len(got) != 1 || got[0].Batch == nil {
-			t.Fatalf("four failures of one cause drew %d rows, want one incident", len(got))
-		}
-		return got[0]
+// One reader holds one connection per provider, so an incident folds providers
+// sharing an account label and medium. It names them by that label alone.
+func TestAFoldedCaptureIncidentIsNamedByItsAccountAndMedium(t *testing.T) {
+	connection := func(provider string, calendar bool) crmcontracts.AttentionItem {
+		return captureItem(CaptureConcern{
+			ConnectionID: ids.NewV7(), Kind: "reauth_required",
+			Provider: provider, AccountLabel: "sales@acme.test", Calendar: calendar,
+		})
 	}
+	rows := []crmcontracts.AttentionItem{
+		connection("gmail", false), connection("imap", false), connection("graph", false),
+		connection("gcal", true), connection("graphcal", true), connection("caldav", true),
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, CaptureHealth: &rows}
+	got := rankAll(foldRoutineDecisions(classifyDay(day, rankInstant, dayMoney{})))
 
-	shared := incident("gcal", "gcal", "gcal", "gcal")
-	if shared.Connection == nil || shared.Connection.Provider != "gcal" ||
-		shared.Connection.Medium != crmcontracts.AttentionConnectionFactsMediumCalendar {
-		t.Errorf("incident connection = %+v, want the gcal calendar every member names", shared.Connection)
+	if len(got) != 2 {
+		t.Fatalf("three mailboxes and three calendars on one account drew %d rows, want one incident each", len(got))
 	}
-	if mixed := incident("gcal", "graphcal", "gcal", "gcal"); mixed.Connection != nil {
-		t.Errorf("incident connection = %+v, want none when the members name different connections", mixed.Connection)
+	for _, incident := range got {
+		if incident.Batch == nil || incident.Batch.Label == nil || *incident.Batch.Label != "sales@acme.test" {
+			t.Errorf("incident batch = %+v, want it named by the account label", incident.Batch)
+		}
+		if incident.Connection != nil {
+			t.Errorf("incident connection = %+v, want none when the members name different providers", incident.Connection)
+		}
 	}
 }

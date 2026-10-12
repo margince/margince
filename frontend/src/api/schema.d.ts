@@ -21043,13 +21043,17 @@ export interface components {
              *
              *     - `stated`: whoever decided wrote the reason down; it travels as `note`.
              *     - `company_created`: a colleague created a company on this domain, which let it in.
+             *     - `kept_as_company`: a colleague answered the domain's open question by keeping it
+             *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
              *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
              *       question, as `source` describes each one.
+             *     - `unknown`: the row records a reason this server has no word for. `reason` still
+             *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -22450,7 +22454,10 @@ export interface components {
             rungs: components["schemas"]["AiRungHealth"][];
         };
         AiProviderHealth: {
-            /** @description Providers that are not answering normally, in name order. Empty when all are. */
+            /**
+             * @description Providers that are not answering normally, in name order. Empty when every provider
+             *     in `configured` answers, and empty too when `configured` is.
+             */
             providers: components["schemas"]["AiProviderHealthEntry"][];
             /**
              * @description Every provider the routing binds now, answering or not, in name order and in the
@@ -41994,9 +42001,10 @@ export interface components {
              * @description The reader's OWN capture connections needing the reader's hand: a mailbox
              *     wanting re-authentication, a connection in error, a sync failing, a history
              *     import that ended in error. One card per connection, carrying its worst
-             *     condition; `kind` names the condition and `detail` carries the mailbox (its
-             *     account label, or the provider where none was recorded). Fixing the
-             *     connection lives on the capture settings screen, so the card offers no verbs.
+             *     condition; `kind` names the condition, `detail` carries the account label when
+             *     the connector recorded one, and `connection` names the provider and whether it
+             *     is a mailbox or a calendar. Fixing the connection lives on the capture settings
+             *     screen, so the card offers no verbs.
              *
              *     Capture is per-user, so this lane is each reader's own mailboxes and nobody
              *     else's. Withheld — named in `lanes_omitted` — for a caller with no human
@@ -43724,7 +43732,11 @@ export interface components {
             kind?: string;
             /** @description The server's own sentence for this item, where it has one. */
             title?: string;
-            /** @description The connection a `capture_health` row is about, carried from the attention item. Sent only on `capture_health` rows. */
+            /**
+             * @description The connection a `capture_health` row is about, carried from the attention item. Sent
+             *     only on a single `capture_health` row: a folded incident's members are connections of
+             *     different providers, so `batch.label` names the account they share instead.
+             */
             connection?: components["schemas"]["AttentionConnectionFacts"];
             /**
              * @description Which underlying CONDITION this row reports, so a surface can group repeated

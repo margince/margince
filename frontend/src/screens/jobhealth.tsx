@@ -61,7 +61,8 @@ function JobKind({ kind }: Readonly<{ kind: string }>) {
   );
 }
 
-type Counted = "waiting" | "running" | "retrying" | "dead";
+const COUNTED = ["waiting", "running", "retrying", "dead"] as const;
+type Counted = (typeof COUNTED)[number];
 
 const COUNT_HEADER: Record<Counted, MessageKey> = {
   waiting: "jobs.col.waiting",
@@ -81,7 +82,7 @@ function kindColumns(
   t: Translator,
   locale: Locale,
 ): DataTableColumn<JobKindHealth>[] {
-  const counts = (Object.keys(COUNT_HEADER) as Counted[]).map(
+  const counts = COUNTED.map(
     (count): DataTableColumn<JobKindHealth> => ({
       key: count,
       header: t(COUNT_HEADER[count]),

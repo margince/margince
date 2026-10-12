@@ -28,13 +28,13 @@ export function ProviderHealthCard() {
       footer={() => null}
     >
       {({ providers, configured }) => {
-        // Healthy only says something when a provider is bound to answer.
-        if (configured.length === 0 || providers.length === 0) {
+        // The worker can report a provider this process has no binding for.
+        if (providers.length === 0) {
           return (
             <PanelBody>
               <EmptyState>
                 {t(
-                  configured.length === 0
+                  (configured ?? []).length === 0
                     ? "providerHealth.noneConfigured"
                     : "providerHealth.healthy",
                 )}

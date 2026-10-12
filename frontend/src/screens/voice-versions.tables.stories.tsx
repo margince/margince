@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { DataTable } from "../design-system/datatable";
 import { Panel } from "../design-system/panel";
@@ -153,6 +154,20 @@ export const EveryState: Story = {
       <Tables />
     </StoryProviders>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const table = await canvas.findByRole("table", {
+      name: "Versions and learning",
+    });
+    const active = within(table)
+      .getAllByRole("row")
+      .find((row) => row.textContent?.includes("Version 3"));
+    if (active === undefined) {
+      throw new Error("the active version has no row");
+    }
+    const marker = within(active).getByText("Active");
+    await expect(marker.closest(".badge-label")).toBeNull();
+  },
 };
 
 export const EveryStateAtPhoneWidth: Story = {

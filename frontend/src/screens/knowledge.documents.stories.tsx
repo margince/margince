@@ -70,6 +70,7 @@ function story(items: CorpusDocument[], canManage: boolean) {
             corpusId={SET_ID}
             setName="Operator handbook"
             canManage={canManage}
+            afterDelete={() => null}
           />
         </Panel>
       </StoryProviders>

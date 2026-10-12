@@ -5968,7 +5968,7 @@ export const de = {
   "captureHealth.col.runsEvery": "Intervall",
   "captureHealth.col.processed": "Verarbeitet",
   "captureHealth.col.state": "Status",
-  "captureHealth.col.owner": "Postfach von",
+  "captureHealth.col.owner": "Postfachinhaber",
   "captureHealth.col.contacts": "Wartende Kontakte",
   "captureHealth.col.threads": "Wartende Threads",
   "captureHealth.col.oldestWait": "Längste Wartezeit",
@@ -5979,7 +5979,7 @@ export const de = {
   "captureHealth.fact.pending": "Absender vor der Prüfung",
   "captureHealth.fact.unsure": "Absender, bei denen die Prüfung unsicher ist",
   "captureHealth.fact.exhausted": "Absender ohne verbleibende Versuche",
-  "captureHealth.oldestWaited": "längste Wartezeit {age}",
+  "captureHealth.oldestWaited": "längste Wartezeit: {age}",
   "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
   "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
   "captureHealth.threadsWaiting_one": "{count} Thread wartet",
@@ -6917,6 +6917,7 @@ export const de = {
   "senders.waiting.moreAddresses_one": "+{count} weitere",
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
+  "senders.waiting.openUnnamed": "Kontakt öffnen",
   "mailSharing.title": "Teilen von E-Mails",
   "mailSharing.sub":
     "Erfasste E-Mails sind für alle Teammitglieder lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet, damit die Arbeit an Deals geteilt werden kann.",
@@ -6971,6 +6972,7 @@ export const de = {
   "connectors.notConfigured":
     "Die E-Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
+  "connectors.reconnectNamed": "{name} neu verbinden",
   "connectors.disconnect": "Trennen",
   "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
   "connectors.contextTag.label": "Tag für angelegte Kontakte",
@@ -7216,6 +7218,8 @@ export const de = {
   "blockedDomains.reopenFailed": "Domain nicht erneut geprüft",
   "blockedDomains.reason.companyCreated":
     "Ein Teammitglied hat ein Unternehmen auf dieser Domain angelegt",
+  "blockedDomains.reason.keptAsCompany":
+    "Ein Teammitglied hat die offene Frage beantwortet und die Domain als Unternehmen behalten",
   "blockedDomains.reason.bulkSender":
     "Mails von dieser Domain wurden als Massen- oder automatische Mails eingestuft",
   "blockedDomains.reason.bulkNewsletter":
@@ -8722,8 +8726,10 @@ export const de = {
     "Gezählt ab dem Zeitpunkt, an dem ein Connector eine Nachricht an dieses CRM übergibt. Was ein Connector auf seiner eigenen Seite gefiltert hat, etwa eine Chat-Reaktion oder eine E-Mail-Regel, ist nicht enthalten. Umfasst nur Nachrichten. Die Lead-Erfassung wird hier nicht angezeigt.",
   "captureActivity.filtered":
     "Angezeigt: {shown} von {total} mit dem Ergebnis „{outcome}“ in diesem Zeitraum.",
-  "captureActivity.openTrace":
-    "Alle Verarbeitungsschritte dieser Nachricht anzeigen",
+  "captureActivity.openTraceFrom":
+    "Alle Verarbeitungsschritte der Nachricht von {sender} vom {at} anzeigen",
+  "captureActivity.openTraceAt":
+    "Alle Verarbeitungsschritte der Nachricht vom {at} anzeigen",
   "captureActivity.emptyFiltered":
     "Keine geladene Zeile passt. Lade mehr, um den Rest des Zeitraums zu sehen.",
   "captureActivity.loadMore": "Mehr laden",

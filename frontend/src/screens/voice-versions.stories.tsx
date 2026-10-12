@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Disclosure } from "../design-system/atoms";
-import { Panel, PanelGroupHead } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import {
   installFetchStub,
   jsonResponse,
@@ -89,7 +89,6 @@ function story(
     return (
       <StoryProviders>
         <Panel title="Builds">
-          <PanelGroupHead title="Versions and learning" level="h3" />
           <VoiceHistory
             profileId="vp-1"
             canEdit={canEdit}

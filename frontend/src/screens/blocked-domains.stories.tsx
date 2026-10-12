@@ -117,7 +117,7 @@ export const Populated: Story = {
 };
 
 // The row's verbs sit behind one menu at a fixed place; an open question
-// offers both decisions and a re-ask.
+// offers only a re-ask.
 export const RowMenu: Story = {
   render: story([UNEVIDENCED, BY_HUMAN], 2, OPS),
   play: async ({ canvasElement }) => {
@@ -130,6 +130,11 @@ export const RowMenu: Story = {
         name: "Ask again",
       }),
     ).toBeVisible();
+    await expect(
+      within(canvasElement.ownerDocument.body).queryByRole("button", {
+        name: "Allow",
+      }),
+    ).toBeNull();
   },
 };
 
