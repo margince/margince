@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
@@ -54,6 +55,7 @@ type importRunDTO struct {
 	Connector  string `json:"connector"`
 	Object     string `json:"object"`
 	Checkpoint int    `json:"checkpoint"`
+	Error      string `json:"error"`
 }
 
 type importDispositionDTO struct {
@@ -463,6 +465,13 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	}
 	if runs[0].Status != "failed" {
 		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
+	}
+	var failed importRunDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+runs[0].ID, nil, nil, &failed); status != http.StatusOK {
+		t.Fatalf("read the failed run → %d, want 200", status)
+	}
+	if failed.Error != migration.CauseValidationStopped {
+		t.Fatalf("error = %q, want the fixed sentence; the parser's message stays in the log", failed.Error)
 	}
 
 	// A vanished upload cannot be read at all, so it is refused before a run

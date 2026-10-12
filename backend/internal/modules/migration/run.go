@@ -407,7 +407,7 @@ func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 // record, understating a one-way cutover to the operator reading it.
 func (s *RunStore) failRun(ctx context.Context, id RunID, rep Report, cause error) error {
 	return s.transition(ctx, id, StatusFailed, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, cause.Error()); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, stopCause(cause)); err != nil {
 			return err
 		}
 		return storeReport(ctx, tx, id, rep)

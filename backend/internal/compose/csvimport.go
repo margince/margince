@@ -475,7 +475,8 @@ func (h importHandlers) ownsSource(ctx context.Context, sourceRef string) error 
 // failValidation records a dry run that could not finish, so the run it was
 // opened for does not sit in `validating` with nothing able to move it.
 func failValidation(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
-	if err := runs.FailValidation(ctx, id, cause); err != nil {
+	slog.ErrorContext(ctx, "import validation stopped", "run", id, "err", cause)
+	if err := runs.FailValidation(ctx, id); err != nil {
 		slog.ErrorContext(ctx, "recording a failed import validation", "run", id, "err", err)
 	}
 }

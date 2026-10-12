@@ -204,17 +204,17 @@ func (s *RunStore) stageTransition(ctx context.Context, id RunID, from, to strin
 	})
 }
 
-// FailValidation records a dry run that could not finish. Valid only from
-// `validating`, so it can never overwrite the outcome of a run that has since
-// been approved and committed.
-func (s *RunStore) FailValidation(ctx context.Context, id RunID, cause error) error {
+// FailValidation records a dry run that could not finish, with a fixed cause.
+// Valid only from `validating`, so it can never overwrite the outcome of a run
+// that has since been approved and committed.
+func (s *RunStore) FailValidation(ctx context.Context, id RunID) error {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE import_run SET status = $2, error = $3, updated_at = now()
-			 WHERE id = $1 AND status = $4`, id, StatusFailed, cause.Error(), StatusValidating)
+			 WHERE id = $1 AND status = $4`, id, StatusFailed, CauseValidationStopped, StatusValidating)
 		if err != nil {
 			return fmt.Errorf("failing import run %s: %w", id, err)
 		}

@@ -82,7 +82,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
 		{"Approve", func() error { _, err := s.Approve(ctx, runID); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID); return err }},
-		{"FailValidation", func() error { return s.FailValidation(ctx, runID, errors.New("boom")) }},
+		{"FailValidation", func() error { return s.FailValidation(ctx, runID) }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
 		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {

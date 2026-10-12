@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -37,8 +36,8 @@ func TestADetachedPanicFailsTheRunWithItsCause(t *testing.T) {
 	}}
 	id := migration.RunID(ids.NewV7())
 	h.runDetached(context.Background(), id, "commit", func(context.Context) error { panic("boom") })
-	if failed != id || !strings.Contains(cause, "boom") {
-		t.Fatalf("failed %v with %q; want run %v failed naming the panic", failed, cause, id)
+	if failed != id || cause != migration.CauseStopped {
+		t.Fatalf("failed %v with %q; want run %v failed with %q, the panic's text kept to the log", failed, cause, id, migration.CauseStopped)
 	}
 }
 
@@ -73,8 +72,8 @@ func TestACommitPastItsBudgetRecordsThatCauseOnALiveContext(t *testing.T) {
 		<-ctx.Done()
 		return ctx.Err()
 	})
-	if cause != importOverBudgetCause {
-		t.Fatalf("cause = %q, want %q", cause, importOverBudgetCause)
+	if cause != migration.CauseOverBudget {
+		t.Fatalf("cause = %q, want %q", cause, migration.CauseOverBudget)
 	}
 	if recordedOn != nil {
 		t.Fatalf("the failure was recorded on a context already done (%v); the write would not land", recordedOn)
