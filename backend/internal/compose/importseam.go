@@ -173,7 +173,11 @@ func (i importSeam) ReadReport(
 // in the installation's language.
 func (i importSeam) DescribeFormat(ctx context.Context) (crmcontracts.ImportFormat, error) {
 	door := i.door()
-	return buildImportFormat(ctx, door.db, installationLanguage(door.db.Pool())(ctx), door.uploadLimitMB())
+	limitMB, err := door.uploadLimitMB()
+	if err != nil {
+		return crmcontracts.ImportFormat{}, err
+	}
+	return buildImportFormat(ctx, door.db, installationLanguage(door.db.Pool())(ctx), limitMB)
 }
 
 // ProfileFiles zips the files and profiles the ZIP as an upload is. Each

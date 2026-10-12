@@ -32,7 +32,12 @@ func (h importHandlers) GetImportFormat(w http.ResponseWriter, r *http.Request, 
 	if params.Lang != nil {
 		lang = textlang.Lang(*params.Lang)
 	}
-	f, err := buildImportFormat(r.Context(), h.db, lang, h.uploadLimitMB())
+	limitMB, err := h.uploadLimitMB()
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	f, err := buildImportFormat(r.Context(), h.db, lang, limitMB)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -40,9 +45,14 @@ func (h importHandlers) GetImportFormat(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, f)
 }
 
-// uploadLimitMB is the upload ceiling in whole MB, as the format states it.
-func (h importHandlers) uploadLimitMB() int {
-	return int(h.uploadLimit >> 20)
+// uploadLimitMB is the upload ceiling in whole MB, as the format states it. A
+// format with no ceiling would tell the reader nothing may be uploaded, so it
+// is refused as the upload is.
+func (h importHandlers) uploadLimitMB() (int, error) {
+	if h.uploadLimit <= 0 {
+		return 0, errUploadLimitUnset
+	}
+	return int(h.uploadLimit >> 20), nil
 }
 
 // buildImportFormat is the format for this workspace in one language. It

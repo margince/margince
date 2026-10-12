@@ -23,7 +23,12 @@ import (
 // language. It is built whole before the first byte, so a failure is answered.
 func (h importHandlers) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 	lang := installationLanguage(h.db.Pool())(r.Context())
-	f, err := buildImportFormat(r.Context(), h.db, lang, h.uploadLimitMB())
+	limitMB, err := h.uploadLimitMB()
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	f, err := buildImportFormat(r.Context(), h.db, lang, limitMB)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
