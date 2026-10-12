@@ -14,6 +14,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
@@ -139,11 +140,18 @@ func heldMarker(ctx context.Context, task crmcontracts.Activity) string {
 }
 
 // heldByAnother reports whether a named colleague, and not the reader, holds
-// this task. A call carrying no user (an agent reading through a passport)
-// claims nobody's work as its own.
+// this task.
+//
+// An agent claims nobody's work as its own. A passport carries its granting
+// human's UserID, so comparing ids would answer about that human and the
+// phrasing would call their task "ours". auth.RequireHuman is what tells the
+// two apart, which a check for a non-zero id does not.
 func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 	if task.AssigneeId == nil {
 		return false
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return true
 	}
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {

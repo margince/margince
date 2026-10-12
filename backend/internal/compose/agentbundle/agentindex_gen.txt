@@ -20,7 +20,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /contacts/{id}` | updateContact | Update a contact (partial). | Change records | at once |
 | `DELETE /contacts/{id}` | archiveContact | Archive (soft-delete) a contact. | Change records | at once |
 | `POST /contacts/{id}/merge` | mergeContact | Merge this contact into a target (non-lossy). | Change records | at once |
+| `GET /contacts/{id}/360` | getContact360 | The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance. | Read records | at once |
 | `GET /contacts/{id}/consent/guard` | getContactConsentGuard | May we write to this contact right now — per purpose and channel, with the reason. | Read records | at once |
+| `GET /contacts/{id}/graph` | getContactGraph | Who around this contact could open a door, and through whom. | Read records | at once |
 | `GET /contacts/{id}/access` | getContactAccess | Who can open this contact and who can change it, and why. | Read records | at once |
 | `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | Read records | at once |
 | `GET /email-signature-template` | getEmailSignatureTemplate | The workspace's signature template. | Read records | at once |

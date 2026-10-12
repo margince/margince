@@ -351,6 +351,35 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/360:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getContact360
+      summary: The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
+      description: |-
+        The contact half of the one-composite-read doctrine, assembled inside ONE
+        workspace transaction so the sections describe one consistent moment rather than a
+        stack of independently-timed round trips. `as_of` stamps that moment; the isolation
+        level is Read Committed, so a write committed mid-read may land in a later section —
+        the stamp is what makes that honest rather than hidden.
+      parameters:
+        - name: project_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: >-
+            Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
+      responses:
+        '200':
+          description: The contact's 360 view.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Contact360'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/consent/guard:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -369,6 +398,27 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ContactConsentGuard'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/graph:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getContactGraph
+      summary: Who around this contact could open a door, and through whom.
+      description: |-
+        The local graph answers one question a rep actually asks: *who here can introduce me,
+        and what is the evidence they really know them?* It is not a picture of the whole
+        network — a diagram of everything answers nothing.
+      responses:
+        '200':
+          description: The local graph.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ContactGraph'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -9432,6 +9482,244 @@ components:
         that the legal set is identical everywhere, which is false. The registry refuses a
         name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
         live set.
+    ProviderConnectionMode:
+      type: string
+      enum: [automatic_on_create, on_demand]
+    ProviderPreset:
+      type: string
+      description: |-
+        A named shortcut the connected provider's descriptor declares. Presentation convenience only: the resolved
+        per-category choices are authoritative, and the descriptor validates the value, so a second
+        provider may declare different presets without a contract change.
+    ProviderCategorySelection:
+      type: object
+      description: |-
+        Resolved per-category choices, keyed by the connected provider's declared category
+        vocabulary. A key the provider does not offer is
+        rejected; at least one selected category is required. Keys are not enumerated here because
+        they belong to the provider, not to the contract.
+      minProperties: 1
+      additionalProperties: {type: boolean}
+    ProviderPoolBudget:
+      type: object
+      description: |-
+        Ceilings for one of the provider's credit pools (Surfe meters `email` and `mobile`
+        separately). Reservation is atomic per connection per pool.
+      properties:
+        monthly_ceiling: {type: [integer, 'null'], minimum: 0}
+        pause_below_balance: {type: [integer, 'null'], minimum: 0}
+    ProviderConfiguration:
+      type: object
+      required:
+        - mode
+        - preset
+        - automatic_individual_create
+        - automatic_import
+        - categories
+      properties:
+        mode: {$ref: '#/components/schemas/ProviderConnectionMode'}
+        preset: {$ref: '#/components/schemas/ProviderPreset'}
+        automatic_individual_create:
+          type: boolean
+          default: true
+          deprecated: true
+          description: 'IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`.'
+        automatic_import:
+          type: boolean
+          default: false
+          deprecated: true
+          description: >-
+            IGNORED. Superseded by `automatic_lookup` on `/integrations/settings`. It once held connector-created contacts back because each purchase spent credits; an automatic run now buys only what costs nothing, so the two cases stopped differing.
+        categories: {$ref: '#/components/schemas/ProviderCategorySelection'}
+        refresh_after_days: {type: [integer, 'null'], minimum: 1}
+        daily_run_limit: {type: [integer, 'null'], minimum: 1}
+        budgets:
+          type: object
+          description: Per-pool ceilings keyed by the provider's declared credit pools.
+          additionalProperties: {$ref: '#/components/schemas/ProviderPoolBudget'}
+    ProviderRun:
+      type: object
+      required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        subject_kind:
+          type: string
+          enum: [contact]
+          description: |-
+            The kind of record this run enriches, drawn from the canonical EntityType vocabulary. Only `contact` is supported today; the matching typed id field below is
+            populated for that kind.
+        contact_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            Populated when `subject_kind` is `contact`, and null otherwise.
+        provider: {$ref: '#/components/schemas/Provider'}
+        trigger:
+          type: string
+          enum: [automatic_create, automatic_import, automatic_backfill, scheduled_refresh, manual]
+          description: |-
+            What asked for this run. `automatic_backfill` is the catch-up sweep reaching a
+            contact that existed before the provider was connected, or that no run has covered
+            yet; like the other automatic triggers it buys only the categories that cost
+            nothing.
+        state: {type: string, enum: [queued, submitting, in_progress, completed, no_match, skipped, submission_unknown, failed, cancelled]}
+        skip_reason:
+          type: [string, 'null']
+          enum: [budget_exhausted, low_balance, suppressed, not_eligible, duplicate_subject_candidate, rate_limited, already_fresh, no_identifiers, category_in_flight, null]
+          description: |-
+            Why a `skipped` run sent nothing. Null for every other state.
+            `duplicate_subject_candidate` means the subject looked like a duplicate of an
+            already-enriched record, so no provider call was made.
+            `rate_limited` means the connection's daily run ceiling was already reached. `already_fresh` means a completed run for this subject is newer
+            than the connection's refresh window, so an automatic trigger declined to buy
+            the same data twice — nothing failed and no budget was consumed.
+            `no_identifiers` means the contact carries neither a profile link nor a name with
+            a company, so the provider has nothing to match on; an automatic trigger declines
+            rather than spending a call that can only answer "no match". A human pressing the
+            button on the contact is still allowed to try.
+            `category_in_flight` means a live run for this contact and provider was already
+            buying at least one of the categories asked for. The request is refused whole
+            rather than narrowed, nothing was reserved, and asking again once that run has
+            finished is admitted.
+        connection_version: {type: integer, format: int64, minimum: 1}
+        configuration_snapshot: {$ref: '#/components/schemas/ProviderConfiguration'}
+        requested_categories: {type: array, uniqueItems: true, items: {type: string}}
+        reservations:
+          type: array
+          description: Maximum credits held per pool before submission, reconciled to actual spend on a terminal result.
+          items:
+            type: object
+            required: [pool, reserved_credits]
+            properties:
+              pool: {type: string}
+              reserved_credits: {type: integer, minimum: 0}
+              actual_credits: {type: [integer, 'null'], minimum: 0}
+        claims_unwritten:
+          type: boolean
+          default: false
+          description: |-
+            True when a paid terminal result could not be handed to the owning domain within the bounded retry. The spend is real and the claims are absent; an
+            operator sees the gap rather than discovering it as missing data.
+        applied:
+          type: boolean
+          default: false
+          description: |-
+            True once this run's answers have been OFFERED to the contact's own record — every
+            field the record left empty is filled, and the rest were already answered. It says
+            the folding HAPPENED, not that anything moved: a run whose values the record
+            already held reports `applied` with nothing changed, because for a client waiting
+            to re-read, "we tried and there is nothing more coming" is the same fact.
+        submitted_at: {type: [string, 'null'], format: date-time}
+        completed_at: {type: [string, 'null'], format: date-time}
+        safe_status_code:
+          type: [string, 'null']
+          description: Closed product reason only; never a provider body or contact value.
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    ContactProviderEmail:
+      type: object
+      required: [value]
+      properties:
+        value: {type: string, format: email}
+        email_type:
+          type: [string, 'null']
+          enum: [professional, personal, null]
+          description: May be classified from the frozen requested cascade when Surfe omits `emailType`.
+        email_type_source:
+          type: [string, 'null']
+          enum: [provider, requested_cascade, null]
+          description: Prevents a request-context label from masquerading as a provider-returned type.
+        validation_status:
+          type: [string, 'null']
+          description: "Surfe's returned validation status, displayed without relabelling every value ‘verified’."
+    ContactProviderPhone:
+      type: object
+      required: [value]
+      properties:
+        value: {type: string}
+        confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
+    ContactProviderEmployment:
+      type: object
+      properties:
+        company_name: {type: [string, 'null']}
+        company_domain: {type: [string, 'null']}
+        job_title: {type: [string, 'null']}
+    ContactProviderJobHistory:
+      type: object
+      required: [company_name]
+      properties:
+        company_name: {type: string}
+        job_title: {type: [string, 'null']}
+        started_at: {type: [string, 'null'], format: date-time}
+        ended_at: {type: [string, 'null'], format: date-time}
+        linkedin_url: {type: [string, 'null'], format: uri}
+    ContactProviderProfile:
+      type: object
+      description: |-
+        One connected provider's snapshot for the Contact360 response, named by `provider`.
+        Provider provenance is not an underlying webpage citation; these values never silently
+        overwrite canonical fields. The reader sees one of these per connection, so every value
+        on the page says who was paid for it.
+      required: [provider, state, categories_not_requested, emails, mobile_phones, job_history, departments, seniorities]
+      properties:
+        state:
+          type: string
+          description: >-
+            Why this provider's section reads the way it does. `nothing_to_look_up` is its own state rather than a kind of `not_eligible`: nothing forbids the purchase, the record simply carries no profile link and no company, so the provider has nothing to match on. The reader's next step is to add one of those, which is the next step for no other state here.
+          enum: [not_connected, not_eligible, nothing_to_look_up, never_run, queued, in_progress, completed, no_match, stale, invalid_credentials, insufficient_credits, rate_limited, provider_error, submission_unknown, completed_claims_unwritten]
+        provider:
+          description: >-
+            Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid.
+          allOf: [{$ref: '#/components/schemas/Provider'}]
+        retrieved_at: {type: [string, 'null'], format: date-time}
+        safe_status_code: {type: [string, 'null']}
+        categories_not_requested: {type: array, uniqueItems: true, items: {type: string}}
+        categories_asked:
+          type: array
+          uniqueItems: true
+          description: >-
+            What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
+          items: {type: string}
+        categories_without_answer:
+          type: array
+          uniqueItems: true
+          description: >-
+            What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something.
+          items: {type: string}
+        emails: {type: array, items: {$ref: '#/components/schemas/ContactProviderEmail'}}
+        mobile_phones: {type: array, items: {$ref: '#/components/schemas/ContactProviderPhone'}}
+        linkedin_url: {type: [string, 'null'], format: uri}
+        current_employment: {$ref: '#/components/schemas/ContactProviderEmployment'}
+        job_history: {type: array, items: {$ref: '#/components/schemas/ContactProviderJobHistory'}}
+        location: {type: [string, 'null']}
+        city: {type: [string, 'null']}
+        region:
+          type: [string, 'null']
+          description: |-
+            Geographic state/province as the provider returned it.
+        country: {type: [string, 'null']}
+        departments: {type: array, items: {type: string}}
+        seniorities: {type: array, items: {type: string}}
+        attributes:
+          type: array
+          description: >-
+            The location, departments and seniorities, one entry per distinct value, each dated by the run that last reported it. Runs replace the location and add to the other two, so the profile's own `retrieved_at` would misdate every value an older run reported. Never copied into the contact's address.
+          items: {$ref: '#/components/schemas/ContactProviderAttribute'}
+        latest_run: {$ref: '#/components/schemas/ProviderRun'}
+        contributing_runs:
+          type: array
+          description: |-
+            Every retained completed run whose claims contribute to this snapshot. Normally the
+            single latest run; after a merge it spans both sides so purchased values stay visible
+            rather than merely stored.
+          items: {$ref: '#/components/schemas/ProviderRun'}
+    ContactProviderAttribute:
+      type: object
+      required: [kind, value, retrieved_at]
+      properties:
+        kind: {type: string, enum: [location, department, seniority]}
+        value: {type: string}
+        retrieved_at: {type: string, format: date-time, description: When the run that last reported this value retrieved it.}
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
@@ -10606,6 +10894,15 @@ components:
         In what capacity somebody handles the invoice: `recipient` (it is addressed to
         them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
         One contact may hold several, and each is a separate edge.
+    BillingCompany:
+      type: object
+      description: One company a contact handles invoices for — the same edge read from the contact's end.
+      required: [relationship_id, company_id, company_name, role]
+      properties:
+        relationship_id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        role: {$ref: '#/components/schemas/BillingContactRole'}
     Company360:
       type: object
       description: |-
@@ -10771,6 +11068,65 @@ components:
             The company node's resolved logo (A55), same value `Company.logo_url` carries.
             Absent on a company with no resolved logo and on every contact or deal node —
             a client draws the node's monogram or its token-coloured circle instead.
+    ContactProfileField:
+      type: object
+      description: |-
+        One enriched field with the evidence it was read from. Evidence-or-omit: a row
+        exists only where a verbatim snippet was captured. A phone is a list, so a contact
+        has one `phone` row per number, told apart by `value_key`; every other field has at
+        most one row.
+      required: [field, value, evidence_snippet, source, captured_by, captured_at]
+      properties:
+        field: {type: string, enum: [title, phone, role, linkedin, company_name, address, website]}
+        value: {type: string}
+        value_key:
+          type: string
+          description: |-
+            What tells two rows of one field apart: the E.164 number for a `phone` row, empty
+            for every other field. Pass it to the restore to name which number to undo.
+        superseded_value:
+          type: [string, 'null']
+          description: |-
+            What this field held before a newer statement replaced it. The contact's own
+            signature or business card, carrying a later date than the value on record,
+            replaces what is older than it — including a value a colleague typed, because a
+            number stated last week outranks one typed in March. For a phone it is the older
+            number of the same country this number replaced; a number a newer statement
+            simply leaves out is kept, not replaced. Present only where something was
+            actually replaced, and it is what the undo control restores.
+        superseded_observed_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the replaced value was itself stated, so a reader can see which of the two is older.
+        observed_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            When the source stated this value: the mail's own date, rather than when the pass read it. Recency is judged on this, so a re-delivered old message cannot outrank a
+            recent one.
+        evidence_snippet:
+          type: string
+          description: The verbatim source text the value was read from, so the reader can check the claim against its own source.
+        source_ref:
+          type: [string, 'null']
+        confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
+        source: {type: string, description: "The channel that produced it, e.g."}
+        captured_by:
+          type: string
+          description: "`agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says \"corrected by you\"."
+        captured_at: {type: string, format: date-time}
+        claim_key:
+          type: string
+          description: >-
+            The stable identity of this field as a claim. Pass it to `POST /ai/feedback` as `claim_path` to correct or confirm the value — keyed on WHICH field, so the verdict survives the value being re-derived.
+        verdict:
+          type: string
+          description: >-
+            What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
+          enum: [corrected, suppressed, confirmed]
+        verdict_note:
+          type: [string, 'null']
+          description: Why, in the human's own words, when they gave a reason.
     EmploymentImportItem:
       type: object
       required: [key, provider, company_name, role, employment_status, state]
@@ -10795,6 +11151,48 @@ components:
         warnings: {type: array, items: {type: string}, description: Retained evidence that requires administrator review.}
         contact_id: {type: string, format: uuid}
         items: {type: array, items: {$ref: '#/components/schemas/EmploymentImportItem'}}
+    Contact360Employment:
+      type: object
+      description: One employment edge, current primary first.
+      required: [relationship_id, company_id, is_current_primary]
+      properties:
+        version: {$ref: '#/components/schemas/RowVersion'}
+        relationship_id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        company_name: {type: [string, 'null']}
+        role:
+          type: [string, 'null']
+          description: The title as the edge records it, which may differ from the contact's own title field.
+        is_current_primary: {type: boolean}
+        employment_status: {type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.'}
+        started_precision: {type: string, enum: [day, month]}
+        ended_precision: {type: string, enum: [day, month]}
+        started_at: {type: [string, 'null'], format: date-time}
+        ended_at: {type: [string, 'null'], format: date-time, description: Missing date; consult employment_status. Historical roles retain their own rows.}
+    Contact360DealRole:
+      type: object
+      description: One stakeholder seat this contact holds on a deal.
+      required: [relationship_id, deal_id, role]
+      properties:
+        relationship_id: {type: string, format: uuid}
+        deal_id: {type: string, format: uuid}
+        deal_title: {type: [string, 'null']}
+        deal_stage: {type: [string, 'null']}
+        role:
+          type: string
+          description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."
+    Contact360SinceLastVisit:
+      type: object
+      description: |-
+        What changed on this contact since the caller last acknowledged seeing them.
+        Read-only: the 360 never advances the baseline — `POST /contacts/{id}/view-ack` does.
+      required: [new_activities]
+      properties:
+        baseline_at:
+          type: [string, 'null']
+          format: date-time
+          description: The caller's last acknowledged visit, or null if they have never acknowledged one (first visit — counts run from the contact's whole history).
+        new_activities: {type: integer, minimum: 0}
     Company360LastContact:
       type: object
       required: [at, kind, activity_id]
@@ -10804,6 +11202,290 @@ components:
           type: string
           enum: [email, call, meeting, message]
         activity_id: {type: string, format: uuid}
+    Contact360:
+      type: object
+      description: |-
+        The contact record page in one payload. Every section except `contact` is
+        optional: absent means the caller lacks its grant, and `sections_omitted` names it.
+      required: [as_of, contact, sections_omitted]
+      properties:
+        as_of:
+          type: string
+          format: date-time
+          description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
+        contact: {$ref: '#/components/schemas/Contact'}
+        scope:
+          $ref: '#/components/schemas/ProjectScope'
+          description: The project this was narrowed to, when the request named one.
+        last_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+        dead_addresses:
+          type: array
+          items: {type: string}
+          description: >-
+            The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
+        last_outbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+        sections_omitted:
+          type: array
+          description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
+          items:
+            type: string
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles]
+        strength: {$ref: '#/components/schemas/RelationshipStrength'}
+        billing_roles:
+          type: array
+          description: >-
+            The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed.
+          items: {$ref: '#/components/schemas/BillingCompany'}
+        projects:
+          type: array
+          description: >-
+            The unarchived projects this contact is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`.
+          items: {$ref: '#/components/schemas/Company360Project'}
+        provider_profiles:
+          type: array
+          description: >-
+            The purchased contact-data snapshots, one per CONNECTED provider: what each returned about this contact, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the contact grant, named in `sections_omitted` as `provider_profile`.
+          items: {$ref: '#/components/schemas/ContactProviderProfile'}
+        relationship_changes:
+          type: array
+          description: >-
+            What CHANGED about this relationship, most consequential first — derived at read from the contact's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
+          items: {$ref: '#/components/schemas/ContactRelationshipChange'}
+        moment:
+          description: >-
+            The ONE thing this contact needs today, selected server-side by the fixed ladder in `ContactMoment.rule`. Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
+          allOf: [{$ref: '#/components/schemas/ContactMoment'}]
+        commercial:
+          description: >-
+            The open deal this contact sits on, with the money on it and who else is in the room. Absent when the caller has no deal grant (`sections_omitted`: `commercial`); present with `deal` null when they have the grant and there is no open deal — "no open deal" and "you may not see deals" are different facts.
+          allOf: [{$ref: '#/components/schemas/Contact360Commercial'}]
+        next_meeting:
+          description: >-
+            The soonest booked meeting with this contact, or absent. Read through the contact's own activity-link predicate — the company's next-meeting read answers a different question and would name a meeting this contact is not in.
+          allOf: [{$ref: '#/components/schemas/Contact360NextMeeting'}]
+        claims:
+          type: array
+          description: >-
+            What was promised, asked and decided in captured conversations — one store behind the commitments card and the what-matters card, which differ only by kind. Every claim carries the activity it was read from and the verbatim snippet, so a reader can check it rather than trust it.
+          items: {$ref: '#/components/schemas/ConversationClaim'}
+        conversation_memory:
+          type: array
+          description: >-
+            Threads and meetings as ENTITIES, condensed — what the conversation was about, not the transport events it was made of. The Activity tab remains the complete raw ledger; a summary never replaces it and never leaks a withheld activity.
+          items: {$ref: '#/components/schemas/ConversationMemoryEntry'}
+        network:
+          type: object
+          description: The colleagues who know this contact, warmest first — who to ask.
+          required: [colleagues]
+          properties:
+            colleagues: {type: array, items: {$ref: '#/components/schemas/ContactNetworkColleague'}}
+        employments:
+          type: object
+          required: [data, page]
+          properties:
+            data: {type: array, items: {$ref: '#/components/schemas/Contact360Employment'}}
+            page: {$ref: '#/components/schemas/PageInfo'}
+        deal_roles:
+          type: object
+          required: [data, page]
+          properties:
+            data: {type: array, items: {$ref: '#/components/schemas/Contact360DealRole'}}
+            page: {$ref: '#/components/schemas/PageInfo'}
+        activities:
+          type: object
+          required: [data, page]
+          properties:
+            data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
+            page: {$ref: '#/components/schemas/PageInfo'}
+        next_steps:
+          type: object
+          description: Open tasks filed against this contact.
+          required: [data, page]
+          properties:
+            data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
+            page: {$ref: '#/components/schemas/PageInfo'}
+        consent:
+          type: object
+          description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
+          required: [state]
+          properties:
+            state: {type: array, items: {$ref: '#/components/schemas/ContactConsentState'}}
+        profile_fields:
+          type: array
+          description: The enrichment evidence sidecar — same rows as `GET /contacts/{id}/profile-fields`.
+          items: {$ref: '#/components/schemas/ContactProfileField'}
+        since_last_visit: {$ref: '#/components/schemas/Contact360SinceLastVisit'}
+    Contact360Commercial:
+      type: object
+      description: |-
+        The commercial context around this contact: the open deal that matters most, the money
+        on it, their recorded seat, and who else is in the room.
+      required: [committee]
+      properties:
+        deal:
+          description: The most relevant open deal, or null when there is none to show.
+          allOf: [{$ref: '#/components/schemas/Contact360CommercialDeal'}]
+        role:
+          type: [string, 'null']
+          description: This contact's recorded buying role on that deal — champion, economic_buyer, blocker, influencer, user by convention.
+        committee:
+          type: array
+          description: >-
+            The other stakeholders on the same deal, with their recorded roles. Capped: past a handful this is a company chart, and the question it answers is "who else do I have to convince". Empty means single-threaded, which is itself the finding.
+          maxItems: 8
+          items: {$ref: '#/components/schemas/Contact360CommitteeMember'}
+    Contact360CommercialDeal:
+      type: object
+      description: One open deal, with the figures a reader needs before a meeting.
+      required: [deal_id, title]
+      properties:
+        deal_id: {type: string, format: uuid}
+        title: {type: string}
+        stage: {type: [string, 'null']}
+        amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: >-
+            The deal value in the currency's MINOR units, as every money field on this API is carried. A renderer divides by the ISO 4217 scale; nothing here pre-rounds.
+        currency:
+          type: [string, 'null']
+          description: ISO 4217 code for `amount_minor`. Null exactly when the amount is null.
+        close_date: {type: [string, 'null'], format: date}
+        next_milestone:
+          type: [string, 'null']
+          description: The nearest dated thing on this deal — the next step or stage gate, when one is recorded.
+    Contact360CommitteeMember:
+      type: object
+      description: One other contact on the same deal, and the seat they hold.
+      required: [contact_id, full_name, role]
+      properties:
+        contact_id: {type: string, format: uuid}
+        full_name: {type: string}
+        role:
+          type: string
+          description: |-
+            The stakeholder's recorded buying role, EMPTY where the seat records
+            none: a deal_stakeholder may be seated without one, since the schema
+            requires a role only for billing_contact. A client that treats this as
+            a label to show should check it before showing it.
+        photo_url:
+          type: [string, 'null']
+          description: Where to stream their portrait, or null — the client draws the deterministic monogram.
+    Contact360NextMeeting:
+      type: object
+      description: |-
+        The soonest booked meeting with this contact. Absent means either none is booked or the
+        caller cannot read meetings — `sections_omitted` is what separates the two.
+      required: [activity_id, starts_at]
+      properties:
+        activity_id: {type: string, format: uuid}
+        starts_at: {type: string, format: date-time}
+        subject: {type: [string, 'null']}
+        linked_deal_id: {type: [string, 'null'], format: uuid}
+        participants:
+          type: array
+          description: Who is in the room, so the reader knows whether they are single-threaded before they walk in.
+          maxItems: 8
+          items:
+            type: object
+            required: [contact_id, full_name]
+            properties:
+              contact_id: {type: string, format: uuid}
+              full_name: {type: string}
+    ConversationClaimKind:
+      type: string
+      description: |-
+        The eight kinds one extraction mechanism produces. They share a
+        lifecycle — extracted → cited → correctable → dismissible — and differ only here.
+      enum: [commitment_ours, commitment_theirs, open_question, decision, priority, objection, success_criterion, decision_process]
+    ConversationClaim:
+      type: object
+      description: |-
+        One thing said in a captured conversation, with the evidence it was read from.
+      required: [id, kind, body, source_activity_id, source_quote, status, needs_review]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {$ref: '#/components/schemas/ConversationClaimKind'}
+        body:
+          type: string
+          description: What the claim says, in the reader's language. The verbatim evidence is `source_quote`, beside it.
+        source_activity_id: {type: string, format: uuid}
+        source_quote:
+          type: string
+          description: The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written.
+        source_label:
+          type: [string, 'null']
+          description: How to name the source in a chip — the thread subject or the meeting title.
+        occurred_at: {type: [string, 'null'], format: date-time}
+        status:
+          type: string
+          description: '`open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.'
+          enum: [open, done, dismissed]
+        due_at: {type: [string, 'null'], format: date-time}
+        needs_review:
+          type: boolean
+          description: >-
+            Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
+        corrected_at:
+          type: [string, 'null']
+          format: date-time
+          description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
+        task_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
+    ConversationMemoryEntry:
+      type: object
+      description: |-
+        One thread or meeting, condensed to what it was about.
+      required: [key, channel, direction, title, summary, occurred_at, activity_count]
+      properties:
+        key:
+          type: string
+          description: The thread key, or the activity id for a meeting or a standalone message that has none.
+        channel:
+          type: string
+          enum: [email, meeting, call, note, message]
+        channel_provider:
+          allOf: [{$ref: '#/components/schemas/ProviderRef'}]
+          nullable: true
+          description: |-
+            Which transport carried the thread — non-null exactly when `channel=message`. A renderer that printed `channel` alone used to get the provider
+            name for free; it must now read both, or a Telegram thread and a Dispact thread
+            become indistinguishable.
+        direction:
+          type: string
+          description: Which way the LAST message in the thread went. `internal` for a meeting or note that has no direction.
+          enum: [inbound, outbound, internal]
+        title: {type: string}
+        summary:
+          type: string
+          description: One sentence about what the conversation was, not what it contained.
+        generated_by: {$ref: '#/components/schemas/WrittenBy'}
+        occurred_at: {type: string, format: date-time}
+        activity_count:
+          type: integer
+          minimum: 1
+          description: How many captured activities this entry folds, so the reader knows whether it is one message or a long exchange.
+        status:
+          type: [string, 'null']
+          description: >-
+            The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
+          enum: [replied, unanswered, awaiting_them, null]
+        linked_deal_id: {type: [string, 'null'], format: uuid}
+        first_activity_id:
+          type: string
+          format: uuid
+          description: What "expand to original" opens.
     MeetingBrief:
       type: object
       description: |-
@@ -11124,6 +11806,182 @@ components:
         note:
           type: [string, 'null']
           description: The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record.
+    ContactGraph:
+      type: object
+      description: The local graph around one contact — nodes, the edges between them, and the route worth taking.
+      required: [contact_id, nodes, edges, groups_omitted]
+      properties:
+        contact_id: {type: string, format: uuid}
+        nodes:
+          type: array
+          description: Everyone in the picture, including the contact themselves as the anchor.
+          items: {$ref: '#/components/schemas/ContactGraphNode'}
+        edges:
+          type: array
+          description: Who has actually corresponded with whom. An edge exists only where interactions do.
+          items: {$ref: '#/components/schemas/ContactGraphEdge'}
+        route:
+          $ref: '#/components/schemas/ContactGraphRoute'
+        routes:
+          type: array
+          description: >-
+            Every way in worth offering, best first, so a reader can take the second one when the first is unavailable. `route` is `routes[0]` — the singular field is the same recommendation and stays for callers that only ever wanted the one.
+          items: {$ref: '#/components/schemas/ContactGraphRouteCandidate'}
+        groups_omitted:
+          type: array
+          description: Groups withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
+          items:
+            type: string
+            enum: [direct, account]
+        dropped_count:
+          type: object
+          description: >-
+            How many nodes each group lost to its cap, stated rather than silently truncated. `account` is the true remainder. `direct` counts from a bounded fetch (100), so on a contact more than a hundred colleagues have corresponded with it understates — a shape far outside what this card is for, and making it exact would cost every ordinary read.
+          properties:
+            direct: {type: integer}
+            account: {type: integer}
+            peer:
+              type: integer
+              description: Counts from a bounded fetch, like `direct` — an understatement past the fetch width, stated rather than exact because exactness would cost every ordinary read.
+    ContactGraphNode:
+      type: object
+      required: [id, type, group, label]
+      properties:
+        id:
+          type: string
+          description: Stable within this response, and what an edge refers to. `user:<uuid>` or `contact:<uuid>`.
+        type:
+          type: string
+          enum: [colleague, contact]
+        group:
+          type: string
+          description: '`anchor` is the contact this graph is about. `direct` knows them. `account` works with them. `peer` is another external contact observed on the same captured activities.'
+          enum: [anchor, direct, account, peer]
+        label: {type: string}
+        sublabel:
+          type: string
+          description: Their role or employer, when the record carries one.
+        contact_id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        suggest_edge:
+          type: boolean
+          description: |-
+            On `peer` nodes only: the pair shares enough recent activities to be
+            worth recording (the server applies the evidence floor) and no live
+            `works_with` relationship exists between the anchor and this peer yet. A suggestion is a READ — nothing is staged
+            or written until a human posts the relationship themselves. Absent
+            when the caller lacks the relationship read grant, because saying
+            "not yet recorded" would disclose what is.
+    ContactGraphEdge:
+      type: object
+      description: One corresponding pair, with the evidence the graph is allowed to disclose.
+      required: [from, to, strength_bucket, interactions_90d]
+      properties:
+        from: {type: string, description: A node id.}
+        to: {type: string, description: A node id.}
+        strength_bucket:
+          type: string
+          enum: [none, weak, moderate, strong]
+        interactions_90d: {type: integer}
+        inbound_90d: {type: integer}
+        outbound_90d: {type: integer}
+        last_at: {type: [string, 'null'], format: date-time}
+        receipts:
+          type: array
+          maxItems: 3
+          description: >-
+            The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
+          items: {$ref: '#/components/schemas/ContactGraphReceipt'}
+    ContactGraphReceipt:
+      type: object
+      required: [activity_id, occurred_at, kind]
+      properties:
+        activity_id: {type: string, format: uuid}
+        subject: {type: [string, 'null']}
+        occurred_at: {type: string, format: date-time}
+        kind:
+          type: string
+          enum: [email, call, meeting, note, task, message]
+          description: |-
+            What the receipt is evidence OF. The graph counts attendees and organizers as well
+            as correspondents, so a meeting is as much a receipt here as a mail — and a citation
+            that drew every one of them as an email would tell a reader a meeting was one.
+    ContactGraphRoute:
+      type: object
+      description: |-
+        The warmest way in, chosen deterministically rather than scored by a model: the
+        strongest direct relationship if one exists, otherwise the strongest relationship any
+        colleague has with someone else at the same company.
+      required: [via_user_id, via_display_name, why]
+      properties:
+        via_user_id: {type: string, format: uuid}
+        via_display_name: {type: string}
+        through_contact_id:
+          type: string
+          format: uuid
+          description: Set when the route goes via a colleague at the same company rather than the contact directly.
+        through_display_name: {type: string}
+        why:
+          type: string
+          description: The proof line, written from the counts — "6 two-way exchanges · replied 2 days ago".
+    ContactGraphRouteCandidate:
+      type: object
+      description: |-
+        One way in, with the facts behind it and whether it can be asked for today.
+      required: [route_id, route_type, via_user_id, via_display_name, evidence, availability]
+      properties:
+        route_id:
+          type: string
+          description: >-
+            Stable within this response, for selecting a route in a client. `direct:<user>` or `through:<user>:<contact>`. A write names the parts it means rather than parsing this back apart.
+        route_type:
+          $ref: '#/components/schemas/ContactGraphRouteType'
+        via_user_id: {type: string, format: uuid}
+        via_display_name: {type: string}
+        through_contact_id:
+          type: string
+          format: uuid
+          description: Set when the route goes via someone else at the contact's company.
+        through_display_name: {type: string}
+        strength_bucket:
+          type: string
+          enum: [none, weak, moderate, strong]
+        evidence:
+          $ref: '#/components/schemas/ContactGraphRouteEvidence'
+        receipts:
+          type: array
+          maxItems: 3
+          description: >-
+            The messages behind a `direct` candidate, each individually visibility-checked. Absent on an indirect candidate for the reason the edge itself carries no rows: the counts are disclosable where the correspondence is not.
+          items: {$ref: '#/components/schemas/ContactGraphReceipt'}
+        availability:
+          $ref: '#/components/schemas/ContactGraphRouteAvailability'
+    ContactGraphRouteType:
+      type: string
+      description: >-
+        `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
+      enum: [direct, through_contact]
+    ContactGraphRouteAvailability:
+      type: string
+      description: >-
+        Whether a route can be asked for now. `already_requested` means an open ask exists, `declined` that this colleague has refused this contact before, and `unavailable` that the seat can no longer carry it.
+      enum: [available, already_requested, declined, unavailable]
+    ContactGraphRouteEvidence:
+      type: object
+      description: >-
+        The counts behind a route, as facts rather than a sentence. The prose is written by the client, because this server speaks one language and the product speaks three.
+      required: [interactions_90d, two_way]
+      properties:
+        interactions_90d: {type: integer}
+        inbound_90d: {type: integer}
+        outbound_90d: {type: integer}
+        two_way:
+          type: boolean
+          description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
+        last_at: {type: [string, 'null'], format: date-time}
+        days_since_last:
+          type: [integer, 'null']
+          description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
     ContactMoment:
       type: object
       description: |-
@@ -11253,6 +12111,34 @@ components:
           additionalProperties: {type: string}
           description: >-
             What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
+    ContactRelationshipChange:
+      type: object
+      description: |-
+        One thing that happened to a relationship, with the evidence for it.
+      required: [kind, at]
+      properties:
+        kind:
+          type: string
+          description: >-
+            `replied_after_gap` — they answered after a long silence, the strongest buy-signal captured data alone can produce. `went_quiet` — an established relationship stopped. A band move is reported; a point drift is not, because the score decays continuously and reporting that would fire on every read.
+          enum: [replied_after_gap, went_quiet, warmed, cooled]
+        at:
+          type: string
+          format: date-time
+          description: >-
+            When it happened — the reply's own timestamp, or the last touch of a relationship that went quiet. For a band move this is the read instant: a band move is observed, not dated.
+        days:
+          type: integer
+          description: >-
+            The span the change is about: the silence a reply broke, or how long a quiet relationship has been quiet. Absent for a band move.
+        from_bucket:
+          type: string
+          description: Band moves only.
+          enum: [none, weak, moderate, strong]
+        to_bucket:
+          type: string
+          description: The band it holds now. Band moves only.
+          enum: [none, weak, moderate, strong]
     ContactNetworkColleague:
       type: object
       description: One colleague's own relationship with this contact.
