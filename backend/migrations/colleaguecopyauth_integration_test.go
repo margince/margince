@@ -108,8 +108,8 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 }
 
 // settledByCopy is what a copy left behind while it read as the colleague's
-// answer: the colleague stamped as its sender, a request settled through it,
-// and that request's reminders completed, one of them by a human.
+// answer. The colleague is stamped as its sender, and a request was settled
+// through it. That request's two reminders are done, one of them by a human.
 type settledByCopy struct {
 	copyID, colleague, request, machineReminder, humanReminder string
 }
