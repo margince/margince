@@ -120,7 +120,10 @@ export const RowMenu: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /^Actions for Gmail/ }),
     );
-    await canvas.findByRole("button", { name: "Import old emails" });
+    // The menu's items are portalled out of the canvas.
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Import old emails",
+    });
   },
 };
 

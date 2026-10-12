@@ -52,15 +52,13 @@
 @media (max-width: 640px) {
   .settinglist-records > .settingrow:has(.connector-head) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
-    gap: var(--space-2);
   }
-  .settingrow:has(.connector-head) > .settingrow-control,
-  .settingrow:has(.connector-head) .connector-actions {
+  .settingrow:has(.connector-head) > .settingrow-control {
     display: contents;
   }
-  .settingrow:has(.connector-head) .connector-reconnect {
+  .connector-reconnect {
     grid-row: 2;
     grid-column: 1 / -1;
     justify-self: start;

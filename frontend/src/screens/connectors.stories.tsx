@@ -166,10 +166,11 @@ export const ImportOldEmails: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /^Actions for Gmail/ }),
     );
+    const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Import old emails" }),
+      await page.findByRole("button", { name: "Import old emails" }),
     );
-    await within(canvasElement.ownerDocument.body).findByRole("dialog");
+    await page.findByRole("dialog");
   },
 };
 

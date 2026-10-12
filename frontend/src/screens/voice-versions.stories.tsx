@@ -53,6 +53,8 @@ const DELTA = {
   created_at: "2026-08-12T09:15:00Z",
 };
 
+const LAST_PAGE = { next_cursor: null, has_more: false };
+
 const LEARNING = {
   drafted: 6,
   accepted: 2,
@@ -69,8 +71,10 @@ function stub(
 ) {
   installFetchStub({
     "GET /me": meRoute({ voice_profile: ["read", "update"] }),
-    "GET /voice-profiles/vp-1/versions": () => jsonResponse({ data: versions }),
-    "GET /voice-profiles/vp-1/deltas": () => jsonResponse({ data: deltas }),
+    "GET /voice-profiles/vp-1/versions": () =>
+      jsonResponse({ data: versions, page: LAST_PAGE }),
+    "GET /voice-profiles/vp-1/deltas": () =>
+      jsonResponse({ data: deltas, page: LAST_PAGE }),
     "GET /voice-profiles/vp-1/learning": () => jsonResponse(LEARNING),
   });
 }

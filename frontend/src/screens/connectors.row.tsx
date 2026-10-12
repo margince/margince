@@ -90,7 +90,7 @@ export function ConnectorRow({
         }
         description={<ConnectorCaption conn={conn} />}
         control={
-          <span className="connector-actions">
+          <>
             {needsReconnect(conn) && (
               <Button
                 className="connector-reconnect"
@@ -100,30 +100,32 @@ export function ConnectorRow({
                 <RefreshCw aria-hidden /> {t("connectors.reconnect")}
               </Button>
             )}
-            <span className="cell-actions">
-              <OverflowMenu label={t("table.rowActions", { name: identity })}>
-                {canImport && (
+            <span className="connector-actions">
+              <span className="cell-actions">
+                <OverflowMenu label={t("table.rowActions", { name: identity })}>
+                  {canImport && (
+                    <Button
+                      aria-haspopup="dialog"
+                      onClick={() => setImporting(true)}
+                    >
+                      {t("backfill.title")}
+                    </Button>
+                  )}
                   <Button
+                    variant="danger"
                     aria-haspopup="dialog"
-                    onClick={() => setImporting(true)}
+                    onClick={onDisconnect}
                   >
-                    {t("backfill.title")}
+                    {t("connectors.disconnect")}
                   </Button>
-                )}
-                <Button
-                  variant="danger"
-                  aria-haspopup="dialog"
-                  onClick={onDisconnect}
-                >
-                  {t("connectors.disconnect")}
-                </Button>
-              </OverflowMenu>
+                </OverflowMenu>
+              </span>
+              <RowOpen
+                label={t("connectors.openNamed", { name: identity })}
+                onOpen={() => setOpened(true)}
+              />
             </span>
-            <RowOpen
-              label={t("connectors.openNamed", { name: identity })}
-              onOpen={() => setOpened(true)}
-            />
-          </span>
+          </>
         }
       />
       {connectError && (

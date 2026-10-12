@@ -5,11 +5,10 @@
  * then the row menu and the chevron at a fixed place. */
 .knowledge-set {
   display: grid;
-  /* The coverage sentence wraps in its own column so the name keeps its width. */
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 16rem) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   grid-template-areas: "name documents passages menu open";
   align-items: center;
-  column-gap: var(--space-4);
+  column-gap: var(--space-3);
 }
 .knowledge-set-name {
   grid-area: name;
@@ -19,8 +18,10 @@
   grid-area: documents;
   text-align: end;
 }
+/* Capped, so the coverage reason wraps and the name takes the spare width. */
 .knowledge-set-passages {
   grid-area: passages;
+  max-width: 13rem;
 }
 .knowledge-set-menu {
   grid-area: menu;
@@ -42,5 +43,8 @@
   }
   .knowledge-set-documents {
     text-align: start;
+  }
+  .knowledge-set-passages {
+    max-width: none;
   }
 }

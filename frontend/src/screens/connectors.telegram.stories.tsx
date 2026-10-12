@@ -92,7 +92,9 @@ export const BotMenu: Story = {
         name: "Actions for @acme_sales_bot",
       }),
     );
-    await canvas.findByRole("button", { name: "Replace token" });
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Replace token",
+    });
   },
 };
 
