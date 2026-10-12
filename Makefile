@@ -1805,7 +1805,7 @@ sbom-check:
 
 # SBOM_GATE_ATTEMPTS is how many times the scan-and-judge pair may run before a
 # denial is believed. Three: enough that two independent registry failures have
-# to coincide, few enough that a real denial costs six minutes rather than an
+# to coincide, few enough that a real denial costs three scans rather than an
 # afternoon.
 SBOM_GATE_ATTEMPTS ?= 3
 
