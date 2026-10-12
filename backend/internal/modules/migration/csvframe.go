@@ -4,8 +4,8 @@
 package migration
 
 // How a delimited file is framed. Spreadsheet apps write two things csv.Reader
-// does not expect: Excel's "CSV UTF-8" starts with a byte-order mark, and Excel
-// in a locale that uses the comma for decimals separates fields with ';'.
+// does not expect. Excel's "CSV UTF-8" starts with a byte-order mark. Excel in
+// a locale with a decimal comma separates fields with ';'.
 
 import (
 	"bufio"
