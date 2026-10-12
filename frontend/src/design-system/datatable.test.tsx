@@ -375,8 +375,8 @@ it("hides a folded heading and an empty cell by clipping, never by display", () 
   const css = datatableCss();
   const fold = css.slice(css.indexOf("@container table-fold"));
   expect(fold).toContain(".table-scroll-fold > .table > thead,");
-  expect(fold).toContain(
-    ':is(:empty:not([data-fold="lead"]), [data-fold="hide"])',
+  expect(fold).toMatch(
+    /:is\(\s*:empty:not\(\[data-fold="lead"\], \[data-fold="trail"\]\),\s*\[data-fold="hide"\]\s*\)/,
   );
   expect(fold).toContain("clip-path: inset(50%);");
   // `folded` swaps a figure for its phrase, and only one of the two may be heard.
@@ -541,15 +541,29 @@ it("points the toggle at the caller's element when nothing opens under the row",
   expect(document.querySelector(".datatable-detail")).toBeNull();
 });
 
-it("keeps a folded row's toggle at the end of its first line", () => {
-  render(<CallLog fold />);
+// A row with nothing to open keeps the toggle's empty slot. A control before
+// it then ends on the edge it ends on in the rows that open.
+it("keeps the toggle's place at the end of a folded row's first line, opening or not", () => {
+  render(
+    <CallLog fold detail={{ ...TRACE, has: (call) => call.id === "a" }} />,
+  );
   const toggle = screen.getByRole("button", { name: "Show Triage" });
-  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("end");
+  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("trail");
+  const slot = screen.getByTestId("call-b").lastElementChild;
+  expect(slot?.childElementCount).toBe(0);
+  expect(slot?.getAttribute("data-fold")).toBe("trail");
   expect(
     screen
       .getByRole("columnheader", { name: "Detail" })
       .querySelector(".sr-only"),
   ).not.toBeNull();
+});
+
+it("lets the toggle column fold away where no row has anything to open", () => {
+  render(<CallLog fold detail={{ ...TRACE, has: () => false }} />);
+  expect(
+    screen.getByTestId("call-a").lastElementChild?.getAttribute("data-fold"),
+  ).toBe("end");
 });
 
 it("names the table itself, whether or not its box scrolls", () => {
@@ -611,7 +625,9 @@ function Ladder({
   onOpen,
   fold,
   detail,
+  busy,
 }: Readonly<{
+  busy?: boolean;
   onReorder?: (keys: string[]) => void;
   onOpen?: (stage: Stage) => void;
   fold?: boolean;
@@ -620,6 +636,7 @@ function Ladder({
   const [stages, setStages] = useState(STAGES);
   const reorder: DataTableReorder<Stage> = {
     header: "Order",
+    busy,
     can: (stage) => !stage.closing,
     labels: {
       handle: (stage, position, count) =>
@@ -717,6 +734,24 @@ it("never opens a row from its grip, nor from the release that ends a carry", as
   expect(onOpen).toHaveBeenCalledWith(STAGES[3]);
 });
 
+it("never opens a row from a press that carried nothing, cancelled or refused", async () => {
+  const user = userEvent.setup();
+  const onOpen = vi.fn();
+  const { rerender } = render(<Ladder onOpen={onOpen} />);
+  carry("Move Discovery, 2 of 3");
+  fireEvent.keyDown(globalThis.window, { key: "Escape" });
+  fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+  fireEvent.click(screen.getByText("Discovery"));
+  rerender(<Ladder onOpen={onOpen} busy />);
+  const grip = screen.getByRole("button", { name: "Move Proposal, 3 of 3" });
+  fireEvent.pointerDown(grip, { pointerId: 2, button: 0 });
+  fireEvent.pointerUp(globalThis.window, { pointerId: 2 });
+  fireEvent.click(screen.getByText("Proposal"));
+  expect(onOpen).not.toHaveBeenCalled();
+  await user.click(screen.getByText("Won"));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
 it("keeps the grip at the start of a folded row's first line, on every row", () => {
   render(<Ladder fold />);
   const places = (id: string) =>
@@ -728,7 +763,7 @@ it("keeps the grip at the start of a folded row's first line, on every row", () 
   const css = datatableCss();
   const fold = css.slice(css.indexOf("@container table-fold"));
   expect(fold).toMatch(
-    /> tr > \[data-fold="lead"\] \{\s*flex: none;\s*min-inline-size: var\(--controlHeight\);\s*min-block-size: var\(--controlHeight\);/,
+    /> :is\(\[data-fold="lead"\], \[data-fold="trail"\]\) \{\s*flex: none;\s*min-inline-size: var\(--controlHeight\);\s*min-block-size: var\(--controlHeight\);/,
   );
 });
 

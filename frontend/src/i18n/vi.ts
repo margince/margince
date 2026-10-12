@@ -6325,8 +6325,8 @@ export const vi = {
     "Chưa có giai đoạn thắng hoặc thua. Thêm một giai đoạn mới thuộc loại đó.",
   "stage.orderHint":
     "Kéo giai đoạn bằng tay nắm, hoặc đặt tiêu điểm vào tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
-  "stage.handle": "Di chuyển {name}, vị trí {position} trên {total}",
-  "stage.moved": "{name} giờ ở vị trí {position} trên {total}",
+  "stage.handle": "Di chuyển {name}, bước {position} trên {total}",
+  "stage.moved": "{name} giờ ở bước {position} trên {total}",
   "stage.lowerThanAbove": "Thấp hơn {name} ({reading}) ở trên",
   "stage.oddsOf": "Xác suất thắng của {name}",
   "stage.noneOpen": "Chưa có giai đoạn đang mở",
@@ -6361,8 +6361,6 @@ export const vi = {
   "stage.criteria.unreadable":
     "Tải lại trước khi thay đổi; danh sách có thể chưa đầy đủ.",
   "stage.criteria.none": "Chưa có tiêu chí rời giai đoạn nào.",
-  "stage.criteria.terminal":
-    "Giai đoạn thắng hoặc thua là giai đoạn cuối, nên không có tiêu chí rời giai đoạn.",
   "stage.criteria.add": "Thêm tiêu chí",
   "stage.criteria.key": "Khóa",
   "stage.criteria.keyHint":

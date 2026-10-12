@@ -9,13 +9,13 @@
 // draws and never reaches for the catalog around it.
 
 import { ArrowDown, Lock } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { PanelBody, PanelGroupHead, PanelIntro } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
 import { Meter } from "../design-system/readings";
 import { StageStrip } from "../design-system/stagestrip";
@@ -187,7 +187,7 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
 }
 
 /** The ladder's shape at a glance, above the table that edits it. */
-export function StageFlow({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
+function StageFlow({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -223,7 +223,14 @@ export function StageLadderEditor({
   const canRemove = useCanWrite("pipeline", "delete") && !pipeline.archived_at;
   const ladder = ladderOf(pipeline);
   const open = ladder.filter((stage) => stage.semantic === "open");
-  const removal = useStageRemoval(ladder);
+  const head = useRef<HTMLSpanElement>(null);
+  const removal = useStageRemoval(
+    ladder,
+    () =>
+      document.querySelector<HTMLElement>(
+        `[data-testid="new-stage-${pipeline.id}"]`,
+      ) ?? head.current,
+  );
   const [adding, setAdding] = useState<Stage | null>(null);
   const added = useLastSubject(adding);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -247,7 +254,11 @@ export function StageLadderEditor({
     <>
       <PanelGroupHead
         level="h3"
-        title={label}
+        title={
+          <span ref={head} tabIndex={-1}>
+            {label}
+          </span>
+        }
         action={writable && <StageCreate pipeline={pipeline} />}
       />
       {ladder.length === 0 ? (
@@ -276,7 +287,6 @@ export function StageLadderEditor({
               <StageExitCriteria
                 stageId={stage.id}
                 stageName={stage.name}
-                semantic={stage.semantic}
                 canEdit={writable}
               />
             ),
@@ -328,8 +338,35 @@ export function StageLadderEditor({
   );
 }
 
+/**
+ * What stands above the ladder: why a retired one is read-only, how to order
+ * it, and its shape. Bare holds the strip alone, which a phone does not draw.
+ */
+export function StageLadderIntro({
+  pipeline,
+  canEdit,
+  hintId,
+}: Readonly<{ pipeline: Pipeline; canEdit: boolean; hintId: string }>) {
+  const t = useT();
+  const retired = Boolean(pipeline.archived_at);
+  const hinted = ordersStages(pipeline, canEdit);
+  return (
+    <PanelBody
+      className={retired || hinted ? "pipeline-flow" : "pipeline-flow is-bare"}
+    >
+      {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
+      {hinted && (
+        <PanelIntro>
+          <span id={hintId}>{t("stage.orderHint")}</span>
+        </PanelIntro>
+      )}
+      <StageFlow pipeline={pipeline} />
+    </PanelBody>
+  );
+}
+
 /** Whether the ladder takes the arrow-key order hint: a writer, and two open stages to swap. */
-export function ordersStages(pipeline: Pipeline, canEdit: boolean): boolean {
+function ordersStages(pipeline: Pipeline, canEdit: boolean): boolean {
   const open = ladderOf(pipeline).filter((stage) => stage.semantic === "open");
   return canEdit && !pipeline.archived_at && open.length > 1;
 }

@@ -211,7 +211,7 @@ function useDisclosure<Row>(
     header: detail.header,
     headerHidden: true,
     align: "end",
-    fold: "end",
+    fold: rows.some(has) ? "trail" : "end",
     render: (row) =>
       has(row) && (
         <IconAction
@@ -277,9 +277,9 @@ export type DataTableColumn<Row> = Readonly<{
   // grows is named rather than left to the browser's guess.
   grow?: boolean;
   // Where the cell goes when a `fold` table folds. "hide" leaves sight but is
-  // still read, so it must not hold a control. "lead" keeps its width before
-  // the title, empty or not, so every title starts on one edge.
-  fold?: "title" | "end" | "hide" | "lead";
+  // still read, so it must not hold a control. "lead" and "trail" keep their
+  // width empty or not, so every title and every last control sits on one edge.
+  fold?: "title" | "end" | "hide" | "lead" | "trail";
   /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
   folded?: (row: Row) => ReactNode | undefined;
 }>;
@@ -323,7 +323,7 @@ function foldTitle<Row>(columns: DataTableColumn<Row>[]): string | undefined {
 function foldPlace<Row>(
   column: DataTableColumn<Row>,
   title: string | undefined,
-): "title" | "end" | "hide" | "lead" | "rest" {
+): Exclude<DataTableColumn<Row>["fold"], undefined> | "rest" {
   if (column.key === title) {
     return "title";
   }

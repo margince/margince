@@ -28,7 +28,7 @@ import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
-import { ordersStages, StageFlow, StageLadderEditor } from "./settings.stages";
+import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
 import { ladderOf, str } from "./settings.stageverbs";
 import "./settings.pipelines.css";
 
@@ -298,7 +298,6 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const retired = Boolean(pipeline.archived_at);
   const retireBlockedId = useId();
   const hintId = useId();
-  const hinted = ordersStages(pipeline, canEdit);
   return (
     <Panel
       title={pipeline.name}
@@ -334,20 +333,7 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
         </span>
       }
     >
-      {/* Bare holds the strip alone, which a phone does not draw. */}
-      <PanelBody
-        className={
-          retired || hinted ? "pipeline-flow" : "pipeline-flow is-bare"
-        }
-      >
-        {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
-        {hinted && (
-          <PanelIntro>
-            <span id={hintId}>{t("stage.orderHint")}</span>
-          </PanelIntro>
-        )}
-        <StageFlow pipeline={pipeline} />
-      </PanelBody>
+      <StageLadderIntro pipeline={pipeline} canEdit={canEdit} hintId={hintId} />
       <StageLadderEditor
         pipeline={pipeline}
         canEdit={canEdit}

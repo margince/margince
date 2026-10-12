@@ -130,7 +130,10 @@
     > .table
     > tbody
     > tr
-    > :is(:empty:not([data-fold="lead"]), [data-fold="hide"]),
+    > :is(
+      :empty:not([data-fold="lead"], [data-fold="trail"]),
+      [data-fold="hide"]
+    ),
   .table-scroll-fold > .table > tbody > tr > td:has(> .sr-only:only-child) {
     position: absolute;
     inline-size: 1px;
@@ -172,7 +175,11 @@
   .table-scroll-fold [data-fold="title"] {
     flex: 1 1 0%;
   }
-  .table-scroll-fold > .table > tbody > tr > [data-fold="lead"] {
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > :is([data-fold="lead"], [data-fold="trail"]) {
     flex: none;
     min-inline-size: var(--controlHeight);
     min-block-size: var(--controlHeight);
@@ -182,7 +189,7 @@
   .table-scroll-fold > .table.is-sorting > tbody > tr.is-lifted > td {
     background: transparent;
   }
-  .table-scroll-fold [data-fold="end"] {
+  .table-scroll-fold :is([data-fold="end"], [data-fold="trail"]) {
     flex: none;
     order: 1;
   }

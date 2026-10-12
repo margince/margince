@@ -4,7 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { Badge, Button, EmptyState, SectionHeader, TableScroll } from "./atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+  SectionHeader,
+  TableScroll,
+} from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Meter } from "./readings";
@@ -719,7 +726,26 @@ function StageLadder() {
             render: (stage) => `${stage.odds}%`,
             folded: (stage) => `${stage.odds}% win odds`,
           },
+          {
+            key: "verbs",
+            header: "Actions",
+            headerHidden: true,
+            fold: "end",
+            render: (stage) => (
+              <OverflowMenu label={`Actions for ${stage.name}`}>
+                <Button>Edit</Button>
+              </OverflowMenu>
+            ),
+          },
         ]}
+        detail={{
+          header: "Exit criteria",
+          toggleLabel: (stage) => `Show exit criteria for ${stage.name}`,
+          has: (stage) => !stage.closing,
+          render: (stage) => (
+            <p>{`Leave ${stage.name} once the buyer agrees.`}</p>
+          ),
+        }}
         reorder={{
           header: "Order",
           hintId: "ladder-hint",
@@ -761,9 +787,15 @@ export const Reorderable: Story = {
     await expect(
       canvas.getByRole("button", { name: "Move Proposal, step 4 of 4" }),
     ).toHaveFocus();
-    await expect(canvas.getByTestId("stage-p").nextElementSibling).toBe(
-      canvas.getByTestId("stage-w"),
-    );
+    const order = [...canvasElement.querySelectorAll("tbody tr[data-testid]")];
+    await expect(order.map((row) => row.getAttribute("data-testid"))).toEqual([
+      "stage-q",
+      "stage-d",
+      "stage-n",
+      "stage-p",
+      "stage-w",
+      "stage-l",
+    ]);
   },
 };
 
@@ -773,7 +805,8 @@ export const ReorderableDark: Story = {
 };
 
 // Folded at a phone's width, the grip stays at the start of line one. A fixed
-// row's empty grip cell holds its title on the same edge.
+// row's empty grip cell holds its title on the same edge. Its empty toggle slot
+// holds its menu on the edge of the menus on rows that open.
 export const ReorderablePhone: Story = {
   render: () => <StageLadder />,
   globals: { viewport: { value: "phone" } },
@@ -796,5 +829,10 @@ export const ReorderablePhone: Story = {
     await expect(gripBox.top).toBeLessThan(name?.bottom ?? 0);
     await expect(gripBox.width).toBe(32);
     await expect(title("w")?.left).toBe(name?.left);
+    const menuEnd = (stage: string) =>
+      canvas
+        .getByRole("button", { name: `Actions for ${stage}` })
+        .getBoundingClientRect().right;
+    await expect(menuEnd("Won")).toBe(menuEnd("Qualified"));
   },
 };

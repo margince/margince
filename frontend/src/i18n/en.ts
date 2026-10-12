@@ -6636,8 +6636,6 @@ export const en = {
   "stage.criteria.unreadable":
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
-  "stage.criteria.terminal":
-    "A won or lost stage is final, so it has no exit criteria.",
   "stage.criteria.add": "Add criterion",
   "stage.criteria.key": "Key",
   "stage.criteria.keyHint":

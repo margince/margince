@@ -6,10 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { expect, userEvent, within } from "storybook/test";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel } from "../design-system/panel";
 import { unwrap } from "./common";
 import { SETTINGS_PIPELINES } from "./settings.pipelineorder";
-import { StageLadderEditor } from "./settings.stages";
+import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
 import "./settings.pipelines.css";
 import {
   installFetchStub,
@@ -156,14 +156,11 @@ function LiveLadder({
   }
   return (
     <Panel title={pipeline.name}>
-      <PanelBody>
-        <PanelIntro>
-          <span id={HINT_ID}>
-            Drag a stage by its handle, or focus the handle and press the up or
-            down arrow.
-          </span>
-        </PanelIntro>
-      </PanelBody>
+      <StageLadderIntro
+        pipeline={pipeline}
+        canEdit={canEdit}
+        hintId={HINT_ID}
+      />
       <StageLadderEditor
         pipeline={pipeline}
         canEdit={canEdit}
@@ -286,7 +283,15 @@ export const EditablePhone: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("table", { name: "Stages" });
+    const table = await canvas.findByRole("table", { name: "Stages" });
+    const row = within(table).getByTestId(`stage-${DISCOVERY.id}`);
+    const title = row.querySelector('[data-fold="title"]');
+    const rest = row.querySelector('[data-fold="rest"]');
+    await expect(title).not.toBeNull();
+    await expect(rest).not.toBeNull();
+    await expect(rest?.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      title?.getBoundingClientRect().bottom ?? Number.POSITIVE_INFINITY,
+    );
     const root = canvasElement.ownerDocument.documentElement;
     await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
   },

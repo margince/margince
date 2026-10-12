@@ -184,7 +184,7 @@ func TestAStageCountsItsLiveExitCriteriaOnEveryRead(t *testing.T) {
 	}
 }
 
-func TestAStageCountsTheLiveDealsTheCallerMaySee(t *testing.T) {
+func TestAStageCountsItsLiveDealsForASeatThatReadsDeals(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
@@ -200,15 +200,13 @@ func TestAStageCountsTheLiveDealsTheCallerMaySee(t *testing.T) {
 		t.Fatalf("removing the occupied stage: %v, want stage_occupied", err)
 	}
 	seat := func(objects map[string]principal.ObjectGrant) context.Context {
-		return e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
-			RoleKeys: []string{"custom"}, Objects: objects, RowScope: principal.RowScopeOwn,
-		})
+		return e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{RoleKeys: []string{"custom"}, Objects: objects})
 	}
 	readsDeals := seat(map[string]principal.ObjectGrant{"pipeline": {Read: true}, "deal": {Read: true}})
 	for stage, want := range map[ids.StageID]int{open: occupied.Count, won: 0} {
 		for read, got := range stageReads(readsDeals, t, e, pipeline, stage) {
 			if got.DealCount == nil || *got.DealCount != want {
-				t.Errorf("%s: an own-scope seat reads deal_count %s on %q, want %d", read, countText(got.DealCount), got.Name, want)
+				t.Errorf("%s: deal_count %s on %q, want %d", read, countText(got.DealCount), got.Name, want)
 			}
 		}
 	}

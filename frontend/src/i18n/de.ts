@@ -6458,8 +6458,8 @@ export const de = {
     "Noch keine Phase für gewonnene oder verlorene Deals. Lege eine neue Phase dieses Typs an.",
   "stage.orderHint":
     "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
-  "stage.handle": "{name} verschieben, Phase {position} von {total}",
-  "stage.moved": "{name} ist jetzt Phase {position} von {total}",
+  "stage.handle": "{name} verschieben, Schritt {position} von {total}",
+  "stage.moved": "{name} ist jetzt Schritt {position} von {total}",
   "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
   "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
   "stage.noneOpen": "Noch keine offenen Phasen",
@@ -6495,8 +6495,6 @@ export const de = {
   "stage.criteria.unreadable":
     "Lade die Seite neu, bevor du sie änderst; die Liste ist möglicherweise unvollständig.",
   "stage.criteria.none": "Noch keine Austrittskriterien.",
-  "stage.criteria.terminal":
-    "Eine Phase vom Typ „Gewonnen“ oder „Verloren“ ist endgültig und hat daher keine Austrittskriterien.",
   "stage.criteria.add": "Kriterium hinzufügen",
   "stage.criteria.key": "Schlüssel",
   "stage.criteria.keyHint":

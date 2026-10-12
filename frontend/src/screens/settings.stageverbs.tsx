@@ -224,11 +224,17 @@ export function StageMenu({
 
 // Removal is pipeline:delete, not pipeline:update. The server also refuses a
 // stage holding deals the reader cannot see, so its refusal shows in the dialog.
-export function useStageRemoval(ladder: readonly Stage[]) {
+export function useStageRemoval(
+  ladder: readonly Stage[],
+  // Takes focus when no row is left with a menu to hand it to.
+  landing: () => HTMLElement | null,
+) {
   const queryClient = useQueryClient();
   const [removing, setRemoving] = useState<Stage | null>(null);
   const asked = useLastSubject(removing);
-  const nextMenus = useRef<readonly string[]>([]);
+  // Null until the confirm is pressed: a dismissed dialog hands focus back to
+  // its opener.
+  const nextMenus = useRef<readonly string[] | null>(null);
   const remove = useMutation({
     mutationFn: async (target: Stage) => {
       unwrap(
@@ -246,12 +252,12 @@ export function useStageRemoval(ladder: readonly Stage[]) {
       await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
       setRemoving(null);
     },
-    // A confirm pressed again after the re-read carries the new version.
-    onError: (error) => {
-      if (isVersionSkewOf(error)) {
-        queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      }
-    },
+    // Held pending until the re-read lands, so a second press cannot resend
+    // the stale version.
+    onError: (error) =>
+      isVersionSkewOf(error)
+        ? queryClient.invalidateQueries({ queryKey: ["pipelines"] })
+        : undefined,
   });
   return {
     asked,
@@ -259,11 +265,11 @@ export function useStageRemoval(ladder: readonly Stage[]) {
     open: removing !== null,
     ask: (stage: Stage) => {
       remove.reset();
-      nextMenus.current = [];
+      nextMenus.current = null;
       setRemoving(stage);
     },
     close: () => {
-      nextMenus.current = [];
+      nextMenus.current = null;
       setRemoving(null);
     },
     confirm: () => {
@@ -277,13 +283,14 @@ export function useStageRemoval(ladder: readonly Stage[]) {
     },
     // The removed row took its menu with it; the nearest row's menu takes focus.
     focusAfter: () => {
+      if (nextMenus.current === null) return null;
       for (const id of nextMenus.current) {
         const menu = document.querySelector<HTMLElement>(
           `[data-testid="stage-${id}"] .overflow-menu > button`,
         );
         if (menu) return menu;
       }
-      return null;
+      return landing();
     },
   };
 }

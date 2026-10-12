@@ -57,12 +57,20 @@ function server(opts: {
   allow?: GrantSpec;
   stageOrderRefusal?: { status: number; body: unknown };
   stageDeleteRefusal?: { status: number; body: unknown };
+  // The first DELETE finds the stage moved on: refused, and its version bumped.
+  stageDeleteSkew?: boolean;
+  // The re-read after that refusal waits for `release()`.
+  holdReread?: boolean;
+  onlyStage?: boolean;
   dealCount?: number;
   soloInUse?: boolean;
   countsWithheld?: boolean;
 }) {
   const calls: Call[] = [];
   let salesVersion = 3;
+  let skewed = false;
+  let reread = Promise.resolve();
+  let release = () => {};
   let sales = [
     stage("s1", "Qualify", 1, "open", 20, {
       ...(opts.countsWithheld
@@ -76,6 +84,7 @@ function server(opts: {
     stage("s2", "Closed won", 3, "won", 100),
     stage("s3", "Lost", 4, "lost", 0),
   ];
+  if (opts.onlyStage) sales = sales.slice(0, 1);
   const salesPipeline = () => ({
     id: "pl",
     name: "Sales",
@@ -169,6 +178,7 @@ function server(opts: {
       });
     }
     if (url.includes("/pipelines")) {
+      await reread;
       return jsonResponse({ data: catalog(), page: { next_cursor: null } });
     }
     if (url.endsWith("/stages") && method === "POST") {
@@ -192,12 +202,30 @@ function server(opts: {
       return jsonResponse({ ...found, ...call.body });
     }
     if (url.includes("/stages/") && method === "DELETE") {
+      const id = new URL(url).pathname.split("/").pop();
       if (opts.stageDeleteRefusal) {
         return jsonResponse(
           opts.stageDeleteRefusal.body,
           opts.stageDeleteRefusal.status,
         );
       }
+      if (opts.stageDeleteSkew && !skewed) {
+        skewed = true;
+        sales = sales.map((s) =>
+          s.id === id ? { ...s, version: s.version + 4 } : s,
+        );
+        if (opts.holdReread) {
+          reread = new Promise((resolve) => {
+            release = resolve;
+          });
+        }
+        return jsonResponse(
+          { status: 409, code: "version_skew", detail: "version skew" },
+          409,
+        );
+      }
+      sales = sales.filter((s) => s.id !== id);
+      salesVersion += 1;
       return new Response(null, { status: 204 });
     }
     return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -205,6 +233,7 @@ function server(opts: {
   vi.stubGlobal("fetch", fetch);
   return {
     calls,
+    release: () => release(),
     writes: (method: string, path: string) =>
       calls.filter(
         (c) => c.method === method && new URL(c.url).pathname.endsWith(path),
@@ -652,24 +681,118 @@ describe("PipelinesCard: the ladder", () => {
     const user = userEvent.setup();
     const backend = server({
       allow: { pipeline: ["read", "update", "delete"] },
-      stageDeleteRefusal: {
-        status: 409,
-        body: { status: 409, code: "version_skew", detail: "version skew" },
-      },
+      stageDeleteSkew: true,
     });
     renderPage();
     await user.click(
       await screen.findByRole("button", { name: "Actions for Qualify" }),
     );
     await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    expect(await screen.findByText(/changed after you opened it/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await waitFor(() =>
+      expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(2),
+    );
+    const [refused, retried] = backend.writes("DELETE", "/stages/s1");
+    expect(refused.ifMatch).toBe("5");
+    expect(retried.ifMatch).toBe("9");
+    await waitFor(() => expect(screen.queryByText("Qualify")).toBeNull());
+  });
+
+  it("holds the confirm while the re-read is out, so a second press cannot resend the stale version", async () => {
+    const user = userEvent.setup();
+    const backend = server({
+      allow: { pipeline: ["read", "update", "delete"] },
+      stageDeleteSkew: true,
+      holdReread: true,
+    });
+    renderPage();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Qualify" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    const confirm = screen.getByRole("button", { name: "Remove stage" });
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1),
+    );
+    await waitFor(() => expect(confirm.getAttribute("aria-busy")).toBe("true"));
+    await user.click(confirm);
+    backend.release();
+    expect(await screen.findByText(/changed after you opened it/)).toBeTruthy();
+    expect(confirm.getAttribute("aria-busy")).toBeNull();
+    expect(backend.writes("DELETE", "/stages/s1")).toHaveLength(1);
+  });
+
+  // With no row left holding a menu, focus lands on the group, never on <body>.
+  it("hands focus to the heading when a delete-only seat removes the last open stage", async () => {
+    const user = userEvent.setup();
+    server({ allow: { pipeline: ["read", "delete"] } });
+    renderPage();
+    for (const name of ["Qualify", "Proposal"]) {
+      await user.click(
+        await screen.findByRole("button", { name: `Actions for ${name}` }),
+      );
+      await user.click(screen.getByRole("button", { name: "Remove" }));
+      await user.click(screen.getByRole("button", { name: "Remove stage" }));
+      await waitFor(() => expect(screen.queryByText(name)).toBeNull());
+    }
+    expect(screen.queryByRole("button", { name: /^Actions for / })).toBeNull();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("heading", { name: "Stages" }).firstElementChild,
+      ),
+    );
+  });
+
+  it("hands focus to New stage when the only stage is removed", async () => {
+    const user = userEvent.setup();
+    server({
+      allow: { pipeline: ["read", "update", "delete"] },
+      onlyStage: true,
+    });
+    renderPage();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Qualify" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(screen.getByRole("button", { name: "Remove stage" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("table", { name: "Stages" })).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("new-stage-pl")),
+    );
+  });
+
+  // The criteria are read apart from the pipelines, so a reorder leaves an
+  // open editor alone.
+  it("does not re-read an open stage's criteria when the ladder is reordered", async () => {
+    const user = userEvent.setup();
+    const backend = server({});
+    renderPage();
+    await user.click(
+      await screen.findByRole("button", { name: "Exit criteria for Qualify" }),
+    );
+    const criteriaReads = () =>
+      backend.calls.filter((c) => c.url.includes("/stages/s1/exit-criteria"))
+        .length;
+    await waitFor(() => expect(criteriaReads()).toBe(1));
     const reads = () =>
       backend.calls.filter(
         (c) => c.method === "GET" && c.url.includes("/pipelines"),
       ).length;
     const before = reads();
-    await user.click(screen.getByRole("button", { name: "Remove stage" }));
-    expect(await screen.findByText(/changed after you opened it/)).toBeTruthy();
+    screen.getByRole("button", { name: "Move Proposal, step 2 of 2" }).focus();
+    await user.keyboard("{ArrowUp}");
+    await waitFor(() =>
+      expect(backend.writes("PUT", "/pipelines/pl/stage-order")).toHaveLength(
+        1,
+      ),
+    );
     await waitFor(() => expect(reads()).toBeGreaterThan(before));
+    expect(criteriaReads()).toBe(1);
   });
 
   it("offers no criteria and no removal on a closing stage", async () => {

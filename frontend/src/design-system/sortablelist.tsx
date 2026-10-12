@@ -157,10 +157,16 @@ export function useSortableRows<T>(
   const keys = shown.map(keyOf);
   const busy = sort?.busy ?? false;
 
-  const movableIn = (current: typeof latest.current) => (key: string) => {
-    const item = current.items.find((each) => current.keyOf(each) === key);
-    return item !== undefined && (current.sort?.can?.(item) ?? true);
+  const movableIn = (current: typeof latest.current) => {
+    const rowOf = new Map(
+      current.items.map((each) => [current.keyOf(each), each]),
+    );
+    return (key: string) => {
+      const item = rowOf.get(key);
+      return item !== undefined && (current.sort?.can?.(item) ?? true);
+    };
   };
+  const movable = movableIn({ items, keyOf, sort });
 
   const commit = (next: string[], moved: T) => {
     const current = latest.current;
@@ -227,7 +233,11 @@ export function useSortableRows<T>(
   };
 
   const pickUp = (item: T, event: PointerEvent<HTMLButtonElement>) => {
-    if (busy || event.button !== 0 || carry.current) {
+    if (event.button !== 0 || carry.current) {
+      return;
+    }
+    if (busy) {
+      swallowClickOnRelease(event.pointerId);
       return;
     }
     // No text selection and no scroll under a carried row: the gesture is the
@@ -235,7 +245,7 @@ export function useSortableRows<T>(
     event.preventDefault();
     const pointerId = event.pointerId;
     const key = keyOf(item);
-    const run = runOf(keys, key, movableIn(latest.current));
+    const run = runOf(keys, key, movable);
     carry.current = { key, start: keys, order: keys, run };
     setDraft({ key, order: keys });
     const onMove = (move: globalThis.PointerEvent) => {
@@ -258,6 +268,7 @@ export function useSortableRows<T>(
       if (press.key === "Escape") {
         press.preventDefault();
         finish(false);
+        swallowClickOnRelease(pointerId);
       }
     };
     globalThis.addEventListener("pointermove", onMove);
@@ -280,7 +291,7 @@ export function useSortableRows<T>(
     event.preventDefault();
     const key = keyOf(item);
     const to = keys.indexOf(key) + delta;
-    const [from, end] = runOf(keys, key, movableIn(latest.current));
+    const [from, end] = runOf(keys, key, movable);
     if (busy || to < from || to >= end) {
       return;
     }
@@ -289,14 +300,11 @@ export function useSortableRows<T>(
   };
 
   const grip = (item: T): ReactNode => {
-    if (!sort || !(sort.can?.(item) ?? true)) {
+    const key = keyOf(item);
+    if (!sort || !movable(key)) {
       return null;
     }
-    const key = keyOf(item);
-    const [from, to] = runOf(keys, key, (each) => {
-      const row = byKey.get(each);
-      return row !== undefined && (sort.can?.(row) ?? true);
-    });
+    const [from, to] = runOf(keys, key, movable);
     return (
       <button
         type="button"
@@ -350,6 +358,22 @@ function swallowNextClick() {
     () => globalThis.removeEventListener("click", swallow, { capture: true }),
     0,
   );
+}
+
+// A press that carries nothing, refused or cancelled, still ends in a click.
+function swallowClickOnRelease(pointerId: number) {
+  const release = (end: globalThis.PointerEvent) => {
+    if (end.pointerId !== pointerId) {
+      return;
+    }
+    globalThis.removeEventListener("pointerup", release);
+    globalThis.removeEventListener("pointercancel", release);
+    if (end.type === "pointerup") {
+      swallowNextClick();
+    }
+  };
+  globalThis.addEventListener("pointerup", release);
+  globalThis.addEventListener("pointercancel", release);
 }
 
 const entryKey = (entry: SortableEntry) => entry.key;

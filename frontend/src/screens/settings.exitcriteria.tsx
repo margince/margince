@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -35,27 +40,17 @@ const BUYER_KINDS: readonly CriterionKind[] = [
   "terms_accepted",
 ];
 
-/**
- * A stage's exit criteria, inside the stage's row on the pipelines card.
- *
- * Terminal stages are the interesting case: won and lost are where a deal
- * stops, so the section says so and offers no Add. That is the server's rule
- * too, and asking it first would still be right — but a control that only
- * exists to be refused is worse than one that is never drawn.
- */
+/** A stage's exit criteria, inside the stage's row on the pipelines card. */
 export function StageExitCriteria({
   stageId,
   stageName,
-  semantic,
   canEdit,
 }: Readonly<{
   stageId: string;
   stageName: string;
-  semantic: components["schemas"]["Stage"]["semantic"];
   canEdit: boolean;
 }>) {
   const t = useT();
-  const terminal = semantic === "won" || semantic === "lost";
   const query = useQuery({
     queryKey: criteriaKey(stageId),
     queryFn: async () => {
@@ -66,13 +61,8 @@ export function StageExitCriteria({
       );
       return data.data;
     },
-    // A terminal stage can hold none, so the read is not worth a round trip.
-    enabled: !terminal,
   });
 
-  if (terminal) {
-    return <p>{t("stage.criteria.terminal")}</p>;
-  }
   // Sorted here as well as in the query, exactly as PipelineRow sorts its
   // stages: position is what the reader is promised, and a list that depended
   // on the server's order would reorder itself the day a caching layer or a
@@ -138,6 +128,7 @@ function CriterionRow({
   canEdit: boolean;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   return (
     <li className="criterion-row">
       <span className="criterion-label">{criterion.label}</span>
@@ -167,7 +158,7 @@ function CriterionRow({
             }}
             fields={criterionEditFields(t)}
             update={async (values, _rows, opened) => {
-              return unwrap(
+              const saved = unwrap(
                 await api.PATCH("/stages/{id}/exit-criteria/{criterion_id}", {
                   params: {
                     path: { id: stageId, criterion_id: criterion.id },
@@ -181,6 +172,9 @@ function CriterionRow({
                   body: criterionEditBody(values),
                 }),
               );
+              // The edit form refreshes the pipelines; this list is read apart.
+              queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
+              return saved;
             }}
           />
           <CriterionRemove criterion={criterion} stageId={stageId} />
@@ -240,9 +234,9 @@ export function CriterionCreateDialog({
         }),
       );
     },
-    onSuccess: () => {
+    onSuccess: (_created, draft) => {
       onClose();
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      refreshCriteria(queryClient, draft.stageId);
     },
   });
   return (
@@ -272,19 +266,19 @@ function CriterionRemove({
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (target: Criterion) => {
       unwrap(
         await api.DELETE("/stages/{id}/exit-criteria/{criterion_id}", {
           params: {
-            path: { id: stageId, criterion_id: criterion.id },
-            ...ifMatch(requireVersion(criterion.version)),
+            path: { id: stageId, criterion_id: target.id },
+            ...ifMatch(requireVersion(target.version)),
           },
         }),
       );
     },
     onSuccess: () => {
       setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      refreshCriteria(queryClient, stageId);
     },
   });
   return (
@@ -302,7 +296,7 @@ function CriterionRemove({
         title={t("stage.criteria.removeTitle")}
         confirmLabel={t("stage.criteria.remove")}
         confirmVariant="danger"
-        onConfirm={() => mutation.mutate()}
+        onConfirm={() => mutation.mutate(criterion)}
         pending={mutation.isPending}
         error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
       >
@@ -312,10 +306,15 @@ function CriterionRemove({
   );
 }
 
-// Under the pipelines prefix: a criterion write moves the counts the stage
-// table reads from the pipeline, so one invalidation refreshes both.
+// Not under ["pipelines"]: every stage reorder would refetch each open editor.
 function criteriaKey(stageId: string) {
-  return ["pipelines", "exit-criteria", stageId] as const;
+  return ["stage-exit-criteria", stageId] as const;
+}
+
+// A criterion write also moves the counts the stage table reads.
+function refreshCriteria(queryClient: QueryClient, stageId: string) {
+  queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+  queryClient.invalidateQueries({ queryKey: criteriaKey(stageId) });
 }
 
 function kindOptions(t: ReturnType<typeof useT>) {
