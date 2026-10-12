@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // bundleWriters hands each row to the writer of its own type. A single CSV is
@@ -24,6 +27,12 @@ type bundleWriters struct {
 	// fallback reverses a row whose type the run's parts do not name: a run
 	// staged before parts existed records rows under its one object only.
 	fallback *csvWriters
+	// owners and tags resolve the run's owner and tag cells, read once and
+	// shared by every part writer.
+	owners *ownerResolver
+	tags   *tagResolver
+	// tagFirstNamedBy is the part that first names each tag, keyed by tagKey.
+	tagFirstNamedBy map[string]string
 }
 
 var (
@@ -47,9 +56,10 @@ func runOptionsOf(m migration.RunMapping) runOptions {
 }
 
 // newBundleWriters is where a run's run-wide reads happen, once, before the
-// engine walks any part; it builds one writer per part.
+// engine walks any part; it builds one writer per part. A nil source is an
+// undo, which resolves no owner and no tag.
 func newBundleWriters(
-	ctx context.Context, db *database.DB, runID migration.RunID, mapping *migration.RunMapping,
+	ctx context.Context, db *database.DB, runID migration.RunID, mapping *migration.RunMapping, src migration.Source,
 ) (*bundleWriters, error) {
 	settled := migration.RunMapping{}
 	if mapping != nil {
@@ -65,18 +75,80 @@ func newBundleWriters(
 	}
 	options := runOptionsOf(settled)
 	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importSourceSystem(settled.SourceName))}
+	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
+		w.owners, w.tagNames = b.owners, b.tags
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// resolveOwnersAndTags reads every owner and tag cell of the run in import
+// order, then resolves each distinct address and name once. Without tag read
+// the tag resolver is the empty one, and the dry run reports the missing grant.
+func (b *bundleWriters) resolveOwnersAndTags(ctx context.Context, db *database.DB, src migration.Source) error {
+	b.owners, b.tags, b.tagFirstNamedBy = &ownerResolver{seats: map[string]ids.UUID{}}, &tagResolver{}, map[string]string{}
+	if src == nil {
+		return nil
+	}
+	emails, names, err := ownerAndTagCells(ctx, src, b.tagFirstNamedBy)
+	if err != nil {
+		return err
+	}
+	if b.owners, err = newOwnerResolver(ctx, db.Pool(), emails); err != nil {
+		return err
+	}
+	if !auth.Allows(ctx, "tag", principal.ActionRead) {
+		return nil
+	}
+	b.tags, err = newTagResolver(ctx, collections.NewStore(db), names)
+	return err
+}
+
+// ownerAndTagCells is the run's distinct owner addresses and tag names, and
+// the part that first names each tag.
+func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy map[string]string) ([]string, []string, error) {
+	var emails, names []string
+	seenEmail := map[string]bool{}
+	for _, object := range src.Objects() {
+		part, err := partSourceOf(src, object)
+		if err != nil {
+			return nil, nil, err
+		}
+		for offset := 0; ; offset += importPredictPage {
+			rows, err := part.Rows(ctx, object, offset, importPredictPage)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, row := range rows {
+				fields := textFields(row.Fields)
+				if email := foldedEmail(fields[csvTargetOwner]); email != "" && !seenEmail[email] {
+					seenEmail[email] = true
+					emails = append(emails, email)
+				}
+				for _, name := range splitTags(fields[csvTargetTags]) {
+					if _, named := firstNamedBy[tagKey(name)]; !named {
+						firstNamedBy[tagKey(name)] = object
+						names = append(names, name)
+					}
+				}
+			}
+			if len(rows) < importPredictPage {
+				break
+			}
+		}
+	}
+	return emails, names, nil
 }
 
 // bindNamedCompanies refills the ref of every company row the file names by id.

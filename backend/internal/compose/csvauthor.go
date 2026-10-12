@@ -13,7 +13,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -87,14 +86,12 @@ func (s authorSeats) resolve(ctx context.Context, tx pgx.Tx, author *storekit.So
 	key := strings.ToLower(*author.AuthorName)
 	seat, known := s[key]
 	if !known {
-		var id ids.UUID
-		err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1`, key).Scan(&id)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			// No seat holds that address: the spelling stands alone.
-		case err != nil:
+		seats, err := seatsByEmail(ctx, tx, []string{key})
+		if err != nil {
 			return fmt.Errorf("import: resolving the author %q to a seat: %w", key, err)
-		default:
+		}
+		// No seat holds that address: the spelling stands alone.
+		if id, found := seats[key]; found {
 			seat = &id
 		}
 		s[key] = seat

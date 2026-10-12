@@ -242,7 +242,7 @@ func TestARunWithTwoFilesOfOneTypeGetsNoWriters(t *testing.T) {
 	twice := migration.RunMapping{Parts: []migration.PartMapping{
 		{File: "a.csv", Object: migration.ObjectCompany}, {File: "b.csv", Object: migration.ObjectCompany},
 	}}
-	if _, err := newBundleWriters(t.Context(), nil, migration.RunID{}, &twice); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := newBundleWriters(t.Context(), nil, migration.RunID{}, &twice, nil); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("err = %v, want a conflict rather than one file's writer silently replacing the other's", err)
 	}
 }

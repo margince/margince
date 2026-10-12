@@ -45,6 +45,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"company_name": in.CompanyName != nil,
 				"linkedin_url": in.LinkedInURL != nil,
 				"author":       in.Author.AuthorName != nil,
+				"owner_email":  in.OwnerID != nil,
 				"cf_tier":      in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
@@ -54,6 +55,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"title":        up.Title != nil,
 				"company_name": up.CompanyName != nil,
 				"linkedin_url": up.LinkedInURL != nil,
+				"owner_email":  up.OwnerID != nil,
 				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 			}
 			return created, patched
@@ -70,6 +72,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"domain":              len(in.Domains) > 0,
 				"linkedin_url":        in.LinkedInURL != nil,
 				"author":              in.Author.AuthorName != nil,
+				"owner_email":         in.OwnerID != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
@@ -86,6 +89,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"size_band":    up.SizeBand != nil,
 				"description":  up.Description != nil,
 				"linkedin_url": up.LinkedInURL != nil,
+				"owner_email":  up.OwnerID != nil,
 				// The replace-set behind a pointer: non-nil means the file
 				// carried a domain column, and only then is the stored set
 				// rewritten.
@@ -111,6 +115,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"phone":               len(in.Phones) > 0,
 				"linkedin_url":        in.Social["linkedin"] != nil,
 				"author":              in.Author.AuthorName != nil,
+				"owner_email":         in.OwnerID != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
@@ -131,6 +136,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"email":               len(up.Emails) > 0,
 				"phone":               len(up.Phones) > 0,
 				"linkedin_url":        up.Social["linkedin"] != nil,
+				"owner_email":         up.OwnerID != nil,
 				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
 				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
 				"address.city":        up.Address != nil && up.Address.City != nil,
@@ -151,6 +157,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				fields[target] = "value"
 				if strings.HasPrefix(target, customFieldPrefix) {
 					typed[target] = "value"
+				}
+				if target == csvTargetOwner {
+					// The seat the run resolved the address to.
+					typed[target] = ids.NewV7()
 				}
 			}
 			created, patched := build(fields, typed)
@@ -564,6 +574,7 @@ var nonFieldTargets = gatekit.Waive(map[string]string{
 	csvEmployerName:     "names an EDGE from the record to a company — written as a relationship, not a column",
 	csvTargetCompanyRef: "names an EDGE from the record to a company by its ref — written as a relationship, not a column",
 	csvTargetRef:        "the row's id in the source system — the part's source key, not a value",
+	csvTargetTags:       "names tags applied beside the write and only ever added — never a column",
 })
 
 // createOnlyTargets are columns the import writes when it creates a record and
@@ -638,7 +649,7 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 	var issues []crmcontracts.ImportRowIssue
 	seen := map[string]bool{}
 	lead := migration.ObjectReport{Object: migration.ObjectLead}
-	appendIssues(&issues, seen, lead, []migration.SkippedRow{
+	appendIssues(&issues, seen, issueKey, lead, []migration.SkippedRow{
 		// What the source writes for a row with no key at all, on line 7.
 		{ExternalID: "line 7", Line: 7, Reason: "no key"},
 		// A row on line 12 whose key column really does hold that text.
@@ -648,12 +659,12 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 		t.Fatalf("issues = %+v, want both rows — they are two rows a contact must go fix", issues)
 	}
 	// And the fold that DOES belong still happens: one row skipped twice.
-	appendIssues(&issues, seen, lead, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	appendIssues(&issues, seen, issueKey, lead, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
 	if len(issues) != 2 {
 		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
 	}
 	// Two files of a ZIP each have their own line 7.
-	appendIssues(&issues, seen, migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"},
+	appendIssues(&issues, seen, issueKey, migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"},
 		[]migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
 	if len(issues) != 3 || issues[2].File == nil || *issues[2].File != "companies.csv" {
 		t.Errorf("issues = %+v, want a third issue naming companies.csv", issues)

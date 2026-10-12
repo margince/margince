@@ -31,7 +31,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	}
 
 	runs := migration.NewRunStore(h.db)
-	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping)
+	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, nil)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

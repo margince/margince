@@ -12,6 +12,7 @@ package compose
 // helpers, not by living in the same file.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 
@@ -64,7 +65,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // company link finds no single company, by the run's policy. A dropped link
 // rides on the landing outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	typed, invalid := w.checkedCells(row)
+	typed, invalid, unknownOwner := w.landingCells(row)
 	if invalid != nil {
 		return predictUnwritable, invalid, nil
 	}
@@ -79,7 +80,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if refusal != "" {
 		return outcome, &migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: refusal}, err
 	}
-	return outcome, link.problem, err
+	return outcome, cmp.Or(link.problem, unknownOwner), err
 }
 
 // predictLanding is predictRow once the row's cells and links allow it to land.

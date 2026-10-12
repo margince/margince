@@ -246,7 +246,7 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
-	writers, err := newBundleWriters(ctx, h.db, run.ID, &mapping)
+	writers, err := newBundleWriters(ctx, h.db, run.ID, &mapping, source)
 	if err != nil {
 		failValidation(ctx, runs, run.ID, err)
 		return crmcontracts.ImportRun{}, err
@@ -346,8 +346,12 @@ func (h importHandlers) commitRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping)
+	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, source)
 	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+	// The tags the file names exist before any row that carries them lands.
+	if err := writers.tags.createMissing(ctx); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
 	if run.Status == migration.StatusFailed {

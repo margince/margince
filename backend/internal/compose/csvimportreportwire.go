@@ -63,15 +63,15 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			File: partFileOf(run, o), Object: crmcontracts.ImportObject(o.Object),
 			RowsRead: o.MirrorCount, Disposition: d,
 		})
-		appendIssues(&out.Issues, seen, o, o.Skipped)
+		appendIssues(&out.Issues, seen, issueKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
 		// file's own terms — but it does NOT touch Disposition.Skipped: the
 		// row is counted in Created, and adding it here too would report two
 		// outcomes for one row and leave `unchanged` short by the difference.
-		appendIssues(&out.Issues, seen, o, o.Collisions)
+		appendIssues(&out.Issues, seen, issueKey, o, o.Collisions)
 		// A warning is a row that lands with something to say about it, so it
 		// is named the same way and counted nowhere.
-		appendIssues(&out.Issues, seenWarnings, o, o.Warnings)
+		appendIssues(&out.Issues, seenWarnings, warningKey, o, o.Warnings)
 	}
 	out.Parts = &parts
 
@@ -236,10 +236,11 @@ func lineOf(skip migration.SkippedRow) int {
 // row from the report. The pair separates them, and it folds the dry run's skip
 // onto the commit's exactly as before: one row keeps one line across both.
 func appendIssues(
-	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool, o migration.ObjectReport, rows []migration.SkippedRow,
+	issues *[]crmcontracts.ImportRowIssue, seen map[string]bool,
+	keyOf func(migration.ObjectReport, migration.SkippedRow) string, o migration.ObjectReport, rows []migration.SkippedRow,
 ) {
 	for _, row := range rows {
-		key := issueKey(o, row)
+		key := keyOf(o, row)
 		if seen[key] {
 			continue
 		}
@@ -268,6 +269,12 @@ func distinctIssues(o migration.ObjectReport, rows []migration.SkippedRow) int {
 // two files of a ZIP may each have a row `line 7`.
 func issueKey(o migration.ObjectReport, row migration.SkippedRow) string {
 	return o.Object + "\x00" + row.ExternalID + "\x00" + strconv.Itoa(row.Line)
+}
+
+// warningKey is issueKey with the kind and value, because one row may carry
+// several warnings and a part's new tags belong to no row at all.
+func warningKey(o migration.ObjectReport, row migration.SkippedRow) string {
+	return issueKey(o, row) + "\x00" + row.Kind + "\x00" + row.Value
 }
 
 func textOrAbsent(text string) *string {
@@ -337,6 +344,16 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 // withSkippedLines folds the source's own disclosures into the object's report.
 // A row the source could not deliver never reached the writer, so nothing else
 // in the report would mention it.
+// withWarnings adds warnings that belong to one part rather than to a row.
+func withWarnings(report migration.Report, object string, warnings []migration.SkippedRow) migration.Report {
+	for i := range report.Objects {
+		if report.Objects[i].Object == object {
+			report.Objects[i].Warnings = append(report.Objects[i].Warnings, warnings...)
+		}
+	}
+	return report
+}
+
 func withSkippedLines(report migration.Report, object string, skipped []migration.SkippedLine) migration.Report {
 	if len(skipped) == 0 {
 		return report

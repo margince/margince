@@ -43,6 +43,7 @@ func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 	}
 	in.SourceSystem = &sourceSystem
 	in.Author = authorFrom(fields)
+	in.OwnerID = ownerFrom(fields, typed)
 	in.FirstName = importString(fields, "first_name")
 	in.LastName = importString(fields, "last_name")
 	in.Title = importString(fields, fieldTitle)
@@ -63,6 +64,7 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		FirstName:    importString(changed, "first_name"),
 		LastName:     importString(changed, "last_name"),
 		Title:        importString(changed, fieldTitle),
+		OwnerID:      ownerFrom(changed, typed),
 		Address:      addressFrom(changed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}

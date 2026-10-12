@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -71,6 +72,10 @@ type csvWriters struct {
 	companyNameColumn string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
+	// owners and tagNames resolve the owner and tag cells; the bundle reads
+	// them once for every part.
+	owners   *ownerResolver
+	tagNames *tagResolver
 	// cols is the part's custom fields, read before any row transaction opens.
 	cols importColumns
 	// columns is the part's mapping, file header → target.
@@ -181,7 +186,7 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 // refuse is skipped first; then a contact whose company link finds no single
 // company is skipped or lands with a warning, as the run's policy says.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
-	typed, invalid := w.checkedCells(row)
+	typed, invalid, unknownOwner := w.landingCells(row)
 	if invalid != nil {
 		return migration.EnsureResult{Skipped: true, SkipReason: invalid.Reason, Problem: invalid}, nil
 	}
@@ -194,7 +199,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	}
 	landed, err := w.ensureRow(ctx, object, row, typed)
 	if err == nil && !landed.Skipped {
-		landed.Problem = link.problem
+		landed.Problem = cmp.Or(link.problem, unknownOwner)
 	}
 	return landed, err
 }
@@ -295,7 +300,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if len(changed) == 0 {
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
-		return migration.EnsureResult{Unchanged: true}, nil
+		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
 	}
 	if err := w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID)); err != nil {
 		// A corrected file moving an address onto a contact who is not its owner
@@ -313,6 +318,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		if linkedInClaimed(err) {
 			return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
 		}
+		return migration.EnsureResult{}, err
+	}
+	if err := w.tagExisting(ctx, id, row); err != nil {
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -376,7 +384,7 @@ var errImportReplayed = errors.New("import: the record replayed under its natura
 
 func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := leadCreateFrom(textFields(row.Fields), typed, w.sourceSystem, row.ExternalID, w.provenanceOf(row.ExternalID))
-	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
@@ -411,7 +419,7 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 	if in.DisplayName == "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: "the mapped display_name is empty, so the row names no company"}, nil
 	}
-	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
@@ -443,11 +451,11 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 const domainClaimedReason = "this domain is already held by another company in the CRM, " +
 	"so the row cannot create a second company under it"
 
-// land commits one native record and its identity-map row in ONE transaction,
-// then caches the binding — after the commit, never inside it: an entry for a
+// land commits one native record, its identity-map row and its tags in ONE
+// transaction, then caches the binding — after the commit, never inside it: an entry for a
 // landing that then rolled back would make this run's later pages resolve an id
 // that does not exist, and lookup answers from the cache before it asks the map.
-func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx pgx.Tx) (ids.UUID, error)) error {
+func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx pgx.Tx) (ids.UUID, error)) error {
 	// Every row this importer writes is one of many under a single approval, so
 	// it carries the marker that says so. What it buys today is one thing: a
 	// standing domain refusal is NOT lifted by a spreadsheet, because approving
@@ -459,13 +467,16 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, externalID, id); err != nil {
+		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id); err != nil {
+			return err
+		}
+		if err := w.tagNames.applyAll(ctx, tx, w.object, id, textFields(row.Fields)[csvTargetTags]); err != nil {
 			return err
 		}
 		return w.fileUnderContextTag(ctx, tx, id)
 	}); err != nil {
 		return err
 	}
-	w.nativeIDs[externalID] = id
+	w.nativeIDs[row.ExternalID] = id
 	return nil
 }

@@ -97,6 +97,7 @@ func predictEveryPart(
 			return migration.Report{}, err
 		}
 		report = withSkippedLines(report, object, skipped(object))
+		report = withWarnings(report, object, newTagWarnings(writers.tags.missing, writers.tagFirstNamedBy, object))
 	}
 	for i := range report.Objects {
 		report.Objects[i].File = fileOf[report.Objects[i].Object]

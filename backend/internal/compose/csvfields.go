@@ -67,17 +67,16 @@ const leadStatusNew = "new"
 // Every field here round-trips: the writer can both CREATE it and UPDATE it.
 // A target that only half works is worse than one the screen never offers.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor}, recordAddressTargets...),
-	// `owner_id` is absent: an owner is a uuid a spreadsheet cannot honestly
-	// carry, and storekit.OwnerOrActor defaults it to whoever ran the import.
-	// `author` differs: a name is an honest spelling (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	// The owner is named by the seat's email (csvowners.go), never by its id.
+	// `author` is a name, an honest spelling (csvauthor.go).
+	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -185,15 +184,17 @@ func linksEmployer(object string) bool {
 // isNonFieldTarget reports whether a mapped target names something other than a
 // value the record stores.
 //
-// Four targets qualify. `id` names the RECORD the row is, and `ref` its id in
-// the source system. The two employer columns name an EDGE to another record. None
+// Five targets qualify. `id` names the RECORD the row is, and `ref` its id in
+// the source system. The two employer columns name an EDGE to another record,
+// and `tags` names tags applied beside the write, only ever added. None
 // is a column on the record, so none is compared against the stored JSON. The
 // lookup would find nothing and report the row as changed, so every re-import
 // of an unedited file would update every row.
 //
 // Excluded in one place rather than at each caller so no path can forget one.
 func isNonFieldTarget(field string) bool {
-	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef || field == csvTargetCompanyRef
+	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
+		field == csvTargetCompanyRef || field == csvTargetTags
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -218,7 +219,12 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 			continue
 		}
 		want := canonicalFor(field, incoming)
-		if value, checked := typed[field]; checked {
+		value, checked := typed[field]
+		if field == csvTargetOwner && !checked {
+			// An address no seat holds leaves the record's owner as it is.
+			continue
+		}
+		if checked {
 			var err error
 			if want, err = wireText(value); err != nil {
 				return nil, err
@@ -254,6 +260,8 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 			return storedPrimaryPhone(current)
 		case fieldLinkedIn:
 			return storedLinkedIn(current)
+		case csvTargetOwner:
+			return current["owner_id"]
 		}
 		return current[field]
 	}
@@ -321,6 +329,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 		SourceID:     &externalID,
 		Source:       source,
 		Author:       authorFrom(fields),
+		OwnerID:      ownerFrom(fields, typed),
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
@@ -341,6 +350,7 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
+		OwnerID:      ownerFrom(changed, typed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
 }

@@ -63,6 +63,7 @@ func companyCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 		Source:       source,
 		SourceSystem: &sourceSystem,
 		Author:       authorFrom(fields),
+		OwnerID:      ownerFrom(fields, typed),
 	}
 	in.LegalName = importString(fields, "legal_name")
 	in.Description = importString(fields, "description")
@@ -98,6 +99,7 @@ func companyUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		Industry:     importString(changed, fieldIndustry),
 		SizeBand:     importString(changed, "size_band"),
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
+		OwnerID:      ownerFrom(changed, typed),
 		Address:      addressFrom(changed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
