@@ -3,9 +3,8 @@
 
 package compose
 
-// Every cell of a row is checked before anything is written, and the dry run
-// and the commit both ask here, so a preview cannot promise a row the store
-// then refuses.
+// Every cell of a row is checked before anything is written. The dry run and
+// the commit both ask here, so a preview cannot promise a row the store refuses.
 
 import (
 	"encoding/json"
@@ -30,9 +29,9 @@ type cellProblem struct {
 	Target, Value, Message string
 }
 
-// checkRow checks the core cells, then each custom-field cell in target order,
-// and answers the filled phone, LinkedIn and custom-field cells in the shape
-// the store holds them. The first problem wins.
+// checkRow checks the core cells, then each custom-field cell in target order.
+// It answers the filled phone, LinkedIn and custom-field cells in the shape the
+// store holds them. The first problem wins.
 func checkRow(object string, fields map[string]string, cat importCatalog) (map[string]any, *cellProblem) {
 	if problem := unwritableReason(object, fields); problem != nil {
 		return nil, problem
@@ -115,9 +114,9 @@ func parseMessage(text string, err error) string {
 	return fmt.Sprintf("%q: %s", text, parseErr.Message)
 }
 
-// checkCell turns one custom-field cell into the value storekit.SQLValue
-// takes, and lets SQLValue decide whether it binds, so the dry run accepts
-// exactly the text the store does. A refusal lists a picklist's options only
+// checkCell turns one custom-field cell into the value storekit.SQLValue takes.
+// SQLValue decides whether it binds, so the dry run accepts the text the store
+// does. A refusal lists a picklist's options only
 // when the caller may read them (custom_field:read).
 //
 //craft:ignore naked-any the value is SQLValue's own input, whose shape depends on the column type
@@ -127,13 +126,17 @@ func checkCell(target string, col fieldcatalog.Column, raw string, optionsReadab
 	message := ""
 	switch col.Type {
 	case fieldcatalog.TypePicklist:
-		wire, message = picklistValue(col, text, optionsReadable)
+		option, refusal := picklistValue(col, text, optionsReadable)
+		wire, message = option, refusal
 	case fieldcatalog.TypeMultiselect:
-		wire, message = multiselectValue(col, text, optionsReadable)
+		chosen, refusal := multiselectValue(col, text, optionsReadable)
+		wire, message = chosen, refusal
 	case fieldcatalog.TypeCurrency:
-		wire, message = currencyValue(col, text)
+		minor, refusal := currencyValue(col, text)
+		wire, message = minor, refusal
 	case fieldcatalog.TypeBoolean:
-		wire, message = booleanValue(text)
+		value, refusal := booleanValue(text)
+		wire, message = value, refusal
 	}
 	if message == "" {
 		if _, binds := storekit.SQLValue(col, wire); !binds {
@@ -147,17 +150,17 @@ func checkCell(target string, col fieldcatalog.Column, raw string, optionsReadab
 }
 
 // picklistValue is the catalog's spelling of the option the text names.
-func picklistValue(col fieldcatalog.Column, text string, optionsReadable bool) (any, string) {
+func picklistValue(col fieldcatalog.Column, text string, optionsReadable bool) (string, string) {
 	if option, found := optionNamed(col.Options, text); found {
 		return option, ""
 	}
-	return nil, notAllowedMessage(col, text, optionsReadable)
+	return "", notAllowedMessage(col, text, optionsReadable)
 }
 
 // multiselectValue splits on semicolons and names each option in the catalog's
 // spelling. A comma with no semicolon is the usual mistake, so it gets its own
 // sentence once the whole text is not itself an option.
-func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool) (any, string) {
+func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool) ([]string, string) {
 	var chosen []string
 	for part := range strings.SplitSeq(text, ";") {
 		part = strings.TrimSpace(part)
@@ -178,13 +181,13 @@ func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool
 
 // currencyValue is the amount in the column's minor units. A column with no
 // currency has no unit to count, so its values cannot be read at all.
-func currencyValue(col fieldcatalog.Column, text string) (any, string) {
+func currencyValue(col fieldcatalog.Column, text string) (float64, string) {
 	if col.Currency == "" {
-		return nil, fmt.Sprintf("%q cannot be read: this currency field has no currency set", text)
+		return 0, fmt.Sprintf("%q cannot be read: this currency field has no currency set", text)
 	}
 	minor, ok := values.MinorUnits(text, col.Currency)
 	if !ok {
-		return nil, fmt.Sprintf("%q is not an amount in %s; write it like 12000.50", text, col.Currency)
+		return 0, fmt.Sprintf("%q is not an amount in %s; write it like 12000.50", text, col.Currency)
 	}
 	return float64(minor), ""
 }
@@ -195,11 +198,11 @@ func currencyValue(col fieldcatalog.Column, text string) (any, string) {
 var spreadsheetBooleans = map[string]bool{"true": true, "yes": true, "1": true, "false": false, "no": false, "0": false}
 
 // booleanValue reads a cell spelled as one of spreadsheetBooleans.
-func booleanValue(text string) (any, string) {
+func booleanValue(text string) (bool, string) {
 	if value, ok := spreadsheetBooleans[strings.ToLower(text)]; ok {
 		return value, ""
 	}
-	return nil, fmt.Sprintf("%q is not yes or no", text)
+	return false, fmt.Sprintf("%q is not yes or no", text)
 }
 
 func optionNamed(options []string, text string) (string, bool) {

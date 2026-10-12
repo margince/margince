@@ -23,7 +23,7 @@ func grantNames(needs []grantNeed) []string {
 
 func TestGrantsForATaggedContactsFileAreItsWritesAndTheTagGrants(t *testing.T) {
 	parts := []migration.PartMapping{{Object: migration.ObjectContact, Fields: map[string]string{"Tags": csvTargetTags}}}
-	got := grantNames(grantsFor(parts, true, true))
+	got := grantNames(grantsFor(parts, tagGrants{applies: true, createsNew: true}))
 	want := []string{"contact:create", "contact:update", "tag:read", "tag:create"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("grantsFor = %v, want %v", got, want)
@@ -31,9 +31,9 @@ func TestGrantsForATaggedContactsFileAreItsWritesAndTheTagGrants(t *testing.T) {
 }
 
 func TestGrantsForNewTagsAloneIsTagCreate(t *testing.T) {
-	needs := grantsFor(nil, true, false)
+	needs := grantsFor(nil, tagGrants{createsNew: true})
 	if got := grantNames(needs); !slices.Equal(got, []string{"tag:create"}) {
-		t.Fatalf("grantsFor(nil, true, false) = %v, want only tag:create", got)
+		t.Fatalf("grantsFor(new tags only) = %v, want only tag:create", got)
 	}
 	if needs[0].Action != principal.ActionCreate || !strings.Contains(needs[0].Why, "create tags") {
 		t.Fatalf("need = %+v, want its reason to name creating tags", needs[0])
@@ -41,7 +41,7 @@ func TestGrantsForNewTagsAloneIsTagCreate(t *testing.T) {
 }
 
 func TestGrantReasonsNameTheFileInWords(t *testing.T) {
-	needs := grantsFor([]migration.PartMapping{{Object: migration.ObjectCompany}}, false, false)
+	needs := grantsFor([]migration.PartMapping{{Object: migration.ObjectCompany}}, tagGrants{})
 	if len(needs) != 2 || needs[0].Why != "You cannot create companies, so the companies file is skipped" {
 		t.Fatalf("needs = %+v, want the create reason in words first", needs)
 	}

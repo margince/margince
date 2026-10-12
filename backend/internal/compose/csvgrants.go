@@ -3,9 +3,9 @@
 
 package compose
 
-// Every grant a commit needs is checked by the test run, so a missing one is a
-// problem the reader sees before approving, never a refusal halfway through
-// the commit. The commit asks the same questions again and skips what the
+// The test run checks every grant a commit needs. A missing one is a problem
+// the reader sees before approving, never a refusal halfway through the commit.
+// The commit asks the same questions again and skips what the
 // answer refuses.
 
 import (
@@ -40,10 +40,16 @@ type grantNeed struct {
 	Why    string
 }
 
-// grantsFor lists the object grants a run's commit takes: each part's create and
-// update, tag read where tags are applied, and tag create where names are new.
-// Applying a tag also takes the record's update, which each part already needs.
-func grantsFor(parts []migration.PartMapping, needsNewTags, appliesTags bool) []grantNeed {
+// tagGrants says which tag grants a run's commit takes.
+type tagGrants struct {
+	applies    bool // tag read, to apply existing tags
+	createsNew bool // tag create, for names new to the CRM
+}
+
+// grantsFor lists the object grants a run's commit takes: each part's create
+// and update, plus the tag grants. Applying a tag also takes the record's
+// update, which each part already needs.
+func grantsFor(parts []migration.PartMapping, tags tagGrants) []grantNeed {
 	var needs []grantNeed
 	for _, part := range parts {
 		edit := cannotEditReason(part.Object)
@@ -54,13 +60,13 @@ func grantsFor(parts []migration.PartMapping, needsNewTags, appliesTags bool) []
 			grantNeed{Object: part.Object, Action: principal.ActionCreate, Why: cannotCreateReason(part.Object)},
 			grantNeed{Object: part.Object, Action: principal.ActionUpdate, Why: edit})
 	}
-	if appliesTags {
+	if tags.applies {
 		needs = append(needs, grantNeed{
 			Object: tagObject, Action: principal.ActionRead,
 			Why: "You cannot read tags, so the tags column is not imported",
 		})
 	}
-	if needsNewTags {
+	if tags.createsNew {
 		needs = append(needs, grantNeed{
 			Object: tagObject, Action: principal.ActionCreate,
 			Why: "You cannot create tags, so a tag new to the CRM is not added",
@@ -150,7 +156,7 @@ func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolve
 // names and owner seats are known. A refused tag create leaves the new names
 // unknown, so the commit neither creates nor applies them.
 func (b *bundleWriters) checkTagAndOwnerGrants(ctx context.Context, pool *pgxpool.Pool) error {
-	problems, err := checkGrants(ctx, pool, grantsFor(nil, len(b.tags.missing) > 0, false), b.owners)
+	problems, err := checkGrants(ctx, pool, grantsFor(nil, tagGrants{createsNew: len(b.tags.missing) > 0}), b.owners)
 	if err != nil {
 		return err
 	}
@@ -169,13 +175,13 @@ func withGrantProblems(
 ) migration.Report {
 	first := ""
 	for _, part := range parts {
-		report = withWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, false, false)))
+		report = withWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, tagGrants{})))
 		if first == "" || slices.Index(migration.ImportOrder, part.Object) < slices.Index(migration.ImportOrder, first) {
 			first = part.Object
 		}
 	}
 	tags := slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return columnFor(p.Fields, csvTargetTags) != "" })
-	return withWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, false, tags)), late...))
+	return withWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, tagGrants{applies: tags})), late...))
 }
 
 // createRefusal is the skip of a row whose type the importer may not create.
