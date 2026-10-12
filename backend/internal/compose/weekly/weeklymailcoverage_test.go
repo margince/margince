@@ -44,7 +44,7 @@ func everyFamilyNotRecorded(since time.Time) crmcontracts.WeeklyFigureCoverageSe
 // no assertion on a row can pass because the row is gone.
 func rowOf(t *testing.T, body, label string) string {
 	t.Helper()
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(line, label) {
 			return line
 		}
