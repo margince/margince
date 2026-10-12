@@ -8,16 +8,23 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// flagsMissingGreeting runs the shape check for a draft to the named recipient.
-func flagsMissingGreeting(body, firstName, lastName string) bool {
-	for _, finding := range draftcheck.Formatting(body, draftcheck.Grounds{FirstName: firstName, LastName: lastName}) {
-		if finding.Rule == draftcheck.RuleMissingGreeting {
+// flags runs the shape check for a draft in lang to the named recipient.
+func flags(rule draftcheck.Rule, body string, lang textlang.Lang, firstName, lastName string) bool {
+	grounds := draftcheck.Grounds{FirstName: firstName, LastName: lastName}
+	for _, finding := range draftcheck.Formatting(body, lang, grounds) {
+		if finding.Rule == rule {
 			return true
 		}
 	}
 	return false
+}
+
+// flagsMissingGreeting asks the missing-greeting rule alone, in no language.
+func flagsMissingGreeting(body, firstName, lastName string) bool {
+	return flags(draftcheck.RuleMissingGreeting, body, textlang.Unknown, firstName, lastName)
 }
 
 // The reported draft opens on the message; the others open on a sentence
@@ -103,5 +110,118 @@ func TestTheFloorGreetingRendersAStoredNameOnOneLine(t *testing.T) {
 	unset := draftfloor.Envelope{Language: "de", ConversationState: "weeks"}
 	if got := draftcheck.EnsureGreeting(body, unset, "Dietmar", "Rietsch"); got != "Hallo Dietmar,\n\n"+body {
 		t.Errorf("a German draft with no register was repaired as %q", got)
+	}
+}
+
+// A reply greets the sender, or somebody else from the thread, instead of the
+// recipient the record names.
+func TestAGreetingThatNamesSomebodyElseIsAFinding(t *testing.T) {
+	for _, tc := range []struct{ body, first, last string }{
+		{"Hi Bob,\n\nWednesday works.", "Alice", "Weber"},
+		{"Hallo Herr Rietsch,\n\nMittwoch passt.", "Marcus", "Greven"},
+		{"Dear Marcus and Bob,\n\nWednesday works.", "Marcus", "Greven"},
+		{"Hi Al,\n\nWednesday works.", "Alice", "Weber"},
+		{"Chào chị Lan,\n\nxin gửi anh hai lịch hẹn.", "An", "Nguyễn Văn"},
+		{"Hello Bob Smith\n\nWednesday works.", "Alice", "Weber"},
+	} {
+		if !flags(draftcheck.RuleWrongAddressee, tc.body, textlang.Unknown, tc.first, tc.last) {
+			t.Errorf("a greeting to somebody other than %s %s passed: %q", tc.first, tc.last, tc.body)
+		}
+	}
+}
+
+// The recipient passes by a recorded name, with a title or honorific, or by a
+// nickname that begins a recorded name. A group greeting or no name passes
+// too, and a greeting run on into the message is not judged.
+func TestAGreetingToTheRecipientPasses(t *testing.T) {
+	for _, tc := range []struct{ body, first, last string }{
+		{"Hi Marcus,\n\nWednesday works.", "Marcus", "Greven"},
+		{"Sehr geehrter Herr Dr. Greven,\n\nanbei zwei Termine.", "Marcus", "Greven"},
+		{"Guten Tag Anne-Marie Weiß-Konrad,\n\nanbei zwei Termine.", "Anne-Marie", "Weiß-Konrad"},
+		{"Liebe Anne,\n\nanbei zwei Termine.", "Anne-Marie", "Weiß-Konrad"},
+		{"Hi Alex!\n\nWednesday works.", "Alexander", "Brandt"},
+		{"HI MARCUS,\n\nWednesday works.", "Marcus", "Greven"},
+		{"Hi Marcus and team,\n\nWednesday works.", "Marcus", "Greven"},
+		{"Hallo zusammen,\n\nMittwoch passt.", "Marcus", "Greven"},
+		{"Moin Moin Marcus,\n\nMittwoch passt.", "Marcus", "Greven"},
+		{"Sehr geehrte Damen und Herren,\n\nanbei zwei Termine.", "Marcus", "Greven"},
+		{"Chào anh Nguyễn Văn An,\n\nxin gửi anh hai lịch hẹn.", "An", "Nguyễn Văn"},
+		{"Hi Marcus I wanted to confirm Wednesday.", "Marcus", "Greven"},
+		{"Hallo Marcus, kurz zu Donnerstag.\n\nPasst 14 Uhr?", "Marcus", "Greven"},
+	} {
+		if flags(draftcheck.RuleWrongAddressee, tc.body, textlang.Unknown, tc.first, tc.last) {
+			t.Errorf("a greeting to %s %s was flagged: %q", tc.first, tc.last, tc.body)
+		}
+	}
+}
+
+// With no recipient name on record, any name in the greeting was invented, and
+// a greeting naming nobody is the only right one.
+func TestANamedGreetingWithNoRecipientNameIsAFinding(t *testing.T) {
+	if !flags(draftcheck.RuleWrongAddressee, "Hi Bob,\n\nWednesday works.", textlang.English, "", "") {
+		t.Error("a greeting naming somebody passed with no recipient name on record")
+	}
+	for _, body := range []string{"Hello,\n\nWednesday works.", "Hi there,\n\nWednesday works.", "Hi all!\n\nWednesday works."} {
+		if flags(draftcheck.RuleWrongAddressee, body, textlang.English, "", "") {
+			t.Errorf("a greeting naming nobody was flagged: %q", body)
+		}
+	}
+}
+
+// An English draft opening in German is the reported case. A German draft may
+// open on the borrowed "Hi".
+func TestAGreetingInAnotherLanguageThanTheDraftIsAFinding(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		lang textlang.Lang
+	}{
+		{"Hallo Alice,\n\nthe demo slots are Wednesday or Friday.", textlang.English},
+		{"Guten Tag Alice Müller,\n\nthe demo slots are Wednesday or Friday.", textlang.English},
+		{"Dear Marcus,\n\nanbei zwei Termine.", textlang.German},
+		{"Hello An,\n\nxin gửi anh hai lịch hẹn.", textlang.Vietnamese},
+	} {
+		if !flags(draftcheck.RuleGreetingLanguage, tc.body, tc.lang, "Alice", "Müller") {
+			t.Errorf("a greeting in another language than %s passed: %q", tc.lang, tc.body)
+		}
+	}
+	for _, tc := range []struct {
+		body string
+		lang textlang.Lang
+	}{
+		{"Hi Alice,\n\nthe demo slots are Wednesday or Friday.", textlang.English},
+		{"Hi Alice,\n\nanbei zwei Termine.", textlang.German},
+		{"Chào chị Alice,\n\nxin gửi chị hai lịch hẹn.", textlang.Vietnamese},
+		{"Hallo Alice,\n\nanbei zwei Termine.", textlang.Unknown},
+	} {
+		if flags(draftcheck.RuleGreetingLanguage, tc.body, tc.lang, "Alice", "Müller") {
+			t.Errorf("a greeting in the draft's language %s was flagged: %q", tc.lang, tc.body)
+		}
+	}
+}
+
+// Once the retry is spent, a wrong greeting is replaced by the floor's, and
+// the message after it is kept as the model wrote it.
+func TestEnsureGreetingReplacesAWrongGreeting(t *testing.T) {
+	english := draftfloor.Envelope{Language: "en", ConversationState: "fresh"}
+	for _, tc := range []struct{ body, first, want string }{
+		{"Hi Bob,\n\nWednesday works.", "Marcus", "Hi Marcus,\n\nWednesday works."},
+		{"Hi Bob, Wednesday works.", "Marcus", "Hi Marcus,\n\nWednesday works."},
+		{"Hi Bob,\n\nWednesday works.", "", "Hello,\n\nWednesday works."},
+		{"Hallo Alice,\n\nWednesday works.", "Alice", "Hi Alice,\n\nWednesday works."},
+		{"Hi Bob,", "Marcus", "Hi Marcus,"},
+	} {
+		if got := draftcheck.EnsureGreeting(tc.body, english, tc.first, ""); got != tc.want {
+			t.Errorf("EnsureGreeting(%q) = %q, want %q", tc.body, got, tc.want)
+		}
+	}
+}
+
+// A greeting with no punctuation to end it has no place a repair could cut.
+// It is served as written rather than have the message's first words eaten.
+func TestEnsureGreetingLeavesAnUnclosedGreetingAlone(t *testing.T) {
+	english := draftfloor.Envelope{Language: "en", ConversationState: "fresh"}
+	const body = "Hallo Alice ich hoffe Wednesday works."
+	if got := draftcheck.EnsureGreeting(body, english, "Alice", ""); got != body {
+		t.Errorf("an unclosed greeting was rewritten to %q", got)
 	}
 }

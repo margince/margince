@@ -47,7 +47,7 @@ func TestACleanDraftIsNotRetried(t *testing.T) {
 	lane := &scripted{bodies: []string{"Hallo Marek,\n\nder Vertrag ist unterschrieben."}}
 
 	got, err := draftcore.CorrectOnce(context.Background(),
-		textlang.German, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, nil)
+		textlang.German, convstate.BandMonths, draftcheck.Grounds{FirstName: "Marek"}, lane.write, bodyOf, nil, nil)
 	if err != nil {
 		t.Fatalf("CorrectOnce errored on a clean draft: %v", err)
 	}
@@ -197,11 +197,12 @@ func (r *recorder) RetryDidNotClear(_ context.Context, _ draftcheck.Rule, phrase
 // reported, and a retry that DOES help says nothing.
 func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 	stubborn := "Hi Priya, just checking in as discussed."
+	priya := draftcheck.Grounds{FirstName: "Priya"}
 	seen := &recorder{}
 	lane := &scripted{bodies: []string{stubborn, stubborn}}
 
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, lane.write, bodyOf, nil, seen); err != nil {
+		textlang.English, convstate.BandMonths, priya, lane.write, bodyOf, nil, seen); err != nil {
 		t.Fatal(err)
 	}
 	if len(seen.notCleared) != 1 {
@@ -213,7 +214,7 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 
 	broken := &recorder{}
 	if _, err := draftcore.CorrectOnce(context.Background(), textlang.English,
-		convstate.BandMonths, draftcheck.Grounds{}, (&failOnRetry{first: stubborn}).write, bodyOf, nil, broken); err != nil {
+		convstate.BandMonths, priya, (&failOnRetry{first: stubborn}).write, bodyOf, nil, broken); err != nil {
 		t.Fatal(err)
 	}
 	if broken.failed != 1 {
@@ -223,7 +224,7 @@ func TestTheLoopReportsARetryThatDidNotHelp(t *testing.T) {
 	quiet := &recorder{}
 	clean := &scripted{bodies: []string{stubborn, "Hi Priya, the scope is ready."}}
 	if _, err := draftcore.CorrectOnce(context.Background(),
-		textlang.English, convstate.BandMonths, draftcheck.Grounds{}, clean.write, bodyOf, nil, quiet); err != nil {
+		textlang.English, convstate.BandMonths, priya, clean.write, bodyOf, nil, quiet); err != nil {
 		t.Fatal(err)
 	}
 	if quiet.failed != 0 || len(quiet.notCleared) != 0 {

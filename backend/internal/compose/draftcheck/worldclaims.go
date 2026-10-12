@@ -35,8 +35,9 @@ type Grounds struct {
 	// Met: the caller's own intent names an earlier meeting with this
 	// recipient, so the draft may say they met. Set it from IntentNamesMeeting.
 	Met bool
-	// FirstName and LastName are the recipient's, for telling a greeting that
-	// opens on a bare name ("Greven,") from a first line that greets nobody.
+	// FirstName and LastName are the recipient's: a greeting may open on one
+	// bare ("Greven,"), and may name nobody else. Both empty means a greeting
+	// may name nobody at all.
 	FirstName, LastName string
 }
 
