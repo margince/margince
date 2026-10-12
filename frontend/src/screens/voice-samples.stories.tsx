@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
 import {
@@ -133,8 +133,9 @@ export const RemoveDropsBand: Story = {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(page.getByRole("button", { name: "Remove sample" }));
     const dialog = within(await page.findByRole("dialog"));
-    await expect(
-      dialog.getByText("Removing this lowers the voice from good to thin."),
-    ).toBeVisible();
+    const drop = dialog.getByText(
+      "Removing this lowers the voice from good to thin.",
+    );
+    await waitFor(() => expect(drop).toBeVisible());
   },
 };
