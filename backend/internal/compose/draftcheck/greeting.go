@@ -18,10 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// EnsureGreeting gives a body the floor's greeting line once the correction
-// retry is spent. No draft is served ungreeted, greeting somebody else, or
-// greeting in another language. A missing greeting is added above the body,
-// and a wrong one is replaced.
+// EnsureGreeting adds the floor's greeting above a body that opens without one,
+// and puts it in place of a closed greeting the checks judge wrong.
 func EnsureGreeting(body string, envelope draftfloor.Envelope, firstName, lastName string) string {
 	firstName, lastName = draftfloor.NameLine(firstName), draftfloor.NameLine(lastName)
 	floor := envelope.Greeting(firstName, lastName)
@@ -48,7 +46,7 @@ func EnsureGreeting(body string, envelope draftfloor.Envelope, firstName, lastNa
 // copied out of the input must reach neither.
 func greetingFindings(body string, lang textlang.Lang, on Grounds) []Finding {
 	opening, ok := openingGreeting(norm.NFC.String(strings.TrimSpace(body)))
-	if !ok {
+	if !ok || !opening.closed {
 		return nil
 	}
 	var findings []Finding
@@ -126,7 +124,7 @@ type greeting struct {
 // opener, then whatever it addresses up to the punctuation that closes it.
 //
 // A greeting run on into the message with no punctuation ("Hi Marcus I wanted
-// to") keeps its addressee unjudged and uncut. Where
+// to") is neither judged nor cut. Where
 // its name ends is a guess, and a wrong cut would eat the message's first words.
 func openingGreeting(trimmed string) (greeting, bool) {
 	firstLine, _, _ := strings.Cut(trimmed, "\n")

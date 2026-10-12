@@ -234,6 +234,7 @@ func TestAGreetingInAnotherLanguageThanTheDraftIsAFinding(t *testing.T) {
 		{"Dear chị Alice,\n\nxin gửi chị hai lịch hẹn.", textlang.Vietnamese},
 		{"Chào chị Alice,\n\nxin gửi chị hai lịch hẹn.", textlang.Vietnamese},
 		{"Hallo Alice,\n\nanbei zwei Termine.", textlang.Unknown},
+		{"Hallo Alice ich hoffe Wednesday works.", textlang.English},
 	} {
 		if flags(draftcheck.RuleGreetingLanguage, tc.body, tc.lang, "Alice", "Müller") {
 			t.Errorf("a greeting in the draft's language %s was flagged: %q", tc.lang, tc.body)
