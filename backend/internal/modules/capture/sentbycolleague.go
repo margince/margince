@@ -78,3 +78,24 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 	}
 	return colleague, nil
 }
+
+// stampMessageEnds stamps who wrote and who received a captured message. A
+// colleague's mail is from the colleague; the seat whose mailbox held the copy
+// received it, and that participant row is what lets the seat read it.
+func stampMessageEnds(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
+) error {
+	if fields.SentByColleague.IsZero() {
+		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty)
+	}
+	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty); err != nil {
+		return err
+	}
+	if seat.IsZero() {
+		return nil
+	}
+	if err := insertParticipant(ctx, tx, id, roleTo, &seat, nil, "", ""); err != nil {
+		return fmt.Errorf("capture: stamping the seat that held a colleague's mail: %w", err)
+	}
+	return nil
+}

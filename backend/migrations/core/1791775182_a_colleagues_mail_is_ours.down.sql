@@ -3,6 +3,8 @@
 -- reply passes judge them again.
 SET LOCAL lock_timeout = '3s';
 ALTER TABLE activity DROP CONSTRAINT activity_colleague_mail_is_outbound;
+DELETE FROM activity_participant p USING activity a
+ WHERE p.activity_id = a.id AND p.role = 'from' AND p.user_id = a.sent_by_colleague;
 UPDATE activity
    SET direction = 'inbound',
        counterparty_email = (SELECT lower(email) FROM app_user WHERE id = sent_by_colleague)

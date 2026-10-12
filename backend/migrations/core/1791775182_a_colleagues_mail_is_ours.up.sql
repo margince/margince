@@ -19,8 +19,9 @@ ALTER TABLE activity ADD CONSTRAINT activity_colleague_mail_is_outbound
 
 -- The rows captured before this rule, re-read the way capture now reads them
 -- (capture/sentbycolleague.go): an email whose From is the exact login address
--- of an unarchived seat, of any status, other than the mailbox that captured it. The counterparty is
--- the first recipient, To before Cc before Bcc, that is not the colleague, not
+-- of an unarchived seat of any status, other than the mailbox that captured it.
+-- The counterparty is the first recipient, To before Cc before Bcc, that is
+-- not the colleague, not
 -- at an own domain or a subdomain of one, and not one of the capturing seat's
 -- own addresses. A mail with no such recipient stays as it is.
 WITH own_domain AS (
@@ -40,7 +41,12 @@ WITH own_domain AS (
              AND NOT EXISTS (SELECT 1 FROM capture_owner_identity i
                    WHERE i.user_id::text = split_part(a.captured_by, ':', 3)
                      AND ((i.kind = 'address' AND lower(i.value) = lower(btrim(r.address)))
-                       OR (i.kind = 'domain' AND lower(i.value) = split_part(lower(btrim(r.address)), '@', 2))))
+                       OR (i.kind = 'domain' AND (lower(i.value) = split_part(lower(btrim(r.address)), '@', 2)
+                         OR split_part(lower(btrim(r.address)), '@', 2) LIKE '%.' || lower(i.value)))))
+             AND NOT EXISTS (SELECT 1 FROM capture_connection cc
+                   WHERE cc.user_id::text = split_part(a.captured_by, ':', 3) AND cc.archived_at IS NULL
+                     AND lower(btrim(coalesce(substring(cc.account_label from '<([^>]+)>'), cc.account_label)))
+                         = lower(btrim(r.address)))
              AND NOT EXISTS (SELECT 1 FROM app_user seat
                    WHERE seat.id::text = split_part(a.captured_by, ':', 3)
                      AND lower(seat.email) = lower(btrim(r.address)))
@@ -54,6 +60,9 @@ WITH own_domain AS (
      AND a.captured_by LIKE 'connector:%'
      AND split_part(a.captured_by, ':', 3) <> u.id::text
 )
+-- What capture stamps for a colleague's mail: the colleague as the sender. A
+-- later copy from the colleague's own mailbox finds them there and attests the row.
+, reread AS (
 UPDATE activity a
    SET direction = 'outbound',
        sent_by_colleague = c.colleague,
@@ -62,4 +71,9 @@ UPDATE activity a
        owed_verdict_declined_at = NULL, owed_verdict_declined_ruleset = NULL,
        reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL
   FROM colleague_mail c
- WHERE a.id = c.id AND c.recipient IS NOT NULL;
+ WHERE a.id = c.id AND c.recipient IS NOT NULL
+RETURNING a.id, c.colleague
+)
+INSERT INTO activity_participant (activity_id, role, user_id)
+SELECT id, 'from', colleague FROM reread
+ON CONFLICT DO NOTHING;

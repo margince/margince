@@ -240,12 +240,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	// A colleague's mail is from the colleague; this seat only holds a copy.
-	ourSide := actorUserID(ctx)
-	if !fields.SentByColleague.IsZero() {
-		ourSide = fields.SentByColleague
-	}
-	if err := stampCaptureParticipants(ctx, tx, id, ourSide, fields.Kind, fields.Direction, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and

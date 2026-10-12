@@ -96,6 +96,16 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	if got.fromUser == nil || *got.fromUser != colleague {
 		t.Errorf("the From participant is %v, want the colleague %v and not the seat", got.fromUser, colleague)
 	}
+	var seatRole string
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT string_agg(p.role, ',') FROM activity_participant p
+			JOIN activity a ON a.id = p.activity_id WHERE a.source_id = 'colleague-1' AND p.user_id = $1`, seat).Scan(&seatRole)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if seatRole != "to" {
+		t.Errorf("the seat that held the copy is stamped %q, want only \"to\": it received the mail and did not write it", seatRole)
+	}
 }
 
 // Only a seat's exact address is a colleague. An archived seat, or another
