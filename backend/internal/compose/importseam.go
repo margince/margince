@@ -45,7 +45,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// importRunGrant is migration.ImportRunObject spelled as a literal: the
+// importRunGrant is migration.ImportRunObject spelled as a literal. The
 // grant-reachability scan resolves only literals and same-package constants, so
 // a qualified name would leave each door below it uncounted.
 // importerobject_test.go pins the two spellings together.
