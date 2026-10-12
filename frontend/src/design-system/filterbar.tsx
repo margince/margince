@@ -5,14 +5,14 @@ import type { ReactNode } from "react";
 import "./filterbar.css";
 
 /**
- * The dials a page's figures are cut by, on one card above them: the filters
- * on the leading edge, the page's own verbs (export, save, record) on the
- * trailing one, and one line under both saying what the figures cover.
+ * The dials a page's figures are cut by, on one card above them. The filters
+ * sit on the leading edge and the page's own verbs (export, save, record) on
+ * the trailing one. One line under both says what the figures cover.
  *
- * A card rather than a loose row because the figures below it sit on cards:
- * filters floating on the page ground between them read as part of neither.
- * The caption belongs here too, for the same reason: "results through" is a
- * fact about the cut, and alone on the ground it is one more stray line.
+ * A card rather than a loose row, because the figures below it sit on cards.
+ * Filters floating on the page ground between them read as part of neither.
+ * The caption belongs here for the same reason. "Results through" is a fact
+ * about the cut, and alone on the ground it is one more stray line.
  *
  * A named fieldset, because the dials are only read as one cut together.
  */
