@@ -16,6 +16,7 @@ import { hasMoveControl } from "./movebutton";
 describe("whether a move can be drawn", () => {
   it("needs the operand its own verb takes", () => {
     const ACTIVITY = "01a05500-0000-7000-8000-0000000000e1";
+    const CONTACT = "01a05500-0000-7000-8000-0000000000c1";
     for (const [move, drawable, because] of [
       [
         { action: "create_task", arguments: { subject: "x" } },
@@ -46,7 +47,29 @@ describe("whether a move can be drawn", () => {
       [
         { action: "draft_email", arguments: { activity_id: ACTIVITY } },
         false,
-        "writing to the buyer is the composer's job, not this button's",
+        "writing to the buyer is the email box's job, not this button's",
+      ],
+      [
+        {
+          action: "draft_email",
+          arguments: {
+            activity_id: ACTIVITY,
+            links: [{ entity_type: "contact", entity_id: CONTACT }],
+          },
+        },
+        true,
+        "the follow-up after a meeting names who it was with",
+      ],
+      [
+        {
+          action: "draft_email",
+          arguments: {
+            activity_id: ACTIVITY,
+            links: [{ entity_type: "deal", entity_id: CONTACT }],
+          },
+        },
+        false,
+        "a link to no contact names nobody to write to",
       ],
       [{ action: "none" }, false, "the producer's own word for nothing to do"],
       [

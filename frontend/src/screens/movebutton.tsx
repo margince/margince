@@ -27,6 +27,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
 import { unwrap } from "./common";
+import { ComposeModal } from "./compose";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
@@ -45,6 +46,23 @@ export function activityIdOf(move: PerformableMove): string | null {
   return typeof raw === "string" && raw !== "" ? raw : null;
 }
 
+// recipientsOf reads who a follow-up move writes to: the contact links its
+// arguments carry, best first. Anything else in the list names nobody.
+export function recipientsOf(move: PerformableMove): string[] {
+  const links = move.arguments?.links;
+  if (!Array.isArray(links)) return [];
+  return links.flatMap((link: unknown) => {
+    if (typeof link !== "object" || link === null) return [];
+    const { entity_type: kind, entity_id: id } = link as Record<
+      string,
+      unknown
+    >;
+    return kind === "contact" && typeof id === "string" && id !== ""
+      ? [id]
+      : [];
+  });
+}
+
 // Whether the verb has what it needs to be drawn, decided BEFORE the slot is:
 // a slot handed a control that renders nothing still draws the slot, and an
 // empty action region reads as a verb that failed to load. MoveButton keeps
@@ -57,6 +75,8 @@ export function hasMoveControl(move: PerformableMove): boolean {
     case "open_task":
     case "open_meeting_brief":
       return activityIdOf(move) !== null;
+    case "draft_email":
+      return activityIdOf(move) !== null && recipientsOf(move).length > 0;
     default:
       return false;
   }
@@ -171,12 +191,19 @@ export function MoveButton({
         </>
       );
     case "draft_email":
-      // No button here. Writing to the buyer is the email box's job, in the
-      // right-hand column under the Deal Room — one place a rep goes to send
-      // mail, whether or not this move happens to rank first. Deal360 still
-      // says WHY the mail is the move; it just does not carry a second door
-      // to the same composer.
-      return null;
+      // Only the follow-up after a meeting draws a button: it names who the
+      // meeting was with, which the deal's email box cannot know. Any other
+      // mail move is the email box's job, the one place a rep writes from.
+      if (!activityId || recipientsOf(move).length === 0) {
+        return null;
+      }
+      return (
+        <FollowUpDraft
+          dealId={dealId}
+          meetingId={activityId}
+          recipients={recipientsOf(move)}
+        />
+      );
     case "open_meeting_brief":
       if (!activityId) {
         return null;
@@ -203,4 +230,49 @@ export function MoveButton({
     default:
       return null;
   }
+}
+
+// The composer, opened to everyone a meeting was with. Grounded in the first
+// of them, with the rest on the To line beside them.
+function FollowUpDraft({
+  dealId,
+  meetingId,
+  recipients,
+}: Readonly<{
+  dealId?: string;
+  meetingId: string;
+  recipients: readonly string[];
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [contact, ...alsoTo] = recipients;
+  return (
+    <>
+      <Button variant="ai" onClick={() => setOpen(true)}>
+        <Sparkles aria-hidden />
+        {t("worklist.verb.draft_follow_up_now")}
+      </Button>
+      {open && (
+        <ComposeModal
+          entityType="contact"
+          entityId={contact}
+          contactId={contact}
+          followUp={{ alsoTo, aboutActivityId: meetingId }}
+          kind="email"
+          intent={t("contact.composer.intentFollowUp")}
+          open
+          onClose={() => setOpen(false)}
+          onSent={() => {
+            if (dealId) {
+              void queryClient.invalidateQueries({
+                queryKey: ["deal-status", dealId],
+              });
+            }
+            void queryClient.invalidateQueries({ queryKey: ["worklist"] });
+          }}
+        />
+      )}
+    </>
+  );
 }

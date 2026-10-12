@@ -43740,6 +43740,13 @@ export interface components {
              */
             with_contact?: string;
             contact?: components["schemas"]["WorklistContactFacts"];
+            /**
+             * @description Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+             *     is filed under, then the attendees its calendar entry resolved to a contact this
+             *     caller may read. Best first, each once; `contact` is the first of them. Sent on
+             *     `meeting_follow_up` rows only, and absent where no attendee is on file.
+             */
+            recipients?: components["schemas"]["WorklistContactFacts"][];
             company?: components["schemas"]["WorklistCompanyFacts"];
             /**
              * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
@@ -44160,7 +44167,7 @@ export interface components {
              * @description Which fact this is. The client writes the phrase.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -46449,6 +46456,13 @@ export interface operations {
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
                      */
                     project_id?: string | null;
+                    /**
+                     * Format: uuid
+                     * @description The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
+                     */
+                    about_activity_id?: string | null;
+                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
+                    also_to?: string[];
                     /**
                      * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
                      *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.

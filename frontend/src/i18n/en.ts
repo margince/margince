@@ -12327,6 +12327,7 @@ export const en = {
   "worklist.because.met_days_ago.value_one": "met {value} day ago",
   "worklist.because.met_days_ago.value_other": "met {value} days ago",
   "worklist.because.nothing_sent_since": "nothing sent since",
+  "worklist.because.no_attendee_on_file": "no attendee on file",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",

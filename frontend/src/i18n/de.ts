@@ -12196,6 +12196,7 @@ export const de = {
   "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
   "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
   "worklist.because.nothing_sent_since": "seitdem nichts geschickt",
+  "worklist.because.no_attendee_on_file": "kein Teilnehmer erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",

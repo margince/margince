@@ -1729,6 +1729,26 @@ paths:
                     drops out — and the project's name, key, phase and target end date are facts
                     the draft may use. Must be a live project the caller can read; an invisible
                     or archived one is `404`, the same answer a direct read gives.
+                about_activity_id:
+                  type: [string, 'null']
+                  format: uuid
+                  description: >-
+                    The activity the message follows up, such as the meeting a follow-up is
+                    sent after. The writer reads it first, above the recent conversation, with
+                    the deal it is filed under. It must be an activity whose content the caller
+                    may read; any other id is `422` on `about_activity_id`, the same answer
+                    whether it does not exist or is out of reach.
+                also_to:
+                  type: array
+                  maxItems: 24
+                  items: { type: string, format: uuid }
+                  description: >-
+                    Further contacts the same message goes to, such as everyone at a meeting
+                    the draft follows up. The draft's `to` then lists each one's address after
+                    this contact's, and the writer is told the message has several readers.
+                    Each must be a live contact the caller may read; one that is not refuses
+                    the whole request with `422` `recipient_not_on_file`, the code
+                    `POST /emails` answers for an address nobody on file holds.
                 rewrite_of:
                   type: [string, 'null']
                   maxLength: 20000
@@ -58014,6 +58034,15 @@ components:
             attendees are all withheld both produce, and both mean the same thing here.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
+        recipients:
+          type: array
+          maxItems: 25
+          items: { $ref: '#/components/schemas/WorklistContactFacts' }
+          description: |
+            Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+            is filed under, then the attendees its calendar entry resolved to a contact this
+            caller may read. Best first, each once; `contact` is the first of them. Sent on
+            `meeting_follow_up` rows only, and absent where no attendee is on file.
         company:
           $ref: '#/components/schemas/WorklistCompanyFacts'
         host:
@@ -58564,7 +58593,7 @@ components:
       properties:
         kind:
           type: string
-          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since]
+          enum: [pinned, buyer_wrote_last, waiting_days, overdue, due_today, closing_soon, expected_revenue, material, below_material, quiet_days, no_champion, champion_unknown, promised, approved_and_failed, blocks_customer_work, routine, repeated_failure, legal_deadline, opened_overdue, earlier_requests, first_asked, no_next_step, meeting_soon, meeting_booked, meeting_unprepared, response_overdue, response_due_soon, unassigned, stale, no_reply_history, asks_nothing, addressed_elsewhere, outcome_unrecorded, you_wrote_last, no_reply_days, met_days_ago, nothing_sent_since, no_attendee_on_file]
           description: 'Which fact this is. The client writes the phrase.'
         value: { $ref: '#/components/schemas/WorklistValue' }
 

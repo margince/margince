@@ -42,6 +42,9 @@ type AwaitingReply struct {
 	ContactID  ids.UUID
 	CompanyID  ids.UUID
 	DealID     ids.UUID
+	// Recipients is who a meeting follow-up goes to, best first; ContactID is
+	// the first of them. Empty on a sent message.
+	Recipients []ids.UUID
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the

@@ -230,6 +230,59 @@ export const AMeetingFollowUpRow: Story = {
   },
 };
 
+/** The same follow-up, owed to three attendees of a meeting filed on a deal. */
+export const AMeetingFollowUpToThreeAttendees: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Pricing review",
+      move: undefined,
+      contact: {
+        id: "01a05500-0000-7000-8000-0000000000d1",
+        label: "Ana Brandt",
+      },
+      recipients: [
+        { id: "01a05500-0000-7000-8000-0000000000d1", label: "Ana Brandt" },
+        { id: "01a05500-0000-7000-8000-0000000000d2", label: "Ben Ortiz" },
+        { id: "01a05500-0000-7000-8000-0000000000d3", label: "Cleo Nguyen" },
+      ],
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
+/** A follow-up with no attendee on file: the row opens the deal instead. */
+export const AMeetingFollowUpWithNoAttendee: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Pricing review",
+      move: undefined,
+      actions: ["open"],
+      contact: undefined,
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+        { kind: "no_attendee_on_file" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+  },
+};
+
 /**
  * A LANE WHOSE VERBS ARE EQUAL has no answer, and nothing on the line is
  * filled.

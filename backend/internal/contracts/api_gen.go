@@ -18942,6 +18942,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindMetDaysAgo         WorklistReasonKind = "met_days_ago"
+	WorklistReasonKindNoAttendeeOnFile   WorklistReasonKind = "no_attendee_on_file"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
@@ -19001,6 +19002,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindMetDaysAgo:
+		return true
+	case WorklistReasonKindNoAttendeeOnFile:
 		return true
 	case WorklistReasonKindNoChampion:
 		return true
@@ -48704,6 +48707,12 @@ type WorklistItem struct {
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
 
+	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+	// is filed under, then the attendees its calendar entry resolved to a contact this
+	// caller may read. Best first, each once; `contact` is the first of them. Sent on
+	// `meeting_follow_up` rows only, and absent where no attendee is on file.
+	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
+
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
 
@@ -51707,6 +51716,12 @@ type LiftSuppressionJSONBody struct {
 
 // DraftContactEmailJSONBody defines parameters for DraftContactEmail.
 type DraftContactEmailJSONBody struct {
+	// AboutActivityId The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
+	AboutActivityId *openapi_types.UUID `json:"about_activity_id,omitempty"`
+
+	// AlsoTo Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds.
+	AlsoTo *[]openapi_types.UUID `json:"also_to,omitempty"`
+
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 

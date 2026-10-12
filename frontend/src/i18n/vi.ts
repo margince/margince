@@ -11953,6 +11953,7 @@ export const vi = {
   "worklist.because.met_days_ago.value_one": "đã gặp {value} ngày trước",
   "worklist.because.met_days_ago.value_other": "đã gặp {value} ngày trước",
   "worklist.because.nothing_sent_since": "chưa gửi gì từ đó",
+  "worklist.because.no_attendee_on_file": "cuộc họp chưa có liên hệ nào",
   "worklist.because.response_overdue": "quá hạn trả lời",
   "worklist.because.response_due_soon": "sắp đến hạn trả lời",
   "worklist.because.response_due_soon.value": "cần trả lời trước {value}",

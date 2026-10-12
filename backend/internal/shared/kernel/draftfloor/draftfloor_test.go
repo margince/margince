@@ -260,3 +260,17 @@ func TestTheRegisterFollowsTheResolvedLanguage(t *testing.T) {
 		t.Errorf("an English draft = %q/%q, want en with no register", english.Language, english.Register)
 	}
 }
+
+// Each language greets a group in its own words. A language missing from the
+// map falls back to English, which shows here as a repeated greeting.
+func TestEveryLanguageGreetsAGroupInItsOwnWords(t *testing.T) {
+	t.Parallel()
+	seen := map[string]bool{}
+	for _, lang := range langs {
+		greeting := draftfloor.GroupGreeting(lang)
+		if greeting == "" || seen[greeting] {
+			t.Errorf("%s greets a group with %q, which is empty or another language's", lang, greeting)
+		}
+		seen[greeting] = true
+	}
+}
