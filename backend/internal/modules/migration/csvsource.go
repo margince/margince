@@ -244,8 +244,12 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 	if err != nil {
 		return openFile{}, fmt.Errorf("import source %q: %w", s.key, err)
 	}
-	file := openFile{body: body, records: csv.NewReader(body), key: s.key}
-	file.records.TrimLeadingSpace = true
+	records, err := newRecordReader(body)
+	if err != nil {
+		openFile{body: body, key: s.key}.close(ctx)
+		return openFile{}, err
+	}
+	file := openFile{body: body, records: records, key: s.key}
 	header, err := file.records.Read()
 	if err != nil {
 		file.close(ctx)

@@ -71,8 +71,10 @@ type Profile struct {
 // found. It never writes and never decides anything — the mapping is the
 // human's, and this is the evidence they make it on.
 func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
-	cr := csv.NewReader(r)
-	cr.TrimLeadingSpace = true
+	cr, err := newRecordReader(r)
+	if err != nil {
+		return Profile{}, err
+	}
 
 	header, err := cr.Read()
 	if errors.Is(err, io.EOF) {
