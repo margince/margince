@@ -33,10 +33,10 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	// target that no longer exists.
 	defer nonFieldTargets.AssertAllMatched(t)
 	defer createOnlyTargets.AssertAllMatched(t)
-	for object, build := range map[string]func(map[string]string) (created, patched map[string]bool){
-		migration.ObjectLead: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := leadCreateFrom(fields, "import:csv", "ext-1", "src")
-			up := leadUpdateFrom(fields)
+	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
+		migration.ObjectLead: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := leadCreateFrom(fields, typed, "import:csv", "ext-1", "src")
+			up := leadUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":    in.FullName != nil,
 				"email":        in.Email != nil,
@@ -56,9 +56,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			return created, patched
 		},
-		migration.ObjectCompany: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := companyCreateFrom(fields, importSourceSystem(""), "src")
-			up := companyUpdateFrom(fields)
+		migration.ObjectCompany: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := companyCreateFrom(fields, typed, importSourceSystem(""), "src")
+			up := companyUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"display_name":        in.DisplayName != "",
 				"legal_name":          in.LegalName != nil,
@@ -95,9 +95,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			return created, patched
 		},
-		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := contactCreateFrom(fields, importSourceSystem(""), "src")
-			up := contactUpdateFrom(fields)
+		migration.ObjectContact: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := contactCreateFrom(fields, typed, importSourceSystem(""), "src")
+			up := contactUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":           in.FullName != "",
 				"first_name":          in.FirstName != nil,
@@ -138,11 +138,14 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			if err != nil {
 				t.Fatalf("importTargets: %v", err)
 			}
-			fields := make(map[string]string, len(targets))
+			fields, typed := make(map[string]string, len(targets)), map[string]any{}
 			for _, target := range targets {
 				fields[target] = "value"
+				if strings.HasPrefix(target, customFieldPrefix) {
+					typed[target] = "value"
+				}
 			}
-			created, patched := build(fields)
+			created, patched := build(fields, typed)
 			for _, target := range targets {
 				if nonFieldTargets.Waived(t, target) {
 					// Not a field, so the round-trip rule does not apply. Each
@@ -185,7 +188,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 
 	// The store lowercases email on write. Compared raw, a file spelling it
 	// differently would rewrite the row on every single re-import.
-	changed, err := changedFields(stored, map[string]string{"email": "Ada@Lovelace.Example"})
+	changed, err := changedFields(stored, map[string]string{"email": "Ada@Lovelace.Example"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}
@@ -194,7 +197,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 	}
 
 	// A real change is still a change.
-	changed, err = changedFields(stored, map[string]string{"email": "ada@newplace.example"})
+	changed, err = changedFields(stored, map[string]string{"email": "ada@newplace.example"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}
@@ -203,7 +206,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 	}
 
 	// Case is NOT folded on a field the store keeps verbatim.
-	changed, err = changedFields(stored, map[string]string{"full_name": "ADA LOVELACE"})
+	changed, err = changedFields(stored, map[string]string{"full_name": "ADA LOVELACE"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}

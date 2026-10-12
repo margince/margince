@@ -97,7 +97,7 @@ func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration
 			return err
 		}
 		for _, row := range rows {
-			if target, skip := w.namedTarget(ctx, migration.ObjectCompany, row); skip == "" && target.named {
+			if target, lands := w.namedTarget(ctx, row); lands && target.named {
 				b.links.markLanded(migration.ObjectCompany, row.ExternalID, target.id)
 			}
 		}
@@ -105,6 +105,16 @@ func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration
 			return nil
 		}
 	}
+}
+
+// namedTarget is the record a company row names by id, and whether the row
+// lands: Ensure's order for a company row, which has no link to check.
+func (w *csvWriters) namedTarget(ctx context.Context, row migration.Row) (targetID, bool) {
+	if _, invalid := w.checkedCells(row); invalid != nil {
+		return targetID{}, false
+	}
+	target := w.targetIDOf(ctx, row)
+	return target, target.reason == ""
 }
 
 // part is the writer of one type. A run with no file of that type answers a

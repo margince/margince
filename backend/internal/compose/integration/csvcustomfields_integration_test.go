@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -109,6 +110,64 @@ func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
 	approveAndRead(t, e, run.ID)
 	if got := recordField(t, e, "/v1/contacts", "full_name", "Ada Segment", column); got != "Enterprise" {
 		t.Fatalf("%s = %q, want Enterprise", column, got)
+	}
+}
+
+func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
+	e := setupCustomFieldImportApp(t)
+	column := createCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold", "Silver"}, "source": "manual"})
+	profile, _ := uploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
+	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tier": column})
+	if status != http.StatusAccepted {
+		t.Fatalf("stage → %d, want 202", status)
+	}
+	assertOneBronzeIssue := func(stage string, report importReportDTO) {
+		t.Helper()
+		issue := issueOf(report, "invalid_value", "Bronze")
+		if len(report.Issues) != 1 || issue == nil || issue.Column != "Tier" || report.Disposition.Created != 1 {
+			t.Fatalf("%s report = %+v, want one created and one invalid_value issue on the Tier column", stage, report)
+		}
+	}
+	assertOneBronzeIssue("dry-run", readImportReport(t, e, run.ID))
+	approveAndRead(t, e, run.ID)
+	assertOneBronzeIssue("finished", readImportReport(t, e, run.ID))
+	if got := companyField(t, e, "Good GmbH", column); got != "Gold" {
+		t.Fatalf("%s = %q, want Gold", column, got)
+	}
+	var page struct {
+		Data []AnyMap `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/companies?limit=100", nil, nil, &page); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies → %d", status)
+	}
+	for _, company := range page.Data {
+		if company["display_name"] == "Bad GmbH" {
+			t.Fatal("Bad GmbH exists, but its Tier was refused")
+		}
+	}
+}
+
+// A typed value lands in its type, and an unedited re-import changes nothing.
+func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
+	e := setupCustomFieldImportApp(t)
+	active := createCustomField(t, e, AnyMap{"object": "company", "label": "Active", "type": "boolean", "source": "manual"})
+	value := createCustomField(t, e, AnyMap{"object": "company", "label": "Value", "type": "currency", "currency": "EUR", "source": "manual"})
+	body := "Name,Active,Value\nTyped GmbH,Yes,12000.50\n"
+	mapping := map[string]string{"Name": "display_name", "Active": active, "Value": value}
+	profile, _ := uploadCSV(t, e, "company", body)
+	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, mapping)
+	approveAndRead(t, e, run.ID)
+	if got := companyField(t, e, "Typed GmbH", active); got != "true" {
+		t.Fatalf("%s = %q, want true", active, got)
+	}
+	if got, err := strconv.ParseFloat(companyField(t, e, "Typed GmbH", value), 64); err != nil || got != 1200050 {
+		t.Fatalf("%s = %v (%v), want 1200050 minor units", value, got, err)
+	}
+	again, _ := uploadCSV(t, e, "company", body)
+	second, _ := createRunWithMapping(t, e, "company", again.SourceRef, mapping)
+	approveAndRead(t, e, second.ID)
+	if report := readImportReport(t, e, second.ID); report.Disposition.Unchanged != 1 {
+		t.Fatalf("re-import report = %+v, want the row unchanged", report)
 	}
 }
 

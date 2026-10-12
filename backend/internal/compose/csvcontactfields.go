@@ -30,7 +30,7 @@ import (
 // record named by its email is worth having, and one named by nothing is not.
 // A row with neither is refused by the caller, which is the only shape that
 // names no contact at all.
-func contactCreateFrom(fields map[string]string, sourceSystem, source string) contacts.CreateContactInput {
+func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, source string) contacts.CreateContactInput {
 	in := contacts.CreateContactInput{
 		// Recorded as the import it is. unknown_legacy is the honest answer
 		// where a door cannot say why a contact exists; here the door knows,
@@ -47,21 +47,21 @@ func contactCreateFrom(fields map[string]string, sourceSystem, source string) co
 	in.Title = importString(fields, fieldTitle)
 	in.Address = addressFrom(fields)
 	in.Emails = contactEmailsFrom(fields)
-	in.CustomFields = customFieldsFrom(fields)
+	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
 
 // contactUpdateFrom builds the patch for the fields that actually differ.
 // Emails stays nil unless the file carried the column, so a row that never
 // mentioned an address does not read as "this contact now has none".
-func contactUpdateFrom(changed map[string]string) contacts.UpdateContactInput {
+func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateContactInput {
 	in := contacts.UpdateContactInput{
 		FullName:     importString(changed, fieldFullName),
 		FirstName:    importString(changed, "first_name"),
 		LastName:     importString(changed, "last_name"),
 		Title:        importString(changed, fieldTitle),
 		Address:      addressFrom(changed),
-		CustomFields: customFieldsFrom(changed),
+		CustomFields: customFieldsFrom(changed, typed),
 	}
 	in.Emails = contactEmailsFrom(changed)
 	return in

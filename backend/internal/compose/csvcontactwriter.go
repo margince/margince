@@ -41,8 +41,8 @@ import (
 // record types and hide which rule each row was judged by.
 //
 //nolint:dupl // createCompany has the same SHAPE and not the same job: a
-func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := contactCreateFrom(textFields(row.Fields), w.sourceSystem, w.provenanceOf(row.ExternalID))
+func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	if in.FullName == "" {
 		return migration.EnsureResult{Skipped: true, SkipReason: "the row carries neither a name nor an email, so it names no contact"}, nil
 	}

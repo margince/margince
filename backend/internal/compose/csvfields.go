@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sort"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -208,7 +207,7 @@ func isNonFieldTarget(field string) bool {
 // comparator: the wire shape and the mapping targets are the same vocabulary,
 // so a field added to the contract is compared automatically, while a
 // comparator would keep compiling and quietly stop noticing it.
-func changedFields(encoded []byte, mapped map[string]string) (map[string]string, error) {
+func changedFields(encoded []byte, mapped map[string]string, typed map[string]any) (map[string]string, error) {
 	var current map[string]json.RawMessage
 	if err := json.Unmarshal(encoded, &current); err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
@@ -222,7 +221,14 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
 			continue
 		}
-		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {
+		want := canonicalFor(field, incoming)
+		if value, checked := typed[field]; checked {
+			var err error
+			if want, err = wireText(value); err != nil {
+				return nil, err
+			}
+		}
+		if textOf(storedValue(current, field)) != want {
 			changed[field] = incoming
 		}
 	}
@@ -308,7 +314,7 @@ func textOf(raw json.RawMessage) string {
 // leadCreateFrom builds the create input for one mapped row. Only mapped
 // fields are set: an absent column leaves the field absent rather than
 // clearing it, because the file said nothing about it.
-func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source string) contacts.CreateLeadInput {
+func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, externalID, source string) contacts.CreateLeadInput {
 	in := contacts.CreateLeadInput{
 		Status:       leadStatusNew,
 		SourceSystem: &sourceSystem,
@@ -321,19 +327,19 @@ func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source s
 	in.Phone = importString(fields, fieldLeadPhone)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
-	in.CustomFields = customFieldsFrom(fields)
+	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
-func leadUpdateFrom(changed map[string]string) contacts.UpdateLeadInput {
+func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
 	return contacts.UpdateLeadInput{
 		FullName:     importString(changed, fieldFullName),
 		Email:        importString(changed, fieldEmail),
 		Phone:        importString(changed, fieldLeadPhone),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
-		CustomFields: customFieldsFrom(changed),
+		CustomFields: customFieldsFrom(changed, typed),
 	}
 }
 
@@ -370,86 +376,6 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 		merged.Country = mapped.Country
 	}
 	return &merged, true, nil
-}
-
-// unwritableReason names why the store will refuse this row, or "" when it
-// will not. It is the one place the dry run and the commit agree about what
-// cannot be written, so a preview cannot promise a create the commit then
-// fails on.
-//
-// Today it holds one check: size_band is a closed vocabulary with a database
-// CHECK constraint behind it, and a headcount column mapped onto it ("240")
-// reached the preview as a clean create, then could only fail at write time.
-// A dry run whose whole job is to say what WILL happen may not report the
-// opposite.
-//
-// The vocabulary is read off the generated contract, not hand-copied, for the
-// same reason contacts.validSizeBands is: a band added to crm.yaml must not
-// leave a second list behind saying otherwise. That obligation is on the set
-// rather than on the spelling, so it is gated rather than stated.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
-func unwritableReason(object string, fields map[string]string) string {
-	if reason := authorUnwritableReason(fields); reason != "" {
-		return reason
-	}
-	if object == migration.ObjectContact {
-		// A contact's addresses are parsed before the write transaction opens
-		// (parseContactContacts), so a malformed one refuses the row at commit.
-		// Unchecked here, the dry run would promise a create for every bad
-		// address in the file and the commit would answer differently — the
-		// same shape as the size_band defect below, on the other object.
-		email, given := fields[fieldEmail]
-		if !given || strings.TrimSpace(email) == "" {
-			return ""
-		}
-		if _, err := values.ParseEmail(strings.TrimSpace(email)); err != nil {
-			return fmt.Sprintf("%q is not an email address that can be written", email)
-		}
-		return ""
-	}
-	if object != migration.ObjectCompany {
-		return ""
-	}
-	// A company's domains are parsed before the write transaction opens
-	// (parseCompanyDomains), so a value the parser refuses fails the row at commit.
-	// The same argument as the email arm above and the size_band one below: a dry
-	// run whose job is to say what WILL happen may not report the opposite.
-	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
-		if _, err := values.ParseDomain(domain); err != nil {
-			return fmt.Sprintf("%q is not a domain that can be written", domain)
-		}
-	}
-	band, given := fields[fieldSizeBand]
-	if !given || strings.TrimSpace(band) == "" {
-		return ""
-	}
-	if importableSizeBands[strings.TrimSpace(band)] {
-		return ""
-	}
-	return fmt.Sprintf("size_band %q is not one of %s", band, strings.Join(sizeBandVocabulary(), ", "))
-}
-
-// importableSizeBands is the closed size_band vocabulary, off the contract.
-var importableSizeBands = map[string]bool{
-	string(crmcontracts.CompanySizeBandN110):      true,
-	string(crmcontracts.CompanySizeBandN1150):     true,
-	string(crmcontracts.CompanySizeBandN51200):    true,
-	string(crmcontracts.CompanySizeBandN201500):   true,
-	string(crmcontracts.CompanySizeBandN5011000):  true,
-	string(crmcontracts.CompanySizeBandN10015000): true,
-	string(crmcontracts.CompanySizeBandN5000):     true,
-}
-
-// sizeBandVocabulary renders the bands in ascending order for a refusal to
-// carry — sorted explicitly, because a map's range order would give the user a
-// different sentence on every call.
-func sizeBandVocabulary() []string {
-	out := make([]string, 0, len(importableSizeBands))
-	for band := range importableSizeBands {
-		out = append(out, band)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // addressFrom collects the mapped `address.*` columns into the one nested

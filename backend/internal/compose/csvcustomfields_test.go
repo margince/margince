@@ -65,22 +65,35 @@ func TestACoreFieldKeepsItsHeaderOverACustomLabel(t *testing.T) {
 
 func TestAnUnchangedCustomFieldIsNotRewritten(t *testing.T) {
 	stored := []byte(`{"display_name":"Acme","cf_tier":"A"}`)
-	changed, err := changedFields(stored, map[string]string{"cf_tier": "A"})
+	changed, err := changedFields(stored, map[string]string{"cf_tier": "a"}, map[string]any{"cf_tier": "A"})
 	if err != nil || len(changed) != 0 {
 		t.Fatalf("changed = %v, err %v; want none for the stored value", changed, err)
 	}
-	changed, err = changedFields(stored, map[string]string{"cf_tier": "B"})
+	changed, err = changedFields(stored, map[string]string{"cf_tier": "B"}, map[string]any{"cf_tier": "B"})
 	if err != nil || changed["cf_tier"] != "B" {
 		t.Fatalf("changed = %v, err %v; want cf_tier", changed, err)
 	}
 }
 
-func TestOnlyCustomFieldTargetsReachCustomFields(t *testing.T) {
-	got := customFieldsFrom(map[string]string{"cf_tier": "A", "display_name": "Acme", "cf_empty": " "})
-	if len(got) != 1 || got["cf_tier"] != "A" {
-		t.Fatalf("custom fields = %v, want only the filled cf_tier", got)
+// A typed value is compared in the shape the store holds, so "Yes" against a
+// stored true, or 12000.50 against stored minor units, is no change.
+func TestATypedCustomFieldComparesInTheStoredShape(t *testing.T) {
+	stored := []byte(`{"cf_active":true,"cf_value":1200050,"cf_comp":["HubSpot","Other"],"cf_seats":24}`)
+	mapped := map[string]string{"cf_active": "Yes", "cf_value": "12000.50", "cf_comp": "hubspot;other", "cf_seats": "24"}
+	typed := map[string]any{"cf_active": true, "cf_value": float64(1200050), "cf_comp": []string{"HubSpot", "Other"}, "cf_seats": "24"}
+	changed, err := changedFields(stored, mapped, typed)
+	if err != nil || len(changed) != 0 {
+		t.Fatalf("changed = %v, err %v; want none", changed, err)
 	}
-	if customFieldsFrom(map[string]string{"display_name": "Acme"}) != nil {
+}
+
+func TestOnlyCheckedCustomFieldsReachCustomFields(t *testing.T) {
+	typed := map[string]any{"cf_tier": "A", "cf_active": true}
+	got := customFieldsFrom(map[string]string{"cf_tier": "a", "display_name": "Acme"}, typed)
+	if len(got) != 1 || got["cf_tier"] != "A" {
+		t.Fatalf("custom fields = %v, want only cf_tier, typed", got)
+	}
+	if customFieldsFrom(map[string]string{"display_name": "Acme"}, typed) != nil {
 		t.Fatal("a row with no custom field gave a non-nil map, which a caller-opened create reads as values")
 	}
 }

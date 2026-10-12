@@ -146,19 +146,20 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 	return out
 }
 
-// customFieldsFrom picks the row's filled custom-field cells, as text. It is
-// nil when there are none, which a caller-opened create reads as no values.
-func customFieldsFrom(fields map[string]string) map[string]any {
+// customFieldsFrom picks the checked custom-field values of the targets in
+// fields, which is the whole row on a create and the changed cells on an
+// update. It is nil when there are none, which a caller-opened create reads
+// as no values.
+func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {
 	var out map[string]any
-	for target, value := range fields {
-		trimmed := strings.TrimSpace(value)
-		if !strings.HasPrefix(target, customFieldPrefix) || trimmed == "" {
+	for target, value := range typed {
+		if _, given := fields[target]; !given {
 			continue
 		}
 		if out == nil {
 			out = map[string]any{}
 		}
-		out[target] = trimmed
+		out[target] = value
 	}
 	return out
 }
