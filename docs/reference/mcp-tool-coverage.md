@@ -91,11 +91,11 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 88 |
-| … some case requires | 44 |
-| … some case requires as one of a set | 4 |
-| … **no case requires** | 40 |
-| … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 10988 |
+| … some case requires | 45 |
+| … some case requires as one of a set | 2 |
+| … **no case requires** | 41 |
+| … of those, permitted somewhere but never required | 18 |
+| Prompt tokens spent on tools no case requires | 11429 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 81 |
 
@@ -192,8 +192,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A default nobody set changes without asking<br>**2** The sign-off given up front is used<br>**3** The company that needed sign-off is the one a human had set | `decide_approval`, `update_record` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
 | [case44_chase_what_is_slipping](../../e2e/llm/scenarios/case44-chase-what-is-slipping.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Only the slipping deal is chased<br>**2** A send that could not go is not reported as sent<br>**3** The reason is the workspace's | `draft_follow_ups_for`, `send_company_email`, `send_message`, `send_company_email` or `send_email` |
-| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
-| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `advance_deal` or `progress_deal` |
+| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `progress_deal` |
+| [case45_move_the_deal_on](../../e2e/llm/scenarios/case45-move-the-deal-on.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The deal moves to the stage the call named<br>**2** The move leaves its reason on the deal<br>**3** The forecast change is explained from what was read | `progress_deal` |
 | [case46_get_us_in_a_room](../../e2e/llm/scenarios/case46-get-us-in-a-room.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A recorded booking is not an invitation<br>**2** The held invitation is reported as waiting<br>**3** The two are kept apart | `book_meeting`, `invite_meeting` |
 | [case47_tidy_the_fair_list](../../e2e/llm/scenarios/case47-tidy-the-fair-list.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The list is read before it is changed<br>**2** A wrong promotion is demoted<br>**3** The bulk change covers who is left | `bulk_update_records`, `change_lead_state`, `change_lists`, `read_lists` |
 | [case48_that_whole_thread_is_filed_wrong](../../e2e/llm/scenarios/case48-that-whole-thread-is-filed-wrong.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A conversation moves as a whole<br>**2** The sign-off given up front is used | `decide_approval`, `relink_activities` |
@@ -328,6 +328,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `query_workspace` | 1.00 | 3 | `case4_use_the_moment` |
+| `progress_deal` | 1.00 | 3 | `case45_move_the_deal_on` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `search_records` | 1.00 | 3 | `case5_before_the_meeting` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
@@ -365,6 +366,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `forecast_readings` | 1.00 | 6 | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
+| `progress_deal` | 1.00 | 3 | `case45_move_the_deal_on` |
 | `run_analytics_query` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
@@ -453,8 +455,6 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 |---|---:|---|---|---|---|
 | `run_report` | 1020 | `case7_ask_for_a_number` | `case20_put_it_in_the_board_pack`, `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | - | - |
 | `send_email` | 754 | `case44_chase_what_is_slipping` | - | - | - |
-| `progress_deal` | 505 | `case45_move_the_deal_on` | - | - | - |
-| `advance_deal` | 446 | `case45_move_the_deal_on` | - | - | - |
 
 ## 4. What no use case requires
 
@@ -462,7 +462,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 40 tools no use case requires, **8 are graded elsewhere** and 32 are untried by any lane.
+So of the 41 tools no use case requires, **8 are graded elsewhere** and 33 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -470,6 +470,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|
 | `list_records` | 817 | `agent_loop` | `case10_finish_the_import`, `case21_what_are_we_closing`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case43_the_fair_leads_are_prospects`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case7_ask_for_a_number`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `resolve_entities` | 493 | - | `case1_log_it`, `case23_find_us_a_slot`, `case2_business_card`, `case30_a_word_for_it`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
+| `advance_deal` | 446 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `review_commitments` | 401 | - | `case41_close_the_project` | `overnight_at_risk_sweep` |
 | `enrich` | 396 | `enrich` | - | - |
@@ -489,7 +490,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `describe_query_vocabulary` | 266 | - | - | - |
 | `company_coverage` | 246 | - | `case5_before_the_meeting` | - |
 | `describe_report_blocks` | 245 | - | - | - |
-| `relink_thread` | 240 | - | `case48_that_whole_thread_is_filed_wrong` | - |
+| `relink_thread` | 240 | - | - | - |
 | `decide_approval_bundle` | 235 | - | - | - |
 | `qualify_lead` | 229 | - | - | - |
 | `apply_tag` | 226 | - | - | - |
@@ -500,7 +501,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `update_tag` | 205 | - | - | - |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
 | `create_tag` | 191 | - | - | - |
-| `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
+| `list_pipelines` | 186 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
 | `list_documents` | 180 | - | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `remove_tag` | 166 | - | - | - |
 | `get_record_tags` | 144 | - | - | - |

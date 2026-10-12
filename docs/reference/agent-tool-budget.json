@@ -136,7 +136,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 585
+      "tokens": 581
     },
     {
       "name": "forecast_readings",
@@ -151,12 +151,12 @@
       "tokens": 530
     },
     {
-      "name": "run_analytics_query",
-      "tokens": 508
+      "name": "progress_deal",
+      "tokens": 513
     },
     {
-      "name": "progress_deal",
-      "tokens": 505
+      "name": "run_analytics_query",
+      "tokens": 508
     },
     {
       "name": "resolve_entities",
@@ -387,12 +387,12 @@
       "tokens": 191
     },
     {
-      "name": "list_pipelines",
-      "tokens": 191
-    },
-    {
       "name": "intro_path_to",
       "tokens": 187
+    },
+    {
+      "name": "list_pipelines",
+      "tokens": 186
     },
     {
       "name": "list_documents",

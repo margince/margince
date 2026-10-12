@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 72 |
+| Tools | 70 |
 | Resources | 9 |
-| Tool catalog | 230.0 KB |
+| Tool catalog | 224.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 59777 |
+| Approx. wire tokens | 58382 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 97.2 KB | 42% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 59.7 KB | 25% | Yes, every step |
-| Input schemas | 55.7 KB | 24% | Yes, every step |
-| _Names, annotations, punctuation_ | 17.4 KB | 7% | Partly |
-| **Description + input schema** | **115.4 KB** | **50%** | **the recurring cost** |
+| Output schemas | 95.4 KB | 42% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 58.5 KB | 26% | Yes, every step |
+| Input schemas | 53.8 KB | 23% | Yes, every step |
+| _Names, annotations, punctuation_ | 16.9 KB | 7% | Partly |
+| **Description + input schema** | **112.3 KB** | **49%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,11 +52,10 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (72)
+### Tools (70)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
-| [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
@@ -113,7 +112,6 @@ descriptions and input schemas are what each step pays for.
 | [`read_tags`](#read_tags) | Read tags | yes |  | 1.1 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
-| [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
@@ -293,193 +291,6 @@ one proposed and the choice to keep or replace it.
 
 ## Tools
 
-### advance_deal
-
-**Advance a deal to a stage**
-
-```text
-Move a deal to a different stage of its pipeline. The stage is named by id from list_pipelines —
-call it first; a deal you read carries only its current stage. Moving onto or off a won/lost stage
-is a human's decision: staged for approval, with a lost_reason for a losing stage. Read the target
-stage's semantic rather than guessing from its name. Use progress_deal when the move should also
-leave a note explaining it, which is almost always what a human means by moving a deal on. Send
-if_version with the version you read of the deal, and keep the staged approval id when a closing
-move comes back for approval. (Governance: some calls run immediately and others a human approves
-first, decided per call from its arguments; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on retry after a human approved a won/lost move",
-      "format": "uuid",
-      "type": "string"
-    },
-    "deal_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "type": "integer"
-    },
-    "lost_reason": {
-      "description": "Required when the target stage closes the deal as lost",
-      "type": "string"
-    },
-    "to_stage_id": {
-      "description": "The target stage, by id — obtain it from list_pipelines, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "won_without_contract_detail": {
-      "description": "What the reason was, required when it is other",
-      "maxLength": 500,
-      "type": "string"
-    },
-    "won_without_contract_reason": {
-      "description": "Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
-      "enum": [
-        "imported",
-        "purchase_order",
-        "verbal",
-        "renewal_by_email",
-        "other"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "deal_id",
-    "to_stage_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "fields": {
-          "type": "object"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "trust_tier": {
-          "type": "string"
-        },
-        "version": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "fields",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### advance_project_phase
 
 **Move a project to a phase**
@@ -491,7 +302,7 @@ reopened. Closing requires a reason, which is recorded on the phase history eith
 not complete, cancel or hide anything open on the project: its tasks and commitments stay open on
 their own records. When the user has asked for the close, report what is still open and close — an
 open commitment is something to tell them, not a reason to hold back a close they asked for. Use
-advance_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a
+progress_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a
 different record. Send if_version with the version you read. By default the phase moves when this
 call answers. Where an installation has raised this verb to confirm first, the answer is a staged
 approval and the phase has NOT moved — keep its id and do not report the project as advanced until
@@ -7382,8 +7193,8 @@ cannot be created, or moved anywhere new, without calling this first — a deal 
 read carries only the stage it is in. Each stage carries a semantic — open, won or lost — and
 that, not its name, is what decides whether moving onto it needs a human's approval; a stage called
 "Closed" may be either. Keep the pipeline_id and the stage_id of the stage you mean: create_record
-for a deal requires both, and advance_deal and progress_deal take that stage_id as their
-to_stage_id. (Governance: runs immediately; requires passport scope "read".)
+for a deal requires both, and progress_deal takes that stage_id as its to_stage_id. (Governance:
+runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -9787,16 +9598,16 @@ so report both: a column this placed by a name they did not write is a decision 
 **Progress a deal with a note**
 
 ```text
-Move a deal to a new stage and leave a note on its timeline saying why, in one call. The move
-commits first and the note follows it, so a note that fails to write does not put the deal back —
-the answer says so, and the note is then log_activity's to retry. The note itself is optional. Same
-rules as the bare move otherwise: call list_pipelines for the id of the stage you are moving to, and
-moving onto or off a stage that closes a deal as won or lost is staged for a human to approve. Use
-advance_deal when there is genuinely nothing to say about the move, and log_activity when something
-happened but the deal did not move. Send if_version with the version you read of the deal; keep the
-staged approval id if a closing move is sent for approval. (Governance: some calls run immediately
-and others a human approves first, decided per call from its arguments; requires passport scope
-"write".)
+Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying
+why, in one call. The stage is named by id from list_pipelines — call it first; a deal you read
+carries only its current stage. Moving onto or off a won or lost stage is a human's decision: staged
+for approval, with a lost_reason for a losing stage. Read the target stage's semantic rather than
+guessing from its name. The move commits first and the note follows it, so a note that fails to
+write does not put the deal back — the answer says so, and the note is then log_activity's to
+retry. Use log_activity when something happened but the deal did not move. Send if_version with the
+version you read of the deal; keep the staged approval id if a closing move is sent for approval.
+(Governance: some calls run immediately and others a human approves first, decided per call from its
+arguments; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12902,168 +12713,6 @@ call from its arguments; requires passport scope "write".)
 
 </details>
 
-### relink_thread
-
-**Re-associate a whole conversation to a record**
-
-```text
-Move one whole conversation (by thread_key) onto a record, in one transaction. Refused for an
-assistant, at every destination and however it is called: a thread key cannot be confirmed because
-the conversation may grow before the retry. List the thread's activities and call relink_activities
-with exactly those ids. relink_activities moves a named set; relink_activity moves one message.
-(Governance: some calls run immediately and others a human approves first, decided per call from its
-arguments; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Cannot authorize a thread move; use relink_activities",
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
-      ],
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "replace_existing_of_type": {
-      "default": false,
-      "description": "Move rather than associate",
-      "type": "boolean"
-    },
-    "thread_key": {
-      "minLength": 1,
-      "type": "string"
-    }
-  },
-  "required": [
-    "thread_key",
-    "entity_type",
-    "entity_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "relinked": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "relinked"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### resolve_entities
 
 **Resolve contacts and companies**
@@ -15499,11 +15148,10 @@ contact's email addresses are not among them). A field a HUMAN last set is not o
 part is staged for a human and named in the result, and that part of the write has not happened. It
 names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
 ownership decides visibility, so reassigning moves the record onto someone else's book and can take
-it off the owner's. Use advance_deal or progress_deal to move a deal between stages, and
-relink_activity to change what an activity is about; neither is a field edit. Send if_version with
-the version you read, and keep the staged approval id from the result if you intend to retry the
-same change once a human has released it. (Governance: runs immediately; requires passport scope
-"write".)
+it off the owner's. Use progress_deal to move a deal between stages, and relink_activity to change
+what an activity is about; neither is a field edit. Send if_version with the version you read, and
+keep the staged approval id from the result if you intend to retry the same change once a human has
+released it. (Governance: runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.

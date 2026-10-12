@@ -166,12 +166,12 @@ listing once. Read a row as what that tool costs a menu.
 | `create_record` | 672 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
-| `update_record` | 585 |  |
+| `update_record` | 581 |  |
 | `forecast_readings` | 553 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
+| `progress_deal` | 513 |  |
 | `run_analytics_query` | 508 |  |
-| `progress_deal` | 505 |  |
 | `resolve_entities` | 493 |  |
 | `change_lead_state` | 467 |  |
 | `search_records` | 456 |  |
@@ -229,8 +229,8 @@ listing once. Read a row as what that tool costs a menu.
 | `data_coverage` | 195 |  |
 | `list_colleagues` | 193 |  |
 | `create_tag` | 191 |  |
-| `list_pipelines` | 191 |  |
 | `intro_path_to` | 187 |  |
+| `list_pipelines` | 186 |  |
 | `list_documents` | 180 |  |
 | `list_channel_providers` | 174 |  |
 | `remove_tag` | 166 |  |

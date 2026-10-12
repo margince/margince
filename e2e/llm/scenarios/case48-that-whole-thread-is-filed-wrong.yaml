@@ -42,7 +42,6 @@ must_call:
   - relink_activities
   - decide_approval
 may_call:
-  - relink_thread
   - search_context
   - search_records
   - read_record

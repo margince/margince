@@ -80,6 +80,7 @@ func (t advanceDeal) Spec() mcp.ToolSpec {
 		Instead:       advanceDealCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierDynamic,
+		Unlisted:      true,
 		TierResolver:  advanceDealTier,
 		OpenAPIOp:     "advanceDeal",
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{

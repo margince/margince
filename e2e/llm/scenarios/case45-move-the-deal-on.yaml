@@ -1,12 +1,8 @@
 # CASE 45 — Move the deal on.
 #
-# advance_deal and progress_deal: one bare, one with a note explaining the move.
-# Both are honest answers to "move it on", and the case holds either one — the
-# tool description itself says progress_deal is what a human almost always means,
-# and a model that reaches for the bare move and leaves no note has still moved
-# the deal. That makes advance_deal a tool this lane can only ever cover as one
-# of a set: bare, it is progress_deal with the note left off, and failing a
-# correct answer for taking the shorter door would grade taste, not the product.
+# progress_deal moves a deal and may leave a note explaining the move. The bare
+# move (advance_deal) is still callable by name but no longer offered, since
+# progress_deal with the note left off does the same thing.
 #
 # THE MOVE IS OPEN TO OPEN (Qualified to Negotiation), so it runs without anyone's
 # sign-off. A move onto Won or Lost is staged for a human, which is a different
@@ -33,7 +29,7 @@ prompt: |
   purchasing is at the table. What does that do to my quarter?
 
 must_call:
-  - progress_deal|advance_deal
+  - progress_deal
 may_call:
   - list_pipelines
   - search_records

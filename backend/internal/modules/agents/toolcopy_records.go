@@ -77,7 +77,7 @@ var updateRecordCopy = toolCopy{
 		"of the write has not happened. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's.",
-	Instead: "Use advance_deal or progress_deal to move a deal between stages, and relink_activity " +
+	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
 	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +
 		"result if you intend to retry the same change once a human has released it.",
@@ -200,15 +200,15 @@ var advanceDealCopy = toolCopy{
 }
 
 var progressDealCopy = toolCopy{
-	Purpose: "Move a deal to a new stage and leave a note on its timeline saying why, in one " +
-		"call.",
-	Limits: "The move commits first and the note follows it, so a note that fails to write does " +
-		"not put the deal back — the answer says so, and the note is then log_activity's to " +
-		"retry. The note itself is optional. Same rules as the bare move otherwise: call " +
-		"list_pipelines for the id of the stage you are moving to, and moving onto or off a " +
-		"stage that closes a deal as won or lost is staged for a human to approve.",
-	Instead: "Use advance_deal when there is genuinely nothing to say about the move, and " +
-		"log_activity when something happened but the deal did not move.",
+	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
+		"timeline saying why, in one call.",
+	Limits: "The stage is named by id from list_pipelines — call it first; a deal you read " +
+		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
+		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"stage's semantic rather than guessing from its name. The move commits first and the " +
+		"note follows it, so a note that fails to write does not put the deal back — the answer " +
+		"says so, and the note is then log_activity's to retry.",
+	Instead: "Use log_activity when something happened but the deal did not move.",
 	Retain: "Send if_version with the version you read of the deal; keep the staged approval id " +
 		"if a closing move is sent for approval.",
 }
@@ -272,7 +272,7 @@ var advanceProjectPhaseCopy = toolCopy{
 		"on the project: its tasks and commitments stay open on their own records. When the " +
 		"user has asked for the close, report what is still open and close — an open " +
 		"commitment is something to tell them, not a reason to hold back a close they asked for.",
-	Instead: "Use advance_deal for a deal's pipeline stages; a project's phases are a different " +
+	Instead: "Use progress_deal for a deal's pipeline stages; a project's phases are a different " +
 		"vocabulary on a different record.",
 	Retain: "Send if_version with the version you read. By default the phase moves when this " +
 		"call answers. Where an installation has raised this verb to confirm first, the answer " +
@@ -289,6 +289,6 @@ var listPipelinesCopy = toolCopy{
 		"— and that, not its name, is what decides whether moving onto it needs a human's " +
 		"approval; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
-		"deal requires both, and advance_deal and progress_deal take that stage_id as their " +
+		"deal requires both, and progress_deal takes that stage_id as its " +
 		"to_stage_id.",
 }

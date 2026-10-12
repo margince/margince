@@ -97,7 +97,11 @@ const clientToolCeiling = 100
 //
 // read_tags and change_tags front seven tag verbs, split by scope, and lower it
 // to 72. merge_tags stays listed: it alone asks a human first.
-const publishedToolCeiling = 72
+//
+// advance_deal and relink_thread are no longer offered, which lowers it to 70:
+// progress_deal takes every argument the bare move takes, and relink_thread
+// refuses every call over MCP in favour of relink_activities.
+const publishedToolCeiling = 70
 
 type mcpInfoFile struct {
 	Totals struct {
