@@ -485,7 +485,8 @@ describe("autolink shows where every link goes", () => {
 });
 
 describe("a link to a Margince page stays in this tab", () => {
-  const own = () => `${window.location.origin}/#/deals/42`;
+  const own = () =>
+    `${window.location.origin}${window.location.pathname}#/deals/42`;
   const other = "https://example.com/#/deals/42";
 
   it.each([
@@ -505,6 +506,18 @@ describe("a link to a Margince page stays in this tab", () => {
       expect(outbound).toHaveAttribute("target", "_blank");
     },
   );
+
+  it.each([
+    ["an API address", "/v1/attachments/7"],
+    ["a hash route on another path", "/v1/export#/deals/42"],
+    ["a page path with no hash route", "#section"],
+  ])("opens %s on this origin in a new tab", (_, tail) => {
+    const href = tail.startsWith("#")
+      ? `${window.location.origin}${window.location.pathname}${tail}`
+      : `${window.location.origin}${tail}`;
+    render(<Markdown source={href} autolink />);
+    expect(screen.getByRole("link")).toHaveAttribute("target", "_blank");
+  });
 
   it("still shows the real address behind a label on this origin", () => {
     const { container } = render(

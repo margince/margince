@@ -314,13 +314,20 @@ function renderInline(node: Inline): ReactNode {
 }
 
 /**
- * An http(s) address on another origin. One on this app's own origin is a
- * Margince page, so the hash router takes it in the same tab.
+ * Whether a link leaves the app. Only a hash route on this page's own path is
+ * in-app; the same origin also serves the API and downloads, which would replace the app.
  */
 function leavesTheApp(href: string): boolean {
   if (!/^https?:/i.test(href)) return false;
+  if (typeof window === "undefined") return true;
   try {
-    return new URL(href).origin !== window.location.origin;
+    const target = new URL(href);
+    const here = window.location;
+    const inApp =
+      target.origin === here.origin &&
+      target.pathname === here.pathname &&
+      target.hash.startsWith("#/");
+    return !inApp;
   } catch {
     // An address the URL parser refuses has no origin to match, so it is not ours.
     return true;
