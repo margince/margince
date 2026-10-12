@@ -49,8 +49,10 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 		col, active := cat.byName[target]
 		if !active {
 			// Retired after the run was staged: the store has no column to bind it to.
-			return nil, &cellProblem{Target: target, Value: raw,
-				Message: fmt.Sprintf("%q cannot be written: this field is no longer active", strings.TrimSpace(raw))}
+			return nil, &cellProblem{
+				Target: target, Value: raw,
+				Message: fmt.Sprintf("%q cannot be written: this field is no longer active", strings.TrimSpace(raw)),
+			}
 		}
 		value, problem := checkCell(target, col, raw, cat.optionsReadable)
 		if problem != nil {
@@ -187,13 +189,15 @@ func currencyValue(col fieldcatalog.Column, text string) (any, string) {
 	return float64(minor), ""
 }
 
-// booleanValue reads the spellings a spreadsheet uses for yes and no.
+// spreadsheetBooleans are the spellings a spreadsheet uses for yes and no.
+//
+//nolint:goconst // a cell's spelling; the constant goconst offers names a query argument's
+var spreadsheetBooleans = map[string]bool{"true": true, "yes": true, "1": true, "false": false, "no": false, "0": false}
+
+// booleanValue reads a cell spelled as one of spreadsheetBooleans.
 func booleanValue(text string) (any, string) {
-	switch strings.ToLower(text) {
-	case "true", "yes", "1":
-		return true, ""
-	case "false", "no", "0":
-		return false, ""
+	if value, ok := spreadsheetBooleans[strings.ToLower(text)]; ok {
+		return value, ""
 	}
 	return nil, fmt.Sprintf("%q is not yes or no", text)
 }
@@ -273,8 +277,10 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 			return nil
 		}
 		if _, err := values.ParseEmail(email); err != nil {
-			return &cellProblem{Target: fieldEmail, Value: fields[fieldEmail],
-				Message: fmt.Sprintf("%q is not an email address that can be written", fields[fieldEmail])}
+			return &cellProblem{
+				Target: fieldEmail, Value: fields[fieldEmail],
+				Message: fmt.Sprintf("%q is not an email address that can be written", fields[fieldEmail]),
+			}
 		}
 		return nil
 	}
@@ -284,16 +290,20 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	// parseCompanyDomains refuses a domain its parser cannot read before the write.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
 		if _, err := values.ParseDomain(domain); err != nil {
-			return &cellProblem{Target: fieldDomain, Value: fields[fieldDomain],
-				Message: fmt.Sprintf("%q is not a domain that can be written", domain)}
+			return &cellProblem{
+				Target: fieldDomain, Value: fields[fieldDomain],
+				Message: fmt.Sprintf("%q is not a domain that can be written", domain),
+			}
 		}
 	}
 	band := strings.TrimSpace(fields[fieldSizeBand])
 	if band == "" || importableSizeBands[band] {
 		return nil
 	}
-	return &cellProblem{Target: fieldSizeBand, Value: fields[fieldSizeBand],
-		Message: fmt.Sprintf("size_band %q is not one of %s", fields[fieldSizeBand], strings.Join(sizeBandVocabulary(), ", "))}
+	return &cellProblem{
+		Target: fieldSizeBand, Value: fields[fieldSizeBand],
+		Message: fmt.Sprintf("size_band %q is not one of %s", fields[fieldSizeBand], strings.Join(sizeBandVocabulary(), ", ")),
+	}
 }
 
 // importableSizeBands is the closed size_band vocabulary, off the contract.

@@ -181,7 +181,7 @@ func WithBlobstore(store blobstore.Store) Option {
 // in the response, or a runner that holds the task to see what came first.
 func WithImportCommitRunner(run func(task func())) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
-		s.importHandlers.detach = run
+		s.detach = run
 	}
 }
 

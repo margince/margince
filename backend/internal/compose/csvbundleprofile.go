@@ -49,7 +49,7 @@ func (h importHandlers) profileBundle(
 		})
 	}
 
-	key, err := h.storeSource(ctx, upload.Body, "application/zip")
+	key, err := h.storeSource(ctx, upload.Body, zipContentType)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}

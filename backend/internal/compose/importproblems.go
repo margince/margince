@@ -32,7 +32,7 @@ func (h importHandlers) DownloadImportProblems(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	writeImportDownload(w, r, httperr.Download{ContentType: "text/csv; charset=utf-8", Filename: "problems.csv"}, buf.Bytes())
+	writeImportDownload(w, r, httperr.Download{ContentType: reportingCSVContentType, Filename: "problems.csv"}, buf.Bytes())
 }
 
 // reported is a run that has a report: one a dry run has validated.
@@ -47,11 +47,16 @@ func (h importHandlers) reported(r *http.Request, id openapi_types.UUID) (migrat
 	return run, nil
 }
 
+// importProblemsHeader names the problems spreadsheet's columns, in order.
+//
+//nolint:goconst // column headings of a downloaded file; the constant goconst offers names an extraction key
+var importProblemsHeader = []string{"file", "row", "column", "problem", "value"}
+
 // writeImportProblems writes a report's issues as a spreadsheet, one line per
 // issue. Every cell is the uploader's own text, so each is formula-guarded.
 func writeImportProblems(w io.Writer, rep crmcontracts.ImportRunReport) error {
 	out := csv.NewWriter(w)
-	if err := out.Write([]string{"file", "row", "column", "problem", "value"}); err != nil {
+	if err := out.Write(importProblemsHeader); err != nil {
 		return fmt.Errorf("import problems: %w", err)
 	}
 	for _, issue := range rep.Issues {

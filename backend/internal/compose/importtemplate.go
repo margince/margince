@@ -33,7 +33,7 @@ func (h importHandlers) DownloadImportTemplate(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	writeImportDownload(w, r, httperr.Download{ContentType: "application/zip", Filename: "margince-import.zip"}, buf.Bytes())
+	writeImportDownload(w, r, httperr.Download{ContentType: zipContentType, Filename: "margince-import.zip"}, buf.Bytes())
 }
 
 // writeImportDownload sends a body already built whole. A failed write is a
@@ -80,7 +80,7 @@ func writeZipEntry(archive *zip.Writer, name string, body []byte) error {
 func templateHeader(file crmcontracts.ImportFormatFile) ([]byte, error) {
 	cells := make([]string, 0, len(file.Columns))
 	for _, col := range file.Columns {
-		cells = append(cells, shownName(col))
+		cells = append(cells, columnHeading(col))
 	}
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
@@ -91,8 +91,9 @@ func templateHeader(file crmcontracts.ImportFormatFile) ([]byte, error) {
 	return buf.Bytes(), out.Error()
 }
 
-// shownName is what a person reads for a column: its label, else its name.
-func shownName(col crmcontracts.ImportFormatColumn) string {
+// columnHeading is the header a column carries in the template: its label,
+// else its name.
+func columnHeading(col crmcontracts.ImportFormatColumn) string {
 	if col.Label != nil {
 		return *col.Label
 	}
@@ -130,7 +131,7 @@ func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken) string 
 		line(0, "")
 		line(0, file.File)
 		for _, col := range file.Columns {
-			name := shownName(col)
+			name := columnHeading(col)
 			if col.RequiredOnNewRow {
 				name += " (" + spoken.Say(importguide.Template.Required) + ")"
 			}
@@ -160,7 +161,7 @@ func writeAllowedValues(line func(int, string), f crmcontracts.ImportFormat, spo
 				line(1, file.File)
 				fileNamed = true
 			}
-			line(2, shownName(col)+": "+strings.Join(*col.Options, ", "))
+			line(2, columnHeading(col)+": "+strings.Join(*col.Options, ", "))
 		}
 	}
 	if heading {
