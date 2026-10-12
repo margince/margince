@@ -23,7 +23,7 @@ func identityCells(object string, n int) map[string]string {
 	case "company":
 		return map[string]string{"display_name": fmt.Sprintf("Limits %d GmbH", n)}
 	default:
-		return map[string]string{"email": fmt.Sprintf("limits%d@limits.example", n), "full_name": fmt.Sprintf("Limit Person %d", n)}
+		return map[string]string{"email": fmt.Sprintf("limits%d@limits.example", n), "full_name": fmt.Sprintf("Limit Contact %d", n)}
 	}
 }
 
