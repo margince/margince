@@ -81,7 +81,7 @@ func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 		if declared[spec.Name] || composed[spec.Name] {
 			continue
 		}
-		// A router runs only as its targets, so it is granted exactly what they are.
+		// A router runs only as its targets, so it is granted what they are.
 		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
 			for _, target := range targets {
 				if !declared[target] {

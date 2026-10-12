@@ -102,8 +102,8 @@ func TestRouterDispatchesToTheTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("routed call refused: %v", err)
 	}
-	if served.Tool != "fake_a" {
-		t.Errorf("served tool = %q, want fake_a", served.Tool)
+	if served.Tool != "fake_a" || served.Router != "fake_ab" {
+		t.Errorf("served %q through %q, want fake_a through fake_ab", served.Tool, served.Router)
 	}
 	if a.calls != 1 || b.calls != 0 {
 		t.Fatalf("calls a=%d b=%d, want the call on fake_a alone", a.calls, b.calls)
@@ -139,8 +139,8 @@ func TestRouterRefusesABadChoice(t *testing.T) {
 	}
 }
 
-// The retry claim is the target's, and over the call the target sees: a key
-// spent through the router and the same call made by the old name are one call.
+// The retry claim is the target's, over the call the target sees. A key spent
+// through the router and the same call made by the old name are one call.
 func TestRouterKeepsReservedArguments(t *testing.T) {
 	claimed := func(name, in string) string {
 		claims := &recordingClaims{verdict: Claim{State: ClaimFresh, Attempt: freshAttempt}}
@@ -187,7 +187,7 @@ func TestRegisterDerivesTheRouterSpec(t *testing.T) {
 	r.Register(&argsTool{spec: small})
 	r.Register(fakeRouter{
 		name: "fake_ab", targets: map[string]string{"b": "fake_b", "a": "fake_a"},
-		schema: `{"type":"object","properties":{"x":{"type":"integer","description":"what x means for every action"}}}`,
+		schema: `{"type":"object","properties":{"action":{"description":"which one"},"x":{"description":"what x means for every action"}}}`,
 	})
 
 	spec, _ := r.Spec("fake_ab")
@@ -211,15 +211,18 @@ func TestRegisterDerivesTheRouterSpec(t *testing.T) {
 		Type string   `json:"type"`
 		Enum []string `json:"enum"`
 	}
-	if err := json.Unmarshal(schema.Properties["action"], &route); err != nil || route.Type != "string" ||
+	if err := json.Unmarshal(schema.Properties["action"], &route); err != nil || route.Type != schemaString ||
 		strings.Join(route.Enum, ",") != "a,b" {
 		t.Errorf("route field = %s, want a string enum of the sorted choices", schema.Properties["action"])
 	}
 	if _, ok := schema.Properties["y"]; !ok {
 		t.Error("property y of a target is missing")
 	}
-	if !strings.Contains(string(schema.Properties["x"]), "every action") {
-		t.Errorf("x = %s, want the router's own wording over a target's", schema.Properties["x"])
+	if x := string(schema.Properties["x"]); !strings.Contains(x, "every action") || !strings.Contains(x, "integer") {
+		t.Errorf("x = %s, want the target's shape with the router's wording", x)
+	}
+	if !strings.Contains(string(schema.Properties["action"]), "which one") {
+		t.Errorf("action = %s, want the router's own description kept", schema.Properties["action"])
 	}
 	if strings.Join(schema.Required, ",") != "action,x" {
 		t.Errorf("required = %v, want the route field and what every target requires", schema.Required)
@@ -323,5 +326,52 @@ func TestRouteTargetsNamesARoutersTargets(t *testing.T) {
 	}
 	if _, ok := r.RouteTargets("fake_a"); ok {
 		t.Error("an ordinary tool reported as a router")
+	}
+}
+
+func shapedTarget(name, properties string) *argsTool {
+	spec := targetSpec(name, principal.ScopeWrite, mcp.TierAutoExecute)
+	spec.InputSchema = json.RawMessage(`{"type":"object","properties":` + properties + `}`)
+	return &argsTool{spec: spec}
+}
+
+// Two targets naming one argument with different words advertise every word.
+// A call meant for either is then not refused by a client holding the schema.
+func TestARoutedArgumentCarriesEveryTargetsWords(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	r.Register(shapedTarget("fake_a", `{"color":{"type":"string","enum":["red","blue"]}}`))
+	r.Register(shapedTarget("fake_b", `{"color":{"type":"string","enum":["blue","none"]}}`))
+	r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}})
+	spec, _ := r.Spec("fake_ab")
+	var schema struct {
+		Properties map[string]struct {
+			Enum []string `json:"enum"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(schema.Properties["color"].Enum, ","); got != "blue,none,red" {
+		t.Errorf("color enum = %s, want every target's words", got)
+	}
+}
+
+func TestRegisterRefusesARouterThatRestatesOrConflicts(t *testing.T) {
+	for why, tc := range map[string]struct{ a, b, own string }{
+		"two shapes for one argument":  {`{"x":{"type":"integer"}}`, `{"x":{"type":"string"}}`, ``},
+		"a router restating a shape":   {`{"x":{"type":"integer"}}`, `{}`, `{"x":{"type":"integer","description":"d"}}`},
+		"a router naming no argument":  {`{"x":{"type":"integer"}}`, `{}`, `{"y":{"description":"d"}}`},
+		"a route field a target takes": {`{"action":{"type":"string"}}`, `{}`, ``},
+	} {
+		mustPanic(t, why, func() {
+			r := NewRegistry(nil, nil)
+			r.Register(shapedTarget("fake_a", tc.a))
+			r.Register(shapedTarget("fake_b", tc.b))
+			schema := ""
+			if tc.own != "" {
+				schema = `{"type":"object","properties":` + tc.own + `}`
+			}
+			r.Register(fakeRouter{name: "fake_ab", targets: map[string]string{"a": "fake_a", "b": "fake_b"}, schema: schema})
+		})
 	}
 }

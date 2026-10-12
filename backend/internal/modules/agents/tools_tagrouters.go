@@ -14,7 +14,7 @@ func (readTags) Spec() mcp.ToolSpec {
 		Name: "read_tags", Title: "Read tags", Version: toolVersionV1,
 		Description: readTagsCopy.render(),
 		InputSchema: schema(`{"type":"object","properties":{
-			"mode":{"type":"string","enum":["get","list","record"]}}}`),
+			"mode":{"description":"list every word, get one tag, or record: the tags on one record"}}}`),
 	}
 }
 
@@ -32,7 +32,7 @@ func (changeTags) Spec() mcp.ToolSpec {
 		Description: changeTagsCopy.render(),
 		Instead:     changeTagsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"type":"string","enum":["apply","create","remove","update"]}}}`),
+			"color":{"description":"create and update; none clears it (update only)"}}}`),
 	}
 }
 

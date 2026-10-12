@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 210.8 KB |
+| Tool catalog | 211.5 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 54849 |
+| Approx. wire tokens | 55026 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 85.2 KB | 40% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 56.5 KB | 26% | Yes, every step |
-| Input schemas | 53.3 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 56.7 KB | 26% | Yes, every step |
+| Input schemas | 53.8 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **109.8 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **110.5 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -64,18 +64,18 @@ descriptions and input schemas are what each step pays for.
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
-| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.1 KB |
+| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.2 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
-| [`change_tags`](#change_tags) | Change tags |  |  | 1.8 KB |
+| [`change_tags`](#change_tags) | Change tags |  |  | 2.0 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 1.9 KB |
+| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 2.0 KB |
 | [`decide_duplicate`](#decide_duplicate) | Decide a flagged duplicate pair |  |  | 2.0 KB |
-| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 1.5 KB |
+| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 1.6 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
@@ -99,13 +99,13 @@ descriptions and input schemas are what each step pays for.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.2 KB |
-| [`read_import`](#read_import) | Read an import run | yes |  | 752 B |
-| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 1.5 KB |
+| [`read_import`](#read_import) | Read an import run | yes |  | 822 B |
+| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 1.6 KB |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 4.0 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 1.3 KB |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 1.4 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
@@ -2128,12 +2128,12 @@ until the retry carrying it has answered. (Governance: runs immediately; require
       "type": "string"
     },
     "reason": {
-      "description": "demote only, required: why the promotion is reversed",
+      "description": "demote only, required: why the promotion is reversed, recorded in the audit trail",
       "minLength": 1,
       "type": "string"
     },
     "trigger": {
-      "description": "promote only, required: the genuine engagement justifying it",
+      "description": "promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes",
       "enum": [
         "inbound_reply",
         "meeting_booked",
@@ -2438,12 +2438,14 @@ and its new version from the answer. (Governance: runs immediately; requires pas
 Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
 deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
 word. update renames, recolours or describes one; fields left out are unchanged. apply never creates
-a tag: an unknown name is refused. Before create, read the list — a near-duplicate splits records
-that belong together, and a taken name, even a retired one, is a conflict. create and update need
-tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
-changes what a word is called, never what carries it. Removing a tag that is not there succeeds. Use
-merge_tags to fold a duplicate word into the one kept, and archive_record on a tag to retire it for
-every record. (Governance: runs immediately; requires passport scope "write".)
+a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as
+archived, and the same tag twice is a conflict. Before create, read the list — a near-duplicate
+splits records that belong together, and a taken name is a conflict, even a retired one, which only
+Settings restores. create and update need tag grants an ordinary seat lacks. update sends no
+version, so read the tag right before editing; it changes what a word is called, never what carries
+it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one
+kept, and archive_record on a tag to retire it for every record. (Governance: runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2461,15 +2463,17 @@ every record. (Governance: runs immediately; requires passport scope "write".)
       "type": "string"
     },
     "color": {
+      "description": "create and update; none clears it (update only)",
       "enum": [
-        "teal",
         "amber",
-        "rose",
-        "slate",
-        "sky",
-        "violet",
         "lime",
-        "orange"
+        "none",
+        "orange",
+        "rose",
+        "sky",
+        "slate",
+        "teal",
+        "violet"
       ],
       "type": "string"
     },
@@ -2492,8 +2496,8 @@ every record. (Governance: runs immediately; requires passport scope "write".)
     },
     "record_type": {
       "enum": [
-        "contact",
         "company",
+        "contact",
         "deal",
         "lead",
         "project"
@@ -3853,10 +3857,11 @@ including sending a message that was only drafted; a rejection cannot be taken b
 your own proposal only when it is a change that would have gone straight through but for a human's
 earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is
 theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing
-is written; each bundle member is answered and reported on its own. read_approval when they have not
-seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused
-call, approving does not perform it — re-issue that same call with approval_id set. (Governance:
-runs immediately; requires passport scope "write".)
+is written; each bundle member is answered and reported on its own, and a bundle holding none of
+theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
+where both ids come from. If the proposal is your OWN refused call, approving does not perform it
+— re-issue that same call with approval_id set. (Governance: runs immediately; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3882,7 +3887,7 @@ runs immediately; requires passport scope "write".)
       "type": "string"
     },
     "reason": {
-      "description": "Why, in the decider's own words. Recorded against every member.",
+      "description": "Why, in the decider's own words; with bundle_id it is recorded against every member",
       "type": "string"
     },
     "staged_action_id": {
@@ -4075,6 +4080,7 @@ requires passport scope "read".)
 {
   "properties": {
     "topic": {
+      "description": "Which tool's names to describe",
       "enum": [
         "analytics",
         "query",
@@ -9648,6 +9654,7 @@ the user weighs before committing. (Governance: runs immediately; requires passp
       "type": "string"
     },
     "view": {
+      "description": "run is where it got to, report what it will do or did",
       "enum": [
         "report",
         "run"
@@ -9691,6 +9698,7 @@ passport scope "read".)
 {
   "properties": {
     "view": {
+      "description": "summary is the verdict, exceptions the open problems, sources what could be read",
       "enum": [
         "exceptions",
         "sources",
@@ -11062,13 +11070,13 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
 
 ```text
 Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag
-and how many contacts, companies, deals and leads carry it. record: the tags on one contact,
-company, deal or lead, with who applied each and when. list returns archived words only with
-include_archived, and they cannot be applied; `truncated` means a word missing from the list may
-still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that
-the record has no tags — never report it as none. A word the user says fits a contact you are
-creating goes to create_record as offer_tag, which offers it without applying it. (Governance: runs
-immediately; requires passport scope "read".)
+and how many contacts, companies, deals and leads carry it — the records themselves come from
+list_records. record: the tags on one contact, company, deal or lead, with who applied each and
+when. list returns archived words only with include_archived, and they cannot be applied;
+`truncated` means a word missing from the list may still exist. In record, `withheld` true means the
+vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none.
+A word the user says fits a contact you are creating goes to create_record as offer_tag, which
+offers it without applying it. (Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -11081,6 +11089,7 @@ immediately; requires passport scope "read".)
       "type": "boolean"
     },
     "mode": {
+      "description": "list every word, get one tag, or record: the tags on one record",
       "enum": [
         "get",
         "list",

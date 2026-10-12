@@ -15,8 +15,7 @@ func (describeVocabulary) Spec() mcp.ToolSpec {
 		Description: describeVocabularyCopy.render(),
 		Instead:     describeVocabularyCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"topic":{"type":"string","enum":["analytics","query","record_fields","report_blocks","report_vocabulary"],
-				"description":"Which tool's names to describe"}}}`),
+			"topic":{"description":"Which tool's names to describe"}}}`),
 	}
 }
 

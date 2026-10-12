@@ -76,7 +76,8 @@ var updateTagCopy = toolCopy{
 
 var readTagsCopy = toolCopy{
 	Purpose: "Read the workspace's tags. list: every word, with the tag_id the other tag calls " +
-		"take. get: one tag and how many contacts, companies, deals and leads carry it. record: " +
+		"take. get: one tag and how many contacts, companies, deals and leads carry it — the " +
+		"records themselves come from list_records. record: " +
 		"the tags on one contact, company, deal or lead, with who applied each and when.",
 	Limits: "list returns archived words only with include_archived, and they cannot be applied; " +
 		"`truncated` means a word missing from the list may still exist. In record, `withheld` " +
@@ -91,9 +92,10 @@ var changeTagsCopy = toolCopy{
 		"contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that " +
 		"already exists. create coins a new word. update renames, recolours or describes one; " +
 		"fields left out are unchanged.",
-	Limits: "apply never creates a tag: an unknown name is refused. Before create, read the list " +
-		"— a near-duplicate splits records that belong together, and a taken name, even a retired " +
-		"one, is a conflict. create and update need tag grants an ordinary seat lacks. update " +
+	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
+		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
+		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
+		"together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update " +
 		"sends no version, so read the tag right before editing; it changes what a word is " +
 		"called, never what carries it. Removing a tag that is not there succeeds.",
 	Instead: "Use merge_tags to fold a duplicate word into the one kept, and archive_record on a " +

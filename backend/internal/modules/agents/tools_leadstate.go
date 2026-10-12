@@ -15,12 +15,10 @@ func (changeLeadState) Spec() mcp.ToolSpec {
 		Description: changeLeadStateCopy.render(),
 		Instead:     changeLeadStateCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"type":"string","enum":["demote","disqualify","promote","qualify"]},
-			"lead_id":{"type":"string","format":"uuid","description":"The lead"},
-			"trigger":{"type":"string","enum":["inbound_reply","meeting_booked","meeting_held","human_qualify"],
-				"description":"promote only, required: the genuine engagement justifying it"},
-			"evidence_note":{"type":"string","description":"promote only"},
-			"reason":{"type":"string","minLength":1,"description":"demote only, required: why the promotion is reversed"}}}`),
+			"lead_id":{"description":"The lead"},
+			"trigger":{"description":"promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes"},
+			"evidence_note":{"description":"promote only"},
+			"reason":{"description":"demote only, required: why the promotion is reversed, recorded in the audit trail"}}}`),
 	}
 }
 

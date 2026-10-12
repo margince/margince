@@ -74,7 +74,8 @@ var decideApprovalsCopy = toolCopy{
 		"proposal only when it is a change that would have gone straight through but for a human's " +
 		"earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest " +
 		"is theirs to release in the CRM. An item already answered, or lapsed, is reported as such " +
-		"and nothing is written; each bundle member is answered and reported on its own.",
+		"and nothing is written; each bundle member is answered and reported on its own, and a " +
+		"bundle holding none of theirs reads as not found.",
 	Instead: "read_approval when they have not seen what it holds; list_approvals is where both " +
 		"ids come from.",
 	Retain: "If the proposal is your OWN refused call, approving does not perform it — re-issue that " +

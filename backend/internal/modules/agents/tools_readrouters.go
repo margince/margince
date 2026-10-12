@@ -14,7 +14,7 @@ func (readInputChecks) Spec() mcp.ToolSpec {
 		Name: "read_input_checks", Title: "Can the forecast's inputs be trusted", Version: toolVersionV1,
 		Description: readInputChecksCopy.render(),
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"type":"string","enum":["exceptions","sources","summary"]}}}`),
+			"view":{"description":"summary is the verdict, exceptions the open problems, sources what could be read"}}}`),
 	}
 }
 
@@ -36,7 +36,7 @@ func (readImport) Spec() mcp.ToolSpec {
 		Name: "read_import", Title: "Read an import run", Version: toolVersionV1,
 		Description: readImportCopy.render(),
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"type":"string","enum":["report","run"]}}}`),
+			"view":{"description":"run is where it got to, report what it will do or did"}}}`),
 	}
 }
 

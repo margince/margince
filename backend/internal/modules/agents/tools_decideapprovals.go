@@ -20,8 +20,9 @@ func (decideApprovals) Spec() mcp.ToolSpec {
 		Description: decideApprovalsCopy.render(),
 		Instead:     decideApprovalsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"staged_action_id":{"type":"string","format":"uuid","description":"One staged action; leave out when naming bundle_id"},
-			"bundle_id":{"type":"string","format":"uuid","description":"Every still-waiting proposal one act staged; leave out when naming staged_action_id"}}}`),
+			"staged_action_id":{"description":"One staged action; leave out when naming bundle_id"},
+			"bundle_id":{"description":"Every still-waiting proposal one act staged; leave out when naming staged_action_id"},
+			"reason":{"description":"Why, in the decider's own words; with bundle_id it is recorded against every member"}}}`),
 	}
 }
 
@@ -38,9 +39,17 @@ func (decideApprovals) routeTargets() map[string]string {
 
 var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of staged_action_id or bundle_id")}
 
+// chooseTarget treats a null id as absent, as the surface does everywhere, and
+// drops it: the target refuses an argument it does not take.
 func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string, error) {
-	_, one := members["staged_action_id"]
-	_, bundle := members["bundle_id"]
+	named := func(id string) bool {
+		if isNull(members[id]) {
+			delete(members, id)
+		}
+		_, ok := members[id]
+		return ok
+	}
+	one, bundle := named("staged_action_id"), named("bundle_id")
 	switch {
 	case one && !bundle:
 		return decideOne, nil

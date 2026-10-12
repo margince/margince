@@ -44,7 +44,8 @@ several hidden tools, picked by an argument: `change_lead_state` with `action: p
 
 So the gate, the approval and its later use, retry keys and MCP Tasks all see the name of the hidden
 tool. That name is the approval kind and the contract verb, and a router changes neither. A hidden tool
-still runs when a client calls it by name; `tools/list` leaves it out.
+still runs when a client calls it by name; `tools/list` leaves it out. Two are hidden with no router:
+`progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
 `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
 **Files on MCP and REST.** A passport lists a record's files and uploads one over MCP

@@ -30,9 +30,9 @@ package gates
 // independently. Reading one as the other is the mistake this paragraph exists
 // to prevent.
 //
-// HOW THE NUMBER COMES DOWN. A router (modules/agents/router.go) is one listed
-// tool that runs as one of several unlisted ones, chosen by an argument. The
-// unlisted tools keep their names, because a name is an approval kind, a tier
+// How the number comes down: a router (modules/agents/router.go) is one listed
+// tool that runs as one of several unlisted ones, chosen by an argument.
+// The unlisted tools keep their names. A name is an approval kind, a tier
 // floor key and a contract verb, so x-mcp-tool and the generated policy do not
 // change.
 
@@ -88,25 +88,10 @@ const clientToolCeiling = 100
 // handed a file can only save its text as a note; the user gives up two more
 // slots and keeps 16 of the client's 100 for other servers.
 //
-// change_lead_state fronts qualify, promote, disqualify and demote, and lowers
-// it to 81. From here the ceiling only comes down; raising it needs an explicit
-// maintainer decision on #940.
-//
-// describe_vocabulary fronts the five documents naming what another tool
-// accepts, and lowers it to 77.
-//
-// read_tags and change_tags front seven tag verbs, split by scope, and lower it
-// to 72. merge_tags stays listed: it alone asks a human first.
-//
-// advance_deal and relink_thread are no longer offered, which lowers it to 70:
-// progress_deal takes every argument the bare move takes, and relink_thread
-// refuses every call over MCP in favour of relink_activities.
-//
-// read_input_checks fronts the three answers on the forecast's inputs, and
-// read_import the two reads of an import run, lowering it to 67.
-//
-// decide_approvals answers one staged action or a bundle, chosen by the id the
-// call names, and lowers it to 66.
+// Routers (modules/agents/router.go) offer 25 look-alike tools as seven, and
+// progress_deal and relink_activities supersede advance_deal and relink_thread,
+// which brings it to 66. The ceiling only comes down; raising it needs an
+// explicit maintainer decision.
 const publishedToolCeiling = 66
 
 type mcpInfoFile struct {

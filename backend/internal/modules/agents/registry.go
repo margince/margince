@@ -138,18 +138,23 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 	if err != nil {
 		return Served{Tool: name}, err
 	}
-	out, records, err := r.InvokeServing(ctx, target, args)
-	return Served{Tool: target, Output: out, Records: records}, err
+	served := Served{Tool: target}
+	if target != name {
+		served.Router = name
+	}
+	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	return served, err
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
 //
-// The count exists for exactly one caller: a surface that RECORDS the answer
-// and may serve it again later. What an answer cost is what its replay costs,
-// and only the frame that ran the tool can see it — deriving it afterwards from
-// the envelope's evidence would undercount every answer that hands over more
-// than it can name, making a repeat cheaper than the call. It serves name as
-// given: a router is resolved by InvokeServed, which every outside caller uses.
+// The count exists for one caller: a surface that records the answer and may
+// serve it again later. What an answer cost is what its replay costs, and only
+// the frame that ran the tool can see it. Deriving it afterwards from the
+// envelope's evidence would undercount an answer that hands over more than it
+// can name. A repeat would then cost less than the call. It serves name as given and
+// resolves no router. Callers holding a name a client chose go through
+// InvokeServed, and taskexecute holds the target a task stored.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered

@@ -402,6 +402,11 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"mint a new passport or contact the workspace admin.")
 	}
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
+	if served.Router != "" {
+		// Kept so the traffic still reaching an unlisted tool by its own name
+		// can be told apart from the traffic its router carries.
+		s.log.Debug("mcp: routed call", "router", served.Router, "tool", served.Tool)
+	}
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle

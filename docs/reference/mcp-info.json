@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 215838,
+    "tool_catalog_bytes": 216545,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 54849,
+    "approx_wire_tokens_total": 55026,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 57811,
-      "input_schema_bytes": 54591,
+      "description_bytes": 58060,
+      "input_schema_bytes": 55049,
       "output_schema_bytes": 87281,
-      "description_plus_input_schema_bytes": 112402
+      "description_plus_input_schema_bytes": 113109
     }
   },
   "tools": {
@@ -1757,12 +1757,12 @@
               "type": "string"
             },
             "reason": {
-              "description": "demote only, required: why the promotion is reversed",
+              "description": "demote only, required: why the promotion is reversed, recorded in the audit trail",
               "minLength": 1,
               "type": "string"
             },
             "trigger": {
-              "description": "promote only, required: the genuine engagement justifying it",
+              "description": "promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes",
               "enum": [
                 "inbound_reply",
                 "meeting_booked",
@@ -2052,7 +2052,7 @@
           "readOnlyHint": false,
           "title": "Change tags"
         },
-        "description": "Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new word. update renames, recolours or describes one; fields left out are unchanged. apply never creates a tag: an unknown name is refused. Before create, read the list — a near-duplicate splits records that belong together, and a taken name, even a retired one, is a conflict. create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it changes what a word is called, never what carries it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one kept, and archive_record on a tag to retire it for every record. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new word. update renames, recolours or describes one; fields left out are unchanged. apply never creates a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as archived, and the same tag twice is a conflict. Before create, read the list — a near-duplicate splits records that belong together, and a taken name is a conflict, even a retired one, which only Settings restores. create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it changes what a word is called, never what carries it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one kept, and archive_record on a tag to retire it for every record. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -2065,15 +2065,17 @@
               "type": "string"
             },
             "color": {
+              "description": "create and update; none clears it (update only)",
               "enum": [
-                "teal",
                 "amber",
-                "rose",
-                "slate",
-                "sky",
-                "violet",
                 "lime",
-                "orange"
+                "none",
+                "orange",
+                "rose",
+                "sky",
+                "slate",
+                "teal",
+                "violet"
               ],
               "type": "string"
             },
@@ -2096,8 +2098,8 @@
             },
             "record_type": {
               "enum": [
-                "contact",
                 "company",
+                "contact",
                 "deal",
                 "lead",
                 "project"
@@ -3363,7 +3365,7 @@
           "readOnlyHint": false,
           "title": "Approve or reject staged actions"
         },
-        "description": "Answer staged actions for the colleague asking you: approve, which lets the change happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id for every still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and reported on its own. read_approval when they have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Answer staged actions for the colleague asking you: approve, which lets the change happen, or reject, which discards it. Name staged_action_id for one action, or bundle_id for every still-waiting proposal one act staged together. The verdict is theirs — take an explicit approve or reject rather than deciding what they would have wanted. Approving is what makes the change real, including sending a message that was only drafted; a rejection cannot be taken back. You may approve your own proposal only when it is a change that would have gone straight through but for a human's earlier edit — no deal close, no relink, no tag merge, no schema change, no send; the rest is theirs to release in the CRM. An item already answered, or lapsed, is reported as such and nothing is written; each bundle member is answered and reported on its own, and a bundle holding none of theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is where both ids come from. If the proposal is your OWN refused call, approving does not perform it — re-issue that same call with approval_id set. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "bundle_id": {
@@ -3384,7 +3386,7 @@
               "type": "string"
             },
             "reason": {
-              "description": "Why, in the decider's own words. Recorded against every member.",
+              "description": "Why, in the decider's own words; with bundle_id it is recorded against every member",
               "type": "string"
             },
             "staged_action_id": {
@@ -3551,6 +3553,7 @@
         "inputSchema": {
           "properties": {
             "topic": {
+              "description": "Which tool's names to describe",
               "enum": [
                 "analytics",
                 "query",
@@ -8803,6 +8806,7 @@
               "type": "string"
             },
             "view": {
+              "description": "run is where it got to, report what it will do or did",
               "enum": [
                 "report",
                 "run"
@@ -8836,6 +8840,7 @@
         "inputSchema": {
           "properties": {
             "view": {
+              "description": "summary is the verdict, exceptions the open problems, sources what could be read",
               "enum": [
                 "exceptions",
                 "sources",
@@ -10159,7 +10164,7 @@
           "readOnlyHint": true,
           "title": "Read tags"
         },
-        "description": "Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag and how many contacts, companies, deals and leads carry it. record: the tags on one contact, company, deal or lead, with who applied each and when. list returns archived words only with include_archived, and they cannot be applied; `truncated` means a word missing from the list may still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none. A word the user says fits a contact you are creating goes to create_record as offer_tag, which offers it without applying it. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag and how many contacts, companies, deals and leads carry it — the records themselves come from list_records. record: the tags on one contact, company, deal or lead, with who applied each and when. list returns archived words only with include_archived, and they cannot be applied; `truncated` means a word missing from the list may still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none. A word the user says fits a contact you are creating goes to create_record as offer_tag, which offers it without applying it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "properties": {
             "include_archived": {
@@ -10167,6 +10172,7 @@
               "type": "boolean"
             },
             "mode": {
+              "description": "list every word, get one tag, or record: the tags on one record",
               "enum": [
                 "get",
                 "list",

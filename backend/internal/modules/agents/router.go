@@ -20,25 +20,26 @@ import (
 
 // router is a tool that runs as one of several Unlisted tools, picked by one
 // argument. The tool name is the approval kind, the tier-floor key and the retry
-// key, so a routed call is served under the target's name from the first check
-// on: the router itself never handles, stages or is admitted.
+// key. A routed call is therefore served under the target's name from the first
+// check on, and the router itself never handles, stages or is admitted.
 type router interface {
 	mcp.Tool
 	routeField() string
 	routeTargets() map[string]string
 }
 
-// Served is one call's answer and the tool that produced it: the target, when
-// the call named a router.
+// Served is one call's answer and the tool that produced it. When the call
+// named a router, Tool is the target and Router is the name it was called by.
 type Served struct {
 	Tool    string
+	Router  string
 	Output  json.RawMessage
 	Records int
 }
 
 // routedSpec is what a router is registered and offered as. Everything but its
-// name, title and copy is derived from the targets, so the router cannot
-// advertise an argument, scope or tier that the tool it runs as does not have.
+// name, title, copy and argument wording is derived from the targets. The router
+// cannot advertise an argument, scope or tier that its targets lack.
 func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 	spec := rt.Spec()
 	choices := slices.Sorted(maps.Keys(rt.routeTargets()))
@@ -47,26 +48,33 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		targets = append(targets, r.routeTarget(spec.Name, rt.routeTargets()[choice]))
 	}
 	first := targets[0]
-	for _, target := range targets[1:] {
+	spec.RequiredScope, spec.Tier = first.RequiredScope, first.Tier
+	for _, target := range targets {
 		if target.RequiredScope != first.RequiredScope || target.Tier != first.Tier {
 			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 			panic(fmt.Sprintf("crmagents: router %s fronts %s and %s, which differ in scope or tier — one tool spends one of each",
 				spec.Name, first.Name, target.Name))
 		}
-		spec.MaxArgsBytes = max(spec.MaxArgsBytes, target.MaxArgsBytes)
+		spec.MaxArgsBytes = max(spec.MaxArgsBytes, argsLimit(target))
 		spec.Egress = spec.Egress || target.Egress
 	}
-	spec.MaxArgsBytes = max(spec.MaxArgsBytes, first.MaxArgsBytes)
-	spec.Egress = spec.Egress || first.Egress
-	spec.RequiredScope, spec.Tier = first.RequiredScope, first.Tier
-	spec.InputSchema = routedSchema(rt.routeField(), choices, spec.InputSchema, targets)
+	spec.InputSchema = routedSchema(spec.Name, rt.routeField(), choices, spec.InputSchema, targets)
 	spec.OutputSchema = nil
 	return spec
 }
 
+// argsLimit is the bound withinArgsBound holds a tool's arguments to.
+func argsLimit(spec mcp.ToolSpec) int64 {
+	if spec.MaxArgsBytes == 0 {
+		return httperr.MaxBodyBytes
+	}
+	return spec.MaxArgsBytes
+}
+
 // routeTarget is one registered target's own spec, refused unless a router may
 // front it. A dynamic tier is refused because its resolver belongs to the
-// target and a router has no call to resolve it on until it has routed.
+// target. A router has no call to resolve it on until it has routed. The
+// last three are refused because the listing reads them off the router.
 func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RLock()
 	t, ok := r.tools[name]
@@ -81,6 +89,8 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 		why = "is still offered, so fronting it would list one capability twice"
 	case t.Spec().Tier == mcp.TierDynamic:
 		why = "has a dynamic tier"
+	case t.Spec().HumanOnly, t.Spec().SelfDescribing, t.Spec().ConfirmsInConversation:
+		why = "is offered or confirmed in a way a router does not carry"
 	}
 	if why != "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
@@ -90,8 +100,9 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 }
 
 type routeChoice struct {
-	Type string   `json:"type"`
-	Enum []string `json:"enum"`
+	Type        string          `json:"type"`
+	Enum        []string        `json:"enum"`
+	Description json.RawMessage `json:"description,omitempty"`
 }
 
 type routedObject struct {
@@ -100,53 +111,111 @@ type routedObject struct {
 	Properties map[string]json.RawMessage `json:"properties"`
 }
 
+// The schema members a router reads off an argument.
+const (
+	schemaDescription = "description"
+	schemaEnum        = "enum"
+)
+
+// argument is one property of a JSON schema, member by member.
+type argument map[string]json.RawMessage
+
+type objectSchema struct {
+	Required   []string            `json:"required,omitempty"`
+	Properties map[string]argument `json:"properties"`
+}
+
+func readObjectSchema(owner string, raw json.RawMessage) objectSchema {
+	var schema objectSchema
+	if raw == nil {
+		return schema
+	}
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic(fmt.Sprintf("crmagents: cannot read %s's input schema: %v", owner, err))
+	}
+	return schema
+}
+
 // routedSchema is the targets' arguments plus the route field. An argument is
 // required only when every target requires it; the target's own check still
-// refuses a call missing one only it needs. An argument the router describes
-// itself keeps the router's wording, written for every action at once.
-func routedSchema(field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) json.RawMessage {
-	properties := map[string]json.RawMessage{}
-	if own != nil {
-		var described struct {
-			Properties map[string]json.RawMessage `json:"properties"`
-		}
-		if err := json.Unmarshal(own, &described); err != nil {
+// refuses a call missing one only it needs. The router may only word an
+// argument for every action at once, never restate its shape.
+func routedSchema(routerName, field string, choices []string, own json.RawMessage, targets []mcp.ToolSpec) json.RawMessage {
+	properties, required := unitedArguments(routerName, field, targets)
+	routerOwn := readObjectSchema(routerName, own)
+	for name, wording := range routerOwn.Properties {
+		_, known := properties[name]
+		if _, extra := wording[schemaDescription]; len(wording) != 1 || !extra || (!known && name != field) {
 			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(fmt.Sprintf("crmagents: cannot read a router's own input schema: %v", err))
+			panic(fmt.Sprintf("crmagents: router %s may only describe an argument its targets take, and %s is not that", routerName, name))
 		}
-		maps.Copy(properties, described.Properties)
+		if known {
+			properties[name][schemaDescription] = wording[schemaDescription]
+		}
 	}
-	var required []string
-	for i, target := range targets {
-		var own struct {
-			Required   []string                   `json:"required,omitempty"`
-			Properties map[string]json.RawMessage `json:"properties"`
-		}
-		if err := json.Unmarshal(target.InputSchema, &own); err != nil {
-			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(fmt.Sprintf("crmagents: cannot read %s's input schema: %v", target.Name, err))
-		}
-		for name, schema := range own.Properties {
-			if _, seen := properties[name]; !seen {
-				properties[name] = schema
-			}
-		}
-		if i == 0 {
-			required = own.Required
-		} else {
-			required = slices.DeleteFunc(required, func(name string) bool { return !slices.Contains(own.Required, name) })
-		}
+	out := map[string]json.RawMessage{}
+	for name, arg := range properties {
+		out[name] = mustMarshal(arg)
 	}
 	if field != "" {
-		enum, err := json.Marshal(routeChoice{Type: schemaString, Enum: choices})
-		if err != nil {
-			//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
-			panic(err)
-		}
-		properties[field] = enum
+		out[field] = mustMarshal(routeChoice{Type: schemaString, Enum: choices, Description: routerOwn.Properties[field][schemaDescription]})
 		required = append([]string{field}, required...)
 	}
-	out, err := json.Marshal(routedObject{Type: schemaObject, Required: required, Properties: properties})
+	return mustMarshal(routedObject{Type: schemaObject, Required: required, Properties: out})
+}
+
+// unitedArguments unites the arguments of a router's targets. Two targets
+// naming one argument must agree on its shape. Where they differ only in the
+// words an enum admits, the router admits all of them. Neither target's call is
+// then refused by a client holding the advertised schema.
+func unitedArguments(routerName, field string, targets []mcp.ToolSpec) (map[string]argument, []string) {
+	properties := map[string]argument{}
+	var required []string
+	for i, target := range targets {
+		schema := readObjectSchema(target.Name, target.InputSchema)
+		for name, arg := range schema.Properties {
+			united, ok := uniteArgument(properties[name], arg)
+			if name == field || !ok {
+				//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+				panic(fmt.Sprintf("crmagents: router %s cannot advertise %s's argument %s as one shape", routerName, target.Name, name))
+			}
+			properties[name] = united
+		}
+		if i == 0 {
+			required = schema.Required
+		} else {
+			required = slices.DeleteFunc(required, func(name string) bool { return !slices.Contains(schema.Required, name) })
+		}
+	}
+	return properties, required
+}
+
+// uniteArgument is one argument as two targets declare it, ignoring wording.
+func uniteArgument(seen, next argument) (argument, bool) {
+	if seen == nil {
+		return maps.Clone(next), true
+	}
+	shape := func(arg argument) argument {
+		out := maps.Clone(arg)
+		delete(out, schemaDescription)
+		delete(out, schemaEnum)
+		return out
+	}
+	if !maps.EqualFunc(shape(seen), shape(next), func(a, b json.RawMessage) bool { return string(a) == string(b) }) {
+		return nil, false
+	}
+	var words, more []string
+	if json.Unmarshal(seen[schemaEnum], &words) != nil || json.Unmarshal(next[schemaEnum], &more) != nil {
+		return seen, string(seen[schemaEnum]) == string(next[schemaEnum])
+	}
+	united := maps.Clone(seen)
+	united[schemaEnum] = mustMarshal(slices.Compact(slices.Sorted(slices.Values(append(words, more...)))))
+	return united, true
+}
+
+func mustMarshal[T any](v T) json.RawMessage {
+	out, err := json.Marshal(v)
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(err)
@@ -154,9 +223,9 @@ func routedSchema(field string, choices []string, own json.RawMessage, targets [
 	return out
 }
 
-// resolve names the tool a call runs as and the arguments it runs with: the
-// call itself for an ordinary tool, the chosen target without the route field
-// for a router.
+// resolve names the tool a call runs as and the arguments it runs with. An
+// ordinary tool runs as the call itself; a router runs as the chosen target
+// without the route field.
 func (r *Registry) resolve(name string, in json.RawMessage) (string, json.RawMessage, error) {
 	r.mu.RLock()
 	rt, isRouter := r.tools[name].(router)

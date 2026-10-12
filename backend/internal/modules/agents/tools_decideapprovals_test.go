@@ -17,6 +17,7 @@ func TestDecideApprovalsPicksTheTargetByTheIDItNames(t *testing.T) {
 	for _, tc := range []struct{ args, target string }{
 		{`{"staged_action_id":"not-a-uuid","decision":"approve"}`, "decide_approval"},
 		{`{"bundle_id":"not-a-uuid","decision":"approve"}`, "decide_approval_bundle"},
+		{`{"staged_action_id":"not-a-uuid","bundle_id":null,"decision":"approve"}`, "decide_approval"},
 	} {
 		served, err := r.InvokeServed(agentCtx(), "decide_approvals", json.RawMessage(tc.args))
 		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != tc.target {

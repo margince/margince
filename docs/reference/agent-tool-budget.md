@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 66 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26371 |  |  | 80% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 26547 |  |  | 81% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 344 tokens, mean 399, across 66 served tools.
+Median 346 tokens, mean 401, across 66 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -173,26 +173,27 @@ listing once. Read a row as what that tool costs a menu.
 | `progress_deal` | 513 |  |
 | `run_analytics_query` | 508 |  |
 | `resolve_entities` | 493 |  |
-| `change_lead_state` | 467 |  |
+| `change_lead_state` | 485 |  |
 | `search_records` | 456 |  |
 | `forecast_movement` | 443 |  |
+| `change_tags` | 441 |  |
+| `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |
-| `decide_approvals` | 410 |  |
 | `review_commitments` | 401 |  |
 | `attach_document` | 397 |  |
 | `enrich` | 396 |  |
 | `prep_for_meeting` | 394 |  |
-| `change_tags` | 387 |  |
 | `draft_email` | 385 |  |
 | `catch_me_up_on` | 348 | 2 scenarios |
+| `describe_vocabulary` | 346 |  |
+| `read_input_checks` | 346 |  |
 | `book_meeting` | 344 |  |
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
-| `describe_vocabulary` | 334 |  |
-| `read_input_checks` | 322 |  |
 | `relink_activity` | 303 |  |
+| `read_tags` | 299 |  |
 | `merge_records` | 293 |  |
 | `read_record` | 292 | 2 scenarios |
 | `archive_record` | 291 |  |
@@ -200,7 +201,6 @@ listing once. Read a row as what that tool costs a menu.
 | `whats_slipping_this_week` | 269 |  |
 | `list_approvals` | 268 |  |
 | `prepare_handoff` | 267 |  |
-| `read_tags` | 266 |  |
 | `invite_meeting` | 264 |  |
 | `relink_activities` | 260 |  |
 | `company_coverage` | 246 |  |
@@ -218,7 +218,7 @@ listing once. Read a row as what that tool costs a menu.
 | `list_channel_providers` | 174 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
-| `read_import` | 131 |  |
+| `read_import` | 149 |  |
 | `whoami` | 129 |  |
 
 ## Related

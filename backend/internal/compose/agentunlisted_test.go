@@ -12,7 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A scheduled agent's run is offered what the registry offers, and an Unlisted
+// A scheduled agent's run is offered what the registry offers. An Unlisted
 // tool is never offered, so an allowlist naming one leaves the run without it.
 func TestNoScheduledAgentIsGivenAnUnlistedTool(t *testing.T) {
 	unlisted := unlistedTools(t)
@@ -26,8 +26,8 @@ func TestNoScheduledAgentIsGivenAnUnlistedTool(t *testing.T) {
 	}
 }
 
-// A model can call only what it is shown, so an offered description that sends
-// it to an Unlisted tool sends it to a name it was never given.
+// A model can call only what it is shown. A description that names an Unlisted
+// tool sends the model to a name it was never given.
 func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 	unlisted := unlistedTools(t)
 	for _, spec := range servedSurface(t).Specs() {
