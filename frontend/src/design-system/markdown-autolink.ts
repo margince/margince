@@ -89,7 +89,6 @@ function splitAddresses(text: string): Inline[] {
     out.push({
       kind: "link",
       href,
-      external: true,
       children: [{ kind: "text", text: href }],
     });
     last = match.index + href.length;

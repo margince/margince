@@ -21,16 +21,15 @@ func (e staticIdentityEmbedder) Embed(context.Context, model.EmbedRequest) (mode
 
 func (e staticIdentityEmbedder) EmbedIdentity() (string, int) { return e.identity, 1024 }
 
-func TestAddEmbedDriftSweepJobRequiresABoundEmbedLane(t *testing.T) {
+func TestAddEmbedDriftSweepJobRequiresAnEmbedderAndNotABinding(t *testing.T) {
 	// No embedder at all: a role with no model path has no store to heal.
 	if jobs := addEmbedDriftSweepJob(newJobRegistry(), nil, JobRunnerConfig{}, nil); jobs != nil {
 		t.Fatalf("nil embedder registered %d periodic jobs, want none", len(jobs))
 	}
-	// An embedder whose identity is empty (--ai-fake, or a routing config
-	// with no embeddings binding) seeds no marker either — same posture as
-	// WithEmbedReindex.
-	if jobs := addEmbedDriftSweepJob(newJobRegistry(), nil, JobRunnerConfig{Embedder: staticIdentityEmbedder{identity: ""}}, nil); jobs != nil {
-		t.Fatalf("empty-identity embedder registered %d periodic jobs, want none", len(jobs))
+	// An unbound lane is registered anyway: RoutingWatcher binds one on a
+	// running process, and nothing re-runs the registration.
+	if jobs := addEmbedDriftSweepJob(newJobRegistry(), nil, JobRunnerConfig{Embedder: staticIdentityEmbedder{identity: ""}}, nil); len(jobs) != 1 {
+		t.Fatalf("an unbound embed lane registered %d periodic jobs, want 1 that waits for the binding", len(jobs))
 	}
 }
 

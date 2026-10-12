@@ -1399,11 +1399,11 @@ function BulkGroupRow({
             ))}
           </ul>
         )}
+        {/* The newest copy's verbs stand for the send: Relink on it offers to
+            move the rest, so a mis-filed send is fixed from its summary row
+            without opening it first. */}
+        {newest.actions && <span className="tl-actions">{newest.actions}</span>}
       </div>
-      {/* The newest copy's verbs stand for the send: Relink on it offers to
-          move the rest, so a mis-filed send is fixed from its summary row
-          without opening it first. */}
-      {newest.actions && <span className="tl-actions">{newest.actions}</span>}
     </li>
   );
 }
@@ -1488,8 +1488,8 @@ export function TimelineRow({
             whyNotOpenable="noReader"
           />
           {flag}
+          {entry.actions && <span className="tl-actions">{entry.actions}</span>}
         </div>
-        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </li>
     );
   }
@@ -1510,8 +1510,7 @@ export function TimelineRow({
       </span>
       {/* A div, not a span: a change row's detail is a field diff whose
                 long-value side is a focusable region — flow content, invalid
-                inside phrasing content. The row lays out identically, because
-                .tl-body is a flex column either way. */}
+                inside phrasing content. */}
       <div className="tl-body">
         {/* What KIND of thing this was, as a kicker and not a status, and
             which way it went — one line above the headline, because both
@@ -1572,8 +1571,8 @@ export function TimelineRow({
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />
         </span>
+        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </div>
-      {entry.actions && <span className="tl-actions">{entry.actions}</span>}
     </li>
   );
 }
