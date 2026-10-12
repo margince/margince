@@ -90,12 +90,12 @@ Everything below is the detail behind the two tables above: which tools each job
 
 | | |
 |---|---:|
-| Tools the assistant is offered | 86 |
-| … some case requires | 49 |
+| Tools the assistant is offered | 88 |
+| … some case requires | 44 |
 | … some case requires as one of a set | 4 |
-| … **no case requires** | 33 |
+| … **no case requires** | 40 |
 | … of those, permitted somewhere but never required | 19 |
-| Prompt tokens spent on tools no case requires | 9873 |
+| Prompt tokens spent on tools no case requires | 10988 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 81 |
 
@@ -117,7 +117,7 @@ A tool being "untried" means something different on each, so the numbers above a
 | | Surface A: MCP | Surface B: scheduled agents |
 |---|---|---|
 | Who drives it | a user, watching | a job on a timer, unattended |
-| Menu | 86 tools, the whole catalog | 5 to 7 tools, declared per agent |
+| Menu | 88 tools, the whole catalog | 5 to 7 tools, declared per agent |
 | A wrong reach | the user corrects it | nobody is there |
 | Graded by | the use-case lane on this page | [ai-certification.md](ai-certification.md) |
 
@@ -172,12 +172,12 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
-| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `apply_tag`, `create_tag`, `list_tags` |
-| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `apply_tag`, `create_tag`, `list_tags` |
-| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `get_record_tags`, `remove_tag` |
-| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `get_record_tags`, `remove_tag` |
-| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `get_tag`, `list_tags`, `merge_tags`, `update_tag` |
-| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `get_tag`, `list_tags`, `merge_tags`, `update_tag` |
+| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `change_tags`, `read_tags` |
+| [case30_a_word_for_it](../../e2e/llm/scenarios/case30-a-word-for-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The word the workspace already has is reused<br>**2** A word that does not exist is coined before it is applied | `change_tags`, `read_tags` |
+| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `change_tags`, `read_tags` |
+| [case31_wrong_word_on_the_record](../../e2e/llm/scenarios/case31-wrong-word-on-the-record.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The retired word on the record is reported<br>**2** One record loses the word and the word survives | `change_tags`, `read_tags` |
+| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `change_tags`, `merge_tags`, `read_tags` |
+| [case32_two_words_for_one_thing](../../e2e/llm/scenarios/case32-two-words-for-one-thing.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The surviving word is chosen by what carries it<br>**2** A fold nobody has released is reported as waiting<br>**3** The surviving word is given its meaning | `change_tags`, `merge_tags`, `read_tags` |
 | [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records`, `update_record` |
 | [case33_two_cards_for_one_company](../../e2e/llm/scenarios/case33-two-cards-for-one-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The duplicate is merged, and which record survives is said<br>**2** The company that shut down is archived<br>**3** The account is handed to a named colleague | `archive_record`, `list_colleagues`, `merge_records`, `update_record` |
 | [case4_use_the_moment](../../e2e/llm/scenarios/case4-use-the-moment.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Nearby is worked out to be a distance search<br>**6** Check with the owner before turning up | `query_workspace` |
@@ -333,6 +333,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `forecast_movement` | 1.00 | 3 | `case50_what_moved_my_quarter` |
 | `advance_project_phase` | 1.00 | 3 | `case41_close_the_project` |
 | `attach_document` | 1.00 | 6 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
+| `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `decide_approval` | 1.00 | 9 | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
@@ -345,21 +346,15 @@ Every run of every case requiring this tool passed, for the model named.
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
-| `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
+| `read_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
-| `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
-| `remove_tag` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `get_record_tags` | 1.00 | 3 | `case31_wrong_word_on_the_record` |
-| `list_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
-| `get_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
 
 ### `gpt-5.6-sol@codex-cli`
@@ -381,17 +376,12 @@ Every run of every case requiring this tool passed, for the model named.
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
-| `apply_tag` | 1.00 | 3 | `case30_a_word_for_it` |
-| `update_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `data_coverage` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
-| `create_tag` | 1.00 | 3 | `case30_a_word_for_it` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `list_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case32_two_words_for_one_thing` |
-| `get_tag` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `read_import_report` | 1.00 | 3 | `case10_finish_the_import` |
 
 ## 2. What is failing now
@@ -422,13 +412,13 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `query_workspace` | 0.67 | 2/3 | - | `case4_use_the_moment` |
 | `change_lead_state` | 0.67 | 2/3 | - | `case40_sort_the_queue`, `case47_tidy_the_fair_list` |
 | `search_records` | 0.67 | 2/3 | - | `case5_before_the_meeting` |
+| `change_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `decide_approval` | 0.89 | 8/9 | - | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
 | `draft_follow_ups_for` | 0.67 | 2/3 | - | `case44_chase_what_is_slipping` |
 | `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
+| `read_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `decide_duplicate` | 0.67 | 2/3 | - | `case56_not_the_same` |
-| `remove_tag` | 0.67 | 2/3 | - | `case31_wrong_word_on_the_record` |
-| `get_record_tags` | 0.67 | 2/3 | - | `case31_wrong_word_on_the_record` |
 
 ## Who judged it, and how well
 
@@ -472,7 +462,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 33 tools no use case requires, **8 are graded elsewhere** and 25 are untried by any lane.
+So of the 40 tools no use case requires, **8 are graded elsewhere** and 32 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -502,13 +492,20 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `relink_thread` | 240 | - | `case48_that_whole_thread_is_filed_wrong` | - |
 | `decide_approval_bundle` | 235 | - | - | - |
 | `qualify_lead` | 229 | - | - | - |
+| `apply_tag` | 226 | - | - | - |
 | `create_task` | 221 | `deal_health` | `case42_can_i_answer_on_whatsapp` | - |
 | `disqualify_lead` | 209 | - | - | - |
 | `list_input_checks` | 209 | - | `case21_what_are_we_closing`, `case22_can_i_trust_the_numbers` | - |
 | `read_brief` | 205 | `agent_loop` | - | `morning_brief` |
+| `update_tag` | 205 | - | - | - |
 | `who_knows` | 197 | - | `case33_two_cards_for_one_company`, `case49_who_can_introduce_us`, `case5_before_the_meeting` | - |
+| `create_tag` | 191 | - | - | - |
 | `list_pipelines` | 191 | - | `case1_log_it`, `case20_put_it_in_the_board_pack`, `case45_move_the_deal_on` | - |
 | `list_documents` | 180 | - | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` | - |
+| `remove_tag` | 166 | - | - | - |
+| `get_record_tags` | 144 | - | - | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case57_put_it_on_the_file`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract` | - |
+| `list_tags` | 95 | - | - | - |
+| `get_tag` | 88 | - | - | - |
 | `read_import_run` | 67 | - | `case10_finish_the_import`, `case3_spreadsheet` | - |
 

@@ -1323,6 +1323,7 @@
       "warnings"
     ]
   },
+  "change_lead_state": null,
   "change_lists": {
     "type": "object",
     "properties": {
@@ -1418,6 +1419,7 @@
       "warnings"
     ]
   },
+  "change_tags": null,
   "check_availability": {
     "type": "object",
     "properties": {
@@ -3425,6 +3427,7 @@
       "warnings"
     ]
   },
+  "describe_vocabulary": null,
   "disqualify_lead": {
     "type": "object",
     "properties": {
@@ -9753,6 +9756,7 @@
       "warnings"
     ]
   },
+  "read_tags": null,
   "relink_activities": {
     "type": "object",
     "properties": {

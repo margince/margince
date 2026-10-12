@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 77 |
+| Tools | 72 |
 | Resources | 9 |
-| Tool catalog | 240.7 KB |
+| Tool catalog | 230.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 62514 |
+| Approx. wire tokens | 59777 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 104.3 KB | 43% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 60.9 KB | 25% | Yes, every step |
-| Input schemas | 57.0 KB | 23% | Yes, every step |
-| _Names, annotations, punctuation_ | 18.5 KB | 7% | Partly |
-| **Description + input schema** | **117.9 KB** | **48%** | **the recurring cost** |
+| Output schemas | 97.2 KB | 42% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 59.7 KB | 25% | Yes, every step |
+| Input schemas | 55.7 KB | 24% | Yes, every step |
+| _Names, annotations, punctuation_ | 17.4 KB | 7% | Partly |
+| **Description + input schema** | **115.4 KB** | **50%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -52,14 +52,13 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (77)
+### Tools (72)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
-| [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.2 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.7 KB |
 | [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
@@ -68,12 +67,12 @@ descriptions and input schemas are what each step pays for.
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.1 KB |
 | [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.1 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
+| [`change_tags`](#change_tags) | Change tags |  |  | 1.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 2.2 KB |
 | [`company_coverage`](#company_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.6 KB |
-| [`create_tag`](#create_tag) | Create a tag |  |  | 2.0 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`data_coverage`](#data_coverage) | How current the sources are | yes |  | 2.1 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 3.2 KB |
@@ -86,8 +85,6 @@ descriptions and input schemas are what each step pays for.
 | [`forecast_input_checks`](#forecast_input_checks) | What the forecast's inputs were checked against | yes |  | 2.7 KB |
 | [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
 | [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
-| [`get_record_tags`](#get_record_tags) | Get a record's tags | yes |  | 1.9 KB |
-| [`get_tag`](#get_tag) | Get a tag | yes |  | 1.7 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
@@ -97,7 +94,6 @@ descriptions and input schemas are what each step pays for.
 | [`list_input_checks`](#list_input_checks) | What the forecast's inputs still need | yes |  | 2.4 KB |
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
-| [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
 | [`log_activity`](#log_activity) | Log an activity |  |  | 4.1 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
@@ -114,10 +110,10 @@ descriptions and input schemas are what each step pays for.
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.4 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.5 KB |
 | [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 1.1 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
 | [`relink_thread`](#relink_thread) | Re-associate a whole conversation to a record |  |  | 2.2 KB |
-| [`remove_tag`](#remove_tag) | Take a tag off a record |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.6 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.4 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.4 KB |
@@ -129,7 +125,6 @@ descriptions and input schemas are what each step pays for.
 | [`send_email`](#send_email) | Send an email |  |  | 4.3 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 3.6 KB |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
-| [`update_tag`](#update_tag) | Rename or recolour a tag |  |  | 2.1 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.5 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes |  | 2.2 KB |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
@@ -739,175 +734,6 @@ is a correction rather than an addition. (Governance: runs immediately; requires
       "required": [
         "items_annotated",
         "narrative_written"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### apply_tag
-
-**Apply a tag to a record**
-
-```text
-Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must name a tag the
-workspace already has. This tool never creates a tag: an unknown name is refused, and only an admin
-or ops seat can add a word to the vocabulary. A name matches case-insensitively; an archived word is
-refused as archived rather than as unknown. Prefer a tag_id from list_tags. The same tag twice is a
-conflict. (Governance: runs immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "record_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
-      ],
-      "type": "string"
-    },
-    "tag_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "tag_name": {
-      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
-      "maxLength": 64,
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type",
-    "record_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "applied": {
-          "type": "boolean"
-        },
-        "record_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "tag_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "applied",
-        "record_id",
-        "record_type",
-        "tag_id"
       ],
       "type": "object"
     },
@@ -2797,6 +2623,95 @@ and its new version from the answer. (Governance: runs immediately; requires pas
 
 </details>
 
+### change_tags
+
+**Change tags**
+
+```text
+Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
+deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
+word. update renames, recolours or describes one; fields left out are unchanged. apply never creates
+a tag: an unknown name is refused. Before create, read the list — a near-duplicate splits records
+that belong together, and a taken name, even a retired one, is a conflict. create and update need
+tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
+changes what a word is called, never what carries it. Removing a tag that is not there succeeds. Use
+merge_tags to fold a duplicate word into the one kept, and archive_record on a tag to retire it for
+every record. (Governance: runs immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "action": {
+      "enum": [
+        "apply",
+        "create",
+        "remove",
+        "update"
+      ],
+      "type": "string"
+    },
+    "color": {
+      "enum": [
+        "teal",
+        "amber",
+        "rose",
+        "slate",
+        "sky",
+        "violet",
+        "lime",
+        "orange"
+      ],
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+    },
+    "record_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "tag_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "tag_name": {
+      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
+      "maxLength": 64,
+      "type": "string"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### check_availability
 
 **Check calendar availability**
@@ -3692,7 +3607,7 @@ and you report the pair as filed, unresolved until the reviewer decides. Several
 or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and
 writes nothing; creating them one by one skips that check. The new record's id comes back in the
 result; keep it for anything that links to it. When the user says where they met the contact, pass
-that word as offer_tag: it only offers the tag, and apply_tag still needs their yes. (Governance:
+that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Governance:
 runs immediately; requires passport scope "write".)
 ```
 
@@ -3846,170 +3761,6 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "fields",
         "id",
         "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### create_tag
-
-**Create a tag**
-
-```text
-Coin a new word in the workspace vocabulary, so records can be grouped by it. list_tags FIRST: a
-workspace with "Key Account" does not want "key accounts" beside it, and the two then split the
-records that belong together. A name already taken is a conflict, matched case-insensitively —
-including a RETIRED word holding it, which a contact restores in Settings; no tool does. Needs the
-tag.create grant, which an ordinary seat does not hold. (Governance: runs immediately; requires
-passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "color": {
-      "enum": [
-        "teal",
-        "amber",
-        "rose",
-        "slate",
-        "sky",
-        "violet",
-        "lime",
-        "orange"
-      ],
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "name": {
-      "maxLength": 64,
-      "minLength": 1,
-      "type": "string"
-    }
-  },
-  "required": [
-    "name"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "archived": {
-          "type": "boolean"
-        },
-        "color": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "tag_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "name",
-        "tag_id"
       ],
       "type": "object"
     },
@@ -6285,334 +6036,6 @@ written from. (Governance: runs immediately; requires passport scope "read".)
 
 </details>
 
-### get_record_tags
-
-**Get a record's tags**
-
-```text
-Read the tags on one contact, company, deal or lead, with who applied each and when. Those four
-record types only. `withheld` true means the vocabulary is not visible to this caller, so the list
-is empty for that reason — NOT because the record carries no tags, and it must not be reported as
-none. An archived tag stays on whatever carries it. (Governance: runs immediately; requires passport
-scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "record_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type",
-    "record_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "tags": {
-          "items": {
-            "properties": {
-              "archived": {
-                "type": "boolean"
-              },
-              "assigned_at": {
-                "type": "string"
-              },
-              "assigned_by": {
-                "type": "string"
-              },
-              "assigned_by_kind": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "tag_id": {
-                "format": "uuid",
-                "type": "string"
-              }
-            },
-            "required": [
-              "assigned_at",
-              "name",
-              "tag_id"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "withheld": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "tags",
-        "withheld"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### get_tag
-
-**Get a tag**
-
-```text
-Read one tag and how many contacts, companies, deals and leads carry it. The counts cover those four
-record types only. They say how much retiring or merging the word would touch; the records
-themselves come from list_records. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "tag_id": {
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "tag_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "archived": {
-          "type": "boolean"
-        },
-        "color": {
-          "type": "string"
-        },
-        "companies": {
-          "type": "integer"
-        },
-        "contacts": {
-          "type": "integer"
-        },
-        "deals": {
-          "type": "integer"
-        },
-        "leads": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "tag_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "companies",
-        "contacts",
-        "deals",
-        "leads",
-        "name",
-        "tag_id"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### intro_path_to
 
 **Find a warm introduction path**
@@ -8404,156 +7827,6 @@ passport scope "read".)
 
 </details>
 
-### list_tags
-
-**List tags**
-
-```text
-The workspace's words for grouping records, with the tag_id apply_tag takes. Archived words come
-only on request and cannot be applied. `truncated` means the list was cut, so a word missing from it
-may still exist. (Governance: runs immediately; requires passport scope "read".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "include_archived": {
-      "description": "Also list retired words; they cannot be applied",
-      "type": "boolean"
-    }
-  },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "tags": {
-          "items": {
-            "properties": {
-              "archived": {
-                "type": "boolean"
-              },
-              "color": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "tag_id": {
-                "format": "uuid",
-                "type": "string"
-              }
-            },
-            "required": [
-              "name",
-              "tag_id"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "truncated": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "tags"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### log_activity
 
 **Log an activity**
@@ -8952,7 +8225,7 @@ and by default nothing holds it. (Governance: runs immediately; requires passpor
 Fold a duplicate word into the one the workspace keeps, moving every record that carries it. NOT
 UNDOABLE once approved: the source is retired, its name is released — links to it stop working and
 someone may coin it again — and no pointer home is kept, unlike a contact or company merge. The
-TARGET is the word that survives; read both with get_tag first. Needs the tag.update grant.
+TARGET is the word that survives; read both with read_tags first. Needs the tag.update grant.
 (Governance: a human approves every call before it runs; requires passport scope "write".)
 ```
 
@@ -11906,9 +11179,9 @@ recorded. A preview is logged as a read of those records. A list with health ret
 works but filters on a retired custom field, named in retired_fields; its steward should replace
 that clause. A list with health retired_tag filters on an archived or merged-away tag, named in
 retired_tags, and that tag no longer matches any record, so its steward should name the live tag.
-search_records finds records by name; tags are applied with apply_tag, not lists. Keep list_id, the
-version for a later change, and next_cursor to read the next page. (Governance: runs immediately;
-requires passport scope "read".)
+search_records finds records by name; tags are applied with change_tags, not lists. Keep list_id,
+the version for a later change, and next_cursor to read the next page. (Governance: runs
+immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -13237,6 +12510,64 @@ schedules in Analytics. (Governance: runs immediately; requires passport scope "
 
 </details>
 
+### read_tags
+
+**Read tags**
+
+```text
+Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag
+and how many contacts, companies, deals and leads carry it. record: the tags on one contact,
+company, deal or lead, with who applied each and when. list returns archived words only with
+include_archived, and they cannot be applied; `truncated` means a word missing from the list may
+still exist. In record, `withheld` true means the vocabulary is hidden from this caller, NOT that
+the record has no tags — never report it as none. (Governance: runs immediately; requires passport
+scope "read".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "include_archived": {
+      "description": "Also list retired words; they cannot be applied",
+      "type": "boolean"
+    },
+    "mode": {
+      "enum": [
+        "get",
+        "list",
+        "record"
+      ],
+      "type": "string"
+    },
+    "record_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_type": {
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead"
+      ],
+      "type": "string"
+    },
+    "tag_id": {
+      "format": "uuid",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### relink_activities
 
 **Re-associate a set of activities to a record**
@@ -13648,173 +12979,6 @@ arguments; requires passport scope "write".)
       },
       "required": [
         "relinked"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### remove_tag
-
-**Take a tag off a record**
-
-```text
-Take one tag off one record — by tag_id or tag_name — leaving the word itself. Removing one that
-is not there succeeds. archive_record on a tag retires it for all. (Governance: runs immediately;
-requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "record_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
-      ],
-      "type": "string"
-    },
-    "tag_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "tag_name": {
-      "description": "Instead of tag_id: the name of a tag the workspace ALREADY has. An unknown name is refused, never created",
-      "maxLength": 64,
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type",
-    "record_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "applied": {
-          "type": "boolean"
-        },
-        "record_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "tag_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "applied",
-        "record_id",
-        "record_type",
-        "tag_id"
       ],
       "type": "object"
     },
@@ -16451,175 +15615,6 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
         "fields",
         "id",
         "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### update_tag
-
-**Rename or recolour a tag**
-
-```text
-Rename, recolour or describe a word that already exists. Fields left out are unchanged, so a
-recolour need not restate the name. The word keeps every record carrying it — this changes what it
-is CALLED, not what it is on. LAST WRITE WINS: this tool sends no version, so an edit made between
-your read and your write is overwritten without a conflict. Read with get_tag immediately before
-editing. A name another word already holds is a conflict. (Governance: runs immediately; requires
-passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "color": {
-      "enum": [
-        "teal",
-        "amber",
-        "rose",
-        "slate",
-        "sky",
-        "violet",
-        "lime",
-        "orange",
-        "none"
-      ],
-      "type": "string"
-    },
-    "description": {
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "name": {
-      "maxLength": 64,
-      "minLength": 1,
-      "type": "string"
-    },
-    "tag_id": {
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "tag_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "archived": {
-          "type": "boolean"
-        },
-        "color": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "tag_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "name",
-        "tag_id"
       ],
       "type": "object"
     },

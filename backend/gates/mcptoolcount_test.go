@@ -94,7 +94,10 @@ const clientToolCeiling = 100
 //
 // describe_vocabulary fronts the five documents naming what another tool
 // accepts, and lowers it to 77.
-const publishedToolCeiling = 77
+//
+// read_tags and change_tags front seven tag verbs, split by scope, and lower it
+// to 72. merge_tags stays listed: it alone asks a human first.
+const publishedToolCeiling = 72
 
 type mcpInfoFile struct {
 	Totals struct {

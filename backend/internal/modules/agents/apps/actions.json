@@ -4,8 +4,6 @@
   "create-followups": [
     "merge_records",
     "decide_duplicate",
-    "apply_tag",
-    "create_tag",
-    "remove_tag"
+    "change_tags"
   ]
 }

@@ -28,7 +28,7 @@ may_call:
   - resolve_entities
   - search_records
   - read_record
-  - apply_tag
+  - change_tags
   - query_workspace
 
 must_mention:

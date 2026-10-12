@@ -45,9 +45,15 @@ func TestEveryToolACardActsThroughIsRegisteredAndVisibleToTheModel(t *testing.T)
 			reachable[pol.Tool] = true
 		}
 	}
+	registry := NewRegistry(nil, SendPath{})
 	registered := map[string]mcp.ToolSpec{}
-	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+	for _, spec := range registry.Specs() {
 		registered[spec.Name] = spec
+	}
+	for _, spec := range registry.Specs() {
+		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
+			reachable[spec.Name] = !slices.ContainsFunc(targets, func(target string) bool { return !reachable[target] })
+		}
 	}
 	for name := range actions {
 		spec, ok := registered[name]

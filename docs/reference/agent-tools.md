@@ -16,8 +16,8 @@ and what a live server shows can differ from the table:
   `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
   list never shows what the gate will refuse.
 
-  It answers **only for scope**. Margince works out the seat limit, and the object RBAC of the human who gave the
-  passport, again on each call. They can still refuse a tool the list showed.
+  It answers **only for scope**: the seat limit and object RBAC of the human who gave the passport are checked on
+  each call, and can still refuse a tool the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
   declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A
@@ -28,14 +28,12 @@ and what a live server shows can differ from the table:
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
 - **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and the operations of
-  `extensions/openchannel` are all `human-only`. It makes and returns a lasting signing secret over a path open to
-  all. It also points the whole outbound mail route of a member to a new place. On a plain install, the catalog below
-  is all an agent can reach.
+  `extensions/openchannel` are all `human-only`: one returns a lasting signing secret over a path open to all, and
+  one moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
 
-**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the same origin as
-`/oauth/*` and the discovery documents. There is no stdio transport and no `cmd/mcp` binary; `backend/cmd/` is `api`,
-`migrate`, `worker`. To connect a client: [how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md). To
-make the credential: [how-to/mint-a-passport.md](../how-to/mint-a-passport.md).
+**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
+and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
+[how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md); the credential: [mint-a-passport.md](../how-to/mint-a-passport.md).
 
 ## The catalog
 
@@ -89,6 +87,7 @@ ways.
 | `catch_me_up_on` | 🟢 | `read` | no |
 | `change_lead_state` | 🟢 | `write` | no |
 | `change_lists` | 🟢 | `write` | no |
+| `change_tags` | 🟢 | `write` | no |
 | `check_availability` | 🟢 | `read` | no |
 | `commit_import` | 🟢 | `write` | no |
 | `create_record` | 🟢 / 🟡 | `write` | no |
@@ -128,6 +127,7 @@ ways.
 | `promote_lead` | 🟢 | `write` | no |
 | `qualify_lead` | 🟢 | `write` | no |
 | `read_brief` | 🟢 | `read` | no |
+| `read_tags` | 🟢 | `read` | no |
 | `read_record` | 🟢 | `read` | no |
 | `read_approval` | 🟢 | `read` | no |
 | `read_import_report` | 🟢 | `read` | no |
