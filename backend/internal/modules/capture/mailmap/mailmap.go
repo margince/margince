@@ -53,6 +53,7 @@ type Message struct {
 	// authored, and empty whenever no such claim can be trusted
 	// (deliveredto.go). It is how a forwarding alias becomes discoverable.
 	deliveredTo string
+	senderAuth  connector.SenderAuthentication
 	autoReply   bool // a reply nobody chose to write: kept off the timeline
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
@@ -145,6 +146,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := header.AddressList("Bcc")
 	deliveredTo := TopDeliveredTo(header)
+	senderAuth := TopSenderAuthentication(header)
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
@@ -196,6 +198,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
+		senderAuth:       senderAuth,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
@@ -402,17 +405,18 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			HasCalendarPart: m.hasCalendarPart,
 			CalendarMethod:  m.calendarMethod,
 		},
-		Source:       source,
-		CapturedBy:   "connector:" + connectorName,
-		Raw:          raw,
-		DeliveredTo:  m.deliveredTo,
-		Counterparty: m.recordCounterparty(),
-		ThreadKey:    m.threadKey,
-		ReplyTo:      m.replyTo,
-		Participants: m.participants.Participants,
-		Addresses:    m.addresses,
-		Parts:        m.recordParts(),
-		PartDrops:    m.recordDrops(),
+		Source:               source,
+		CapturedBy:           "connector:" + connectorName,
+		Raw:                  raw,
+		DeliveredTo:          m.deliveredTo,
+		SenderAuthentication: m.senderAuth,
+		Counterparty:         m.recordCounterparty(),
+		ThreadKey:            m.threadKey,
+		ReplyTo:              m.replyTo,
+		Participants:         m.participants.Participants,
+		Addresses:            m.addresses,
+		Parts:                m.recordParts(),
+		PartDrops:            m.recordDrops(),
 	}
 }
 

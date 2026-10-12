@@ -293,6 +293,11 @@ type NormalizedRecord struct {
 	// (mailmap.TopDeliveredTo); empty is the safe answer and the common one.
 	DeliveredTo string
 
+	// SenderAuthentication is what the receiving server's topmost
+	// Authentication-Results header said about the From domain
+	// (mailmap.TopSenderAuthentication). Zero when the message carries none.
+	SenderAuthentication SenderAuthentication
+
 	// ProviderReceivedAt is when the mailbox PROVIDER says this message arrived
 	// in the seat's mailbox: Gmail's internalDate, Graph's receivedDateTime. It
 	// comes off the provider's API response, never out of the message, so a
@@ -488,3 +493,11 @@ type (
 // ErrSkip marks a record a connector intentionally skipped (excluded or
 // out of scope); the sync loop counts it, never surfaces it as a failure.
 var ErrSkip = errors.New("connector: record intentionally skipped")
+
+// SenderAuthentication is one receiving server's verdict on who sent a message.
+// Server is the authserv-id it signed the result with. DMARCPassDomain is the
+// From domain DMARC passed for, empty when it did not pass.
+type SenderAuthentication struct {
+	Server          string
+	DMARCPassDomain string
+}
