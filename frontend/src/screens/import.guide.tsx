@@ -7,8 +7,8 @@ import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
 import type { ImportFormatColumn } from "./importtypes";
 
-// What goes in one column of an import file, opened where the column is named:
-// a chip in the template preview, or the `?` beside a chosen field on the map.
+// What goes in one column of an import file. It opens where the column is
+// named: a chip in the template preview, or the `?` beside a field on the map.
 // The words come from the server's format, the same ones the template's README
 // and the agent read.
 

@@ -6,7 +6,7 @@ import type { ImportFormat, ImportRun } from "./importtypes";
 // Wire answers the import screens' stories and tests share.
 
 // Three files in the server's order. Contacts link to companies by
-// `company_ref`, and companies carry one custom picklist, so the guide, the
+// `company_ref`, and companies carry one custom picklist. So the guide, the
 // template and the map all have a link and a custom column to show.
 export const formatFixture: ImportFormat = {
   version: "margince-import/1",

@@ -68,9 +68,9 @@ export function ImportWizardPage() {
 }
 
 /**
- * The steps as one ladder, and the step the reader is on. A step behind them
- * opens again only while no run exists, because a staged run was made from
- * the files and the map as they were.
+ * The steps as one ladder, and the step the reader is on. An earlier step
+ * opens again only while no run exists. A staged run was made from the files
+ * and the map as they were.
  */
 export function ImportWizard({
   wizard,

@@ -14,10 +14,10 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The test run: the counts per type, every problem with where it is, and the
-// choice to bring rows with broken links in without the link. The first story
-// reaches it the way a reader does; the second opens a staged run by address,
-// where no file is in hand to stage again.
+// The test run shows the counts per type and every problem with where it is.
+// It offers to bring rows with broken links in without the link. The first
+// story reaches it the way a reader does. The second opens a staged run by
+// address, where no file is in hand to stage again.
 
 const meta: Meta = {
   title: "Settings/Data/Data import/Test run",

@@ -9,9 +9,9 @@ import { useTagVocabulary } from "./tags.queries";
 /**
  * What the approver is committing to, named rather than implied.
  *
- * The picker lives on the mapping step, which is off screen once a report
- * exists — so the run's word would otherwise be invisible at the one moment
- * somebody decides whether to write it onto every created record.
+ * The picker lives on the mapping step, off screen once a report exists. So
+ * the run's word would be hidden when somebody decides to write it onto every
+ * created record.
  */
 export function ImportContextTagSummary({
   tagID,
@@ -27,22 +27,17 @@ export function ImportContextTagSummary({
       {word
         ? t("import.contextTagChosen", { name: word.name })
         : // The vocabulary has not landed, or no longer holds the word. Saying
-          // "a tag" is honest; naming the wrong one, or none, is not.
+          // "a tag" is true; naming the wrong one, or none, is not.
           t("import.contextTagChosenUnnamed")}
     </p>
   );
 }
 
 /**
- * The word every record this run CREATES is filed under.
- *
- * Optional, and an existing word only: an import that coined one would hand the
- * vocabulary's one governed door to anyone who can upload a file, and a
- * misspelled column header would become a permanent tag nobody chose.
- *
- * Creates only, which the label says. A row that UPDATES a record the estate
- * already held leaves its tags alone — the run did not put it there, and
- * tagging it would claim the batch contains records it only touched.
+ * The word every record this run creates is filed under. Existing words only:
+ * coining one would open the vocabulary to anyone who can upload a file.
+ * A misspelled header would then become a tag nobody chose.
+ * An updated row keeps its tags, since the run only touched that record.
  */
 export function ImportContextTag({
   value,
@@ -60,10 +55,9 @@ export function ImportContextTag({
     <Field
       label={t("import.contextTag")}
       hint={
-        // The catalog is capped and carries no cursor, so past the cap a word
-        // that exists cannot be picked — and an importer who cannot find the
-        // word they meant would file the batch under nothing, or ask an admin
-        // to coin a duplicate.
+        // The catalog is capped with no cursor, so past the cap a word cannot be
+        // picked. An importer who cannot find it would file the batch under
+        // nothing, or ask an admin to coin a duplicate.
         vocabulary.data?.truncated
           ? `${t("import.contextTagHint")} ${t("tags.catalogTruncated")}`
           : t("import.contextTagHint")

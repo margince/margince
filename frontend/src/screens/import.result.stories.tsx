@@ -13,7 +13,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The import while it runs and what it did: one bar per file, the stop and its
+// The import while it runs and what it did. One bar per file, the stop and its
 // resume, the counts with Undo, and what an undo kept.
 
 const meta: Meta = {

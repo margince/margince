@@ -15,7 +15,7 @@ const RUN_PARAM = "run";
 /**
  * The run the page is about, held in the address (`?run=`). A reader who
  * leaves a running import and comes back, from Recent imports or by reload,
- * lands on the same run; the server answers 404 for a run that is not theirs.
+ * lands on the same run. The server answers 404 for a run that is not theirs.
  */
 export function useAddressedRun(): [
   string | null,

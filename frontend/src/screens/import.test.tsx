@@ -385,7 +385,7 @@ describe("the import page", () => {
   });
 
   // The hub's drop zone unmounts as the page opens, so focus would otherwise
-  // fall to the body; and the file it took is the one the page profiles.
+  // fall to the body. The file it took is the one the page profiles.
   it("starts the file dropped on the hub, with focus on the page's title", async () => {
     const user = userEvent.setup();
     globalThis.location.hash = "#/settings/import";

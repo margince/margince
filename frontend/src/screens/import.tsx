@@ -33,13 +33,12 @@ import {
 } from "./settingsrouting";
 import "./import.css";
 
-// Bringing a customer's data into the estate: download the template or upload
+// Bringing a customer's data into the estate. Download the template or upload
 // a file on the hub, then check, map, test and import on the run page.
 //
-// The dry run is the point of the whole flow. An import is the least
-// reversible write in the product, thousands of rows across several record
-// types in one act, so nothing is written until a human has read a report of
-// what will happen and pressed the button again.
+// An import is the least reversible write in the product: thousands of rows
+// across several record types in one act. So nothing is written until a human
+// has read the dry run's report and pressed the button again.
 const IMPORT_HOME = settingsHref("import");
 const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
 const openTemplate = () =>
@@ -93,8 +92,8 @@ export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   return <ImportHub />;
 }
 
-// The hub: the two ways in (a template to fill, or a file to upload), the
-// order every import lands its files in, and the runs already made.
+// The hub shows the two ways in (a template to fill, or a file to upload).
+// It also shows the order files land in, and the runs already made.
 function ImportHub() {
   const t = useT();
   const { locale } = useLocale();
@@ -139,7 +138,7 @@ function ImportHub() {
   );
 }
 
-// The order the engine lands files in, read from the format: a link can only
+// The order the engine lands files in, read from the format. A link can only
 // name a record an earlier file made, so a reader planning a ZIP needs it.
 function ImportOrder({ order }: Readonly<{ order: ImportFormat["order"] }>) {
   const t = useT();

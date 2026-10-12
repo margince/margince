@@ -56,8 +56,8 @@ function firstClash(
 }
 
 /**
- * The files of an upload with the type each will import as, the source name
- * the run is filed under and the tag its created records get. Next is refused,
+ * The files of an upload, each with its type, plus the run's source name and
+ * the tag for created records. Next is refused,
  * with the reason beside it, while no file has a type or two share one.
  */
 export function FilesStep({

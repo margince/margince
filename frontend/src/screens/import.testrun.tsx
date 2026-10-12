@@ -67,9 +67,9 @@ function countOf(
 }
 
 /**
- * What the run will do, before anything is written: the counts per type, every
- * problem with where it is, and the choice to bring rows with broken links in
- * without the link. Import approves this report and no other.
+ * What the run will do, before anything is written. It shows the counts per
+ * type and every problem with where it is, and offers to bring rows with
+ * broken links in without the link. Import approves this report and no other.
  */
 export function TestRunStep({
   wizard,

@@ -125,8 +125,8 @@ export function ImportMappingTable({
   );
 }
 
-// What a chosen field is beyond its name: a link to another record, one of
-// this installation's own fields, and the guide to what goes in it.
+// What a chosen field is beyond its name. It may be a link to another record
+// or one of this installation's own fields, and it has a guide to its content.
 function TargetMarks({
   target,
   file,

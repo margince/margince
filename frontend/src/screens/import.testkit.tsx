@@ -123,7 +123,7 @@ export type Sent = { method: string; path: string; body?: unknown };
 type Routes = Record<string, () => Response>;
 
 // The answers every import screen reads before a test says otherwise, each for
-// exactly the request it names.
+// only the request it names.
 const EXACT_DEFAULTS: Routes = {
   "GET /me": () =>
     jsonResponse(
@@ -154,11 +154,10 @@ function runDefault(key: string): Response | undefined {
   return undefined;
 }
 
-// A request is answered by the route that names it exactly, the test's or the
-// default's, then by the default for a run named by its id, and only then by a
-// test route that is a prefix of it: a stub "GET /imports" does not answer
-// "GET /imports/format", and "GET /imports/r1" does not answer
-// "GET /imports/r1/report".
+// First a route with the same key, the test's or the default's. Then the
+// default for a run named by its id. Last, a test route that is a prefix.
+// So a stub "GET /imports" does not answer "GET /imports/format". Nor does
+// "GET /imports/r1" answer "GET /imports/r1/report".
 function answer(routes: Routes, key: string): Response {
   const exact = routes[key] ?? EXACT_DEFAULTS[key];
   if (exact) return exact();
@@ -172,7 +171,7 @@ function answer(routes: Routes, key: string): Response {
 }
 
 // Every request the screens make, recorded, so a test can assert what went to
-// the server: the mapping and the parts are what the screen composes.
+// the server. The mapping and the parts are what the screen composes.
 export function stubRoutes(routes: Routes = {}): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal(
@@ -216,8 +215,8 @@ async function bodyOf(
 const RUN_PAGE = "#/settings/import/run";
 
 /**
- * The run page at the test step, reached the way a reader reaches it: a CSV
- * dropped, its type kept, its map kept, and a test run staged. The staged run
+ * The run page at the test step, reached the way a reader reaches it. A CSV is
+ * dropped, its type and map kept, and a test run staged. The staged run
  * is whatever the "POST /imports" route answers (`run` by default).
  */
 export async function renderAtTestRun(user: UserEvent): Promise<void> {

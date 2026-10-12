@@ -21,12 +21,12 @@ import type {
 } from "./importtypes";
 import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
 
-// Every read of the import surface sits under this key, so one invalidation
-// after a write refreshes the run, its report and the recent list together.
+// Every read of the import surface sits under this key. One invalidation after
+// a write then refreshes the run, its report and the recent list together.
 const IMPORTS_KEY = "imports";
 
 // The files an import takes, their columns and their order, in the reader's
-// language: the template preview, the guide and every screen that orders
+// language. The template preview, the guide and every screen that orders
 // types read it, so none of them keeps a list of its own.
 export function useImportFormat(lang: Locale) {
   return useQuery({
@@ -176,9 +176,9 @@ export function uploadObjectFor(
   );
 }
 
-// The source name a ZIP starts with: the one the last ZIP run was filed under,
-// so a re-downloaded "crm (1).zip" updates what "crm.zip" landed rather than
-// starting a second namespace; else the server's proposal. A single CSV keeps
+// A ZIP starts with the source name the last ZIP run was filed under, else the
+// server's proposal. So a re-downloaded "crm (1).zip" updates what "crm.zip"
+// landed rather than starting a second namespace. A single CSV keeps
 // the server's empty proposal, so its re-upload stays where it was first filed.
 export function defaultSourceName(
   profile: ImportProfile,
@@ -206,7 +206,7 @@ async function postSource(input: UploadInput): Promise<ImportProfile> {
   const body = new FormData();
   if (input.object) body.append("object", input.object);
   body.append("file", input.file);
-  // contract-fetch:allow multipart — see the note above
+  // contract-fetch:allow multipart: see the note above
   const response = await fetch("/v1/imports/sources", {
     method: "POST",
     body,

@@ -4,11 +4,10 @@
 import type { ImportPartProfile, ImportProfile } from "./importtypes";
 import { isImportObject } from "./importtypes";
 
-// asProfile checks the ONE payload nothing else types. The upload is a
-// hand-rolled multipart fetch — the generated client cannot send a file part —
-// so its answer arrives as parsed JSON with no shape behind it. A cast here
-// would be a promise the code has no way to keep, so every member the screen
-// reads is checked and the value is rebuilt from the checked parts.
+// asProfile checks the one payload nothing else types. The upload is a
+// hand-rolled multipart fetch (the generated client cannot send a file part).
+// So its answer arrives as parsed JSON with no shape behind it. A cast cannot
+// be kept, so each member the screen reads is checked and rebuilt.
 export function asProfile(payload: unknown): ImportProfile {
   const read = reader(payload);
   const source_ref = read("source_ref");
@@ -43,9 +42,8 @@ export function asProfile(payload: unknown): ImportProfile {
   };
 }
 
-// Read by name rather than destructured through a cast: the payload is
-// genuinely unknown here, and asserting a shape onto it is the promise these
-// readers exist to avoid making.
+// Read by name rather than destructured through a cast. The payload is
+// unknown here, and these readers exist to avoid asserting a shape onto it.
 function reader(payload: unknown): (name: string) => unknown {
   if (typeof payload !== "object" || payload === null) {
     throw new Error(unreadableUpload);
