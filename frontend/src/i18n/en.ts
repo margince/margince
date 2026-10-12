@@ -10572,7 +10572,7 @@ export const en = {
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
   "captureExclusions.containersPartial": "This folder list stopped short",
   "captureExclusions.containersPartialBody":
-    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. Type its name below instead, or keep senders out by address or domain.",
+    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. To keep its mail out, add a rule for its senders' address or domain instead.",
   "captureExclusions.containersUnreadable": "Your folders could not be read",
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",

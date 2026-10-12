@@ -49,10 +49,6 @@ const SCOPES: readonly Scope[] = ["user", "workspace"];
 // The kinds this card offers. `container` is a PICKER rather than a text box:
 // a container rule stores a provider's own token — a Gmail label id, a Graph
 // folder id — so the list comes from the mailbox and the reader chooses a name.
-//
-// It is offered only where a mailbox can answer. A provider with no folders
-// answers 501, and the kind drops out rather than presenting a choice with
-// nothing behind it.
 const KINDS: readonly Kind[] = ["address", "domain", "container"];
 
 /** The company-wide rules, which are the ones a plain seat may not touch. */
@@ -430,7 +426,7 @@ function ExcludeDialog({
           )}
         {/* A list that stopped short is still worth showing, and saying so is
             what keeps a missing folder from reading as a folder that does not
-            exist. The hand-typed fallback beneath it is the way out. */}
+            exist. */}
         {picking &&
           !folders.isPending &&
           !folders.isError &&

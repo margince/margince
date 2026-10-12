@@ -59,7 +59,7 @@ function lexLine(s,   i, ch, nxt, prev, out, goFile, t) {
   STACKIN = STACK
   CMT = 0; CMTKIND = ""
   out = ""
-  goFile = (FILENAME ~ /\.go$/)
+  goFile = ((SRCPATH != "" ? SRCPATH : FILENAME) ~ /\.go$/)
   for (i = 1; i <= length(s); i++) {
     ch = substr(s, i, 1)
     nxt = substr(s, i + 1, 1)
