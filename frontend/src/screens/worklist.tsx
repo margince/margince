@@ -8,6 +8,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf } from "./common";
 import { rosterOwnerNaming } from "./entityref";
 import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
@@ -631,7 +632,18 @@ export function WorklistScreen({
   // rows already loaded are still true, so the surface stays ready and the
   // control below says the request failed.
   const lostTheDay = day.isError && day.data === undefined;
-  const state = day.isPending ? "loading" : lostTheDay ? "failed" : "ready";
+  // A refusal is not a failure. A named owner this reader has no reach over
+  // answers 403, and "did not load. Retry" invites a retry that can only
+  // refuse again.
+  const refused =
+    lostTheDay && problemCodeOf(day.error) === "permission_denied";
+  const state = day.isPending
+    ? "loading"
+    : refused
+      ? "withheld"
+      : lostTheDay
+        ? "failed"
+        : "ready";
   // The FIRST page carries the day's own figures — summary, counts, reach,
   // scope options. Those describe the assembled day and do not change as the
   // reader pages, so they are read from page one rather than from the latest
@@ -655,7 +667,7 @@ export function WorklistScreen({
           to load and the body — the owner picker with it — never renders.
           Without this the reader is stranded on a page whose only control is
           gone, and reloading is the way out. */}
-      {owner !== "" && state === "failed" && (
+      {owner !== "" && (state === "failed" || state === "withheld") && (
         <Button onClick={() => setOwner("")}>
           {t("worklist.owner.backToMine")}
         </Button>
@@ -664,7 +676,11 @@ export function WorklistScreen({
         state={state}
         emptyLabel={t("worklist.clear")}
         loadingLabel={t("worklist.loading")}
-        detail={{ onRetry: () => void day.refetch() }}
+        detail={
+          refused
+            ? { withheldReason: t("worklist.owner.refused") }
+            : { onRetry: () => void day.refetch() }
+        }
       >
         {first && (
           <WorklistBody

@@ -11728,6 +11728,8 @@ export const vi = {
   "worklist.owner.nobodyYet": "Chưa có ai",
   "worklist.owner.mine": "Danh sách công việc của tôi",
   "worklist.owner.backToMine": "Quay lại Danh sách công việc của bạn",
+  "worklist.owner.refused":
+    "Bạn không được xem danh sách công việc này. Hãy hỏi chủ sở hữu, hoặc quay lại danh sách của bạn.",
   "worklist.manager.reassign": "Giao lại",
   "worklist.manager.reassignTo": "Giao lại cho",
   "worklist.manager.reassignConfirm": "Giao lại",

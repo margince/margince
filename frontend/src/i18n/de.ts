@@ -11969,6 +11969,8 @@ export const de = {
   "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
+  "worklist.owner.refused":
+    "Diese Worklist darfst du nicht lesen. Frage die zuständige Person, oder gehe zurück zu deiner.",
   "worklist.manager.reassign": "Neu zuweisen",
   "worklist.manager.reassignTo": "Neu zuweisen an",
   "worklist.manager.reassignConfirm": "Neu zuweisen",
