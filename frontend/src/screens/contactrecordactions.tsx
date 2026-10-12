@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
+import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { unwrap } from "./common";
@@ -17,12 +18,12 @@ import { invalidateRecord } from "./recordwritekeys";
 
 type Contact = components["schemas"]["Contact"];
 
-// Merge-target search (P-2): reuses the list read, mapped down to the
-// {id, name} shape MergeAction renders — the caller filters out the source
-// row since this fetch has no notion of "the record being merged away".
+// Merge-target search (P-2) over the list read. The detail line tells two
+// contacts of one name apart. A field the reader may not see arrives empty,
+// and it is left out with its separator.
 async function searchContactsTargets(
   q: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<RecordPickerCandidate[]> {
   const data = unwrap(
     await api.GET("/contacts", {
       params: { query: { q, limit: 10 } },
@@ -31,6 +32,14 @@ async function searchContactsTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.full_name,
+    detail:
+      [
+        candidate.employer?.company_name,
+        candidate.title,
+        candidate.primary_email,
+      ]
+        .filter(Boolean)
+        .join(" · ") || undefined,
   }));
 }
 

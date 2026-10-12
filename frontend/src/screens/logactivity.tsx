@@ -28,7 +28,6 @@ import {
 import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import {
   type ActivityDraft,
   activityRequestBody,
@@ -93,7 +92,7 @@ function freshDraft(
 // Scoped to the company rather than searching every contact in the installation:
 // the question is who from THIS account was in the room, and an unscoped search
 // would offer contacts of other companies as equally likely answers to it.
-async function searchCompanyContacts(
+export async function searchCompanyContacts(
   companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -121,6 +120,7 @@ export function LogActivityForm({
   onLogged,
   askedKind,
   banded = false,
+  onlyTasks = false,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
@@ -130,6 +130,8 @@ export function LogActivityForm({
   // means note, the ordinary case. It is the kind ASKED rather than the kind
   // the form starts on: it may change while this form stands.
   askedKind?: OpeningKind;
+  // Opened as Add task: no other kind is offered, so no date stops at today.
+  onlyTasks?: boolean;
 }>) {
   const t = useT();
   const formId = useId();
@@ -203,7 +205,7 @@ export function LogActivityForm({
       )) {
         queryClient.invalidateQueries({ queryKey });
       }
-      setDraft(freshDraft(input.zone));
+      setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendee(null);
       renewKey();
       onLogged?.();
@@ -231,7 +233,7 @@ export function LogActivityForm({
       pending={log.isPending}
       busyLabel={t("log.saving")}
     >
-      {t("log.save")}
+      {t(onlyTasks ? "log.addTask" : "log.save")}
     </Button>
   );
   const form = (actions: ReactNode) => (
@@ -244,33 +246,36 @@ export function LogActivityForm({
       })}
     >
       <div className="form-row">
-        <Field label={t("log.kind")}>
-          {(control) => (
-            <Select
-              {...control}
-              options={[
-                { value: "note", label: t("log.kindNote") },
-                { value: "task", label: t("log.kindTask") },
-                { value: "call", label: t("log.kindCall") },
-                { value: "meeting", label: t("log.kindMeeting") },
-              ]}
-              value={draft.kind}
-              // The clamp is the narrowing, not a validation: the Select can
-              // only hand back one of the values above, and anything else is
-              // the ordinary kind rather than a refusal.
-              onChange={(value) =>
-                setField({
-                  kind: isKind(value) ? value : "note",
-                })
-              }
-            />
-          )}
-        </Field>
-        {/* One date box for every kind, prefilled with today, so nothing about
-            the entry's date is assumed invisibly. The picked day carries what
-            the kind needs it to: a task's due date, otherwise the day the
-            note or meeting happened (occurredInstant). */}
-        <Field label={draft.kind === "task" ? t("log.dueAt") : t("log.date")}>
+        {!onlyTasks && (
+          <Field label={t("log.kind")}>
+            {(control) => (
+              <Select
+                {...control}
+                options={[
+                  { value: "note", label: t("log.kindNote") },
+                  { value: "task", label: t("log.kindTask") },
+                  { value: "call", label: t("log.kindCall") },
+                  { value: "meeting", label: t("log.kindMeeting") },
+                ]}
+                value={draft.kind}
+                // The clamp narrows the type and validates nothing. The Select
+                // only hands back the values above; anything else falls back
+                // to the ordinary kind rather than a refusal.
+                onChange={(value) =>
+                  setField({
+                    kind: isKind(value) ? value : "note",
+                  })
+                }
+              />
+            )}
+          </Field>
+        )}
+        {/* One date box, prefilled with today: a task's due date, otherwise the
+            day it happened (occurredInstant), whose hint explains the cap. */}
+        <Field
+          label={draft.kind === "task" ? t("log.dueAt") : t("log.date")}
+          hint={draft.kind === "task" ? undefined : t("log.dateHint")}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -447,7 +452,6 @@ export function LogActivityAction({
   entityId,
   askedKind,
   openOnMount,
-  triggerLabel,
   triggerIcon,
   disabled,
   disabledReasonId,
@@ -463,11 +467,6 @@ export function LogActivityAction({
   // Rendered already open, with no trigger button — for a caller that IS the
   // trigger (a suggestion's action), rather than a toolbar offering the verb.
   openOnMount?: boolean;
-  // What the trigger says. A header offering two ways into this form — log
-  // what happened, and set what happens next — needs each button to name its
-  // own verb; two buttons both reading "Log activity" is a toolbar that has
-  // stopped telling the reader anything.
-  triggerLabel?: MessageKey;
   // The glyph beside the trigger's words, `aria-hidden` at the call site: a
   // verb is found by its shape first. Optional: `openOnMount` draws no trigger.
   triggerIcon?: ReactNode;
@@ -490,6 +489,9 @@ export function LogActivityAction({
 }>) {
   const t = useT();
   const titleId = useId();
+  // Asked for a task, this is Add task: trigger, heading and form all say so.
+  const addTask = askedKind === "task";
+  const verb = addTask ? "log.addTask" : "log.title";
   const [open, setOpen] = useState(Boolean(openOnMount));
   const close = () => {
     setOpen(false);
@@ -504,7 +506,7 @@ export function LogActivityAction({
           onClick={() => setOpen(true)}
         >
           {triggerIcon}
-          {t(triggerLabel ?? "log.title")}
+          {t(verb)}
         </Button>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
@@ -512,7 +514,7 @@ export function LogActivityAction({
           <Heading size="large" id={titleId} className="t-h2">
             {/* The heading answers the verb that opened it: a reader who
                 pressed "Add task" reads "Log activity" as the wrong dialog. */}
-            {t(triggerLabel ?? "log.title")}
+            {t(verb)}
           </Heading>
         </DrawerHead>
         <LogActivityForm
@@ -520,6 +522,7 @@ export function LogActivityAction({
           entityId={entityId}
           askedKind={askedKind}
           banded
+          onlyTasks={addTask}
           onLogged={() => {
             onLogged?.();
             close();

@@ -277,11 +277,16 @@ function GroupReading({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const key = props.fields[0].key;
+  const { key, editLabel } = props.fields[0];
   const rendered = props.renderValues?.[key];
   if (rendered)
     return editable ? (
-      <InlineEditVerb label={label} disabled={!canEdit} onClick={onEdit} />
+      <InlineEditVerb
+        label={label}
+        text={editLabel && t(editLabel)}
+        disabled={!canEdit}
+        onClick={onEdit}
+      />
     ) : null;
   const value =
     (props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
@@ -300,7 +305,9 @@ function GroupReading({
       className="inline-editable"
       data-empty={!value}
       onClick={onEdit}
-      aria-label={t("inlineChoice.change", { field: label })}
+      aria-label={
+        editLabel ? t(editLabel) : t("inlineChoice.change", { field: label })
+      }
     >
       {value || t("field.unset")}
     </Button>

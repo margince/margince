@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CheckSquare, FileText } from "lucide-react";
+import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
+import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { ListPopover } from "../design-system/listpopover";
 import { useT } from "../i18n";
 import { useMe } from "./common";
 import { ComposeModal } from "./compose";
-import { LogActivityAction } from "./logactivity";
+import { LogActivityAction, searchCompanyContacts } from "./logactivity";
 import { EmailVerb } from "./recordemail";
 
 // The account header's verbs, in the shape every record page draws them:
@@ -68,6 +70,7 @@ export function CompanyHeaderActions({
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefusedId = useId();
+  const bookRefusedId = useId();
   // A guard that has not answered yet refuses nothing: claiming a refusal
   // `/me` has not decided is worse than a control that is briefly quiet.
   const logGrantKnown = me.data?.authorization !== undefined;
@@ -107,17 +110,68 @@ export function CompanyHeaderActions({
       >
         <CheckSquare aria-hidden="true" /> {t("log.addTask")}
       </Button>
+      <CompanyBookMeeting
+        companyId={company.id}
+        allowed={logGrantKnown && canLog && !archived}
+        pending={logPending}
+        reasonId={archived ?? (logGrantKnown ? bookRefusedId : undefined)}
+      />
+      {!archived && logGrantKnown && !canLog && (
+        <p className="t-caption" id={bookRefusedId}>
+          {t("scheduling.bookRefused")}
+        </p>
+      )}
       {drawer && (
         <LogActivityAction
           entityType="company"
           entityId={company.id}
           askedKind={drawer === "task" ? "task" : undefined}
-          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
           openOnMount
           onClose={() => onDrawer(null)}
         />
       )}
     </>
+  );
+}
+
+// CompanyBookMeeting books with a contact, so the account first asks which
+// one, then hands over to that contact's own booking screen. The picker is
+// drawn only once `/me` allows it, so a refusal that lands late also closes it.
+function CompanyBookMeeting({
+  companyId,
+  allowed,
+  pending,
+  reasonId,
+}: Readonly<{
+  companyId: string;
+  allowed: boolean;
+  pending: boolean;
+  reasonId?: string;
+}>) {
+  const t = useT();
+  const face = (
+    <>
+      <CalendarPlus aria-hidden="true" /> {t("scheduling.bookContact")}
+    </>
+  );
+  if (!allowed) {
+    return (
+      <Button variant="ghost" disabled={pending} reasonId={reasonId}>
+        {face}
+      </Button>
+    );
+  }
+  return (
+    <ListPopover
+      label={face}
+      title={t("scheduling.bookContact")}
+      searchLabel={t("scheduling.bookPickContact")}
+      search={(term) => searchCompanyContacts(companyId, term)}
+      onPick={(contact, done) => {
+        done();
+        navigate({ screen: "book", id: `contact-${contact.id}` });
+      }}
+    />
   );
 }
 

@@ -414,6 +414,7 @@ export const en = {
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
+  "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
 
   "scheduling.chooseProvider": "Choose a calendar provider",
@@ -1397,6 +1398,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  // The picked record's detail line, so two look-alike names stay apart here too.
+  "merge.confirmDetail":
+    "Merge {source} into {target} ({detail})? This archives {source}.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",
@@ -1559,6 +1563,16 @@ export const en = {
     "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
   "common.versionSkew":
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
+  "common.duplicate.email":
+    "Another contact or lead already has this email address, so it was not saved here.",
+  "common.duplicate.domain":
+    "Another company already has this domain, so it was not saved here.",
+  "common.duplicate.linkedinUrl":
+    "Another lead already has this LinkedIn profile, so it was not saved here.",
+  "common.duplicate.contactLead":
+    "This contact already has a live lead, so no second one was created.",
+  "common.duplicate.slotTaken":
+    "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
@@ -4460,6 +4474,8 @@ export const en = {
   "field.unset": "Not set",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
+  "field.editEmails": "Edit emails",
+  "field.editPhones": "Edit phone numbers",
   "field.addDomain": "Add domain",
 
   "field.addRegisterVat": "Add VAT ID",
@@ -4702,6 +4718,7 @@ export const en = {
     "File could not be read. Paste the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
   "log.unassigned": "Unassigned",
   "log.save": "Log",

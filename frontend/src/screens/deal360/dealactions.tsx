@@ -221,7 +221,6 @@ export function DealActions({
           entityType="deal"
           entityId={deal.id}
           askedKind={drawer === "task" ? "task" : undefined}
-          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
           openOnMount
           onClose={() => setDrawer(null)}
         />

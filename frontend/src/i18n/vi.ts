@@ -420,6 +420,7 @@ export const vi = {
   "scheduling.proposalUpdate": "Tạo đề xuất cập nhật",
   "scheduling.calendar": "Lịch sự kiện",
   "scheduling.bookContact": "Đặt lịch họp",
+  "scheduling.bookPickContact": "Tìm liên hệ của công ty này",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
 
   "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
@@ -1375,6 +1376,8 @@ export const vi = {
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
     "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+  "merge.confirmDetail":
+    "Gộp {source} vào {target} ({detail})? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
   "merge.submit": "Gộp",
 
   "tab.overview": "Tổng quan",
@@ -1520,6 +1523,16 @@ export const vi = {
     "Tài khoản này chỉ có quyền xem. Liên hệ quản trị viên để nâng cấp tài khoản.",
   "common.versionSkew":
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
+  "common.duplicate.email":
+    "Một liên hệ hoặc lead khác đã có địa chỉ email này, nên email chưa được lưu ở đây.",
+  "common.duplicate.domain":
+    "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
+  "common.duplicate.linkedinUrl":
+    "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
+  "common.duplicate.contactLead":
+    "Liên hệ này đã có một lead đang mở, nên không tạo thêm lead thứ hai.",
+  "common.duplicate.slotTaken":
+    "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
@@ -4280,6 +4293,8 @@ export const vi = {
   "field.unset": "Chưa có",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
+  "field.editEmails": "Sửa danh sách email",
+  "field.editPhones": "Sửa danh sách số điện thoại",
   "field.addDomain": "Thêm tên miền",
 
   "field.addRegisterVat": "Thêm mã số thuế",
@@ -4519,6 +4534,8 @@ export const vi = {
   "log.body": "Chi tiết",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.dateHint":
+    "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",
   "log.assignee": "Giao cho",
   "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
