@@ -9,6 +9,16 @@ SET LOCAL lock_timeout = '3s';
 DELETE FROM activity_request_settlement s USING activity a
  WHERE s.request_activity_id = a.id AND a.sent_by_colleague IS NOT NULL;
 
+-- The reminders are locked first, and the human test runs in the next
+-- statement. That statement sees an edit that committed while this one waited
+-- for its lock; the same test inside one UPDATE would not.
+SELECT count(*) FROM (
+  SELECT r.id FROM activity r JOIN activity a ON a.id = r.source_activity_id
+   WHERE a.sent_by_colleague IS NOT NULL
+     AND r.source_system = 'email_request' AND NOT r.is_done AND r.archived_at IS NULL
+     FOR UPDATE OF r
+) locked;
+
 WITH retired AS (
   UPDATE activity r
      SET archived_at = now()

@@ -12,7 +12,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const colleagueCopiedMailOwesNothing = "core/1791778974_a_colleagues_copied_mail_owes_nothing.up.sql"
+const (
+	colleagueCopiedMailOwesNothing     = "core/1791778974_a_colleagues_copied_mail_owes_nothing.up.sql"
+	colleagueCopiedMailOwesNothingDown = "core/1791778974_a_colleagues_copied_mail_owes_nothing.down.sql"
+)
 
 // rereadColleagueCopy seeds a colleague's copied mail as migration 1791775182
 // left it: outbound to the customer, by the colleague.
@@ -88,4 +91,26 @@ func TestAColleaguesCopiedMailOwesNothing(t *testing.T) {
 	if !untouchedArchived || editedArchived {
 		t.Errorf("reminder archived: untouched %v, human-edited %v; want true and false", untouchedArchived, editedArchived)
 	}
+
+	// Down restores the archive it made, and not one made after it.
+	execFile(ctx, t, conn, colleagueCopiedMailOwesNothingDown)
+	if archivedNow(ctx, t, conn, untouched) {
+		t.Error("the down migration left the reminder it archived archived")
+	}
+	if _, err := conn.Exec(ctx, `UPDATE activity SET archived_at = clock_timestamp() WHERE id = $1`, untouched); err != nil {
+		t.Fatal(err)
+	}
+	execFile(ctx, t, conn, colleagueCopiedMailOwesNothingDown)
+	if !archivedNow(ctx, t, conn, untouched) {
+		t.Error("the down migration restored a reminder archived after it ran")
+	}
+}
+
+func archivedNow(ctx context.Context, t *testing.T, conn *pgx.Conn, id string) bool {
+	t.Helper()
+	var archived bool
+	if err := conn.QueryRow(ctx, `SELECT archived_at IS NOT NULL FROM activity WHERE id = $1`, id).Scan(&archived); err != nil {
+		t.Fatal(err)
+	}
+	return archived
 }
