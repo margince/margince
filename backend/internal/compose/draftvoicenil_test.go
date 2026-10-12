@@ -7,9 +7,9 @@ package compose
 //
 // The census next door (TestEveryDraftingSurfaceLoadsTheSenderVoice) asks
 // whether a surface's PACKAGE can reach draftvoice.Load. That question has one
-// answer for a package and several entry points inside it, so a function that
-// passes a literal nil to the model reads green there whenever a sibling in its
-// package loads the voice.
+// answer per package, though a package has several entry points. So a function
+// that passes a literal nil to the model reads green there whenever a sibling in
+// its package loads the voice.
 //
 // So this reads the entry points. An unvoiced call is not itself a defect — a
 // rep with no profile is drafted for unvoiced, and a voiced draft that trips the
@@ -146,12 +146,10 @@ func alwaysUnvoicedCallers(t *testing.T, dir string) (findings []string, reached
 // voiceArgumentShapes counts the calls in fn that pass a voice block, split by
 // whether the argument can carry a voice at all.
 //
-// Two spellings say "no voice", and both must count as unvoiced: a literal nil
-// for the func-shaped block, and an empty draftvoice.Context{} for the struct
-// one. Counting only nil let a site that always constructs the empty struct read
-// as voiced while taking the unvoiced branch on every call — which a certification
-// case pinned to the plain variant does deliberately, and a production site could
-// do by accident.
+// Two spellings say "no voice", and both count as unvoiced: a literal nil for
+// the func-shaped block, and an empty draftvoice.Context{} for the struct one.
+// A site that always builds the empty struct takes the unvoiced branch on every
+// call. A certification case pinned to the plain variant is such a site.
 func voiceArgumentShapes(fn *ast.FuncDecl, positions map[string]int) (voiced, unvoiced int) {
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)

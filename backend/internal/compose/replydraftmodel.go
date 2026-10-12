@@ -59,10 +59,9 @@ type replyDraft struct {
 	Body    string `json:"body"`
 }
 
-// replyDraftSystemFor assembles this call's system turn: what this surface is
-// for, the voice rule when the call carries a profile block, the rules every
-// drafting surface shares, and THIS call's data boundary (see
-// promptfence.Fence.Rule).
+// replyDraftSystemFor assembles the system turn for one call. It carries what
+// this surface is for, the voice rule when voiced, the rules every drafting
+// surface shares, and this call's data boundary (promptfence.Fence.Rule).
 func replyDraftSystemFor(fence promptfence.Fence, voiced bool) string {
 	system := replyDraftSystem
 	if voiced {

@@ -306,9 +306,9 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 	}
 }
 
-// The first-touch rule rides in the header of each surface that writes at
-// state "none", once, ahead of the shared block: a first touch is where the pull
-// to pitch is strongest. The reply site is absent: a reply answers a message.
+// Each surface that writes at state "none" carries the first-touch rule in its
+// header, ahead of the shared block. A first touch is where the pull to pitch is
+// strongest. The reply site is absent: a reply answers a message.
 func TestEveryFirstTouchSurfaceLeadsWithTheFirstTouchRule(t *testing.T) {
 	if !strings.Contains(draftrules.FirstTouch, "Say only what the caller's stated reason says\nyour side does") {
 		t.Error("the first-touch rule no longer says what a first touch may claim about our side")
