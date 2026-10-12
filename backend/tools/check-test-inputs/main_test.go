@@ -68,6 +68,29 @@ func TestADeclaredReadAndReadsTheCacheSeesAreNotReported(t *testing.T) {
 	}
 }
 
+// A nested module finds the repository by statting .git in each directory on
+// the way up. The ones between are no input.
+func TestLocatingTheRepositoryFromANestedModuleIsNotReported(t *testing.T) {
+	repo := t.TempDir()
+	pkg := filepath.Join(repo, "backend", "tools", "gen")
+	for _, dir := range []string{filepath.Join(repo, ".git"), pkg} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(repo, "backend", "tools", "go.mod"), []byte("module example.com/tools\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	findings, err := undeclaredReads(strings.NewReader("stat ../../.git\nstat ../../../.git\n"), pkg,
+		map[string]string{"backend": "TREE_DIGEST_BACKEND"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 0 {
+		t.Errorf("statting backend/.git on the way to the repository reported %q, want nothing", findings)
+	}
+}
+
 func TestACensusOverAnEmptyDirectoryReadsNothing(t *testing.T) {
 	findings, read, err := census(t.TempDir(), map[string]string{})
 	if err != nil {
