@@ -32,7 +32,8 @@ func TestEveryToolRunsOnARouteThatDeclaresIt(t *testing.T) {
 		byID[op.id] = op
 	}
 
-	specs := NewRegistry(nil, SendPath{}).Specs()
+	registry := NewRegistry(nil, SendPath{})
+	specs := registry.Specs()
 	if len(specs) == 0 {
 		t.Fatal("the registry has no tools — this sweep checked nothing")
 	}
@@ -40,6 +41,10 @@ func TestEveryToolRunsOnARouteThatDeclaresIt(t *testing.T) {
 	sort.Slice(specs, func(i, j int) bool { return specs[i].Name < specs[j].Name })
 	for _, spec := range specs {
 		if extensionTools[spec.Name] {
+			continue
+		}
+		// A router runs as its targets, each held to its own route in this sweep.
+		if _, isRouter := registry.RouteTargets(spec.Name); isRouter {
 			continue
 		}
 		for _, problem := range restParityProblems(spec.Name, spec.OpenAPIOp, byID) {

@@ -71,13 +71,23 @@ func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 		}
 	}
 
-	specs := NewRegistry(nil, SendPath{}).Specs()
+	registry := NewRegistry(nil, SendPath{})
+	specs := registry.Specs()
 	if len(specs) == 0 {
 		t.Fatal("the registry has no tools — this sweep checked nothing")
 	}
 	composed := composedToolNames()
 	for _, spec := range specs {
 		if declared[spec.Name] || composed[spec.Name] {
+			continue
+		}
+		// A router runs only as its targets, so it is granted exactly what they are.
+		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
+			for _, target := range targets {
+				if !declared[target] {
+					t.Errorf("router %s fronts %s, which no operation declares", spec.Name, target)
+				}
+			}
 			continue
 		}
 		t.Errorf("%s is registered but no operation declares it, so an agent may call a verb the "+

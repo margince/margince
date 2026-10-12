@@ -401,14 +401,14 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"(it may be revoked, expired, or bound to another workspace). Nothing was changed — " +
 			"mint a new passport or contact the workspace admin.")
 	}
-	out, err := s.registry.Invoke(callCtx, p.Name, p.Arguments)
+	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
 	if err != nil {
-		if handle, minted := s.mintTask(callCtx, fr, p.Name, err); minted {
+		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
 		}
-		return toolError(s.explain(p.Name, err))
+		return toolError(s.explain(served.Tool, err))
 	}
-	return s.result(p.Name, out)
+	return s.result(served.Tool, served.Output)
 }
 
 // result renders one successful tool return.

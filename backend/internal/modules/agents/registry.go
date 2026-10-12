@@ -137,6 +137,23 @@ func (r *Registry) Invoke(ctx context.Context, name string, in json.RawMessage) 
 // the envelope's evidence would undercount every answer that hands over more
 // than it can name, making a repeat cheaper than the call.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
+	served, err := r.InvokeServed(ctx, name, in)
+	return served.Output, served.Records, err
+}
+
+// InvokeServed is InvokeServing, plus the tool that ran: the router's target
+// when name is a router. A caller that records the call by tool, or checks its
+// answer against a tool's schema, needs that name and not the one it called.
+func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMessage) (Served, error) {
+	target, args, err := r.resolve(name, in)
+	if err != nil {
+		return Served{Tool: name}, err
+	}
+	out, records, err := r.invokeTool(ctx, target, args)
+	return Served{Tool: target, Output: out, Records: records}, err
+}
+
+func (r *Registry) invokeTool(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
 	// one is what tools/list advertised and what the argument constraints were
