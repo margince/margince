@@ -111,8 +111,10 @@ func stampMessageEnds(
 }
 
 // fromAuthenticated reports that Gmail's receiving server passed DMARC for the
-// domain of from. Gmail writes its result, signed mx.google.com, above every
-// header the sender submitted, so the topmost one is Gmail's own. Other
+// domain of from. Gmail writes its result, under the authserv-id
+// mx.google.com, above every header the sender submitted, so the topmost one
+// is Gmail's own. The trust comes from that position; nothing here verifies a
+// signature on the header. Other
 // transports answer false: Microsoft writes no server name, and an IMAP
 // server is whatever the seat chose.
 func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
@@ -122,5 +124,5 @@ func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
 }
 
-// gmailAuthServer is the authserv-id Gmail signs Authentication-Results with.
+// gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"

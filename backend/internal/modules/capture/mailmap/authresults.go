@@ -54,10 +54,17 @@ func parseAuthenticationResults(value string) connector.SenderAuthentication {
 	var verdicts [][]string
 	for _, clause := range clauses[1:] {
 		name, result, found := strings.Cut(clause, "=")
-		method, _, _ := strings.Cut(name, "/")
-		if found && strings.EqualFold(strings.TrimSpace(method), "dmarc") {
-			verdicts = append(verdicts, strings.Fields(strings.ToLower(result)))
+		method, version, versioned := strings.Cut(name, "/")
+		if !found || !strings.EqualFold(strings.TrimSpace(method), "dmarc") {
+			continue
 		}
+		verdict := strings.Fields(strings.ToLower(result))
+		// Version 1 is the only DMARC this reads; another version's pass is
+		// not one, though its clause still counts against a second result.
+		if versioned && strings.TrimSpace(version) != "1" {
+			verdict = []string{"unsupported"}
+		}
+		verdicts = append(verdicts, verdict)
 	}
 	if len(verdicts) != 1 || len(verdicts[0]) == 0 || verdicts[0][0] != "pass" {
 		return out

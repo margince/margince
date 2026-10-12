@@ -67,6 +67,8 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 		`Authentication-Results: mx.google.com; spf=pass smtp.mailfrom="x; dmarc=pass header.from=auth.test y"@evil.test;`,
 		"       dmarc=fail header.from=auth.test")
 
+	otherVersion := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-8", gmail,
+		"Authentication-Results: mx.google.com; dmarc/2=pass header.from=auth.test")
 	attestedSince := rereadCopyWithOriginal(ctx, t, conn, colleague, "auth-6", "connector:imap:seat")
 	if _, err := conn.Exec(ctx, `UPDATE activity SET counterparty_outbound_attested = true WHERE id = $1`, attestedSince); err != nil {
 		t.Fatal(err)
@@ -90,6 +92,7 @@ func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
 		"no stored original":                     {noOriginal, "inbound", "sam@auth.test"},
 		"captured over IMAP":                     {overIMAP, "inbound", "sam@auth.test"},
 		"a pass smuggled in a quoted sender":     {smuggled, "inbound", "sam@auth.test"},
+		"a pass under another DMARC version":     {otherVersion, "inbound", "sam@auth.test"},
 		"attested by the colleague's mailbox":    {attestedSince, "outbound", "dana@client.test"},
 		"a base64-wrapped original that passed":  {wrapped, "outbound", "dana@client.test"},
 	} {

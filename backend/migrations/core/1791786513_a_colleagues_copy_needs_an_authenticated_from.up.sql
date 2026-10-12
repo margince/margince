@@ -6,8 +6,9 @@
 --
 -- The SQL reads the original the way mailmap.TopSenderAuthentication does: the
 -- topmost Authentication-Results header, unfolded, quoted strings and then
--- comments removed, signed mx.google.com. It must hold no quote or parenthesis
--- left over, exactly one dmarc clause in any spelling, and that clause a pass
+-- comments removed, under the authserv-id mx.google.com. No quote or
+-- parenthesis may be left over. It must hold exactly one dmarc clause in any
+-- spelling, and that clause must be a pass under DMARC version 1 or no version,
 -- whose header.from is the From domain. A base64-wrapped original is decoded
 -- first, as rawCapturePayload stores one.
 --
@@ -41,7 +42,7 @@ WITH original AS (
       OR r.line ~ '["()]'
       OR lower(split_part(btrim(split_part(r.line, ';', 1)), ' ', 1)) <> 'mx.google.com'
       OR regexp_count(r.line, ';\s*dmarc\s*(/[^=;]*)?=', 1, 'i') <> 1
-      OR lower(substring(r.line FROM '(?i);\s*dmarc\s*(?:/[^=;]*)?=\s*pass\s+(?:[^;]*\s)?header\.from=([^[:space:];]+)'))
+      OR lower(substring(r.line FROM '(?i);\s*dmarc\s*(?:/\s*1\s*)?=\s*pass\s+(?:[^;]*\s)?header\.from=([^[:space:];]+)'))
          IS DISTINCT FROM lower(split_part(r.colleague, '@', 2))
 ), reverted AS (
   UPDATE activity a
