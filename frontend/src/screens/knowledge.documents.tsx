@@ -38,6 +38,7 @@ import {
   unwrap,
 } from "./common";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
+import { postMultipart } from "./multipart";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];
@@ -107,18 +108,11 @@ function useDocumentWrite<Vars>(
   });
 }
 
-// Multipart by hand: the generated client serializes JSON bodies only.
 async function uploadDocument(vars: { corpusId: string; file: File }) {
-  const body = new FormData();
-  body.append("file", vars.file);
-  const response = await fetch(
+  await postMultipart(
     `/v1/knowledge/corpora/${encodeURIComponent(vars.corpusId)}/documents`,
-    { method: "POST", body, credentials: "include" },
+    { file: vars.file },
   );
-  const payload = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throwProblem(payload);
-  }
 }
 
 async function deleteDocument(vars: { id: string }) {
