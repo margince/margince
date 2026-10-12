@@ -53,8 +53,7 @@ func aCompany() datasource.Record {
 // nor is entitled to read.
 func requireBadArgs(t *testing.T, err error) {
 	t.Helper()
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Fatalf("err = %v, want a BadArgsError a host can act on", err)
 	}
 }

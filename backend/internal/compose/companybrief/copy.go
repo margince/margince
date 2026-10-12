@@ -17,7 +17,7 @@ package companybrief
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // The activity kinds the floor can name, as constants so the three language
@@ -32,35 +32,23 @@ const (
 	kindMessage = "message"
 )
 
-// phrase is one sentence in every language, kept together so a translator reads
-// the three side by side. Keyed per language instead, each sentence sat in a
-// different block a hundred lines from its siblings.
-type phrase struct{ en, de, vi string }
+// The tables below are read by the writers in this package; the primitive they
+// are built from is shared, because six private copies of one three-field
+// struct is six places for a fallback to differ.
+type phrase = langcopy.Phrase
 
-func (p phrase) in(lang textlang.Lang) string {
-	switch lang {
-	case textlang.German:
-		return p.de
-	case textlang.Vietnamese:
-		return p.vi
-	default:
-		return p.en
-	}
-}
+type spoken = langcopy.Spoken
 
-// spoken is the floor resolved to one language.
-type spoken struct{ lang textlang.Lang }
-
-func (s spoken) say(p phrase) string { return p.in(s.lang) }
-
-// nouns answers a keyed noun in this language, falling back to the stored key —
-// a kind or field this build has no word for says only that it exists.
-func (s spoken) noun(table map[string]phrase, key string) (string, bool) {
+// nounFor answers a keyed noun in the resolved language, falling back to the
+// stored key: a kind or field this build has no word for says only that it
+// exists. A free function rather than a method, because Spoken's method set is
+// fixed at its shared definition.
+func nounFor(s spoken, table map[string]phrase, key string) (string, bool) {
 	p, ok := table[key]
 	if !ok {
 		return key, false
 	}
-	return p.in(s.lang), true
+	return p.In(s.Lang()), true
 }
 
 // companyPhrases is the company floor's sentence set. Every field is answered
@@ -121,128 +109,123 @@ type companyPhrases struct {
 var floor = companyPhrases{
 	ProfileLabels: map[string]phrase{
 		string(crmcontracts.CompanyProfileFieldFieldOfferSummary): {
-			en: "What they sell", de: "Was sie verkaufen", vi: "Họ bán gì",
+			En: "What they sell", De: "Was sie verkaufen", Vi: "Họ bán gì",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldIcp): {
-			en: "Who they sell to", de: "An wen sie verkaufen", vi: "Họ bán cho ai",
+			En: "Who they sell to", De: "An wen sie verkaufen", Vi: "Họ bán cho ai",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldValueProposition): {
-			en: "What they promise", de: "Was sie versprechen", vi: "Họ cam kết điều gì",
+			En: "What they promise", De: "Was sie versprechen", Vi: "Họ cam kết điều gì",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldUsp): {
-			en: "How they differentiate", de: "Wodurch sie sich unterscheiden",
-			vi: "Điều gì làm họ khác biệt",
+			En: "How they differentiate", De: "Wodurch sie sich unterscheiden",
+			Vi: "Điều gì làm họ khác biệt",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldCustomerPains): {
-			en: "What they solve", de: "Welches Problem sie lösen",
-			vi: "Họ giải quyết vấn đề gì",
+			En: "What they solve", De: "Welches Problem sie lösen",
+			Vi: "Họ giải quyết vấn đề gì",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldDesiredOutcomes): {
-			en: "What their customers want", de: "Was ihre Kunden erreichen wollen",
-			vi: "Khách hàng của họ muốn đạt được gì",
+			En: "What their customers want", De: "Was ihre Kunden erreichen wollen",
+			Vi: "Khách hàng của họ muốn đạt được gì",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldBuyingCenter): {
-			en: "Who decides there", de: "Wer dort entscheidet",
-			vi: "Ai là người quyết định bên đó",
+			En: "Who decides there", De: "Wer dort entscheidet",
+			Vi: "Ai là người quyết định bên đó",
 		},
 		string(crmcontracts.CompanyProfileFieldFieldSalesMotion): {
-			en: "How they sell", de: "Wie sie verkaufen", vi: "Họ bán theo cách nào",
+			En: "How they sell", De: "Wie sie verkaufen", Vi: "Họ bán theo cách nào",
 		},
 	},
 	KindNouns: map[string]phrase{
-		kindEmail:   {en: "an email", de: "eine E-Mail", vi: "một email"},
-		kindCall:    {en: "a call", de: "ein Anruf", vi: "một cuộc gọi"},
-		kindMeeting: {en: "a meeting", de: "ein Termin", vi: "một cuộc họp"},
-		kindNote:    {en: "a note", de: "eine Notiz", vi: "một ghi chú"},
-		kindTask:    {en: "a task", de: "eine Aufgabe", vi: "một công việc"},
-		kindMessage: {en: "a message", de: "eine Nachricht", vi: "một tin nhắn"},
+		kindEmail:   {En: "an email", De: "eine E-Mail", Vi: "một email"},
+		kindCall:    {En: "a call", De: "ein Anruf", Vi: "một cuộc gọi"},
+		kindMeeting: {En: "a meeting", De: "ein Termin", Vi: "một cuộc họp"},
+		kindNote:    {En: "a note", De: "eine Notiz", Vi: "một ghi chú"},
+		kindTask:    {En: "a task", De: "eine Aufgabe", Vi: "một công việc"},
+		kindMessage: {En: "a message", De: "eine Nachricht", Vi: "một tin nhắn"},
 	},
 
-	ContactsSuffix: phrase{en: "%s contacts", de: "%s Kontakte", vi: "%s liên hệ"},
+	ContactsSuffix: phrase{En: "%s contacts", De: "%s Kontakte", Vi: "%s liên hệ"},
 	StrengthOverOne: phrase{
-		en: " Relationship strength %d across 1 known contact.",
-		de: " Beziehungsstärke %d über einen bekannten Kontakt.",
-		vi: " Mức độ quan hệ %d trên 1 liên hệ đã biết.",
+		En: " Relationship strength %d across 1 known contact.",
+		De: " Beziehungsstärke %d über einen bekannten Kontakt.",
+		Vi: " Mức độ quan hệ %d trên 1 liên hệ đã biết.",
 	},
 	StrengthOverContacts: phrase{
-		en: " Relationship strength %d across %d known contacts.",
-		de: " Beziehungsstärke %d über %d bekannte Kontakte.",
-		vi: " Mức độ quan hệ %d trên %d liên hệ đã biết.",
+		En: " Relationship strength %d across %d known contacts.",
+		De: " Beziehungsstärke %d über %d bekannte Kontakte.",
+		Vi: " Mức độ quan hệ %d trên %d liên hệ đã biết.",
 	},
 
-	OpenDealOne:  phrase{en: "1 open deal", de: "1 offener Deal", vi: "1 cơ hội đang mở"},
-	OpenDealMany: phrase{en: "%d open deals", de: "%d offene Deals", vi: "%d cơ hội đang mở"},
+	OpenDealOne:  phrase{En: "1 open deal", De: "1 offener Deal", Vi: "1 cơ hội đang mở"},
+	OpenDealMany: phrase{En: "%d open deals", De: "%d offene Deals", Vi: "%d cơ hội đang mở"},
 	WorthAbout: phrase{
-		en: " worth about %s %s", de: " im Wert von etwa %s %s",
-		vi: " trị giá khoảng %s %s",
+		En: " worth about %s %s", De: " im Wert von etwa %s %s",
+		Vi: " trị giá khoảng %s %s",
 	},
 	WonToDate: phrase{
-		en: "; %s %s won to date", de: "; %s %s bisher gewonnen",
-		vi: "; đã thắng %s %s đến nay",
+		En: "; %s %s won to date", De: "; %s %s bisher gewonnen",
+		Vi: "; đã thắng %s %s đến nay",
 	},
 	StalledDeal: phrase{
-		en: "%s is stalled with no recent activity.",
-		de: "%s stockt, ohne jüngste Aktivität.",
-		vi: "%s đang chững lại, không có hoạt động gần đây.",
+		En: "%s is stalled with no recent activity.",
+		De: "%s stockt, ohne jüngste Aktivität.",
+		Vi: "%s đang chững lại, không có hoạt động gần đây.",
 	},
 
 	LastContactPlain: phrase{
-		en: "Last contact was %s.", de: "Der letzte Kontakt war %s.",
-		vi: "Lần liên hệ gần nhất là %s.",
+		En: "Last contact was %s.", De: "Der letzte Kontakt war %s.",
+		Vi: "Lần liên hệ gần nhất là %s.",
 	},
 	LastContactDated: phrase{
-		en: "Last contact was %s on %s.", de: "Der letzte Kontakt war %s am %s.",
-		vi: "Lần liên hệ gần nhất là %s vào %s.",
+		En: "Last contact was %s on %s.", De: "Der letzte Kontakt war %s am %s.",
+		Vi: "Lần liên hệ gần nhất là %s vào %s.",
 	},
 	LastContactSubject: phrase{
-		en: "Last contact was %s: %q.", de: "Der letzte Kontakt war %s: %q.",
-		vi: "Lần liên hệ gần nhất là %s: %q.",
+		En: "Last contact was %s: %q.", De: "Der letzte Kontakt war %s: %q.",
+		Vi: "Lần liên hệ gần nhất là %s: %q.",
 	},
 	LastContactFull: phrase{
-		en: "Last contact was %s on %s: %q.", de: "Der letzte Kontakt war %s am %s: %q.",
-		vi: "Lần liên hệ gần nhất là %s vào %s: %q.",
+		En: "Last contact was %s on %s: %q.", De: "Der letzte Kontakt war %s am %s: %q.",
+		Vi: "Lần liên hệ gần nhất là %s vào %s: %q.",
 	},
 
-	OpenTaskOne:  phrase{en: "1 open task", de: "1 offene Aufgabe", vi: "1 công việc đang mở"},
-	OpenTaskMany: phrase{en: "%d open tasks", de: "%d offene Aufgaben", vi: "%d công việc đang mở"},
+	OpenTaskOne:  phrase{En: "1 open task", De: "1 offene Aufgabe", Vi: "1 công việc đang mở"},
+	OpenTaskMany: phrase{En: "%d open tasks", De: "%d offene Aufgaben", Vi: "%d công việc đang mở"},
 	TasksStarting: phrase{
-		en: "%s, starting with %q.", de: "%s, beginnend mit %q.",
-		vi: "%s, bắt đầu với %q.",
+		En: "%s, starting with %q.", De: "%s, beginnend mit %q.",
+		Vi: "%s, bắt đầu với %q.",
 	},
 
 	KnownContactOne: phrase{
-		en: "1 known contact", de: "1 bekannter Kontakt", vi: "1 liên hệ đã biết",
+		En: "1 known contact", De: "1 bekannter Kontakt", Vi: "1 liên hệ đã biết",
 	},
 	KnownContactMany: phrase{
-		en: "%d known contacts", de: "%d bekannte Kontakte", vi: "%d liên hệ đã biết",
+		En: "%d known contacts", De: "%d bekannte Kontakte", Vi: "%d liên hệ đã biết",
 	},
 	KnownContactLine: phrase{
-		en: "Known contact: %s.", de: "Bekannter Kontakt: %s.", vi: "Liên hệ đã biết: %s.",
+		En: "Known contact: %s.", De: "Bekannter Kontakt: %s.", Vi: "Liên hệ đã biết: %s.",
 	},
 	TasksEarliestDue: phrase{
-		en: "%s, the earliest due %s.", de: "%s, die früheste fällig am %s.",
-		vi: "%s, sớm nhất đến hạn %s.",
+		En: "%s, the earliest due %s.", De: "%s, die früheste fällig am %s.",
+		Vi: "%s, sớm nhất đến hạn %s.",
 	},
 	OpenTaskNamed: phrase{
-		en: "Open task: %q.", de: "Offene Aufgabe: %q.", vi: "Công việc đang mở: %q.",
+		En: "Open task: %q.", De: "Offene Aufgabe: %q.", Vi: "Công việc đang mở: %q.",
 	},
 	OpenTaskDue: phrase{
-		en: "Open task: %q, due %s.", de: "Offene Aufgabe: %q, fällig am %s.",
-		vi: "Công việc đang mở: %q, đến hạn %s.",
+		En: "Open task: %q, due %s.", De: "Offene Aufgabe: %q, fällig am %s.",
+		Vi: "Công việc đang mở: %q, đến hạn %s.",
 	},
 	OpenDealNamed: phrase{
-		en: "Open deal: %s", de: "Offener Deal: %s", vi: "Cơ hội đang mở: %s",
+		En: "Open deal: %s", De: "Offener Deal: %s", Vi: "Cơ hội đang mở: %s",
 	},
-	DealStalledMark: phrase{en: "stalled", de: "stockend", vi: "đang chững lại"},
+	DealStalledMark: phrase{En: "stalled", De: "stockend", Vi: "đang chững lại"},
 
-	DateLayout: phrase{en: "2 Jan 2006", de: "2.1.2006", vi: "2/1/2006"},
+	DateLayout: phrase{En: "2 Jan 2006", De: "2.1.2006", Vi: "2/1/2006"},
 }
 
 // companyPhrasesFor answers the floor's language for a code, falling back to
 // English for one this build does not speak.
-func companyPhrasesFor(lang string) spoken {
-	if textlang.Known(lang) {
-		return spoken{lang: textlang.Lang(lang)}
-	}
-	return spoken{lang: textlang.English}
-}
+func companyPhrasesFor(lang string) spoken { return langcopy.For(lang) }

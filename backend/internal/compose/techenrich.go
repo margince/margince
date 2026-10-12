@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // dkimSelectors are the selector names probed for DKIM.
@@ -120,7 +121,7 @@ type laneOutcome struct {
 // no completed lanes, which the writer reads as "change nothing" — the honest
 // outcome, and one the next pass simply retries.
 func (e *TechnicalEnricher) Read(
-	ctx context.Context, companyID ids.CompanyID, domain string,
+	ctx context.Context, companyID ids.CompanyID, domain string, lang textlang.Lang,
 ) (contacts.TechnicalEnrichment, []laneOutcome) {
 	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
 	result := contacts.TechnicalEnrichment{
@@ -137,8 +138,8 @@ func (e *TechnicalEnricher) Read(
 	// and would then reconcile the crawl's rows away as unobserved.
 	// technicalonsiteread.go carries that lane.
 	outcomes := []laneOutcome{
-		e.readDNS(ctx, domain, &result),
-		e.readCertLog(ctx, domain, &result),
+		e.readDNS(ctx, domain, &result, lang),
+		e.readCertLog(ctx, domain, &result, lang),
 	}
 	for _, outcome := range outcomes {
 		if outcome.Completed {
@@ -153,7 +154,7 @@ func (e *TechnicalEnricher) Read(
 // all — a domain with no MX records still has an answer, and recording "this
 // company receives no mail" is the point of asking.
 func (e *TechnicalEnricher) readDNS(
-	ctx context.Context, domain string, result *contacts.TechnicalEnrichment,
+	ctx context.Context, domain string, result *contacts.TechnicalEnrichment, lang textlang.Lang,
 ) laneOutcome {
 	outcome := laneOutcome{Lane: contacts.LaneDNS}
 	if e.dns == nil {
@@ -173,7 +174,7 @@ func (e *TechnicalEnricher) readDNS(
 		return laneOutcome{Lane: contacts.LaneDNS, Err: err}
 	}
 	if provider, ok := techprofile.MailProvider(domain, mxHosts); ok {
-		result.Observations = append(result.Observations, observationOf(provider, sourceURL))
+		result.Observations = append(result.Observations, observationOf(provider, sourceURL, lang))
 	}
 
 	// EVERY sub-lookup must answer for this lane to be authoritative. A lane
@@ -181,10 +182,10 @@ func (e *TechnicalEnricher) readDNS(
 	// reconciliation then deletes the mail posture and the hosting provider
 	// because one TXT query timed out, and the next pass writes them back —
 	// so the record flickers with the resolver's mood.
-	if !e.appendEmailSecurity(ctx, domain, sourceURL, result) {
+	if !e.appendEmailSecurity(ctx, domain, sourceURL, result, lang) {
 		return laneOutcome{Lane: contacts.LaneDNS, Err: errPartialDNS}
 	}
-	if !e.appendHosting(ctx, domain, sourceURL, result) {
+	if !e.appendHosting(ctx, domain, sourceURL, result, lang) {
 		return laneOutcome{Lane: contacts.LaneDNS, Err: errPartialDNS}
 	}
 
@@ -210,7 +211,7 @@ var errPartialDNS = errors.New("compose: the DNS lane could not read every recor
 // — the alternative is deleting a company's whole mail posture because one TXT
 // query timed out.
 func (e *TechnicalEnricher) appendEmailSecurity(
-	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment,
+	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment, lang textlang.Lang,
 ) bool {
 	cached, hit, err := e.cache.LookupTechnical(ctx, domain, contacts.CacheKindTXT)
 	if err != nil {
@@ -231,7 +232,7 @@ func (e *TechnicalEnricher) appendEmailSecurity(
 		}
 	}
 	for _, signal := range techprofile.EmailSecurityFromKeys(keys) {
-		result.Observations = append(result.Observations, observationOf(signal, sourceURL))
+		result.Observations = append(result.Observations, observationOf(signal, sourceURL, lang))
 	}
 	return true
 }
@@ -272,7 +273,7 @@ func (e *TechnicalEnricher) readEmailSecurity(ctx context.Context, domain string
 // hosting provider deleted because one address lookup failed is a fact removed
 // by a network blip rather than by anything the company did.
 func (e *TechnicalEnricher) appendHosting(
-	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment,
+	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment, lang textlang.Lang,
 ) bool {
 	addrText, err := e.cachedStrings(ctx, domain, contacts.CacheKindAddress, func() ([]string, bool, error) {
 		addrs, found, err := e.dns.Addresses(ctx, domain)
@@ -318,7 +319,7 @@ func (e *TechnicalEnricher) appendHosting(
 		cnameTarget = cname[0]
 	}
 	if hosting, ok := techprofile.HostingProvider(reverseNames, cnameTarget); ok {
-		result.Observations = append(result.Observations, observationOf(hosting, sourceURL))
+		result.Observations = append(result.Observations, observationOf(hosting, sourceURL, lang))
 	}
 	return true
 }
@@ -330,7 +331,7 @@ func (e *TechnicalEnricher) appendHosting(
 // personal data in a table the erasure path does not reach. What is remembered
 // is the allowlisted service keys and their proving hostnames.
 func (e *TechnicalEnricher) readCertLog(
-	ctx context.Context, domain string, result *contacts.TechnicalEnrichment,
+	ctx context.Context, domain string, result *contacts.TechnicalEnrichment, lang textlang.Lang,
 ) laneOutcome {
 	outcome := laneOutcome{Lane: contacts.LaneCertLog}
 	if e.certs == nil {
@@ -359,7 +360,7 @@ func (e *TechnicalEnricher) readCertLog(
 	}
 	sourceURL := certlog.PublicBaseURL + "/?q=%25." + domain
 	for _, service := range services {
-		result.Observations = append(result.Observations, observationOf(service, sourceURL))
+		result.Observations = append(result.Observations, observationOf(service, sourceURL, lang))
 	}
 	outcome.Completed = true
 	return outcome
@@ -389,13 +390,37 @@ func (e *TechnicalEnricher) cachedStrings(
 	return answer, nil
 }
 
-// observationOf carries a classified signal into the shape the writer stores.
-func observationOf(signal techprofile.Signal, sourceURL string) contacts.TechnicalObservation {
+// observationOf carries a classified signal into the shape the writer stores,
+// naming it in the language the record is kept in.
+//
+// An enumerated signal is named from its key, because techprofile classifies
+// and does not translate. A vendor's own name is not enumerated and passes
+// through: Shopify is Shopify in every language.
+func observationOf(
+	signal techprofile.Signal, sourceURL string, lang textlang.Lang,
+) contacts.TechnicalObservation {
+	value, evidence := signal.Label, signal.Evidence
+	if name, ok := recordName(signal, lang); ok {
+		value = name
+	}
+	if value == "" {
+		// An enumerated key the copy does not name, which the census makes
+		// unreachable.
+		//
+		// The key beats an empty value. The column accepts one, and no reader
+		// could interpret it.
+		value = signal.Key
+	}
+	if signal.Field == techprofile.FieldEmailSecurity {
+		if spelled, ok := named(securityEvidenceVocabulary, lang, signal.Key); ok {
+			evidence = spelled
+		}
+	}
 	return contacts.TechnicalObservation{
 		Field:     signal.Field,
 		ValueKey:  signal.Key,
-		Value:     signal.Label,
-		Evidence:  signal.Evidence,
+		Value:     value,
+		Evidence:  evidence,
 		SourceURL: sourceURL,
 	}
 }
@@ -420,14 +445,16 @@ func servicesFromCache(encoded []string) []techprofile.Signal {
 		if !found {
 			continue
 		}
-		// Re-derived rather than cached, so a label reworded in the code takes
-		// effect on the next read instead of persisting in the cache.
-		label, known := techprofile.ServiceLabel(key)
-		if !known {
+		// The key is checked against the classifier rather than trusted, so a
+		// cache written before a service was retired cannot resurrect it.
+		//
+		// The label is not cached at all. observationOf names the signal in
+		// the record's language on the way out.
+		if !techprofile.IsService(key) {
 			continue
 		}
 		services = append(services, techprofile.Signal{
-			Field: techprofile.FieldOperatedService, Key: key, Label: label, Evidence: evidence,
+			Field: techprofile.FieldOperatedService, Key: key, Evidence: evidence,
 		})
 	}
 	return services

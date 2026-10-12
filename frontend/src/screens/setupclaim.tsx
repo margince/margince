@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { Select } from "../design-system/select";
+import { jurisdictionName } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import {
   detectLocale,
   LOCALES,
   type Locale,
   localeNameKey,
+  useLocale,
   useT,
 } from "../i18n";
 import { usePageTitle, Wordmark } from "./auth";
@@ -26,7 +28,20 @@ import "./auth.css";
 // it creates is the installation's root. An interface that mints root quietly is
 // not honest about what it is doing.
 
-export type SetupStatus = { claimable: boolean };
+export type SetupStatus = {
+  claimable: boolean;
+  /** The jurisdiction pack codes this build carries, offered by the claim form. */
+  jurisdictions: readonly string[];
+};
+
+// The claim form's value for "no pack". The Select's "" is "nothing chosen",
+// and the admin must choose, so the explicit answer needs a value of its own.
+const NO_PACK = "none";
+
+/** The code the claim sends: the chosen pack, or "" for no pack. */
+function claimedCountry(choice: string): string {
+  return choice === NO_PACK ? "" : choice;
+}
 
 // A first guess at the currency this installation bills in, from the region the
 // claiming browser reports.
@@ -77,7 +92,7 @@ export async function fetchSetupStatus(): Promise<SetupStatus> {
     const response = await fetch("/setup/status", {
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) return { claimable: false };
+    if (!response.ok) return { claimable: false, jurisdictions: [] };
     const body: unknown = await response.json();
     // Narrowed, not asserted: this body arrives from the network, and an `as`
     // here would promise the compiler a shape nothing checked. Anything that is
@@ -85,11 +100,17 @@ export async function fetchSetupStatus(): Promise<SetupStatus> {
     // the cost of getting it wrong is a claim screen on an installation that
     // cannot be claimed.
     if (typeof body === "object" && body !== null && "claimable" in body) {
-      return { claimable: body.claimable === true };
+      const offered = "jurisdictions" in body ? body.jurisdictions : [];
+      return {
+        claimable: body.claimable === true,
+        jurisdictions: Array.isArray(offered)
+          ? offered.filter((code): code is string => typeof code === "string")
+          : [],
+      };
     }
-    return { claimable: false };
+    return { claimable: false, jurisdictions: [] };
   } catch {
-    return { claimable: false };
+    return { claimable: false, jurisdictions: [] };
   }
 }
 
@@ -102,6 +123,8 @@ type ClaimFields = {
   baseCurrency: string;
   baseLanguage: Locale;
   timezone: string;
+  /** A pack code, NO_PACK, or "" while the admin has not chosen. */
+  country: string;
 };
 
 // What the browser can tell us about where this installation is being claimed
@@ -123,13 +146,17 @@ function claimDefaults(): ClaimFields {
     baseCurrency: currencyForRegion(),
     baseLanguage: detectLocale(),
     timezone: viewerZone(),
+    country: "",
   };
 }
 
 export function SetupClaimScreen({
   onClaimed,
-}: Readonly<{ onClaimed: () => void }>) {
+  status,
+}: Readonly<{ onClaimed: () => void; status?: SetupStatus }>) {
+  const jurisdictions = status?.jurisdictions ?? [];
   const t = useT();
+  const { locale } = useLocale();
   usePageTitle(t("setup.pageTitle"));
   // Seeded once, from the browser. A lazy initializer rather than a call in the
   // render body: re-guessing on every keystroke would overwrite what the
@@ -164,6 +191,9 @@ export function SetupClaimScreen({
           // than about currencies.
           base_currency: fields.baseCurrency.trim().toUpperCase(),
           base_language: fields.baseLanguage,
+          // No silent default, as with the currency: "" here is the explicit
+          // choice of no pack, made on the form.
+          country: claimedCountry(fields.country),
           admin_email: fields.adminEmail.trim(),
           admin_name: fields.adminName.trim(),
           admin_password: fields.adminPassword,
@@ -212,6 +242,7 @@ export function SetupClaimScreen({
     fields.adminEmail.trim() !== "" &&
     fields.timezone.trim() !== "" &&
     fields.baseCurrency.trim() !== "" &&
+    fields.country !== "" &&
     !currencyMalformed &&
     !passwordShort &&
     fields.adminPassword !== "";
@@ -305,6 +336,27 @@ export function SetupClaimScreen({
                     }));
                   }
                 }}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("setup.jurisdiction")}
+            required
+            hint={t("setup.jurisdictionHint")}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                value={fields.country}
+                placeholder={t("setup.jurisdictionPlaceholder")}
+                options={[
+                  ...jurisdictions.map((code) => ({
+                    value: code,
+                    label: jurisdictionName(code, locale),
+                  })),
+                  { value: NO_PACK, label: t("jurisdiction.option.none") },
+                ]}
+                onChange={set("country")}
               />
             )}
           </Field>

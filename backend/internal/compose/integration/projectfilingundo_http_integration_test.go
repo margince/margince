@@ -34,7 +34,7 @@ type projectFilingDTO struct {
 func TestAMemberUndoesAProjectFilingOverHTTPAndAnAgentCannot(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Filing Account"})
+	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Filing Account"})
 	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Filing Engagement", "company_id": company, "source": "manual"})
 	activity := createdID(t, e, "/v1/activities", AnyMap{"kind": "note", "subject": "Filed by mistake"})
 	path := "/v1/activities/" + activity + "/project-filing"

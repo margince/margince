@@ -111,7 +111,8 @@ func TestDealStakeholdersView(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
-		"name": "Stakeholder Deal", "pipeline_id": pipelines.Data[0].ID,
+		"source": "manual",
+		"name":   "Stakeholder Deal", "pipeline_id": pipelines.Data[0].ID,
 		"stage_id": pipelines.Data[0].Stages[0].ID,
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)

@@ -44,8 +44,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 	case errors.Is(cause, webread.ErrRobotsDisallowed):
 		return contacts.SiteReadFailureRobots, "The site's robots.txt asks this crawler not to read the page."
 	}
-	var status *webread.StatusError
-	if errors.As(cause, &status) {
+	if status, ok := errors.AsType[*webread.StatusError](cause); ok {
 		if status.Retryable() {
 			if status.Status == http.StatusForbidden || status.Status == http.StatusTooManyRequests {
 				return contacts.SiteReadFailureBotBlocked, fmt.Sprintf(
@@ -67,8 +66,7 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 	if errors.As(cause, &certErr) || errors.As(cause, &hostErr) || errors.As(cause, &authErr) {
 		return contacts.SiteReadFailureTLS, "The site's HTTPS certificate could not be verified, so it was not read."
 	}
-	var dnsErr *net.DNSError
-	if errors.As(cause, &dnsErr) {
+	if _, ok := errors.AsType[*net.DNSError](cause); ok {
 		return contacts.SiteReadFailureDNS, "The domain name does not resolve to a server."
 	}
 	// Nothing recognized it, so it is not evidence about the SITE. Most callers

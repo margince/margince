@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import { SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { PostureRefused } from "./integrations-provider.notices";
 
 // The installation's lookup posture, read and written through its own surface.
@@ -21,11 +21,7 @@ function useLookupPosture() {
   return useQuery({
     queryKey: ["integrations-settings"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/integrations/settings");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/integrations/settings"));
     },
   });
 }
@@ -37,13 +33,11 @@ function usePatchLookupPosture() {
     // render state: the switch that was pressed is the one that must be saved,
     // even if the card re-rendered while the write was in flight.
     mutationFn: async (automaticLookup: boolean) => {
-      const { data, error } = await api.PATCH("/integrations/settings", {
-        body: { automatic_lookup: automaticLookup },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/integrations/settings", {
+          body: { automatic_lookup: automaticLookup },
+        }),
+      );
     },
     onSettled: () => {
       void queryClient.invalidateQueries({

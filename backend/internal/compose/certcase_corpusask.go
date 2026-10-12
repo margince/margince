@@ -86,11 +86,10 @@ func (corpusAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 		return nil, fmt.Errorf("corpus_ask/corpus_ask: the fixture is not the shape this site takes: %w", err)
 	}
 	if strings.TrimSpace(f.Question) == "" {
-		return nil, fmt.Errorf("corpus_ask/corpus_ask: the fixture asks no question")
+		return nil, errors.New("corpus_ask/corpus_ask: the fixture asks no question")
 	}
 	if len(f.Passages) == 0 {
-		return nil, fmt.Errorf(
-			"corpus_ask/corpus_ask: the fixture supplies no passages, and production never asks the lane without them")
+		return nil, errors.New("corpus_ask/corpus_ask: the fixture supplies no passages, and production never asks the lane without them")
 	}
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {

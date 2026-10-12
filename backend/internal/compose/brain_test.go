@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -71,6 +72,33 @@ func TestModelPathInvalidateCacheForcesAFreshCompletion(t *testing.T) {
 	}
 	if calls := len(fake.Calls()); calls != 2 {
 		t.Fatalf("calls after invalidation = %d, want 2 (the cache must have been dropped)", calls)
+	}
+}
+
+// The runner refuses each of the offline model's replies as an invalid step.
+// Re-running the same agent must ask the model again for every step, not
+// replay the refused replies from the router's result cache.
+func TestAReRunAsksTheModelAgainForStepsTheRunnerRefused(t *testing.T) {
+	fake := ai.NewFakeClient()
+	path, err := NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(fake))
+	if err != nil {
+		t.Fatalf("NewLocalModelPath: %v", err)
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	job := runner.Job{Goal: "find the open deal", Tools: []string{agentLoopRegistry()[0].Name}}
+	agent := runner.New(agentLoopToolSurface{}, path.AgentLoop)
+
+	for run := 1; run <= 2; run++ {
+		res, err := agent.Run(ctx, job)
+		if err != nil {
+			t.Fatalf("run %d: %v", run, err)
+		}
+		if res.Outcome != runner.OutcomeDegraded {
+			t.Fatalf("run %d ended %s, want degraded on invalid steps", run, res.Outcome)
+		}
+		if calls, want := len(fake.Calls()), run*res.StepsUsed; calls != want {
+			t.Fatalf("after run %d the model was called %d times, want %d", run, calls, want)
+		}
 	}
 }
 

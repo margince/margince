@@ -30,8 +30,8 @@ func TestAnUnreachableBoundScrapesAsUnanswerable(t *testing.T) {
 	}
 	// The sentence that stops an operator draining pods over an agent-only
 	// fault has to be ON the metric, where an alert rule quotes it from.
-	if !strings.Contains(scrape, "Human traffic is unaffected") {
-		t.Errorf("the HELP text does not say human traffic is unaffected:\n%s", scrape)
+	if !strings.Contains(scrape, "Draining the pod does not fix it") {
+		t.Errorf("the HELP text does not say draining the pod does not fix it:\n%s", scrape)
 	}
 }
 

@@ -274,7 +274,7 @@ const completionAttempts = 3
 // of the two.
 func (s *Store) completeSystemTask(ctx context.Context, id ids.ActivityID, version int64) (bool, error) {
 	done := true
-	for attempt := 0; attempt < completionAttempts; attempt++ {
+	for range completionAttempts {
 		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: &done, IfVersion: &version})
 		if err == nil {
 			return true, nil

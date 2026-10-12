@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
-  CheckCircle2,
   Circle,
+  CircleCheck,
   Mail,
   ShieldCheck,
 } from "lucide-react";
@@ -18,7 +18,7 @@ import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { ConnectPostureStep } from "./connect-posture";
 import { useConnectors } from "./connectors";
 import { imapErrorMessage } from "./imap-connect-form";
@@ -154,14 +154,12 @@ export function OAuthConnectPanel({
   const copy = OAUTH_COPY[provider];
   const connect = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/connectors/{provider}/connect", {
-        params: { path: { provider } },
-        body: {},
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/connectors/{provider}/connect", {
+          params: { path: { provider } },
+          body: {},
+        }),
+      );
     },
     onSuccess: (data) => {
       if (data.authorize_url) {
@@ -314,7 +312,7 @@ export function OAuthReturnPanel({
   return (
     <div className="connect-result">
       <div className="cr-h">
-        <CheckCircle2 aria-hidden /> {t("ob.s4.connectOkTitle")}
+        <CircleCheck aria-hidden /> {t("ob.s4.connectOkTitle")}
       </div>
       <p className="ob-sub">{t("ob.s4.connectOkBody")}</p>
       {connections.isPending && (
@@ -416,23 +414,21 @@ export function ImapConnectPanel({
 
   const connect = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/connectors/{provider}/connect", {
-        params: { path: { provider: "imap" } },
-        body: {
-          imap: {
-            host: host.trim(),
-            port: parsedPort,
-            username: email.trim(),
-            secret: password,
-            mailbox: mailbox.trim() || "INBOX",
-            max_messages: Number(max) || 30,
+      return unwrap(
+        await api.POST("/connectors/{provider}/connect", {
+          params: { path: { provider: "imap" } },
+          body: {
+            imap: {
+              host: host.trim(),
+              port: parsedPort,
+              username: email.trim(),
+              secret: password,
+              mailbox: mailbox.trim() || "INBOX",
+              max_messages: Number(max) || 30,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     onSuccess: () => {
       // The Settings connected-inboxes card shares this query key — a
@@ -467,7 +463,7 @@ export function ImapConnectPanel({
     return (
       <div className="connect-result">
         <div className="cr-h">
-          <CheckCircle2 aria-hidden /> {t("ob.s4.capturedTitle")}
+          <CircleCheck aria-hidden /> {t("ob.s4.capturedTitle")}
         </div>
         <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
         {/* The same question the OAuth arm asks, in the same place: after the

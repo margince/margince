@@ -7,39 +7,33 @@ package gates
 
 // One lock order over the lead and the contact it was promoted into.
 //
-// Two writers hold both rows. MergeContact locks the contacts (LockPair) and then
-// repoints lead.promoted_contact_id, so it goes contact -> lead. DemoteLead used
-// to go lead -> contact. Opposite orders over the same pair is the whole of a
-// deadlock: each transaction ends up holding what the other is waiting for,
-// Postgres aborts one with 40P01, and the caller gets a 5xx where the losing
-// side of a serialized race should get a clean refusal.
+// Three writers hold both rows. MergeContact locks the contacts (LockPair) and
+// then repoints lead rows, so it goes contact -> lead. DemoteLead and
+// QualifyLead lock through lockContactThenLead, which takes the same order.
+// Opposite orders over one pair is a deadlock: Postgres aborts one side with
+// 40P01, and the caller gets a 5xx.
 //
-// The integration suite pins that ordering for the demote specifically, by
-// holding a row open and asking what the parked writer holds. This gate asks
-// the question the suite cannot: not "does THIS writer take them in order" but
-// "does EVERY writer", including the one added next month whose race test
-// nobody thought to write.
+// The gate holds two rules over every function in the roots:
 //
-// What it holds is the ORDER, and only that. Whether a writer takes the
-// contact's lock AT ALL is held by the demote's race suite, which parks the
-// writer on the lead and asks whether the contact is already held — a question
-// no source read can answer, because a lock not taken looks exactly like a
-// lock the reader failed to find.
+//  1. No function reaches the lead's lock before the contact's.
+//  2. A function holding an explicit lock on both rows takes them through
+//     lockContactThenLead, so a fix to the order lands in one place.
 //
-// It is transitive, and that is the point rather than a flourish: the promote
-// path takes its lead lock in QualifyLead and its contact lock three frames
-// down in mergeLeadIntoContact. A gate reading one function body at a time sees
-// a lead lock here and a contact lock there, finds no function holding both,
-// and reports a clean tree over the exact shape it exists to catch.
+// Promotion finds its contact by matching the lead's email, so it names the
+// candidate without a lock, locks it, and matches again under both locks.
+// TestPromoteRacingAContactMergeBothComplete holds the retry when the match moved.
 //
-// H2, not H3: the order is a convention two paths must share, and the harm is
-// an aborted transaction rather than corrupted data. What makes it worth a
-// gate is that the failure is invisible until two writers actually interleave
-// in production, and by then the evidence is a 40P01 in a log.
+// It holds the order only. Whether a writer takes the contact's lock at all is
+// held by the race suites, which park a writer and ask what it holds.
+//
+// It is transitive: the promote path takes a second contact lock three frames
+// down in mergeLeadIntoContact. A gate reading one body at a time would miss
+// a lead lock in one function and a contact lock in its callee.
 
 import (
 	"fmt"
 	"go/ast"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,6 +48,10 @@ const (
 	lockOrderLead    = "lead"
 )
 
+// lockOrderHelper takes both locks in order. A call to it is recorded in a
+// sequence, so rule 2 can ask whether a writer used it.
+const lockOrderHelper = "lockContactThenLead"
+
 // lockOrderDoors are the storekit calls that take a row lock. Both spell the table
 // as their third argument, which is what makes one predicate serve both.
 var lockOrderDoors = map[string]bool{"LockRow": true, "LockPair": true}
@@ -64,30 +62,6 @@ var lockOrderDoors = map[string]bool{"LockRow": true, "LockPair": true}
 // lock added beside that one is a finding rather than a file nobody asks about. Scope
 // proves the claim by sweeping everything outside both roots for the same sites.
 var lockOrderRoots = []string{"internal/modules/contacts", "internal/modules/privacy"}
-
-// promoteTakesTheOldOrder ratifies the one path still going lead -> contact.
-//
-// Promotion discovers WHICH contact it is contending over: it reads the lead's
-// emails, matches them, and merges into whatever live contact that finds — so
-// unlike the demote, which is told the contact by lead.promoted_contact_id, it
-// cannot lock the contact before it has read the lead under a lock. Reordering
-// it means resolving the match unlocked and refusing the promotion when the
-// match moves underneath, which turns a benign race into a user-visible 409.
-// That is a product decision about what a racing promote answers, not a
-// lock-order edit, so it is tracked as its own change rather than settled here
-// as a side effect.
-//
-// Three entries because every entry point reaches the locks: promoteLeadTx
-// holds the body, QualifyLead opens its transaction, and PromoteLead is the
-// one-line wrapper callers use. Waiving only the body would leave the
-// wrappers failing and read as a second, different defect.
-var promoteTakesTheOldOrder = gatekit.Waive(map[string]string{
-	"promoteLeadTx": "promotion resolves its contact by matching the lead's emails, so it cannot name the " +
-		"row to lock before it has read the lead — reordering it changes what a racing promote answers, " +
-		"which is a product decision about what a racing promote returns, not a lock-order edit",
-	"QualifyLead": "opens the transaction promoteLeadTx runs in, waived with it and for the same reason",
-	"PromoteLead": "the one-line wrapper over QualifyLead, whose body is promoteLeadTx, waived with it and for the same reason",
-})
 
 // TestOneLockOrderOverTheLeadAndItsContact fails on a writer that reaches the
 // lead's lock before the promoted contact's.
@@ -128,8 +102,12 @@ func TestOneLockOrderOverTheLeadAndItsContact(t *testing.T) {
 			continue
 		}
 		locking++
-		if lead, ok := leadBeforeContact(sequence); ok {
-			offenders[name] = lead
+		if leadBeforeContact(sequence) {
+			offenders[name] = "the lead before the contact"
+			continue
+		}
+		if name != lockOrderHelper && locksBothBypassingTheHelper(sequence) {
+			offenders[name] = "both rows without " + lockOrderHelper
 		}
 	}
 
@@ -144,9 +122,6 @@ func TestOneLockOrderOverTheLeadAndItsContact(t *testing.T) {
 
 	names := make([]string, 0, len(offenders))
 	for name := range offenders {
-		if promoteTakesTheOldOrder.Waived(t, name) {
-			continue
-		}
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -155,18 +130,18 @@ func TestOneLockOrderOverTheLeadAndItsContact(t *testing.T) {
 		for _, name := range names {
 			lines = append(lines, fmt.Sprintf("  %s locks %s", name, offenders[name]))
 		}
-		t.Fatalf(`%d writer(s) take the lead's lock before the promoted contact's:
+		t.Fatalf(`%d writer(s) lock the lead and its contact outside the one order:
 
 %s
 
 MergeContact locks the contact first and then writes the lead. A writer taking
 them the other way round closes a cycle with it: each holds what the other
 waits for, and Postgres breaks the tie by aborting one with a deadlock, which
-reaches the caller as a 5xx. Lock the contact first — read whatever you need to
-name it WITHOUT a lock, then re-read under both locks and refuse if it moved.`,
+reaches the caller as a 5xx. Lock both through lockContactThenLead: name the
+contact WITHOUT a lock, then re-read under both locks and start again if it
+moved, as QualifyLead does.`,
 			len(names), strings.Join(lines, "\n"))
 	}
-	promoteTakesTheOldOrder.AssertAllMatched(t)
 }
 
 // locksALeadOrItsContact is the sweep's subject: a file that locks EITHER of
@@ -228,6 +203,9 @@ func locksTakenIn(t *testing.T, name string, fn *ast.FuncDecl, bodies map[string
 			return true
 		}
 		if callee := lockOrderCallee(call); callee != "" {
+			if callee == lockOrderHelper {
+				sequence = append(sequence, lockOrderHelper)
+			}
 			sequence = append(sequence, locksTakenBy(t, callee, bodies, visited)...)
 		}
 		return true
@@ -276,26 +254,29 @@ func lockOrderCallee(call *ast.CallExpr) string {
 	return ""
 }
 
-// leadBeforeContact reports whether a sequence reaches the lead's lock without
-// the contact's, and the table it found there. A sequence holding only one of
-// the two is not an ordering and is not judged.
-func leadBeforeContact(sequence []string) (string, bool) {
+// leadBeforeContact reports whether a sequence reaches the lead's lock before
+// the contact's. A sequence holding only one of the two is not an ordering and
+// is not judged.
+func leadBeforeContact(sequence []string) bool {
 	for _, table := range sequence {
 		switch table {
 		case lockOrderContact:
-			return "", false
+			return false
 		case lockOrderLead:
-			return lockOrderLead, lockOrderHasTable(sequence, lockOrderContact)
-		}
-	}
-	return "", false
-}
-
-func lockOrderHasTable(sequence []string, want string) bool {
-	for _, table := range sequence {
-		if table == want {
-			return true
+			return lockOrderHasTable(sequence, lockOrderContact)
 		}
 	}
 	return false
+}
+
+func lockOrderHasTable(sequence []string, want string) bool {
+	return slices.Contains(sequence, want)
+}
+
+// locksBothBypassingTheHelper reports a sequence that locks the lead and a
+// contact but never called lockContactThenLead. A merge's LockPair locks no
+// lead row, so it is not judged here.
+func locksBothBypassingTheHelper(sequence []string) bool {
+	return lockOrderHasTable(sequence, lockOrderLead) && lockOrderHasTable(sequence, lockOrderContact) &&
+		!lockOrderHasTable(sequence, lockOrderHelper)
 }

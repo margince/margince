@@ -30,7 +30,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// with another binding's width or provider label.
 	b := r.binding()
 	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return model.Embeddings{}, fmt.Errorf("ai: embeddings outside workspace context")
+		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {

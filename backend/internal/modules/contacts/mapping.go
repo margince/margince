@@ -72,6 +72,11 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		return CreateContactInput{}, err
 	}
 	req.FullName = fullName
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateContactInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateContactInput{}, err
 	}
@@ -229,6 +234,11 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		return CreateCompanyInput{}, err
 	}
 	req.DisplayName = displayName
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateCompanyInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateCompanyInput{}, err
 	}
@@ -346,6 +356,11 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 			}
 		}
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateLeadInput{}, err
+	}
+	req.Source = source
 	// `source` is nobody's to forge, the importer included.
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return CreateLeadInput{}, err
@@ -392,6 +407,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		email := string(*req.Email)
 		in.Email = &email
 	}
+	in.Phone = req.Phone
 	if req.Status != nil {
 		in.Status = string(*req.Status)
 	}
@@ -450,6 +466,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		email := string(*req.Email)
 		in.Email = &email
 	}
+	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)
 		in.Status = &s

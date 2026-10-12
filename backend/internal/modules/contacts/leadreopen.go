@@ -109,6 +109,11 @@ func (s *Store) ReopenLead(ctx context.Context, id ids.LeadID) (crmcontracts.Lea
 			   SET status = $2, status_set_by = $3, archived_at = NULL,
 			       disqualify_reason_id = NULL, disqualify_note = NULL
 			 WHERE id = $1`, id, restored, setBy); err != nil {
+			// The address may have been taken by a live lead while this one was
+			// closed, which is the same collision create and update answer.
+			if mapped, ok := leadUniqueViolation(err, (*string)(current.Email)); ok {
+				return mapped
+			}
 			return fmt.Errorf("reopen the lead: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "restore", "lead", id.UUID,

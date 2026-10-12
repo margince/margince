@@ -44,7 +44,7 @@ export const EveryArm: Story = {
     <div style={stack}>
       <div style={row}>
         <ProvenanceTag provenance={{ kind: "agent", agent: "capture" }} />
-        <PassportChip id="psp_7Q3fa91" />
+        <PassportChip name="Marcus's Claude" />
         <ProvenanceTag provenance={{ kind: "agent" }} />
       </div>
       <div style={row}>

@@ -21,6 +21,7 @@ package integration
 // because an id must be immune to every one of them.
 
 import (
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -34,7 +35,9 @@ func createCompanyReturningID(t *testing.T, e *apptest.AppEnv, body map[string]a
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/companies", body, nil, &created); status != http.StatusCreated {
+	withSource := map[string]any{"source": "manual"}
+	maps.Copy(withSource, body)
+	if status := e.Call(t, http.MethodPost, "/v1/companies", withSource, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating a company → %d, want 201", status)
 	}
 	return created.ID
@@ -415,7 +418,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
 			if status := e.Call(t, http.MethodPost, "/v1/companies",
-				map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+				map[string]any{"source": "manual", "display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 				t.Fatalf("creating the incumbent → %d, want 201", status)
 			}
 

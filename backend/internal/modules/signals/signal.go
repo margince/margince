@@ -343,6 +343,9 @@ func (s *Store) UpdateSignal(ctx context.Context, id ids.SignalID, in UpdateSign
 			p.Set("severity", string(current.Severity), *in.Severity)
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "signal", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

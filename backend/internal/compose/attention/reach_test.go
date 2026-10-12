@@ -23,7 +23,7 @@ import (
 // exist, so it says so rather than reporting the number it happened to read.
 func TestABoundedSourceSaysMoreRatherThanATotal(t *testing.T) {
 	notices := []crmcontracts.AttentionItem{}
-	for i := 0; i < doneCap; i++ {
+	for i := range doneCap {
 		notices = append(notices, item("n"+string(rune('a'+i)), "notice"))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
@@ -65,7 +65,7 @@ func TestASourceUnderItsBoundClaimsNoMore(t *testing.T) {
 // as "nothing from this source" rather than "folded into one row".
 func TestAFoldedGroupIsCountedAgainstTheSourcesItStandsFor(t *testing.T) {
 	failures := []crmcontracts.AttentionItem{}
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		row := item("f"+string(rune('a'+i)), "automation_run")
 		cause := "automation_run:one-rule"
 		row.CauseRef = &cause
@@ -143,7 +143,7 @@ func TestReachUnderMineCountsNothingOfAColleaguesWork(t *testing.T) {
 func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 	full := func(n int, source crmcontracts.AttentionItemSource) []crmcontracts.AttentionItem {
 		rows := make([]crmcontracts.AttentionItem, 0, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			rows = append(rows, item(string(source)+strconv.Itoa(i), source))
 		}
 		return rows

@@ -5,7 +5,6 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -40,6 +39,7 @@ type Handlers struct {
 	// module's table — so the store that owns it is injected rather than the
 	// row being written from here.
 	settings *settings.Store
+	names    RecordNames
 }
 
 // WithSettings hands the handlers the store that owns installation settings.
@@ -375,17 +375,6 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 }
 
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
-	var invalid *ValidationError
-	if errors.As(err, &invalid) {
-		httperr.Write(w, r, httperr.Validation(invalid.Field, "invalid", invalid.Reason))
-		return
-	}
-	var badEvent *InvalidQualifyingEventError
-	if errors.As(err, &badEvent) {
-		field, code, message := badEvent.FieldFault()
-		httperr.Write(w, r, httperr.Validation(field, code, message))
-		return
-	}
 	httperr.Write(w, r, err)
 }
 

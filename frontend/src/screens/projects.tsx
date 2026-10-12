@@ -11,7 +11,7 @@ import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { CreateAction } from "./create";
 import { EntityRef } from "./entityref";
 import {
@@ -21,6 +21,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "./listquery";
+import { useOwnerChips } from "./ownerdials";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,
@@ -43,25 +44,23 @@ async function fetchProjectsPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Project>> {
-  const { data, error } = await api.GET("/projects", {
-    params: {
-      query: {
-        q: query.q || undefined,
-        sort: query.sort || undefined,
-        include_archived: query.includeArchived || undefined,
-        cursor: cursor || undefined,
-        limit: listFetchLimit(query.perPage),
-        // Passed through whole rather than narrowed to a typed subset: the
-        // list endpoint answers a field outside its allow-list with a 422 the
-        // table renders, and a saved view the server refuses is better shown
-        // refused than silently shown as an active tab over an unfiltered list.
-        ...query.filters,
+  const data = unwrap(
+    await api.GET("/projects", {
+      params: {
+        query: {
+          q: query.q || undefined,
+          sort: query.sort || undefined,
+          include_archived: query.includeArchived || undefined,
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage),
+          // Passed through whole, not narrowed to a typed subset. The endpoint
+          // answers a field outside its allow-list with a 422 the table renders.
+          // A refused saved view is better shown refused than as an unfiltered tab.
+          ...query.filters,
+        },
       },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+    }),
+  );
   return {
     data: data.data,
     page: {
@@ -116,13 +115,11 @@ export function useCompanyOptions(): ProjectCompanyOption[] {
   const companies = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
   return companies.data?.data ?? [];
@@ -161,6 +158,7 @@ export function ProjectsScreen() {
   const companies = useCompanyOptions();
   const views = useSavedViews("projects");
   const savedViews = useSavedViewTabs("projects");
+  const ownerChips = useOwnerChips();
   const state = useListQuery<Project>({
     key: "projects",
     initialSort: "-last_activity_at",
@@ -265,6 +263,7 @@ export function ProjectsScreen() {
         rowKey={(project) => project.id}
         rowRoute={(project) => ({ screen: "projects", id: project.id })}
         dataViews={savedViews}
+        dataChips={ownerChips}
         chips={[
           {
             key: "phase",

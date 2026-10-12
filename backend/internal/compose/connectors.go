@@ -117,10 +117,7 @@ func (h connectorHandlers) callbackURL(provider string) string {
 // must resolve to where the API serves it: on a split deployment those are
 // different hosts, which is why this cannot be derived from the sign-in URI.
 func connectorCallbackURL(apiBaseURL, publicBaseURL, provider string) string {
-	base := apiBaseURL
-	if base == "" {
-		base = publicBaseURL
-	}
+	base := apiOrigin(apiBaseURL, publicBaseURL)
 	if base == "" {
 		return ""
 	}

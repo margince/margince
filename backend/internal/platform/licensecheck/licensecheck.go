@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -258,14 +258,5 @@ func sanitizeReason(reason string) string {
 		return r
 	}, reason)
 	oneLine = strings.TrimSpace(oneLine)
-	if len(oneLine) <= reasonLimit {
-		return oneLine
-	}
-	// Cut on a rune boundary; a truncated multi-byte sequence would render as a
-	// replacement character and read as corruption rather than as a cut.
-	cut := oneLine[:reasonLimit]
-	for len(cut) > 0 && !utf8.ValidString(cut) {
-		cut = cut[:len(cut)-1]
-	}
-	return cut + "… (truncated)"
+	return textcut.BytesMarked(oneLine, reasonLimit, "… (truncated)")
 }

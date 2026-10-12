@@ -12,7 +12,7 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  animation: ob-live-rise 0.36s cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation: ob-live-rise var(--dur-enter) cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes ob-live-rise {
@@ -39,7 +39,7 @@
   text-align: left;
   color: var(--textPrimary);
   cursor: pointer;
-  transition: background 0.14s ease;
+  transition: background var(--dur-state) ease;
 }
 
 .ob-live-card-head:hover {

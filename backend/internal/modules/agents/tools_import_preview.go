@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"time"
@@ -82,12 +83,8 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	// which is honest rather than convenient, because the report says what
 	// each column became and a reader reads it before anything commits.
 	mapping := make(map[string]string, len(profile.SuggestedMapping))
-	for column, field := range profile.SuggestedMapping {
-		mapping[column] = field
-	}
-	for column, field := range args.Mapping {
-		mapping[column] = field
-	}
+	maps.Copy(mapping, profile.SuggestedMapping)
+	maps.Copy(mapping, args.Mapping)
 	if len(args.Mapping) == 0 {
 		if err := proposalCoversTheFile(profile, mapping); err != nil {
 			return nil, discarding(ctx, t.imports, profile.SourceRef, err)

@@ -245,7 +245,7 @@ func (s *RoutingStore) probeAvailability(ctx context.Context, bound ProviderConf
 	lane := probeLane(q.Tier)
 	switch err := s.probeBinding(ctx, bound, q.Model, lane); {
 	case err == nil:
-		out.Models = []AvailableModel{{Info: model.Info{ID: q.Model, Lane: lane}}}
+		out.Models = []AvailableModel{{ID: q.Model, Lane: lane}}
 	case errors.Is(err, errModelNotFound):
 		out.Unavailable = AvailabilityNoEndpoint
 	case isKeyFault(err):

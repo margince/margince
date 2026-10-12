@@ -39,7 +39,7 @@ func logged(
 	t.Helper()
 	body := "What did we agree?"
 	row, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: kind, Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
+		Kind: kind, Subject: &subject, Body: &body, Direction: new("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {

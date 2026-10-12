@@ -16,21 +16,18 @@ func at(m time.Month, d int) time.Time {
 	return time.Date(testYear, m, d, 12, 0, 0, 0, time.UTC)
 }
 
-func ptrTime(t time.Time) *time.Time { return &t }
-func money(v int64) *int64           { return &v }
-
 // A deal with nothing wrong with it. Every case below varies ONE field, so what
 // a case proves is that field.
 func healthy() Subject {
 	return Subject{
 		DealID:           "d1",
 		Owner:            "u1",
-		AmountMinor:      money(500_000),
+		AmountMinor:      new(int64(500_000)),
 		Currency:         "EUR",
-		ExpectedClose:    ptrTime(at(time.June, 30)),
+		ExpectedClose:    new(at(time.June, 30)),
 		Category:         "commit",
 		StageName:        "Negotiation",
-		LastInboundAt:    ptrTime(at(time.May, 10)),
+		LastInboundAt:    new(at(time.May, 10)),
 		HasNextStep:      true,
 		HasEconomicBuyer: true,
 	}
@@ -67,10 +64,10 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 	}{
 		{
 			ruleType: TypeClosePast,
-			fires:    func(s Subject) Subject { s.ExpectedClose = ptrTime(at(time.April, 30)); return s },
+			fires:    func(s Subject) Subject { s.ExpectedClose = new(at(time.April, 30)); return s },
 			// Due TODAY has not gone by. The boundary, and the case a `<=`
 			// would get wrong on the one day it matters most.
-			quiet: func(s Subject) Subject { s.ExpectedClose = ptrTime(at(time.May, 14)); return s },
+			quiet: func(s Subject) Subject { s.ExpectedClose = new(at(time.May, 14)); return s },
 		},
 		{
 			ruleType: TypeCloseUnconfirmed,
@@ -89,14 +86,14 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeAmountVsOffer,
-			fires:    func(s Subject) Subject { s.OfferTotalMinor = money(300_000); return s },
+			fires:    func(s Subject) Subject { s.OfferTotalMinor = new(int64(300_000)); return s },
 			// A gap below materiality is rounding somewhere, and a finding
 			// about it costs a contact's morning to dismiss.
-			quiet: func(s Subject) Subject { s.OfferTotalMinor = money(499_990); return s },
+			quiet: func(s Subject) Subject { s.OfferTotalMinor = new(int64(499_990)); return s },
 		},
 		{
 			ruleType: TypeAmountVsContract,
-			fires:    func(s Subject) Subject { s.ContractTotalMinor = money(200_000); return s },
+			fires:    func(s Subject) Subject { s.ContractTotalMinor = new(int64(200_000)); return s },
 			// No contract is not a disagreement with one.
 			quiet: func(s Subject) Subject { s.ContractTotalMinor = nil; return s },
 		},
@@ -113,7 +110,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeBuyerSilent,
-			fires:    func(s Subject) Subject { s.LastInboundAt = ptrTime(at(time.January, 5)); return s },
+			fires:    func(s Subject) Subject { s.LastInboundAt = new(at(time.January, 5)); return s },
 			// Never heard from at all is a DIFFERENT finding, and not one this
 			// rule claims: a deal created today has no inbound either.
 			quiet: func(s Subject) Subject { s.LastInboundAt = nil; return s },
@@ -192,13 +189,13 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded := healthy()
 	loaded.HasNextStep = true
 	loaded.StageName = "Negotiation — blocked on legal review of clause 7"
-	loaded.ExpectedClose = ptrTime(at(time.April, 30))
+	loaded.ExpectedClose = new(at(time.April, 30))
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
-	loaded.LastInboundAt = ptrTime(at(time.January, 5))
+	loaded.LastInboundAt = new(at(time.January, 5))
 	loaded.HasEconomicBuyer = false
-	loaded.OfferTotalMinor = money(100_000)
-	loaded.ContractTotalMinor = money(90_000)
+	loaded.OfferTotalMinor = new(int64(100_000))
+	loaded.ContractTotalMinor = new(int64(90_000))
 
 	for _, rule := range Rules() {
 		found := rule.Ask(asOf, loaded, cfg)

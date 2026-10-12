@@ -128,7 +128,7 @@ type Tags interface {
 	// It answers the WORD, not TagDetail: usage counts are a second read, and a
 	// write that reported them would either pay for a count nobody asked for or
 	// — as this first shipped — report zero for a word on fifty records.
-	CreateTag(ctx context.Context, name string, color *string) (Tag, error)
+	CreateTag(ctx context.Context, name string, color, description *string) (Tag, error)
 	// UpdateTag renames, recolours or describes an existing word. A nil field
 	// is left alone, which is what lets a caller recolour without restating a
 	// name it never read.

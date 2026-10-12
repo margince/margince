@@ -9,7 +9,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { importPathTo, productionModulesUnder } from "./import-reach";
+import {
+  edgesOf,
+  importPathTo,
+  productionModulesUnder,
+  testRunnerReach,
+} from "./import-reach";
 
 describe("the import walk the split gates share", () => {
   let dir = "";
@@ -77,5 +82,117 @@ describe("the import walk the split gates share", () => {
     write("heavy.tsx", "");
 
     expect(importPathTo(at("entry.ts"), new Set([at("heavy.tsx")]))).toBeNull();
+  });
+
+  it("scans every edge the parser finds, in every import form", () => {
+    write(
+      "forms.tsx",
+      [
+        'import a from "./a";',
+        'import * as b from "./b";',
+        'import { type C, c } from "./c";',
+        'import type { D } from "./d";',
+        'import "./e";',
+        'export { f } from "./f";',
+        'export * from "./g";',
+        'export type { H } from "./h";',
+        'import {\n  i,\n} from "./i";',
+        'const j = () => import(/* lazy */ "./j");',
+        "const l = () => import(`./l`);",
+        'export const k = <p>{"./k"}</p>;',
+      ].join("\n"),
+    );
+    const modules = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "l"];
+    for (const name of [...modules, "k"]) {
+      write(`${name}.ts`);
+    }
+    const expected = modules.map((name) => `${name}.ts`);
+
+    expect(named(edgesOf(at("forms.tsx"), "all"))?.sort()).toEqual(expected);
+    expect(named(edgesOf(at("forms.tsx"), "scanned"))?.sort()).toEqual(
+      expected,
+    );
+  });
+
+  it("walks value edges alone when asked, keeping a separate cache per mode", () => {
+    write("kit.stories.tsx", 'import type { M } from "./kit.testkit";\n');
+    write("kit.testkit.ts", "export type M = number;\n");
+    const kit = new Set([at("kit.testkit.ts")]);
+
+    expect(importPathTo(at("kit.stories.tsx"), kit, "values")).toBeNull();
+    expect(named(importPathTo(at("kit.stories.tsx"), kit))).toEqual([
+      "kit.stories.tsx",
+      "kit.testkit.ts",
+    ]);
+  });
+
+  it("finds every value path to vitest from stories, docs pages and preview", () => {
+    const vi = 'import { vi } from "vitest";\nexport const body = vi.fn();\n';
+    write(
+      "src/card.stories.tsx",
+      'import { body } from "./plain";\nimport "./typed.fixtures";\n',
+    );
+    write("src/plain.ts", 'export { body } from "./card.fixtures";\n');
+    write("src/card.fixtures.ts", vi);
+    write(
+      "src/typed.fixtures.ts",
+      'import type { Mock } from "vitest";\nexport type M = Mock;\n',
+    );
+    write("src/typed.stories.tsx", 'import "./typed.fixtures";\n');
+    write("src/kit.stories.tsx", 'import type { M } from "./kit.testkit";\n');
+    write("src/kit.testkit.ts", `${vi}export type M = number;\n`);
+    write("src/spy.stories.tsx", 'import { fn } from "@vitest/spy";\n');
+    write(
+      "src/dom.stories.tsx",
+      'import "@testing-library/jest-dom/vitest";\n',
+    );
+    write("src/far.stories.tsx", 'import { body } from "../outside";\n');
+    write("outside.ts", vi);
+    write(".storybook/preview.tsx", vi);
+    write(
+      "src/intro.mdx",
+      'import { Meta } from "@storybook/addon-docs/blocks";\n' +
+        'import { body } from "./card.fixtures";\n\n# Intro\n',
+    );
+
+    write(
+      "src/notes.mdx",
+      'See import("./kit.testkit") in prose.\n\n' +
+        '```ts\nimport { vi } from "vitest";\n```\n',
+    );
+    write(
+      "src/reexport.mdx",
+      '# Re-export\n\nexport { body } from "./card.fixtures";\n',
+    );
+    write("src/tilde.mdx", '~~~ts\nimport { vi } from "vitest";\n~~~\n');
+    write(
+      "src/nested.mdx",
+      '````md\n```\nimport { vi } from "vitest";\n```\n````\n',
+    );
+
+    const entries = [
+      "src/card.stories.tsx",
+      "src/typed.stories.tsx",
+      "src/kit.stories.tsx",
+      "src/spy.stories.tsx",
+      "src/dom.stories.tsx",
+      "src/far.stories.tsx",
+      ".storybook/preview.tsx",
+      "src/intro.mdx",
+      "src/notes.mdx",
+      "src/reexport.mdx",
+      "src/tilde.mdx",
+      "src/nested.mdx",
+    ];
+
+    expect(testRunnerReach(entries.map(at)).map(named)).toEqual([
+      ["src/card.stories.tsx", "src/plain.ts", "src/card.fixtures.ts"],
+      ["src/spy.stories.tsx"],
+      ["src/dom.stories.tsx"],
+      ["src/far.stories.tsx", "outside.ts"],
+      [".storybook/preview.tsx"],
+      ["src/intro.mdx", "src/card.fixtures.ts"],
+      ["src/reexport.mdx", "src/card.fixtures.ts"],
+    ]);
   });
 });

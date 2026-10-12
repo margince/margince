@@ -49,7 +49,7 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists|drill-start|drill-finish> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>] [--by <name>] [--restored-to <time>] [--drill <id>] [--outcome passed|failed] [--note <text>]")
 	}
 	direction := args[0]
 
@@ -66,6 +66,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	email := fs.String("email", "", "user email (reset-password only)")
 	name := fs.String("name", "", "database name (recreate-db, drop-db, db-exists only)")
 	template := fs.String("template", "", "template database to copy (recreate-db only)")
+	var drill drillFlags
+	fs.StringVar(&drill.by, "by", "", "who runs the restore drill (drill-start only)")
+	fs.StringVar(&drill.restoredTo, "restored-to", "", "RFC 3339 point in time the backup restores to (drill-start only)")
+	fs.StringVar(&drill.drill, "drill", "", "drill id drill-start printed (drill-finish only)")
+	fs.StringVar(&drill.outcome, "outcome", "", "passed or failed (drill-finish only)")
+	fs.StringVar(&drill.note, "note", "", "what the drill checked, or why it failed (drill-start, drill-finish)")
 	// Bounds how long a single migration statement may HOLD its lock. Every
 	// migration file already bounds ACQUISITION with `SET LOCAL lock_timeout`
 	// (migrations/locktimeout_test.go requires it), and that is a different
@@ -144,8 +150,12 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return workspaceExists(ctx, conn, stdout)
 	case "setup-token":
 		return rotateSetupToken(ctx, resolved, stdout)
+	case "drill-start":
+		return drillStart(ctx, resolved, drill, stdout)
+	case "drill-finish":
+		return drillFinish(ctx, resolved, drill, stdout)
 	default:
-		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists or workspace-exists)", direction)
+		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists, workspace-exists, drill-start or drill-finish)", direction)
 	}
 }
 

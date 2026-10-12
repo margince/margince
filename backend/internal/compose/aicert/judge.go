@@ -324,8 +324,8 @@ func publishesLine(publisher, line string) bool {
 // (us.anthropic.claude-…), so its Claude is read as anthropic's claude.
 func modelLineage(servedModel string) (publisher, line string) {
 	name := servedModel
-	if slash := strings.LastIndex(servedModel, "/"); slash >= 0 {
-		publisher, name = strings.ToLower(servedModel[:slash]), servedModel[slash+1:]
+	if before, after, ok := strings.CutLast(servedModel, "/"); ok {
+		publisher, name = strings.ToLower(before), after
 	}
 	if at := strings.Index(strings.ToLower(name), bedrockClaude); at >= 0 {
 		publisher, name = "anthropic", name[at+len("anthropic."):]

@@ -13,6 +13,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -302,7 +303,7 @@ func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, erro
 
 func (a *httpAPI) sameAPIOrigin(link string) error {
 	if !strings.HasPrefix(link, a.base+"/") && link != a.base {
-		return fmt.Errorf("graph: continuation link does not point at the graph api")
+		return errors.New("graph: continuation link does not point at the graph api")
 	}
 	return nil
 }

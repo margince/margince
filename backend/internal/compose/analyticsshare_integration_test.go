@@ -17,6 +17,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 	"time"
@@ -190,9 +191,7 @@ func (e *forecastEnv) forecastReader(ctx context.Context) context.Context {
 		panic("forecastReader: no actor to widen")
 	}
 	objects := map[string]principal.ObjectGrant{"forecast": {Read: true}}
-	for name, grant := range p.Permissions.Objects {
-		objects[name] = grant
-	}
+	maps.Copy(objects, p.Permissions.Objects)
 	p.Permissions.Objects = objects
 	return principal.WithActor(ctx, p)
 }
@@ -739,9 +738,7 @@ func TestASnapshotShareCannotClaimADifferentPopulation(t *testing.T) {
 func withForecastCreate(ctx context.Context) context.Context {
 	p, _ := principal.Actor(ctx)
 	objects := map[string]principal.ObjectGrant{}
-	for name, grant := range p.Permissions.Objects {
-		objects[name] = grant
-	}
+	maps.Copy(objects, p.Permissions.Objects)
 	forecast := objects["forecast"]
 	forecast.Create = true
 	objects["forecast"] = forecast

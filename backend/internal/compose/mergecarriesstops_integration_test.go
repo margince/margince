@@ -207,8 +207,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 	if err == nil {
 		t.Fatal("a merge that would have dropped a recorded stop went through unnoticed")
 	}
-	var notWired *contacts.StopCarrierNotWiredError
-	if !errors.As(err, &notWired) {
+	if _, ok := errors.AsType[*contacts.StopCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge failed with %v, want StopCarrierNotWiredError", err)
 	}
 	// And the stop is still where it was: the refusal rolled the merge back
@@ -587,8 +586,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 	if err == nil {
 		t.Fatal("a merge that would have dropped a recorded override went through unnoticed")
 	}
-	var notWired *contacts.OverrideCarrierNotWiredError
-	if !errors.As(err, &notWired) {
+	if _, ok := errors.AsType[*contacts.OverrideCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge failed with %v, want OverrideCarrierNotWiredError", err)
 	}
 	// And the override is still where it was: the refusal rolled the merge

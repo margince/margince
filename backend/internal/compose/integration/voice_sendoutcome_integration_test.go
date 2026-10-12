@@ -69,6 +69,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Draft Reader",
 		"emails":    []AnyMap{{"email": "reader@buyer.test"}},
 	}, nil, &contact); status != http.StatusCreated {
@@ -210,7 +211,8 @@ func (e *voiceSendEnv) readSignal(t *testing.T, signal ids.UUID) voiceSignal {
 	if err := e.Owner.QueryRow(context.Background(), `
 		SELECT outcome, similarity::double precision, generated_original, content_erased_at, version
 		FROM voice_learning_signal WHERE id = $1`, signal).Scan(
-		&row.outcome, &row.similarity, &row.generatedOriginal, &row.contentErasedAt, &row.version); err != nil {
+		&row.outcome, &row.similarity, &row.generatedOriginal, &row.contentErasedAt, &row.version,
+	); err != nil {
 		t.Fatalf("reading the learning signal: %v", err)
 	}
 	return row

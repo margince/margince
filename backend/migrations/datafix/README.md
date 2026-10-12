@@ -1,12 +1,13 @@
+<!-- prose:plain -->
 # Data fixes
 
-One-time rewrites of existing installation data. They are **not** migrations:
-`margince-migrate` never runs this folder, because their run time grows with an
-installation's data and migrations run at api boot.
+One-time rewrites of data in an installation that exists. They are **not** migrations.
+`margince-migrate` never runs this folder. The run time of a data fix grows with the data of an
+installation, and migrations run when the API starts.
 
-An operator runs a data fix once, after the release that needs it is live, at a
-quiet time, and batched where the installation is large. Each file states what it
-rewrites and is idempotent: running it again changes nothing.
+An operator runs a data fix once, after the release that needs it is live. Run it at a quiet time,
+and in batches where the installation is large. Each file states what it rewrites, and is idempotent: to run
+it again changes nothing.
 
 | File | Needed when | What it does |
 |---|---|---|
@@ -19,29 +20,26 @@ rewrites and is idempotent: running it again changes nothing.
 | `2026-10-03-5_a_group_post_is_its_authors_mail.up.sql` | the installation captured Google Group posts before capture read their author | names the X-Original-From author as counterparty and sender of each stored group post, and clears the bulk flag the group's own unsubscribe links set |
 | `2026-10-06_an_imported_emails_sender_is_who_its_headers_name.up.sql` | the installation logged or imported emails before the participant-role fix, so every linked contact was recorded as the sender (margince#6914) | gives each linked contact of a live, unrestricted email with stated headers and at least one contact-only participant row the role its address appears on — a contact the headers do not name keeps the receiving side (cc inbound, to otherwise), bcc rows are never touched; the only delete collapses two identical contact-only rows into one, and any email whose stated address ever belonged to more than one contact is skipped whole |
 
-Where several are needed, run them in the order of this table: each later one
-reads what an earlier one wrote, and `1790871111` comes again after the
-`Delivered-To` backfill.
+Where you need more than one, run them in the order of this table. Each later one reads what an
+earlier one wrote, and `1790871111` comes again after the `Delivered-To` backfill.
 
 ## Running one
 
-Each file assumes it runs in one transaction (`SET LOCAL lock_timeout` holds only
-inside one). Run it like this, so that a
-failure rolls everything back:
+Each file expects to run in one transaction (`SET LOCAL lock_timeout` holds only inside one). Run it
+like this, so that a failure rolls all of it back:
 
 ```
 psql "$DSN" -v ON_ERROR_STOP=1 --single-transaction -f <file>
 ```
 
-On a large installation, run the work in batches instead of the whole file at
-once (for example by restricting the first statement to a range of
-`capture_import.id` per run), and repeat until a run changes nothing.
+On a large installation, run the work in batches instead of the whole file at once. For example,
+limit the first statement to a range of `capture_import.id` per run. Repeat until a run changes
+nothing.
 
 ## Limits
 
-- `1790871111…down.sql` is the rollback of the whole feature. Besides
-  undoing the fix, it relabels every capture-created `mailbox_history`
-  acquisition that the sent-mail rule does not cover, including ones the running
-  application created correctly, and opens notice cases for them. Use it only
-  together with reverting the received-mail rule. It also leaves the stamped
-  `provider_received_at` values in place.
+- `1790871111…down.sql` is the rollback of the whole feature. Besides undoing the fix, it labels
+  every `mailbox_history` acquisition that capture created and the sent-mail rule does not cover
+  with its old kind again. That includes ones the running application created right, and it opens
+  notice cases for them. Use it only together with reverting the received-mail rule. It also leaves
+  the stamped `provider_received_at` values in place.

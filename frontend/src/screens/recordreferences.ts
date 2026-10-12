@@ -2,21 +2,26 @@ export { searchCompanyTargets as searchCompanyReferences } from "./companyform";
 export { searchProjects as searchProjectReferences } from "./companyprojects";
 
 import { useT } from "../i18n";
-import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import { rosterOwnerName, useRoster } from "./entityref";
+import { useMemberName } from "./membernames";
 
 export function useRecordOwners(ownerId: string | null | undefined) {
   const t = useT();
   const roster = useRoster("user", true);
-  const partial = useRosterPartial("user", true);
   const options = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
-  if (ownerId && !options.some((entry) => entry.value === ownerId))
+  const missing =
+    Boolean(ownerId) && !options.some((entry) => entry.value === ownerId);
+  // Named by id: the current owner may be invited or deactivated, and the
+  // picker's walk carries neither.
+  const ownerName = useMemberName(missing ? ownerId : null);
+  if (missing && ownerId)
     options.push({
       value: ownerId,
-      label: rosterMissLabel(roster, partial, t, t("ref.notInRoster")),
+      label: rosterOwnerName(ownerId, ownerName, t, t("ref.notInRoster")),
     });
   return options;
 }

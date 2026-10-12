@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -51,10 +52,12 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 
 // registryFeatures are what a server role adds to the tool surface. firstDrafts
 // is a pointer to the server's own engines, so options binding a model lane
-// after the registry is built still reach draft_email.
+// after the registry is built still reach draft_email. served is the Server
+// whose object store the document tools write to; without one they store nothing.
 type registryFeatures struct {
 	lists       bool
 	firstDrafts *firstMessageEngines
+	served      *Server
 }
 
 func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath) *agents.Registry {
@@ -140,7 +143,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterDuplicateTools(registry, duplicateQueueSeam(db))
 	agents.RegisterListTools(registry, newListSeam(pool, features.lists))
 	agents.RegisterImportTools(registry, importsOr(imports, db))
-	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider))
+	agents.RegisterDocumentTools(registry, documentSeam{srv: features.served, db: db})
+	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
@@ -207,7 +211,7 @@ func reportToolRunner(engine *reportEngine) agents.ReportRunner {
 			// empty array says "none matched". reportOutcome.Rows guarantees
 			// it, so this is the shape both transports already agree on.
 			"rows":         outcome.Rows,
-			"total_rows":   len(outcome.Rows),
+			"total_rows":   outcome.TotalRows,
 			"generated_at": outcome.GeneratedAt,
 			// The frame, same as the HTTP envelope carries. A number without
 			// the zone that cut its days and the month its year opens is not

@@ -19,7 +19,7 @@ import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import "./overnight-grant.css";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, unwrap } from "./common";
 
 // The rep's standing answer: may an agent work as them overnight?
 //
@@ -78,10 +78,7 @@ export function useAgentGrants() {
   return useQuery({
     queryKey: GRANTS_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/agent-grants");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/me/agent-grants"));
       return data.data;
     },
   });
@@ -95,14 +92,12 @@ export function useSetAgentGrant() {
   const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
-      const { data, error } = await api.PUT("/me/agent-grants/{spec}", {
-        params: { path: { spec: MORNING_BRIEF } },
-        body: { granted },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/agent-grants/{spec}", {
+          params: { path: { spec: MORNING_BRIEF } },
+          body: { granted },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
@@ -214,63 +209,55 @@ export function OvernightGrantCard() {
     <Panel title={t("overnightGrant.title")}>
       <PanelBody>
         <PanelIntro>{t("overnightGrant.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
-          {(grants) => {
-            const grant = morningBriefGrant(grants);
-            const granted = grant?.state === "granted";
-            const shown = optimistic ?? granted;
-            // The rep agreed and their credential no longer does the job.
-            // Reported as its own state rather than as a decline, because they
-            // already answered — asking again would be putting a settled
-            // question back to them.
-            //
-            // TWO CAUSES, and the rep is owed which one. The passport lapsed —
-            // revoked or expired — or the agent has since gained a tool the
-            // passport was never minted to fund, in which case it is perfectly
-            // live authority for a job this agent no longer does. Neither
-            // fails the run: it degrades, silently, at 2am.
-            const lapsed = granted && !grant?.credential_usable;
-            const outgrown =
-              granted &&
-              grant?.credential_usable === true &&
-              !grant?.credential_funds_agent;
-            return (
-              <>
-                <SettingList>
-                  <SettingRow
-                    label={t("overnightGrant.label")}
-                    description={t("overnightGrant.help")}
-                    control={(control) => (
-                      <Switch
-                        describedBy={control["aria-describedby"]}
-                        testId="overnight-grant-toggle"
-                        label={t("overnightGrant.label")}
-                        labelHidden
-                        checked={shown}
-                        pending={save.isPending}
-                        onChange={(next) => {
-                          setOptimistic(next);
-                          save.mutate(next, {
-                            onSettled: () => setOptimistic(null),
-                          });
-                        }}
-                      />
-                    )}
-                  />
-                </SettingList>
-                <GrantNotices
-                  showDanger={!shown}
-                  showRenewal={lapsed && shown}
-                  showScopeRenewal={outgrown && shown}
-                  error={
-                    save.isError ? problemMessageOf(save.error, t) : undefined
-                  }
-                />
-              </>
-            );
-          }}
-        </QueryGate>
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
+        {(grants) => {
+          const grant = morningBriefGrant(grants);
+          const granted = grant?.state === "granted";
+          const shown = optimistic ?? granted;
+          // Lapsed and outgrown differ from a decline (the rep already agreed);
+          // each names its cause, since either degrades the 2am run silently.
+          const lapsed = granted && !grant?.credential_usable;
+          const outgrown =
+            granted &&
+            grant?.credential_usable === true &&
+            !grant?.credential_funds_agent;
+          return (
+            <>
+              <SettingList bleed="settings">
+                <SettingRow
+                  label={t("overnightGrant.label")}
+                  description={t("overnightGrant.help")}
+                  control={(control) => (
+                    <Switch
+                      describedBy={control["aria-describedby"]}
+                      testId="overnight-grant-toggle"
+                      label={t("overnightGrant.label")}
+                      labelHidden
+                      checked={shown}
+                      pending={save.isPending}
+                      onChange={(next) => {
+                        setOptimistic(next);
+                        save.mutate(next, {
+                          onSettled: () => setOptimistic(null),
+                        });
+                      }}
+                    />
+                  )}
+                />
+              </SettingList>
+              <GrantNotices
+                showDanger={!shown}
+                showRenewal={lapsed && shown}
+                showScopeRenewal={outgrown && shown}
+                error={
+                  save.isError ? problemMessageOf(save.error, t) : undefined
+                }
+              />
+            </>
+          );
+        }}
+      </QueryGate>
     </Panel>
   );
 }
@@ -293,35 +280,37 @@ function GrantNotices({
     return null;
   }
   return (
-    <div className="settings-panel-commit">
-      {showDanger && <GrantCostNotice />}
-      {showRenewal && (
-        <Callout
-          kind="event"
-          tone="warning"
-          title={t("overnightGrant.renewTitle")}
-        >
-          {t("overnightGrant.renew")}
-        </Callout>
-      )}
-      {showScopeRenewal && (
-        <Callout
-          kind="event"
-          tone="warning"
-          title={t("overnightGrant.renewScopeTitle")}
-        >
-          {t("overnightGrant.renewScope")}
-        </Callout>
-      )}
-      {error !== undefined && (
-        <Callout
-          kind="outcome"
-          tone="danger"
-          title={t("overnightGrant.writeFailedTitle")}
-        >
-          {error}
-        </Callout>
-      )}
-    </div>
+    <PanelBody>
+      <div className="settings-panel-commit">
+        {showDanger && <GrantCostNotice />}
+        {showRenewal && (
+          <Callout
+            kind="event"
+            tone="warning"
+            title={t("overnightGrant.renewTitle")}
+          >
+            {t("overnightGrant.renew")}
+          </Callout>
+        )}
+        {showScopeRenewal && (
+          <Callout
+            kind="event"
+            tone="warning"
+            title={t("overnightGrant.renewScopeTitle")}
+          >
+            {t("overnightGrant.renewScope")}
+          </Callout>
+        )}
+        {error !== undefined && (
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("overnightGrant.writeFailedTitle")}
+          >
+            {error}
+          </Callout>
+        )}
+      </div>
+    </PanelBody>
   );
 }

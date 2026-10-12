@@ -55,8 +55,11 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	})
 	var due []capture.PrivateThreadMessage
 	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		var err error
-		due, err = capture.SelectPrivateThreadFilesDueTx(ctx, tx, windows, statutoryFloor(), privateThreadStripBatch)
+		floor, _, err := purgeFloorTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		due, err = capture.SelectPrivateThreadFilesDueTx(ctx, tx, windows, floor, privateThreadStripBatch)
 		return err
 	}); err != nil {
 		return 0, fmt.Errorf("verdict: finding personal-thread mail whose files are due: %w", err)
@@ -65,7 +68,11 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	for _, message := range due {
 		withheld := false
 		if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-			due, err := capture.PrivateThreadFilesStillDueTx(ctx, tx, windows, statutoryFloor(), message.Activity)
+			floor, _, err := purgeFloorTx(ctx, tx)
+			if err != nil {
+				return err
+			}
+			due, err := capture.PrivateThreadFilesStillDueTx(ctx, tx, windows, floor, message.Activity)
 			if err != nil || !due {
 				return err
 			}

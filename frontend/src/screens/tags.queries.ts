@@ -5,8 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
+import type { MutationOutcome } from "./undoableremoval";
 
 // The reads and writes behind the record page's tag panel.
 
@@ -25,14 +26,16 @@ function invalidateTagged(
   entityType: TaggableType,
   entityID: string,
 ) {
-  void queryClient.invalidateQueries({
-    queryKey: ["record-tags", entityType, entityID],
-  });
-  void queryClient.invalidateQueries({
-    queryKey: [RECORD_LIST_KEY[entityType]],
-  });
-  void queryClient.invalidateQueries({ queryKey: ["tag"] });
-  void queryClient.invalidateQueries({ queryKey: ["tag-records"] });
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: ["record-tags", entityType, entityID],
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [RECORD_LIST_KEY[entityType]],
+    }),
+    queryClient.invalidateQueries({ queryKey: ["tag"] }),
+    queryClient.invalidateQueries({ queryKey: ["tag-records"] }),
+  ]);
 }
 
 /**
@@ -47,14 +50,11 @@ export function useRecordTags(entityType: TaggableType, entityID: string) {
   return useQuery({
     queryKey: ["record-tags", entityType, entityID],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{entity_id}/tags",
-        { params: { path: { entity_type: entityType, entity_id: entityID } } },
+      return unwrap(
+        await api.GET("/records/{entity_type}/{entity_id}/tags", {
+          params: { path: { entity_type: entityType, entity_id: entityID } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     staleTime: 30_000,
   });
@@ -76,10 +76,7 @@ export function useTagVocabulary(enabled = true) {
     // list is short — without it a word beyond the cap is indistinguishable
     // from a word that does not exist, and the reader coins a near-duplicate.
     queryFn: async (): Promise<{ tags: Tag[]; truncated: boolean }> => {
-      const { data, error } = await api.GET("/tags", {});
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/tags", {}));
       return { tags: data.data, truncated: data.page.has_more };
     },
     staleTime: 5 * 60_000,
@@ -91,31 +88,71 @@ export function useApplyTag(entityType: TaggableType, entityID: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (tagID: string) => {
-      const { error } = await api.POST("/tags/{id}/apply", {
-        params: { path: { id: tagID } },
-        body: { entity_type: entityType, entity_id: entityID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST("/tags/{id}/apply", {
+          params: { path: { id: tagID } },
+          body: { entity_type: entityType, entity_id: entityID },
+        }),
+      );
     },
-    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
+    onSuccess: () => {
+      void invalidateTagged(queryClient, entityType, entityID);
+    },
   });
 }
 
-/** Take one tag off one record, leaving the tag itself alone. */
-export function useRemoveTag(entityType: TaggableType, entityID: string) {
+export type RemovalUndo = components["schemas"]["RemovalUndo"];
+
+/**
+ * Take one tag off one record, leaving the tag itself alone. `onSuccess` gets
+ * the handle that puts it back, or null when the record did not carry the tag.
+ */
+export function useRemoveTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: MutationOutcome<TagRestore | null>,
+) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (tagID: string) => {
-      const { error } = await api.DELETE("/tags/{id}/apply", {
-        params: { path: { id: tagID } },
-        body: { entity_type: entityType, entity_id: entityID },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+    mutationFn: async (tagID: string): Promise<TagRestore | null> => {
+      const data = unwrap(
+        await api.DELETE("/tags/{id}/apply", {
+          params: { path: { id: tagID } },
+          body: { entity_type: entityType, entity_id: entityID },
+        }),
+      );
+      return data ? { tagID, undo: data } : null;
     },
-    onSuccess: () => invalidateTagged(queryClient, entityType, entityID),
+    onError: outcome.onError,
+    onSuccess: async (restore) => {
+      await invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(restore);
+    },
+  });
+}
+
+export type TagRestore = Readonly<{ tagID: string; undo: RemovalUndo }>;
+
+/** Put back a tagging this reader removed, as it was assigned. */
+export function useRestoreTag(
+  entityType: TaggableType,
+  entityID: string,
+  outcome: MutationOutcome<TagRestore>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: TagRestore) => {
+      unwrap(
+        await api.POST("/tags/{id}/apply/restore", {
+          params: { path: { id: input.tagID } },
+          body: input.undo,
+        }),
+      );
+    },
+    onError: outcome.onError,
+    onSuccess: async (_, input) => {
+      await invalidateTagged(queryClient, entityType, entityID);
+      outcome.onSuccess(input);
+    },
   });
 }

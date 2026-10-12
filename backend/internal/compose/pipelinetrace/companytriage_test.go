@@ -13,6 +13,7 @@ package pipelinetrace
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -132,12 +133,7 @@ func TestTheRungIsTheRegisteredStage(t *testing.T) {
 }
 
 func containsReason(set []trace.Reason, want trace.Reason) bool {
-	for _, r := range set {
-		if r == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(set, want)
 }
 
 // A composition that wired no triage reader answers an ERROR, not an empty

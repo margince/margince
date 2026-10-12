@@ -11,7 +11,7 @@
   padding: var(--padCard);
 }
 .card-inset {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border: 0;
   box-shadow: none;
 }
@@ -47,18 +47,45 @@
 .table tbody tr:hover td {
   background: var(--bgHover);
 }
-
-/* A cell with two facts that belong on two lines — a call's timestamp over the
- * reason it failed, say — rather than run together as one glued word. Named
- * for what it does, not for a caller, so any cell renderer can reach for it. */
-.cell-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+/* bleed: the table spans the pane, and its outer cells keep the pane's padding
+   so the first column lines up with a PanelBody's text. */
+.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+  padding-inline-start: var(--padPanel);
+}
+.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+  padding-inline-end: var(--padPanel);
+}
+/* The pinned first column is opaque because the rest scrolls under it. Any
+   table, since a hand-drawn one may skip `.table`. */
+.table-scroll-sticky {
+  container-type: scroll-state;
+}
+.table-scroll-sticky > table > * > tr > :first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--bgPage);
+}
+.panel .table-scroll-sticky > table > * > tr > :first-child {
+  background: linear-gradient(var(--pane), var(--pane)), var(--bgPage);
+}
+.table-scroll-sticky > .table > tbody > tr:hover > :first-child {
+  background: var(--bgHover);
+}
+/* The edge shows only once a column has slid under it. */
+@container scroll-state(scrollable: inline-start) {
+  .table-scroll-sticky > table > * > tr > :first-child {
+    box-shadow: inset -1px 0 var(--borderSubtle);
+  }
+}
+/* Inset, because the pane's `overflow: hidden` clips a ring drawn outside it. */
+.panel > .table-scroll-bleed:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
 
 .skeleton {
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-sm);
   animation: ds-pulse 1.4s var(--ease-in-out) infinite;
 }
@@ -666,6 +693,10 @@
   cursor: pointer;
   text-align: left;
   text-decoration: none;
+  /* The name is the user's text and may be one unbroken run (a pasted URL).
+     `anywhere`, not `break-word`: only it lowers the min-content size, so a
+     flex or grid parent can shrink instead of being pushed off the page. */
+  overflow-wrap: anywhere;
 }
 .entity-link:hover {
   text-decoration: underline;
@@ -776,6 +807,7 @@
  * to drift apart on. Two classes, so the pair outranks `.btn`'s own box on
  * specificity rather than on which of the two sheets the bundler emitted
  * first. */
+.cell-link,
 .link-button,
 .btn.btn-link {
   font-family: var(--fontFamilyBody);
@@ -802,6 +834,7 @@
   align-items: center;
   gap: var(--space-1);
 }
+.cell-link:hover,
 .link-button:hover,
 .btn.btn-link:hover {
   text-decoration: underline;
@@ -830,10 +863,17 @@
  * A real outline also survives Windows High Contrast Mode, which drops
  * box-shadow entirely — the transparent-outline trick the filled controls use
  * exists only to keep something there when it does. */
+.cell-link:focus-visible,
 .link-button:focus-visible,
 .btn.btn-link:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+/* No inset, so a row title's text starts on the column's edge under its heading. */
+.cell-link {
+  font: inherit;
+  padding: 0;
+  text-align: start;
 }
 
 .kbd {
@@ -872,10 +912,8 @@
 }
 /* A section header leading a card sits on the card's own padding — the 24px
  * page-flow top margin (inter-section rhythm down a .wrap) otherwise drops
- * the title below the card edge, and below the action button it shares a
- * .list-head row with. Owns both the plain and the list-head-wrapped case. */
-.card > .section-header:first-child,
-.card > .list-head:first-child > .section-header {
+ * the title below the card edge. */
+.card > .section-header:first-child {
   margin-top: 0;
 }
 /* Filter/status tabs above a result list: the gap to the content below rides
@@ -1051,11 +1089,6 @@ span.error-line {
   justify-content: flex-end;
 }
 
-/* A card that stacks above the next one in a rail. */
-.card-stack {
-  margin-bottom: var(--gapCards);
-}
-
 /* A dialog's own heading, where the content has no SectionHeader of its own. */
 .modal-title {
   margin-bottom: var(--space-3);
@@ -1188,14 +1221,14 @@ span.error-line {
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
-  background: var(--bgCard);
+  background: var(--bgInset);
   cursor: not-allowed;
 }
 /* The shell owns the boundary for a field that has something inside it, so it
    is the shell that has to dim — the input within it draws no fill of its own. */
 .field-shell:has(:disabled),
 .field-shell:has([aria-disabled="true"]) {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1457,6 +1490,8 @@ span.error-line {
 }
 
 .table-scroll {
+  /* Contains absolutely placed cell content (sr-only labels) so it scrolls with the table. */
+  position: relative;
   overflow-x: auto;
 }
 
@@ -1756,6 +1791,38 @@ span.error-line {
   min-block-size: 138px;
 }
 
+/* The compact card, inside a strip that asked for it (`StatStrip density`).
+   One step down the same heading scale, tighter air, and a one-line basis:
+   the row sits above the content a reader came for, so it must not fill the
+   first screen. The full figure stays on the value's tooltip. */
+[data-density="compact"] .stat-card {
+  padding: var(--space-3);
+  min-block-size: 0;
+}
+/* A narrow tile cannot hold the name and its receipt on one line; the receipt
+   drops under the name rather than cutting it to a stub. */
+[data-density="compact"] .stat-card-label {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+[data-density="compact"] .stat-card-label-text {
+  flex-shrink: 0;
+  max-inline-size: 100%;
+}
+[data-density="compact"] .stat-card-value {
+  font: var(--fontHeadingSmall);
+  font-variant-numeric: tabular-nums;
+  margin-block-end: var(--space-1);
+}
+[data-density="compact"] .stat-card-detail {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  margin-block-end: 0;
+}
+[data-density="compact"] .stat-card-foot {
+  padding-top: var(--space-1);
+}
+
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
    already carries a border on all four sides, so a divider spelled here as a
    `border-left` on the second and later siblings only restated it — while
@@ -1860,6 +1927,8 @@ span.error-line {
   border: 0;
   background: none;
   color: var(--accentText);
+  /* The door may be a link (`href`), and it reads the same as the button. */
+  text-decoration: none;
   white-space: nowrap;
   /* The card's own `cursor` cannot reach this control: the overlay that
      stretches the door over the tile is the BUTTON's pseudo-element, so what a

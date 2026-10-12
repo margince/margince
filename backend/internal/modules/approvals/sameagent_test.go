@@ -24,7 +24,7 @@ func connected(connection ids.UUID, staged, calling ids.UUID) (row, principal.Pr
 		ConnectionID: &connection,
 	}
 	human := ids.NewV7()
-	a.OnBehalfOf = ptr(ids.From[ids.UserKind](human))
+	a.OnBehalfOf = new(ids.From[ids.UserKind](human))
 	p := principal.Principal{
 		Type:         principal.PrincipalAgent,
 		UserID:       human,
@@ -90,7 +90,7 @@ func TestSameAgentIsConnectionThenPassport(t *testing.T) {
 		want bool
 	}{
 		"a rotated passport under one connection": {
-			a:    row{PassportID: ptr(ids.From[ids.PassportKind](ids.NewV7())), ConnectionID: &connection},
+			a:    row{PassportID: new(ids.From[ids.PassportKind](ids.NewV7())), ConnectionID: &connection},
 			p:    principal.Principal{PassportID: ids.NewV7(), ConnectionID: connection},
 			want: true,
 		},

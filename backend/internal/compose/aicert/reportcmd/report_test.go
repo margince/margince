@@ -17,7 +17,7 @@ import (
 func rowFor(t *testing.T, out, site string) string {
 	t.Helper()
 	var found string
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		if !strings.HasPrefix(strings.TrimSpace(line), site+" ") {
 			continue
 		}

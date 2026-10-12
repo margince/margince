@@ -78,14 +78,14 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			// 15000 is three support plans; 12345 is no whole number of them.
 			name: "a grounded line net no whole count of a product reaches",
 			expected: offerDraftExpectation(t, map[string]offerDraftExpectedLine{
-				offerDraftSupportSource: {LineNetMinor: offerDraftMinor(12345), PriceGrounded: true},
+				offerDraftSupportSource: {LineNetMinor: new(int64(12345)), PriceGrounded: true},
 			}),
 			wantMsg: "neither the cited context states nor any EUR rate-card product charges",
 		},
 		{
 			name: "a line judged by two figures",
 			expected: offerDraftExpectation(t, map[string]offerDraftExpectedLine{
-				offerDraftSupportSource: {UnitPriceMinor: 5000, LineNetMinor: offerDraftMinor(15000), PriceGrounded: true},
+				offerDraftSupportSource: {UnitPriceMinor: 5000, LineNetMinor: new(int64(15000)), PriceGrounded: true},
 			}),
 			wantMsg: "pins both a unit price and a line net",
 		},
@@ -107,7 +107,7 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 // though no text states the net and no product charges it outright.
 func TestOfferDraftCasePreparesALineNetOfWholeRateCardUnits(t *testing.T) {
 	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
-		offerDraftSupportSource: {LineNetMinor: offerDraftMinor(15000), PriceGrounded: true},
+		offerDraftSupportSource: {LineNetMinor: new(int64(15000)), PriceGrounded: true},
 	})
 
 	_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, offerDraftDealFixture()), expected)

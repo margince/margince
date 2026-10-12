@@ -94,7 +94,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
@@ -284,20 +284,20 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Relink Account"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	var project struct {
 		ID string `json:"id"`
 	}
 	if status := q.Call(t, "POST", "/v1/projects", AnyMap{
-		"name": "Relink Engagement", "company_id": company.ID,
+		"name": "Relink Engagement", "company_id": company.ID, "source": "manual",
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("create project → %d", status)
 	}
@@ -332,8 +332,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
 			if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 				`","entity_type":"`+destination.entityType+`","entity_id":"`+destination.entityID+`"}`); err != nil {
-				var staged *workflow.StagedApprovalError
-				if errors.As(err, &staged) {
+				if staged, ok := errors.AsType[*workflow.StagedApprovalError](err); ok {
 					t.Fatalf("relinking to a %s staged approval %s; a member does this in the app unasked",
 						destination.entityType, staged.ApprovalID)
 				}
@@ -345,8 +344,7 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 	t.Run("a project still stages", func(t *testing.T) {
 		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
 			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
-		var staged *workflow.StagedApprovalError
-		if !errors.As(err, &staged) {
+		if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
 			t.Fatalf("relinking to a project → %v, want a staged approval — filing under a project is write-once", err)
 		}
 	})

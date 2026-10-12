@@ -441,7 +441,13 @@ function budgetOf(
 
   const takeWaiter = (call: ts.CallExpression): void => {
     const stated = statedTimeout(call);
-    if (stated === undefined) {
+    // Both libraries read `timeout: undefined` as no timeout stated.
+    if (
+      stated === undefined ||
+      (stated !== OPAQUE &&
+        ts.isIdentifier(stated) &&
+        stated.text === "undefined")
+    ) {
       ms += DEFAULT_WAITER_MS;
       return;
     }

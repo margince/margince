@@ -14,6 +14,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -31,9 +32,7 @@ func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 		"subject": "Consented discovery call",
 		"links":   []AnyMap{{"entity_type": "contact", "entity_id": contactID}},
 	}
-	for k, v := range extra {
-		body[k] = v
-	}
+	maps.Copy(body, extra)
 	return body
 }
 
@@ -45,7 +44,7 @@ func TestBookingConsentPassthrough(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Carla Consenting"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Carla Consenting"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 
@@ -197,6 +196,7 @@ func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Wilma Withdrawn",
 		"emails":    []AnyMap{{"email": "wilma@corp.example", "email_type": "work", "is_primary": true}},
 	}, nil, &contact); status != http.StatusCreated {

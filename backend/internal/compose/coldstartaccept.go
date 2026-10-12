@@ -13,7 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -42,8 +42,13 @@ import (
 // log is installed for the same reason and on the same service: a bundle member
 // whose effect fails AFTER its decision committed is reported to the client by
 // outcome alone, so this is the process that has to carry the cause.
-func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger) approvals.Handlers {
-	return approvals.NewHandlers(approvalsServiceWithEffects(pool).WithVolumeReleaser(volume).WithLogger(log))
+// It also answers the lane a website lead is told through, installed here
+// alone, for rewireConfirmationLane to fill once the mail lane is wired.
+func approvalsHandlersWithEffects(
+	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
+) (approvals.Handlers, *siteLeadNoticeLane) {
+	notices := newSiteLeadNoticeLane()
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
 // approvalsServiceWithEffects is the registration list itself, split from the
@@ -51,14 +56,22 @@ func approvalsHandlersWithEffects(pool *pgxpool.Pool, volume approvals.VolumeRel
 // standing up an HTTP surface. Every kind registered here must carry a
 // decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
 func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
+	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
+}
+
+// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// lead is told through. An empty lane refuses every site lead, which is right
+// for the services that only stage.
+func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
 	svc := approvals.NewService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
-	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
-	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck())
+	svc.WithEffect(siteLeadProposalKind,
+		siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{}), pool, notices))
+	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
@@ -87,9 +100,9 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc,
-		activities.NewStore(InstallationDB(pool)), contacts.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck())
+	commitmentTasks := activities.NewStore(InstallationDB(pool))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(commitmentTasks))
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
@@ -128,7 +141,7 @@ func coldstartAcceptEffect(svc *approvals.Service, store *contacts.Store) approv
 		// provenance the 360 renders as "read from your site".
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: coldstart effect without a deciding principal")
+			return errors.New("compose: coldstart effect without a deciding principal")
 		}
 		execCtx := principal.WithActor(ctx, principal.Principal{
 			Type:       principal.PrincipalSystem,

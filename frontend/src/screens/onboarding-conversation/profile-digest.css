@@ -348,10 +348,10 @@
   text-align: start;
 }
 .pdigest-editable:hover {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 .pdigest-editable:focus-visible {
-  background: var(--bgCard);
+  background: var(--bgInset);
   outline: var(--focus-ring);
 }
 .pdigest-edit-control {

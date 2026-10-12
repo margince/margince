@@ -518,5 +518,9 @@ const (
 	// lead merge). They must see the link whether or not the caller may open
 	// the contact, so it is read off the row; it reaches no caller, and every
 	// read of a lead withholds it through withholdUnreadableSourceContacts.
-	modulesTierUnscopedCeiling = 117
+	//
+	// 118: privacy.contactsMatchingSuppression's second walk, over every live
+	// contact_channel_identity. It is unscoped for the reason given at 106: a
+	// chat-only subject has no address, and the list names their account.
+	modulesTierUnscopedCeiling = 118
 )

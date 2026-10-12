@@ -4,8 +4,11 @@
 import { Layers, ListChecks, Server } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
+import { KeyedName } from "../design-system/keyedname";
 import { Popover } from "../design-system/popover";
 import { useT } from "../i18n";
+import { tierLabel, tierRank } from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
 import "./ai-settings.css";
 
 // The three words this settings area is built from, each with one mark wherever
@@ -37,25 +40,42 @@ export function ModelRef({
   model,
 }: Readonly<{ provider: string; model: string }>) {
   const t = useT();
+  const name = providerName(provider, t);
   return (
     <Popover
       onHover
       label={
         <>
-          <TermChip term="provider">{provider}</TermChip>
+          <TermChip term="provider">{name}</TermChip>
           <span className="sr-only">{model}</span>
         </>
       }
     >
       <dl className="ai-model-facts">
         <dt>{t("aiTerms.provider")}</dt>
-        <dd>{provider}</dd>
+        <dd>
+          <KeyedName name={name} code={provider} />
+        </dd>
         <dt>{t("aiRouting.model.label")}</dt>
         <dd>
           <code className="ai-model-id">{model}</code>
         </dd>
       </dl>
     </Popover>
+  );
+}
+
+export function TierChips({ tiers }: Readonly<{ tiers: readonly string[] }>) {
+  const t = useT();
+  const ordered = [...tiers].sort((a, b) => tierRank(a) - tierRank(b));
+  return (
+    <span className="ai-tier-chips">
+      {ordered.map((tier) => (
+        <TermChip key={tier} term="tier">
+          {tierLabel(tier, t)}
+        </TermChip>
+      ))}
+    </span>
   );
 }
 

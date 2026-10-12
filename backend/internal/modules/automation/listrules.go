@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -101,9 +102,7 @@ func listRuleSchema(extra map[string]any) map[string]any {
 			schemaKeyDefault: directionEntered, schemaKeyDescription: "Whether the rule fires when a record joins, leaves, or either.",
 		},
 	}
-	for key, property := range extra {
-		properties[key] = property
-	}
+	maps.Copy(properties, extra)
 	return map[string]any{
 		schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
 		schemaKeyProperties: properties, schemaKeyRequired: requiredListParams(extra),

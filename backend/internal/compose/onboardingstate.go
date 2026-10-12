@@ -69,8 +69,7 @@ func (h onboardingStateHandlers) PutOnboardingState(
 
 	state, err := h.state.Put(r.Context(), in, h.company.OnboardingCompanyState)
 	if err != nil {
-		var invalid *identity.InvalidOnboardingStateError
-		if errors.As(err, &invalid) {
+		if invalid, ok := errors.AsType[*identity.InvalidOnboardingStateError](err); ok {
 			httperr.Write(w, r, httperr.Validation(invalid.Field, "invalid", invalid.Reason))
 			return
 		}

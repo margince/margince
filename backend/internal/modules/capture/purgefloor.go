@@ -20,11 +20,12 @@ package capture
 type StatutoryFloor struct {
 	// Clause filters an activity aliased `a`, in the positive form: it is TRUE
 	// for a row the law still requires the installation to keep.
-	Clause func(intervalArg, anchorArg int) string
-	// Interval is the retention period, as a SQL interval literal; Anchor says
-	// whether the window runs from the end of the calendar year.
-	Interval string
-	Anchor   bool
+	Clause func(currentArg, carriedArg int) string
+	// Current and Carried are the floor policy the clause reads, as privacy
+	// renders it (FloorPolicy.ShieldArgs). Carried is nil when no earlier
+	// jurisdiction left a floor on older mail.
+	Current string
+	Carried *string
 }
 
 // column renders the shield as a boolean expression and appends its two
@@ -39,7 +40,7 @@ func (f StatutoryFloor) column(used int, args []any) (string, []any) {
 		// window — see determinate.
 		return "true", args
 	}
-	return f.Clause(used+1, used+2), append(args, f.Interval, f.Anchor)
+	return f.Clause(used+1, used+2), append(args, f.Current, f.Carried)
 }
 
 // shieldedAs is the reason a row shielded by this floor is reported under.

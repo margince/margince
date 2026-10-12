@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -244,7 +245,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 	if err := scanner.Err(); err != nil {
 		return model.Response{}, fmt.Errorf("ai: anthropic: stream: %w", err)
 	}
-	return model.Response{}, fmt.Errorf("ai: anthropic: stream ended without message_stop")
+	return model.Response{}, errors.New("ai: anthropic: stream ended without message_stop")
 }
 
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {

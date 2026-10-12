@@ -287,7 +287,7 @@ func readsOneRelation(statement string) bool {
 
 // firstAddressLine is the line a reader should open the file at.
 func firstAddressLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if trimmed := strings.TrimSpace(line); strings.Contains(strings.ToLower(trimmed), "contact_email") {
 			return trimmed
 		}

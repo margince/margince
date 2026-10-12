@@ -9,7 +9,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { invalidateProviderHealth } from "./ai-provider-health";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 
 // Whether a stored key works, asked of the vendor that issued it.
 //
@@ -27,13 +27,11 @@ export function useTestProviderKey() {
     // and a stale "connected" kept in cache would outlive a revoked key.
     gcTime: 0,
     mutationFn: async (vars: { provider: string }) => {
-      const { data, error } = await api.POST(
-        "/ai/provider-keys/{provider}/test",
-        { params: { path: { provider: vars.provider } } },
+      const data = unwrap(
+        await api.POST("/ai/provider-keys/{provider}/test", {
+          params: { path: { provider: vars.provider } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
       if (!data) throw new Error("Provider key test unavailable");
       return data;
     },

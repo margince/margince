@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -47,10 +48,7 @@ func NewProvider(pool *pgxpool.Pool) *Provider {
 }
 
 // NewProviderFor is NewProvider over a handle whose workspace is already
-// decided. A server resolves the installation's singleton, which is what
-// NewProvider does for it; a suite that seeds a second workspace on purpose has
-// no singleton to resolve and names the one it means instead (ADR-0091 §9
-// step 3).
+// decided: a suite that seeds a second workspace names the one it means.
 func NewProviderFor(db *database.DB) *Provider {
 	pool := db.Pool()
 	return &Provider{
@@ -62,7 +60,8 @@ func NewProviderFor(db *database.DB) *Provider {
 		contacts: contacts.NewProvider(db).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithStopCarrier(consent.NewStore(db)).
-			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)),
+			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
+			WithGrantCarrier(identity.NewServiceFor(db)),
 		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
 		activities: activities.NewProvider(InstallationDB(pool)),

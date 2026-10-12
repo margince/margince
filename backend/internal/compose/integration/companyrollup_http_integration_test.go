@@ -247,7 +247,7 @@ func TestCompanyRollupHTTP(t *testing.T) {
 	t.Run("422 invalid scope", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET", "/v1/companies/"+root+"/hierarchy-rollup?scope=bogus", nil, nil, &problem)
-		assertFieldHistoryValidation422(t, status, problem, "scope", "invalid_enum")
+		assertFieldHistoryValidation422(t, status, problem, "scope", "invalid")
 	})
 
 	t.Run("422 fx_rate_unavailable", func(t *testing.T) {

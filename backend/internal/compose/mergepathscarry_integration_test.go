@@ -139,8 +139,7 @@ func TestAnUnwiredLeadMergeRefusesWhenALinkWouldBeStranded(t *testing.T) {
 	c.leadHoldsLinkAndBasis(t, retired, "uwe@leadcarry.test")
 
 	_, err := unwired.MergeLead(c.admin, retired, survivor)
-	var notWired *contacts.SatelliteCarrierNotWiredError
-	if !errors.As(err, &notWired) {
+	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](err); !ok {
 		t.Fatalf("the lead merge answered %v, want SatelliteCarrierNotWiredError", err)
 	}
 	if links, bases := c.subjectsHolding(t, "lead_id", retired.UUID); links != 1 || bases != 1 {

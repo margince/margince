@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import {
   EvidenceVerdict,
   factClaim,
@@ -274,7 +275,7 @@ describe("a human's verdict on a machine's claim", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe(
-        "This record changed since it was opened. Reload and retry.",
+        en["common.versionSkew"],
       ),
     );
   });
@@ -393,5 +394,22 @@ describe("a human's verdict on a machine's claim", () => {
     // A value a contact already stood behind is not a claim awaiting a verdict.
     expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
     expect(screen.getByText(/Confirmed by a person/)).toBeTruthy();
+  });
+
+  it("says an agent set a value, and does not offer to confirm it again", () => {
+    wrap(
+      <EvidenceVerdict
+        companyId={COMPANY}
+        claim={profileFieldClaim(COMPANY, { ...field, source: "agent" })}
+        canEdit
+      />,
+    );
+    // An agent's correction is protected from the automatic refresh the way a
+    // contact's is, so the reader is told why the value stopped moving. It is
+    // attributed to the agent rather than to the human who granted the
+    // passport, who never saw this value.
+    expect(screen.getByText(/Set by an agent/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
+    expect(screen.queryByText(/Confirmed by a person/)).toBeNull();
   });
 });

@@ -105,6 +105,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
   usage: ["spend", "cost", "budget", "tokens", "money"],
   "model-calls": ["trace", "log", "call", "debug", "prompt"],
   privacy: ["gdpr", "dsr", "consent", "retention", "erasure", "purpose"],
+  jurisdiction: ["country", "law", "legal", "pack", "deadline", "floor"],
   audit: ["trail", "log", "who", "history", "compliance"],
   "system-health": ["jobs", "queue", "reindex", "maintenance", "stuck"],
   extensions: ["unit", "plugin", "module", "extension"],

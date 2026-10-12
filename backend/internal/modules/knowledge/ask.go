@@ -115,10 +115,10 @@ func (p Passage) Locate(span string) Span {
 func (p Passage) positionOf(offset int) (line, column int) {
 	before := p.Text[:offset]
 	line = p.StartLine + strings.Count(before, "\n")
-	if nl := strings.LastIndex(before, "\n"); nl >= 0 {
+	if _, after, ok := strings.CutLast(before, "\n"); ok {
 		// A later line of the passage: the column is measured from that
 		// line's own start.
-		return line, utf8.RuneCountInString(before[nl+1:]) + 1
+		return line, utf8.RuneCountInString(after) + 1
 	}
 	// The passage's FIRST line, which may itself begin mid-line in the
 	// document — a span cut at the width ceiling does. Nothing here knows how

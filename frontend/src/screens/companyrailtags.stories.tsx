@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { TagsPanel } from "./tagspanel";
@@ -139,9 +140,18 @@ export const ReadOnly: Story = {
 
 /**
  * An assignment written before the product recorded WHO shows the date with no
- * name, rather than crediting somebody who may not have chosen it.
+ * name on the tag's hover and focus, rather than crediting somebody.
  */
 export const AssignerUnknown: Story = {
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", {
+      name: /Imported/,
+    });
+    link.focus();
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent(/^Added /);
+  },
   render: () => (
     <Panel
       tags={[

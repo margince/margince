@@ -3,7 +3,7 @@
 
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // Which providers are not answering, read once for every surface that shows it.
 // The Providers list and the System health card both call this with the same
@@ -13,9 +13,7 @@ export function useProviderHealth(canSee: boolean) {
     queryKey: ["ai-provider-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai/provider-health");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/ai/provider-health"));
     },
     // Same cadence and same off-with-the-grant rule as useAiHealth: the
     // question is whether it answers now.

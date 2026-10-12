@@ -75,7 +75,8 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		// and the introduction asks ride the same way.
 		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
 		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now))
+			introductions.NewStore(InstallationDB(pool), time.Now)).
+		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it
@@ -101,6 +102,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	// subsystem is shaped to prevent.
 	gate := consentGateFor(pool)
 	return activities.NewHandlers(InstallationDB(pool)).
+		WithSettings(NewSettingsStore(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
 		// The SAME seam the check_availability tool reads, so the two doors
@@ -126,7 +128,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
 		// like every other cross-module edge on this path.
-		WithSignature(contacts.NewStore(InstallationDB(pool))).
+		WithSignature(signatureReader{store: contacts.NewStore(InstallationDB(pool))}).
 		// The name on the envelope. identity owns who the acting human is —
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
@@ -171,7 +173,7 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
 // forecast's base value, priced at today's rate for an open deal.
-var dealWorthTodaySQL = BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+var dealWorthTodaySQL = deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
 
 // installationBaseCurrencySQL reads the reporting currency inside the filter's
 // own statement, which the segment engine compiles without a Go-side bind.
@@ -275,7 +277,8 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).
 	s.installationSettingsHandlers = installationSettingsHandlers{
-		store:          identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool)),
+		store:          NewInstallationSettingsFor(pool),
+		pool:           pool,
 		maxUploadBytes: s.uploadLimits.Attachment,
 	}
 	// The workspace's own consumer-mail list (CAP-PARAM-5): the surviving
@@ -452,15 +455,21 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// here is answered there rather than sitting in a second queue nobody
 		// reads.
 		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
-		WithEraser(privacy.NewEraser(InstallationDB(pool))).
+		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		// The controller particulars form reads and writes through the settings
+		// store; without it every read and write of the form is a server fault.
+		WithSettings(NewSettingsStore(pool)).
 		// The edge that writes an accepted correction, through contacts' own
 		// update path — so the subject's correction is governed by the same
 		// gates as any other edit to that field.
-		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))})
+		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))}).
+		// The privacy queues name the contacts and leads they point at through
+		// the resolver every other surface names records with.
+		WithRecordNames(newAttentionNames(InstallationDB(pool)))
 }

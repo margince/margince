@@ -86,27 +86,38 @@ func stampDescriptionAuthor(ctx context.Context, tx pgx.Tx, companyID ids.Compan
 		[]storekit.FieldStamp{{Field: descriptionField}})
 }
 
-// carryDescriptionAuthor moves the description's author from a merged-away
-// company to the survivor that just inherited its sentence, so the value
-// and the claim on it stay together. Nothing is written when the retired record
-// had no provenance row: the survivor then holds an unclaimed description,
-// which is the truth about it.
-func carryDescriptionAuthor(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID) error {
-	var source, by string
-	err := tx.QueryRow(ctx, `
-		SELECT source, captured_by
-		FROM field_provenance
-		WHERE object_type = 'company' AND object_id = $1 AND field_name = $2
-		ORDER BY captured_at DESC, id DESC
-		LIMIT 1`, from, descriptionField).Scan(&source, &by)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+// provenanceCarriedOnMerge are the survivorship-filled fields whose author
+// follows the value onto the survivor.
+var provenanceCarriedOnMerge = []string{descriptionField, fieldLegalName, fieldIndustry, linkedInField}
+
+// carryFieldAuthors moves the author of each field the survivor just inherited
+// from a merged-away company, so the value and the claim on it stay together.
+// A field the retired record had no provenance for stays unclaimed, which is
+// the truth about it.
+func carryFieldAuthors(ctx context.Context, tx pgx.Tx, from, to ids.CompanyID, filled map[string]any) error {
+	for _, field := range provenanceCarriedOnMerge {
+		if _, inherited := filled[field]; !inherited {
+			continue
+		}
+		var source, by string
+		err := tx.QueryRow(ctx, `
+			SELECT source, captured_by
+			FROM field_provenance
+			WHERE object_type = 'company' AND object_id = $1 AND field_name = $2
+			ORDER BY captured_at DESC, id DESC
+			LIMIT 1`, from, field).Scan(&source, &by)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("read merged-away %s provenance: %w", field, err)
+		}
+		if err := storekit.StampFields(ctx, tx, "company", to.UUID, source, by,
+			[]storekit.FieldStamp{{Field: field}}); err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return fmt.Errorf("read merged-away description provenance: %w", err)
-	}
-	return storekit.StampFields(ctx, tx, "company", to.UUID, source, by,
-		[]storekit.FieldStamp{{Field: descriptionField}})
+	return nil
 }
 
 // descriptionHeldByHuman reports whether a contact authored this company's

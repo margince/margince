@@ -1,37 +1,42 @@
+<!-- prose:plain -->
 # Editing records while other work is running
 
-The **Details** editors for companies, contacts, deals and leads save only the
-fields a user changed, so independent edits to one record both land. What a user
-sees, including the refusal when a colleague saved the same field first, is in
-the handbook, [records.md](../handbook/records.md). Below is how the editors
+Editing in the **Details** panel of a company, contact, deal or lead writes only
+the fields a user changed. So two separate edits to one record both land. What
+a user sees, including the message when a colleague wrote the same field first,
+is in the handbook, [records.md](../handbook/records.md). Below is how the edits
 merge.
 
-Email, phone, domain, and relationship-type lists are each treated as one
-field because their endpoints replace the complete list. Address and social
-object members are compared separately, with untouched members preserved.
-Values that depend on each other are checked together: a deal's currency and
-money figures, partner and attribution, and company and project; a contact's
-full name and name parts.
+Email, phone, domain, and relationship type lists each count as one field,
+because their endpoints take the whole list and keep only that. The parts of an
+`address` and a `social` object are checked one by one, and parts nobody touched
+are kept. Values that depend on each other are checked together. On a deal that
+is the currency and the money values, partner and attribution, and company and
+project. On a contact it is the full name and the name parts.
 
-## Shared implementation
+## One shared function
 
-[`saveIndependentEdit`](../../frontend/src/screens/independentedit.ts) compares
-three readings: the original record captured when an inline editor opened, the submitted
-changes, and the latest server record. The same function serves all four record types, including their separate custom-field sections.
+[`saveIndependentEdit`](../../frontend/src/screens/independentedit.ts) checks
+three versions of a record. The first is the original, read when editing
+started. The second is the changes the user sent, and the third is the newest
+record on the server. The same function serves all four record types, including
+their separate custom-field sections.
 
-The API keeps its atomic `If-Match` check. A definite
-`409 version_skew` triggers a fresh read. Only when all edited fields and their
-dependencies still match the original does the UI retry with the fresh version.
-The retry remains version-guarded, so a writer landing between that read and
-save cannot be overwritten. After three refused attempts, the error remains
-visible and the editor stops retrying.
+The API keeps its `If-Match` check, which passes or fails as one step. A clear
+`409 version_skew` answer starts a new read. The UI tries again with the new
+version only when every edited field, and every value it depends on, still
+matches the original. The second try still carries a version check, so a writer
+that lands between that read and the write cannot be written over. After three
+refused tries, the error stays on screen and the panel stops trying.
 
-Timeouts, permission failures, duplicate-record conflicts, and other errors
-are never automatically retried. Fields that become masked are not rebased.
-Other API clients keep the whole-record version check. The recovery lives in the
-Details editors, and the API's concurrency contract is unchanged.
+A timed-out call, a permission failure, a duplicate-record conflict, or any other error
+is never tried again on its own. If a field the edit touches, or one it depends on,
+becomes masked, the whole edit is refused. Other API clients keep the whole-record version check. This
+retry lives only in the Details panel, and the contract of the API for two writers
+at once does not change.
 
-The helper's race tests and actual company/contact/deal form tests run in the
-standard `make check` frontend suite. They cover separate fields, overlapping
-edits, clears, nested objects, replace-sets, monetary dependencies, and another
-writer arriving during recovery.
+The tests of the function for two writers at once run with the frontend tests
+in `make check`. So do real form tests for companies, contacts and deals.
+They cover separate fields, and edits that touch the same field. They also cover
+clears, objects inside objects, lists sent whole, values that depend on money,
+and another writer that lands while the retry runs.

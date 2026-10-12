@@ -154,8 +154,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 // re-derive.
 func assertEveryFieldSurvives(t *testing.T, shape string, fields reflect.Type, probes map[string]string, served string) {
 	t.Helper()
-	for i := range fields.NumField() {
-		name := fields.Field(i).Name
+	for field := range fields.Fields() {
+		name := field.Name
 		probe, described := probes[name]
 		if !described {
 			t.Fatalf("%s.%s was added and this test has no probe for it, so nothing here says whether "+

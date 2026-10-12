@@ -577,9 +577,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The comment checks judge the lines added since origin/main, which a
+          # shallow checkout does not have.
+          fetch-depth: 0
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
+      # The comment checks see only added lines; this holds the whole tree's
+      # comment numbers to a baseline that may fall and never rise.
+      - name: comment stats (may fall, never rise)
+        working-directory: .
+        run: make comment-stats
       # AGENTS.md is one of this job's path-filter inputs, so the rulebook is
       # held against the standard exactly when either one changes.
       - name: craft prose (rulebook agrees with the standard)

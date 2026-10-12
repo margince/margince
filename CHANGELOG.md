@@ -12,6 +12,16 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Added
 
+- **The Margince skill for AI tools.** Settings → Agents → **Agent passports**
+  shows two ways to use a passport. **In your AI tool** has **Download skill**,
+  and **In your own code** has a curl, Python and JavaScript example that reads
+  the passport from `MARGINCE_PASSPORT`. `GET /v1/agent-bundle` (session only)
+  answers `margince-skill.zip`: one `margince/` folder with `README.md`,
+  `SKILL.md`, `INDEX.md` and an `openapi.yaml` that keeps only the operations a
+  passport can call. The API address in it, and `api_base_url` on
+  `GET /v1/passports`, is `MARGINCE_API_BASE_URL`, else
+  `MARGINCE_PUBLIC_BASE_URL`, else the request's own origin. The
+  **Connected agents** card is now **Connected MCP clients**.
 - AI provider health. A provider that is out of credit, rejecting its key,
   unreachable or degraded is marked on Settings → AI models and in the new
   **AI provider status** card under System health. A blocked provider is skipped
@@ -58,6 +68,12 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 - Mailbox imports report where their time goes on `/metrics`: every Gmail API
   call by op and result, each message's fetch, parse, transaction and
   follow-up time, pages and waits by cause, and the fleet's runs and progress.
+- An agent can put a file on a company, contact, deal, lead or project with the
+  `attach_document` MCP tool, and list a record's files with `list_documents`.
+  The file lands on the record's **Documents** tab at once, through the same
+  writer as an upload in the app. A file can be up to about 6.2 MB, or the
+  installation's `uploads.attachment_mb` if that is smaller. No tool downloads a
+  file or returns its contents, and no scheduled agent is given `attach_document`.
 
 ### Removed
 
@@ -73,6 +89,17 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
 
 ### Changed
 
+- **The company graph names its signal route.** In `GET /companies/{id}/graph`,
+  `intro_path` is now `signal_route`. It is the contact the account's most recent
+  open signal proposes. A node's `intro_path` flag is now `on_signal_route`, and
+  `groups_omitted` names `signal_route`. Who should introduce us is still answered
+  by `GET /companies/{id}/intro-paths`.
+- **The handoff reads the project page.** `prepare_handoff` and
+  `GET /projects/{id}/handoff` take deals, stakeholders and open tasks from the
+  project page's own read, cut at the page's 25 rows. A list the caller may not
+  read is named in the new `sections_omitted`. It no longer fails the handoff or
+  counts as empty. A caller without the contact grant gets the stakeholder seats
+  with no names. The clock's own reminders stay out of the open commitments.
 - Analytics uses one reporting implementation across the web, API, MCP and workers.
   The old performance screen and rollout switch are removed. Existing
   `analytics.performance_enabled` configuration is accepted but ignored.
@@ -94,8 +121,37 @@ dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
   `Cross-Origin-Resource-Policy: same-origin`, and nginx no longer sends its
   version. `robots.txt` refuses the common AI crawlers by name.
 
+- **Uploads take accepted kinds of file only.** A document uploaded in the
+  app, or attached by an agent, is refused `422 unsupported_file_type` unless it
+  is a PDF, Office or OpenDocument file, RTF, text, CSV, Markdown, HTML, a
+  common image, a zip archive or a saved email. SVG and executables are refused.
+  The file picker offers only those kinds. Files already stored, and files
+  captured with an email, are unaffected.
+- **`POST /mcp` reads up to 8 MiB of JSON**, so an agent can carry a file inline.
+  Every tool other than `attach_document` still refuses arguments over 1 MiB, and
+  one process holds at most 4 calls over 1 MiB at once; a fifth answers `503`
+  with `Retry-After`.
+
 ### Fixed
 
+- **An approval reads the same on every door.** A write held for approval over
+  REST now opens with the sentence the tool door shows, naming the records it
+  changes, such as the two tags a merge folds together. Each field of the
+  request that the sentence does not show follows it as `field=value`, so a
+  blind-copy recipient, an attachment or a close reason stays on the card. A
+  record create, update or logged activity follows its sentence with the values
+  it sets, because that sentence names only the fields. A call with no sentence,
+  or one that names a record by its id, keeps the REST line.
+- **A create must name its source.** A lead, a relationship, a note, a task, an offer,
+  a product, a custom field and a signal are refused with a 422 naming `source` when
+  it is absent or blank, as a contact, a company and a deal already were. So are a
+  deal room, and the invitation or document added to one.
+- **An archived contact's unanswered message leaves the Worklist.** It no longer
+  shows under "Customer waiting", in the queue's count, in a record's waiting
+  filter or in the reply classifier's backlog. Restoring the contact brings it
+  back. Only the contacts the reader can see count: a message filed under a
+  second visible contact who is not archived stays, and its row names that
+  contact.
 - **The contacts-without-consent retention rule acts again** on older installations.
   An installation seeded before the record was renamed kept the rule under the old
   `person/no_consent_no_deal` scope. The nightly evaluator has no selector for it,

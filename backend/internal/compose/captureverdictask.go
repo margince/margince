@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -191,11 +192,7 @@ const maxEchoedToken = 64
 
 // clampToken bounds one echoed token on a rune boundary.
 func clampToken(s string) string {
-	runes := []rune(s)
-	if len(runes) <= maxEchoedToken {
-		return s
-	}
-	return string(runes[:maxEchoedToken]) + "…"
+	return textcut.RunesMarked(s, maxEchoedToken, "…")
 }
 
 // verdictSchema is the generation-time shape guardrail for the one sender

@@ -85,13 +85,11 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		Subject:   &subject,
 		Body:      &body,
 		Direction: &outbound,
+		Source:    systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
-		Links: []activities.ActivityLinkInput{{
-			EntityType: string(crmcontracts.ActivityLinkEntityTypeContact),
-			EntityID:   in.ContactID.UUID,
-		}},
+		Links:  []activities.ActivityLinkInput{controllerMailSubject(in)},
 	})
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: filing the notice on the timeline: %w", err)
@@ -138,4 +136,17 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		return ids.UUID{}, err
 	}
 	return deliveryID, nil
+}
+
+// controllerMailSubject files the notice under the record it was sent to: the
+// lead for a website lead's privacy notice, the contact for everything else.
+func controllerMailSubject(in consent.ConfirmationSend) activities.ActivityLinkInput {
+	if !in.LeadID.IsZero() {
+		return activities.ActivityLinkInput{
+			EntityType: string(crmcontracts.ActivityLinkEntityTypeLead), EntityID: in.LeadID.UUID,
+		}
+	}
+	return activities.ActivityLinkInput{
+		EntityType: string(crmcontracts.ActivityLinkEntityTypeContact), EntityID: in.ContactID.UUID,
+	}
 }

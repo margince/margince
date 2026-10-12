@@ -20,7 +20,7 @@ import type {
   ListExplanation,
   ListRecordType,
 } from "./lists.queries";
-import { useRosterNames } from "./roster";
+import { useMemberNames } from "./membernames";
 import type { FilterOp } from "./segmentpredicate";
 
 /** Whether a Live List selects the record, and each clause's verdict. */
@@ -67,7 +67,8 @@ function Verdict({
   const t = useT();
   const words = useSentenceWords();
   const vocabulary = useFilterVocabulary(entityType);
-  const valueText = useFieldValueText(entityType);
+  const field = vocabularyField(vocabulary.data, node.field);
+  const valueText = useFieldValueText(entityType, colleaguesIn(field, node));
   if (node.join) {
     return (
       <div className="lists-why-group">
@@ -131,14 +132,20 @@ function Verdict({
  * How a filter field's value on a record reads, as the server states it in a
  * why or a member's `values`: money in the field's currency, a day as how long
  * ago it was, a yes/no as words, a user by name, anything else as given.
- * Disabled, it reads nothing and every value reads as given.
+ * `userIds` are the colleagues the caller will ask about, named by id up front
+ * because the returned function cannot call a hook per value. Disabled, it
+ * reads nothing and every value reads as given.
  */
-export function useFieldValueText(entityType: ListRecordType, enabled = true) {
+export function useFieldValueText(
+  entityType: ListRecordType,
+  userIds: readonly string[],
+  enabled = true,
+) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const vocabulary = useFilterVocabulary(entityType, enabled);
-  const users = useRosterNames("user", enabled);
+  const users = useMemberNames(enabled ? userIds : []);
   return (name: string, raw: string): string => {
     const field = vocabularyField(vocabulary.data, name);
     switch (field?.type) {
@@ -152,13 +159,17 @@ export function useFieldValueText(entityType: ListRecordType, enabled = true) {
           ? (moneyText(raw, field.currency, locale) ?? raw)
           : t("filters.sentence.pendingValue");
       default:
-        return field?.references === "app_user" ? userName(raw) : raw;
+        return field?.references === "app_user" ? (users.get(raw) ?? raw) : raw;
     }
   };
-  function userName(id: string): string {
-    const user = users.data?.find((entry) => entry.id === id);
-    return user && "display_name" in user ? user.display_name : id;
-  }
+}
+
+// The colleague a clause's value names, when its field references one.
+function colleaguesIn(
+  field: VocabularyField | undefined,
+  node: ListClauseVerdict,
+): string[] {
+  return field?.references === "app_user" && node.value ? [node.value] : [];
 }
 
 /**

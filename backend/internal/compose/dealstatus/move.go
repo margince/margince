@@ -363,10 +363,15 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 	return crmcontracts.Activity{}, false
 }
 
+// noContactYet is the claim an absent last contact supports. A note, a booked
+// meeting and a canceled one sit on the timeline without being contact, so
+// "nothing logged" would be false.
+const noContactYet = "No contact has taken place on this deal yet"
+
 func nextStepReason(f facts) string {
 	last, ok := lastContact(f)
 	if !ok {
-		return "Nothing has been logged on this deal yet — agree the next step."
+		return noContactYet + " — agree the next step."
 	}
 	return fmt.Sprintf("The last contact was %s and nothing is booked — agree the next step.",
 		since(f.now, last.OccurredAt))

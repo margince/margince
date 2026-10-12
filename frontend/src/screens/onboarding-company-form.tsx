@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
+import { Bot, Circle, CircleCheck, ShieldCheck } from "lucide-react";
 import { useId } from "react";
 import type { components } from "../api/schema";
 import {
@@ -104,7 +104,7 @@ export function CompanyStep({
 
       {saved && (
         <p className="ob-sub ob-companyform-saved">
-          <CheckCircle2 aria-hidden className="ob-companyform-savedmark" />{" "}
+          <CircleCheck aria-hidden className="ob-companyform-savedmark" />{" "}
           {t("ob.s1.savedNote")}
         </p>
       )}

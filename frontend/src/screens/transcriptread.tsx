@@ -21,7 +21,7 @@ import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import "./transcriptread.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -100,13 +100,11 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
     queries: ids.map((id) => ({
       queryKey: ["approval", id],
       queryFn: async () => {
-        const { data, error } = await api.GET("/approvals/{id}", {
-          params: { path: { id } },
-        });
-        if (error) {
-          throwProblem(error);
-        }
-        return data;
+        return unwrap(
+          await api.GET("/approvals/{id}", {
+            params: { path: { id } },
+          }),
+        );
       },
       // A decided approval does not un-decide, and this card is often on
       // screen while the rep works elsewhere in the record.
@@ -213,14 +211,11 @@ function TranscriptReadPanel({
   const reportQuery = useQuery({
     queryKey: ["transcript-read", activityId, readId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/activities/{id}/transcript-proposals/{readId}",
-        { params: { path: { id: activityId, readId } } },
+      return unwrap(
+        await api.GET("/activities/{id}/transcript-proposals/{readId}", {
+          params: { path: { id: activityId, readId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;

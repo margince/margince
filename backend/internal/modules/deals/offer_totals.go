@@ -243,9 +243,8 @@ func roundHalfUp(x *big.Rat) *big.Int {
 	return new(big.Int).Quo(twice, new(big.Int).Mul(den, big.NewInt(2)))
 }
 
-// formatQuantity renders the contract's float64 quantity at the DB's
-// numeric(14,3) scale — the one conversion point from wire number to
-// exact decimal, so the engine and the column always agree.
+// formatQuantity renders a stored quantity at the column's numeric(14,3) scale.
+// A quantity arriving on the wire goes through wireDecimal and checkLineFigures.
 func formatQuantity(v float64) string { return strconv.FormatFloat(v, 'f', 3, 64) }
 
 // formatPct renders a percentage at numeric(5,2) scale.

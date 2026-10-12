@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -281,11 +282,18 @@ func (t updateRecord) applyRecord(ctx context.Context, args updateRecordArgs, pa
 	if err != nil {
 		return wireRecord{}, err
 	}
+	// A null in the patch means clear, read by the rule the REST door uses.
+	// The record store clears it or refuses it by name.
+	nulls, err := httperr.NullKeysOf(patch)
+	if err != nil {
+		return wireRecord{}, err
+	}
 	ref, err := t.p.Update(ctx, datasource.UpdateInput{
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID},
 		Patch:     patch,
 		Source:    ToolSource,
 		IfVersion: pin,
+		Clear:     nulls,
 	})
 	if err != nil {
 		return wireRecord{}, err

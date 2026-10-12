@@ -15,12 +15,8 @@ import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
-import {
-  company,
-  emptyPage,
-  jsonResponse,
-  stubFetch,
-} from "./company.fixtures";
+import { company, emptyPage, jsonResponse } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { ContactDetails } from "./contactdetails";
 import { DealScreen } from "./deals";
 

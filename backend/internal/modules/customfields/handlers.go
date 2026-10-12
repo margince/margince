@@ -74,12 +74,17 @@ func (h Handlers) CreateCustomField(w http.ResponseWriter, r *http.Request, _ cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	spec := FieldSpec{
 		Object:   string(req.Object),
 		Label:    req.Label,
 		Type:     string(req.Type),
 		Currency: req.Currency,
-		Source:   req.Source,
+		Source:   source,
 	}
 	if req.Options != nil {
 		spec.Options = *req.Options

@@ -4,7 +4,7 @@
 import { useCallback, useRef } from "react";
 import { api } from "../api/client";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 export const RELINK_KINDS = [
   "contact",
@@ -34,10 +34,11 @@ export function useRecordTargets() {
   const kindById = useRef(new Map<string, RelinkKind>());
   const search = useCallback(
     async (q: string): Promise<RecordPickerCandidate[]> => {
-      const { data, error } = await api.GET("/search", {
-        params: { query: { q, limit: 10 } },
-      });
-      if (error) throwProblem(error);
+      const data = unwrap(
+        await api.GET("/search", {
+          params: { query: { q, limit: 10 } },
+        }),
+      );
       const out: RecordPickerCandidate[] = [];
       for (const result of data.data) {
         // Only what a relink may point at. An activity is the message itself, a

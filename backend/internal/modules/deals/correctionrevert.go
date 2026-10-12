@@ -37,6 +37,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -162,15 +163,8 @@ func (s *Store) restoreCorrectedFields(
 	// per-field conflict check below cannot — a field edited away and back to
 	// the exact value this correction would also produce compares equal there
 	// and would otherwise pass unnoticed.
-	if ifVersion != nil {
-		var version int64
-		if err := tx.QueryRow(ctx, `SELECT version FROM `+dealTable+` WHERE id = $1`,
-			correction.DealID.UUID).Scan(&version); err != nil {
-			return fmt.Errorf("read the deal's version to check against If-Match: %w", err)
-		}
-		if version != *ifVersion {
-			return apperrors.ErrVersionSkew
-		}
+	if err := storekit.EnsureIfMatch(ctx, tx, dealTable, correction.DealID.UUID, ifVersion); err != nil {
+		return err
 	}
 	patch := storekit.NewPatch()
 	if err := s.buildReversalPatch(ctx, tx, correction, before, patch); err != nil {
@@ -408,9 +402,7 @@ func setReversalField(patch *storekit.Patch, field string, current, wanted json.
 // consumer can tell it from a fresh correction moving the same column.
 func reversalFields(patch *storekit.Patch) map[string]any {
 	fields := map[string]any{"close_date_correction": "reversal"}
-	for field, v := range patch.After() {
-		fields[field] = v
-	}
+	maps.Copy(fields, patch.After())
 	return fields
 }
 

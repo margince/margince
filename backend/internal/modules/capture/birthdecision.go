@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -122,7 +123,8 @@ func decideBirthTx(
 	if memberBound && actorUserID(ctx) == ids.Nil {
 		return birthDecision{}, fmt.Errorf(
 			"capture: %q declares a member-bound credential but this capture names no member",
-			fields.ChannelProvider)
+			fields.ChannelProvider,
+		)
 	}
 	// Whose correspondence this is, which decides whether any of the five steps
 	// below has anything to say about it.
@@ -350,7 +352,7 @@ func heldCounterpartyTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 			   AND ((h.kind = 'address' AND h.value = ANY($1::text[]))
 			     OR (h.kind = 'domain' AND EXISTS (
 			           SELECT 1 FROM unnest($2::text[]) d
-			            WHERE d = h.value OR d LIKE '%.' || h.value))))`,
+			            WHERE d = h.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("h.value")+`))))`,
 		addresses, domains, user).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("capture: reading this seat's counterparty holds: %w", err)

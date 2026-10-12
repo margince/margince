@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
+import { Building2, CircleCheck, History, Mail, Users } from "lucide-react";
 import type { components } from "../api/schema";
 import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
@@ -309,7 +309,7 @@ function RunHead({
     <div className="capture-head" aria-live="polite">
       <span className="capture-mark" aria-hidden>
         {state === "done" ? (
-          <CheckCircle2 />
+          <CircleCheck />
         ) : (
           <History className={reading ? "spin-slow" : ""} />
         )}

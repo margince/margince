@@ -190,7 +190,7 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--borderSubtle);
-  background: color-mix(in srgb, var(--bgCard) 70%, transparent);
+  background: color-mix(in srgb, var(--bgInset) 70%, transparent);
 }
 
 .ob-stage-who {

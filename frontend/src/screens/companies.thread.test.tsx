@@ -22,8 +22,8 @@ import {
   company360,
   companyBackstop,
   jsonResponse,
-  stubFetch,
 } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 
 afterEach(() => {
   cleanup();

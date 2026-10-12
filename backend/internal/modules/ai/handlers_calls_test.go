@@ -17,13 +17,11 @@ import (
 func TestWireAiCallDetailMapsPayloadAndAttempts(t *testing.T) {
 	sentinel := "provider_unavailable"
 	detail := CallDetail{
-		CallSummary: CallSummary{
-			ID: ids.NewV7(), OccurredAt: time.Date(2026, 7, 20, 10, 0, 0, 0, time.UTC),
-			Task: "capture_classify", Tier: "cheap_cloud", Provider: "gemini",
-			ModelID: "gemini-2.5-flash", ServedModel: "gemini-2.5-flash",
-			Attempt: 2, TokensIn: 100, TokensOut: 20, LatencyMS: 900,
-			ErrorSentinel: &sentinel, HasPayload: true,
-		},
+		ID: ids.NewV7(), OccurredAt: time.Date(2026, 7, 20, 10, 0, 0, 0, time.UTC),
+		Task: "capture_classify", Tier: "cheap_cloud", Provider: "gemini",
+		ModelID: "gemini-2.5-flash", ServedModel: "gemini-2.5-flash",
+		Attempt: 2, TokensIn: 100, TokensOut: 20, LatencyMS: 900,
+		ErrorSentinel: &sentinel, HasPayload: true,
 		ServedIdentitySource: "configured",
 		ContextScopes:        []string{"identity"},
 		ContextFingerprint:   "abc",
@@ -79,7 +77,7 @@ func TestBothCallWiresSayADecisionModelWasAsked(t *testing.T) {
 // sending an empty string.
 func TestWireAiCallNamesEachAttemptsKindAndBinding(t *testing.T) {
 	wire := wireAiCall(CallDetail{
-		CallSummary: CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, Tier: "cheap_cloud"},
+		ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion, Tier: "cheap_cloud",
 		Attempts: []CallAttempt{
 			{Attempt: 1, Kind: callKindDecision, Tier: string(TierDecideLane), Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13"},
 			{Attempt: 2, IsTerminal: true, Kind: callKindCompletion, AttemptReason: attemptReasonDecisionBelowFloor},
@@ -104,7 +102,7 @@ func TestWireAiCallCarriesEachAttemptsServedIdentityAndAnswer(t *testing.T) {
 	logical := ids.NewV7()
 	sentinel := "provider_error"
 	wire := wireAiCall(CallDetail{
-		CallSummary:   CallSummary{ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion},
+		ID: ids.NewV7(), Task: "site_triage", Kind: callKindCompletion,
 		LogicalCallID: logical,
 		Attempts: []CallAttempt{
 			{

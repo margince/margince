@@ -57,8 +57,6 @@ func (e *privacyEnv) ownerOf(t *testing.T, id ids.ContactID) *ids.UUID {
 	return got
 }
 
-func visibility(v string) *string { return &v }
-
 // TestAWorkspaceContactCanBeMadePrivateAgain is the direction that did not
 // exist, and the whole reason for the change.
 func TestAWorkspaceContactCanBeMadePrivateAgain(t *testing.T) {
@@ -70,7 +68,7 @@ func TestAWorkspaceContactCanBeMadePrivateAgain(t *testing.T) {
 	}
 
 	if _, err := e.store.UpdateContact(e.as(e.owner, principal.RowScopeOwn), published,
-		UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+		UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making a published contact private: %v", err)
 	}
 
@@ -96,7 +94,7 @@ func TestAPrivateContactCanBePublishedThroughThePatch(t *testing.T) {
 	}
 
 	if _, err := e.store.UpdateContact(e.as(e.owner, principal.RowScopeOwn), captured,
-		UpdateContactInput{Visibility: visibility("workspace")}); err != nil {
+		UpdateContactInput{Visibility: new("workspace")}); err != nil {
 		t.Fatalf("publishing a captured contact: %v", err)
 	}
 
@@ -128,7 +126,7 @@ func TestNarrowingAContactNamesAnOwnerForIt(t *testing.T) {
 	// owner, so nothing is filled in and the contact stays the owner's — not
 	// the narrowing colleague's.
 	if _, err := e.store.UpdateContact(e.as(e.teammate, principal.RowScopeTeam), published,
-		UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+		UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("narrowing a colleague's contact: %v", err)
 	}
 
@@ -157,7 +155,7 @@ func TestAWriteGrantHolderMovesVisibility(t *testing.T) {
 	// The teammate holds `contact: update` and reads the row under team scope,
 	// which is what EnsureWritable admits.
 	if _, err := e.store.UpdateContact(e.as(e.teammate, principal.RowScopeTeam), published,
-		UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+		UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("a colleague who may write the record could not narrow it: %v", err)
 	}
 	if got := e.visibilityOf(t, published); got != "owner" {
@@ -192,7 +190,7 @@ func TestCapturePrivacyStillHidesAContactFromTheNewDoor(t *testing.T) {
 		{"an admin", e.admin, principal.RowScopeAll},
 	} {
 		_, err := e.store.UpdateContact(e.as(reader.user, reader.scope), captured,
-			UpdateContactInput{Visibility: visibility("workspace")})
+			UpdateContactInput{Visibility: new("workspace")})
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s publishing somebody else's capture-private contact: err = %v, want not found",
 				reader.name, err)
@@ -226,7 +224,7 @@ func TestNarrowingRefusesToMakeARecordNobodyCanRead(t *testing.T) {
 			t.Fatalf("seeding an ownerless contact: %v", err)
 		}
 		if _, err := e.store.UpdateContact(ctx, id,
-			UpdateContactInput{Visibility: visibility("owner")}); err == nil {
+			UpdateContactInput{Visibility: new("owner")}); err == nil {
 			t.Error("an admin narrowed an ownerless contact — the row is now readable by nobody")
 		}
 	})
@@ -235,7 +233,7 @@ func TestNarrowingRefusesToMakeARecordNobodyCanRead(t *testing.T) {
 		published := e.captureContact(t, "workspace")
 		ctx := e.as(e.owner, principal.RowScopeOwn)
 		if _, err := e.store.UpdateContact(ctx, published, UpdateContactInput{
-			Visibility: visibility("owner"),
+			Visibility: new("owner"),
 			Clear:      []string{"owner_id"},
 		}); err == nil {
 			t.Error("a contact was made private with its owner cleared — nobody can read it")
@@ -269,7 +267,7 @@ func TestAStaleVisibilityWriteIsRefused(t *testing.T) {
 
 	// Its owner makes it private in between.
 	if _, err := e.store.UpdateContact(ctx, published,
-		UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+		UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making it private: %v", err)
 	}
 
@@ -320,7 +318,7 @@ func TestContactAuthorizationIsRecheckedUnderTheRowLock(t *testing.T) {
 			return err
 		}
 		if _, err := e.store.UpdateContact(e.as(e.owner, principal.RowScopeOwn), published,
-			UpdateContactInput{Visibility: visibility("owner")}); err != nil {
+			UpdateContactInput{Visibility: new("owner")}); err != nil {
 			t.Fatalf("the owner privatizing mid-race: %v", err)
 		}
 		current, err := readContact(colleague, tx, published, storekit.LiveOnly, active)

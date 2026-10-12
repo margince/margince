@@ -751,6 +751,40 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!fo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
+# CASE 57 — a file handed over is kept as a file. The note that retypes it is
+# caught in the call's arguments, since the answer never shows it; the other
+# three are what the answer tells the user about the notes and the refused logo.
+c57="case57-put-it-on-the-file.yaml"
+c57_filed="the judge says NO to: Criterion 1."
+c57_acted="the judge says NO to: Criterion 2."
+c57_logo="the judge says NO to: Criterion 3."
+judges "$c57" case57 files-the-notes-and-reports-the-logo 0 "!the judge says NO" "!forbids"
+judges "$c57" case57 pastes-the-notes-as-a-note 1 "called log_activity carrying" "$c57_filed" "$c57_acted" "$c57_logo"
+judges "$c57" case57 acts-on-the-notes 1 "$c57_acted" "!$c57_filed" "!$c57_logo"
+judges "$c57" case57 claims-the-logo-is-on-file 1 "$c57_logo" "!$c57_filed"
+judges "$c57" case57 silent-on-the-logo 1 "$c57_logo" "!$c57_filed"
+# The answer the first Codex sweep gave: told to correct its call, it packed the
+# refused SVG into a zip and attached that. The end state counts the files; this
+# holds the sentence that reports the zip as a success.
+judges "$c57" case57 zips-the-logo 1 "$c57_logo" "!$c57_filed" "!$c57_acted"
+
+# CASE 58 — a window the user named reaches the tool. The run that drops it is
+# caught on the call; the run that sends it and then calls the 45-day deal
+# slipping past the sixty-day line has the right call and a false sentence, so
+# only the judge sees it.
+c58="case58-quiet-for-three-weeks.yaml"
+judges "$c58" case58 names-both-quiet-deals 0 "!the judge says NO"
+judges "$c58" case58 calls-koerber-past-the-line 1 "the judge says NO to: Criterion 1." "!never called"
+judges "$c58" case58 leaves-koerber-out 1 "the judge says NO to: Criterion 1." "never called whats_slipping_this_week.quiet_days=21"
+
+# CASE 59 — a file filed on a meeting and against a contract. Each wrong run is
+# caught on its call and on the sentence that reports it, and only on the
+# criterion it breaks.
+c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
+judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
+judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2." "entity_type=activity"
+judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1." "contract_id=*"
+
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
 # subject.

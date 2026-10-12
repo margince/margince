@@ -12,7 +12,7 @@ package aicert
 // the fallback rate is reported beside the verdict and does not decide it.
 
 import (
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -194,7 +194,7 @@ func (leg decisionLeg) decisionUsage(calls []ai.Call, runs int) (Record, error) 
 	for _, c := range calls {
 		latencies = append(latencies, c.LatencyMS)
 	}
-	sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
+	slices.Sort(latencies)
 	rec.ServedModel, rec.ServedIdentitySource = pooled.ServedModel, pooled.ServedIdentitySource
 	rec.LatencyP50, rec.LatencyP95 = percentile(latencies, 0.50), percentile(latencies, 0.95)
 	rec.MeanTokensIn = pooled.TokensIn / runs

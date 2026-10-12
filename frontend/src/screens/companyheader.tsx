@@ -15,14 +15,14 @@ import { useT } from "../i18n";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { throwProblem, useViewerId } from "./common";
+import { unwrap, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import { rosterOwnerName, useRoster } from "./entityref";
+import { useMemberName } from "./membernames";
 import { MergeAction } from "./merge";
-import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
 // The account header's editable pieces: the owner, changed in place
@@ -128,19 +128,6 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   return undefined;
 }
 
-// What to call an owner the roster's answer does not name. "No longer in the
-// user list" is a claim about a read that came back WITHOUT them, so it is the
-// only reading this screen supplies; still reading, read failed and walk stopped
-// short belong to the roster and are spelled once there. Shared by every control
-// here that names the current owner, so none goes on making the claim alone.
-function unresolvedOwnerLabel(
-  roster: Readonly<{ isPending: boolean; isError: boolean }>,
-  partial: boolean,
-  t: ReturnType<typeof useT>,
-): string {
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
-}
-
 // Exported for the same reason as useCompanyFieldPatch/useCompanyReadOnlyReason
 // above: the rail's Details grid edits the SAME field through the SAME
 // roster read, the SAME not-in-roster fallback and the SAME
@@ -169,25 +156,29 @@ export function CompanyOwnerControl({
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
-  const allMembers = useRosterNames("user", true);
-  const rosterPartial = useRosterPartial("user", true);
+  const ownerName = useMemberName(company.owner_id);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
   // The current owner may not be offerable (invited, deactivated, or past the
-  // walk), and a select whose value is no option renders blank. An invited one
-  // is named; for the rest, `unresolvedOwnerLabel` says which honest sentence.
+  // walk), and a select whose value is no option renders blank. Named by id
+  // regardless: `rosterOwnerName` says the true sentence for the rest.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
     owners.unshift({
       value: company.owner_id,
-      label:
-        memberName(allMembers.data, company.owner_id) ??
-        unresolvedOwnerLabel(roster, rosterPartial, t),
+      // `company.owner_id` is truthy in this branch, so `unowned` is never
+      // read; passed anyway so the call reads the same as every other one.
+      label: rosterOwnerName(
+        company.owner_id,
+        ownerName,
+        t,
+        t("co.pulse.unowned"),
+      ),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
@@ -223,10 +214,10 @@ export function CompanyOwnerControl({
         if (!value) {
           return t("co.pulse.unowned");
         }
-        return (
-          owners.find((user) => user.value === value)?.label ??
-          unresolvedOwnerLabel(roster, rosterPartial, t)
-        );
+        // Every value this control can hold is one of the options above: the
+        // current owner is unshifted in when the walk misses them, and any
+        // other value is a seat the picker itself offered.
+        return owners.find((user) => user.value === value)?.label;
       }}
       // Taking an unowned account goes through the claim, the door open to
       // every seat; naming a colleague is a patch, offered only to a reader
@@ -356,17 +347,16 @@ export function CompanyActionBadges({
           sourceName={company.display_name}
           searchTargets={searchCompanyTargets}
           merge={async (targetId) => {
-            const { data, error } = await api.POST("/companies/{id}/merge", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-              body: { target_id: targetId },
-            });
-            if (error) {
-              throwProblem(error, t);
-            }
-            return data;
+            return unwrap(
+              await api.POST("/companies/{id}/merge", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+                body: { target_id: targetId },
+              }),
+              t,
+            );
           }}
           invalidate="companies"
           recordKey="company"
@@ -426,16 +416,14 @@ export function CompanyActionBadges({
             name: company.display_name,
           })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/companies/{id}", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.DELETE("/companies/{id}", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+              }),
+            );
           }}
           invalidate="companies"
           recordKey="company"
@@ -472,10 +460,3 @@ export function companyWebsite(company: Company): string | undefined {
     (primaryDomain ? `https://${primaryDomain}` : undefined)
   );
 }
-
-// useAccountChronology assembles the middle column's history: what happened
-// with this account, what changed about the record, or both in one order.
-//
-// The two feeds page independently, so "both" is not a concatenation — the
-// merge is cut where it stops being provably complete (mergeChronology), and
-// the cut is stated rather than left to look like the end of the history.

@@ -1,117 +1,122 @@
-# Operate sales reporting
+<!-- prose:plain -->
+# Run sales reporting
 
 ## Set up reporting
 
-1. Apply additive migrations using the normal deployment procedure. Back up the
-   installation before deploying. Existing historical rows are not given invented
-   event owners, rates or customer eligibility.
-2. Reporting is available on every installation. API, MCP and workers use the same
-   evaluator; no deployment switch selects a different analytics implementation.
-3. Review role grants for `report_definition`, `report_edition`, `report_schedule`,
-   `sales_target`, `reporting_framework` and `reporting_credit`. Data-object grants,
-   field masks and team oversight still constrain the numbers. Read seats cannot mutate.
-4. In Analytics → Definitions, publish the agreed template and qualifying stages.
-   Mappings are versioned and effective prospectively. Agree target metrics and
-   calendar periods before setting commitments.
-5. Enable an `erase` retention policy for `report_edition` before enabling schedules.
-   Select at most 20 fixed team/pipeline capture contexts. Workspace and configured-context forecast captures share one daily job.
-6. Save a view, capture an edition, inspect a mark's evidence, export it and repeat
-   under a narrower reader. Validate totals and business-timezone boundaries against
-   the same context before widening access.
+1. Apply the additive migrations with the normal deployment steps. Back up the
+   installation before you deploy. Old rows get no made-up event owners, rates or
+   customer eligibility.
+2. Know that reporting is on for every installation. The API, MCP and workers use the same
+   evaluator, and no deployment switch chooses another analytics engine.
+3. Review the role grants for `report_definition`, `report_edition`, `report_schedule`,
+   `sales_target`, `reporting_framework` and `reporting_credit`. Grants on kinds of data,
+   field masks and team oversight still limit the numbers. A read seat cannot change data.
+4. In Analytics → Definitions, publish the template and stages that you agreed on.
+   Mappings have versions, and they apply from now on, not to the past. Agree on target metrics and
+   calendar periods before you set commitments.
+5. Turn on an `erase` retention policy for `report_edition` before you turn on schedules.
+   Choose at most 20 fixed team or pipeline capture contexts. The workspace and the contexts you set share one daily forecast capture job.
+6. Save a view, capture an edition, look at the evidence of a mark, and export it.
+   Then do it again as a reader with a smaller view. Check totals against the same context before you give more users access.
+   Check the business time zone at the start and end of each day too.
 
 ## Upgrade from a flag-gated installation
 
-If reporting was disabled after a pilot, call `POST /v1/admin/reporting/pause`
-before upgrading and verify that schedules are disabled. Otherwise enabled
-schedules resume their bounded catch-up (up to twelve missed occurrences).
-Removing the retired configuration key does not pause a schedule.
+If you turned reporting off after a pilot, call `POST /v1/admin/reporting/pause`
+before you upgrade, and check that schedules are off. If you do not, schedules that are on
+start again, and make up the runs they missed (up to 12 of them).
+To remove the old settings key does not pause a schedule.
 
-Older forecast captures without a population fingerprint cannot become a
-comparable reporting baseline. New captures establish history prospectively;
-no backfill invents a population for old observations. Historical down-migration
-errors may mention disabling the retired flag: use durable schedule pause instead.
+Old forecast captures without a population fingerprint cannot become a
+reporting baseline that you can compare against. New captures build history from now on.
+No backfill makes up a population for old data. An old error from a down migration
+may say to turn off the old flag: use the schedule pause, which lasts, instead.
 
 ## Understand the workers
 
-`report_schedule_sweep` materializes due runs and publishes bounded editions.
-Run identity includes the schedule revision and intended occurrence. Leases and
-fences prevent a stale attempt from replacing another publication. Attempts use
-bounded backoff; run history exposes failure and suspension. Catch-up retains the
-newest twelve occurrences and records skipped older occurrences.
+`report_schedule_sweep` turns runs whose time has come into records, and it publishes editions within limits.
+The identity of a run includes the schedule revision and the time the run is for. Leases and
+fences stop a stale try from taking the place of another publication. Tries wait longer each time, up to a limit.
+Run history shows failure and pauses. When it makes up runs, it keeps the
+12 newest runs, and records the older runs it skipped.
 
-`forecast_snapshot_sweep` captures configured fixed contexts as well as the
-workspace. Contexts are deduplicated and processed least-recently attempted first,
-with per-context and overall budgets. Status includes last attempt, actual last
-capture, a safe failure reason and next expected capture. Retry the existing job
-through the operational job interface after correcting a removed team/pipeline.
-A new quarter or changed population needs compatible captures; it never falls back
-to a different team's history.
+`forecast_snapshot_sweep` captures the fixed contexts you set, and the
+workspace too. It removes contexts that show up twice. It works first on the context whose last try is oldest,
+with limits for each context and for all of them. The status shows the last try, the
+last capture that worked, a safe failure reason and the next capture it expects. After you fix a team or pipeline that someone removed,
+try the job again through the job tools. A new period, or a changed population, needs
+captures that match; it never uses the history of another team instead.
 
-## Pause schedules or roll back
+## Pause schedules or go back to old code
 
-An authorized human administrator can call `POST /v1/admin/reporting/pause`.
-It durably disables all reporting schedules and advances their versions. Verify
-the changed schedules and run history. Each schedule needs an explicit decision
-to resume; restarting API or worker does not resume it.
+A human admin with the right grant can call `POST /v1/admin/reporting/pause`.
+It turns off all reporting schedules until someone starts them again, and steps
+their versions up. Check the changed schedules and the run history. Each schedule
+needs its own decision to start again; a new start of the API or worker does not start it.
 
-Keep the additive schema and stored editions during a code rollback. Do not reverse
-migrations to remove collected facts. Down migrations support an unused installation
-and refuse once the affected reporting data exists. Daily forecast capture, privacy
-erasure, SAR and retention continue independently of paused reporting schedules.
+Keep the additive schema and the stored editions when you go back to old code. Do not run
+migrations down to remove facts that the system stored. Down migrations work on an installation that no one used,
+and refuse once reporting data exists. The daily forecast capture, privacy
+erase, SAR and retention go on, even while reporting schedules are paused.
 
-## Investigate a discrepancy
+## Look into numbers that do not agree
 
-Start with the evaluation key, scope, timezone, interval, pipeline, definition and
-coverage on the answer. Sales won and win rate follow the current deal owner;
-qualification and SDR outcomes use their stated attribution rules. Current-state
-charts use their capture time. Target actuals have their own containing period.
-Use the evidence endpoint with the returned evaluation key and timestamp. If
-sources changed, the response asks for refresh rather than attaching new rows to
-an old total. Saved editions read frozen contributions instead of live records.
+Start with the evaluation key, scope, time zone, time window, pipeline, definition and
+coverage on the answer. Sales won and the win rate follow the current deal owner.
+Qualification and SDR outcomes use their own stated rules for who gets the credit. Charts of the current state
+use their capture time. Target actuals have their own period.
 
-The common evaluator serves HTTP, `read_reporting`, exports and typed report
+Use the evidence endpoint with the evaluation key and time that the answer gave you. If
+sources changed, the answer asks for a refresh, and it does not add new rows to
+an old total. Saved editions read frozen contributions, not live records.
+
+The one shared evaluator serves HTTP, `read_reporting`, exports and typed report
 references. `compose_analytics_report` cells may name `metric_ref` (selection plus metric) or
-`edition_ref` (edition ID plus metric), or a legacy saved-query cell; one
-reference is required. Metric references carry definition, unit, context and
-coverage with the resolved value. Keep partial/withheld metadata when rendering them.
+`edition_ref` (edition ID plus metric), or an old saved query cell. One
+reference must be there. Metric references carry the definition, unit, context and
+coverage with the value. When you show them, keep the `partial` and `withheld` marks.
 
-Requests are bounded to supported dimensions and 100,000 contributions per metric;
-large populations must be narrowed. Evidence, target, report and edition lists are
-paginated. Edition pages contain at most five fully authorized results to bound
-the multiplied evidence-read cost. Publication rechecks the accountable human and holds authority changes
-through a generation fence in the publication transaction. Login counters do not
-take that fence; authority changes and erasure do. Scheduled work does not elevate that human's grants.
+Requests stay within the dimensions the server supports, and 100,000 contributions for each metric.
+When a request is over the limit, make its population smaller. Evidence, target, report and edition lists come
+in pages. An edition page holds at most 5 items that the reader may see in full, to limit
+the cost of reading evidence many times.
+
+Publication checks the accountable human again, and holds changes to rights
+through a generation fence in the publication transaction. Sign in counters do not
+take that fence; changes to rights and erasure do. Planned work does not give that human more grants.
 
 ## Privacy and retention
 
-Edition manifests and normalized contributions participate in subject access and
-erasure. A publication/erasure fence prevents old snapshots from restoring erased
-content. Reads recheck current grants. Win rate is re-derived from retained numerator and denominator facts, subject to
-the sample floor. Historical stage-age and forecast charts and comparisons are
-withheld when their original population cannot be represented safely. Retention
-leaves an expired tombstone and respects linked-source legal holds. Audit records
-identify editions and revisions without copying their complete frozen payloads.
+Edition manifests and stored contributions take part in subject access and
+erasure. A fence between publication and erasure stops old snapshots from putting back erased
+content. Reads check the current grants again.
+
+The win rate is worked out again from the retained numerator and denominator facts, under
+the sample floor. Some old charts and comparisons are kept back: the ones of how long deals stay in a stage, and forecast charts.
+The system keeps them back when it cannot show their first population safely. Retention
+leaves a tombstone, and does not break legal holds on linked sources. Audit records
+name editions and revisions, and do not copy their full frozen payloads.
 
 ## Pilot query budget
 
 Run `IT_ARGS='-tags=integration,bench' make test-it DIR=backend/internal/compose RUN=TestReportingEvaluationPilotBudget`
-against the disposable integration database. It creates 10,000 deals through the
-production writer, warms the evaluator and measures twenty complete four-chart
-evaluations. The pilot ceiling is 300 ms at the 95th percentile. The fixture is bounded and
-does not certify the full mid-market workload; rerun on the
-deployment's hardware and representative owner/target cardinality.
+against the integration database that is only for tests. It creates 10,000 deals through the
+production writer, runs the evaluator once first, and measures 20 full evaluations of four
+charts each. The pilot limit is `300 ms` at `p95`. The fixture has limits, and it
+does not certify the full workload of a real customer. Run it again on the
+hardware of the deployment, with owner and target counts like the real ones.
 
-## Disclosure and comparison boundaries
+## What a reader can see, and what you can compare
 
-Frozen editions preserve the captured figures but grant no lasting access to them.
-Current membership, source visibility and field masks intersect the published
-population on every read. Losing access to a former team can therefore narrow
-an old edition. A restricted reader receives neither peer target allocations
-nor synthesized zero-value peer rows, even when the edition has no contributions.
+Frozen editions keep the captured numbers, but they give no access to them that lasts.
+On every read, current membership, source visibility and field masks limit the published
+population. So if a reader no longer has access to a past team, an old edition can show them a smaller view.
+A reader with limited rights gets no target numbers of other users on the team.
+They also get no made-up rows for them with a value of 0, even when the edition has no contributions.
 
 A live evidence or CSV request carries the evaluation receipt. If source changes
-invalidate it, refresh the reading before exporting; serving newly changed rows
-under the old total would not reconcile. Frozen editions provide the durable
-alternative for repeatable review. Comparisons require matching
-population fingerprints and framework revisions, including company views;
-roster or framework changes are shown as a reason a comparison is unavailable.
+make it no longer valid, refresh the reading before you export. To serve rows that changed
+under the old total would not add up. Frozen editions are the lasting
+way to get a review you can do again. A comparison needs the same
+population fingerprints and framework revisions, company views too.
+When the roster or the framework changes, the system shows that as the reason a comparison is not available.

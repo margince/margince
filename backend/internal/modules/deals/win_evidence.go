@@ -27,12 +27,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // WonWithoutContractReasons is the closed vocabulary a human picks from when a
@@ -112,22 +112,11 @@ func (e *WonReasonDetailTooLongError) FieldFault() (field, code, message string)
 // characters of German must not be refused for the bytes their umlauts cost.
 const maxWonReasonDetail = 500
 
-// saysSomething reports whether a detail carries any visible character.
-//
-// TrimSpace alone is not enough: a zero-width space is not whitespace to Go and
-// not whitespace to Postgres either, so "\u200b" would satisfy both the Go check
-// and the column's CHECK while explaining precisely nothing — which is the state
-// the whole reason vocabulary exists to refuse.
+// saysSomething reports whether a detail carries any visible character. A
+// zero-width space is not white space to Go or to Postgres, so the column's
+// CHECK alone would accept a detail that explains nothing.
 func saysSomething(detail *string) bool {
-	if detail == nil {
-		return false
-	}
-	for _, r := range *detail {
-		if unicode.IsGraphic(r) && !unicode.IsSpace(r) && !unicode.Is(unicode.Cf, r) {
-			return true
-		}
-	}
-	return false
+	return detail != nil && values.HasVisibleText(*detail)
 }
 
 // ensureWinEvidence admits a transition to a won stage, or refuses it.

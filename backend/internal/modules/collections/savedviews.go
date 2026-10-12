@@ -325,6 +325,9 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 			p.Set("query", current.Query, *in.Query)
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "saved_view", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

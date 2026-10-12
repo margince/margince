@@ -15,6 +15,7 @@ import { DealSuggestionCard } from "./dealsuggestion";
 import { useDealSuggestions } from "./dealsuggestions.queries";
 import { PairDecision } from "./worklist.pair";
 import type { WorklistItem } from "./worklist.queries";
+import { TagSuggestionDecision } from "./worklist.tagsuggestion";
 
 export function SuggestionDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
@@ -56,6 +57,10 @@ export function answerBelow(
   // suggestion.
   if (item.source === "deal_suggestion" && !item.batch) {
     return { below: <SuggestionDecision item={item} /> };
+  }
+  // The suggested word and the mail that raised it, with Accept and Dismiss.
+  if (item.source === "tag_suggestion" && !item.batch) {
+    return { below: <TagSuggestionDecision item={item} /> };
   }
   return undefined;
 }

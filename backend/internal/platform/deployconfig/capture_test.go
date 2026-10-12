@@ -69,7 +69,7 @@ func TestTracePayloadsIsOnUnlessTheFileTurnsItOff(t *testing.T) {
 	if !(Capture{}).TracesPayloads() {
 		t.Error("TracesPayloads() on the zero block = false, want true")
 	}
-	if w := (Capture{TracePayloadsSetting: ptr(true)}).Warnings(); len(w) != 0 {
+	if w := (Capture{TracePayloadsSetting: new(true)}).Warnings(); len(w) != 0 {
 		t.Errorf("Warnings() = %v for a setting that acts, want none", w)
 	}
 }
@@ -105,8 +105,6 @@ func TestASilentFileGetsTheDefault(t *testing.T) {
 		t.Error("TracesPayloads() = false for a file that says nothing, want true")
 	}
 }
-
-func ptr(b bool) *bool { return &b }
 
 // The claim above TracesPayloads — that the default lives in one place — is
 // only true while nothing else READS the pointer field.

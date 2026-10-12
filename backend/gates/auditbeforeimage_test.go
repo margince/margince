@@ -158,10 +158,9 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/contacts/companytechnical.go:auditTechnicalEnrichment": "what a company publicly runs lands in company_fact and no column of the company moves, so no field has a prior value for an image to name. What was replaced is still recorded, and more precisely than an image would: the evidence carries the rows written AND the rows the reconciliation removed, which is what makes a mail provider moving to Microsoft 365 readable as a move rather than as an arrival",
 
-	"internal/modules/collections/tags.go:applyTagTx": "the tag row is untouched; the write inserts a taggable link, " +
-		"and the after image names the record it now points at.",
-	"internal/modules/collections/tagremove.go:removeTagTx": "the tag row is untouched; the write deletes a taggable link, " +
-		"and the after image names the record it stopped pointing at.",
+	"internal/modules/collections/tags.go:auditTagLink": "the tag row is untouched; the write inserts or deletes a " +
+		"taggable link, and the after image names the record. The helper is the subject because its signature admits " +
+		"nothing but a tagging image on a tag, so a new caller can only write the shape ratified here.",
 	"internal/modules/collections/memberwrite.go:recordMemberChange": "the list row is untouched; the write adds or " +
 		"removes a Shortlist membership, and the after image names the record that joined or left.",
 	"internal/modules/webhooks/store.go:RotateSecret": "the new signing secret replaces a value that must never be " +
@@ -212,6 +211,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/commissions/decide.go:voidOne":                                    "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                       "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                  "each room transition names its own verb and carries the patch images the move built",
+	"internal/platform/settings/delete.go:DeleteRawTx":                                  "each setting declares its own verb; the before image is the stored row it removes, and the after image is the registered default the key reads as once the row is gone",
 	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the

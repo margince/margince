@@ -1,84 +1,82 @@
+<!-- prose:plain -->
 # The AI provenance notice
 
-The sentence a model-written draft carries to say a model wrote it. It lives in
-one place, `draftfloor.AIProvenanceNotice`, and this page is why it is shaped the
-way it is.
+The sentence a draft from a model holds to say that a model wrote it. It sits in one place,
+`draftfloor.AIProvenanceNotice`, and this page says why it has the shape it has.
 
-This notice does not discharge an EU AI Act Art. 50 disclosure duty, and no
-comment or field description should claim it does. A reader who believes the
-claim (an engineer, or a customer's compliance officer reading the published
-contract) concludes a legal obligation is handled and stops looking.
+This notice does not meet a disclosure duty under EU AI Act Art. 50, and no comment or field description
+should claim it does. A reader who trusts the claim stops looking. That reader may be an engineer, or a
+compliance lead at a customer who reads the published contract. They would think a legal duty is
+handled.
 
 ## What it is
 
-It is an internal provenance signal. It tells the rep that these words came from
-a model, so they read and edit before sending.
+It is a provenance signal inside the product. It tells the rep that these words are from a model, so
+they read and edit before sending.
 
-The notice prompts the rep to review the draft. That review is what keeps an
-Art. 50(4) duty from applying, and it only works if the rep reads the sentence.
-So there is one spelling of it, held by `TestTheAIProvenanceNoticeHasOneSpelling`. A rep shown a different
-sentence by each surface learns to skim past all of them.
+The notice asks the rep to review the draft. That review is what keeps an Art. 50(4) duty from applying,
+and it only works if the rep reads the sentence. So there is one spelling of it, held by
+`TestTheAIProvenanceNoticeHasOneSpelling`. A rep shown a different sentence by each surface learns to
+skip past all of them.
 
 ## Why no duty attaches
 
-Art. 50(4) subparagraph 2 binds text "published with the purpose of informing
-the public on matters of public interest". A sales email to one contact is
-neither published nor public-interest, so the obligation in that subparagraph
-does not reach it. There is nothing to discharge.
+Art. 50(4), second part, binds text `published with the purpose of informing the public on matters of public interest`.
+A sales email to one contact is not published and not a matter of public interest. So the duty
+in that part does not reach it. There is nothing to meet.
 
-Art. 50(2), machine-readable marking, is a different obligation with a
-different addressee. It means watermarking and signed metadata, and it binds the
-**provider** of the AI system, which is the model vendor. It binds neither
-Margince nor our customers. A human-readable sentence in a JSON field is not machine-readable
-marking under any reading, so the `ai_disclosure` field descriptions do not claim
-to be.
+Art. 50(2), marking that a machine can read, is a different duty for a different party. It means a
+watermark and signed metadata, and it binds the **provider** of the AI system, which is the model
+vendor. It binds neither Margince nor our customers. A sentence for humans in a JSON field is not marking
+that a machine can read, under any reading. So the `ai_disclosure` field descriptions do not claim to be.
 
 ## Why the notice matters
 
-Where an Art. 50(4) obligation *would* reach the text, it drops away where the
-AI-generated content has undergone a process of human review or editorial
-control and editorial responsibility is held by a natural or legal entity.
-(Paraphrased; the regulation's own wording is worth reading in full before
-relying on this.)
+Where an Art. 50(4) duty *would* reach the text, it drops away in one case. That case is when the content
+the AI made has been through human review or editorial control. A human or a legal entity must also hold the
+editorial duty for it. (This is our own short version; read the law's own words in full before you
+depend on this.)
 
-The notice supports that exemption. The confirm-first composer (a draft a rep
-reads, edits and presses send on) clears the bar, because the
-Commission's guidance requires careful examination by someone competent to
-approve, alter or reject the substance. Superficial checks do not qualify.
+The notice supports that exception. The composer that needs a confirm first (a draft a rep reads, edits
+and presses send on) clears the bar. The guidance from the Commission needs a close look by someone able to
+approve, change or reject the content. A light check does not count.
 
-A send-without-review path would not clear that bar. Examples are a model that
-drafts and sends in one step, or an automation that fires outbound mail with
-nobody in the loop. The analysis on this page does not hold for such a path, so
-re-read this page before building one.
+A path that sends with no review would not clear that bar. One example is a model that drafts and sends
+in one step. Another is an automation that sends outbound mail with nobody in the loop. What this page
+says does not hold for such a path, so read this page again before you build one.
 
 ## Who sees it
 
-Do not generalise from one surface; they differ, and the difference matters.
+Do not take one surface as the rule for all; they differ, and that matters.
 
 | Surface | Where the notice goes | Who reads it |
 |---|---|---|
-| Composer reply draft, account/contact/lead drafts | The `ai_disclosure` field, rendered in the draft band | The rep only |
-| Offer regenerate | The `ai_disclosure` field, rendered in the offer banner | The rep only |
-| Warm-intro path (`renderIntroDraft`) | Formatted **into** `draft_body` | The rep, and the recipient if the body is sent unchanged |
+| A reply draft in the composer, account, contact and lead drafts | The `ai_disclosure` field, shown in the draft band | The rep only |
+| Offer made again | The `ai_disclosure` field, shown in the offer banner | The rep only |
+| The path for an intro draft (`renderIntroDraft`) | Put **into** `draft_body` | The rep, and the receiver if the body is sent with no change |
 
-The first two never append it to an outgoing body: the send payload carries
-subject, body, recipients and attachments, and the notice is not part of the
-body. The third does embed it, which is why the blanket claim "a recipient never
-sees it" is false and is not made anywhere.
+The first two never add it to the body that is sent. The send payload holds subject, body, receivers and
+attached files, and the notice is not part of the body. The third does put it in the body. So a claim for all paths like
+"a receiver never sees it" is false, and no text makes it.
 
 ## What is still open
 
-The wording itself. All three translations still call the sentence an Art. 50
-disclosure (`Offenlegung nach Art. 50`, `công bố theo Điều 50`, `EU AI Act
-Art. 50 disclosure`), which is the claim this page exists to correct. It is
-user-visible copy in three languages and a German-market question, so it is a
-product decision rather than a rename: margince#5920.
+The wording itself. All three languages still call the sentence an Art. 50 disclosure:
+`Offenlegung nach Art. 50`, `công bố theo Điều 50`, `EU AI Act Art. 50 disclosure`. That is the claim
+this page is here to correct. It is copy users see in three languages, and a question that turns on the
+law in Germany. So it is a product decision, not a rename:
+[issue 5920](https://github.com/margince/margince/issues/5920).
 
-## Standing caveat
+## Standing note
 
-This is desk research against the regulation text, the Commission's Art. 50 FAQ,
-the Wettbewerbszentrale's February 2026 guidance and one law-firm analysis. It
-is not legal advice and has not been confirmed by whoever gives us AI Act advice.
-Confirm it before relying on any of it in a customer-facing statement.
+This is research done by reading these sources:
 
-The name `AIProvenanceNotice` holds under every reading considered.
+- the text of the law;
+- the Art. 50 FAQ from the Commission;
+- the February 2026 guidance from the Wettbewerbszentrale;
+- one outside legal review.
+
+It is not legal advice, and the one who gives us AI Act advice has not confirmed it. Confirm it before
+you depend on any of it in a statement to customers.
+
+The name `AIProvenanceNotice` holds under every reading we looked at.

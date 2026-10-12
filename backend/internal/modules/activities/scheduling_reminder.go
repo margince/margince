@@ -151,7 +151,7 @@ func (s *Store) meetingReminderReady(ctx context.Context, row invitationRow) (bo
 		return false, s.markMeetingReminderUnavailable(ctx, row)
 	}
 	if row.Receipt == nil || s.calendar == nil {
-		return false, fmt.Errorf("meeting reminder: confirmed invitation has no receipt")
+		return false, errors.New("meeting reminder: confirmed invitation has no receipt")
 	}
 	state, err := s.calendar.Inspect(ctx, row.Host, row.Provider, row.Calendar, row.Receipt.EventID)
 	if err != nil {

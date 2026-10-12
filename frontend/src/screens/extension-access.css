@@ -62,25 +62,10 @@
   text-overflow: ellipsis;
 }
 
-/* The two matrix notices sit under the grid they are about. The gap is the
-   STACK's, declared on this container rather than handed to a notice: a
-   callout owns no layout, so anything that needs air gets it from where it
-   stands. `TableScroll` is the only other child, so this reaches the notices
-   and nothing else. */
-.ext-object > * + * {
-  margin-top: var(--space-2);
-}
-
-/* A sentence standing in the row list instead of in a row: the seat ceiling
-   above the matrices, and the line that says a unit registered nothing to
-   grant. `.settinglist` rules BETWEEN its children but only a `.settingrow`
-   pays for its own vertical rhythm, so a plain child owes its own. Both are
-   the list's FIRST child wherever they appear — a unit with no objects has no
-   seat ceiling to state — so a margin here can never push a hairline off the
-   row above it. */
-.settinglist > .ext-readonly,
-.settinglist > .ext-note {
-  margin: var(--space-3) 0;
+/* The unit's own sentences and notices, above its grids. A notice owns no
+   layout, so the air between them is the body's. */
+.ext-unit-body > * + * {
+  margin-top: var(--space-3);
 }
 
 /* The sentence that stands in for the page link when this build of the SPA has
@@ -133,19 +118,4 @@
    DELETE from the GET beside it. */
 .ext-method {
   margin-right: var(--space-1);
-}
-
-/* One registered object's grid and whatever it has to say about itself, in the
-   control column of a stacked row. A COLUMN, because `.settingrow-control` is
-   a flex row: the matrix and the two notices under it would otherwise sit
-   shoulder to shoulder. The separation between one object and the next is the
-   `SettingList` hairline now, which is why there is no panel edge here. */
-.ext-object {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.ext-note {
-  margin: var(--space-2) 0 0;
 }

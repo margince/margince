@@ -30,6 +30,14 @@ import (
 // invites one that says something subtly different.
 const sqlUnbounded = "true"
 
+// orUnbounded renders an empty scope clause as the unnarrowed predicate.
+func orUnbounded(clause string) string {
+	if clause == "" {
+		return sqlUnbounded
+	}
+	return clause
+}
+
 // countWeek tallies the week. One statement, because ten round trips for ten
 // integers is ten chances for the numbers to describe different moments.
 func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time) (Counts, error) {
@@ -46,9 +54,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	if err != nil {
 		return Counts{}, err
 	}
-	if dealScope == "" {
-		dealScope = sqlUnbounded
-	}
+	dealScope = orUnbounded(dealScope)
 
 	verbsPos := arg(privacy.ScrubVerbs())
 	completion := taskCompletionAtSQL("a", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))
@@ -139,9 +145,7 @@ func countWeekLeads(
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	// One window expression, three counts over it.
 	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + nonImportedLeadSQL
@@ -194,11 +198,11 @@ func countWeekLeads(
 // meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
 // hosted by them, or — where no host was recorded — filed by them.
 //
-// TWO readers ask it, the headline count here and the funnel in
-// weeklyscorecard.go, and they must not disagree: a meeting credited to
-// different contacts by the two panels is one page contradicting itself about the
-// same week. The caller supplies its own placeholders because the two queries
-// number their arguments differently.
+// THREE readers ask it, the headline count here, the funnel in
+// weeklyscorecard.go and the coverage in weeklycoverage.go, and they must not
+// disagree: a meeting credited to different contacts by two panels is one page
+// contradicting itself about the same week. The caller supplies its own
+// placeholders because the queries number their arguments differently.
 //
 // The fallback is bounded to rows with NO host on purpose. A meeting naming one
 // is that contact's, and letting its recorder also claim it would count one
@@ -276,9 +280,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	if err != nil {
 		return nil, err
 	}
-	if dealScope == "" {
-		dealScope = sqlUnbounded
-	}
+	dealScope = orUnbounded(dealScope)
 
 	// The week's closed list prints each deal's figure beside its name, so the
 	// mask reaches it here as it does the deal list. The `moved` leg below

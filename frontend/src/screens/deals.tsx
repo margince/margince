@@ -84,6 +84,7 @@ import {
   provenanceOf,
   QueryGate,
   throwProblem,
+  unwrap,
   useMe,
   useViewerId,
 } from "./common";
@@ -124,6 +125,13 @@ import { OutcomeReviewPanel } from "./deal360/outcomereview";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { DealBulkBar } from "./dealbulk";
 import { type CompanyNaming, useCompanyMarks } from "./dealcompanymarks";
+import { currencyBeside } from "./dealcurrency";
+import {
+  admittedDealFilters,
+  dealStatusFilter,
+  forecastCategoryFilter,
+  useAppliedCompanyName,
+} from "./dealdials";
 import { DealEmailAside } from "./dealemail";
 import { DealFiles } from "./dealfiles";
 import { lastMailColumn } from "./dealmailaside";
@@ -142,7 +150,6 @@ import {
   type OwnerNaming,
   rosterOwnerNaming,
   useEntityName,
-  useRoster,
 } from "./entityref";
 import { searchCompanies } from "./filterreference";
 import {
@@ -158,7 +165,9 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
+import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
+import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";
 import type { Project } from "./projects.form";
 import { RecordReading, RecordReadingPair, TimelineThread } from "./record360";
@@ -201,12 +210,11 @@ function usePipeline(pipelineId?: string | null) {
   return useQuery({
     queryKey: ["pipelines", pipelineId ?? "default"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
       const pipeline =
         (pipelineId &&
           data.data.find((candidate) => candidate.id === pipelineId)) ||
@@ -239,33 +247,9 @@ const VIEW_PARAM = "view";
 // choice to the server as a filter.
 const DEAL_SCREEN_DIALS: readonly string[] = [PIPELINE_PARAM, VIEW_PARAM];
 
-// FORECAST_FILTER_VALUES are the four buckets a deal's own column can hold.
-// `slipped` is the report's derivation from a claimed category and a close
-// date, so it is a dimension of the forecast tiles and never a filter here.
-const FORECAST_FILTER_VALUES = [
-  "commit",
-  "best_case",
-  "pipeline",
-  "omitted",
-] as const;
-
-// forecastCategoryFilter narrows a stored dial to what the wire admits.
-//
-// The value arrives as a bare string because a SAVED VIEW carries it, and a
-// view written before a category was renamed — or by hand — can hold anything.
-// An unadmitted value selects nothing rather than being sent: the request
-// would be refused, and a list that fails to load says less than one that
-// simply is not narrowed. Same reading `tag_mode` takes of a stored mode its
-// own enum no longer admits.
-function forecastCategoryFilter(
-  value: string | undefined,
-): (typeof FORECAST_FILTER_VALUES)[number] | undefined {
-  return FORECAST_FILTER_VALUES.find((admitted) => admitted === value);
-}
-
 // dealsQueryParams builds the board's /deals query — the full dial set
 // (pipeline/stage/owner/company filters + sort).
-function dealsQueryParams(f: DealFilters) {
+export function dealsQueryParams(f: DealFilters) {
   const { filters } = f;
   return {
     limit: 100,
@@ -275,7 +259,10 @@ function dealsQueryParams(f: DealFilters) {
     sort: f.sort || undefined,
     stage_id: filters.stage_id || undefined,
     owner_id: filters.owner_id || undefined,
+    owner_team_id: filters.owner_team_id || undefined,
+    unassigned: filters.unassigned === "true" ? true : undefined,
     company_id: filters.company_id || undefined,
+    status: dealStatusFilter(filters.status),
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     forecast_category: forecastCategoryFilter(filters.forecast_category),
@@ -308,13 +295,11 @@ function useDeals(f: DealFilters) {
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/deals", {
-        params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals", {
+          params: { query: { ...dealsQueryParams(f), cursor: pageParam } },
+        }),
+      );
     },
     getNextPageParam: (last) =>
       last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
@@ -332,6 +317,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.company_id) out.company_id = filters.company_id;
+  const status = dealStatusFilter(filters.status);
+  if (status) out.status = status;
   if (filters.partner_company_id)
     out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
@@ -358,15 +345,18 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
 // have told a reader whose report answered 422 to press a filter instead of
 // showing them the failure.
 //
-// A TAG and a SEARCH have no filter field on the report — sending one is a
-// 422 — so the totals would count deals the board is not showing. Every other
-// dial is one the report takes, and the report measures every deal the reader
-// may see, which is the set `GET /deals` draws as cards.
+// A tag, a search, a team and the unassigned queue have no filter field on the
+// report, and sending one is a 422. The totals would count deals the board is
+// not showing. The report takes every other dial, and it measures every deal
+// the reader may see, which is the set `GET /deals` draws as cards.
 function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (parseTagIDs(f.filters.tag_id).length > 0) {
     return "deals.totalsNoTagFilter";
   }
   if (f.q) return "deals.totalsNoSearch";
+  if (f.filters.owner_team_id || f.filters.unassigned === "true") {
+    return "deals.totalsNoTeamFilter";
+  }
   return undefined;
 }
 
@@ -689,7 +679,7 @@ export function mapDealCreate(
     expected_arr_minor: expectedArr
       ? toMinorUnits(Number(expectedArr), currency)
       : null,
-    currency,
+    currency: currencyBeside(currency, amount, expectedArr),
     company_id: str(values.company_id) || null,
     partner_company_id: str(values.partner_company_id) || null,
     // The empty option means the caller made no claim, and null is how that
@@ -747,12 +737,11 @@ export function usePartnerOptions(
   const partners = useQuery({
     queryKey: ["partners", "options"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/partners", {
-        params: { query: { limit: 200 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/partners", {
+          params: { query: { limit: 200 } },
+        }),
+      );
       return data.data;
     },
     staleTime: 60_000,
@@ -773,12 +762,11 @@ export function usePartnerOptions(
       // relationship_type=partner reads the same set from the other side, so
       // the page is partner companies rather than the first N companies of
       // any kind. The cap matches /partners' own.
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { relationship_type: "partner", limit: 200 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies", {
+          params: { query: { relationship_type: "partner", limit: 200 } },
+        }),
+      );
       return data.data;
     },
   });
@@ -1363,21 +1351,20 @@ function useAdvanceDeal() {
     mutationKey: ["deal-edit"],
     mutationFn: async (input: AdvanceInput) => {
       const terminal = input.toStage.semantic !== "open";
-      const { data, error } = await api.POST("/deals/{id}/advance", {
-        params: {
-          path: { id: input.dealId },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: {
-          to_stage_id: input.toStage.id,
-          ...(terminal ? { status: input.toStage.semantic } : {}),
-          ...closingFields(input),
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/advance", {
+          params: {
+            path: { id: input.dealId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: {
+            to_stage_id: input.toStage.id,
+            ...(terminal ? { status: input.toStage.semantic } : {}),
+            ...closingFields(input),
+          },
+        }),
+        t,
+      );
     },
     onSuccess: (deal, input) => {
       // The advanced deal goes into the cache SYNCHRONOUSLY, before the
@@ -1466,6 +1453,7 @@ function narrowsTheDealList(query: ListQuery): boolean {
 function dealFilterChips(
   stages: Stage[],
   t: ReturnType<typeof useT>,
+  companyName: string | undefined,
 ): ListChip[] {
   return [
     {
@@ -1480,6 +1468,7 @@ function dealFilterChips(
       allLabel: t("deals.filterCompanyAll"),
       options: [],
       search: searchCompanies,
+      appliedName: companyName,
     },
   ];
 }
@@ -1593,11 +1582,10 @@ function DealBoardBody({
 }>) {
   const t = useT();
   const recordZone = useRecordZone();
-  // Only walked when a card has an owner to name: a board of unowned deals
-  // needs no roster read to say so.
-  const roster = useRoster(
-    "user",
-    loadedDeals.some((deal) => Boolean(deal.owner_id)),
+  // Named by id, batched into one request for every card's owner at once;
+  // an unowned deal contributes no id, so a board of them asks nothing.
+  const ownerNames = useMemberNames(
+    loadedDeals.flatMap((deal) => (deal.owner_id ? [deal.owner_id] : [])),
   );
   // Every company the CARDS name. The picker's capped page answers most of them
   // for free; the rest are resolved by id (useCompanyMarks), so no card is left
@@ -1637,7 +1625,7 @@ function DealBoardBody({
                   stageTotalsQuery.data ?? new Map(),
                   companyMarks,
                   totalsWithheld ? t(totalsWithheld) : undefined,
-                  rosterOwnerNaming(roster),
+                  rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
                 cardDragHandlers={cardDragHandlers}
@@ -1771,15 +1759,15 @@ function useDealScreenDials({
     }),
     [],
   );
-  const query = useMemo(
-    () =>
-      listQueryFromParams(
-        withoutScreenDials(params, DEAL_SCREEN_DIALS),
-        opening,
-        true,
-      ),
-    [params, opening],
-  );
+  const query = useMemo(() => {
+    const read = listQueryFromParams(
+      withoutScreenDials(params, DEAL_SCREEN_DIALS),
+      opening,
+      true,
+    );
+    const filters = admittedDealFilters(read.filters);
+    return filters === read.filters ? read : { ...read, filters };
+  }, [params, opening]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
@@ -1861,45 +1849,41 @@ function DealCreateAction({
   startOpen: boolean;
 }>) {
   const t = useT();
-  // The picker asks the server for ONE company's projects, so the form's chosen
-  // company is what it is keyed on: a project is worked by several companies,
-  // and only the server can say which of them this one is on.
-  //
-  // The company comes from the OPEN FORM rather than from anything on this
-  // screen, because there is nothing else it could come from: a create form has
-  // no record, and the reader picks the company inside the same dialog. The
-  // form publishes its answers (CreateAction's onValuesChange) and the query
-  // follows them, which is the read `optionsFor` cannot do — it is a pure
-  // function of the values, so it can only filter a list already fetched, and a
-  // project list row names only its anchor company, so nothing in the browser
-  // can compute which projects a company is on.
+  // The picker asks the server for one company's projects, so it is keyed on
+  // the company the open form names. A create form has no record to take it
+  // from, and only the server knows which projects a company is on. The form
+  // publishes its answers (CreateAction's onValuesChange) and the query follows.
   const [formCompany, setFormCompany] = useState("");
   const openProjects = useProjectsOfCompany(formCompany || undefined);
 
-  const createDeal = async (values: Record<string, string>) => {
+  const createDeal = async (
+    values: Record<string, string>,
+    _rows: unknown,
+    idempotencyKey: string,
+  ) => {
     if (!pipeline) {
       throwProblem(null);
     }
-    // A project asked for on the form is born first, on the deal's company,
-    // so the deal can name it at birth.
+    // A project asked for on the form is born first, so the deal names it.
     const projectId = await resolveDealProject(
       values,
       values.company_id?.trim() || null,
       t,
+      idempotencyKey,
     );
-    const { data, error } = await api.POST("/deals", {
-      body: {
-        ...mapDealCreate(
-          { ...values, project_id: projectId ?? "" },
-          pipeline.id,
-        ),
-        ...cf.toBody(values),
-      },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
+    return unwrap(
+      await api.POST("/deals", {
+        params: { header: { "Idempotency-Key": idempotencyKey } },
+        body: {
+          ...mapDealCreate(
+            { ...values, project_id: projectId ?? "" },
+            pipeline.id,
+          ),
+          ...cf.toBody(values),
+        },
+      }),
+      t,
+    );
   };
 
   return (
@@ -2050,7 +2034,7 @@ export function DealsScreen({
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("deal");
   const pipelinesQuery = usePipelines();
-  const meQuery = useMe();
+  const ownerChips = useOwnerChips();
   const viewerId = useViewerId();
   const savedViews = useSavedViewTabs("deals");
   const {
@@ -2117,13 +2101,11 @@ export function DealsScreen({
   const companiesQuery = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
 
@@ -2175,7 +2157,8 @@ export function DealsScreen({
       query={savableDealQuery(dealsListState.query, pipelineId)}
     />
   );
-  const dealChips = dealFilterChips(stages, t);
+  const companyName = useAppliedCompanyName(query.filters.company_id);
+  const dealChips = dealFilterChips(stages, t, companyName);
   const tagChips = useTagChips();
   const rowSelection = dealRowSelection({
     view,
@@ -2240,14 +2223,13 @@ export function DealsScreen({
         // changes every row without touching `filters`. Naming it here is
         // what puts the reader back on page 1.
         scopeKey={effectivePipeline?.id ?? ""}
-        dataChips={[...dealChips, ...tagChips]}
+        dataChips={[...ownerChips, ...dealChips, ...tagChips]}
         dataViews={savedViews}
         selection={rowSelection}
         chips={dealSurfaceChips({
-          me: meQuery.data,
           partnerOptions,
           partnerApplied: query.filters.partner_company_id,
-          acquisitionSources: acquisitionSources,
+          acquisitionSources,
           retiredSuffix: t("deal.acquisitionRetired"),
         })}
         views={[...standardViews(viewerId, { sort: "" })]}
@@ -2416,7 +2398,7 @@ export function DealDetails({
             me: meId,
             currentOwner: deal.owner_id ?? null,
             currency: deal.currency ?? "",
-            acquisitionSources: acquisitionSources,
+            acquisitionSources,
             currentAcquisitionSource: deal.acquisition_source,
           }).map(
             (field): CreateField =>
@@ -2808,13 +2790,11 @@ export function useDeal(id: string) {
   return useQuery({
     queryKey: ["deal", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -2857,13 +2837,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const companies = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
     },
   });
   // The shared pending-approvals hook, not a second query on the same key: a
@@ -2898,25 +2876,21 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const offersQuery = useQuery({
     queryKey: ["deal-offers", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/offers", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/offers", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
   const createOffer = useMutation({
     mutationFn: async (currency: string) => {
-      const { data, error } = await api.POST("/deals/{id}/offers", {
-        params: { path: { id } },
-        body: { currency, source: "manual" },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deals/{id}/offers", {
+          params: { path: { id } },
+          body: { currency, source: "manual" },
+        }),
+      );
     },
     onSuccess: (offer: Offer) => {
       navigate({ screen: "offers", id: offer.id });
@@ -2931,12 +2905,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         input.verdict === "approve"
           ? "/approvals/{id}/approve"
           : "/approvals/{id}/reject";
-      const { error } = await api.POST(path, {
-        params: { path: { id: input.approvalId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: { path: { id: input.approvalId } },
+        }),
+      );
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["approvals", "pending"] }),

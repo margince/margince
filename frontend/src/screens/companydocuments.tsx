@@ -12,7 +12,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { DocumentExtractionPanel } from "./documentextraction";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -165,12 +165,11 @@ export function CompanyDocumentsCard({
   const query = useQuery({
     queryKey: ["companyDocuments", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/documents", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/documents", {
+          params: { path: { id: companyId } },
+        }),
+      );
       return data?.data ?? [];
     },
   });

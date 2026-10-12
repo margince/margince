@@ -43,6 +43,10 @@ func inputFixture() Input {
 			ID: "22222222-2222-4222-8222-222222222222", Kind: "email",
 			Subject: "Re: proposal", At: "2026-07-10T09:00:00Z",
 		}},
+		LastContact: &ActIn{
+			ID: "22222222-2222-4222-8222-222222222222", Kind: "email",
+			Subject: "Re: proposal", At: "2026-07-10T09:00:00Z",
+		},
 	}
 }
 
@@ -403,7 +407,7 @@ func TestDeterministicClosesWithWhatTheCompanyIs(t *testing.T) {
 func TestDeterministicSaysNothingAboutACompanyItKnowsNothingAbout(t *testing.T) {
 	for _, sentence := range Deterministic("company-1", Input{Name: "Acme"}, "en") {
 		for _, label := range floor.ProfileLabels {
-			if strings.Contains(sentence.Text, label.in(textlang.English)) {
+			if strings.Contains(sentence.Text, label.In(textlang.English)) {
 				t.Errorf("sentence %q talks about the company with no profile to talk from", sentence.Text)
 			}
 		}

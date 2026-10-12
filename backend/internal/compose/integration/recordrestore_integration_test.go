@@ -110,7 +110,7 @@ func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Original", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Original", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
@@ -154,7 +154,7 @@ func TestEndToEnd_anEntryAlreadyPutBackRefusesBySayingSo(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Twice", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Twice", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
@@ -186,7 +186,7 @@ func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Superseded", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Superseded", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -258,7 +258,7 @@ func TestEndToEnd_undoingAnUndoReopensTheOriginalEntry(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Reundo", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Reundo", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -295,7 +295,7 @@ func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Stale", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Stale", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -328,10 +328,10 @@ func TestEndToEnd_anEntryFromAnotherRecordIsNotFound(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var mine, theirs contactRecord
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Mine"}, nil, &mine); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Greta Mine"}, nil, &mine); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+theirs.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -384,7 +384,7 @@ func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -423,6 +423,7 @@ func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Greta Custom", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
 		t.Fatalf("create contact → %d", status)
@@ -475,7 +476,7 @@ func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
@@ -518,6 +519,7 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 	}
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Greta Dropped", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
 		t.Fatalf("create contact → %d", status)
@@ -563,7 +565,7 @@ func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
 	// Created with NO title, so the change below records a before-image of null.
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Greta Cleared"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Greta Cleared"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
@@ -640,6 +642,7 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Greta Address",
 		"address":   AnyMap{"city": "Hanoi", "line1": "1 First Street"},
 	}, nil, &created); status != 201 {
@@ -689,7 +692,7 @@ func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	for _, value := range []string{"B", "C"} {
@@ -758,7 +761,7 @@ func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
@@ -793,7 +796,7 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 
 	var created contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Named Forever"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "full_name": "Named Forever"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// full_name is not nullable in the contract and a record with no name is
@@ -823,7 +826,7 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
+		AnyMap{"source": "manual", "display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// domains and relationship_types live in their own tables; industry is an
@@ -856,13 +859,13 @@ func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) 
 	var oldCo, newCo struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Wanda Mover"}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Wanda Mover"}, nil, &contact); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	for name, out := range map[string]*struct {
 		ID string `json:"id"`
 	}{"Old Employer": &oldCo, "New Employer": &newCo} {
-		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": name}, nil, out); status != 201 {
+		if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, out); status != 201 {
 			t.Fatalf("create %s → %d", name, status)
 		}
 	}

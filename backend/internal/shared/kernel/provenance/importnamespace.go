@@ -49,6 +49,11 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// WebsiteLeadSource names a lead read off a company's website and accepted by
+// a human. Only that accept writes it. A lead under it is sent an Art. 14
+// notice, held until the notice is through, and deleted when it fails.
+const WebsiteLeadSource = "siteread"
+
 // internalSourceSystems are the exact identities only an internal writer may
 // spell. Exact names rather than a second prefix: these are already written
 // into rows, and renaming them to fit a namespace would strand every row that
@@ -58,6 +63,7 @@ var internalSourceSystems = map[string]bool{
 	NoActivityReminderSource: true,
 	CheckInCadenceSource:     true,
 	CommitmentTaskSource:     true,
+	WebsiteLeadSource:        true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

@@ -321,8 +321,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 			if err == nil {
 				t.Fatal("staged a call the executor refuses; a human's yes would be spent discovering that")
 			}
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("err = %v (%T), want a BadArgsError — a refusal the caller can act on", err, err)
 			}
 			if !strings.Contains(err.Error(), c.names) {
@@ -586,8 +585,7 @@ func TestTheArchiveToolRefusesARecordTypeItsOwnWritePathCannotArchive(t *testing
 			// anyway fails here rather than passing on a lenient stub.
 			_, err := archiveRecord{p: unreadableProvider{}}.StageInfo(context.Background(),
 				json.RawMessage(fmt.Sprintf(`{"record_type":%q,"id":%q}`, recordType, ids.NewV7())))
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("staging an archive of %q answered %v, want a BadArgsError — an approval for it "+
 					"could never be carried out", recordType, err)
 			}

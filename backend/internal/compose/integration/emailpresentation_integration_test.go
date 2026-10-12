@@ -40,7 +40,7 @@ const contractPathForLists = "../../../api/crm.yaml"
 func logEmailActivity(author context.Context, t *testing.T, e *Env, contact ids.UUID, subject, body string) ids.ActivityID {
 	t.Helper()
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Body: &body, Direction: StrPtr("inbound"),
+		Kind: "email", Subject: &subject, Body: &body, Direction: new("inbound"),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
@@ -392,7 +392,7 @@ func requiredListFields(t *testing.T, schema string) []string {
 	arrays := map[string]bool{}
 	inSchema := false
 	current := ""
-	for _, line := range strings.Split(string(source), "\n") {
+	for line := range strings.SplitSeq(string(source), "\n") {
 		if match := schemaLine.FindStringSubmatch(line); match != nil {
 			inSchema = match[1] == schema
 			current = ""
@@ -402,7 +402,7 @@ func requiredListFields(t *testing.T, schema string) []string {
 			continue
 		}
 		if match := requiredLine.FindStringSubmatch(line); match != nil {
-			for _, name := range strings.Split(match[1], ",") {
+			for name := range strings.SplitSeq(match[1], ",") {
 				required = append(required, strings.TrimSpace(name))
 			}
 			continue
@@ -650,7 +650,7 @@ func assertBadge(
 	}
 
 	page, _, err := e.Activities.ListActivities(reader, activities.ListActivitiesInput{
-		EntityType: StrPtr("contact"), EntityID: &contact,
+		EntityType: new("contact"), EntityID: &contact,
 	})
 	if err != nil {
 		t.Fatalf("listing the contact's timeline: %v", err)

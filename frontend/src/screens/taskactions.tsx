@@ -19,16 +19,18 @@ import {
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { Markdown } from "../design-system/markdown";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { problemCodeOf, provenanceOf, throwProblem } from "./common";
+import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "./activityread";
+import { useCompleteTask } from "./taskcomplete";
 import { refetchAfterWrite } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -54,16 +56,16 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskPatch) => {
-      const { data, error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: input.body,
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      const data = unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: input.body,
+        }),
+        t,
+      );
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
@@ -117,13 +119,10 @@ export function snoozedDueAt(
 }
 
 /**
- * TaskCompleteCheck is the tick affordance itself — a checkbox rather than a
- * labelled button, for a row that names its own verb (ticking IS completing)
- * rather than one that reads as a menu of actions. Every caller lists OPEN
- * tasks only, so the box always starts unchecked; ticking it fires the
- * completion and the row leaves the list on the invalidated re-read, rather
- * than the checkbox itself flipping to a done state it would then have to
- * keep showing.
+ * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
+ * own verb, since ticking is completing. Every caller lists open tasks only,
+ * so the box starts unchecked. The row leaves on the invalidated re-read,
+ * with the confirmation and its Undo raised meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
@@ -135,11 +134,11 @@ export function TaskCompleteCheck({
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const complete = useCompleteTask(update);
   const isThisTask = update.variables?.id === activityId;
   const pending = update.isPending && isThisTask;
-  // A rejected PATCH re-enables the box and leaves it unchecked — the same
-  // rendering a click that did nothing would leave. Without this, the two are
-  // indistinguishable and the reader has no reason to try again.
+  // A rejected PATCH re-enables the box, unchecked, like a click that did
+  // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
   return (
     <>
@@ -150,9 +149,7 @@ export function TaskCompleteCheck({
         label={<span className="sr-only">{t("tasks.complete")}</span>}
         checked={false}
         disabled={pending}
-        onChange={() =>
-          update.mutate({ id: activityId, version, body: { is_done: true } })
-        }
+        onChange={() => complete(activityId, version)}
       />
       {failed && <ErrorLine error={update.error} inline />}
     </>
@@ -184,15 +181,14 @@ export function TaskQuickActions({
   const recordZone = useRecordZone();
   const nextDue = snoozedDueAt(dueAt, recordZone);
   const pending = update.isPending && update.variables?.id === activityId;
+  const complete = useCompleteTask(update);
   return (
     <>
       {showComplete && (
         <Button
           variant="primary"
           disabled={pending}
-          onClick={() =>
-            update.mutate({ id: activityId, version, body: { is_done: true } })
-          }
+          onClick={() => complete(activityId, version)}
         >
           {t("tasks.complete")}
         </Button>
@@ -336,7 +332,12 @@ export function TaskDetailModal({
         <ErrorLine error={query.error} />
         {task && (
           <div className="form-stack">
-            {task.body && <p className="t-body">{task.body}</p>}
+            {/* Markdown, as the timeline draws the same body. */}
+            {task.body && (
+              <div className="t-body task-detail-body">
+                <Markdown source={task.body} autolink />
+              </div>
+            )}
             <div className="t-caption task-detail-meta">
               {task.due_at ? (
                 <span>
@@ -456,12 +457,12 @@ export function useNoticeRead(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await api.POST("/notices/{id}/read", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/notices/{id}/read", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -485,13 +486,12 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST("/automations/runs/{id}/retry", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/automations/runs/{id}/retry", {
+          params: { path: { id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {
@@ -522,16 +522,16 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
       version: number | undefined;
       status: "held" | "no_show" | "canceled";
     }) => {
-      const { error } = await api.PATCH("/activities/{id}", {
-        params: {
-          path: { id: input.id },
-          ...ifMatch(requireVersion(input.version)),
-        },
-        body: { meeting_status: input.status },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/activities/{id}", {
+          params: {
+            path: { id: input.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+          body: { meeting_status: input.status },
+        }),
+        t,
+      );
     },
     onSuccess: (_data, input) => {
       for (const queryKey of invalidateKeys) {
@@ -561,13 +561,13 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       id: string;
       outcome: "done" | "dismissed";
     }) => {
-      const { error } = await api.POST("/claims/{id}/settle", {
-        params: { path: { id: input.id } },
-        body: { outcome: input.outcome },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST("/claims/{id}/settle", {
+          params: { path: { id: input.id } },
+          body: { outcome: input.outcome },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       for (const queryKey of invalidateKeys) {

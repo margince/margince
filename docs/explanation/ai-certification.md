@@ -1,15 +1,15 @@
+<!-- prose:plain -->
 # How AI certification works
 
-The [certification page](../reference/ai-certification.md) grades every AI feature
-under every preset. Here, in plain words, is how one grade is made. To
-run the lane, see [certify-an-ai-model.md](../how-to/certify-an-ai-model.md); to
-write a case, see [write-a-certification-case.md](../how-to/write-a-certification-case.md).
-The exact rule and its numbers live in `backend/internal/compose/aicert/score.go`
-and `thresholds.go`, and the certification page prints them.
+The [certification page](../reference/ai-certification.md) grades every AI feature under every preset.
+Here, in plain words, is how one grade is made. To run the lane, see
+[certify-an-ai-model.md](../how-to/certify-an-ai-model.md); to write a case, see
+[write-a-certification-case.md](../how-to/write-a-certification-case.md). The full rule and its numbers
+are in `backend/internal/compose/aicert/score.go` and `thresholds.go`, and the certification page prints
+them.
 
-A **scenario** (a test case) is one realistic situation (an email, an account, a
-web page) plus the answer we expect. It lives in
-`backend/internal/compose/aicert/corpus/<task>/*.yaml`.
+A **scenario** (a test case) is one real case (an email, an account, a web page) plus the answer we
+expect. It sits in `backend/internal/compose/aicert/corpus/<task>/*.yaml`.
 
 ## One try
 
@@ -39,37 +39,36 @@ web page) plus the answer we expect. It lives in
  └──────────────────────────────────────────────────────────────────┘
 ```
 
-1. The scenario's data goes through the **product's real prompt builder**, so the
-   model sees what production sends. A scenario never carries a prompt of
-   its own, because a copy would stay green while the real one broke.
-2. The model answers.
-3. **① Is it right?** The product's own validator and the expected answer decide
-   pass or fail. Strict, and no AI involved.
-4. **② Is it good?** A second model, the judge, scores the answer 0–100 against
-   the scenario's rubric. The judge is asked once. If the score is within 10
-   points of one of the scenario's bars, or below the lowest bar, it is asked a
-   second time. If those two scores differ by more than 5, it is asked a third
-   time. The middle score counts; with two scores, the average counts. So one odd
-   reading cannot swing a close call, and a clear one is not paid for three times.
-   It sees the product's rules, so it
-   never marks down what the product allows. It never sees ①'s verdict. Where the
-   "expected answer" is a check list (phrases that must not appear) rather than a
-   model answer, it is not shown to the judge at all.
+1. The scenario's data goes through the **product's real prompt builder**, so the model sees what
+   production sends.
+2. A scenario never holds a prompt of its own, because a copy would stay green while the real one failed.
+3. The model answers.
+4. **① Is it right?** The product's own validator and the expected answer decide pass or fail. It is
+   strict, and no AI takes part.
+5. **② Is it good?** A second model, the judge, scores the answer 0–100 against the scenario's rubric.
+   The judge is asked once.
+   - If the score is within 10 points of one of the scenario's bars, or below the lowest bar, the judge
+     is asked a second time. If those two scores differ by more than 5, it is asked a third time.
+   - The middle score counts; with two scores, the average counts. So one odd reading cannot change a
+     close call, and a clear one is not run three times.
+   - The judge sees the product's rules, so it never marks down what the product allows. It never sees
+     the verdict of ①.
+   - The "expected answer" may be a check list (words that must not appear), not a model answer. Then
+     the judge does not see it at all.
 
-Some scenarios skip ②. When the answer is a closed label, a tool name, a number
-or an empty list, the mechanical check already sees everything a rubric would
-ask for. Such a scenario declares `judge: none` and says why in
-`judge_none_reason`, and it carries no rubric and no quality bars. It counts
-toward the feature's right answers like any other and adds nothing to the
-quality average. A gate runs each one against the wrong answer a judge would
-catch, and that answer must fail. The certification page marks these scenarios
-"checked mechanically".
+Some scenarios skip ②. The answer may be a closed label, a tool name, a number or an empty list. Then the
+check in ① already sees all that a rubric would ask for. Such a scenario declares `judge: none` and says
+why in `judge_none_reason`, and it has no rubric and no quality bars. It counts among the feature's right
+answers like any other, and adds nothing to the quality average.
 
-The judge is never the model being tested, nor one of its family: a Gemini
-candidate is not graded by a Gemini judge. The default judge is
-`claude_cli:claude-sonnet-4-6`.
+A gate runs each one against the wrong
+answer a judge would catch, and that answer must fail. The certification page marks these scenarios
+`checked mechanically`.
 
-## Several tries per scenario
+The judge is never the exact model under test. A judge from the same vendor or family may still grade,
+and the record marks that run as self judged. The default judge is `claude_cli:claude-sonnet-4-6`.
+
+## Many tries per scenario
 
 ```
  try 1 ─┐
@@ -80,22 +79,21 @@ candidate is not graded by a Gemini judge. The default judge is
               scenario is decided
 ```
 
-Models vary from run to run, so every scenario gets **3 tries**. If its result sits
-near a threshold, it gets **3 more, up to 9**. Clear cases stop early; uncertain
-ones gather more evidence instead of being settled by a coin flip. A feature with a
-single scenario always runs to 9, because 3 out of 3 is not yet enough evidence.
+Models change from run to run, so every scenario gets **3 tries**. If its result sits near a threshold,
+it gets **3 more, up to 9**. Clear cases stop early; cases near the line get more evidence, so chance does
+not settle them. A feature with a single scenario always runs to 9, because 3 out of 3 is not
+yet enough evidence.
 
 ## What each scenario must clear
 
 - right in **at least half** of its tries;
-- **no single answer below its floor** (for example 40): one very bad answer
-  blocks ✅;
-- not **consistently mediocre**: its quality must be able to reach its bar.
+- **no single answer below its floor** (for example 40): one very bad answer blocks ✅;
+- not **always just middling**: its quality must be able to reach its bar.
 
-A scenario that is clearly broken (wrong most of the time, or scoring under its
-floor even on its best reading) **vetoes** the whole feature: ❌, whatever its
-siblings score. Averaging cannot hide it. One whose best reading stays under the
-lower bar shows ❌ on its own row and blocks ✅, but the pool may still reach ⚠️.
+A scenario that clearly fails **blocks** the whole feature: ❌, no matter what its siblings score. Such a
+scenario is wrong most of the time, or under its floor even on its best reading. An average cannot hide it. A
+scenario whose best reading stays under the lower bar shows ❌ on its own row and blocks ✅, but the pool
+may still reach ⚠️.
 
 ## The feature's grade: all scenarios together
 
@@ -117,12 +115,11 @@ lower bar shows ❌ on its own row and blocks ✅, but the pool may still reach 
          ❔ Not measured       nobody has run it on this model yet
 ```
 
-Why pooled: requiring *every* scenario to pass on its own multiplies the chances of
-a stray miss: nine scenarios each right 90% of the time would reach ✅ only four
-times in ten. Pooling allows a stray miss; the per-scenario gates and the veto still
-refuse a real weakness.
+Why one pool: if *every* scenario had to pass on its own, the chances of a single miss would add up. Take
+9 scenarios that are each right 90% of the time: they would reach ✅ only four times in ten.
+A pool allows a single miss, while the gates per scenario and the block above still refuse a real weak spot.
 
-## Saved and published
+## Stored and published
 
 ```
   records/<task>/<model>.json ──► docs/reference/ai-certification.md
@@ -130,28 +127,25 @@ refuse a real weakness.
 ```
 
 - The result is written to a **record** per feature and model
-  (`backend/internal/compose/aicert/records/`). It names the model, the judge, the
-  thinking level and when it ran.
+  (`backend/internal/compose/aicert/records/`). It names the model, the judge, the thinking level and
+  when it was run.
 - The certification page is generated from the records.
-- When the prompt, a scenario or the grading rule changes, the record reads
-  **re-check pending** until somebody runs it again. A grade always describes the
-  prompt that was measured, never a later one.
+- When the prompt, a scenario or the grading rule changes, the record reads **`re-check pending`** until
+  someone runs it again. A grade always describes the prompt that was measured, never a later one.
 
 ## When a feature fails: fix in this order
 
-1. **The case is wrong or not doable.** The expected answer is not the only right
-   one, a fact the answer needs is missing, or the check contradicts the rubric.
-   Fix the case.
-2. **The prompt confuses the model.** Rules conflict, or the deciding rule is
-   buried. Fix the prompt ([prompt-principles.md](prompt-principles.md)).
-3. **The model really cannot do it.** Only then change its settings (thinking
-   level) or move the feature to a stronger tier.
+1. **The case is wrong or cannot be done.** The expected answer may not be the only right one. A fact the
+   answer needs may be missing, or the check and the rubric may disagree. Fix the case.
+2. **The prompt confuses the model.** Rules conflict, or the rule that decides is hard to find in the
+   text. Fix the prompt ([prompt-principles.md](prompt-principles.md)).
+3. **The model really cannot do it.** Only then change its settings (thinking level) or move the feature
+   to a stronger tier.
 
 ## What a run costs
 
-Every try costs one candidate call and one to three judge calls (about 1.4 on
-average, three only on a close and contested score). An uncertain scenario can
-run up to 9 tries, so the judge is still most of the cost. On the default
-`claude_cli` judge that is subscription usage rather than money, and the
-subscription's session limit is shared with everything else using it: keep a sweep
-to two or three tasks in parallel.
+Every try costs one candidate call and one to three judge calls. That is about 1.4 judge calls on
+average, and three only on a close score where the two first scores disagree. A scenario near the line
+can run up to 9 tries, so the judge is still most of the cost. On the default `claude_cli` judge that is
+use of a subscription, not money. The subscription's session limit is shared with all else that uses
+it, so keep a sweep to two or three tasks at the same time.

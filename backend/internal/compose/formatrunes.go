@@ -21,7 +21,11 @@ package compose
 // the soft hyphen: a rendering hint is not content, and there is nothing here a
 // reader loses.
 
-import "unicode"
+import (
+	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // formatRune reports a rune that carries no content: Unicode's Cf class (the
 // bidi controls, the zero-width joiners and spaces, the byte-order mark) and
@@ -34,7 +38,7 @@ func formatRune(r rune) bool {
 	if unicode.IsSpace(r) {
 		return false
 	}
-	return unicode.Is(unicode.Cf, r) || unicode.IsControl(r)
+	return values.IsInvisibleRune(r)
 }
 
 // withoutFormatRunes drops them, leaving the text a reader would have seen.

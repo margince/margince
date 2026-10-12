@@ -84,7 +84,7 @@ func TestTheVoiceDraftEvaluationReAsksThroughItsOwnParse(t *testing.T) {
 		Markdown: "# Voice DNA\n\n## Identity\n\ndirect", Stats: ai.AnalyzeVoice(buildSamples),
 		Inference: ai.VoiceInference{IdentitySummary: "direct"},
 	}
-	brain := &reAskingEvalBrain{scriptedEvalBrain: scriptedEvalBrain{judgeScore: 0.9}}
+	brain := &reAskingEvalBrain{judgeScore: 0.9}
 
 	result, err := evaluateVoiceCandidate(t.Context(), brain, artifact, "", heldOut, nil)
 	if err != nil {

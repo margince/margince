@@ -86,7 +86,7 @@ func writeTechnicalFacts(ctx context.Context, tx pgx.Tx, in TechnicalEnrichment)
 			              source_url = EXCLUDED.source_url, source = EXCLUDED.source,
 			              captured_by = EXCLUDED.captured_by, retrieved_at = EXCLUDED.retrieved_at,
 			              captured_at = now()
-			WHERE company_fact.captured_by NOT LIKE 'human:%'`,
+			WHERE company_fact.source NOT IN ('human', 'agent')`,
 			in.CompanyID, observation.Field, observation.Value, observation.ValueKey,
 			observation.Evidence, observation.SourceURL, companySourceTechnical,
 			technicalCapturedBy, in.ObservedAt)
@@ -128,7 +128,7 @@ func removeUnobservedTechnicalFacts(
 		 WHERE company_id = $1
 		   AND category = 'signal'
 		   AND field = ANY($2)
-		   AND captured_by NOT LIKE 'human:%'
+		   AND source NOT IN ('human', 'agent')
 		   AND (field || $4::text || value_key) <> ALL($3)
 		RETURNING field, value_key, value`,
 		in.CompanyID, fields, observed, technicalKeySeparator)

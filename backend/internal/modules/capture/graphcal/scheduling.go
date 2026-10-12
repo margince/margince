@@ -6,7 +6,7 @@ package graphcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -140,7 +140,7 @@ func calendarPath(calendar string) string {
 
 func graphInstant(at scheduledTime) (time.Time, error) {
 	if at.Zone != calendarUTC {
-		return time.Time{}, fmt.Errorf("calendar: provider did not return UTC")
+		return time.Time{}, errors.New("calendar: provider did not return UTC")
 	}
 	return time.Parse("2006-01-02T15:04:05.999999999", strings.TrimSuffix(at.At, "Z"))
 }
@@ -170,17 +170,17 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 				return nil, err
 			}
 			if !end.After(start) {
-				return nil, fmt.Errorf("calendar: invalid busy interval")
+				return nil, errors.New("calendar: invalid busy interval")
 			}
 			busy = append(busy, connector.CalendarInterval{EventID: event.ID, Start: start, End: end})
 		}
 		next = result.Next
 		if next != "" && !strings.HasPrefix(next, a.base+"/") {
-			return nil, fmt.Errorf("calendar: invalid continuation")
+			return nil, errors.New("calendar: invalid continuation")
 		}
 	}
 	if next != "" {
-		return nil, fmt.Errorf("calendar: incomplete availability")
+		return nil, errors.New("calendar: incomplete availability")
 	}
 	return busy, nil
 }
@@ -220,7 +220,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 		return connector.CalendarReceipt{}, err
 	}
 	if result.ID == "" || result.Canceled {
-		return connector.CalendarReceipt{}, fmt.Errorf("calendar: event was not confirmed")
+		return connector.CalendarReceipt{}, errors.New("calendar: event was not confirmed")
 	}
 	return connector.CalendarReceipt{EventID: result.ID, UID: result.UID, URL: result.URL, VideoURL: result.videoURL()}, nil
 }

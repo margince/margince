@@ -43,6 +43,7 @@ import {
   QueryGate,
   type QueryLike,
   throwProblem,
+  unwrap,
   useMe,
   WriteRefused,
 } from "./common";
@@ -146,11 +147,7 @@ export function useCompanyContextCapabilities(enabled = true) {
     queryKey: companyContextCapabilitiesQueryKey,
     enabled,
     queryFn: async (): Promise<Capabilities> => {
-      const { data, error } = await api.GET("/company/context/capabilities");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/company/context/capabilities"));
     },
   });
 }
@@ -164,13 +161,11 @@ export function ManualCompanySetup() {
   const [form, setForm] = useState<CompanyInput>(EMPTY_COMPANY_INPUT);
   const save = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.PUT("/company", {
-        body: trimCompanyInput(form),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/company", {
+          body: trimCompanyInput(form),
+        }),
+      );
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -358,11 +353,7 @@ export function CompanyContextCard() {
 
   const save = useMutation({
     mutationFn: async (body: CompanyInput) => {
-      const { data, error } = await api.PUT("/company", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.PUT("/company", { body }));
     },
     onSuccess: (profile) => {
       storeCompany(queryClient, profile);
@@ -395,14 +386,12 @@ export function CompanyContextCard() {
       if (!website) {
         throwProblem({ title: t("settings.companyWebsiteRequired") });
       }
-      const { data, error } = await api.POST("/company/site-reads", {
-        params: { header: { "Idempotency-Key": crypto.randomUUID() } },
-        body: { url: absoluteWebsite(website) },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/company/site-reads", {
+          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          body: { url: absoluteWebsite(website) },
+        }),
+      );
     },
     onSuccess: (read) => {
       setReadID(read.id);
@@ -415,13 +404,11 @@ export function CompanyContextCard() {
     queryKey: ["company-context-refresh", readID],
     enabled: readID !== null,
     queryFn: async (): Promise<SiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readID ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readID ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -672,66 +659,63 @@ function CompanyFactsCard({
             null instead, because a capability this installation does not have
             is not a fact about the reader. */}
         {readOnly && <p>{t("settings.companyReadOnly")}</p>}
-        <QueryGate
-          query={company}
-          pendingLabel={t("settings.companySourceTitle")}
-        >
-          {(profile) =>
-            profile !== null &&
-            form && (
-              <>
-                {/* The company's FACE, above the statements about it. It is the
-                    one thing on this card a reader recognises at a glance, and
-                    the only one that also stands at the top of the sidebar. */}
-                <CompanyMark profile={profile} canEdit={canEdit} />
-                <SettingList>
-                  {ESSENTIALS.fields.map((field) => (
-                    <CompanyFactRow
-                      key={field}
-                      field={field}
-                      value={String(form[field] ?? "")}
-                      profile={profile}
-                      canEdit={canEdit}
-                      onEdit={() => onEdit(field)}
-                    />
-                  ))}
-                  {/* The elaborations, closed. Thirteen optional statements
-                      against the three the save DEMANDS, and open by default
-                      they buried the three that decide whether this profile is
-                      usable at all. A Disclosure inside the list is the
-                      settings page's own answer for a card's secondary half:
-                      its summary sits on the same beat as the labels above. */}
-                  {ELABORATIONS.map((group) => (
-                    <Disclosure key={group.title} summary={t(group.title)}>
-                      <SettingList>
-                        {group.fields.map((field) => (
-                          <CompanyFactRow
-                            key={field}
-                            field={field}
-                            value={String(form[field] ?? "")}
-                            profile={profile}
-                            canEdit={canEdit}
-                            onEdit={() => onEdit(field)}
-                          />
-                        ))}
-                      </SettingList>
-                    </Disclosure>
-                  ))}
-                </SettingList>
-                {/* The save landed and the dialog it landed in is gone, so the
-                    confirmation is left on the card that now shows the new
-                    values. A refusal stays in the dialog, beside the fields it
-                    refused. */}
-                {saved && (
+        {/* The company's FACE, above the statements about it: the one thing
+            here a reader recognises at a glance, and the sidebar's too. */}
+        {company.data && !company.isError && form && (
+          <CompanyMark profile={company.data} canEdit={canEdit} />
+        )}
+      </PanelBody>
+      <QueryGate
+        query={company}
+        pendingLabel={t("settings.companySourceTitle")}
+      >
+        {(profile) =>
+          profile !== null &&
+          form && (
+            <>
+              <SettingList bleed="settings">
+                {ESSENTIALS.fields.map((field) => (
+                  <CompanyFactRow
+                    key={field}
+                    field={field}
+                    value={String(form[field] ?? "")}
+                    profile={profile}
+                    canEdit={canEdit}
+                    onEdit={() => onEdit(field)}
+                  />
+                ))}
+                {/* Closed, so thirteen optional facts do not bury the three
+                    the save requires. */}
+                {ELABORATIONS.map((group) => (
+                  <Disclosure key={group.title} summary={t(group.title)}>
+                    <SettingList>
+                      {group.fields.map((field) => (
+                        <CompanyFactRow
+                          key={field}
+                          field={field}
+                          value={String(form[field] ?? "")}
+                          profile={profile}
+                          canEdit={canEdit}
+                          onEdit={() => onEdit(field)}
+                        />
+                      ))}
+                    </SettingList>
+                  </Disclosure>
+                ))}
+              </SettingList>
+              {/* The dialog closes on save, so the confirmation lands here; a
+                  refusal stays in the dialog beside the fields it refused. */}
+              {saved && (
+                <PanelBody>
                   <div className="settings-panel-commit">
                     <SavedNotice />
                   </div>
-                )}
-              </>
-            )
-          }
-        </QueryGate>
-      </PanelBody>
+                </PanelBody>
+              )}
+            </>
+          )
+        }
+      </QueryGate>
     </Panel>
   );
 }
@@ -767,65 +751,59 @@ function CompanySourceCard({
     <Panel title={t("settings.companySourceTitle")}>
       <PanelBody>
         <PanelIntro>{t("settings.companyTrust")}</PanelIntro>
-        <SettingList>
+      </PanelBody>
+      <SettingList bleed="settings">
+        <SettingRow
+          label={t("settings.companyWebsite")}
+          description={t("settings.companyWebsiteHint")}
+          value={website === "" ? t("field.unset") : website}
+          control={
+            canEdit ? (
+              <Button
+                variant="ghost"
+                aria-label={t("settings.companyEditField", {
+                  field: t("settings.companyWebsite"),
+                })}
+                onClick={onEdit}
+              >
+                {t("settings.companyEdit")}
+              </Button>
+            ) : null
+          }
+        />
+        {/* Reading the website rewrites this profile, so the server asks for
+            the same grant as a save. */}
+        {canEdit && (
           <SettingRow
-            label={t("settings.companyWebsite")}
-            description={t("settings.companyWebsiteHint")}
-            value={website === "" ? t("field.unset") : website}
+            label={t("settings.companyRefreshRow")}
+            description={t("settings.companyRefreshHint")}
             control={
-              canEdit ? (
-                <Button
-                  variant="ghost"
-                  aria-label={t("settings.companyEditField", {
-                    field: t("settings.companyWebsite"),
-                  })}
-                  onClick={onEdit}
-                >
-                  {t("settings.companyEdit")}
-                </Button>
-              ) : null
+              <Button
+                variant="primary"
+                reason={
+                  website === ""
+                    ? t("settings.companyWebsiteRequired")
+                    : undefined
+                }
+                pending={refreshing}
+                onClick={onRefresh}
+              >
+                <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
+              </Button>
             }
           />
-          {/* Reading the website is a WRITE of this profile: the server admits
-              the read on the same create-or-update the save needs, because a
-              read exists to change what the record says. Absent without that
-              grant, like every other verb on these two cards — the posture is
-              stated once, on the card above.
-
-              This is the one card on the page that exists to make a MOVE, which
-              is what earns the primary. The refusal it can state is stated:
-              with no website there is nothing to read, in the same sentence the
-              start itself would answer with. */}
-          {canEdit && (
-            <SettingRow
-              label={t("settings.companyRefreshRow")}
-              description={t("settings.companyRefreshHint")}
-              control={
-                <Button
-                  variant="primary"
-                  reason={
-                    website === ""
-                      ? t("settings.companyWebsiteRequired")
-                      : undefined
-                  }
-                  pending={refreshing}
-                  onClick={onRefresh}
-                >
-                  <RefreshCw aria-hidden /> {t("settings.companyRefresh")}
-                </Button>
-              }
-            />
-          )}
-        </SettingList>
-        {failure !== null && (
+        )}
+      </SettingList>
+      {failure !== null && (
+        <PanelBody>
           <div className="settings-panel-commit">
             <WriteRefused
               titleKey="settings.companyRefreshFailed"
               message={failure}
             />
           </div>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }

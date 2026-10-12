@@ -57,7 +57,7 @@ func TestTheShippingLoopNamesARoutineThatReachesTheIntegrationLane(t *testing.T)
 // the lane's name appears in its comments whatever the commands do — and a
 // recipe that stopped running the lane would keep every one of those words.
 func invokes(recipe, target string) bool {
-	for _, line := range strings.Split(recipe, "\n") {
+	for line := range strings.SplitSeq(recipe, "\n") {
 		command := strings.TrimSpace(line)
 		if strings.HasPrefix(command, "#") {
 			continue

@@ -7,7 +7,7 @@ import type { FieldControl } from "../design-system/atoms";
 import type { SelectOption } from "../design-system/select";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import "./automations.datefield.css";
 
 // renewal_reminder's date_field param (GH-706) names a workspace's own cf_*
@@ -79,13 +79,11 @@ export function DateFieldSelect({
           "DateFieldSelect queryFn ran for an unsupported object",
         );
       }
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/custom-fields", {
+          params: { query: { object } },
+        }),
+      );
     },
   });
 

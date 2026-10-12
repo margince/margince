@@ -47,7 +47,7 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 	seen := map[ids.UUID]bool{}
 	var cursor *string
 	var first ids.UUID
-	for page := 0; page < 5; page++ {
+	for page := range 5 {
 		got, err := svc.ContactPage(ctx, ids.CompanyID{UUID: company},
 			company360svc.ContactListQuery{Limit: &limit, Cursor: cursor})
 		if err != nil {

@@ -55,6 +55,7 @@ func seedContactWithActivity(t *testing.T, e *apptest.AppEnv) string {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Context Anchor",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)

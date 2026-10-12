@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
-import { AuditLogCard, SettingsScreen, settingsAddress } from "./settings";
+import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
   installFetchStub,
@@ -46,6 +46,7 @@ const passports = () =>
         revoked_at: null,
       },
     ],
+    api_base_url: "https://crm.example.com/v1",
     page: { next_cursor: null, has_more: false },
   });
 
@@ -210,6 +211,14 @@ export const AgentsTabDark: Story = {
   render: tab("agents", agentsTabRoutes),
 };
 
+// At 390px. The code example wraps inside the card instead of widening it.
+export const AgentsTabPhone: Story = {
+  name: "Your agents — phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: tab("agents", agentsTabRoutes),
+};
+
 // The connector switched off: the guide has no commands to print, so its one row
 // says so and says what still works. It is the state a default install is in, and
 // it used to render as a bold line and a paragraph flush against the disclosure.
@@ -221,16 +230,19 @@ export const AgentsConnectorOff: Story = {
   }),
 };
 
-// AS-2 kill-switch: PassportCard revoke is a hard DELETE behind a ConfirmModal.
-// Mirrors share.stories' revoke play() — render the card with a live
-// (non-revoked) passport, click Revoke, leave the confirm modal open so the
-// guarded state is what the render gate captures.
+// The row's menu opens the revoke confirm, left open here so the guarded
+// state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const revokeButton = await canvas.findByRole("button", { name: "Revoke" });
-    await userEvent.click(revokeButton);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Scout" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Revoke Scout" }),
+    );
   },
 };
 
@@ -245,6 +257,51 @@ export const PassportMintDialog: Story = {
       await canvas.findByRole("button", { name: "New passport" }),
     );
   },
+};
+
+// After the mint: the passport once, with its own copy control, and the ways to
+// use it under it. The example keeps the variable, never the new value.
+const mintedRoutes = {
+  ...agentsTabRoutes,
+  "POST /passports": () =>
+    jsonResponse({
+      id: "pp-new",
+      label: "Claude Code on my laptop",
+      scopes: ["read", "draft"],
+      created_at: "2026-10-01T08:00:00Z",
+      expires_at: "2026-10-31T08:00:00Z",
+      revoked_at: null,
+      token: "mgp_example_passport",
+    }),
+};
+
+const mintPassport = async ({
+  canvasElement,
+}: {
+  canvasElement: HTMLElement;
+}) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "New passport" }),
+  );
+  // The Modal portals into the document body, outside the canvas.
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog"));
+  await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
+  await dialog.findByText("Next, use it");
+};
+
+export const PassportMinted: Story = {
+  name: "Mint a passport — minted",
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
+};
+
+export const PassportMintedDark: Story = {
+  name: "Mint a passport — minted, dark",
+  globals: { theme: "dark" },
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
 };
 
 // The same dialog in dark, because the fieldset's legend, the checkbox rows and
@@ -262,14 +319,10 @@ export const PassportMintDialogDark: Story = {
   },
 };
 
-// The governed tool console renders the inventory unfiltered by default,
-// then strikes the send_email row once the read-only "Scout" passport (whose
-// only granted scope is "read") is selected — its required "send" scope
-// is absent from that grant.
+// The tool table unfiltered, then scoped to the read-only "Scout" passport: the
+// send_email row is struck, because "send" is not in that grant.
 const toolConsoleRoutes = agentsTabRoutes;
 
-// Selects the read-only passport, so the send_email row is dimmed. Shared with
-// the dark variant below, which is about that dimming and nothing else.
 const selectScoutPassport = async ({
   canvasElement,
 }: {
@@ -291,12 +344,6 @@ export const AgentToolConsole: Story = {
   play: selectScoutPassport,
 };
 
-// The unreachable row is dimmed, and dimming is the one signal that does not
-// survive a theme swap by construction: on a light ground it reads as "faded
-// toward the paper", on a dark one the same reduction moves the text toward the
-// background it is meant to stay legible against. This is the story that says
-// whether the dim row is still readable text or has become a grey smear — and
-// whether the tier/egress badges beside it still separate from each other.
 export const AgentToolConsoleDark: Story = {
   globals: { theme: "dark" },
   render: tab("agents", toolConsoleRoutes),
@@ -514,74 +561,4 @@ export const PipelinesAdminPhone: Story = {
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
-};
-
-// AuditLogCard (AO-3/AO-4): one entry carrying a full before/after diff plus
-// the agent attribution trail (passport, on-behalf-of human, authorization
-// rule, grounding evidence), collapsed by default — the expand toggle is
-// what a reviewer exercises to confirm the panel renders honestly.
-const auditLogPage = {
-  data: [
-    {
-      id: "al-1",
-      actor_type: "agent",
-      actor_id: "agent:sdr",
-      passport_id: "pp-9",
-      on_behalf_of: "u-1",
-      on_behalf_of_name: "Me",
-      action: "update",
-      entity_type: "contact",
-      entity_id: "p-1",
-      before: { stage: "new" },
-      after: { stage: "qualified" },
-      authorization_rule: "role:admin",
-      evidence: { snippet: "Reply confirmed budget", source: "email:msg-1" },
-      occurred_at: "2026-07-10T09:00:00Z",
-    },
-  ],
-  page: { next_cursor: null, has_more: false },
-};
-
-// The grants the card asks for, not a bare identity: `useCan("audit_log",
-// "read")` is what draws the filter disclosure, and a hand-rolled /me carrying
-// no `authorization` fails every grant closed — so the trail rendered with no
-// dials above it and the play() below had no "Filters" to press. The id stays
-// `u-1`, which is the actor the fixture's `on_behalf_of` names, so the entry
-// still reads as the viewer's own.
-const auditLogMe = () =>
-  jsonResponse({
-    ...meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
-    user: { ...meFixture().user, id: "u-1", display_name: "Me" },
-  });
-
-function auditLogCard() {
-  return () => {
-    globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
-    installFetchStub({
-      "GET /me": auditLogMe,
-      "GET /audit-log": () => jsonResponse(auditLogPage),
-      "GET /contacts/p-1": () =>
-        jsonResponse({ id: "p-1", full_name: "Priya Shah" }),
-    });
-    return (
-      <StoryProviders>
-        <AuditLogCard />
-      </StoryProviders>
-    );
-  };
-}
-
-export const AuditLog: Story = { render: auditLogCard() };
-
-// The dials, which the card no longer spends six input boxes on before the
-// trail: they sit in a disclosure that is closed on arrival, and this is what
-// opening it looks like — six rows in the same language as every other settings
-// answer, above the log they narrow.
-export const AuditLogFilters: Story = {
-  name: "Audit log — filters open",
-  render: auditLogCard(),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("Filters"));
-  },
 };

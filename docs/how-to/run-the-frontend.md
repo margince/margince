@@ -1,8 +1,9 @@
+<!-- prose:plain -->
 # Run the frontend
 
-The web app lives in `frontend/` (React 19 + Vite; see
-[frontend/README.md](../../frontend/README.md) for the full picture). It
-talks only to the `/v1` contract surface; there is no privileged path.
+The web app is in `frontend/`. It uses React 19 and Vite, and
+[frontend/README.md](../../frontend/README.md) has more. It
+calls only the `/v1` contract, and it has no other path past it.
 
 ## Develop
 
@@ -10,14 +11,14 @@ talks only to the `/v1` contract surface; there is no privileged path.
 make dev   # full local stack, cold: db + migrate + the app on :8080 (api behind it)
 ```
 
-`make dev` starts the Vite dev server too, with its `/v1` proxy pointed at
-the api over plain http. `localhost` is a browser secure context, so the
-`Secure` session cookie survives without TLS. Open the SPA on
-http://localhost:8080 and log in to get the `crm_session` cookie. The
-server resolves its singleton company itself, so there is no
-workspace selection. Stop the stack with `make dev-stop`.
+`make dev` also starts the Vite dev server, and its `/v1` proxy points at
+the API over HTTP. A browser counts `localhost` as safe, so the
+`Secure` session cookie works without TLS. Open the app on
+http://localhost:8080 and sign in to get the `crm_session` cookie. The
+server finds its one company by itself, so you do not choose a
+workspace. Stop the stack with `make dev-stop`.
 
-## Verify
+## Check your work
 
 ```sh
 make frontend-check   # Biome + unit tests + tsc + build (the frontend gate)
@@ -26,19 +27,19 @@ make frontend-e2e     # the screen-acceptance harness: AC-named tests,
 make bench-mobile     # the perceived-perf budget, sampled on Fast-3G
 ```
 
-The e2e harness runs hermetically over a seed mock by default. To run the
-identical suite against a live, seeded backend:
+By default, the `e2e` tests run without a live backend, against a stand-in that serves seed data.
+To run the same tests against a live backend that holds seed data:
 
 ```sh
 BASE_URL=http://localhost:8080 make frontend-e2e
 ```
 
-## Regenerate contract types
+## Generate the contract types again
 
-After any `backend/api/crm.yaml` change:
+After any change to `backend/api/crm.yaml`, run:
 
 ```sh
 cd frontend && pnpm gen:api
 ```
 
-`src/api/schema.d.ts` is generated; never hand-edit it.
+A tool generates `src/api/schema.d.ts`, so never change it by hand.

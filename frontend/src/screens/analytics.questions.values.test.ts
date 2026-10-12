@@ -25,6 +25,7 @@ describe("a dimension value in the reader's words", () => {
     expect(valueLabel(t, "forecast", "forecast_category", "best_case")).toBe(
       "Best case",
     );
+    expect(valueLabel(t, "deals-by-stage", "status", "open")).toBe("Open");
     expect(
       valueLabel(t, "activities-by-kind", "meeting_status", "no_show"),
     ).toBe("No-show");
@@ -37,7 +38,7 @@ describe("a dimension value in the reader's words", () => {
   });
 
   it("has no word for a value no screen names yet", () => {
-    expect(valueLabel(t, "deals-by-stage", "status", "open")).toBeNull();
+    expect(valueLabel(t, "deals-by-stage", "status", "stalled")).toBeNull();
     expect(
       valueLabel(t, "activities-by-kind", "direction", "inbound"),
     ).toBeNull();

@@ -317,40 +317,37 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 	return archiveAbsorbedEcho(ctx, tx, survivorID, echoID, stamped)
 }
 
-// copyEchoLinks gives the survivor the echo's timeline placements — the sent
-// mail's presence on an auto-created contact's record, which is most of what the
-// echo's row was worth — and LEAVES the echo's own copies where they are.
+// copyEchoLinks gives the survivor the echo's timeline placements, and leaves
+// the echo's own links in place. The archived echo shows on no timeline, and
+// the Art. 17 erasure walks from a contact to an activity's attachments and
+// embeddings through activity_link, so moving them would hide that evidence.
 //
-// Copying rather than moving is load-bearing, and it follows from the echo
-// being archived rather than destroyed. An archived row is filtered out of
-// every timeline read, so its links cannot show the message twice; moving them
-// would only have been necessary while the row was being deleted out from under
-// them. What moving them WOULD cost is reach: the subject-scoped Art. 17
-// erasure walks from a contact to an activity's attachments, provenance and
-// embeddings through activity_link, so an archived row with no links left is a
-// row whose derived evidence that walk no longer finds. Releasing the natural
-// key instead of deleting the echo exists precisely to keep that evidence
-// reachable, and re-pointing its links away would have been the same defect in
-// a smaller shape.
+// Three kinds of link are not copied:
+//   - one the survivor already holds, which uq_activity_link would refuse;
+//   - a project link when the survivor holds one, since uq_activity_link_project
+//     allows one per activity and the survivor's filing wins;
+//   - a link to an archived contact.
 //
-// Two kinds of link are deliberately NOT copied. One the survivor already
-// holds, because uq_activity_link keys on the activity, the entity type, and
-// the five target columns coalesced into one — inserting a duplicate would
-// raise the very violation this path exists to answer. And a project link
-// whenever the survivor holds one at all, because uq_activity_link_project
-// permits exactly one per activity WHATEVER the target: the link ladder decides
-// once and never overwrites, so the survivor's project wins rather than the
-// echo's replacing it.
+// The survivor is a human's send, so its contact link is work a sender purge's
+// recheck reads. Each contact is held FOR SHARE first. A purge anonymising it
+// then either finishes first, and the copy skips the archived contact, or waits
+// for the copy and sees the link.
 //
-// A project link it copies is STAMPED here, in this transaction, the way every
-// other writer of one stamps its own (D5). This is the fourth writer and the
-// easiest to miss, because it copies a link somebody else decided rather than
-// deciding one — but the survivor is a different activity, and until this runs
-// that activity carries no classification at all. Leaving it to the erasure's
-// legacy arm would still shield the row, and would freeze the project's name at
-// erasure time instead of at qualification, which is the whole point of
-// freezing it.
+// A project link it copies is stamped here, as every writer of one stamps its
+// own (D5). Left to the erasure, the project's name would freeze at erasure
+// time instead of at qualification.
 func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID, stamp StampProject) error {
+	// The copy takes only contacts this lock confirmed live. A link added to the
+	// echo after it stays behind, as does a contact anonymised while it waited.
+	rows, err := tx.Query(ctx, `SELECT c.id FROM contact c JOIN activity_link l ON l.contact_id = c.id
+		 WHERE l.activity_id = $1 AND c.archived_at IS NULL ORDER BY c.id FOR SHARE OF c`, echoID)
+	if err != nil {
+		return fmt.Errorf("activities: holding the contacts the absorbed echo is filed under: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("activities: holding the contacts the absorbed echo is filed under: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
 		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id)
@@ -365,10 +362,11 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		          AND held.entity_type = echo_link.entity_type
 		          AND coalesce(held.contact_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
 		            = coalesce(echo_link.contact_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
+		   AND (echo_link.contact_id IS NULL OR echo_link.contact_id = ANY($3))
 		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,
-		survivorID, echoID); err != nil {
+		survivorID, echoID, held); err != nil {
 		return fmt.Errorf("activities: giving the send the absorbed echo's timeline links: %w", err)
 	}
 	// Read the survivor's project link back rather than counting on the insert
@@ -378,7 +376,7 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 	// the link arrived here or was already there. At most one row can come
 	// back: uq_activity_link_project admits one project link per activity.
 	var project ids.UUID
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT project_id FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`,
 		survivorID).Scan(&project)
 	if errors.Is(err, pgx.ErrNoRows) {

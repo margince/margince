@@ -24,7 +24,7 @@ import (
 func TestQuotedSpeakersLeaveTheOwnersProseHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Sam Weber"}, nil, nil); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Sam Weber"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("contact create → %d", status)
 	}
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {

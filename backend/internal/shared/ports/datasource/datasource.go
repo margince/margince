@@ -209,14 +209,13 @@ type UpdateInput struct {
 	// trail calls it, which is why it travels on this input rather than
 	// through a second write engine.
 	Trail auditverb.Trail
-	// Clear names the wire fields to set to NULL. It exists because a JSON
-	// null cannot say so: every field on every update request is an optional
-	// pointer, so a null decodes to nil and the module reads it as "the caller
-	// did not supply this" — the write succeeds and the field keeps its value.
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so.
+	// It decodes to nil, which a module reads as "not supplied", so the write
+	// succeeds and the field keeps its value.
 	//
-	// Only the reversal path sets it, and only for fields the record's own
-	// update path can actually clear. A caller that wants a field left alone
-	// simply omits it, exactly as before.
+	// The reversal path and the update_record tool set it, the tool from the
+	// nulls in its patch. The record's update path clears what it can and
+	// refuses the rest by name.
 	Clear []string
 }
 

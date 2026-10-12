@@ -204,6 +204,16 @@ type capturedFileRow struct {
 	withheld bool
 }
 
+// No allowlist here, unlike UploadAttachment: a sender's file is evidence of what
+// was sent, and refusing its kind would lose the record of it.
+//
+// It emits no attachment.created, and the silence is a decision rather than an
+// omission: the mail's own activity.captured already says this arrived, and a
+// second event for one arrival would make one delivery look like two to every
+// subscriber counting them. An uploaded file has no covering event, which is why
+// that path emits (attachmentupload.go).
+//
+// Held by TestACapturedFileEmitsNoAttachmentEventOfItsOwn.
 func insertCapturedAttachment(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, account *ids.UUID,
 	from CapturedFileSource, row capturedFileRow,

@@ -1,36 +1,36 @@
-# THE UNIQUENESS-CLAIM DEBT REGISTER — a count, not a permission.
 #
-# Every line is a doc comment in this tree asserting that the declaration it
-# sits on is the ONLY one of its kind, with no test holding that assertion.
-# Nine of the ten such claims audited in 2026-08 turned out to be FALSE, and
-# every one was found months later by a human reading the file for some other
-# reason.
 #
-# This file is CLOSED to new entries. backend/gates/uniquenessclaims_test.go refuses a
-# claim that is neither registered here nor bound to a test, so a claim written
-# tomorrow must carry:
+#
+#
+#
+#
 #
 #     // Held by: TestSomethingHasOneWriter (backend/gates/somethingwriters_test.go)
-#
-# WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
-# wording it used to miss finds claims that were already here, and this file
-# grows to hold them. `shapeCensus` in the gate is the ceiling that growth has
-# to pass through, and it is kept per shape: narrowing a shape empties lines
-# out of this file while auditing nothing, and a single total cannot tell that
-# from the work it looks like.
-#
+# Every line is a doc comment in this tree asserting that the declaration it
+# Nine of the ten such claims audited in 2026-08 turned out to be FALSE, and
+# Sorted, one key per line: <path>#<declaration>.
 # THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line: write the
-# test that fails when a second implementation appears and name it in the doc
+# THE UNIQUENESS-CLAIM DEBT REGISTER — a count, not a permission.
+# There are no per-entry reasons on purpose. Six hundred rationalisations
+# This file is CLOSED to new entries. backend/gates/uniquenessclaims_test.go refuses a
+# WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
+# claim that is neither registered here nor bound to a test, so a claim written
 # comment, or delete the claim because it was never true. An entry that stops
 # describing an unheld claim FAILS the gate, so this file cannot rot beside the
-# tree it describes.
-#
-# There are no per-entry reasons on purpose. Six hundred rationalisations
-# written by somebody who has not audited the claims would be worse than an
+# every one was found months later by a human reading the file for some other
+# from the work it looks like.
+# grows to hold them. `shapeCensus` in the gate is the ceiling that growth has
 # honest count of what is unaudited. The count itself is not restated here: it
 # is whatever this file holds, and a second copy of it drifts.
-#
-# Sorted, one key per line: <path>#<declaration>.
+# out of this file while auditing nothing, and a single total cannot tell that
+# reason.
+# sits on is the ONLY one of its kind, with no test holding that assertion.
+# test that fails when a second implementation appears and name it in the doc
+# to pass through, and it is kept per shape: narrowing a shape empties lines
+# tomorrow must carry:
+# tree it describes.
+# wording it used to miss finds claims that were already here, and this file
+# written by somebody who has not audited the claims would be worse than an
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../desktop/launcher/postgres.go#type cluster.connArgs
@@ -72,7 +72,6 @@ internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
 internal/compose/attentionreceiptseam.go#const approvalStatusApproved
 internal/compose/backfilltransport.go#func backfillStatusPayload
-internal/compose/backfilltransport.go#func writeBackfillJSON
 internal/compose/bodyceilingcensus_test.go#var httpMethods
 internal/compose/brain.go#type agentBrain
 internal/compose/captureautoenrich.go#func startAutoEnrichRead
@@ -220,7 +219,6 @@ internal/compose/signalextractread.go#type settledThread.PrivateTo
 internal/compose/signalproposals.go#const signalKindContractEnded
 internal/compose/signalscan.go#const kindGhostedThread
 internal/compose/signalscan_project.go#const kindProjectGoneQuiet
-internal/compose/siteleadaccept.go#const siteLeadCapturedBy
 internal/compose/sitelogo.go#func siteReadLogoKey
 internal/compose/sitepagefacts_test.go#func TestOneRoleLabelServesEveryOfficerListedUnderIt
 internal/compose/sitereaddebugreport.go#type DebugExtraction.Dropped
@@ -370,7 +368,6 @@ internal/modules/comms/seams.go#type deliveryStore
 internal/modules/comms/store_channel_integration_test.go#func TestStagingAChannelDeliveryWithNoBodyIsRefused
 internal/modules/consent/doi.go#const purposeIDField
 internal/modules/consent/dsr.go#const dsrSelectByID
-internal/modules/consent/dsr.go#func validateDSRUpdate
 internal/modules/consent/gate.go#func grantedForRecipient
 internal/modules/consent/gate.go#type Gate
 internal/modules/contacts/anchorcompany.go#const block at const fieldOfferSummary
@@ -421,7 +418,6 @@ internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
 internal/modules/dealrooms/lifecycle.go#const block at const stateDraft
 internal/modules/dealrooms/store.go#const columnTitle
-internal/modules/dealrooms/store_public.go#const exchangeablePredicate
 internal/modules/deals/basecurrencyfreeze.go#var frozenRateTables
 internal/modules/deals/handlers.go#func WriteOfferError
 internal/modules/deals/listfilters.go#const block at const filterCompanyID

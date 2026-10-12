@@ -196,6 +196,48 @@ func TestOpenAIRefusalIsAnError(t *testing.T) {
 	}
 }
 
+// A Responses reply can carry a second message after the one that answers the
+// schema. Joined, the two read as one reply that is not a single document.
+func TestOpenAISchemaAnswerIsTheFirstMessageAlone(t *testing.T) {
+	const twoMessages = `{"id":"r","status":"completed","output":[` +
+		`{"type":"message","content":[{"type":"output_text","text":"{\"tool\":\"t\"}"}]},` +
+		`{"type":"message","content":[{"type":"output_text","text":"{\"final\":{}}"}]}]}`
+	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(twoMessages))
+	})
+	msgs := []model.Message{{Role: "user", Content: "x"}}
+
+	bound, err := client.Complete(context.Background(), model.Request{Messages: msgs, ResponseSchema: json.RawMessage(`{"type":"object"}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bound.Text != `{"tool":"t"}` {
+		t.Errorf("schema-bound reply = %q, want the first message alone", bound.Text)
+	}
+	if bound.FinishReason != "stop" {
+		t.Errorf("finish reason = %q, want stop for a completed response", bound.FinishReason)
+	}
+
+	free, err := client.Complete(context.Background(), model.Request{Messages: msgs})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if free.Text != `{"tool":"t"}{"final":{}}` {
+		t.Errorf("free-text reply = %q, want every message joined", free.Text)
+	}
+}
+
+func TestOpenAIRefusalInALaterMessageIsStillAnError(t *testing.T) {
+	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"id":"r","status":"completed","output":[{"type":"message","content":[{"type":"refusal","refusal":"no"}]},` +
+			`{"type":"message","content":[{"type":"output_text","text":"{}"}]}]}`))
+	})
+	_, err := client.Complete(context.Background(), model.Request{Messages: []model.Message{{Role: "user", Content: "x"}}, ResponseSchema: json.RawMessage(`{"type":"object"}`)})
+	if err == nil || !strings.Contains(err.Error(), "refus") {
+		t.Fatalf("want a refusal error, got %v", err)
+	}
+}
+
 func TestOpenAIEmbedReturnsVectors(t *testing.T) {
 	client := newOpenAIForTest(t, func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/v1/embeddings" {

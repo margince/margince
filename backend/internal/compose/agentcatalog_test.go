@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Total in both directions. Either half alone is a half-answer: an agent the
@@ -156,5 +157,34 @@ func TestNoScheduledAgentAttachesADecideVerb(t *testing.T) {
 	if checked == 0 {
 		t.Error("no agent attaches any tool, so this gate compared nothing — the declaration is not " +
 			"reaching the assembled catalog")
+	}
+}
+
+// A run persists every call's arguments in agent_run.trace, so a tool whose
+// arguments may outgrow the ordinary body bound (a whole file) is never attached.
+func TestNoAgentLoopAttachesAToolThatCarriesAFile(t *testing.T) {
+	carriesFile := map[string]bool{}
+	for _, spec := range NewRegistry(nil, SendPath{}).Specs() {
+		if spec.MaxArgsBytes > httperr.MaxBodyBytes {
+			carriesFile[spec.Name] = true
+		}
+	}
+	if len(carriesFile) == 0 {
+		t.Fatal("no registered tool takes arguments over the ordinary body bound, so this gate checked nothing")
+	}
+	lists := 0
+	for _, task := range ai.AllTasks() {
+		for _, agent := range ai.AgentsFor(task) {
+			lists++
+			for _, tool := range agent.Tools {
+				if carriesFile[tool] {
+					t.Errorf("agent %q attaches %s, so a run would store the file it was handed in its trace",
+						agent.Name, tool)
+				}
+			}
+		}
+	}
+	if lists == 0 {
+		t.Fatal("api/ai-tasks.yaml declares no agent tool list, so this gate checked nothing")
 	}
 }

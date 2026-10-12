@@ -205,7 +205,7 @@ func TestAutoEnrichBudgetSlotIsReturnedWhenItBoughtNothing(t *testing.T) {
 
 	const testCap = 3
 	var last capture.BudgetSlot
-	for i := 0; i < testCap; i++ {
+	for i := range testCap {
 		slot, err := store.ReserveBudget(e.Admin(), testCap)
 		if err != nil {
 			t.Fatal(err)
@@ -252,7 +252,7 @@ func TestAutoEnrichBudgetReleaseNeverGoesBelowZero(t *testing.T) {
 	if !today.Reserved {
 		t.Fatal("setup reservation refused — the guard below would pass without ever running")
 	}
-	for i := 0; i < testCap; i++ {
+	for range testCap {
 		if err := store.ReleaseBudget(e.Admin(), today); err != nil {
 			t.Fatalf("ReleaseBudget on an unspent day: %v", err)
 		}
@@ -261,7 +261,7 @@ func TestAutoEnrichBudgetReleaseNeverGoesBelowZero(t *testing.T) {
 		t.Fatalf("budget spent = %d after more refunds than reservations, want 0", n)
 	}
 	// And the day still gives its full allowance.
-	for i := 0; i < testCap; i++ {
+	for i := range testCap {
 		slot, err := store.ReserveBudget(e.Admin(), testCap)
 		if err != nil {
 			t.Fatal(err)

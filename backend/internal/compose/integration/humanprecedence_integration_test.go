@@ -37,7 +37,7 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Human"}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Greta Human"}, nil, &contact); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 
@@ -161,7 +161,7 @@ func stageContactAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label strin
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": fullName}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": fullName}, nil, &contact); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {

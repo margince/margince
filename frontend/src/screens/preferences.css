@@ -10,7 +10,7 @@
   /* Twice the top at the bottom: the save bar sticks 16px off the floor, so
      the page has to clear it below the last row. */
   padding: var(--space-12) var(--space-5) calc(var(--space-12) * 2);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 .pref-center {
@@ -187,5 +187,5 @@
 }
 
 .pref-check:not(:has(input:disabled)):hover {
-  background: var(--bgCard);
+  background: var(--bgInset);
 }

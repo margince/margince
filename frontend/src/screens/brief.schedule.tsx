@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { routeHash } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { sourceComplete } from "./brief.facts";
+import {
+  type CalendarDay,
+  calendarDay,
+  nextMeetingDay,
+  sourceComplete,
+} from "./brief.facts";
+import { EntityRef } from "./entityref";
+import { settingsHref } from "./settingsrouting";
 import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
+
+type NextMeeting = NonNullable<Worklist["next_meeting"]>;
 
 // Calendar context is drawn from the same loaded agenda, with explicit partial states.
 const MEETING = "meeting";
@@ -30,7 +40,10 @@ export function scheduleIsEmpty(
     answered(state) &&
     day !== undefined &&
     sourceComplete(day, MEETING) &&
-    rowsFrom(day, MEETING).length === 0
+    rowsFrom(day, MEETING).length === 0 &&
+    // A day whose calendar could not count, or whose next meeting is known,
+    // still has something to say.
+    calendarDay(day).state === "counted"
   );
 }
 
@@ -60,9 +73,6 @@ export function SchedulePanel({
     return null;
   }
   const meetings = rowsFrom(day, MEETING);
-  const calendarFailed = day?.sources_unavailable.some(
-    (entry) => entry.source === MEETING,
-  );
   return (
     <section id="brief-schedule">
       <Panel title={t("brief.panel.schedule")}>
@@ -77,14 +87,8 @@ export function SchedulePanel({
           // quiet line cannot report one morning in two vocabularies.
           emptyLabel={t("brief.rail.quietSchedule")}
         >
-          {meetings.length === 0 && answered(state) && (
-            <PanelRow>
-              {t(
-                calendarFailed
-                  ? "brief.schedule.unavailable"
-                  : "brief.schedule.more",
-              )}
-            </PanelRow>
+          {meetings.length === 0 && answered(state) && day && (
+            <NoMeetingRows calendar={calendarDay(day)} />
           )}
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
@@ -106,6 +110,93 @@ export function SchedulePanel({
         </SurfaceState>
       </Panel>
     </section>
+  );
+}
+
+/** What the panel says on a day it has no meeting rows to draw. */
+function NoMeetingRows({ calendar }: Readonly<{ calendar: CalendarDay }>) {
+  const t = useT();
+  switch (calendar.state) {
+    case "quiet":
+      return <NextMeetingRow next={calendar.next} />;
+    case "not_connected":
+      return (
+        <>
+          <CalendarRow
+            sentence={t("brief.schedule.notConnected")}
+            verb={t("brief.schedule.connect")}
+          />
+          {calendar.next && <NextMeetingRow next={calendar.next} />}
+        </>
+      );
+    case "unreadable":
+      return (
+        <>
+          <CalendarRow
+            sentence={t("brief.schedule.unreadable")}
+            verb={t("brief.schedule.reconnect")}
+          />
+          {calendar.next && <NextMeetingRow next={calendar.next} />}
+        </>
+      );
+    case "unread":
+      return <PanelRow>{t("brief.schedule.unavailable")}</PanelRow>;
+    case "counted":
+      return <PanelRow>{t("brief.schedule.more")}</PanelRow>;
+  }
+}
+
+/** Why the calendar counted nothing, and the way to where it is connected. */
+function CalendarRow({
+  sentence,
+  verb,
+}: Readonly<{ sentence: string; verb: string }>) {
+  return (
+    <PanelRow>
+      {sentence}{" "}
+      <a className="link-button" href={routeHash(settingsHref("connections"))}>
+        {verb}
+      </a>
+    </PanelRow>
+  );
+}
+
+/**
+ * The next booked conversation, on the schedule's own line. Its gutter carries
+ * a date rather than a time, which is what tells it apart from today's rows.
+ */
+function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const subject = next.subject || t("contact.meetings.untitled");
+  return (
+    <PanelRow className="rail-schedule-row">
+      <span className="t-caption rail-schedule-when">
+        {nextMeetingDay(next, locale)}
+      </span>
+      <span className="rail-schedule-dot" aria-hidden="true" />
+      <span className="rail-schedule-what">
+        {next.linked_deal_id ? (
+          <EntityRef kind="deal" id={next.linked_deal_id} name={subject} />
+        ) : (
+          <span className="t-body">{subject}</span>
+        )}
+        <span className="t-caption">
+          {t("brief.schedule.nextAt", {
+            time: formatTimeOfDay(next.starts_at, locale, zone),
+          })}
+        </span>
+        {next.participants?.map((participant) => (
+          <EntityRef
+            key={participant.contact_id}
+            kind="contact"
+            id={participant.contact_id}
+            name={participant.full_name}
+          />
+        ))}
+      </span>
+    </PanelRow>
   );
 }
 

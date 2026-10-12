@@ -137,7 +137,7 @@ func TestAddingToAShortlistNeedsTheRecordsReadGrant(t *testing.T) {
 	if _, err := store.AddMember(ctx, list.ID, change); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a curator without contact read added a contact: %v, want not found", err)
 	}
-	if err := store.RemoveMember(ctx, list.ID, change); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.RemoveMember(ctx, list.ID, change); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a curator without contact read removed a contact: %v, want not found", err)
 	}
 }

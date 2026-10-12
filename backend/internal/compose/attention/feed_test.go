@@ -6,7 +6,6 @@ package attention
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -255,7 +254,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 }
 
 func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
-	svc := NewService(stubApprovals{err: fmt.Errorf("the database is unreachable")}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+	svc := NewService(stubApprovals{err: errors.New("the database is unreachable")}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(pageReader()); err == nil {
 		t.Fatal("a lane that FAILED was reported as an empty day")
 	}
@@ -492,7 +491,7 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 	// them tells a reader a pair is hidden from their account when the truth is
 	// that the database would not answer — a reassuring lie, and the one this
 	// surface must never tell.
-	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, describeErr: fmt.Errorf("the database is unreachable"), pairs: []DuplicatePair{{
+	svc := NewService(stubApprovals{}, stubDuplicates{open: 1, describeErr: errors.New("the database is unreachable"), pairs: []DuplicatePair{{
 		ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 		LeftID: ids.NewV7(), RightID: ids.NewV7(),
 	}}}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -690,7 +689,7 @@ func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 // reader who most needs next week's deadline was the one who never saw it.
 func TestUpcomingWorkSurvivesAFullDayOfTasks(t *testing.T) {
 	full := make([]Task, 0, plannedCap+6)
-	for i := 0; i < plannedCap+6; i++ {
+	for i := range plannedCap + 6 {
 		due := rankInstant.Add(time.Duration(i) * time.Minute)
 		full = append(full, Task{ID: ids.NewV7(), Subject: "Due today", DueAt: &due})
 	}
@@ -747,7 +746,7 @@ func TestTheTwoTaskReadsCoverOneUnbrokenWindow(t *testing.T) {
 // paging path existed to find it.
 func TestATruncatedUpcomingListReportsItselfTruncated(t *testing.T) {
 	upcoming := make([]Task, 0, upcomingCap)
-	for i := 0; i < upcomingCap; i++ {
+	for i := range upcomingCap {
 		due := rankInstant.Add(time.Duration(48+i) * time.Hour)
 		upcoming = append(upcoming, Task{ID: ids.NewV7(), Subject: "Due later", DueAt: &due})
 	}

@@ -16,7 +16,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -109,12 +108,8 @@ func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(string) bool, closed bool) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			return &DetailedError{
-				Status: http.StatusRequestEntityTooLarge,
-				Code:   codeBodyTooLarge, Detail: "request body exceeds the 1 MiB cap",
-			}
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return BodyTooLargeRefusal("request body exceeds the 1 MiB cap")
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
@@ -148,6 +143,9 @@ func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(
 	if dec.More() {
 		return Validation("body", "malformed_json", "trailing content after the JSON value")
 	}
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return Validation(outOfRange.Field, "out_of_range", outOfRange.Error())
+	}
 	stashPresentFields(r, raw)
 	return nil
 }
@@ -159,6 +157,12 @@ func decodeRefusal(w http.ResponseWriter, r *http.Request, into any, owned func(
 func BodyTooLarge(err error) bool {
 	var detailed *DetailedError
 	return errors.As(err, &detailed) && detailed.Code == codeBodyTooLarge
+}
+
+// BodyTooLargeRefusal is the 413 for a body over its ceiling. The detail should
+// name the limit, the one fact the sender can act on.
+func BodyTooLargeRefusal(detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusRequestEntityTooLarge, Code: codeBodyTooLarge, Detail: detail}
 }
 
 // presentFieldsKey carries the decoded body's top-level keys, so a handler can
@@ -259,11 +263,25 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 	}
 	// A list with no rows is `[]`, never `null` — see withEmptyLists for why
 	// that is a contract question rather than a cosmetic one.
-	body = withEmptyLists(body)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report an encode failure to the client anymore
-	_ = json.NewEncoder(w).Encode(body)
+	if err := writeEncoded(w, status, "application/json", withEmptyLists(body)); err != nil {
+		slog.Error("encoding a JSON response", "status", status, "err", err)
+		DropSuccessHeaders(w.Header())
+		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
+	}
+}
+
+// successHeaders describe a body that a failure replaces. Headers the chassis
+// set for every response (security, CORS, cache policy) are not among them.
+var successHeaders = []string{
+	"Location", "Content-Location", "ETag", "Last-Modified", "Content-Disposition", "Content-Length",
+}
+
+// DropSuccessHeaders removes what a handler set for the success it was about
+// to send, before a failure is answered in its place.
+func DropSuccessHeaders(header http.Header) {
+	for _, name := range successHeaders {
+		header.Del(name)
+	}
 }
 
 // CustomFieldFilters collects a list request's cf_* query parameters —
@@ -429,6 +447,26 @@ func splitUnquoted(s string, sep byte) []string {
 	return parts
 }
 
+// RequireSent refuses a body that left out a field the contract makes required
+// but nullable. A null there clears the value and a missing key must not. Both
+// decode to a nil pointer, so only the raw body tells them apart.
+func RequireSent(r *http.Request, field, message string) error {
+	if _, sent := PresentField(r, field); !sent {
+		return Validation(field, "required", message)
+	}
+	return nil
+}
+
+// RequireAnyField refuses a patch body that carried no key at all.
+// A schema with `minProperties: 1` calls an empty object a mistake. The decoded
+// struct of an all-optional patch cannot tell it from a real edit.
+func RequireAnyField(r *http.Request) error {
+	if fields, ok := r.Context().Value(presentFieldsKey{}).(map[string]json.RawMessage); ok && len(fields) > 0 {
+		return nil
+	}
+	return Validation("body", "required", "send at least one field to change")
+}
+
 // ClearedFields names the top-level keys the body sent as an explicit null.
 //
 // A nullable contract field decodes to a nil pointer whether the caller sent
@@ -446,15 +484,5 @@ func ClearedFields(r *http.Request) []string {
 	if !ok {
 		return nil
 	}
-	cleared := make([]string, 0, len(fields))
-	for name, raw := range fields {
-		if string(raw) == "null" {
-			cleared = append(cleared, name)
-		}
-	}
-	if len(cleared) == 0 {
-		return nil
-	}
-	sort.Strings(cleared)
-	return cleared
+	return NullKeys(fields)
 }

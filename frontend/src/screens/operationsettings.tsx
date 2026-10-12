@@ -112,27 +112,29 @@ function OperationsCard({
       <PanelBody className="form-stack">
         <PanelIntro>{sub}</PanelIntro>
         {!canManage && <PanelIntro>{t("operations.adminOnly")}</PanelIntro>}
-        <QueryGate query={query} pendingLabel={title}>
-          {(settings) => (
-            <SettingList>
-              {rows.map((row) => (
-                <NumberSettingRow
-                  key={row.property}
-                  label={t(`operations.${row.copy}.label`)}
-                  description={t(`operations.${row.copy}.help`)}
-                  testId={`operation-${row.property}`}
-                  value={settings.operations[row.property]}
-                  {...OPERATION_BOUNDS[row.property]}
-                  lowestOn={row.lowestOn}
-                  refusal={t("operations.refusal")}
-                  disabled={!canManage || update.isPending}
-                  onCommit={(next) => update.mutate({ [row.property]: next })}
-                />
-              ))}
-            </SettingList>
-          )}
-        </QueryGate>
-        {update.isError && (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={title}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            {rows.map((row) => (
+              <NumberSettingRow
+                key={row.property}
+                label={t(`operations.${row.copy}.label`)}
+                description={t(`operations.${row.copy}.help`)}
+                testId={`operation-${row.property}`}
+                value={settings.operations[row.property]}
+                {...OPERATION_BOUNDS[row.property]}
+                lowestOn={row.lowestOn}
+                refusal={t("operations.refusal")}
+                disabled={!canManage || update.isPending}
+                onCommit={(next) => update.mutate({ [row.property]: next })}
+              />
+            ))}
+          </SettingList>
+        )}
+      </QueryGate>
+      {update.isError && (
+        <PanelBody>
           <Callout
             tone="danger"
             kind="outcome"
@@ -140,8 +142,8 @@ function OperationsCard({
           >
             {problemMessageOf(update.error, t)}
           </Callout>
-        )}
-      </PanelBody>
+        </PanelBody>
+      )}
     </Panel>
   );
 }

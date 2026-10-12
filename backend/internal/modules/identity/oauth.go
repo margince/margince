@@ -303,7 +303,8 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	// all, so intersecting with it would make every real connection read-only
 	// whatever the human chose.
 	code, err := h.svc.mintConsentedAuthorizationCode(
-		r.Context(), id, r.PostForm.Get("scopes"), req)
+		r.Context(), id, r.PostForm.Get("scopes"), req,
+	)
 	if errors.Is(err, apperrors.ErrInvalidArgument) {
 		// Not something the human's next click fixes: this server rendered
 		// five checkboxes over a closed vocabulary, so a scope list it will
@@ -353,13 +354,13 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 	if strings.TrimSpace(raw) == "" {
 		return []string{string(principal.ScopeRead)}, false, nil
 	}
-	for _, sc := range strings.Fields(raw) {
+	for sc := range strings.FieldsSeq(raw) {
 		if sc == scopeOfflineAccess {
 			offline = true
 			continue
 		}
 		if !validScopes[principal.Scope(sc)] {
-			return nil, false, fmt.Errorf("scope %q is not one of read|draft|write|send|enrich", sc)
+			return nil, false, fmt.Errorf("scope %q is not one of %s", sc, passportScopeList())
 		}
 		scopes = append(scopes, sc)
 	}

@@ -1,3 +1,4 @@
+<!-- prose:plain -->
 ## What
 
 <!-- The change, in one or two sentences. What behaviour is different after this PR? -->
@@ -15,17 +16,17 @@
 
 - [ ] `make check` is green
 - [ ] `make test-integration` is green (or: this change does not touch tenant data, workspace isolation or the write shape)
-- [ ] `make craft-static` reports no new blockers
-- [ ] This diff and description carry no secrets, no customer data, no local machine paths, and nothing quoted from or pointing at a private document; a decision is cited by its number (this repository is public)
+- [ ] `make craft-static` reports no new `BLOCKER` findings
+- [ ] This diff and the PR body hold no secrets, no customer data and no local machine paths. They hold nothing copied from a private document or pointing at one. A decision is named only by its number (this repository is public)
 
 ## AI involvement
 
 <!-- Which parts were AI-assisted, and how. This repo is built by agents under
      human accountability; say what was generated and what was hand-written. -->
 
-## Accountability
+## Who is accountable
 
-By opening this PR I confirm I am **accountable** for this change and can
-**explain every line** in it, human-written or AI-assisted. See
+By opening this PR, you confirm that you are **accountable** for this change. You can
+**explain every line** in it, whether a human or an AI wrote it. See
 [CONTRIBUTING.md](/CONTRIBUTING.md) and the
 [Code of Conduct](/CODE_OF_CONDUCT.md).

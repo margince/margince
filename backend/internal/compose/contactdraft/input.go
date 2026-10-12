@@ -138,10 +138,11 @@ type DealIn struct {
 	CloseDate   string `json:"close_date,omitempty"`
 }
 
-// ProjectIn is the body of work the message is about. It carries no id: a
-// project is not a record a reason may cite, and an id the grounding filter
-// refuses only invites a citation it drops.
+// ProjectIn is the body of work the message is about. Its id never reaches the
+// model: a project is not a record a reason may cite, and an id the grounding
+// filter refuses only invites a citation it drops.
 type ProjectIn struct {
+	ID   string `json:"-"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -204,6 +205,8 @@ type ClaimIn struct {
 // a draft naming the other attendees to the recipient tells them who we are
 // also talking to.
 type MeetingIn struct {
+	// ActivityID never reaches the model; it names the meeting for Grounding.
+	ActivityID string `json:"-"`
 	// Subject as scheduled, empty when the meeting has none.
 	Subject string `json:"subject,omitempty"`
 	// StartsAt is RFC3339 UTC. The drafter is told WHEN so it can write "next
@@ -244,6 +247,12 @@ type ActIn struct {
 	// met and the slots offered. Fenced with the rest of the input.
 	Record string `json:"record,omitempty"`
 }
+
+// ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.
+func (a ActIn) ActivityKind() string { return a.Kind }
+
+// ActivitySubject is the subject draftcore.ThreadMail answers.
+func (a ActIn) ActivitySubject() string { return a.Subject }
 
 // String is the debug rendering, never the prompt payload — the prompt sends
 // JSON so the model reads a structure rather than prose it might imitate.

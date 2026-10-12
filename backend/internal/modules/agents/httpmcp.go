@@ -16,11 +16,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -138,6 +138,13 @@ type httpMCPHandler struct {
 	server       *Dispatcher
 	authenticate func(*http.Request) (context.Context, error)
 	challenge    func(*http.Request) string
+	// largeBodies holds one token per request over httperr.MaxBodyBytes in flight.
+	largeBodies chan struct{}
+	// largeHolders names the principals holding a large slot, one each.
+	largeMu      sync.Mutex
+	largeHolders map[string]struct{}
+	// largeBodyReadBudget is largeBodyReadDeadline, a field so a test need not wait it out.
+	largeBodyReadBudget time.Duration
 }
 
 // NewHTTPHandler serves MCP over HTTP. authenticate runs PER REQUEST —
@@ -158,9 +165,12 @@ func NewHTTPHandler(registry *Registry, authenticate func(*http.Request) (contex
 		opt(server)
 	}
 	return &httpMCPHandler{
-		server:       server,
-		authenticate: authenticate,
-		challenge:    challenge,
+		server:              server,
+		authenticate:        authenticate,
+		challenge:           challenge,
+		largeBodies:         make(chan struct{}, maxLargeMCPBodiesInFlight),
+		largeHolders:        map[string]struct{}{},
+		largeBodyReadBudget: largeBodyReadDeadline,
 	}
 }
 
@@ -230,10 +240,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// authorization server. DELETE authenticates exactly like POST —
 		// there is no unauthenticated teardown path.
 		w.Header().Set("WWW-Authenticate", h.challenge(r))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		//craft:ignore swallowed-errors a failed write of the 401 body means the client hung up — there is no channel left to report on
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid_token"})
+		httperr.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
 		return
 	}
 
@@ -268,15 +275,12 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request, and the framing decides how a call is parsed — never what it may
 // do, which is the registry's business either way.
 func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(io.LimitReader(r.Body, 8<<20))
+	body, release, err := h.readBody(w, r)
 	if err != nil {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusBadRequest,
-			Code:   "unreadable_body",
-			Detail: "This request's body could not be read to the end.",
-		})
+		h.writeBodyRefusal(w, r, err)
 		return
 	}
+	defer release()
 	var req rpcRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		// The body is what normally decides the era, and this one does not

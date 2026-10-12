@@ -56,7 +56,8 @@ const (
 // is the one predicate equality does imply, so those indexes count.
 const uncoveredKeysTemplate = `
 WITH fk AS (
-  SELECT c.oid, c.conrelid AS childoid, c.conrelid::regclass::text AS child, c.conkey
+  SELECT c.oid, c.conrelid AS childoid, c.conrelid::regclass::text AS child,
+         c.confrelid::regclass::text AS parent, c.conkey
     FROM pg_constraint c
     JOIN pg_class t ON t.oid = c.conrelid
     JOIN pg_namespace n ON n.oid = t.relnamespace
@@ -83,7 +84,8 @@ WITH fk AS (
 )
 SELECT fk.child || ' (' || (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
           FROM unnest(fk.conkey) WITH ORDINALITY AS u(k, ord)
-          JOIN pg_attribute att ON att.attrelid = fk.childoid AND att.attnum = u.k) || ')'
+          JOIN pg_attribute att ON att.attrelid = fk.childoid AND att.attnum = u.k) || ')',
+       fk.parent
   FROM fk
  WHERE fk.oid NOT IN (SELECT oid FROM covered)
  ORDER BY 1`
@@ -113,7 +115,7 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 			"stopped recognising them rather than the schema having given them up", cascades)
 	}
 
-	if uncovered := readUncovered(ctx, t, conn, cascadeAction); len(uncovered) > 0 {
+	if uncovered, _ := readUncovered(ctx, t, conn, cascadeAction); len(uncovered) > 0 {
 		t.Errorf("%d cascading foreign key(s) have no index their delete can use:\n\t%s\n"+
 			"Deleting the parent scans the whole child table, inside the parent's transaction "+
 			"and holding its locks. Add an index on the referencing columns in the constraint's "+
@@ -170,7 +172,7 @@ SELECT i.indexrelid::regclass::text, fk.child || ' (' || fk.cols || ')'
 		t.Fatalf("dropping %s: %v", index, err)
 	}
 
-	uncovered := readUncovered(ctx, t, tx, cascadeAction)
+	uncovered, _ := readUncovered(ctx, t, tx, cascadeAction)
 	if !slices.Contains(uncovered, key) {
 		t.Errorf("dropped %s, the only index serving the cascade on %s, and the query still "+
 			"reported it covered — it is matching something other than a usable index, so a "+
@@ -183,7 +185,7 @@ SELECT i.indexrelid::regclass::text, fk.child || ' (' || fk.cols || ')'
 func readUncovered(ctx context.Context, t *testing.T, q interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }, action string,
-) []string {
+) ([]string, map[string]string) {
 	t.Helper()
 	rows, err := q.Query(ctx, fmt.Sprintf(uncoveredKeysTemplate, action))
 	if err != nil {
@@ -191,17 +193,19 @@ func readUncovered(ctx context.Context, t *testing.T, q interface {
 	}
 	defer rows.Close()
 	var uncovered []string
+	parentOf := map[string]string{}
 	for rows.Next() {
-		var one string
-		if err := rows.Scan(&one); err != nil {
+		var one, parent string
+		if err := rows.Scan(&one, &parent); err != nil {
 			t.Fatalf("scanning: %v", err)
 		}
 		uncovered = append(uncovered, one)
+		parentOf[one] = parent
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("reading uncovered cascades: %v", err)
 	}
-	return uncovered
+	return uncovered, parentOf
 }
 
 // foreignKeyIndexDebt is every non-cascading foreign key whose child carries no index
@@ -244,189 +248,132 @@ func TestEveryOtherForeignKeyIsIndexedOrRegisteredDebt(t *testing.T) {
 			"has stopped recognising them rather than the schema having given them up", others)
 	}
 
-	uncovered := readUncovered(ctx, t, conn, otherActions)
+	uncovered, parentOf := readUncovered(ctx, t, conn, otherActions)
 	registered := slices.Clone(foreignKeyIndexDebt)
 	slices.Sort(registered)
+	judged := map[string]bool{}
 	for _, key := range uncovered {
+		if _, measured := foreignKeyNoIndexNeeded[parentOf[key]]; measured {
+			judged[key] = true
+			continue
+		}
 		if !slices.Contains(registered, key) {
-			t.Errorf("%s has no index its parent's delete can use and is not in the register.\n"+
-				"Index the referencing columns in the constraint's own order, or add the line and "+
-				"say in the PR why the scan is affordable there.", key)
+			t.Errorf("%s has no index its parent's delete can use, and neither the register nor "+
+				"foreignKeyNoIndexNeeded accounts for it.\n"+
+				"Index the referencing columns in the constraint's own order, add the line and say "+
+				"in the PR why the scan is affordable there, or measure the parent and record what "+
+				"you found.", key)
 		}
 	}
 	for _, key := range registered {
 		if !slices.Contains(uncovered, key) {
-			t.Errorf("%s is in the register but is indexed now — delete its line, so the register "+
+			t.Errorf("%s is in the register but is indexed now: delete its line, so the register "+
 				"keeps meaning what it says.", key)
+		}
+		if judged[key] {
+			t.Errorf("%s is in the register and under a parent foreignKeyNoIndexNeeded has "+
+				"already measured: delete the line, or the register counts work nobody owes.", key)
+		}
+	}
+	// A parent whose keys all gained an index, or which no longer has an
+	// uncovered key at all, is a measurement with nothing left to answer for.
+	// Left in place it reads as a standing judgement about a shape that has
+	// moved on.
+	for parent := range foreignKeyNoIndexNeeded {
+		var still bool
+		for _, key := range uncovered {
+			if parentOf[key] == parent {
+				still = true
+				break
+			}
+		}
+		if !still {
+			t.Errorf("foreignKeyNoIndexNeeded measures %q, which has no uncovered key left: "+
+				"delete the entry, so what remains is a judgement about the schema as it is", parent)
 		}
 	}
 }
 
+// foreignKeyNoIndexNeeded records the parents whose keys have been MEASURED and
+// need no index, with what the measurement found. A key under one of these
+// parents is accounted for without being work owed.
+//
+// The distinction matters because the register is a list of work: a key that
+// will never want an index would otherwise sit in it forever, and a reader
+// cannot tell those from the ones nobody has looked at yet.
+//
+// gatekit:fixture the parent table each measurement was taken of, and what the
+// measurement found. Not a waiver: its keys are parents, where a finding names
+// one child key, and the three directions below are checked here rather than by
+// subject matching.
+var foreignKeyNoIndexNeeded = map[string]string{
+	"deal_room_participant":      "a seat is revoked and anonymized in place by the erasure, never deleted: a comment names its participant row, and deleting the seat would orphan the conversation",
+	"report_definition_revision": "append-only: a revision is what a report meant when it ran",
+	"sdr_handoff_reason":         "a reason is a vocabulary row the handoffs that cite it keep resolving",
+	"activity_kind":              "the kind vocabulary. Nothing deletes a kind, and an index on it would cost every insert of the busiest table in the schema to serve a delete that does not happen",
+	"ai_call_config":             "a configuration is superseded rather than removed, so a call can still say what it ran under",
+	"channel_provider":           "a provider is a vocabulary row; the identities bound to it keep naming it",
+	"deal_acquisition_source":    "a source is vocabulary the deals that cite it keep resolving",
+	"offer":                      "an offer is archived with its deal rather than deleted",
+	"deal_room_document":         "a document is withdrawn in place, keeping the engagement rows that reference it readable",
+	"maskable_field":             "the field vocabulary a mask policy cites",
+	"meeting_invitation":         "append-only: an invitation is the record that it was sent",
+	"oauth_client":               "a client is disabled in place so its grants stay attributable",
+	"project_health_assessment":  "append-only: an assessment is what somebody judged at a point in time",
+	"company":                    "a company is archived, never deleted: archived_at retires it and every read filters on it",
+	"consent_purpose":            "a purpose is archived rather than deleted, so a policy that cited it keeps resolving",
+	"activity":                   "an activity is archived, and the retention ladder redacts its content in place rather than removing the row",
+	"passport":                   "a passport is revoked or left to expire; the row stays so an audit trail can still name what acted",
+	"contact":                    "a contact is anonymized in place by the Art. 17 cascade, which is why that cascade exists rather than a delete",
+	"team":                       "a team is archived, keeping the membership history that references it readable",
+	"site_read":                  "append-only: a site read is evidence of what a scan saw, and nothing retires it",
+	"project":                    "a project is archived or ended, both in place",
+	"pipeline":                   "a pipeline is archived, so the deals that moved through it keep their stage history",
+	"stage":                      "a stage is archived; deleting one would strip the history of every deal that passed it",
+	"approval":                   "an approval is consumed or expires, and the row is the record that it was asked for",
+	"contract":                   "a contract is archived, which is what a commercial record needs rather than removal",
+	"deal":                       "a deal is archived or closed, never deleted",
+	"forecast_call":              "append-only: a call is what somebody committed to at a point in time",
+	"oauth_grant":                "a grant is revoked in place, so a later audit can say what the client once held",
+	"tag":                        "a tag is archived, keeping the rows that carried it explainable",
+	"commission_entry":           "append-only: a commission entry is a financial record",
+	"communication_instruction":  "an instruction is consumed or revoked in place",
+	"communication_review":       "append-only: a review is the decision somebody made",
+	"consent_text_version":       "append-only, and the migration revokes DELETE on it: a proof row pointing at a removed version is the failure it prevents",
+	"audit_log":                  "append-only by trigger (audit_log_immutable refuses DELETE), which is the whole point of the table",
+	"close_date_run":             "append-only: a sweep run holds the cursor the next one resumes from",
+	"deal_stage_evidence":        "append-only: evidence for why a stage moved",
+	"stage_exit_criterion":       "a criterion is archived, so the evidence that met it keeps resolving",
+	"deal_stage_history":         "append-only: the history is the record",
+	"finance_connection":         "a connection is archived, keeping the entries it produced attributable",
+	"product":                    "a product is archived; the offers that priced it still name it",
+	"relationship":               "a relationship is archived or ended in place",
+	"record_role":                "append-only: a role assignment is who could do what, when",
+	"report_schedule":            "append-only in practice: a schedule is retired by its own flags rather than removed",
+	"agent_run":                  "append-only: the run is how an outcome was reached",
+	"comms_outbound":             "append-only: the ledger of what was sent",
+	"weekly_review":              "append-only: a review is what a reader saw that week",
+	"app_user": "nothing deletes an app_user row. A member is retired by setting " +
+		"archived_at, every read filters on it, and preservedResetTables keeps the table " +
+		"out of the installation reset (compose/datasweep.go); the only DELETE FROM " +
+		"app_user in the tree is in three integration tests, over a handful of rows. " +
+		"So the referential scan these 63 keys would need an index for never runs, and " +
+		"adding one to each would cost every insert on 63 children to serve a delete " +
+		"that does not happen. Migration 1790813926 removed fifteen indexes for exactly " +
+		"that trade. Should a hard delete arrive, this entry is what has to be revisited, " +
+		"and the keys return to the register below.",
+}
+
 var foreignKeyIndexDebt = []string{
-	"activity (assignee_id)",
-	"activity (host_user_id)",
-	"activity (kind)",
-	"activity (source_author_id)",
-	"agent_run (approval_id)",
-	"agent_run (passport_id)",
-	"agent_standing_grant (passport_id, user_id)",
-	"ai_call (config_hash)",
-	"ai_task_run (passport_id)",
-	"approval (decided_by)",
-	"approval (on_behalf_of)",
-	"approval (passport_id)",
-	"approval (staged_by_connection)",
-	"assurance_resolution (actor_id)",
-	"attachment (contract_id)",
 	"attachment (supersedes_id)",
-	"audit_log (on_behalf_of)",
-	"automation (owner_id)",
-	"capture_connection (context_tag_id)",
-	"capture_freemail_domain (created_by)",
-	"capture_pending_counterparty (proposal_id)",
-	"capture_thread_verdict (first_activity_id)",
-	"capture_thread_verdict (user_id)",
-	"channel_connection (connected_by)",
-	"commission_entry (reversal_of)",
 	"comms_outbound (link_id)",
-	"comms_outbound (user_id)",
-	"communication_basis (source_activity_id)",
-	"communication_decision (instruction_id)",
-	"communication_instruction (revoked_by)",
-	"communication_review (superseded_by)",
 	"communication_suppression (carried_from)",
-	"communication_suppression (purpose_id)",
-	"company (merged_into_id)",
-	"company (owner_id)",
-	"company (source_author_id)",
-	"company_domain_disposition (owner_id)",
-	"company_domain_disposition (site_read_id)",
-	"company_fact (site_read_id)",
-	"confirm_token (purpose_id)",
-	"consent_doi_token (purpose_id)",
-	"consent_event (consent_text_version_id)",
-	"consent_event (purpose_id)",
-	"consent_text_version (purpose_id)",
-	"contact (owner_id)",
-	"contact (source_author_id)",
-	"contact_channel_identity (provider)",
-	"contact_consent (purpose_id)",
 	"contact_phone (superseded_phone_id)",
-	"contract (company_id)",
-	"contract (deal_id)",
-	"contract (project_id)",
-	"contract (superseded_by_id)",
-	"conversation_claim (corrected_by_user_id)",
-	"conversation_claim (task_activity_id)",
-	"custom_field (created_by)",
-	"data_subject_request (assignee_id)",
-	"data_subject_request (contact_id)",
-	"deal (acquisition_source)",
-	"deal (company_id)",
-	"deal (id, arr_source_offer_id)",
-	"deal (owner_id)",
-	"deal (partner_company_id)",
-	"deal (pipeline_id)",
-	"deal (project_id)",
-	"deal (source_author_id)",
-	"deal (stage_id)",
-	"deal (stage_id, pipeline_id)",
-	"deal_correction (reversal_audit_id)",
-	"deal_correction (run_id)",
-	"deal_room (steward_user_id)",
-	"deal_room_comment (author_participant_id, room_id)",
-	"deal_room_comment (author_user_id)",
 	"deal_room_document (attachment_id)",
-	"deal_room_engagement (document_id, room_id)",
-	"deal_room_participant (invited_by)",
 	"deal_room_thread (attachment_id)",
-	"deal_room_thread (author_participant_id, room_id)",
-	"deal_room_thread (author_user_id)",
-	"deal_room_thread (resolved_by_user_id)",
-	"deal_stage_evidence (contradicted_by)",
-	"deal_stage_evidence (criterion_id)",
-	"deal_stage_evidence (refuted_by)",
-	"deal_stage_history (from_stage_id)",
-	"deal_stage_history (reversal_of)",
-	"deal_stage_history (to_stage_id)",
-	"dedupe_candidate (disposed_by)",
-	"field_mask (object, field)",
-	"finance_customer_link (company_id)",
-	"finance_customer_link (connection_id)",
-	"forecast_call (author_id)",
-	"forecast_call (supersedes_id)",
-	"forecast_snapshot (call_id)",
-	"forecast_snapshot (pipeline_id)",
-	"intro_request (introducer_user_id)",
-	"intro_request (requester_user_id)",
-	"intro_request (source_activity_id)",
-	"intro_request (suggested_user_id)",
-	"intro_request (through_contact_id)",
-	"lead (owner_id)",
-	"lead (project_id)",
-	"lead (promoted_contact_id)",
-	"lead (source_author_id)",
-	"lead_manual_signal (set_by)",
-	"linkedin_connection (matched_company_id)",
-	"list (owner_id)",
-	"list (team_id)",
-	"meeting_invitation (host_user_id)",
-	"meeting_proposal (host_user_id)",
-	"meeting_proposal (invitation_id)",
-	"oauth_grant (client_id)",
-	"offer (buyer_company_id)",
-	"offer_line_item (product_id)",
-	"onboarding_wizard_state (site_read_id)",
-	"passport (granted_by)",
 	"preference_token (contact_email_id)",
-	"privacy_notice_case (owner_user_id)",
-	"privacy_notice_case (resolved_by)",
-	"project (company_id)",
-	"project (owner_id)",
-	"project (source_author_id)",
-	"project_health_assessment (project_id, supersedes_assessment_id)",
-	"provider_connection (connected_by)",
-	"provider_employment_resolution (company_id)",
-	"provider_employment_resolution (relationship_id)",
-	"provider_run (requested_by)",
-	"record_assignment (role_id)",
-	"record_assignment (team_id)",
-	"record_assignment (user_id)",
-	"record_grant (granted_by)",
-	"report_definition (audience_team_id)",
-	"report_definition (owner_id)",
-	"report_definition_revision (created_by)",
-	"report_execution (owner_id)",
-	"report_execution (report_id, report_revision)",
-	"report_execution (schedule_id)",
-	"report_schedule (owner_id)",
-	"report_schedule (report_id, report_revision)",
-	"reporting_framework_revision (created_by)",
-	"runner_job (agent_run_id)",
-	"runner_job (passport_id)",
-	"sales_target (pipeline_id)",
-	"sales_target_revision (created_by)",
-	"scheduled_send (activity_id)",
-	"scheduled_send (agent_on_behalf_of)",
-	"scheduled_send (delivery_id)",
-	"sdr_handoff (assigned_to)",
-	"sdr_handoff (company_id)",
-	"sdr_handoff (deal_id)",
-	"sdr_handoff (reason_id, reason_applies_to)",
-	"sdr_handoff_event (reason_id, reason_applies_to)",
-	"signal (owner_id)",
-	"signal (resolved_contact_id)",
-	"signal_resolution (matched_company_id)",
-	"signal_resolution (resolved_by)",
-	"signal_thread_scan (resolved_company_id)",
-	"stage_progression_outcome (reversed_by)",
-	"stage_progression_policy (enabled_by)",
-	"system_log (on_behalf_of)",
-	"team (parent_team_id)",
 	"voice_build (voice_profile_id, result_version)",
 	"voice_learning_signal (voice_profile_id, profile_version)",
 	"voice_profile_delta (voice_profile_id, from_version)",
 	"voice_profile_version (voice_profile_id, predecessor_version)",
-	"weekly_plan_commitment (manager_user_id)",
-	"weekly_review (prior_review_id)",
 }

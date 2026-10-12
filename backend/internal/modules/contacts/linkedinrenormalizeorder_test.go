@@ -66,14 +66,14 @@ func idAt(t *testing.T, prefix string) ids.UUID {
 // would stand on every pass.
 func TestCosmeticSpellingsOfOneEmployerDeriveOneKey(t *testing.T) {
 	t.Parallel()
-	plain := currentKey(ptr("najahak.io"))
+	plain := currentKey(new("najahak.io"))
 	if plain == "" {
 		t.Fatal("a named employer derived no key, so every row with a name groups as though it " +
 			"had none")
 	}
 
 	for _, spelling := range []string{"  najahak.io  ", "NAJAHAK.IO", "najahak.io | Growth"} {
-		if got := currentKey(ptr(spelling)); got != plain {
+		if got := currentKey(new(spelling)); got != plain {
 			t.Errorf("%q derives %q, want %q: a row restating its employer would read as one "+
 				"that left its group", spelling, got, plain)
 		}

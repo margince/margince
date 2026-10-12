@@ -14,6 +14,7 @@ package comms
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,9 +58,9 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 		t.Fatalf("recording the send: %v", err)
 	}
 
-	// A CHANNEL send given up on wears the same stamp and must not reach this
-	// lane: it has no subject line, so the card would carry nothing but a
-	// reason. That it tells its sender nothing either is a separate gap.
+	// A CHANNEL send given up on wears the same stamp and reaches this lane
+	// too. It has no subject line, so the card is headed by the channel and
+	// the counterparty instead.
 	channel := e.stageChannel(t, StageChannelInput{
 		ActivityID: e.telegramActivity(t),
 		Provider:   "telegram",
@@ -72,6 +73,14 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	if err := e.store.Park(e.ctx, channel, "the bot was removed from the chat"); err != nil {
 		t.Fatalf("parking the channel delivery: %v", err)
 	}
+	// The counterparty as Telegram knows them. The card's recipient half is
+	// read from here. Never from the CRM record's own name, which a reader of
+	// this lane may not be allowed to see.
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
+		VALUES ($1, 'telegram', '778899', 'buyer', 'manual', 'human:x')`, contact); err != nil {
+		t.Fatalf("seeding the channel identity: %v", err)
+	}
 
 	since := e.clockValue.Add(-7 * 24 * time.Hour)
 	reader := readerCtx(e.ws, e.user)
@@ -79,12 +88,31 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParkedSendsFor: %v", err)
 	}
-	if len(parked) != 1 {
-		t.Fatalf("ParkedSendsFor = %+v, want only the MAIL send that was given up on", parked)
+	if len(parked) != 2 {
+		t.Fatalf("ParkedSendsFor = %+v, want both sends that were given up on, mail and channel", parked)
 	}
-	got := parked[0]
-	if got.ID != abandoned {
-		t.Errorf("carried send %s, want the abandoned one %s", got.ID, abandoned)
+	byID := map[ids.UUID]ParkedSend{}
+	for _, send := range parked {
+		byID[send.ID] = send
+	}
+	channelCard, onLane := byID[channel]
+	if !onLane {
+		t.Fatalf("the parked channel send is not on the lane: %+v", parked)
+	}
+	// Headed by the channel and the counterparty the provider knows, and by
+	// nothing out of the message. The text is unsent.
+	if channelCard.Subject != "Telegram to buyer" {
+		t.Errorf("channel card title = %q, want %q", channelCard.Subject, "Telegram to buyer")
+	}
+	if strings.Contains(channelCard.Subject, "On its way today") {
+		t.Error("the unsent message text reached a shared queue through the card title")
+	}
+	if channelCard.Reason != "the bot was removed from the chat" {
+		t.Errorf("channel reason = %q, want the dispatcher's own words", channelCard.Reason)
+	}
+	got, onLane := byID[abandoned]
+	if !onLane {
+		t.Fatalf("the parked mail send is not on the lane: %+v", parked)
 	}
 	if got.Reason != "the mailbox is no longer send-capable" {
 		t.Errorf("reason = %q, want the dispatcher's own words", got.Reason)
@@ -92,8 +120,8 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	if got.ContactID != contact {
 		t.Errorf("contact = %s, want the one the activity is filed under (%s)", got.ContactID, contact)
 	}
-	if got.Subject == "" {
-		t.Error("the send's subject line did not travel, so the card cannot name the send")
+	if got.Subject != "Re: pricing" {
+		t.Errorf("mail card title = %q, want the send's own subject line unchanged", got.Subject)
 	}
 	if got.ParkedAt.IsZero() {
 		t.Error("the send carries no time, so the lane has nothing to window or order on")

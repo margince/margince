@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -40,7 +41,7 @@ func (c *BudgetConfig) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 	if value.TokensPerFullUser == nil || len(value.CompanyMonthlyTokens) == 0 {
-		return fmt.Errorf("both allowance fields are required")
+		return errors.New("both allowance fields are required")
 	}
 	var company *int64
 	if err := json.Unmarshal(value.CompanyMonthlyTokens, &company); err != nil {
@@ -91,7 +92,7 @@ func (c BudgetConfig) resolveMonthlyTokens(fullUsers int64, onOverflow func() (i
 // instead — this stays strict only for the write path (previewBudget/ReplaceBudget).
 func (c BudgetConfig) MonthlyTokens(fullUsers int64) (int64, error) {
 	return c.resolveMonthlyTokens(fullUsers, func() (int64, error) {
-		return 0, fmt.Errorf("company allowance exceeds the supported maximum: lower tokens per full user, or set a company-wide monthly override")
+		return 0, errors.New("company allowance exceeds the supported maximum: lower tokens per full user, or set a company-wide monthly override")
 	})
 }
 

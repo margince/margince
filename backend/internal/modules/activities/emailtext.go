@@ -5,6 +5,7 @@ package activities
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -178,10 +179,8 @@ func isQuoteStart(lines []string, index int) bool {
 	// separates a reply header from a sentence that opens "Von:".
 	if index > 0 && replyHeaderFrom.MatchString(line) {
 		end := min(index+5, len(lines))
-		for _, next := range lines[index+1 : end] {
-			if replyHeaderSent.MatchString(next) {
-				return true
-			}
+		if slices.ContainsFunc(lines[index+1:end], replyHeaderSent.MatchString) {
+			return true
 		}
 	}
 	return false

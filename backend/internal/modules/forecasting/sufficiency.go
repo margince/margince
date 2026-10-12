@@ -22,7 +22,7 @@ package forecasting
 import (
 	"fmt"
 	"math"
-	"sort"
+	"slices"
 )
 
 // The bars below which an answer is not worth giving.
@@ -134,12 +134,10 @@ func AssessSufficiency(
 			"forecasting: a conversion rate of %v is more deals won than reached the stage", rate)
 	}
 
-	remaining := reference - readings.WonMinor
-	if remaining < 0 {
+	remaining := max(reference-readings.WonMinor,
 		// Already past the reference. No more pipeline is needed, and a
 		// negative requirement would print as a coverage figure nobody can read.
-		remaining = 0
-	}
+		0)
 	// Bounded before the conversion. A float64 above the int64 ceiling converts
 	// to an IMPLEMENTATION-DEFINED value in Go — in practice MinInt64 — so an
 	// unchecked cast turns "more pipeline than exists" into a negative
@@ -214,7 +212,7 @@ func referenceLanding(history ConversionHistory, call *int64) (SufficiencyBasis,
 	// business. Sorted on a copy: the caller's slice is theirs, and reordering
 	// it would change what a second reader sees.
 	recent := append([]int64{}, history.ComparableWon[:comparablePeriods]...)
-	sort.Slice(recent, func(i, j int) bool { return recent[i] < recent[j] })
+	slices.Sort(recent)
 	// The mean of the middle two, which is what a median of an even count is.
 	// Integer division truncates toward zero and both values are non-negative
 	// money, so the result is at most one minor unit low — and biasing the

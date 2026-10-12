@@ -149,7 +149,7 @@
   display: block;
   height: 1.25rem;
   border-radius: var(--r-sm);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 .report-chart-bullet-fill {
   position: absolute;

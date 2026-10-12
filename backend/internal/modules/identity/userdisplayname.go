@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameField is the name this answers to on every surface: the audit
@@ -61,7 +62,7 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 	// Trimmed before it is judged, so a name that is only spaces is refused
 	// rather than stored as a blank a colleague cannot address.
 	name = strings.TrimSpace(name)
-	if name == "" || utf8.RuneCountInString(name) > displayNameMaxRunes {
+	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > displayNameMaxRunes {
 		return Seat{}, &InvalidDisplayNameError{MaxRunes: displayNameMaxRunes}
 	}
 
@@ -144,5 +145,6 @@ func (e *InvalidDisplayNameError) Error() string {
 // 422 pointing at the control the reader used rather than a 500.
 func (e *InvalidDisplayNameError) FieldFault() (field, code, message string) {
 	return displayNameField, codeInvalid, fmt.Sprintf(
-		"a display name is 1 to %d characters", e.MaxRunes)
+		"a display name is 1 to %d characters", e.MaxRunes,
+	)
 }

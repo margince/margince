@@ -5,12 +5,14 @@ package knowledge
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,10 +36,21 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 	var doc crmcontracts.KnowledgeDocument
 	var key string
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		var failed bool
 		if err := tx.QueryRow(ctx,
-			`SELECT storage_key FROM knowledge_document WHERE id = $1 AND archived_at IS NULL`,
-			documentID).Scan(&key); err != nil {
+			`SELECT storage_key, ingest_status = 'failed' FROM knowledge_document
+			  WHERE id = $1 AND archived_at IS NULL`,
+			documentID).Scan(&key, &failed); err != nil {
 			return notFoundOr(err, "read the document to download")
+		}
+		// A failed ingest deletes the stored bytes and keeps the row, so there
+		// is nothing to send.
+		//
+		// The object store answered the missing key with a read error, so the
+		// server reported a fault for a state it had itself created.
+		if failed {
+			return fmt.Errorf("%w: this document failed to read and its bytes were not kept",
+				apperrors.ErrNotFound)
 		}
 		var rerr error
 		doc, rerr = readDocument(ctx, tx, documentID)

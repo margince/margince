@@ -194,6 +194,9 @@ func (s *Store) ArchiveRoom(ctx context.Context, id ids.DealRoomID, ifVersion *i
 			return err
 		}
 		if current.ArchivedAt != nil {
+			if err := storekit.EnsureIfMatchIn(ctx, tx, roomObject, id.UUID, ifVersion, storekit.IncludeArchived); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}

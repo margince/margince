@@ -65,7 +65,7 @@ func (c *channelSendEnv) enrichTarget(t *testing.T) string {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/companies",
-		AnyMap{"display_name": "Approval Mechanism GmbH"}, nil, &company); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": "Approval Mechanism GmbH"}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	return company.ID

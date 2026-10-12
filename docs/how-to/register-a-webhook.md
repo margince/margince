@@ -1,60 +1,61 @@
+<!-- prose:plain -->
 # Register an outbound webhook
 
-Register an HTTPS endpoint to receive signed, retried deliveries of published domain events, then
-verify the signature, inspect deliveries, and replay a parked one. For the mental model (the config
-surface vs. the delivery engine, secret sealing, the contract-first payload pipeline, versioning, the
-retry/dead-letter state machine, the owner-scope fan-out gate), read
-[explanation/outbound-webhooks.md](../explanation/outbound-webhooks.md) first.
+Register an HTTPS endpoint, so that it gets signed deliveries of published domain events, which are tried again when they fail.
+Then check the signature, look at deliveries, and replay a parked one. To learn how it all works, read
+[explanation/outbound-webhooks.md](../explanation/outbound-webhooks.md) first. It covers the settings
+part and the delivery engine, how secrets are sealed, and the payload pipeline that starts from the contract.
+It also covers versions, the states of a retry and a dead letter, and the gate that limits delivery to what the owner may see.
 
-Everything below also works from the UI: **Settings → Integrations** drives the same create / pause /
-resume / re-target / archive / rotate / replay actions this guide curls, plus a deliveries and
-dead-letter panel. Both hit the same API.
+All of the steps below also work from the app. **Settings → Integrations** does the same create, pause,
+resume, new target, archive, rotate and replay actions that this guide does with `curl`. It also has a panel for
+deliveries and dead letters. Both use the same API.
 
-**First-party, outbound only.** This registers a *subscription* Margince delivers to. It is neither
-an inbound receiver nor a third-party app install. Deliveries are signed HTTP POSTs of a **typed,
-contract-generated** payload (`backend/api/public-events.yaml` → `internal/contracts`, one
-`PublicEvent<Event>` schema per event type) on the [Standard Webhooks](https://www.standardwebhooks.com/)
-scheme, the convention Anthropic, OpenAI, Stripe and Svix use. Any off-the-shelf SW verifier library
-works unmodified.
+**First party, outbound only.** This registers a *subscription* that Margince delivers to. It is not
+an inbound receiver, and it does not install an app from a third party. Deliveries are signed HTTP POSTs of a **typed
+payload that the contract generates** (`backend/api/public-events.yaml` → `internal/contracts`, one
+`PublicEvent<Event>` schema for each event type). They follow the [Standard Webhooks](https://www.standardwebhooks.com/)
+scheme, which Anthropic, OpenAI, Stripe and Svix use. Any ready-made library that checks Standard Webhooks
+works with no change.
 
-> **Single-company installation.** One installation serves one company; the
-> server resolves its singleton company itself, so no request selects a tenant and there is no
-> `X-Workspace-Slug` header. The `curl`s below carry only the session cookie. ("Workspace" still names
-> the internal tenant identity `WithWorkspaceTx` binds the transaction to.)
+> **One company for each installation.** One installation serves one company. The
+> server finds its one company by itself, so no request chooses a tenant, and there is no
+> `X-Workspace-Slug` header. The `curl` calls below carry only the session cookie. ("Workspace" still names
+> the tenant identity in the code that `WithWorkspaceTx` uses for the transaction.)
 
-## Prerequisites
+## Before you start
 
-- **Admin or ops RBAC.** Managing subscriptions is company-wide integration config (the same
-  posture as custom fields), gated `admin`/`ops`-only; every role may *read* a subscription and its
+- **Admin or ops RBAC.** Subscriptions are integration settings for the whole company (like
+  custom fields), so only `admin` and `ops` may change them. Every role may *read* a subscription and its
   deliveries.
-- **A deployment signing key must be configured**: `MARGINCE_WEBHOOK_KEY` (see step 1). Without it the
-  read surface still lists, but create/rotate/replay answer `503 webhooks_not_configured` and no
+- **A deployment signing key must be set**: `MARGINCE_WEBHOOK_KEY` (see step 1). Without it, the
+  read paths still list, but create, rotate and replay answer `503 webhooks_not_configured`, and no
   delivery runs.
-- **An HTTPS endpoint you control** that can verify an HMAC and return `2xx`. Plain `http://` targets
-  are rejected at create.
+- **An HTTPS endpoint you control** that can check an HMAC and return `2xx`. Create refuses
+  plain `http://` targets.
 
-## 1. Configure the deployment signing key
+## 1. Set the deployment signing key
 
-The key seals every subscription's signing secret at rest (AES-256-GCM). It is a **base64-encoded
-32-byte** key, shared by the api and the delivery worker. Mint one:
+The key seals the signing secret of every subscription at rest (AES-256-GCM). It is a **base64
+32-byte** key, and the API and the delivery worker share it. Mint one:
 
 ```sh
 openssl rand -base64 32
 ```
 
-Set it on both the api and the worker before boot (`--webhook-key` or `MARGINCE_WEBHOOK_KEY`). A
-wrong-length key is a **boot error** and is never padded. Rotating this deployment key re-seals
-nothing automatically, so treat it as long-lived. The secret you rotate operationally is the
-per-subscription one (step 6).
+Set it on both the API and the worker before they start (`--webhook-key` or `MARGINCE_WEBHOOK_KEY`). A
+key of the wrong length is a **start error**, and the server never fills it out to the right length. When you rotate this deployment key,
+nothing is sealed again on its own, so keep the key for a long time. The secret you rotate in daily work is the
+one for each subscription (step 6).
 
 ```sh
 export MARGINCE_WEBHOOK_KEY="$(openssl rand -base64 32)"   # then (re)start the api + worker
 ```
 
-The api delivers on the bus inline in `make dev` (`--inline-relay`), and the worker runs the same
-`cg:webhooks` consumer in a split deployment; the same key must be set on whichever process delivers.
-Re-attempting a delivery that failed is the worker's job alone: it is a River periodic job, and the api
-runs no job runner, so an installation with no worker never retries a parked delivery.
+In `make dev`, the API delivers from the bus itself (`--inline-relay`). When the worker runs as its own program, it runs the same
+`cg:webhooks` consumer. The same key must be set on the program that delivers.
+Only the worker tries a failed delivery again. That is a River job that runs on a schedule, and the API
+runs no jobs. So an installation with no worker never tries a parked delivery again.
 
 ## 2. Create a subscription
 
@@ -69,21 +70,23 @@ curl -X POST http://localhost:8080/v1/webhook-subscriptions \
 ```
 
 - `target_url` **must be `https://`**.
-- `event_types` is a **non-empty subset of the published catalog**. An unknown type is a `422`, and
-  the entity-less capture-pipeline events (`capture.*`) are rejected because they name no subject to
-  scope delivery by. The runtime catalog (`events.Types()` minus the pipeline class) validates a
-  create/update; the contract's `SubscribableEventType` enum (`public-events.yaml`) is its documented
-  projection. For the documented set:
+- `event_types` is a **part of the published catalog, and not empty**. An unknown type is a `422`.
+
+  The capture pipeline events (`capture.*`) have no record behind them, so the server refuses them: they name no subject to
+  limit delivery by. The catalog in the code (`events.Types()` without the pipeline class) checks each
+  create and update. The `SubscribableEventType` enum (`public-events.yaml`) is its copy in
+  the contract. For the set in the contract, run:
   ```sh
   grep -A200 'SubscribableEventType:' backend/api/public-events.yaml | grep '^\s*- ' | sed 's/^\s*- //'
   ```
-  Every type in that enum has a published `PublicEvent<Event>` schema in the same file, describing
-  the `data` shape your receiver will see for it. A few are catalogued but not emitted or not
-  delivered ([outbound-webhooks.md](../explanation/outbound-webhooks.md#5-the-fan-out-and-the-owner-scope-gate));
-  their schema's own description says so.
 
-The `201` response is the subscription **plus the signing secret**, the only time the plaintext
-appears:
+  Every type in that enum has a published `PublicEvent<Event>` schema in the same file. It shows
+  the `data` shape that your receiver will see for it. Some types are in the catalog, but the server does not send or
+  deliver them ([outbound-webhooks.md](../explanation/outbound-webhooks.md#5-the-fan-out-and-the-owner-scope-gate)).
+  The schema of each such type says so.
+
+The `201` answer is the subscription **and the signing secret**. It is the only time the plain secret
+shows up:
 
 ```json
 {
@@ -93,32 +96,35 @@ appears:
 }
 ```
 
-**Store `signing_secret` now**: it is never shown again on any read. If you lose it, rotate (step 6);
-you cannot recover it. The `owner_id` is the acting human, stamped server-side, and the fan-out only
-delivers events that owner may see.
+**Store `signing_secret` now**: no read shows it again. If you no longer have it, rotate it (step 6);
+you cannot get it back. The `owner_id` is the human who made the call, and the server sets it. Delivery only
+sends events that this owner may see.
 
-> **URL-safe base64 secrets cannot sign.** Standard Webhooks requires *standard* base64, so a secret
-> minted with URL-safe base64 before the Standard Webhooks scheme cannot be decoded: every matching
-> delivery fails signing and dead-letters. Rotate it (step 6) or recreate the subscription; either
-> mints a new standard-base64 `whsec_…` secret.
+> **Base64 secrets in the URL-safe form cannot sign.** Standard Webhooks needs *standard* base64. A secret
+> minted in URL-safe base64, from before the Standard Webhooks scheme, cannot be read back.
+> So every matching delivery fails to sign, and becomes a dead letter. Rotate it (step 6), or create the subscription again. Both
+> mint a new `whsec_…` secret in standard base64.
 
-## 3. Verify the signature on your receiver
+## 3. Check the signature on your receiver
 
-Every delivery is a POST carrying three [Standard Webhooks](https://www.standardwebhooks.com/) headers.
-Verify `webhook-signature` against `{webhook-id}.{webhook-timestamp}.{raw request body}` using the
-secret from step 2, and dedupe on `webhook-id`, because the bus is at-least-once and the delivery id
-is stable across retries. `webhook-timestamp` is minted fresh on every attempt, so a captured
-signature cannot be replayed against a receiver that enforces a timestamp tolerance window:
+Every delivery is a POST that carries three [Standard Webhooks](https://www.standardwebhooks.com/) headers.
+Check `webhook-signature` against `{webhook-id}.{webhook-timestamp}.{raw request body}` with the
+secret from step 2. Run dedupe on `webhook-id`, because the bus can deliver an event more than one time.
+The delivery id stays the same in all retries.
+
+Each try mints a new `webhook-timestamp`. So a receiver that only accepts a time within a short window
+refuses a captured signature once that window passes. Inside the window, the dedupe on `webhook-id`
+catches it:
 
 | Header | Meaning |
 |---|---|
-| `X-Margince-Event` | convenience only: the event type, e.g. `deal.stage_changed` |
-| `webhook-id` | the delivery id: your dedupe key, stable across retries |
-| `webhook-timestamp` | unix seconds when this attempt was signed, fresh every attempt |
-| `webhook-signature` | `v1,` + base64 HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}`, keyed by the secret's decoded bytes |
+| `X-Margince-Event` | only there to help: the event type, such as `deal.stage_changed` |
+| `webhook-id` | the delivery id: your dedupe key, the same in all retries |
+| `webhook-timestamp` | unix seconds at which the server signed this try, new on every try |
+| `webhook-signature` | `v1,` + base64 HMAC-SHA256 of `{webhook-id}.{webhook-timestamp}.{body}`, keyed by the decoded bytes of the secret |
 
-A minimal receiver check (Go). The secret is `whsec_`-stripped and **base64-decoded to bytes**
-before use as the HMAC key, as SW compatibility requires:
+Here is a small receiver check in Go. It takes `whsec_` off the secret and **decodes the base64 to bytes**
+before it uses the bytes as the HMAC key, as Standard Webhooks needs:
 
 ```go
 func verify(secret, webhookID, webhookTimestamp string, body []byte, sigHeader string) bool {
@@ -134,13 +140,13 @@ func verify(secret, webhookID, webhookTimestamp string, body []byte, sigHeader s
 }
 ```
 
-Return any `2xx` to acknowledge; any non-2xx (or a timeout; one attempt is bounded at 10s) is treated
-as a failure and retried.
+Return any `2xx` to confirm you have it. Any other code, or a timeout, is a failure, and the server tries again.
+One try can take at most `10s`.
 
-## 4. Inspect deliveries
+## 4. Look at deliveries
 
-Every attempt is logged. List a subscription's deliveries newest-first; this is the dead-letter
-inspection surface:
+The server logs every try. List the deliveries of a subscription, newest first. This is where you look at
+dead letters:
 
 ```sh
 curl --cookie 'crm_session=<session>' \
@@ -148,20 +154,20 @@ curl --cookie 'crm_session=<session>' \
   | jq '.data[] | {event_type, status, attempts, last_status_code, last_error, next_retry_at}'
 ```
 
-The `status` vocabulary is the state machine:
+The `status` values are the states:
 
-- `pending`: freshly enqueued, first attempt imminent.
-- `delivered`: a `2xx` was received.
-- `retrying`: failed, parked with a `next_retry_at`; the sweeper re-attempts (backoff `1,2,4,8,16s`).
-- `dead_lettered`: the 6-attempt budget is spent; it will not retry on its own.
+- `pending`: new in line, and the first try comes soon.
+- `delivered`: the receiver returned a `2xx`.
+- `retrying`: failed, and parked with a `next_retry_at`. The sweeper tries again (backoff `1,2,4,8,16s`).
+- `dead_lettered`: the budget of 6 tries is used up. It will not try again on its own.
 
-`page.has_more` is true while older deliveries sit past the limit.
+`page.has_more` is true while older deliveries are past the limit.
 
 ## 5. Replay a dead-lettered delivery
 
-Once you've fixed the receiver, replay a parked delivery. This is a **human, audited** action; it resets
-the attempt budget and re-sends the *stored* body (so it works even after the source event has aged off
-the bus):
+Once you have fixed the receiver, replay a parked delivery. This is a **human action, with an audit record**. It sets
+the try budget back, and sends the *stored* body again. So it works even after the source event is no longer on
+the bus:
 
 ```sh
 curl -X POST --cookie 'crm_session=<admin or ops session>' \
@@ -169,14 +175,14 @@ curl -X POST --cookie 'crm_session=<admin or ops session>' \
   | jq '{status, attempts, last_status_code}'
 ```
 
-Replay re-sends the delivery's stored body **verbatim**, at whatever `version` it was originally
-enqueued with. It never re-renders the payload against a schema that has since (additively) grown, so
-an old delivery replays as your receiver saw it the first time.
+Replay sends the stored body of the delivery again **word for word**, at the `version` of its first
+send. It never builds the payload again against a schema that now has new fields (an additive change).
+So an old delivery replays the same as the first time.
 
 ## 6. Rotate the signing secret
 
-Rotation mints a new secret and returns it once; the prior secret **stops verifying immediately**, so
-roll it into your receiver before (or atomically with) the switch:
+The rotate call mints a new secret and returns it one time. The old secret **stops working at once**, so
+put the new one into your receiver before the switch, or at the same time:
 
 ```sh
 curl -X POST --cookie 'crm_session=<admin or ops session>' \
@@ -184,9 +190,9 @@ curl -X POST --cookie 'crm_session=<admin or ops session>' \
   | jq -r '.signing_secret'
 ```
 
-## 7. Pause, re-target, or archive
+## 7. Pause, change the target, or archive
 
-Pause/resume and re-target run under an optimistic-concurrency guard: read the current `version` and
+Pause, resume and a new target run under a version check. Read the current `version` and
 pass it as `If-Match`:
 
 ```sh
@@ -201,33 +207,41 @@ curl -X DELETE --cookie 'crm_session=<admin or ops session>' \
   http://localhost:8080/v1/webhook-subscriptions/<id>
 ```
 
-A paused subscription holds its retries until it resumes; an archived one stops delivery and reads as
-`404` thereafter (existence-hiding). An empty PATCH (setting neither `state` nor `event_types`) is a
-`422`.
+A paused subscription holds its retries until it resumes. An archived one stops delivery, and a read by id
+answers `404` from then on. The list shows it only when you ask with `include_archived`.
+An empty PATCH (one that sets no `state` and no `event_types`) is a `422`.
 
-## Verify end-to-end
+## Check it from end to end
 
-1. **The secret appears once.** A `GET /webhook-subscriptions/<id>` never returns
-   `signing_secret`; confirm it is absent from every read.
-2. **A signed delivery arrives and verifies.** Trigger a subscribed event (e.g. advance a deal's stage
-   for `deal.stage_changed`), confirm your receiver got a POST, and confirm the HMAC verifies against
-   the raw body.
-3. **The owner-scope gate holds.** Register a subscription as a rep who can see only their own deals,
-   then trigger `deal.stage_changed` on a deal they cannot see. Confirm **no** delivery is enqueued
-   for that subscription; it never escalates past what the owner may read in the UI.
-4. **Retry and dead-letter.** Point a subscription at an endpoint that returns `500`, trigger an event,
-   and watch the delivery walk `retrying → … → dead_lettered` over its backoff schedule; then fix the
-   endpoint and `replay` it to `delivered`.
-5. **The key-gate holds.** Unset `MARGINCE_WEBHOOK_KEY` and restart: reads still list, but
-   create/rotate/replay answer `503 webhooks_not_configured`, and no unsigned delivery is sent.
-6. **The delivered `data` matches the published schema.** For any event you subscribe to, diff your
-   receiver's `data` field against that event's `PublicEvent<Event>` schema in
-   `backend/api/public-events.yaml`. They must agree field-for-field; the compile-time seam that
-   guarantees this is in [outbound-webhooks.md](../explanation/outbound-webhooks.md#3-the-contract-first-payload-pipeline).
-7. **A deferred-delivery subject stays silent.** Subscribe to `retention.applied` and trigger a
-   retention sweep that purges `ai_call` telemetry. Confirm you receive nothing for it: this is a
-   documented gap ([outbound-webhooks.md](../explanation/outbound-webhooks.md#5-the-fan-out-and-the-owner-scope-gate)),
-   not a bug in your setup.
-8. **The UI mirrors the API.** Everything above also works from Settings → Integrations: the create
-   modal reveals the secret once, and the deliveries panel shows the same retry/dead-letter/replay
-   lifecycle you drove with `curl`.
+1. **Check that the secret shows up one time.** A `GET /webhook-subscriptions/<id>` never returns
+   `signing_secret`. Confirm that no read has it.
+2. **Check that a signed delivery passes.** Start an event you subscribe to.
+
+   You can change the stage of a deal for `deal.stage_changed`. Confirm that your receiver gets a POST,
+   and that the HMAC matches the body as sent.
+3. **Check that the owner gate holds.** Register a subscription as a rep who can see only their own deals.
+
+   Then start `deal.stage_changed` on a deal they cannot see. Confirm that **no** delivery goes in line
+   for that subscription. It never goes past what the owner may read in the app.
+4. **Check retry and dead letter.** Point a subscription at an endpoint that returns `500`, and start an event.
+
+   Watch the delivery go `retrying → … → dead_lettered` over its backoff schedule. Then fix the
+   endpoint, and `replay` it to `delivered`.
+5. **Check that the key gate holds.** Remove `MARGINCE_WEBHOOK_KEY` and start again.
+
+   Reads still list, but create, rotate and replay answer `503 webhooks_not_configured`.
+   No delivery goes out without a signature.
+6. **Check the `data` against the schema.** Use any event you subscribe to.
+
+   Compare the `data` field your receiver gets with the `PublicEvent<Event>` schema of that event in
+   `backend/api/public-events.yaml`. Each field must match. The build step that holds this is in
+   [outbound-webhooks.md](../explanation/outbound-webhooks.md#3-the-contract-first-payload-pipeline).
+7. **Check a subject that has no delivery.** Subscribe to `retention.applied`.
+
+   Then start a retention sweep that deletes `ai_call` data. Confirm that you get nothing for it. This is a
+   limit we know about ([outbound-webhooks.md](../explanation/outbound-webhooks.md#5-the-fan-out-and-the-owner-scope-gate)),
+   and not a bug in your setup.
+8. **Check that the app matches the API.** All of the above also works from Settings → Integrations.
+
+   The create form shows the secret one time. The deliveries panel shows the same retry, dead letter and replay
+   steps that you take with `curl`.

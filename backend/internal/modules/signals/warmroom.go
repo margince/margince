@@ -157,11 +157,11 @@ func RankRouteIn(edges []RouteInEdge, score func(ids.ContactID) (int, bool)) []R
 // grant and not the contact one is refused here rather than at whichever call
 // site remembered to ask.
 //
-// It carries the EDGE gate for the same reason, and the name says why: these
-// ARE edges, returned with their kind and role. Refusing is the honest answer
-// on both surfaces — company360 names `intro_path` in groups_omitted, and the warm
-// room refuses outright rather than reporting a COLD verdict it reached by not
-// being allowed to look for warmth.
+// It carries the edge gate for the same reason, and the name says why: these
+// are edges, returned with their kind and role. Both surfaces refuse.
+// company360 names `signal_route` in groups_omitted. The warm room refuses
+// outright rather than report a cold verdict it reached by not being allowed
+// to look for warmth.
 func RouteInEdges(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]RouteInEdge, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err

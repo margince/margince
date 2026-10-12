@@ -83,6 +83,10 @@ type openaiResponseFormat struct {
 	Strict bool            `json:"strict"`
 }
 
+// openaiLeastOutputTokens is the smallest max_output_tokens the Responses API
+// accepts.
+const openaiLeastOutputTokens = 16
+
 type openaiReasoning struct {
 	Effort string `json:"effort"`
 }
@@ -111,15 +115,8 @@ type openaiResponse struct {
 	IncompleteDetails struct {
 		Reason string `json:"reason"`
 	} `json:"incomplete_details"`
-	Output []struct {
-		Type    string `json:"type"`
-		Content []struct {
-			Type    string `json:"type"`
-			Text    string `json:"text"`
-			Refusal string `json:"refusal"`
-		} `json:"content"`
-	} `json:"output"`
-	Usage struct {
+	Output []openaiOutputItem `json:"output"`
+	Usage  struct {
 		InputTokens  int `json:"input_tokens"`
 		OutputTokens int `json:"output_tokens"`
 		// InputTokenDetails itemizes input_tokens: the cache read and, from
@@ -135,10 +132,22 @@ type openaiResponse struct {
 	} `json:"usage"`
 }
 
+// openaiOutputItem is one entry of output[]: a message, or an item such as
+// reasoning that carries no reply text.
+type openaiOutputItem struct {
+	Type string `json:"type"`
+	// Phase labels an assistant message commentary or final_answer; an
+	// unphased model leaves it empty.
+	Phase   string `json:"phase"`
+	Content []struct {
+		Type    string `json:"type"`
+		Text    string `json:"text"`
+		Refusal string `json:"refusal"`
+	} `json:"content"`
+}
+
 func (c *openaiClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	ctx, attempt := trackHTTPAttempt(ctx)
-	resp, err := c.completeResponse(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+	return completeOnOpenAIWire(ctx, req, c.completeResponse)
 }
 
 func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) (model.Response, error) {
@@ -164,11 +173,16 @@ func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) 
 	if err := openaiTerminalStatus(ctx, out); err != nil && !cutOff {
 		return model.Response{}, withSpend(err, resp)
 	}
-	text, err := openaiReplyText(ctx, out)
+	text, err := openaiReplyText(ctx, out, len(req.ResponseSchema) > 0)
 	if err != nil {
 		return model.Response{}, withSpend(err, resp)
 	}
 	resp.Text = text
+	// The Responses wire says "completed" where the chat wire says "stop"; one
+	// word for one outcome keeps the finish counts comparable across wires.
+	if out.Status == "completed" {
+		resp.FinishReason = "stop"
+	}
 	if cutOff {
 		resp.FinishReason = model.FinishReasonLength
 	}
@@ -178,27 +192,6 @@ func (c *openaiClient) completeResponse(ctx context.Context, req model.Request) 
 		}
 	}
 	return resp, nil
-}
-
-// openaiReplyText walks output[]: a type:"reasoning" item can precede the
-// message, and a type:"refusal" part is a first-class outcome — never
-// output[0].content[0].
-func openaiReplyText(ctx context.Context, out openaiResponse) (string, error) {
-	var text strings.Builder
-	for _, item := range out.Output {
-		if item.Type != "message" {
-			continue
-		}
-		for _, part := range item.Content {
-			switch part.Type {
-			case "output_text":
-				text.WriteString(part.Text)
-			case finishRefusal:
-				return "", withheldError{wire: providerOpenAI, reason: finishRefusal, detail: safeProviderText(ctx, part.Refusal)}
-			}
-		}
-	}
-	return text.String(), nil
 }
 
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
@@ -211,6 +204,14 @@ func (c *openaiClient) Stream(ctx context.Context, req model.Request) (model.Tok
 }
 
 func (c *openaiClient) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
+	if req.Model == "" {
+		req.Model = c.defaultModel
+	}
+	// Only text-embedding-3 and later take dimensions; ada answers it with a 400.
+	// The store's width check still catches a vector of the wrong width.
+	if strings.HasPrefix(req.Model, "text-embedding-ada-") {
+		req.Dimensions = 0
+	}
 	return openAIWireEmbed(ctx, c.postRaw, c.defaultModel, req, nil)
 }
 
@@ -236,6 +237,7 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if wire.MaxOutputTokens <= 0 {
 		wire.MaxOutputTokens = unsetMaxOutputTokens
 	}
+	wire.MaxOutputTokens = max(wire.MaxOutputTokens, openaiLeastOutputTokens)
 	wire.Input = openaiInputMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
 		wire.Text = &openaiText{Format: openaiResponseFormat{
@@ -247,12 +249,8 @@ func (c *openaiClient) post(ctx context.Context, path string, req model.Request,
 	if err != nil {
 		return nil, err
 	}
-	if def, reasons := openaiDefaultEffort(wire.Model); effort == "" && reasons && req.ThinkingLevel != "" {
-		effort = req.ThinkingLevel
-		// The floor's own rule: a none-default family does not take minimal.
-		if def == effortNone && effort == effortMinimal {
-			effort = effortLow
-		}
+	if _, reasons := openaiDefaultEffort(wire.Model); effort == "" && reasons && req.ThinkingLevel != "" {
+		effort = openaiTakenEffort(wire.Model, req.ThinkingLevel)
 	}
 	if effort == "" {
 		effort = openaiEffortFor(wire.Model, req.ThinkingFloor)
@@ -396,52 +394,6 @@ func openaiError(ctx context.Context, resp *http.Response) error {
 	return providerRefusal(resp, "", fmt.Errorf("ai: openai: http %d", resp.StatusCode))
 }
 
-// openaiCutOff reports a response the output ceiling stopped: an answer,
-// truncated, rather than a failed call. Only Complete reads it — a stream ends
-// on truncatedError, the port's model.ErrOutputTruncated.
-func openaiCutOff(out openaiResponse) bool {
-	return out.Status == "incomplete" && out.IncompleteDetails.Reason == openaiMaxOutputTokens
-}
-
-// openaiTerminalStatus maps a non-completed Responses object to an error: a
-// failed call carries the API's error, an incomplete one names why generation
-// stopped (max_output_tokens, content_filter), and a missing status means the
-// body was not a terminal Responses object at all. Any of them read as a clean
-// answer would silently hand the caller a truncated or filtered result —
-// "completed" is the only success.
-func openaiTerminalStatus(ctx context.Context, out openaiResponse) error {
-	switch out.Status {
-	case "completed":
-		return nil
-	case "failed":
-		if openaiPolicyCodes[out.Error.Code] {
-			return withheldError{wire: providerOpenAI, reason: out.Error.Code, detail: safeProviderText(ctx, out.Error.Message)}
-		}
-		return fmt.Errorf("ai: openai: response failed: %s: %s", safeProviderText(ctx, out.Error.Code), safeProviderText(ctx, out.Error.Message))
-	case "incomplete":
-		switch out.IncompleteDetails.Reason {
-		case finishContentFilter:
-			return withheldError{wire: providerOpenAI, reason: finishContentFilter}
-		case openaiMaxOutputTokens:
-			return truncatedError{wire: providerOpenAI}
-		}
-		return fmt.Errorf("ai: openai: response incomplete: %s", safeProviderText(ctx, out.IncompleteDetails.Reason))
-	case "":
-		return fmt.Errorf("ai: openai: response carries no terminal status")
-	default:
-		return fmt.Errorf("ai: openai: response ended with status %q", safeProviderText(ctx, out.Status))
-	}
-}
-
-// openaiPolicyCodes are the codes, on a failed response or a 400, that are a
-// policy decision about the content, so the answer is withheld rather than the
-// call failed.
-var openaiPolicyCodes = map[string]bool{"invalid_prompt": true, "bio_policy": true}
-
-// openaiMaxOutputTokens is the incomplete reason for a reply the output
-// ceiling cut off.
-const openaiMaxOutputTokens = "max_output_tokens"
-
 // openaiStream parses the Responses SSE stream, yielding text deltas from
 // response.output_text.delta events. response.completed is the ONLY clean
 // terminal — failed/incomplete/error events surface as errors, never as EOF.
@@ -487,7 +439,7 @@ func (s *openaiStream) Next(ctx context.Context) (string, bool, error) {
 			// type itself is still the authority that this is a failure.
 			return "", false, fmt.Errorf("ai: openai: stream ended with %s", ev.Type)
 		case sseErrorEvent:
-			return "", false, fmt.Errorf("ai: openai: stream error: %s: %s", safeProviderText(ctx, ev.Code), safeProviderText(ctx, ev.Message))
+			return "", false, openaiFailure(ctx, ev.Code, ev.Message)
 		}
 	}
 	return s.end.outcome(s.scanner.Err())

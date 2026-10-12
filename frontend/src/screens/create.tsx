@@ -10,7 +10,15 @@ export {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { useIdempotencyKey } from "../api/idempotencykey";
 import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
@@ -20,6 +28,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import { useSinglePress } from "../design-system/presslatch";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import {
   RecordPicker,
@@ -233,7 +242,11 @@ export function useCreateRecord<Created extends { id: string }>({
   aboutId,
   onCreated,
 }: Readonly<{
-  create: (values: Record<string, string>, rows?: FormRows) => Promise<Created>;
+  create: (
+    values: Record<string, string>,
+    rows: FormRows | undefined,
+    idempotencyKey: string,
+  ) => Promise<Created>;
   invalidate: string;
   screen: Screen;
   onDone: () => void;
@@ -256,10 +269,12 @@ export function useCreateRecord<Created extends { id: string }>({
     mutationFn: ({
       values,
       rows,
+      idempotencyKey,
     }: {
       values: Record<string, string>;
       rows: FormRows;
-    }) => create(values, rows),
+      idempotencyKey: string;
+    }) => create(values, rows, idempotencyKey),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
@@ -295,7 +310,14 @@ export function CreateAction<Created extends { id: string }>({
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
   onValuesChange?: (values: Record<string, string>) => void;
-  create: (values: Record<string, string>, rows?: FormRows) => Promise<Created>;
+  // The key is one per open dialog and per record. A repeat of the same save
+  // carries it, so a double press answers the first record. A POST that takes
+  // no Idempotency-Key ignores it.
+  create: (
+    values: Record<string, string>,
+    rows: FormRows | undefined,
+    idempotencyKey: string,
+  ) => Promise<Created>;
   invalidate: string;
   screen: Screen;
   startOpen?: boolean;
@@ -324,6 +346,7 @@ export function CreateAction<Created extends { id: string }>({
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
+  const { key: idempotencyKey, renew } = useIdempotencyKey();
   const mutation = useCreateRecord({
     create,
     invalidate,
@@ -331,6 +354,7 @@ export function CreateAction<Created extends { id: string }>({
     stay: stay || keepOpen,
     aboutId,
     onDone: () => {
+      renew();
       if (keepOpen) {
         setSaved((n) => n + 1);
         return;
@@ -347,7 +371,10 @@ export function CreateAction<Created extends { id: string }>({
     <>
       <NewRecordButton
         label={label}
-        onClick={() => setCreating(true)}
+        onClick={() => {
+          renew();
+          setCreating(true);
+        }}
         testId={testId}
         pending={creating && !shown}
       />
@@ -363,7 +390,7 @@ export function CreateAction<Created extends { id: string }>({
         resetToken={saved}
         onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
-          mutation.mutate({ values, rows: rows ?? {} })
+          mutation.mutate({ values, rows: rows ?? {}, idempotencyKey })
         }
       />
     </>
@@ -603,11 +630,14 @@ export function RecordFormBody({
     }
   }, [error, formId]);
 
-  const submit = (event: { preventDefault: () => void }) => {
+  // Enter in a field submits without touching Save, so the form holds the
+  // same latch the button does.
+  const singlePress = useSinglePress(pending);
+  const submit = singlePress((event: FormEvent) => {
     event.preventDefault();
     if (!pending && !requiredMissing && refusals.size === 0)
       onSubmit(submittedValues(fields, values), rows);
-  };
+  });
   const stack = (
     <>
       {shown.map((field) => {

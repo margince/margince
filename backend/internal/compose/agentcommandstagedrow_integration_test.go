@@ -164,8 +164,7 @@ func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
 
 	_, invokeErr := archiveRegistry(e).Invoke(agent, "archive_record",
 		json.RawMessage(`{"record_type":"contact","id":"`+hidden.ID.String()+`"}`))
-	var staged *workflow.StagedApprovalError
-	if errors.As(invokeErr, &staged) {
+	if staged, ok := errors.AsType[*workflow.StagedApprovalError](invokeErr); ok {
 		t.Errorf("the tool door staged approval %s for a row outside the agent's scope, where the REST door "+
 			"refused — one credential, two answers", staged.ApprovalID)
 	}

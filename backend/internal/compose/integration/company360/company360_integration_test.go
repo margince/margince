@@ -736,8 +736,8 @@ func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T
 	// amount in the workspace's own currency and an expected close date.
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Priced deal", PipelineID: pipeline, StageID: stage,
-		CompanyID:   ptrTo(ids.From[ids.CompanyKind](companyID)),
-		AmountMinor: ptrTo(int64(250000)), Currency: ptrTo("EUR"),
+		CompanyID:   new(ids.From[ids.CompanyKind](companyID)),
+		AmountMinor: new(int64(250000)), Currency: new("EUR"),
 		ExpectedClose: &closeOn, Source: "manual",
 	}); err != nil {
 		t.Fatalf("creating the deal: %v", err)
@@ -770,5 +770,3 @@ func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T
 		t.Fatal("no expected close date, though the deal names one")
 	}
 }
-
-func ptrTo[T any](v T) *T { return &v }

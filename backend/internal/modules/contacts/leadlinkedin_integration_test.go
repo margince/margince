@@ -109,8 +109,6 @@ func (e *linkedinEnv) as(user ids.UUID, scope principal.RowScope) context.Contex
 	})
 }
 
-func strPtr(s string) *string { return &s }
-
 func TestCreateLeadNormalizesTheLinkedInKeyOnce(t *testing.T) {
 	e := setupLeadLinkedIn(t)
 	ctx := e.as(e.rep1, principal.RowScopeAll)
@@ -121,7 +119,7 @@ func TestCreateLeadNormalizesTheLinkedInKeyOnce(t *testing.T) {
 	canonical := "https://www.linkedin.com/in/vera-vp"
 
 	created, wasCreated, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: strPtr("Vera VP"), LinkedInURL: strPtr(messy), Source: "manual",
+		FullName: new("Vera VP"), LinkedInURL: new(messy), Source: "manual",
 	})
 	if err != nil || !wasCreated {
 		t.Fatalf("create lead: created=%v err=%v", wasCreated, err)
@@ -162,7 +160,7 @@ func TestLeadLinkedInRefusesNonURLsAsTheCallersFault(t *testing.T) {
 
 	var parseErr *values.ParseError
 	if _, _, err := e.store.CreateLead(ctx, CreateLeadInput{
-		FullName: strPtr("No Profile"), LinkedInURL: strPtr("ftp://linkedin.com/in/x"), Source: "manual",
+		FullName: new("No Profile"), LinkedInURL: new("ftp://linkedin.com/in/x"), Source: "manual",
 	}); !errors.As(err, &parseErr) {
 		t.Fatalf("create with a non-http URL → %v, want a values.ParseError (422)", err)
 	}

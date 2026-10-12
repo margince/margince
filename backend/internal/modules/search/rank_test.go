@@ -47,8 +47,7 @@ func TestTheRankingRunsAsAnUnnamedStatement(t *testing.T) {
 func TestASpentCeilingOnTheRankingReadsAsTooBroad(t *testing.T) {
 	tx := &queryingTx{queryErr: queryCanceled()}
 	_, err := rank(context.Background(), tx, "SELECT 1", nil)
-	var tooBroad *QueryTooBroadError
-	if !errors.As(err, &tooBroad) {
+	if _, ok := errors.AsType[*QueryTooBroadError](err); !ok {
 		t.Fatalf("err = %v, want QueryTooBroadError from a ranking stopped by its ceiling", err)
 	}
 }

@@ -171,7 +171,11 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 // model lanes — what they cost, and whether they are answering — and both are
 // admitted through the same automation-config grant.
 func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
-	rungs, err := h.meter.RungHealthReport(r.Context())
+	var bound map[Tier]ModelRef
+	if h.boundModels != nil {
+		bound = h.boundModels()
+	}
+	rungs, err := h.meter.RungHealthReport(r.Context(), bound)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -184,6 +188,13 @@ func (h Handlers) GetAiHealth(w http.ResponseWriter, r *http.Request) {
 		out.Rungs = append(out.Rungs, toContractRungHealth(rung))
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// WithBoundModels counts each lane's health against the model bound reads
+// it serves now.
+func (h Handlers) WithBoundModels(bound func() map[Tier]ModelRef) Handlers {
+	h.boundModels = bound
+	return h
 }
 
 // GetAiProviderHealth implements (GET /ai/provider-health).

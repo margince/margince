@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // The identity vocabulary, the Go spelling of the table's CHECKs. The kinds
@@ -358,15 +359,13 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 // liveness condition here is a second lock on a door that is already shut, and
 // it is spelled correctly so that it stays one if that ever changes.
 //
-// The liveness predicate is spelled out rather than calling identity's helper:
-// identity owns app_user and capture may not import a sibling module. Both
-// halves are named, which is the thing that matters — either alone would go on
-// offering a departed colleague's address.
+// The liveness predicate is the shared one and names both halves. Either alone
+// offers a departed colleague's address.
 func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, error) {
 	var email string
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(email, '') FROM app_user
-		 WHERE id = $1 AND status = 'active' AND archived_at IS NULL`, user).Scan(&email); err != nil {
+		 WHERE id = $1 AND `+workforce.LiveMemberSQL(""), user).Scan(&email); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
 		}

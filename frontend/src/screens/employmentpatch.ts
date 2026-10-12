@@ -2,7 +2,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "./common";
 import { sameEditValue, saveIndependentEdit } from "./independentedit";
 
 type Employment = components["schemas"]["Contact360Employment"];
@@ -23,17 +23,18 @@ export async function patchEmployment(
   t: ReturnType<typeof useT>,
 ): Promise<void> {
   const read = async () => {
-    const { data, error } = await api.GET("/relationships", {
-      params: {
-        query: {
-          contact_id: contactId,
-          company_id: employment.company_id,
-          kind: "employment",
-          limit: 200,
+    const data = unwrap(
+      await api.GET("/relationships", {
+        params: {
+          query: {
+            contact_id: contactId,
+            company_id: employment.company_id,
+            kind: "employment",
+            limit: 200,
+          },
         },
-      },
-    });
-    if (error) throwProblem(error);
+      }),
+    );
     const row = data.data.find((row) => row.id === employment.relationship_id);
     if (!row)
       throwProblem({ detail: t("contact.rail.employmentVersionUnresolved") });
@@ -75,12 +76,12 @@ export async function patchEmployment(
     ],
     read,
     write: async (patch, version) => {
-      const { data, error } = await api.PATCH("/relationships/{id}", {
-        params: { path: { id: original.id }, ...ifMatch(version) },
-        body: patch,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.PATCH("/relationships/{id}", {
+          params: { path: { id: original.id }, ...ifMatch(version) },
+          body: patch,
+        }),
+      );
     },
   });
 }

@@ -17,6 +17,7 @@ package contacts
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -278,12 +279,7 @@ func candidateNames(candidates []SignatureCandidate) []string {
 }
 
 func contains(names []string, want string) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 func TestSignatureCandidatesSkipASwitchedOffMailbox(t *testing.T) {

@@ -144,6 +144,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"whoami", `{}`},
 		{"list_colleagues", `{}`},
 		{"list_colleagues", `{"q":"nothing here matches this"}`},
+		// A record's files, read through each tab's own library: empty here, which is the
+		// answer whose list must stay an array.
+		{"list_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
+		{"list_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
+		{"list_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
 
 		// An enumeration, narrowed and unnarrowed. The narrowed one is the
 		// answer worth holding to the shape: a filter that reached no SQL still
@@ -369,6 +374,8 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"authority every other tool in the sweep runs under",
 	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
 	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	"attach_document": "needs an object store to keep the file in; " +
+		"TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes (compose/documentseam_integration_test.go) holds its answer to its schema",
 	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
 		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"book_meeting":         "needs a live calendar provider",

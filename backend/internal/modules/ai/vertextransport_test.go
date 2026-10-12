@@ -65,7 +65,7 @@ func vertexAt(t *testing.T, location string, handler http.HandlerFunc) (model.Cl
 	t.Helper()
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-	recorder := &googleRecorder{googleFixture: googleFixture{base: srv.URL}}
+	recorder := &googleRecorder{base: srv.URL}
 	client, err := selectBrainOn(
 		ProviderConfig{Provider: providerGeminiVertex, Location: location, Model: "gemini-3.5-flash"},
 		allCloudKeys(t), &http.Client{Timeout: CallCeiling, Transport: recorder},

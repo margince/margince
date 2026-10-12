@@ -205,8 +205,8 @@ func writeLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, etag 
 	w.Header().Set("Cache-Control", cacheControl)
 	w.Header().Set("ETag", etag)
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: imagenorm.ContentType, Inline: true, Size: size},
-		Body:     body,
+		ContentType: imagenorm.ContentType, Inline: true, Size: size,
+		Body: body,
 	}, "company logo "+id.String())
 }
 

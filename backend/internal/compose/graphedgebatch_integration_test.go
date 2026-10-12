@@ -48,7 +48,7 @@ func TestABatchFoldsLikeOneEventAtATimeAndLikeTheRebuild(t *testing.T) {
 	c1 := v.contact(t, "Burst One")
 	c2 := v.contact(t, "Burst Two")
 	var activityIDs []ids.UUID
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		activityIDs = append(activityIDs,
 			v.interaction(t, v.e.Rep1, c1, now.AddDate(0, 0, -i), "inbound", "from"),
 			v.interaction(t, v.e.Rep1, c2, now.AddDate(0, 0, -i-30), "outbound", "cc"),

@@ -8,11 +8,10 @@ package gates
 // A scheduled pass binds its provenance through one helper.
 //
 // The system principal and a fresh correlation id are two calls that belong
-// together: every audit row and outbox event such a pass leaves carries both,
-// and a pass that binds only one writes a trail nobody can read back — rows
-// with no actor, or rows nobody can replay as one story. Neither omission fails
-// anything at the call site, and neither is visible until somebody goes looking
-// for what the machine did.
+// together: every audit row and outbox event such a pass leaves carries both.
+// A pass that binds only one fails at its first write, not where it skipped the
+// binding: storekit refuses an audit with no actor and an emit with no
+// correlation id, so the gap shows up at run time, far from its cause.
 //
 // They were spelled together in forty-odd places, and the shape had already
 // cost something: internal/compose/integration/scope.go built the retention
@@ -54,10 +53,7 @@ const systemActingHelper = "SystemActing"
 // mints an id CONDITIONALLY. SystemActing always mints, so pushing one of these
 // through it would overwrite a trace the caller already opened — the opposite
 // of what the site is for.
-var inheritedCorrelationBindings = gatekit.Waive(map[string]string{
-	"internal/modules/integrations/runactor.go:actingForProvider": "a connector run inherits the correlation id of whatever opened it — a webhook " +
-		"delivery, a rep's request — and mints one only when nothing did, so the purchase and the claim rows it writes replay as one story with the call that asked for them",
-})
+var inheritedCorrelationBindings = gatekit.Waive(map[string]string{})
 
 func TestASystemPassBindsItsProvenanceThroughOneHelper(t *testing.T) {
 	t.Parallel()

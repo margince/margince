@@ -1,60 +1,39 @@
-/* The grant grid: one row per subject, one column per verb. Structure only;
-   every colour reads a design token and every gap the --space-* scale. */
+/* The grant grid: one row per subject, one column per verb, on the `.table`
+   skin. Structure only; colours and gaps read tokens. */
 
-/* The matrix is five columns wide at minimum; on a 390px viewport it scrolls
-   inside its own box rather than pushing the page sideways (the §3.8 no
-   horizontal page scroll rule). The region holds the checkboxes themselves, so
-   it is reachable by keyboard without a tabindex of its own. */
-.grant-matrix {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-/* A table's rules are drawn under each cell and inset by the cell's own padding
- * — that is a table's internal rhythm, and it is deliberately not the card seam,
- * which runs full-bleed. */
-.grant-matrix th,
-.grant-matrix td {
-  border-bottom: 1px solid var(--borderSubtle);
-  padding: var(--space-2);
-  text-align: left;
-}
-
-/* The last row has nothing under it to be ruled off from, so it does not end the
- * matrix on a hairline that separates it from the card's own padding. */
-.grant-matrix tbody tr:last-child th,
-.grant-matrix tbody tr:last-child td {
-  border-bottom: 0;
+/* `.table` rules every header strongly; a row's own header divides rows. */
+.grant-matrix tbody th {
+  border-bottom-color: var(--borderSubtle);
+  vertical-align: middle;
 }
 
 .grant-matrix thead th {
   white-space: nowrap;
 }
 
-.grant-matrix tbody th {
-  color: var(--textPrimary);
-  white-space: nowrap;
+.grant-matrix thead th:not(:first-child),
+.grant-matrix .grant-cell {
+  text-align: center;
 }
 
-.grant-row-name {
-  display: block;
+/* Bounded both ways, because the pinned column is what a phone keeps while
+   the verbs scroll under it: a name neither crushed nor taking the screen. */
+.grant-row-head {
+  min-inline-size: 8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  max-inline-size: 12rem;
+  overflow-wrap: anywhere;
 }
 
-.grant-row-note {
-  display: block;
-}
-
-/* Each cell is one Switch whose label is screen-reader-only, so what the cell
-   shows is the track alone and it centres under its column header. */
 .grant-cell .switchrow {
   display: inline-flex;
 }
 
-/* The denial reaches a screen reader through the switch's own
-   `aria-describedby`, which is the whole reason `reason` is passed here — but
-   forty copies of one sentence printed under forty tracks is noise, not an
-   explanation. It is stated ONCE for the eye, above the grid; this is what keeps the
-   announced version without printing it forty times. */
+/* The refusal is read per switch and seen once above the grid. `.table-scroll`
+   holds the hidden line, so it scrolls with the grid and never widens the page. */
 .grant-cell .switchreason {
   position: absolute;
   width: 1px;

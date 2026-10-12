@@ -274,7 +274,7 @@ func voiceGuidance(stats ai.VoiceStats) map[string]any {
 func wordSet(values []string) map[string]bool {
 	set := map[string]bool{}
 	for _, value := range values {
-		for _, word := range strings.Fields(strings.ToLower(value)) {
+		for word := range strings.FieldsSeq(strings.ToLower(value)) {
 			trimmed := strings.Trim(word, ".,;:!?\"'()")
 			if len([]rune(trimmed)) >= 4 {
 				set[trimmed] = true

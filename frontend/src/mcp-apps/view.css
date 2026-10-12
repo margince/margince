@@ -173,7 +173,7 @@ ol {
 .empty-alone {
   padding: var(--space-4);
   border-radius: var(--r-md);
-  background: var(--bgCard);
+  background: var(--bgInset);
 }
 
 /* The duplicate card's evidence: the two records' values side by side. */

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
@@ -259,9 +260,11 @@ const forecastCategoryExpr = `(CASE WHEN t.forecast_category IN ('commit','best_
 // drill-through, so both read the identical row set.
 func (s reportSpec) fromClause() string {
 	from := s.table + " t"
+	var fromSb262 strings.Builder
 	for _, join := range s.joins {
-		from += " " + join
+		fromSb262.WriteString(" " + join)
 	}
+	from += fromSb262.String()
 	return from
 }
 
@@ -285,7 +288,11 @@ type reportOutcome struct {
 	// report's population, "" when it does not (reportownergate.go). A reason
 	// and never a count: how many were left out is the side channel.
 	PopulationNarrowed string
-	GeneratedAt        time.Time
+	// TotalRows is how many groups matched, which exceeds len(Rows) when the
+	// row limit cut the answer. The handler sends it rather than the page
+	// length, so a reader can tell a whole answer from the top of one.
+	TotalRows   int
+	GeneratedAt time.Time
 	// The reading's frame, resolved in the same transaction that ran it. A
 	// number without them is not wrong so much as unplaceable: the reader
 	// cannot tell which zone cut the day, which currency the money is in, or
@@ -354,6 +361,7 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	return reportOutcome{
 		ExcludedByPermission: fetched.excluded,
 		PopulationNarrowed:   fetched.narrowed,
+		TotalRows:            fetched.total,
 		Report:               report,
 		Plan: map[string]any{
 			"object":       string(spec.entity),

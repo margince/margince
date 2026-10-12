@@ -49,7 +49,7 @@ func (e *closeDateEnv) leaveMeAlone(t *testing.T, user ids.UUID) {
 // the page saying so.
 func TestADealIsCorrectedForARepWhoHasSaidNothing(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Nobody objected", e.early, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Nobody objected", e.early, new("commit"), new(-10), 3)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -66,7 +66,7 @@ func TestADealIsCorrectedForARepWhoHasSaidNothing(t *testing.T) {
 func TestADealIsLeftAloneForARepWhoAskedToBe(t *testing.T) {
 	e := setupCloseDate(t)
 	e.leaveMeAlone(t, e.Rep1)
-	id := e.seedSweepDeal(t, "Hands off", e.early, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Hands off", e.early, new("commit"), new(-10), 3)
 	before := e.readSwept(t, id)
 
 	if err := e.sweep(); err != nil {
@@ -96,7 +96,7 @@ func TestADealIsLeftAloneForARepOnVeto(t *testing.T) {
 		// exists in the CHECK constraint and in this test alone.
 		t.Fatalf("recording the rep's veto setting: %v", err)
 	}
-	id := e.seedSweepDeal(t, "Show me first", e.early, stringp("commit"), intp(-10), 3)
+	id := e.seedSweepDeal(t, "Show me first", e.early, new("commit"), new(-10), 3)
 	before := e.readSwept(t, id)
 
 	if err := e.sweep(); err != nil {

@@ -26,6 +26,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -73,7 +74,7 @@ func assignOwnerReleaseEffect(svc *approvals.Service, provider datasource.System
 		}
 		decider, ok := principal.Actor(ctx)
 		if !ok {
-			return fmt.Errorf("compose: assign_owner release without a deciding principal")
+			return errors.New("compose: assign_owner release without a deciding principal")
 		}
 		version, pinned, err := svc.Redeem(ctx, approvalID, kind, diffHash)
 		if err != nil {

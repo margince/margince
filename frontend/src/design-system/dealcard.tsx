@@ -165,11 +165,11 @@ function DealOwner({
       ref={tip.ref}
       {...tip.trigger}
       onClick={handOn}
-      // The middle button's new tab, handed on as a click: a browser follows
-      // only a dispatched click, whichever button it carries.
+      // The middle button opens the deal in a new tab from this real press: a
+      // dispatched button-1 click can leave that tab blank under load.
       onAuxClick={(event) => {
-        if (event.button === 1) {
-          handOn(event);
+        if (event.button === 1 && dealLink.current) {
+          window.open(dealLink.current.href, "_blank", "noopener");
         }
       }}
     >

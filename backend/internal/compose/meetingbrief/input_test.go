@@ -38,7 +38,7 @@ func TestWithCounterpartExcludesAWithheldActivity(t *testing.T) {
 					Id:           openapi_types.UUID(ids.NewV7()),
 					Kind:         crmcontracts.ActivityKindEmail,
 					OccurredAt:   at(7),
-					Subject:      ptr("Contract redlines"),
+					Subject:      new("Contract redlines"),
 					ContentState: &available,
 				},
 				// content_state carries only two known values today, but the
@@ -50,7 +50,7 @@ func TestWithCounterpartExcludesAWithheldActivity(t *testing.T) {
 					Id:         openapi_types.UUID(ids.NewV7()),
 					Kind:       crmcontracts.ActivityKindEmail,
 					OccurredAt: at(6),
-					Subject:    ptr("No content_state at all"),
+					Subject:    new("No content_state at all"),
 				},
 			},
 		},

@@ -79,6 +79,12 @@ const goneQuietAfterDays = 7
 // for. One spelling, because a typo here is a silently empty drawer.
 const prefillIntent = "intent"
 
+// deliverCommitmentIntent opens the composer to keep a promise the contact was made.
+const deliverCommitmentIntent = "deliver_commitment"
+
+// prefillSubject is the prefill key for the composer's subject line.
+const prefillSubject = "subject"
+
 // momentsSection selects the one moment this page opens on, and honours a
 // dismissal the viewer has already made against the same evidence.
 //
@@ -283,7 +289,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:meeting_prep",
 		Rule:                crmcontracts.ContactMomentRuleMeetingPrep,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("Prepare for %s", label),
 		WhyNow:              "Prepare before the meeting, not after.",
@@ -296,7 +302,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 			State: crmcontracts.ContactMomentActionStateAvailable,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface:    crmcontracts.ContactMomentDestinationSurfaceMeetingBrief,
-				EntityType: entityType(crmcontracts.ContactMomentDestinationEntityTypeActivity),
+				EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeActivity),
 				EntityId:   &id,
 			},
 		},
@@ -306,7 +312,7 @@ func meetingPrepMoment(_ context.Context, now time.Time, page *crmcontracts.Cont
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "agenda"}),
+				Prefill: new(map[string]string{prefillIntent: "agenda"}),
 			},
 		}},
 	}, true
@@ -339,7 +345,7 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:re_engaged",
 		Rule:                crmcontracts.ContactMomentRuleReEngaged,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		// What the two dates support, and no more. "They replied after N quiet
 		// days" said the SILENCE was theirs, and the page cannot know that: it
@@ -364,7 +370,7 @@ func reEngagedMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "reply"}),
+				Prefill: new(map[string]string{prefillIntent: "reply"}),
 			},
 		},
 	}, true
@@ -396,7 +402,7 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:gone_quiet",
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("No reply for %d days", quietFor),
 		WhyNow: fmt.Sprintf("Your last message went out %d days ago. The rule flags no reply after %d days.",
@@ -410,7 +416,7 @@ func goneQuietMoment(_ context.Context, now time.Time, page *crmcontracts.Contac
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "follow_up"}),
+				Prefill: new(map[string]string{prefillIntent: "follow_up"}),
 			},
 		},
 		SecondaryActions: &[]crmcontracts.ContactMomentAction{askColleague()},
@@ -480,7 +486,7 @@ func nothingNeededMoment(_ context.Context, now time.Time, page *crmcontracts.Co
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.ContactMomentRuleNothingNeeded,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: "quiet",
 		Headline:            "Nothing needs you today",
 		WhyNow:              why,

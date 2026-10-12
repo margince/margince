@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -95,9 +96,7 @@ func (r *oidcTestRig) mint(t *testing.T, kid, alg string, claims map[string]any)
 		"exp":            r.base.Add(time.Hour).Unix(),
 		"iat":            r.base.Add(-time.Minute).Unix(),
 	}
-	for k, v := range claims {
-		base[k] = v
-	}
+	maps.Copy(base, claims)
 	seg := func(v any) string {
 		b, err := json.Marshal(v)
 		if err != nil {

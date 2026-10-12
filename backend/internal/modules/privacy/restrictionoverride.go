@@ -130,12 +130,18 @@ func releaseFoundNothing(ctx context.Context, tx pgx.Tx, activityID ids.UUID) er
 // the evidence row and the audit tombstone, where an accountability question
 // is actually answered.
 func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason StatedReason) error {
-	interval, anchor := statutoryFloorArgs()
 	return e.db.Tx(ctx, func(tx pgx.Tx) error {
 		decision, err := admitRestrictionDecision(ctx, tx, reason)
 		if err != nil {
 			return err
 		}
+		// The stricter of the current and the carried floor, so a jurisdiction
+		// change never pins an old record to a window that already closed.
+		floor, err := ResolveFloorPolicy(ctx, tx, e.country)
+		if err != nil {
+			return err
+		}
+		floorCurrent, floorCarried := floor.sqlArgs()
 		if err := auth.EnsureActivityVisible(ctx, tx, activityID); err != nil {
 			// A held record reads as gone to every reader (A165 §2), so a
 			// not-found here is ambiguous on its own. pinRefusalFor says which
@@ -159,14 +165,14 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 			         WHERE c IS NOT NULL),
 			       archived_at = coalesce(a.archived_at, now())
 			 WHERE a.id = $1 AND a.restricted_at IS NULL
-			 RETURNING a.restricted_until`, activityID, retentionClassCorrespondence, interval, anchor).Scan(&until)
+			 RETURNING a.restricted_until`, activityID, retentionClassCorrespondence, floorCurrent, floorCarried).Scan(&until)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("the record is already under a retention obligation: %w", apperrors.ErrConflict)
 		}
 		if err != nil {
 			return err
 		}
-		if err := pinnedRecordLeavesDerivedCopies(ctx, tx, activityID); err != nil {
+		if err := pinnedRecordLeavesDerivedCopies(ctx, tx, activityID, decision.reason); err != nil {
 			return err
 		}
 		class := retentionClassCorrespondence
@@ -215,12 +221,16 @@ func pinRefusalFor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, refusal 
 // could still reach a pinned record's body through. The body itself stays —
 // that is what the obligation keeps — but a restricted record must not survive
 // in a projection (A165 §2), and a vector is the body in another shape.
-func pinnedRecordLeavesDerivedCopies(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+// A deal's stage evidence quoting the body is such a copy too.
+func pinnedRecordLeavesDerivedCopies(ctx context.Context, tx pgx.Tx, activityID ids.UUID, reason string) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, activityID); err != nil {
 		return err
 	}
-	return purgeTranscriptReadings(ctx, tx, []ids.UUID{activityID})
+	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{activityID}); err != nil {
+		return err
+	}
+	return redactEvidenceQuoting(ctx, tx, []ids.UUID{activityID}, reason, "controller_pin")
 }
 
 // recordPinEvidence writes the controller's finding of fact BEFORE the

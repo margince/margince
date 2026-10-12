@@ -235,9 +235,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		// The engine writes from the recipient's record, correspondence
 		// included, so the text carries that content's tier.
 		noteDerivedContent(ctx)
-		for _, l := range links {
-			noteEvidence(ctx, datasource.EntityType(l.EntityType), l.EntityID)
-		}
+		noteFirstDraftEvidence(ctx, links, draft.Grounding)
 		return json.Marshal(DraftEmailResult{
 			Subject: draft.Subject, Body: draft.Body, Links: links, To: draft.To,
 			AIGenerated: draft.AIGenerated, AIDisclosure: draft.AIDisclosure,
@@ -259,6 +257,23 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	return json.Marshal(DraftEmailResult{
 		Subject: subject, Body: body, InReplyToActivityID: args.ActivityID,
 	})
+}
+
+// noteFirstDraftEvidence names every record a first message rests on: the
+// links the caller gave and the records the engine folded in beside them. A
+// replay re-reads each, so revoking any one of them withholds the text.
+func noteFirstDraftEvidence(ctx context.Context, links []RecordLink, grounding []EvidenceRef) {
+	refs := make([]EvidenceRef, 0, len(links)+len(grounding))
+	for _, l := range links {
+		refs = append(refs, EvidenceRef{RecordType: datasource.EntityType(l.EntityType), RecordID: l.EntityID})
+	}
+	noted := make(map[EvidenceRef]bool, cap(refs))
+	for _, ref := range append(refs, grounding...) {
+		if !noted[ref] {
+			noted[ref] = true
+			noteEvidence(ctx, ref.RecordType, ref.RecordID)
+		}
+	}
 }
 
 // --- send_email (🟢: the `send` scope a human granted IS the approval) ---

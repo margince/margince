@@ -1,19 +1,20 @@
+<!-- prose:plain -->
 # Mint an Agent Seat Passport
 
-A passport is a REST bearer credential you mint yourself for a script or
-integration to call the api directly. It also authenticates on the `/mcp`
-transport, like any bearer passport. An MCP client normally gets its own
-credential from the OAuth consent flow when the human approves a connection,
-so that path needs nothing from this page. A passport is scoped, expiring,
-revocable, and bound to the human who minted it. The agent never has more
-rights than that human, and the human's seat + RBAC are re-derived on every
-call, so revocation binds mid-session.
+A passport is a REST bearer credential. You make it so that a script or
+another system can call the API. It also works on the `/mcp` path, like any
+bearer passport. An MCP client gets its own credential from the OAuth consent step
+when a human approves it, so that client needs nothing from this page.
 
-## Prerequisites
+A passport has scopes, it stops working at a set time, and you can revoke it. It is owned by
+the human who made it. The agent never has more rights than that human. Each
+call checks the human's seat and RBAC again, so a revoke works even while a session is open.
 
-A running API (`make dev`) and a browser/API session in the target
-workspace. Passport issuance is session-authed and human-only: an agent
-cannot mint credentials.
+## Before you start
+
+You need a running API (`make dev`) and a browser or API session in the
+workspace. Only a human in a session can make a passport: an agent
+cannot make credentials.
 
 ## Mint
 
@@ -24,29 +25,53 @@ curl -X POST http://localhost:8080/v1/passports \
   -d '{"label": "Claude Desktop", "scopes": ["read", "write"], "ttl_hours": 720}'
 ```
 
-The response contains the raw `mgp_`-prefixed bearer token **once**.
-Only its SHA-256 is stored, so copy it now. Scopes are the verb classes
-read/draft/write/send/enrich (effective authority is always scopes ∩
-the granting human's RBAC); `ttl_hours` defaults to 720 (30 days) and
-is capped at 2160 (90 days).
+The answer holds the bearer token, which starts with `mgp_`, and it shows the token **one time only**.
+The server keeps only its SHA-256, so copy the token now. The scopes are the kinds of action:
+`read`, `draft`, `write`, `send` and `enrich`. The rights that apply are always the scopes and the
+RBAC of the human who made the passport, both together. `ttl_hours` is 720 (30 days) when you leave it out,
+and it can be 2160 (90 days) at most.
 
 ## Use
 
-Send it as `Authorization: Bearer mgp_…` against the `/v1` REST surface. 🟢
-mutations execute with agent-stamped provenance, 🟡 mutations stage an
-approval, and human-only governance routes refuse agent principals. A passport
-carrying `write` can also answer what is waiting (`list_approvals`,
-`read_approval` and `decide_approval`) under its human's own authority; one
-minted `read` only reads the queue.
+Send it as `Authorization: Bearer mgp_…` to the `/v1` REST API. A 🟢
+change runs, and the record shows the agent made it. A 🟡 change waits for an
+approval. Paths that only a human may use refuse an agent. A passport
+with `write` can also answer what is waiting (`list_approvals`,
+`read_approval` and `decide_approval`), with the rights of its own human. A passport
+made with `read` can read the list and each approval, but cannot decide one.
 
-Connecting an MCP client is a separate path and needs none of this
-preparation: `claude mcp add` (or any client's own connect flow) drives its
-own consent screen and mints its own credential from whatever scopes the
-signed-in human leaves ticked there. See
-[connect-an-mcp-client.md](connect-an-mcp-client.md).
+To connect an MCP client, you take a separate path and need nothing from this
+page. `claude mcp add`, or the connect step of any client, shows its own consent
+screen. It makes its own credential from the scopes the signed-in human leaves
+checked there. See [connect-an-mcp-client.md](connect-an-mcp-client.md).
+
+## Give the passport to an AI tool
+
+An AI tool such as Claude Code, Codex or Gemini CLI learns the API from the Margince skill. Download it
+from **Settings → Agents** (**Download skill**), or with your session:
+
+```sh
+curl http://localhost:8080/v1/agent-bundle \
+  --cookie 'crm_session=<your session>' -o margince-skill.zip
+```
+
+Only a session can download it; a passport is refused. The ZIP holds one folder, `margince/`, with four files:
+
+- `README.md`: how to save the passport and install the skill in each tool.
+- `SKILL.md`: the rules the tool follows. The tool reads the passport from `MARGINCE_PASSPORT` only.
+  You may keep the passport in the macOS Keychain or 1Password and set `MARGINCE_PASSPORT` from there,
+  as `README.md` shows.
+- `INDEX.md`: one row per operation a passport can call.
+- `openapi.yaml`: those operations in full, cut from `backend/api/crm.yaml`.
+
+No passport is in the ZIP, so one download serves every passport. `README.md`, `SKILL.md` and
+`openapi.yaml` name the API address of this install;
+[configuration.md](../reference/configuration.md#public-base-url) says where it comes from. For Claude
+Code, open the ZIP and move the `margince` folder to `~/.claude/skills/margince/`. The other tools are in
+its `README.md`.
 
 ## Revoke
 
-Delete the passport over the API (`DELETE /v1/passports/{id}`) or in the
-web UI. Because admission re-authenticates every call, a revoked passport
-stops working immediately.
+Delete the passport with the API (`DELETE /v1/passports/{id}`) or in the
+web app. Each call signs in again, so a revoked passport
+stops working at once.

@@ -102,6 +102,15 @@ func (h Handlers) UpdateList(w http.ResponseWriter, r *http.Request, id crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	for _, err := range []error{
+		httperr.RequireSent(r, versionField, "name the version you read, so a change nobody saw is not overwritten"),
+		httperr.RefuseNull(r, nameField),
+	} {
+		if err != nil {
+			writeErr(w, r, err)
+			return
+		}
+	}
 	cleared := httperr.ClearedFields(r)
 	in := UpdateListInput{
 		Name: req.Name, Purpose: req.Purpose, IfVersion: &req.Version,
@@ -184,11 +193,21 @@ func (h Handlers) RemoveListMember(w http.ResponseWriter, r *http.Request, id cr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.RemoveMember(r.Context(), pathID[ids.ListKind](id), memberChange(req)); err != nil {
-		writeErr(w, r, err)
+	removed, err := h.store.RemoveMember(r.Context(), pathID[ids.ListKind](id), memberChange(req))
+	respond(w, r, http.StatusOK, crmcontracts.RemovalUndo{AuditId: openapi_types.UUID(removed)}, err)
+}
+
+// RestoreListMember serves POST /lists/{id}/members/restore.
+func (h Handlers) RestoreListMember(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.listsOff(w, r) {
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	var req crmcontracts.RemovalUndo
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	member, err := h.store.RestoreMemberRemoval(r.Context(), pathID[ids.ListKind](id), ids.UUID(req.AuditId))
+	respond(w, r, http.StatusOK, wireMember(member), err)
 }
 
 // ExplainListMember serves GET /lists/{id}/members/{recordId}/why.

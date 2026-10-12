@@ -147,8 +147,7 @@ func TestAnArgumentTheSchemaForbidsIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("an unknown argument was accepted; the declared schema forbids it")
 	}
-	var bad *BadArgsError
-	if !errors.As(err, &bad) {
+	if _, ok := errors.AsType[*BadArgsError](err); !ok {
 		t.Errorf("err = %T(%v), want a BadArgsError naming the caller's own argument", err, err)
 	}
 	if read.runs != 0 {

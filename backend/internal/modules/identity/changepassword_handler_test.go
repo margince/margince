@@ -32,7 +32,8 @@ func changeRequest(t *testing.T, h Handlers, body string, bind bool) *httptest.R
 			WorkspaceID: ids.WorkspaceID{UUID: ids.NewV7()},
 		}
 		r = r.WithContext(withIdentity(
-			principal.WithWorkspaceID(r.Context(), id.WorkspaceID.UUID), id))
+			principal.WithWorkspaceID(r.Context(), id.WorkspaceID.UUID), id,
+		))
 	}
 	h.ChangePassword(rec, r)
 	return rec
@@ -107,7 +108,8 @@ func TestChangePasswordAnswersAreMachineReadable(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/v1/auth/change-password",
 		strings.NewReader(`{"current_password":"x","new_password":"a fine new password"}`))
 	r = r.WithContext(withIdentity(
-		principal.WithWorkspaceID(r.Context(), ids.NewV7()), Identity{UserID: key}))
+		principal.WithWorkspaceID(r.Context(), ids.NewV7()), Identity{UserID: key},
+	))
 	h.ChangePassword(rec, r)
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("a throttled caller got %d, want 429", rec.Code)

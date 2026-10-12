@@ -101,6 +101,9 @@ type RouteInfo struct {
 	ModelID  string
 	Degraded bool
 	Cached   bool
+	// cacheKey is the result-cache key this answer was served or stored under,
+	// so Reject evicts that one entry without deriving the key a second time.
+	cacheKey string
 }
 
 // NewRouter builds the production router from a validated routing config.
@@ -275,7 +278,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// scripted repeat-call tests) never consults it: every call must reach
 	// the model.
 	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
-		return r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
+		resp, info, err = r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
+		info.cacheKey = key
+		return resp, info, err
 	}
 
 	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, &trace, task, ladder, req, key, wsID, start)
@@ -293,7 +298,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	if served {
 		m := b.routeMeta[tier]
-		return out, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded}, nil
+		return out, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded, cacheKey: key}, nil
 	}
 	// The honest degraded state (§4.3): no bound model can serve this.
 	//
@@ -335,6 +340,14 @@ func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
 		}
 	}
 	return out
+}
+
+// Reject is the caller's verdict that the answer info describes is unusable,
+// so the identical next request reaches the model instead of replaying it.
+func (r *Router) Reject(info RouteInfo) {
+	if info.cacheKey != "" {
+		r.cache.forget(info.cacheKey)
+	}
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6

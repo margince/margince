@@ -8,12 +8,8 @@ import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { OwnerName } from "./entityref";
-import {
-  type ListState,
-  useOwnerChips,
-  useTagChips,
-  type ViewSpec,
-} from "./listquery";
+import { type ListState, useTagChips, type ViewSpec } from "./listquery";
+import { useOwnerChips } from "./ownerdials";
 
 type RowTag = components["schemas"]["RowTag"];
 

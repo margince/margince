@@ -37,10 +37,10 @@ func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Geocodable Gmbh", Source: "manual",
 		Address: &crmcontracts.Address{
-			Line1:      strPtr("Rosenthaler Str. 40"),
-			City:       strPtr("Berlin"),
-			PostalCode: strPtr("10178"),
-			Country:    strPtr("DE"),
+			Line1:      new("Rosenthaler Str. 40"),
+			City:       new("Berlin"),
+			PostalCode: new("10178"),
+			Country:    new("DE"),
 		},
 	})
 	if err != nil {
@@ -112,7 +112,7 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 
 	located, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Findable GmbH", Source: "manual",
-		Address: &crmcontracts.Address{City: strPtr("Stuttgart"), Country: strPtr("DE")},
+		Address: &crmcontracts.Address{City: new("Stuttgart"), Country: new("DE")},
 	})
 	if err != nil {
 		t.Fatalf("seeding a company with an address: %v", err)
@@ -120,7 +120,7 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 	// A country alone is not a place; the sweep must not spend a lookup on it.
 	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Nowhere GmbH", Source: "manual",
-		Address: &crmcontracts.Address{Country: strPtr("DE")},
+		Address: &crmcontracts.Address{Country: new("DE")},
 	}); err != nil {
 		t.Fatalf("seeding a company with no usable address: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Moved GmbH", Source: "manual",
-		Address: &crmcontracts.Address{City: strPtr("Hamburg"), Country: strPtr("DE")},
+		Address: &crmcontracts.Address{City: new("Hamburg"), Country: new("DE")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)
@@ -216,7 +216,7 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 	// through table-driven SQL with no seam to carry a callback. Either way the
 	// row ends up stale with nothing coming, and the sweep is what finds it.
 	if _, err := e.store.UpdateCompany(ctx, companyID, UpdateCompanyInput{
-		Address: &crmcontracts.Address{City: strPtr("München"), Country: strPtr("DE")},
+		Address: &crmcontracts.Address{City: new("München"), Country: new("DE")},
 	}); err != nil {
 		t.Fatalf("moving the company: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
 
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
 		DisplayName: "Unreachable GmbH", Source: "manual",
-		Address: &crmcontracts.Address{City: strPtr("Leipzig"), Country: strPtr("DE")},
+		Address: &crmcontracts.Address{City: new("Leipzig"), Country: new("DE")},
 	})
 	if err != nil {
 		t.Fatalf("seeding: %v", err)

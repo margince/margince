@@ -126,7 +126,7 @@ func TestProfileEvidenceReadyRequiresCommercialPages(t *testing.T) {
 	if profileEvidenceReady(pages) {
 		t.Fatal("legal pages alone must not fire the one-shot profile lane")
 	}
-	for i := 0; i < profileTriggerNonLegalPages; i++ {
+	for i := range profileTriggerNonLegalPages {
 		pages[i].Kind = crmcontracts.SiteReadPageKindAbout
 	}
 	if !profileEvidenceReady(pages) {

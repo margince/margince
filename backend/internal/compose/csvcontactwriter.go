@@ -56,8 +56,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row) (migr
 		}
 		return ids.UUID(contact.Id), nil
 	})
-	var dup *contacts.DuplicateEmailError
-	if errors.As(err, &dup) {
+	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
 		return migration.EnsureResult{Skipped: true, SkipReason: contactEmailClaimedReason}, nil

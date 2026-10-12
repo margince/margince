@@ -38,7 +38,7 @@ func (*RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UU
 		return fmt.Errorf("read the lead's address before scrubbing it: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, title = NULL,
+		UPDATE lead SET full_name = 'Anonymized Lead', email = NULL, phone = NULL, title = NULL,
 		  company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		  disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		  archived_at = coalesce(archived_at, now())
@@ -92,6 +92,10 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM communication_basis WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's communication bases: %w", err)
+	}
+	// A website lead's notice link carries the address it was sent to.
+	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE lead_id = $1`, id); err != nil {
+		return fmt.Errorf("clear the lead's notice links: %w", err)
 	}
 	// A SUPPRESSION IS DETACHED, NOT DELETED, exactly as the contact arm detaches
 	// it. An anonymized subject may lawfully come back — re-captured from the

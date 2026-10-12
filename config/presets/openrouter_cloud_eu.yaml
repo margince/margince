@@ -44,7 +44,7 @@
 # it grades every task this preset certifies.
 #
 # On the `routing:` block's fields and the measurements behind them:
-# docs/reference/openrouter.md.
+# docs/explanation/openrouter-upstream-choice.md.
 version: 1
 
 seeds:

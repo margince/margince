@@ -17,12 +17,8 @@ package integration
 // the customer sees is the list, not the table.
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"maps"
-	"mime/multipart"
 	"net/http"
 	"path"
 	"strconv"
@@ -116,50 +112,6 @@ func setupImportAppWithStore(t *testing.T) (*apptest.AppEnv, blobstore.Store) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store))
 	e.BootstrapWorkspace(t)
 	return e, store
-}
-
-// uploadCSV posts one file to the upload operation and returns the profile.
-func uploadCSV(t *testing.T, e *apptest.AppEnv, object, body string) (importProfileDTO, int) {
-	t.Helper()
-	var buf bytes.Buffer
-	form := multipart.NewWriter(&buf)
-	if err := form.WriteField("object", object); err != nil {
-		t.Fatalf("writing the object field: %v", err)
-	}
-	part, err := form.CreateFormFile("file", "estate.csv")
-	if err != nil {
-		t.Fatalf("creating the file part: %v", err)
-	}
-	if _, err := part.Write([]byte(body)); err != nil {
-		t.Fatalf("writing the file part: %v", err)
-	}
-	if err := form.Close(); err != nil {
-		t.Fatalf("closing the form: %v", err)
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, e.TS.URL+"/v1/imports/sources", &buf)
-	if err != nil {
-		t.Fatalf("building the upload: %v", err)
-	}
-	req.Header.Set("Content-Type", form.FormDataContentType())
-	//nolint:bodyclose // apptest.CloseBody closes it in the deferred call below, which the checker cannot follow across the helper.
-	resp, err := e.Client.Do(req)
-	if err != nil {
-		t.Fatalf("uploading: %v", err)
-	}
-	defer apptest.CloseBody(t, resp)
-
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("reading the upload response: %v", err)
-	}
-	var profile importProfileDTO
-	if len(raw) > 0 && resp.StatusCode == http.StatusOK {
-		if err := json.Unmarshal(raw, &profile); err != nil {
-			t.Fatalf("decoding %q: %v", raw, err)
-		}
-	}
-	return profile, resp.StatusCode
 }
 
 // createRunOnDuplicate is createRunWithMapping for a run that names a duplicate
@@ -689,7 +641,7 @@ func TestCSVImportMeetsAnExistingCompanyAndABadSizeBand(t *testing.T) {
 	// identity map only remembers rows IT wrote, so a company captured from
 	// mail, a connector or a seed is invisible to it.
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Akeneo", "industry": "retail"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
 
@@ -848,7 +800,7 @@ func TestCSVImportSkipDuplicatesPreviewsWhatItWillDo(t *testing.T) {
 	e := setupImportApp(t)
 
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("creating the incumbent → %d, want 201", status)
 	}
 	companiesBefore := len(companyList(t, e).Data)
@@ -948,7 +900,7 @@ func TestCSVImportCountsTheDuplicatesTheCommitMetNotTheOnesThePreviewPredicted(t
 	// approval. Directly, the way real ones arrive: the importer's identity map
 	// remembers only rows IT wrote, so this one is invisible to it.
 	if code := e.Call(t, http.MethodPost, "/v1/companies",
-		map[string]any{"display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
+		map[string]any{"source": "manual", "display_name": "Zephyr Freight", "industry": "logistics"}, nil, nil); code != http.StatusCreated {
 		t.Fatalf("creating the company between preview and approval → %d, want 201", code)
 	}
 

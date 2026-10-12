@@ -2,12 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
-import {
-  LeadDisqualifyReasonsCard,
-  LeadHandlingCard,
-  LeadSourcesCard,
-} from "./leadvocab";
+import { expect, userEvent, within } from "storybook/test";
+import { LeadHandlingCard } from "./leadvocab";
+import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
+import { VocabRowMenu } from "./leadvocab.rows";
+import { LeadSourcesCard } from "./leadvocab.sources";
 import {
   installFetchStub,
   jsonResponse,
@@ -87,10 +86,25 @@ const REASONS = {
 const ADMIN = { custom_field: ["read", "create", "update", "delete"] } as const;
 const READER = { custom_field: ["read"] } as const;
 
-function story(allow: Parameters<typeof meRoute>[0], slaOn: boolean) {
+const DUPLICATE = {
+  type: "about:blank",
+  title: "Conflict",
+  status: 409,
+  code: "conflict",
+  detail: "conflict",
+};
+
+function story(
+  allow: Parameters<typeof meRoute>[0],
+  slaOn: boolean,
+  refuseReasonName = false,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
+      ...(refuseReasonName && {
+        "POST /lead-disqualify-reasons": () => jsonResponse(DUPLICATE, 409),
+      }),
       "GET /lead-sources": () => jsonResponse(SOURCES),
       "GET /lead-disqualify-reasons": () => jsonResponse(REASONS),
       "GET /leads/settings": () =>
@@ -120,17 +134,12 @@ export const Admin: Story = { render: story(ADMIN, false) };
 export const AdminWithTargetOn: Story = { render: story(ADMIN, true) };
 export const Reader: Story = { render: story(READER, false) };
 
-// The row language in dark: the hairline between two rows is a token
-// (`--borderSubtle`) and a list of decisions that loses its rules is a wall
-// again, which is the one thing this shape exists to prevent.
 export const AdminDark: Story = {
   globals: { theme: "dark" },
   render: story(ADMIN, true),
 };
 
-// A source is a label AND a weight, so its form is a dialog behind the row's
-// verb — the state no story could capture while the form sat inline under the
-// list.
+// A label and a weight, so its form is a dialog behind the header verb.
 export const AddingSource: Story = {
   render: story(ADMIN, false),
   play: async ({ canvasElement }) => {
@@ -141,9 +150,7 @@ export const AddingSource: Story = {
   },
 };
 
-// A target outside the 15-minutes-to-7-days window the server enforces. The
-// refusal used to be `Field`'s; it is drawn by the row now, so what it looks
-// like under a label and a description is worth a frame.
+// A target outside the 15-minutes-to-7-days window the server enforces.
 export const TargetRefused: Story = {
   render: story(ADMIN, true),
   play: async ({ canvasElement }) => {
@@ -153,5 +160,83 @@ export const TargetRefused: Story = {
     await userEvent.type(minutes, "2");
     await userEvent.tab();
     await canvas.findByRole("alert");
+  },
+};
+
+// At 390 each row folds: name and key over the count, intent and switch.
+export const AdminPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(ADMIN, false),
+};
+
+// A built-in keeps Remove in its menu, refused with the reason in words.
+export const RemoveRefused: Story = {
+  render: story(ADMIN, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Inbound" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(page.getByRole("button", { name: "Remove" })).toBeDisabled();
+  },
+};
+
+export const RenamingSource: Story = {
+  render: story(ADMIN, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Trade show" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(page.getByRole("button", { name: "Rename" }));
+    await page.findByRole("dialog");
+  },
+};
+
+// The server refuses a reason that already exists: the dialog says so on the field.
+export const DuplicateReason: Story = {
+  render: story(ADMIN, false, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "New reason" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    const dialog = within(await page.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("Reason"), "Bad timing{Enter}");
+    await dialog.findByText(
+      "A reason with this name already exists. Choose another name.",
+    );
+  },
+};
+
+export const DuplicateReasonPhone: Story = {
+  ...DuplicateReason,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The shared row menu alone, with an in-use entry's refusal under Remove.
+export const RowMenu: Story = {
+  render: () => (
+    <StoryProviders>
+      <VocabRowMenu
+        label="Webinar"
+        verbs={{ canEdit: true, canRemove: true }}
+        refusal="2 leads use this source. Deactivate it instead."
+        onRename={() => undefined}
+        onRemove={() => undefined}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Actions for Webinar",
+      }),
+    );
   },
 };

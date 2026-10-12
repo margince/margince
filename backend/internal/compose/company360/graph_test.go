@@ -3,9 +3,9 @@
 
 package company360
 
-// The graph's placement rules over already-read inputs, so each one is
-// provable without a database: node order, the caps and what they report,
-// edge orientation, and when the intro path may speak.
+// The graph's placement rules over already-read inputs, provable without a
+// database. They cover node order, the caps and what they report, edge
+// orientation, and when the signal route may speak.
 //
 // What the graph READS — the per-group grants, the row-scope prune, and the
 // HTTP shape — needs a real database and lives in
@@ -378,10 +378,10 @@ func TestACompanyAttachedTwiceIsOneNodeAndOneDrop(t *testing.T) {
 	}
 }
 
-// TestTheIntroPathNamesTheWarmRoomsContact is the shared-ranking claim: the
+// TestTheSignalRouteNamesTheWarmRoomsContact is the shared-ranking claim: the
 // card marks the contact signals.RankRouteIn puts first, not the one the card
 // happens to draw first.
-func TestTheIntroPathNamesTheWarmRoomsContact(t *testing.T) {
+func TestTheSignalRouteNamesTheWarmRoomsContact(t *testing.T) {
 	g, _ := newGraph(t)
 	weak := g.employee(t, "Weak", 10)
 	strong := g.employee(t, "Strong", 80)
@@ -390,21 +390,21 @@ func TestTheIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 	g.routeIn = []signals.RouteInEdge{{ContactID: weak}, {ContactID: strong}}
 
 	g.placeContacts()
-	g.markIntroPath()
+	g.markSignalRoute()
 
-	if g.out.IntroPath == nil {
-		t.Fatal("no intro path for an open signal with two measured contacts")
+	if g.out.SignalRoute == nil {
+		t.Fatal("no signal route for an open signal with two measured contacts")
 	}
-	if ids.UUID(g.out.IntroPath.ContactId) != strong.UUID {
-		t.Errorf("intro path routes through %s, want the strongest contact %s",
-			ids.UUID(g.out.IntroPath.ContactId), strong)
+	if ids.UUID(g.out.SignalRoute.ContactId) != strong.UUID {
+		t.Errorf("signal route routes through %s, want the strongest contact %s",
+			ids.UUID(g.out.SignalRoute.ContactId), strong)
 	}
-	if ids.UUID(g.out.IntroPath.SignalId) != signalID {
-		t.Errorf("intro path cites signal %s, want %s", ids.UUID(g.out.IntroPath.SignalId), signalID)
+	if ids.UUID(g.out.SignalRoute.SignalId) != signalID {
+		t.Errorf("signal route cites signal %s, want %s", ids.UUID(g.out.SignalRoute.SignalId), signalID)
 	}
 	marked := 0
 	for _, node := range g.out.Nodes {
-		if node.IntroPath != nil && *node.IntroPath {
+		if node.OnSignalRoute != nil && *node.OnSignalRoute {
 			marked++
 			if ids.UUID(node.Id) != strong.UUID {
 				t.Errorf("marked node %s, want %s", ids.UUID(node.Id), strong)
@@ -412,30 +412,29 @@ func TestTheIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 		}
 	}
 	if marked != 1 {
-		t.Errorf("%d nodes carry intro_path, want exactly 1", marked)
+		t.Errorf("%d nodes carry signal_route, want exactly 1", marked)
 	}
 }
 
-// TestNoIntroPathWithoutAnActiveSignal: the ranking exists whenever the
+// TestNoSignalRouteWithoutAnActiveSignal: the ranking exists whenever the
 // account has contacts, but a path nobody is on is not a path.
-func TestNoIntroPathWithoutAnActiveSignal(t *testing.T) {
+func TestNoSignalRouteWithoutAnActiveSignal(t *testing.T) {
 	g, _ := newGraph(t)
 	only := g.employee(t, "Only", 70)
 	g.routeIn = []signals.RouteInEdge{{ContactID: only}}
 
 	g.placeContacts()
-	g.markIntroPath()
+	g.markSignalRoute()
 
-	if g.out.IntroPath != nil {
-		t.Errorf("intro path %v reported with no open signal", *g.out.IntroPath)
+	if g.out.SignalRoute != nil {
+		t.Errorf("signal route %v reported with no open signal", *g.out.SignalRoute)
 	}
 }
 
-// TestNoIntroPathWhenTheRouteInIsNotDrawn is the rule that keeps the card and
-// the warm room from naming different contacts: the route-in contact's only seat
-// is on a deal this card did not draw, so the card says nothing rather than
-// promoting the next contact it happens to have.
-func TestNoIntroPathWhenTheRouteInIsNotDrawn(t *testing.T) {
+// TestNoSignalRouteWhenTheRouteInIsNotDrawn keeps the card and the warm room
+// from naming different contacts. The route-in contact's only seat is on a deal
+// this card did not draw, so the card says nothing and promotes no one else.
+func TestNoSignalRouteWhenTheRouteInIsNotDrawn(t *testing.T) {
 	g, _ := newGraph(t)
 	drawn := g.employee(t, "Drawn", 20)
 	elsewhere := ids.From[ids.ContactKind](ids.NewV7())
@@ -445,14 +444,14 @@ func TestNoIntroPathWhenTheRouteInIsNotDrawn(t *testing.T) {
 	g.routeIn = []signals.RouteInEdge{{ContactID: drawn}, {ContactID: elsewhere}}
 
 	g.placeContacts()
-	g.markIntroPath()
+	g.markSignalRoute()
 
-	if g.out.IntroPath != nil {
-		t.Errorf("intro path names %s, but the route-in contact is not a node here",
-			ids.UUID(g.out.IntroPath.ContactId))
+	if g.out.SignalRoute != nil {
+		t.Errorf("signal route names %s, but the route-in contact is not a node here",
+			ids.UUID(g.out.SignalRoute.ContactId))
 	}
 	for _, node := range g.out.Nodes {
-		if node.IntroPath != nil && *node.IntroPath {
+		if node.OnSignalRoute != nil && *node.OnSignalRoute {
 			t.Errorf("node %s marked as the route in, want no mark", ids.UUID(node.Id))
 		}
 	}
@@ -470,10 +469,10 @@ func TestAnUnmeasuredRouteInIsNotAWarmPath(t *testing.T) {
 	g.routeIn = []signals.RouteInEdge{{ContactID: unmeasured}}
 
 	g.placeContacts()
-	g.markIntroPath()
+	g.markSignalRoute()
 
-	if g.out.IntroPath != nil {
-		t.Errorf("intro path %v reported for a contact with no measured relationship", *g.out.IntroPath)
+	if g.out.SignalRoute != nil {
+		t.Errorf("signal route %v reported for a contact with no measured relationship", *g.out.SignalRoute)
 	}
 }
 

@@ -108,7 +108,8 @@ func TestClientResponseURICarriesOnlyOurAnswer(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := clientResponseURI(
-				authorizeRequest{RedirectURI: tc.redirectURI, State: tc.state}, tc.answer)
+				authorizeRequest{RedirectURI: tc.redirectURI, State: tc.state}, tc.answer,
+			)
 			if err != nil {
 				t.Fatalf("clientResponseURI(%q): %v", tc.redirectURI, err)
 			}
@@ -130,7 +131,8 @@ func TestClientResponseURIRefusesAQueryItCannotReproduce(t *testing.T) {
 		t.Fatalf("validRedirectURI(%q) = true, want false: an undecodable query must be refused at registration", malformed)
 	}
 	got, err := clientResponseURI(
-		authorizeRequest{RedirectURI: malformed, State: "S"}, url.Values{"code": {"AUTHCODE"}})
+		authorizeRequest{RedirectURI: malformed, State: "S"}, url.Values{"code": {"AUTHCODE"}},
+	)
 	if err == nil {
 		t.Fatalf("clientResponseURI(%q) = %q, want an error rather than a mangled redirect", malformed, got)
 	}

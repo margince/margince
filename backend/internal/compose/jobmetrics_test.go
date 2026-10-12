@@ -133,8 +133,8 @@ func TestAStateTheRendererHasNeverHeardOfIsReportedRatherThanDropped(t *testing.
 func TestTheOldestQueuedAgeIsTheWorstCaseAcrossTheQueuesKinds(t *testing.T) {
 	var buf bytes.Buffer
 	if err := writeJobMetrics(&buf, jobs.Snapshot{Rows: []jobs.StateRow{
-		{Queue: "default", Kind: "slow", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: ptrTo(900.0)},
-		{Queue: "default", Kind: "fast", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: ptrTo(5.0)},
+		{Queue: "default", Kind: "slow", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(900.0)},
+		{Queue: "default", Kind: "fast", Untenanted: true, State: "available", Count: 1, OldestRunnableAgeSeconds: new(5.0)},
 	}}); err != nil {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
@@ -397,8 +397,6 @@ func TestAQueueHoldingOnlyRunningWorkReportsNoAgeEither(t *testing.T) {
 		t.Errorf("the running work itself went missing\ngot:\n%s", buf.String())
 	}
 }
-
-func ptrTo[T any](v T) *T { return &v }
 
 // TestAQueueOfFutureScheduledWorkReportsNoAgeSeries — the group holds
 // waiting work, but none of it is RUNNABLE yet, so the read answers null

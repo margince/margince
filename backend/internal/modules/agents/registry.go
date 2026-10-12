@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -44,6 +45,10 @@ type Registry struct {
 	// supplied value to it, so `minimum`/`maximum` bind the surface instead of
 	// describing an intention.
 	numArgs map[string][]numBound
+	// enumArgs[tool] is the closed vocabulary its schema declares for each text
+	// argument, read off the schema once at registration. Invoke holds a
+	// supplied word to it, so `enum` binds the surface as `minimum` does.
+	enumArgs map[string][]enumArg
 	// requiredArgs[tool] is what that tool's schema says it cannot run without,
 	// read off the schema once at registration. Invoke holds a call to it, so
 	// `required` binds the surface rather than describing an intention that
@@ -97,6 +102,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		specs:        map[string]mcp.ToolSpec{},
 		idArgs:       map[string]idArgSpec{},
 		numArgs:      map[string][]numBound{},
+		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
@@ -158,6 +164,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 
+	if err := withinArgsBound(spec, in); err != nil {
+		return nil, 0, err
+	}
 	res, err := splitReserved(in)
 	if err != nil {
 		return nil, 0, err
@@ -341,13 +350,26 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
+// ErrFileCannotWait answers a confirm-first call that carries a file: staging it
+// would keep the file's bytes in the approval, so nothing is staged.
+var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+
+// FileCannotWait is that answer on both doors, over the refusal that asked for
+// an approval. So a caller reads one code wherever it sent the file.
+func FileCannotWait(refusal error) error {
+	return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+}
+
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
 // carrying its approval_id redeems it. A tool that cannot describe its own
 // staging target has nothing to park, so the refusal stands as the answer.
 func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string, args json.RawMessage, diffHash string, refusal error) error {
 	stageable, ok := t.(stageableTool)
-	if !ok {
+	switch {
+	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
+		return FileCannotWait(refusal)
+	case !ok:
 		return refusal
 	}
 	info, err := stageable.StageInfo(ctx, args)

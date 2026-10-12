@@ -1,39 +1,76 @@
+<!-- prose:plain -->
 # Import purchased employment history
 
-What a user does on the contact — adding phones and emails, reading the
-**Companies** section, **Edit employment** and **Match company** — is in the
-handbook, [records.md](../handbook/records.md). This page is the operator's:
-installation, matching rules, backfill and recovery.
+The handbook page [records.md](../handbook/records.md) covers what a user does on the contact.
+There, a user adds phones and emails, reads the **Companies** section, and uses **Edit employment** and
+**Match company**. This page is for the operator: install, the match rules, the backfill and repair.
 
-## Installation and upgrade
+## Install and upgrade
 
-1. Run the normal additive migrations before starting the updated API and worker. The employment status migration adds nullable status/precision columns, the resolution ledger and the retained-claim processing marker. Existing relationships preserve their previous semantics.
-2. Start the event relay, normal workers and the company auto-enrichment consumer. The employment sweep processes newly retained current-employment and job-history claims without calling Surfe again.
-3. Check the existing company auto-enrichment setting and daily research budget. Company creation emits the normal event that schedules research through this policy. Linking is durable even if research is disabled or fails. Use the company's research view to inspect and retry research.
-4. Verify one empty phone can be added and survives refresh. Rehearse history linking on a test contact and confirm the reciprocal company contact list excludes former/unknown work.
-5. Preview existing purchases, then apply bounded batches as described below. The migration does not bulk-import pre-upgrade purchases on startup; the backfill below applies them.
+1. Run the normal additive migrations before you start the new API and worker. The employment status
+   migration adds the `employment_status`, `started_precision` and `ended_precision` columns, the resolution
+   ledger, and a marker on retained claims. Old relationships keep their old meaning.
+2. Start the event relay, the normal workers and the consumer that enriches companies on its own. The
+   employment sweep works through new retained claims of current employment and job history. It makes no
+   new call to Surfe.
+3. Check the setting that enriches companies on its own, and the daily research budget. A new company
+   sends the normal event, which plans research through this policy. A link holds even when research is
+   off or fails. Use the research view of the company to look at research and to try it again.
+4. Add one empty phone, and check that it is still there after a refresh. Try a history link on a test
+   contact. Confirm that the contact list on the company leaves out past and unknown work.
+5. Preview the old purchases, then apply them in small batches, as the backfill section shows. The
+   migration does not import old purchases when the app starts; the backfill does that.
 
-## Matching and review
+## Match and review
 
-An exact domain identity reuses the company. A name alone requires confirmation, even if it resembles an existing name. A valid explicit provider domain can create a missing company using the existing identity checks. Name similarity or a company label that merely resembles a domain cannot authorize creation. Unresolved entries remain visible in Companies: choose an existing company or confirm its website using **Match company**. One company choice applies to all unresolved roles in the same employer group; dates and status in that form correct the selected role only. Dismiss evidence that should not become a relationship.
+An exact domain match uses the company that exists. A name alone needs a human to confirm it, even when it looks
+like a name that exists. A valid domain that the provider gives can create a missing company, through the
+identity checks that exist today. A name that looks the same, or a company label that only looks like a domain,
+can never create a company.
 
-Repeating an import does not recreate a linked episode or undo a removal. Human corrections remain authoritative. Roles with different dates/titles remain distinct. Removing purchased evidence retracts untouched provider-owned relationships only; manually edited relationships and shared companies survive.
+Open entries stay in Companies. To close one, choose a company that exists, or confirm its website, with
+**Match company**. The company you choose applies to every open role in the same company group. The dates
+and status in that form change only the role that the form is for. Dismiss any evidence that should not become a
+relationship.
 
-Research runs independently through the existing company pipeline. An unresolved identity needs matching before a company can be researched. A linked company without a website needs one before research can proceed. A linked company awaiting policy evaluation is not proof of a completed research job.
+When you import again, the import does not make a linked episode again, and it does not put back a relationship you removed.
+A human change always comes first. Roles with different dates or titles stay separate. When you remove
+purchased evidence, it takes back only the relationships the provider owns and no human changed. A
+relationship a human changed by hand, and a company that others share, both stay.
 
-## Backfill existing purchases
+Research runs on its own, through the company pipeline that exists today. An open identity needs a
+match before someone can research the company. A linked company without a website needs one before
+research can go on. A linked company that waits for a policy check does not prove that a research job
+has run.
 
-Use an authenticated administrator and the ordinary API client. Do not paste credentials into a script committed to the repository.
+## Backfill old purchases
 
-- `GET /v1/contacts/{id}/employment-import` previews one contact's retained history and recorded outcomes without writes or paid calls.
-- `POST /v1/contacts/{id}/employment-import` with `{"action":"apply"}` reconciles that contact. `resolve` and `dismiss` address the opaque `key` returned by preview.
-- `POST /v1/employment-import/backfill` with `{"apply":false,"limit":10}` previews the first batch. Inspect `reports`; the default is read-only.
-- Apply with `{"apply":true,"limit":10}`. Supply the returned `next_cursor` as `after` for the next batch until `has_more` is false. Replays reconcile the ledger and return current outcomes; these endpoints do not cache HTTP responses.
+Use an admin account and the normal API client. Never put credentials into a script that you commit to
+the repository.
 
-Keep the batch reports as the operational record. They identify linked, needs-match, needs-review and dismissed episodes. Repeating a batch is safe after an interrupted request. A failed batch can have committed earlier contacts: retry the same cursor, then continue after its successful response. No Surfe lookup is purchased by preview or apply; creating companies can trigger research subject to the installation's settings and budget.
+- `GET /v1/contacts/{id}/employment-import` shows a preview of the retained history and the stored outcomes of one contact. It writes nothing and makes no call that costs money.
+- `POST /v1/contacts/{id}/employment-import` with `{"action":"apply"}` updates that contact. `resolve` and `dismiss` take the `key` from the preview, as it is.
+- `POST /v1/employment-import/backfill` with `{"apply":false,"limit":10}` shows a preview of the first batch. Read the `reports`; by default the call only reads.
+- To apply, send `{"apply":true,"limit":10}`. Send the `next_cursor` it returns as `after` for the next batch, until `has_more` is false. A replay updates the ledger and returns the current outcomes. These endpoints do not cache HTTP answers.
 
-## Recovery
+Keep the batch reports as the record of the work. They name the linked episodes, and the ones that need
+a match, need review, or that a human dismissed. You can run a batch again after a request breaks off. A failed
+batch can still have saved some contacts first: try the same cursor again, then go on after its good
+answer. Preview and apply buy no Surfe lookup. A new company can start research, as the settings and
+budget of the install allow.
 
-Restarting the worker resumes unprocessed retained claims. Malformed purchases become visible review items without blocking valid roles. Transient failures retry with exponential delays, up to six attempts; then processing stops and the contact shows an administrator-review warning. Correct the evidence or configuration and apply that contact explicitly to retry. Correct unresolved identities in the contact UI and retry. Do not repair an import by deleting a shared company.
+## Repair
 
-For application rollback, stop employment processing first and retain the populated schema. Retract only untouched imported contributions through the provider-data controls if needed. The down migration refuses undated historical/unknown rows that would acquire a different meaning under the old reader. Do not force that rollback by deleting customer history.
+When the worker starts again, it goes on with the retained claims it has not worked through. A wrong
+purchase becomes a review item, and it does not block the valid roles. When a step fails for a short time, the worker tries again,
+with more time between tries, up to 6 tries. Then the work stops, and the contact shows a warning for
+an admin to review.
+
+Fix the evidence or the settings, then apply that contact by hand to try again. Fix
+open identities in the contact screen, then try again. Never repair an import by deleting a company that
+others share.
+
+To go back to the old version of the app, first stop the employment work and keep the schema with its data. If you need to,
+take back only the imported data that no human changed, with the provider data tools. The
+down migration refuses a `former` or `unknown` employment row with no `ended_at`, because the old
+reader would read it another way. Never make that step pass by deleting customer history.

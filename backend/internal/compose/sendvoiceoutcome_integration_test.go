@@ -235,7 +235,7 @@ func TestBothSendTransportsCarryTheDraftOutcomeRecorder(t *testing.T) {
 
 		body, err := json.Marshal(crmcontracts.SendEmailRequest{
 			To: []openapi_types.Email{openapi_types.Email(e.recipient)}, Subject: "Pricing",
-			Body: voiceDraftBody, ConsentPurpose: ptrTo("transactional"), DraftRef: &draft.ref,
+			Body: voiceDraftBody, ConsentPurpose: new("transactional"), DraftRef: &draft.ref,
 		})
 		if err != nil {
 			t.Fatalf("marshaling the send request: %v", err)
@@ -383,18 +383,14 @@ func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *
 	release := sync.OnceFunc(func() { close(winner.release) })
 	defer release()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, winnerErr = winnerStore.SendEmail(e.ctx, activities.FromActivity(anchor), e.draftedSend(draft.ref), gate, winnerStager)
-	}()
+	})
 	holder := awaitLockHolder(t, winner.locked)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, loserErr = loserStore.SendEmail(e.ctx, activities.FromActivity(anchor), e.draftedSend(draft.ref), gate, loserStager)
-	}()
+	})
 	waitForBlockedOn(t, e, holder)
 
 	release()

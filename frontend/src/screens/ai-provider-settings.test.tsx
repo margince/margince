@@ -79,6 +79,27 @@ function backend(
               credential_kind: "service_account",
             },
             {
+              provider: "gemini",
+              configured: true,
+              env_var: "GEMINI_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
+              provider: "anthropic",
+              configured: true,
+              env_var: "ANTHROPIC_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
+              provider: "openai",
+              configured: true,
+              env_var: "OPENAI_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
               provider: "jev_compatible",
               configured: false,
               env_var: "JEV_COMPATIBLE_API_KEY",
@@ -361,6 +382,80 @@ describe("a provider's settings on its sheet", () => {
     );
   });
 
+  // Google AI Studio is the adapter's own host, so a provider with none
+  // stored is already on it, and Save waits for a change.
+  it("opens Gemini on Google AI Studio when no host is stored", async () => {
+    backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "gemini");
+    expect(
+      await within(sheet).findByRole("combobox", { name: "Service" }),
+    ).toHaveTextContent("Google AI Studio");
+    expect(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    ).toBeDisabled();
+  });
+
+  it("warns that Langdock's Gemini path serves no embeddings", async () => {
+    backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "gemini");
+    await pickService(user, sheet, "Langdock (EU)");
+    expect(
+      within(sheet).getByText(/serves no Gemini embeddings/),
+    ).toBeInTheDocument();
+    expect(within(sheet).queryByRole("link", { name: /About/ })).toBeNull();
+  });
+
+  it("points native OpenAI at Langdock's EU host", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "openai");
+    expect(
+      await within(sheet).findByRole("combobox", { name: "Service" }),
+    ).toHaveTextContent("OpenAI");
+    await pickService(user, sheet, "Langdock (EU)");
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts).toEqual([
+        {
+          provider: "openai",
+          body: { base_url: "https://api.langdock.com/openai/eu" },
+        },
+      ]),
+    );
+  });
+
+  it("points Anthropic at Langdock's EU host", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    const sheet = await openSheet(user, "anthropic");
+    await pickService(user, sheet, "Langdock (EU)");
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts).toEqual([
+        {
+          provider: "anthropic",
+          body: { base_url: "https://api.langdock.com/anthropic/eu" },
+        },
+      ]),
+    );
+  });
+
   it("sets a Vertex location on the provider", async () => {
     const puts = backend(routingWith({ gemini_vertex: { location: "eu" } }));
     const user = userEvent.setup();
@@ -369,6 +464,10 @@ describe("a provider's settings on its sheet", () => {
     const sheet = await openSheet(user, "gemini_vertex");
     expect(within(sheet).queryByLabelText("Host")).toBeNull();
     await user.click(await within(sheet).findByLabelText("Location"));
+    // Vertex is reached by location; Gemini's hosts are not offered here.
+    expect(
+      within(sheet).queryByRole("combobox", { name: "Service" }),
+    ).toBeNull();
     await user.click(
       await screen.findByRole("option", { name: /europe-west4/ }),
     );
@@ -422,5 +521,29 @@ describe("serviceOf", () => {
     expect(
       serviceOf("openai_compatible", "https://openrouter.ai/api?region=eu"),
     ).toBe("other");
+  });
+
+  // Langdock serves each wire at its own path, one per region.
+  it("maps each Langdock host to its region on every wire", () => {
+    for (const [provider, wire] of [
+      ["openai_compatible", "openai"],
+      ["gemini", "google"],
+      ["anthropic", "anthropic"],
+      ["openai", "openai"],
+    ] as const) {
+      const version = wire === "google" ? "/v1beta" : "";
+      expect(
+        serviceOf(provider, `https://api.langdock.com/${wire}/eu${version}`),
+      ).toBe("langdock-eu");
+      expect(
+        serviceOf(provider, `https://api.langdock.com/${wire}/us${version}`),
+      ).toBe("langdock-us");
+    }
+  });
+
+  it("takes an unlisted Gemini host for Other and no host for AI Studio", () => {
+    expect(serviceOf("gemini", "https://gemini.example/v1beta")).toBe("other");
+    expect(serviceOf("gemini", "")).toBe("google-ai-studio");
+    expect(serviceOf("anthropic", "")).toBe("anthropic");
   });
 });

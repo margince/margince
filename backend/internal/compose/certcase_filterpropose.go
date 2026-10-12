@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -112,10 +113,8 @@ func offeredBy(p storekit.Predicate, fields []filterpropose.Field) error {
 		if field.Name != p.Field {
 			continue
 		}
-		for _, op := range field.Operators {
-			if op == p.Op {
-				return nil
-			}
+		if slices.Contains(field.Operators, p.Op) {
+			return nil
 		}
 		return fmt.Errorf("the expected clause on %q uses %q, which the fixture's vocabulary does not offer", p.Field, p.Op)
 	}

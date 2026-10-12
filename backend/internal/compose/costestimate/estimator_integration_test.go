@@ -235,7 +235,7 @@ func TestEstimatorPricesObservedHistory(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 2_000_000, tokensOut: 200_000})
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierLocalSmall, provider: ai.ProviderFake, model: "local-model", tokensIn: 500_000, tokensOut: 50_000})
 	e.insertCall(t, callRow{task: ai.TaskEmbeddings, tier: ai.TierEmbedLane, provider: ai.ProviderFake, model: "embed-model", tokensIn: 1_000_000})
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		e.insertLabeledActivity(t, ws)
 	}
 
@@ -289,7 +289,7 @@ func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 2_000_000, tokensOut: 200_000})
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierLocalSmall, provider: ai.ProviderFake, model: "local-model", tokensIn: 500_000, tokensOut: 50_000})
 	e.insertCall(t, callRow{task: ai.TaskEmbeddings, tier: ai.TierEmbedLane, provider: ai.ProviderFake, model: "embed-model", tokensIn: 1_000_000})
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		e.insertLabeledActivity(t, ws)
 	}
 
@@ -328,7 +328,7 @@ func TestEstimatorExcludesRatelessModelAndFlagsHeuristic(t *testing.T) {
 
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierLocalSmall, provider: ai.ProviderFake, model: "local-model", tokensIn: 1_000_000, tokensOut: 0})
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 4_000_000, tokensOut: 0})
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		e.insertLabeledActivity(t, ws)
 	}
 

@@ -24,7 +24,7 @@ func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (contactID, taskID strin
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Task Target"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Task Target"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var task struct {
@@ -89,7 +89,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, taskID, contactID string) {
 	t.Helper()
 	// Relink: idempotent association onto a visible contact.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 			"entity_type": "contact", "entity_id": contactID,
 		}, nil, nil); status != http.StatusOK {

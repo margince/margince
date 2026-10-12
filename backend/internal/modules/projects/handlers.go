@@ -31,6 +31,8 @@ func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params cr
 	}
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
+	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
+	in.Unassigned = params.Unassigned
 	if params.Phase != nil {
 		phase := string(*params.Phase)
 		in.Phase = &phase
@@ -214,6 +216,11 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	// namespace existed; this one never did, so a caller could spell the
 	// importer's namespace on a project and have the trust ladder read it back
 	// as captured history.
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return CreateProjectInput{}, err
+	}
+	req.Source = source
 	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
 		return CreateProjectInput{}, err
 	}

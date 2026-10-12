@@ -143,10 +143,7 @@ func countTail(from string) string {
 		case ')':
 			depth--
 			if depth == 0 {
-				end := i + 21
-				if end > len(from) {
-					end = len(from)
-				}
+				end := min(i+21, len(from))
 				return from[:end]
 			}
 		}
@@ -186,7 +183,7 @@ func interactionProjectionTables(t *testing.T) []string {
 		t.Fatalf("reading the schema head: %v", err)
 	}
 	var tables []string
-	for _, line := range strings.Split(string(schema), "\n") {
+	for line := range strings.SplitSeq(string(schema), "\n") {
 		qualified, _, isColumn := strings.Cut(line, " ")
 		if !isColumn || !strings.HasSuffix(qualified, ".count_90d") {
 			continue

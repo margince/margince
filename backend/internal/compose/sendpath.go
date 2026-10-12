@@ -328,7 +328,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// makes one a REST credential too) must not lose their signature merely
 		// because the request arrived on the tool surface. An agent principal
 		// still signs nothing — signedBody decides that, not this wiring.
-		WithSignature(contacts.NewStore(InstallationDB(pool))).
+		WithSignature(signatureReader{store: contacts.NewStore(InstallationDB(pool))}).
 		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		})).

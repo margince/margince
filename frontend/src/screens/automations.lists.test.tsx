@@ -99,11 +99,15 @@ describe("a rule that watches a list", () => {
     ]);
   });
 
-  it("says why it paused itself, and nothing when paused by hand", () => {
+  it("says why it paused itself in short, the whole reason on a press, and nothing when paused by hand", async () => {
+    const user = userEvent.setup();
     const { rerender } = render(
       <StoryProviders>
         <RulePausedReason automation={{ ...rule, paused_reason: "burst" }} />
       </StoryProviders>,
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["auto.pausedShort.burst"] }),
     );
     expect(screen.getByText(en["auto.pausedReason.burst"])).toBeInTheDocument();
     rerender(
@@ -112,7 +116,7 @@ describe("a rule that watches a list", () => {
       </StoryProviders>,
     );
     expect(
-      screen.queryByText(en["auto.pausedReason.burst"]),
+      screen.queryByText(en["auto.pausedShort.burst"]),
     ).not.toBeInTheDocument();
   });
 });

@@ -570,7 +570,7 @@ func TestFollowUpReconcileDoesNotStackAcrossPasses(t *testing.T) {
 	deal := e.SeedDeal(t, "Reconciled twice", e.pipeline, e.open, &e.Rep1)
 	e.seedInteraction(t, deal, "call", "Call", 1)
 
-	for pass := 0; pass < 2; pass++ {
+	for pass := range 2 {
 		if err := e.reconcile(); err != nil {
 			t.Fatalf("pass %d: %v", pass, err)
 		}
@@ -781,8 +781,7 @@ func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 	// The rep has to be able to ACT on the refusal. An untyped error here reads
 	// as 500 internal at the handler, which says the server broke rather than
 	// that the date needs fixing — and a rep told that has no reason to retry.
-	var invalid *approvals.InvalidEditError
-	if !errors.As(err, &invalid) {
+	if _, ok := errors.AsType[*approvals.InvalidEditError](err); !ok {
 		t.Fatalf("refusal is %T, want *approvals.InvalidEditError so the rep "+
 			"gets a 422 naming the field rather than an opaque 500: %v", err, err)
 	}

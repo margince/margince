@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "../screens/common";
+import { unwrap } from "../screens/common";
 
 /**
  * The anonymous capability probe, read by everything that needs it.
@@ -22,11 +22,7 @@ export function useAuthCapabilities() {
   return useQuery({
     queryKey: ["auth-capabilities"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/auth/capabilities");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/auth/capabilities"));
     },
     staleTime: 60_000,
     retry: 1,

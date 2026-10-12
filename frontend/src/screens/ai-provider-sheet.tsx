@@ -11,13 +11,20 @@ import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { today } from "../format/calendarday";
 import { stable } from "../format/collate";
-import { useT } from "../i18n";
+import { formatDate } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { borrowedRows, useAiModelCatalogue } from "./ai-models";
 import { usePriceSync } from "./ai-price-sync";
+import {
+  type ProviderHealthEntry,
+  ProviderHealthNotice,
+} from "./ai-provider-health-notice";
 import { pricingPageFor } from "./ai-provider-links";
 import { providerName } from "./ai-provider-names";
 import type { ProviderUse } from "./ai-routing-query";
+import { TierChips } from "./ai-terms";
 import { ProviderRefreshLine } from "./rate-catalogue-refresh";
 import { type BoundModel, PriceForm } from "./rate-manual";
 import { RemovePriceDialog } from "./rate-remove";
@@ -69,12 +76,14 @@ export const STATE_TONE = {
 export function ProviderSheet({
   status,
   usage,
+  health,
   connection,
   figures,
   onClose,
 }: Readonly<{
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
+  health?: ProviderHealthEntry;
   connection: ReactNode;
   // What this vendor's calls did, between how it is reached and what it costs.
   figures?: ReactNode;
@@ -91,11 +100,12 @@ export function ProviderSheet({
         </Heading>
         <p className="t-caption ai-sheet-status">
           <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
-          <span>
-            {usage
-              ? t("aiProviders.usedBy", { roles: usage.for.join(", ") })
-              : t("aiProviders.notUsed")}
-          </span>
+          {usage && (
+            <>
+              <span>{t("aiProviders.colUsedBy")}</span>
+              <TierChips tiers={usage.for} />
+            </>
+          )}
         </p>
       </DrawerHead>
       <DrawerBody>
@@ -103,12 +113,14 @@ export function ProviderSheet({
           <Heading size="small" className="t-h3">
             {t("aiProviders.connection")}
           </Heading>
+          {health && <ProviderHealthNotice entry={health} />}
           {connection}
         </section>
         {figures}
         <ProviderPrices
           provider={status.provider}
           pricedBy={status.priced_by}
+          keyed={status.usable}
           usage={usage}
         />
       </DrawerBody>
@@ -134,10 +146,12 @@ function firstVerb(section: HTMLElement | null): HTMLElement | null {
 function ProviderPrices({
   provider,
   pricedBy,
+  keyed,
   usage,
 }: Readonly<{
   provider: string;
   pricedBy?: string;
+  keyed: boolean;
   usage: ProviderUsage | undefined;
 }>) {
   const t = useT();
@@ -145,8 +159,11 @@ function ProviderPrices({
   const canWrite = useCanUpsert("ai_model_rate");
   const sheet = useAiModelCatalogue(canRead);
   const sync = usePriceSync(canRead);
+  // The last sync's line is stored with its run. Its "No key" is about the key
+  // held then, and says nothing true once one is held now.
   const lastLine = sync.data?.last_run?.report.providers.find(
-    (p) => p.provider === provider,
+    (p) =>
+      p.provider === provider && !(keyed && p.outcome === "not_configured"),
   );
   // The row being edited, `{}` for a new price, nothing while the table shows.
   const [form, setForm] = useState<{
@@ -289,6 +306,7 @@ function PriceTable({
   onRemove: (row: SheetRow) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="ai-sheet-table">
       <DataTable<SheetRow>
@@ -305,7 +323,9 @@ function PriceTable({
                 {r.model_id}
                 {r.effective_date > today() ? (
                   <Badge tone="info">
-                    {t("aiRates.manual.from", { date: r.effective_date })}
+                    {t("aiRates.manual.from", {
+                      date: formatDate(r.effective_date, locale, viewerZone()),
+                    })}
                   </Badge>
                 ) : null}
                 {r.source === "manual" ? (
@@ -350,6 +370,7 @@ function PriceTable({
                 {
                   key: "actions",
                   header: t("table.actions"),
+                  headerHidden: true,
                   align: "end" as const,
                   render: (r: SheetRow) => (
                     <div className="cell-actions">

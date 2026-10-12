@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { isImportWindow } from "../mail-history/window-picker";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 
 // The connect-time import, as both of its surfaces need it: the run row, the
 // four operations on it, and the window pick that ties them together.
@@ -41,27 +41,23 @@ const POLL_MS = 2500;
 const statusQueryKey = (provider: Provider) => ["backfill-status", provider];
 
 async function readRun(provider: Provider): Promise<BackfillStatus> {
-  const { data, error } = await api.GET("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.GET("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+    }),
+  );
 }
 
 async function previewRun(
   provider: Provider,
   window: ImportWindow,
 ): Promise<BackfillPreview> {
-  const { data, error } = await api.POST(
-    "/connectors/{provider}/backfill/preview",
-    { params: { path: { provider } }, body: { window } },
+  return unwrap(
+    await api.POST("/connectors/{provider}/backfill/preview", {
+      params: { path: { provider } },
+      body: { window },
+    }),
   );
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
 }
 
 async function startRun(
@@ -69,26 +65,22 @@ async function startRun(
   window: ImportWindow,
   startOver: boolean,
 ): Promise<BackfillStatus> {
-  const { data, error } = await api.POST("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-    // Without start_over the server continues a run that stopped on an error
-    // whose window covers this one, so only an explicit "start over" sends it.
-    body: startOver ? { window, start_over: true } : { window },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+      // Without start_over the server continues a run that stopped on an error
+      // whose window covers this one, so only an explicit "start over" sends it.
+      body: startOver ? { window, start_over: true } : { window },
+    }),
+  );
 }
 
 async function cancelRun(provider: Provider): Promise<BackfillStatus> {
-  const { data, error } = await api.DELETE("/connectors/{provider}/backfill", {
-    params: { path: { provider } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(
+    await api.DELETE("/connectors/{provider}/backfill", {
+      params: { path: { provider } },
+    }),
+  );
 }
 
 /**

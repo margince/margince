@@ -379,7 +379,7 @@
    dressed as one — the user has nothing to correct. */
 .auth-notice {
   text-align: left;
-  background: var(--bgCard);
+  background: var(--bgInset);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   padding: var(--space-3);

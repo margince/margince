@@ -19,7 +19,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "./common";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
@@ -152,10 +152,7 @@ export function ExtensionIngestHealthCard() {
     queryKey: ["extension-ingest-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/extension-ingest-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/extension-ingest-health"));
       // Rejected rather than defaulted. `?? []` would draw the clean state,
       // which claims every record this installation's connectors sent was
       // representable — a statement about the installation that this response
