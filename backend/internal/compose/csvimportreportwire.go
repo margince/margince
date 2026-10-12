@@ -48,12 +48,14 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	seen, seenWarnings := map[string]bool{}, map[string]bool{}
 	duplicates := 0
 	parts := make([]crmcontracts.ImportPartReport, 0, len(run.Report.Objects))
-	for _, o := range run.Report.Objects {
+	reached := rowsReachedOf(run)
+	for i, o := range run.Report.Objects {
+		rowsRead := reached[i]
 		d := importDispositionOf(o, committed)
 		if committed {
-			d = withoutStaleSkips(d, o.MirrorCount, run.Report.Walks())
+			d = withoutStaleSkips(d, rowsRead, run.Report.Walks())
 		}
-		out.RowsRead += o.MirrorCount
+		out.RowsRead += rowsRead
 		out.Disposition.Created += d.Created
 		out.Disposition.Updated += d.Updated
 		out.Disposition.Skipped += d.Skipped
@@ -61,7 +63,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		duplicates += *d.Duplicates
 		parts = append(parts, crmcontracts.ImportPartReport{
 			File: partFileOf(run, o), Object: crmcontracts.ImportObject(o.Object),
-			RowsRead: o.MirrorCount, Disposition: d,
+			RowsRead: rowsRead, Disposition: d,
 		})
 		appendIssues(&out.Issues, seen, issueKey, o, o.Skipped)
 		// A collision is reported the same way a skip is — by line, in the
@@ -74,6 +76,9 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		appendIssues(&out.Issues, seenWarnings, warningKey, o, o.Warnings)
 	}
 	out.Parts = &parts
+	if committed && run.Error != importTagsFailedCause {
+		reportTagsCreated(out.Issues)
+	}
 
 	// Reported even when zero: "0 duplicates" is the answer to the question a
 	// contact is asking before they approve, and an omitted field reads as "not
@@ -88,6 +93,35 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		out.Undo = toContractUndoReport(run.ID, run.Status, *run.UndoReport)
 	}
 	return out
+}
+
+// rowsReachedOf is how many rows of each reported object the run read. A
+// failed commit read only up to its checkpoint, in import order, and the rows
+// past it are none of the four outcomes.
+func rowsReachedOf(run migration.Run) []int {
+	reached := make([]int, len(run.Report.Objects))
+	left := run.Checkpoint
+	for i, o := range run.Report.Objects {
+		reached[i] = o.MirrorCount
+		if run.Status == migration.StatusFailed {
+			reached[i] = min(o.MirrorCount, left)
+			left -= reached[i]
+		}
+	}
+	return reached
+}
+
+// createdTagReason is the report's word for a new tag once the commit ran,
+// which creates every new tag before its first row.
+const createdTagReason = "no tag had this name, so the import created it"
+
+// reportTagsCreated rewords each new_tag issue as done.
+func reportTagsCreated(issues []crmcontracts.ImportRowIssue) {
+	for i := range issues {
+		if kind := issues[i].Kind; kind != nil && string(*kind) == migration.ProblemNewTag {
+			issues[i].Reason = createdTagReason
+		}
+	}
 }
 
 // walksWithoutAResume is how many times an ordinary committed run is walked:

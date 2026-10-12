@@ -14,6 +14,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -273,8 +274,11 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if reason := authorUnwritableReason(fields); reason != "" {
 		return &cellProblem{Target: csvTargetAuthor, Value: fields[csvTargetAuthor], Message: reason}
 	}
-	if object == migration.ObjectContact {
-		// parseContactContacts refuses a malformed address before the write.
+	if problem := tagCellProblem(fields[csvTargetTags]); problem != nil {
+		return problem
+	}
+	if object == migration.ObjectContact || object == migration.ObjectLead {
+		// Both stores parse the address before the write and refuse a malformed one.
 		email := strings.TrimSpace(fields[fieldEmail])
 		if email == "" {
 			return nil
@@ -297,6 +301,13 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 				Target: fieldDomain, Value: fields[fieldDomain],
 				Message: fmt.Sprintf("%q is not a domain that can be written", domain),
 			}
+		}
+	}
+	if length := utf8.RuneCountInString(fields[descriptionField]); length > contacts.CompanyDescriptionMax {
+		return &cellProblem{
+			Target: descriptionField, Value: fields[descriptionField],
+			Message: fmt.Sprintf("the description is %d characters; a company description holds at most %d",
+				length, contacts.CompanyDescriptionMax),
 		}
 	}
 	band := strings.TrimSpace(fields[fieldSizeBand])

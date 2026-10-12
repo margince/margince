@@ -45,6 +45,24 @@ func splitTags(cell string) []string {
 	return names
 }
 
+// tagCellProblem is the first name in a tags cell the tag store would refuse
+// to create. The test run then refuses the row, and the approval never meets it.
+func tagCellProblem(cell string) *cellProblem {
+	for _, name := range splitTags(cell) {
+		if _, err := collections.ValidateTagName(name); err != nil {
+			reason := err.Error()
+			if bad, ok := errors.AsType[*collections.BadInputError](err); ok {
+				reason = bad.Reason
+			}
+			return &cellProblem{
+				Target: csvTargetTags, Value: name,
+				Message: fmt.Sprintf("the tag %q cannot be created: its name %s", name, reason),
+			}
+		}
+	}
+	return nil
+}
+
 // tagKey matches uq_tag_name, which is case-insensitive.
 func tagKey(name string) string {
 	return strings.ToLower(collections.NormalizeTagName(name))

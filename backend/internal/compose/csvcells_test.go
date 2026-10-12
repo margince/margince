@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -128,5 +129,19 @@ func TestAProblemNamesTheFilesOwnHeader(t *testing.T) {
 	w := &csvWriters{columns: map[string]string{"Tier": "cf_tier", "Name": fieldDisplayName}}
 	if got := w.headerFor("cf_tier"); got != "Tier" {
 		t.Fatalf("headerFor(cf_tier) = %q, want Tier", got)
+	}
+}
+
+// The column counts characters, so a description at the cap in
+// multi-byte letters lands and one more character does not.
+func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
+	atCap := strings.Repeat("ü", contacts.CompanyDescriptionMax)
+	if _, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: atCap}, importCatalog{}); problem != nil {
+		t.Fatalf("problem = %+v, want none for a description at the cap", problem)
+	}
+	over := atCap + "x"
+	_, problem := checkRow(migration.ObjectCompany, map[string]string{fieldDisplayName: "Acme", descriptionField: over}, importCatalog{})
+	if problem == nil || problem.Target != descriptionField || !strings.Contains(problem.Message, "501") {
+		t.Fatalf("problem = %+v, want the description refused with its length", problem)
 	}
 }

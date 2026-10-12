@@ -14,9 +14,11 @@ import "testing"
 // applied and zero skipped, which is not an answer: taking it would erase what
 // the earlier attempt actually linked.
 func TestAnAttemptThatNeverLinkedDoesNotReportZeroLinks(t *testing.T) {
+	// The test run and one commit attempt that linked.
 	earlier := Report{
 		Associations:        12,
 		AssociationsSkipped: []SkippedAssoc{{From: "a", To: "b", Reason: "no such company"}},
+		Attempts:            2,
 	}
 
 	// A later attempt that died before the association phase.
@@ -42,6 +44,17 @@ func TestAnAttemptThatNeverLinkedDoesNotReportZeroLinks(t *testing.T) {
 		refused.AssociationsSkipped[0].From != "c" {
 		t.Errorf("associations = %d with %+v, want the later attempt's own answer",
 			refused.Associations, refused.AssociationsSkipped)
+	}
+}
+
+// The test run's count is the links it predicts, so a first commit that died
+// before its links applied none of them.
+func TestAFirstCommitThatNeverLinkedAppliedNoLinks(t *testing.T) {
+	predicted := Report{Associations: 600}
+	died := predicted.mergedWith(Report{})
+	if died.Associations != 0 || len(died.AssociationsSkipped) != 0 {
+		t.Errorf("associations = %d with %d skipped, want none: the 600 were a prediction, never applied",
+			died.Associations, len(died.AssociationsSkipped))
 	}
 }
 

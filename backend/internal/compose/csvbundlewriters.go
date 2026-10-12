@@ -141,6 +141,9 @@ func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy ma
 					seenEmail[email] = true
 					emails = append(emails, email)
 				}
+				if tagCellProblem(fields[csvTargetTags]) != nil {
+					continue
+				}
 				for _, name := range splitTags(fields[csvTargetTags]) {
 					if _, named := firstNamedBy[tagKey(name)]; !named {
 						firstNamedBy[tagKey(name)] = object

@@ -401,8 +401,9 @@ func TestTheDispositionAlwaysSumsToTheRowsRead(t *testing.T) {
 		{migration.StatusFailed, 3, 1},
 	} {
 		t.Run(tc.status, func(t *testing.T) {
+			// The failed run stopped after walking every row, in its link phase.
 			got := toContractImportReport(migration.Run{
-				Status: tc.status, Report: &merged,
+				Status: tc.status, Report: &merged, Checkpoint: 5,
 				Mapping: &migration.RunMapping{Object: migration.ObjectLead},
 			})
 			d := got.Disposition
