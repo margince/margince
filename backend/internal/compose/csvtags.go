@@ -17,9 +17,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const csvTargetTags = "tags"
@@ -102,10 +104,11 @@ func (r *tagResolver) createMissing(ctx context.Context) error {
 
 // applyAll applies a row's tags to the record inside the row's transaction. A
 // name with no tag is skipped, and a tag the record already carries is
-// convergence.
+// convergence. Without the record's update grant nothing is applied; the test
+// run reported it.
 func (r *tagResolver) applyAll(ctx context.Context, tx pgx.Tx, object string, id ids.UUID, cell string) error {
 	entityType, taggable := taggableObjectOf(object)
-	if !taggable {
+	if !taggable || !auth.Allows(ctx, entityType, principal.ActionUpdate) {
 		return nil
 	}
 	for _, name := range splitTags(cell) {

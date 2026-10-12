@@ -21,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // csvWriters implements migration.Writers for a delimited upload.
@@ -182,10 +184,14 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 }
 
 // Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not. A row with a cell the store would
-// refuse is skipped first; then a contact whose company link finds no single
-// company is skipped or lands with a warning, as the run's policy says.
+// since changed, unchanged when it has not. A row of a type the importer may
+// not create is skipped first, then a row with a cell the store would refuse;
+// then a contact whose company link finds no single company is skipped or
+// lands with a warning, as the run's policy says.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+	if refused := w.createRefusal(ctx, row); refused != nil {
+		return migration.EnsureResult{Skipped: true, SkipReason: refused.Reason, Problem: refused}, nil
+	}
 	typed, invalid, unknownOwner := w.landingCells(row)
 	if invalid != nil {
 		return migration.EnsureResult{Skipped: true, SkipReason: invalid.Reason, Problem: invalid}, nil
@@ -301,6 +307,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
 		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
+	}
+	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return migration.EnsureResult{Skipped: true, SkipReason: cannotEditReason(w.object)}, nil
 	}
 	if err := w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID)); err != nil {
 		// A corrected file moving an address onto a contact who is not its owner

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -499,8 +500,12 @@ func TestCSVWritersHaveNoIdentitiesToReconcile(t *testing.T) {
 // being imported.
 func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 	w := &csvWriters{object: migration.ObjectLead, nativeIDs: map[string]ids.UUID{}}
+	// Granted the run's own object, so the refusal can only be the mismatch.
+	ctx := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{migration.ObjectLead: {Create: true, Read: true, Update: true}},
+	}})
 
-	if _, err := w.Ensure(t.Context(), migration.ObjectCompany, migration.Row{ExternalID: "x"}); err == nil {
+	if _, err := w.Ensure(ctx, migration.ObjectCompany, migration.Row{ExternalID: "x"}); err == nil {
 		t.Fatal("a row for an object this run does not carry was accepted")
 	}
 }

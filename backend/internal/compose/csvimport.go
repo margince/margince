@@ -246,10 +246,12 @@ func (h importHandlers) stageRun(
 		return crmcontracts.ImportRun{}, err
 	}
 
+	// The writers read every row once for owners and tags, so a file that
+	// breaks past its header fails here first.
 	writers, err := newBundleWriters(ctx, h.db, run.ID, &mapping, source)
 	if err != nil {
 		failValidation(ctx, runs, run.ID, err)
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, importProblem(err)
 	}
 	report, err := migration.NewEngine(runs, writers).DryRun(ctx, source)
 	if err != nil {
@@ -264,6 +266,7 @@ func (h importHandlers) stageRun(
 		failValidation(ctx, runs, run.ID, err)
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
+	report = withGrantProblems(ctx, report, mapping.PartList(), writers.grantProblems)
 	if err := runs.AwaitApproval(ctx, run.ID, report); err != nil {
 		// The same orphan the two branches above avoid: a run that cannot be
 		// parked for a human is a run in `validating` that neither approve nor
@@ -348,7 +351,7 @@ func (h importHandlers) commitRun(
 	}
 	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, source)
 	if err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, importProblem(err)
 	}
 	// The tags the file names exist before any row that carries them lands.
 	if err := writers.tags.createMissing(ctx); err != nil {

@@ -33,6 +33,9 @@ type bundleWriters struct {
 	tags   *tagResolver
 	// tagFirstNamedBy is the part that first names each tag, keyed by tagKey.
 	tagFirstNamedBy map[string]string
+	// grantProblems are the tag and owner grants the importer lacks, for the
+	// test run's report.
+	grantProblems []migration.SkippedRow
 }
 
 var (
@@ -94,8 +97,9 @@ func newBundleWriters(
 }
 
 // resolveOwnersAndTags reads every owner and tag cell of the run in import
-// order, then resolves each distinct address and name once. Without tag read
-// the tag resolver is the empty one, and the dry run reports the missing grant.
+// order, then resolves each distinct address and name once, and checks the
+// grants they take. Without tag read the tag resolver is the empty one, and the
+// dry run reports the missing grant.
 func (b *bundleWriters) resolveOwnersAndTags(ctx context.Context, db *database.DB, src migration.Source) error {
 	b.owners, b.tags, b.tagFirstNamedBy = &ownerResolver{seats: map[string]ids.UUID{}}, &tagResolver{}, map[string]string{}
 	if src == nil {
@@ -108,11 +112,12 @@ func (b *bundleWriters) resolveOwnersAndTags(ctx context.Context, db *database.D
 	if b.owners, err = newOwnerResolver(ctx, db.Pool(), emails); err != nil {
 		return err
 	}
-	if !auth.Allows(ctx, "tag", principal.ActionRead) {
-		return nil
+	if auth.Allows(ctx, tagObject, principal.ActionRead) {
+		if b.tags, err = newTagResolver(ctx, collections.NewStore(db), names); err != nil {
+			return err
+		}
 	}
-	b.tags, err = newTagResolver(ctx, collections.NewStore(db), names)
-	return err
+	return b.checkTagAndOwnerGrants(ctx, db.Pool())
 }
 
 // ownerAndTagCells is the run's distinct owner addresses and tag names, and

@@ -59,6 +59,18 @@ func foldedEmail(email string) string {
 // ownerResolver holds the seat of every owner address a run names, read once.
 type ownerResolver struct {
 	seats map[string]ids.UUID
+	// refused are addresses whose seat the importer may not name; the test run
+	// reports each once, and its rows keep the importer as owner.
+	refused map[string]bool
+}
+
+// refuse drops an address's seat, so no row names it as owner.
+func (o *ownerResolver) refuse(email string) {
+	delete(o.seats, email)
+	if o.refused == nil {
+		o.refused = map[string]bool{}
+	}
+	o.refused[email] = true
 }
 
 // newOwnerResolver resolves every distinct owner address of the run.
@@ -76,8 +88,12 @@ func newOwnerResolver(ctx context.Context, pool *pgxpool.Pool, emails []string) 
 }
 
 // ownerFor is the seat an owner cell names. An address no seat holds answers
-// nil, so the store makes the importer the owner, and the warning saying so.
+// nil, so the store makes the importer the owner, and the warning saying so. A
+// refused address answers nil with no warning: the run's own names it.
 func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow) {
+	if o.refused[foldedEmail(raw)] {
+		return nil, nil
+	}
 	seat, known := o.seats[foldedEmail(raw)]
 	if !known {
 		return nil, &migration.SkippedRow{Kind: migration.ProblemUnknownOwner, Value: strings.TrimSpace(raw), Reason: unknownOwnerReason}

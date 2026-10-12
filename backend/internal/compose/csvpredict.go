@@ -18,7 +18,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // predictedOutcome is what a commit would do with one row, decided exactly the
@@ -61,10 +63,14 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // the row: why it is refused, or the warning it lands with.
 //
 // The reason travels with the outcome, so every refusal reaches the report
-// with its reason. In Ensure's order: a cell the store would refuse first, then a contact whose
+// with its reason. In Ensure's order: a type the importer may not create, a
+// cell the store would refuse, then a contact whose
 // company link finds no single company, by the run's policy. A dropped link
 // rides on the landing outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
+	if refused := w.createRefusal(ctx, row); refused != nil {
+		return predictUnwritable, refused, nil
+	}
 	typed, invalid, unknownOwner := w.landingCells(row)
 	if invalid != nil {
 		return predictUnwritable, invalid, nil
@@ -178,6 +184,9 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	if len(changed) == 0 {
 		return predictUnchanged, "", nil
+	}
+	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return predictUnwritable, cannotEditReason(w.object), nil
 	}
 	return predictUpdate, "", nil
 }
