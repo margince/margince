@@ -1416,11 +1416,8 @@ export function OverflowMenu({
           in a list, and the announcement still has to describe what the
           keyboard will really do. Announcing a menu we do not implement is
           worse than announcing the expandable region we do. */}
-      {/* `iconOnly`, and not a class of this component's own: the ellipsis is
-          the whole label, so the control is the --controlHeight square the
-          catalog defines and drops the width floor a WORD needs. Geometry
-          belongs to the button — a padding rule beside it is a second author
-          of one box, and which of the two wins is a fact about sheet order. */}
+      {/* `iconOnly`: the ellipsis is the whole label, so the control is the
+          catalog's --controlHeight square and its geometry is the button's. */}
       <Button
         iconOnly
         ref={trigger}
@@ -1435,22 +1432,17 @@ export function OverflowMenu({
       >
         <MoreHorizontal aria-hidden="true" />
       </Button>
-      {/* Hidden, never unmounted once mounted. The items own their own dialogs,
-          so unmounting them on close would throw away the dialog the click just
-          opened. `hidden` also takes them out of the tab order, so a closed
-          menu is closed for a keyboard reader too. WHEN they first mount is
-          `keepMounted`'s question, and it is a real one — see the prop. */}
+      {/* Hidden, never unmounted once mounted: the items own their dialogs, and
+          `hidden` takes them out of the tab order. When they first mount is
+          `keepMounted`'s question. */}
       {createPortal(
         // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it observes that one of the caller's controls inside it was pressed
         // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path IS this handler; Enter and Space on a button dispatch a click that bubbles here
         <div // NOSONAR: listener observes activation of the caller's own buttons; the panel itself is not pressable
           id={panelId}
           ref={panel}
-          className={
-            inDialog
-              ? "overflow-menu-items overflow-menu-items-in-dialog"
-              : "overflow-menu-items"
-          }
+          className="overflow-menu-items"
+          data-layer={inDialog ? "dialog" : undefined}
           hidden={!open}
           style={{
             top: `${at.top}px`,

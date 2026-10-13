@@ -739,7 +739,7 @@ it("draws a menu opened inside a dialog on the layer above that dialog", async (
   await user.click(screen.getByRole("button", { name: "Remove from list" }));
 
   const panel = screen.getByRole("button", { name: "Snooze" }).parentElement;
-  expect(panel?.classList.contains("overflow-menu-items-in-dialog")).toBe(true);
+  expect(panel?.getAttribute("data-layer")).toBe("dialog");
 });
 
 it("keeps a menu outside any dialog on the page's layer", async () => {
@@ -753,9 +753,7 @@ it("keeps a menu outside any dialog on the page's layer", async () => {
   await user.click(screen.getByRole("button", { name: "More actions" }));
 
   const panel = screen.getByRole("button", { name: "Archive" }).parentElement;
-  expect(panel?.classList.contains("overflow-menu-items-in-dialog")).toBe(
-    false,
-  );
+  expect(panel?.hasAttribute("data-layer")).toBe(false);
 });
 
 it("puts that layer above a dialog's overlay, and under a second dialog", () => {
@@ -763,13 +761,9 @@ it("puts that layer above a dialog's overlay, and under a second dialog", () => 
   const overlay = zIndexOf(css, ".overlay");
 
   expect(zIndexOf(css, ".overflow-menu-items")).toBeLessThan(overlay);
-  expect(zIndexOf(css, ".overflow-menu-items-in-dialog")).toBeGreaterThan(
-    overlay,
-  );
+  const inDialog = '.overflow-menu-items[data-layer="dialog"]';
+  expect(zIndexOf(css, inDialog)).toBeGreaterThan(overlay);
   expect(
-    zIndexOf(
-      css,
-      "body:has(> .overlay ~ .overlay) .overflow-menu-items-in-dialog",
-    ),
+    zIndexOf(css, `body:has(> .overlay ~ .overlay) ${inDialog}`),
   ).toBeLessThan(overlay);
 });
