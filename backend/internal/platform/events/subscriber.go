@@ -215,6 +215,18 @@ func (s *Subscriber) deliver(ctx context.Context, stream string, entry redis.XMe
 	}
 
 	if err := s.handler(ctx, env); err != nil {
+		if errors.Is(err, kevents.ErrUnactionable) {
+			// Acked, not retried: the subject is gone and no later pass finds
+			// it.
+			//
+			// Logged at ERROR because an entry leaving the stream unprocessed
+			// is worth a reader's attention once. The pending warning below
+			// was worth it every cycle.
+			s.log.Error("bus: acking an entry whose subject is gone",
+				"stream", stream, "entry", entry.ID, "event_id", env.EventID.String(), "error", err)
+			s.ack(ctx, stream, entry.ID)
+			return
+		}
 		// No ack: the entry stays pending and re-delivers via reclaim.
 		s.log.Warn("bus: handler failed; entry stays pending",
 			"stream", stream, "entry", entry.ID, "event_id", env.EventID.String(), "error", err)
