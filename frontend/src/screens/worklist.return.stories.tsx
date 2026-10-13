@@ -31,7 +31,7 @@ function OnTheRecord() {
 }
 
 const meta: Meta<typeof WorklistReturnLink> = {
-  title: "Shell/Home/Work queue/Back to Worklist",
+  title: "Records/Worklist/Way back from a record",
   component: WorklistReturnLink,
   render: () => <OnTheRecord />,
 };
