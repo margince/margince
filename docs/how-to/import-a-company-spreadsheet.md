@@ -22,11 +22,14 @@ The steps are the same over MCP and REST:
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import` with `view: report`, and `commit_import`. Read `read_import` again until `state` is
-`awaiting_approval`.
+`read_import` with `view: report`, and `commit_import`. `preview_import` waits up to 20 seconds for
+the test. If the test takes longer, it answers `state: validating` with a `next` line; read
+`read_import` again until `state` is `awaiting_approval`. A test that refuses the file answers the
+refusal, and the run goes back to `pending`.
 One assistant tests one run at a time. A second `preview_import` while its first test still runs is
 refused, and the refusal names the run still being tested. `commit_import` answers at once while the run
-goes on, so read `read_import` with `view: report` again until `state` is `complete`.
+goes on, so read `read_import` with `view: report` again until `state` is `complete`. On a run that
+`failed`, `commit_import` resumes the write.
 
 Over REST you upload the file first, so it is five calls:
 
