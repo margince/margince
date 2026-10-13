@@ -294,8 +294,8 @@ export const OpenDealsPerCompany: Story = {
   play: clickButton("Pipeline"),
 };
 
-// The company report past the server's cap: the rows it sent, the count it left
-// out beneath them, and no count drawn as a door into a set it cannot vouch for.
+// The company report past the server's cap: the rows it sent, the count left
+// out beneath them, and no count links.
 export const OpenDealsPerCompanyCapped: Story = {
   render: () => {
     installFetchStub({

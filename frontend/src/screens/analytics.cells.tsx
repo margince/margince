@@ -17,9 +17,8 @@ import "./analytics.css";
 export type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 export type Stage = components["schemas"]["Stage"];
 
-// The report engine's own name for the currency dimension. Spelled once: it
-// reaches the request, every row read and the column header, and a typo in any
-// one of them is a cross-currency sum that looks right.
+// The report engine's name for the currency dimension. A typo in the request
+// or a row read is a cross-currency sum that looks right.
 export const FIELD_CURRENCY = "currency";
 
 // A figure that names a set, drawn as the way into it. The count stays the
