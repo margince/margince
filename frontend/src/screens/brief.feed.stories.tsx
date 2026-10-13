@@ -10,7 +10,7 @@ import {
   overnightRow,
   type Worklist,
 } from "./brief.fixtures";
-import { StoryProviders } from "./story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // TODAY — the panel's own states, the ones the redesign added.
 //
@@ -28,11 +28,15 @@ const meta: Meta<typeof BriefFeed> = {
   component: BriefFeed,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story) => {
+      // A task row's hand-off excludes the reader `/me` names; it reads no grant.
+      installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;

@@ -56,10 +56,7 @@ async function fill(canvasElement: HTMLElement) {
   await user.type(canvas.getByLabelText(/company name/i), "Brandt Automotive");
   await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");
   await user.type(canvas.getByLabelText(/your email/i), "ilse@brandt.example");
-  await user.type(
-    canvas.getByLabelText(/choose a password/i),
-    "correct horse battery",
-  );
+  await user.type(canvas.getByLabelText(/^password/i), "correct horse battery");
   await pickOption(user, canvas.getByLabelText(/jurisdiction/i), "Germany");
   return { canvas, user };
 }
@@ -70,7 +67,7 @@ async function submitAgainst(canvasElement: HTMLElement, status: number) {
     "POST /setup/claim": () => jsonResponse({}, status),
   });
   const { canvas, user } = await fill(canvasElement);
-  await user.click(canvas.getByRole("button", { name: /create the company/i }));
+  await user.click(canvas.getByRole("button", { name: /create company/i }));
 }
 
 /** The screen an operator's first visit lands on. */
@@ -111,7 +108,7 @@ export const PasswordTooShort: Story = {
       canvas.getByLabelText(/your email/i),
       "ilse@brandt.example",
     );
-    await user.type(canvas.getByLabelText(/choose a password/i), "short");
+    await user.type(canvas.getByLabelText(/^password/i), "short");
   },
 };
 
