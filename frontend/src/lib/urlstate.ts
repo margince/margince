@@ -112,8 +112,8 @@ export function currentParams(): UrlParams {
  *
  * `history.replaceState` and not `location.replace`: the latter discards the
  * entry's state object. Nothing here keeps state in it, but lib/scrollmemory.ts
- * stamps the entry's identity there. Without it, every turn of a dial would lose
- * the offset saved for this entry. Passing the current state through keeps the
+ * stamps the entry's identity there. Without passing that state through, every
+ * turn of a dial would lose the offset saved for this entry. Passing the current state through keeps the
  * entry the same entry. lib/router.tsx's `navigateReplacing` is the same write
  * for the path half, held to the same obligation by app/addressstate.test.ts.
  *

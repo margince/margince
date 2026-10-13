@@ -52,8 +52,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
 ```text
  src/design-system/     tokens.css → brand.css → base.css
                         → atoms → trust → the Core primitive → composed
- src/app/               shell = sidebar + top bar + page title, hash router,
-                        ⌘K palette, agent dock, theme, capability, banners
+ src/app/               shell = sidebar + top bar + page title,
+                        ⌘K palette, agent dock, banners
+ src/lib/               shared code that draws nothing: hash router, URL
+                        state, theme, capability, problem decoding, session
  src/screens/           one file per surface (a directory when the surface
                         is a state machine)
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
@@ -81,10 +83,12 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   what both of them know about a page before it renders.
 
   Then come `nav.ts`
-  (the list of places that decides), `router.tsx` (hash routing) and
-  `palette.tsx` (`⌘K`). After them are `agentrail.tsx` (the agent, at the end
-  of the rail), `theme.ts` and `capability.ts`. Last are the advisories the
-  shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
+  (the list of places that decides) and `palette.tsx` (`⌘K`). After them is
+  `agentrail.tsx` (the agent, at the end of the rail). Last are the advisories
+  the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
+- **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
+  `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
+  decoding and the session. `lib/` never imports `app/` or `screens/`.
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
   `screens/onboarding-conversation/`. There the conversation machine, each
