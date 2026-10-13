@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 160.1 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 41866 |
+| Approx. wire tokens | 41864 |
 | Largest tool | `bulk_update_records` (6.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -85,7 +85,7 @@ descriptions and input schemas are what each step pays for.
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.1 KB |
-| [`read_context`](#read_context) | Prepare for a meeting, a handover or a project | yes |  | 2.1 KB |
+| [`read_context`](#read_context) | Prepare for a meeting, handover or project | yes |  | 2.1 KB |
 | [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 1.6 KB |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 2.8 KB |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 923 B |
@@ -5995,7 +5995,7 @@ rested on rather than restating the item's own summary.
 
 ### read_context
 
-**Prepare for a meeting, a handover or a project**
+**Prepare for a meeting, handover or project**
 
 ```text
 Assemble what someone reads before acting, with the evidence each part rests on. meeting: given a

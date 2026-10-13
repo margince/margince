@@ -27,9 +27,8 @@ and what a live server shows can differ from the table:
   A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none. The operations of
-  `extensions/openchannel` are all `human-only`. One returns a lasting signing secret over a path open to all. One
-  moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
+- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and every operation of
+  `extensions/openchannel` is `human-only`. On a plain install, the catalog below is all an agent can reach.
 
 **Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
 and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
@@ -105,6 +104,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `disqualify_lead` | 🟢 | `write` | no |
 | `draft_email` | 🟢 | `draft` | no |
 | `draft_follow_ups_for` | 🟢 | `draft` | no |
+| `draft_outbound` | 🟢 | `draft` | no |
 | `enrich` | 🟡 | `enrich` | yes |
 | `get_record_tags` | 🟢 | `read` | no |
 | `get_tag` | 🟢 | `read` | no |
@@ -126,6 +126,9 @@ Every core verb the surface serves, including those a client reaches only throug
 | `promote_lead` | 🟢 | `write` | no |
 | `qualify_lead` | 🟢 | `write` | no |
 | `read_brief` | 🟢 | `read` | no |
+| `read_context` | 🟢 | `read` | no |
+| `read_directory` | 🟢 | `read` | no |
+| `read_forecast` | 🟢 | `read` | no |
 | `read_tags` | 🟢 | `read` | no |
 | `read_record` | 🟢 | `read` | no |
 | `read_approval` | 🟢 | `read` | no |
@@ -134,14 +137,17 @@ Every core verb the surface serves, including those a client reaches only throug
 | `read_input_checks` | 🟢 | `read` | no |
 | `read_lists` | 🟢 | `read` | no |
 | `read_project_360` | 🟢 | `read` | no |
+| `read_relationships` | 🟢 | `read` | no |
 | `query_workspace` | 🟢 | `read` | no |
 | `relink_activity` | dynamic | `write` | no |
 | `resolve_entities` | 🟢 | `read` | no |
 | `relink_activities` | dynamic | `write` | no |
 | `relink_thread` | dynamic | `write` | no |
 | `remove_tag` | 🟢 | `write` | no |
+| `resolve_duplicates` | 🟢 | `write` | no |
 | `review_commitments` | 🟢 | `read` | no |
 | `run_analytics_query` | 🟢 | `read` | no |
+| `run_import` | 🟢 | `write` | no |
 | `run_report` | 🟢 | `read` | no |
 | `read_reporting` | 🟢 | `read` | no |
 | `compose_analytics_report` | 🟢 | `read` | no |
@@ -156,6 +162,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `send_email` | 🟢 | `send` | yes |
 | `send_company_email` | 🟢 | `send` | yes |
 | `send_message` | 🟢 | `send` | yes |
+| `send_outbound` | 🟢 | `send` | yes |
 | `update_record` | 🟢 / 🟡 | `write` | no |
 | `update_tag` | 🟢 | `write` | no |
 | `whats_slipping_this_week` | 🟢 | `read` | no |
@@ -201,10 +208,9 @@ human who gave the passport. It is never both added up, and never the passport a
 The live count per scope is in [mcp-info.md](mcp-info.md).
 
 The `enrich` cap holds the two company read routes on REST, `scrapeCompany` (`POST /v1/companies/{id}/enrich`) and
-`deepReadCompany` (`POST /v1/companies/{id}/deep-read`). It also holds the `enrich` tool built on them on `/mcp`. A
-passport is a Bearer credential for `/v1`, under the same rules as `/mcp`. The cold-start routes are `human-only`,
-because they create the company and do not enrich one. Grant the cap when the job of the agent is research outside the
-CRM on a record that already exists.
+`deepReadCompany` (`POST /v1/companies/{id}/deep-read`), and the `enrich` tool built on them on `/mcp`. A passport is
+a Bearer credential for `/v1`, under the same rules as `/mcp`. The cold-start routes are `human-only`: they create the
+company and do not enrich one. Grant the cap when the agent's job is research outside the CRM on a record that exists.
 
 ## Operations an agent may not reach at all
 
@@ -299,7 +305,6 @@ not host the endpoint.
 era). `2025-03-26` is outside the window Margince still supports; `2024-11-05` is not served, because it is older than
 Streamable HTTP. In the handshake era, `initialize` sends back the version the client asked for when the server
 supports it. If not, it answers with the newest one it does support.
-
 It never answers with a version the server does not support. It also never answers with the modern version, which
 needs no handshake. A version this server does not serve is refused `400` with `-32022 UnsupportedProtocolVersion` and
 a `data.supported` list naming every version it does. So a client retries, and does not guess.
@@ -316,7 +321,6 @@ sampling, elicitation or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
 lets a client write *any* value that way, plain ASCII included. This server reads the value back before it compares.
-
 Take a server in the middle that filters on the header as sent, and does not read the sentinel form. A client can pass
 it by writing the value that way. Route on these headers only if you read them back the same way.
 
@@ -325,7 +329,6 @@ result a client may cache carries `ttlMs` + `cacheScope`. `server/discover` is `
 every caller, and a test holds that claim. Every catalog (`tools/list`, `resources/*`, `prompts/list`) is
 **`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
 data to the wrong caller.
-
 The server would never see that, so it could not audit it. A TTL is a hint for caches, never a permission. Every call
 signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
 
@@ -342,7 +345,6 @@ does not open. The surface does change per caller, but this server cannot say so
 **A tool result carries the answer twice.** Every registered tool declares an `outputSchema`. So a `tools/call` that
 works returns the JSON both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second
 copy built again.
-
 So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
 writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
 server.
@@ -350,7 +352,6 @@ server.
 **No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
 If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no
 session to close. **Every call signs in again** with its Bearer passport, so any replica can answer any call.
-
 The binder runs per call. So when someone revokes the passport, or lowers the rights of the human who gave it, the
 change applies on the next `tools/call`. When the server cannot *reach* a result on a credential, it answers `503`,
 never `401`. A 401 would tell a good client its good token is bad, and turn a short failure into a new consent from

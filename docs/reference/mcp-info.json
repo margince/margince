@@ -10,9 +10,9 @@
   "totals": {
     "tools": 54,
     "resources": 9,
-    "tool_catalog_bytes": 163905,
+    "tool_catalog_bytes": 163897,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 41866,
+    "approx_wire_tokens_total": 41864,
     "largest_tool_bytes": 6156,
     "largest_tool": "bulk_update_records",
     "tool_catalog_composition": {
@@ -5391,7 +5391,7 @@
         "annotations": {
           "openWorldHint": false,
           "readOnlyHint": true,
-          "title": "Prepare for a meeting, a handover or a project"
+          "title": "Prepare for a meeting, handover or project"
         },
         "description": "Assemble what someone reads before acting, with the evidence each part rests on. meeting: given a meeting, its written brief; given any other record, the recent picture plus the open items to raise. handoff: what a project's delivery side needs from sales — owner, client contacts, what was sold, by when, what is promised — with a named gap for each the records do not answer. project: one project's whole page, each section cut at 25 rows. Built around ONE record you name; what cannot be evidenced is absent rather than inferred, and a gap means the field is empty as far as the caller can see. It changes nothing — preparing a handover is not performing one. catch_me_up_on when there is no meeting or handover, only what has been happening; check_availability to find a time. prepared_for names the record a meeting prep was built around, and its focus list the open items by record_id. Keep the project_id and each gap's source field. occurred_at is in UTC — prefer it over a date the prose recalls.",
         "inputSchema": {
@@ -5444,7 +5444,7 @@
           "type": "object"
         },
         "name": "read_context",
-        "title": "Prepare for a meeting, a handover or a project"
+        "title": "Prepare for a meeting, handover or project"
       },
       {
         "_meta": {

@@ -116,7 +116,7 @@ type readContext struct{ routed }
 
 func (readContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_context", Title: "Prepare for a meeting, a handover or a project", Version: toolVersionV1,
+		Name: "read_context", Title: "Prepare for a meeting, handover or project", Version: toolVersionV1,
 		Description: readContextCopy.render(),
 		Instead:     readContextCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
