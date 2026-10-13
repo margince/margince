@@ -20,7 +20,6 @@ import {
   company,
   company360,
   companyBackstop,
-  emptyPage,
   emptySection,
   jsonResponse,
 } from "./company.fixtures";
@@ -262,30 +261,19 @@ describe("CompanyScreen — the Tasks tab", () => {
     );
   });
 
-  it("recommends no step on an archived account", async () => {
-    // The write would only be refused, and a button that cannot fire is the
-    // control-that-does-nothing this surface exists to avoid.
-    const user = userEvent.setup();
+  it("offers no Tasks tab on an archived account, whose 360 the server refuses", async () => {
     stubFetch(
-      async (url) => {
-        if (url.endsWith("/companies/o-1")) {
-          return jsonResponse({
-            ...company,
-            archived_at: "2026-07-13T00:00:00Z",
-          });
-        }
-        return companyBackstop(url);
-      },
+      async (url) =>
+        url.endsWith("/companies/o-1")
+          ? jsonResponse({ ...company, archived_at: "2026-07-13T00:00:00Z" })
+          : companyBackstop(url),
       { company360: company360WithRecommendedStep },
     );
     render(<CompanyScreen id="o-1" />);
-    await openTasksTab(user);
 
-    await waitFor(() =>
-      expect(screen.getByText("No open tasks for this company.")).toBeTruthy(),
-    );
+    expect(await screen.findByText("Archived")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Tasks/ })).toBeNull();
     expect(screen.queryByText(RECOMMENDED)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
   it("says the section is withheld rather than rendering it as empty", async () => {
@@ -310,42 +298,24 @@ describe("CompanyScreen — the Tasks tab", () => {
     ).toBeNull();
   });
 
-  it("shows no task-completing verb on an archived account", async () => {
-    const user = userEvent.setup();
-    // The server refuses a write on an archived account, so the tab omits the
-    // verb rather than offering a button that can only 404.
+  it("opens a link to an archived account's Tasks tab on its Overview", async () => {
     stubFetch(
-      async (url) => {
-        if (url.endsWith("/companies/o-1")) {
-          return jsonResponse({
-            ...company,
-            archived_at: "2026-07-13T00:00:00Z",
-          });
-        }
-        if (url.endsWith("/activities/a-1")) {
-          return jsonResponse(openTaskActivity);
-        }
-        return emptyPage();
-      },
+      async (url) =>
+        url.endsWith("/companies/o-1")
+          ? jsonResponse({ ...company, archived_at: "2026-07-13T00:00:00Z" })
+          : companyBackstop(url),
       { company360: company360WithOpenTask },
     );
+    window.location.hash = "#/companies/o-1/tasks";
     render(<CompanyScreen id="o-1" />);
-    await openTasksTab(user);
 
+    const overview = await screen.findByRole("button", { name: "Overview" });
+    expect(overview.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("button", { name: /^Tasks/ })).toBeNull();
     await waitFor(() =>
-      expect(screen.getByText(openTask.subject)).toBeTruthy(),
+      expect(window.location.hash).toBe("#/companies/o-1/overview"),
     );
-    expect(screen.queryByRole("checkbox", { name: "Done" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Snooze 1d" })).toBeNull();
-
-    // The same withheld verb holds inside the detail modal, not only the row.
-    await user.click(screen.getByText(openTask.subject));
-    await waitFor(() =>
-      expect(
-        screen.getByRole("dialog", { name: openTask.subject }),
-      ).toBeTruthy(),
-    );
-    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    expect(screen.queryByText(openTask.subject)).toBeNull();
   });
 
   // The detail modal renders on this tab and nowhere else, so a tab change

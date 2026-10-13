@@ -98,6 +98,11 @@ describe("the query client defaults", () => {
   // each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["company", "o-1"] })).toBe(60_000);
+    expect(liveInterval({ queryKey: ["contact", "p-1", "employer"] })).toBe(
+      false,
+    );
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 

@@ -146,8 +146,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   of the product.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
-- [agent-tools.md](reference/agent-tools.md): each agent tool, and what it may do.
-- [mcp-info.md](reference/mcp-info.md): the MCP tools as a client sees them. Generated.
+- [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
+  that go with it.
+- [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
+- [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.

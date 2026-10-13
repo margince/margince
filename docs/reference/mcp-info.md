@@ -5,7 +5,9 @@
 Generated from the served MCP surface by `go test ./internal/compose/ -run TestPublishedMCPSurface -update-mcp-info`; do not edit by hand. It shows every tool and resource across all scopes. tools/list and resources/list are filtered per caller, so a passport holding fewer scopes is served less. Extension tools are left out. The surface is captured as a client that supports MCP Apps sees it, so a tool bound to a view carries `_meta.ui.resourceUri`. A client that declines the UI extension is served no such member, and a client on the older handshake protocol, which cannot declare the extension, is served views. The `ui://` view descriptors are included; a deployment publishes each only after its boot has fetched and admitted that document.
 
 `mcp-info.json` beside this page is the same surface byte for byte, as a client
-receives it. This page is rendered from that file.
+receives it. This page is rendered from that file. Each tool shows its description, with its
+input and output schema in folds below it. What a tool may do and whether a human must approve it is in
+[agent-tools.md](agent-tools.md).
 
 ## Totals
 
@@ -22,8 +24,9 @@ receives it. This page is rendered from that file.
 Those are the bytes on the wire: they carry each tool's output schema and the
 governance clause the transport appends. The listing a run re-sends every step is
 smaller (name, description and input schema only) and is held against its own
-budget in `agenttooldescriptions_test.go`. What that listing costs each scheduled
-agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
+budget in `agenttooldescriptions_test.go`. The Prompt tokens column below is what each
+tool adds to that listing, and what it costs each scheduled agent, agent by agent, is
+[agent-tool-budget.md](agent-tool-budget.md).
 
 ### What the tool catalog is made of
 
@@ -54,64 +57,64 @@ descriptions and input schemas are what each step pays for.
 
 ### Tools (56)
 
-| Tool | What it is for | Read-only | View | Size |
+| Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.8 KB |
-| [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
-| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.6 KB |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
-| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.0 KB |
-| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.3 KB |
-| [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
-| [`change_tags`](#change_tags) | Change tags |  |  | 2.2 KB |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.4 KB |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.7 KB |
-| [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
-| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 2.0 KB |
-| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 1.5 KB |
-| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 2.4 KB |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
-| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
-| [`list_documents`](#list_documents) | List a record's documents | yes |  | 2.3 KB |
-| [`list_records`](#list_records) | List records | yes |  | 4.7 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 4.4 KB |
-| [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 5.8 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.6 KB |
-| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
-| [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.1 KB |
-| [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 1.6 KB |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 2.8 KB |
-| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 923 B |
-| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 1.5 KB |
-| [`read_lists`](#read_lists) | Find and read lists | yes |  | 3.9 KB |
-| [`read_project`](#read_project) | Read a project or its handover | yes |  | 1.3 KB |
-| [`read_record`](#read_record) | Read a record | yes |  | 2.4 KB |
-| [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 1.6 KB |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 3.3 KB |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 1.4 KB |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 1.9 KB |
-| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.3 KB |
-| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.3 KB |
-| [`run_report`](#run_report) | Run a report | yes |  | 5.4 KB |
-| [`search_context`](#search_context) | Search for relevant material | yes |  | 3.1 KB |
-| [`search_records`](#search_records) | Search records | yes |  | 3.2 KB |
-| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 3.9 KB |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 4.3 KB |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 3.9 KB |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 2.5 KB |
-| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.7 KB |
+| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 416 |
+| [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 292 |
+| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 212 |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 399 |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 344 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
+| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
+| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
+| [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 492 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
+| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 678 |
+| [`create_task`](#create_task) | Create a task |  |  | 221 |
+| [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
+| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 346 |
+| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 396 |
+| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
+| [`list_records`](#list_records) | List records | yes |  | 821 |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
+| [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
+| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 986 |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
+| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
+| [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
+| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 205 |
+| [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 361 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 677 |
+| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 185 |
+| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
+| [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
+| [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
+| [`read_record`](#read_record) | Read a record | yes |  | 292 |
+| [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
+| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 544 |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
+| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
+| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
+| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 494 |
+| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 401 |
+| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 508 |
+| [`run_report`](#run_report) | Run a report | yes |  | 1024 |
+| [`search_context`](#search_context) | Search for relevant material | yes |  | 344 |
+| [`search_records`](#search_records) | Search records | yes |  | 456 |
+| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 335 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 581 |
+| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 273 |
+| [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
 

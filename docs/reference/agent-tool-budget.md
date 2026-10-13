@@ -8,48 +8,14 @@ transcript: the frame, the tool listing and the step schema. Token counts use th
 ~4-bytes-per-token estimate the window itself uses, over what the runner's own
 renderer produces (`runner.FixedStepCost`).
 
-## Why this page exists
+## In short
 
-A scheduled agent's tool listing is written into the system prompt of **every step**
-of its run, and each tool's input schema rides every step a second time, as its branch
-of the step schema the provider enforces. The window elides neither; only the
-transcript gives way. So a tool attached to an agent is paid for twice on every turn of
-every run for as long as that agent exists, and what it displaces is the observations
-the run is reasoning over.
+A scheduled agent pays for its whole tool menu on every step of every run, before it reads
+anything. This page shows what each declared agent pays, how much room that leaves, and
+what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
+[mcp-info.md](mcp-info.md#index).
 
-`agent_loop` is the engine; each of its sites in
-[`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml) is one scheduled agent, and
-the site's `tools:` are the only tools that run is offered. Read the numbers below
-before adding one.
-
-The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
-the listing and the step schema) may take 23210 of them (17/24).
-
-## No run is offered the whole catalog
-
-A run attaches the tools its goal needs. The whole served catalog is listed below for
-scale only: no scheduled run, and no certification scenario, is ever offered it. These
-are the checks that fail when that stops being true:
-
-| Check | Refuses |
-|---|---|
-| `tools/gen-aitasks validateSiteTools` | an agent_loop site declaring no tools, or tools on any other kind of site |
-| `runner.Run / runner.Resume (unscopedJobReason)` | a job carrying no allowlist, before any model call |
-| `compose TestEveryAgentSpecNamesRegisteredTools` | an agent attaching every served tool, a tool this build does not serve, or one twice |
-| `compose TestEveryRunnerJobBuiltHereCarriesAnAllowlist` | a runner.Job anywhere in compose whose Tools is not an entry's own allowlist |
-| `compose TestTheShippedAgentsAreNarrowerThanTheirScopesAllow` | an agent withholding nothing its scopes admit |
-| `compose TestEachAgentsToolListingLeavesItsRunRoomInTheWindow` | an agent whose listing outgrows its share of the window |
-
-Nothing bounds how many tools a run attaches below the whole catalog except the
-listing budget above; whether each attached tool is one its goal needs is a reviewer's
-judgement. An MCP client connecting from outside is served the whole catalog by
-`tools/list`, but that is its own agent's window rather than a run of this engine.
-
-Before any tool is listed the frame itself costs **597 tokens**: the output contract,
-the rules and the prompt fence. It is shown here because moving a rule from each
-tool's schema into the frame costs one sentence per run instead of one per tool.
-It is part of every agent's per-step figure below, so a frame that grows a paragraph
-spends it on every run of every agent.
+The heaviest menu is `overnight_at_risk_sweep`: 5497 of the window's 32768 tokens per step (16%).
 
 ## The declared agents
 
@@ -115,6 +81,49 @@ cannot call, so a run may spend a step discovering the refusal:
 - log_activity → send_outbound
 - whats_slipping_this_week → draft_outbound
 
+## Why a tool is paid for twice
+
+A scheduled agent's tool listing is written into the system prompt of **every step**
+of its run, and each tool's input schema rides every step a second time, as its branch
+of the step schema the provider enforces. The window elides neither; only the
+transcript gives way. So a tool attached to an agent is paid for twice on every turn of
+every run for as long as that agent exists, and what it displaces is the observations
+the run is reasoning over.
+
+`agent_loop` is the engine; each of its sites in
+[`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml) is one scheduled agent, and
+the site's `tools:` are the only tools that run is offered. Read the numbers below
+before adding one.
+
+The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
+the listing and the step schema) may take 23210 of them (17/24).
+
+## No run is offered the whole catalog
+
+A run attaches the tools its goal needs. The whole served catalog is listed below for
+scale only: no scheduled run, and no certification scenario, is ever offered it. These
+are the checks that fail when that stops being true:
+
+| Check | Refuses |
+|---|---|
+| `tools/gen-aitasks validateSiteTools` | an agent_loop site declaring no tools, or tools on any other kind of site |
+| `runner.Run / runner.Resume (unscopedJobReason)` | a job carrying no allowlist, before any model call |
+| `compose TestEveryAgentSpecNamesRegisteredTools` | an agent attaching every served tool, a tool this build does not serve, or one twice |
+| `compose TestEveryRunnerJobBuiltHereCarriesAnAllowlist` | a runner.Job anywhere in compose whose Tools is not an entry's own allowlist |
+| `compose TestTheShippedAgentsAreNarrowerThanTheirScopesAllow` | an agent withholding nothing its scopes admit |
+| `compose TestEachAgentsToolListingLeavesItsRunRoomInTheWindow` | an agent whose listing outgrows its share of the window |
+
+Nothing bounds how many tools a run attaches below the whole catalog except the
+listing budget above; whether each attached tool is one its goal needs is a reviewer's
+judgement. An MCP client connecting from outside is served the whole catalog by
+`tools/list`, but that is its own agent's window rather than a run of this engine.
+
+Before any tool is listed the frame itself costs **597 tokens**: the output contract,
+the rules and the prompt fence. It is shown here because moving a rule from each
+tool's schema into the frame costs one sentence per run instead of one per tool.
+It is part of every agent's per-step figure below, so a frame that grows a paragraph
+spends it on every run of every agent.
+
 ## How to read the two derived columns
 
 Both are prose heuristics over text that was written for humans. They are useful for
@@ -142,76 +151,9 @@ expected step. A weight of 5 does not mean a model went wrong five times; it mea
 scenarios name a tool on this menu as the reach to avoid. The measurement that
 would replace it is sampling real runs for chosen-vs-wanted.
 
-## What each tool costs, largest first
-
-Median 393 tokens, mean 442, across 56 served tools.
-
-Each row is one tool rendered alone, so the rows do not add up to the catalog total:
-every row carries its own rounding, and the catalog figure divides the whole rendered
-listing once. Read a row as what that tool costs a menu.
-
-| Tool | Tokens | Named as the wrong reach in |
-|---|---:|---:|
-| `run_report` | 1024 |  |
-| `send_outbound` | 1014 |  |
-| `preview_import` | 986 |  |
-| `list_records` | 821 | 2 scenarios |
-| `bulk_update_records` | 809 |  |
-| `log_activity` | 791 | 3 scenarios |
-| `compose_analytics_report` | 786 |  |
-| `read_lists` | 745 |  |
-| `create_record` | 678 |  |
-| `read_forecast` | 677 |  |
-| `change_lists` | 592 |  |
-| `update_record` | 581 |  |
-| `read_reporting` | 544 |  |
-| `query_workspace` | 530 |  |
-| `progress_deal` | 522 |  |
-| `draft_outbound` | 517 |  |
-| `run_analytics_query` | 508 |  |
-| `change_lead_state` | 494 |  |
-| `resolve_entities` | 494 |  |
-| `change_tags` | 492 |  |
-| `search_records` | 456 |  |
-| `decide_approvals` | 429 |  |
-| `annotate_brief` | 417 | 2 scenarios |
-| `advance_project_phase` | 416 |  |
-| `review_commitments` | 401 |  |
-| `attach_document` | 399 |  |
-| `enrich` | 396 |  |
-| `prep_for_meeting` | 394 |  |
-| `resolve_duplicates` | 393 |  |
-| `read_directory` | 361 |  |
-| `read_relationships` | 359 |  |
-| `catch_me_up_on` | 348 | 2 scenarios |
-| `describe_vocabulary` | 346 |  |
-| `read_input_checks` | 346 |  |
-| `book_meeting` | 344 |  |
-| `search_context` | 344 |  |
-| `check_availability` | 342 |  |
-| `search_report_evidence` | 335 |  |
-| `read_tags` | 322 |  |
-| `relink_activity` | 303 |  |
-| `archive_record` | 292 |  |
-| `read_project` | 292 |  |
-| `read_record` | 292 | 2 scenarios |
-| `commit_import` | 279 |  |
-| `whats_slipping_this_week` | 273 |  |
-| `list_approvals` | 268 |  |
-| `invite_meeting` | 264 |  |
-| `relink_activities` | 260 |  |
-| `create_task` | 221 |  |
-| `at_risk_relationships` | 212 |  |
-| `read_brief` | 205 |  |
-| `merge_tags` | 198 |  |
-| `read_import` | 185 |  |
-| `list_documents` | 180 |  |
-| `read_approval` | 154 |  |
-| `whoami` | 129 |  |
-
 ## Related
 
-- [mcp-info.md](mcp-info.md): the whole served surface as a client receives it,
-  including the output schemas a run is never charged for.
-- [agent-tools.md](agent-tools.md): the governed catalog: what each tool is, what it
-  costs in passport scope, and whether a human must approve it.
+- [agent-tools.md](agent-tools.md): the tool catalog. What each tool is, its scope, and
+  whether a human must approve it.
+- [mcp-info.md](mcp-info.md): each tool's description as a client receives it.
+- [ai-certification.md](ai-certification.md): the scenarios behind the temptation weight.
