@@ -408,7 +408,7 @@ describe("a refusal", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
   });
 
-  it("holds the region while an undo waits, whose Undo still runs after", async () => {
+  it("holds the region while an undo waits, and the Undo still runs after", async () => {
     const acted = vi.fn();
     const acting = steppedClock();
     show({
@@ -461,16 +461,59 @@ describe("a refusal", () => {
     expect(press("Show all")).toBeInTheDocument();
   });
 
-  it("keeps a second refusal waiting behind the first", () => {
+  it("keeps a second refusal behind the first and ahead of a report", () => {
     steppedClock();
     const toast = controlled();
     act(() => {
       toast().show("Not saved.", refused);
+      toast().show("Saved.");
       toast().show("Not sent.", refused);
     });
     expect(screen.getByRole("status")).toHaveTextContent("Not saved.");
     act(() => toast().dismiss());
     expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+  });
+
+  it("is not a refusal when it would withdraw itself", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Hidden from this deal", undo());
+      toast().show("Not saved.", { tone: "danger" });
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden from this deal",
+    );
+  });
+
+  it("is not a refusal when it leads somewhere, so a refusal takes its place", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Moved to Jana.", { ...open(), tone: "danger" });
+      toast().show("Not sent.", refused);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
+  });
+
+  it("is not a refusal when it carries an undo", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Not hidden.", { ...refused, ...undo(first) });
+      toast().show("Hidden from this deal", undo(second));
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden from this deal",
+    );
+    await acting.click(press("Undo"));
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("goes ahead of an undo waiting behind an earlier refusal", async () => {
@@ -907,6 +950,20 @@ describe("a replacement under the reader's hand", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Second done");
     expect(press("Close")).not.toHaveFocus();
     expect(press("Undo")).not.toHaveFocus();
+  });
+
+  it("keeps focus out of a refusal that was waiting when the one before closes", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Not saved.", refused);
+      toast().show("Hidden from this deal", undo());
+      toast().show("Not sent.", refused);
+    });
+    act(() => press("Close").focus());
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
+    expect(press("Close")).not.toHaveFocus();
   });
 
   it("holds a replacement that arrives under a resting pointer", async () => {

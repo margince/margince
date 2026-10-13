@@ -100,8 +100,8 @@ type ToastMessage = Readonly<{
 
 export type ToastOptions = Readonly<{
   /**
-   * Keep it until something dismisses it. With `tone: "danger"` it is a REFUSAL,
-   * which holds the region: a reader told a write failed must get to read it.
+   * Keep it until something dismisses it. With `tone: "danger"` and no action
+   * it is a REFUSAL, which holds the region until the reader puts it down.
    */
   sticky?: boolean;
   /**
@@ -195,7 +195,7 @@ function enqueue(
 ): readonly ToastMessage[] {
   const isUndo = (message: ToastMessage) => message.action?.kind === "undo";
   const isRefusal = (message: ToastMessage) =>
-    message.tone === "danger" && message.sticky;
+    message.tone === "danger" && message.sticky && message.action === null;
   const replacing = { ...arriving, replacedShown: waiting.length > 0 };
   if (isUndo(arriving) && waiting.some(isUndo)) {
     return waiting.map((message, at) =>
@@ -208,7 +208,7 @@ function enqueue(
   }
   const from = waiting.findIndex((message) => !isRefusal(message));
   if (isRefusal(arriving) && from !== -1) {
-    // Each returns when the reader closes a refusal, and takes no focus then.
+    // Displaced messages come back after the refusal, and take no focus then.
     const back = waiting
       .slice(from)
       .map((message) => ({ ...message, replacedShown: false }));

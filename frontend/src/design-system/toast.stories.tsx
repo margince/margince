@@ -221,9 +221,8 @@ export const ARefusalOutranksAVerb: Story = {
       await canvas.findByRole("button", { name: "Hide a file" }),
     );
     await userEvent.click(canvas.getByRole("button", { name: "Hide another" }));
-    await expect(await screen.findByRole("status")).toHaveTextContent(
-      "That file could not be hidden.",
-    );
+    await screen.findByText("That file could not be hidden.");
+    await expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   },
 };
 
