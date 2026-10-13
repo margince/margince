@@ -336,7 +336,7 @@ func (h importHandlers) commitRun(
 	runs := migration.NewRunStore(h.db)
 	approved, err := h.startOrResume(ctx, runs, run, version)
 	if err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
 	// The tags the file names exist before any row that carries them lands,
 	// and only once the approval is accepted.
@@ -369,7 +369,7 @@ func (h importHandlers) startOrResume(
 	ctx context.Context, runs *migration.RunStore, run migration.Run, version int,
 ) (migration.Run, error) {
 	if run.Status == migration.StatusFailed {
-		return runs.ResumeApproved(ctx, run.ID)
+		return runs.ResumeApproved(ctx, run.ID, version)
 	}
 	return runs.Approve(ctx, run.ID, version)
 }

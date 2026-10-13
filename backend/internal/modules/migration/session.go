@@ -106,6 +106,7 @@ type sessionState struct {
 	status, connector, sourceName, sourceRef, draftStep string
 	version                                             int
 	approved                                            bool
+	supersededBy                                        *RunID
 	mapping                                             []byte
 }
 
@@ -115,10 +116,10 @@ func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error)
 	var state sessionState
 	err := tx.QueryRow(ctx, `
 		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version,
-		       approved_at IS NOT NULL, mapping
+		       approved_at IS NOT NULL, superseded_by, mapping
 		  FROM import_run WHERE id = $1 FOR UPDATE`, id).Scan(
 		&state.status, &state.connector, &state.sourceName, &state.sourceRef, &state.draftStep,
-		&state.version, &state.approved, &state.mapping)
+		&state.version, &state.approved, &state.supersededBy, &state.mapping)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sessionState{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 	}
@@ -131,6 +132,12 @@ func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error)
 // admits answers why move may not start from state, or nil when it may.
 func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 	move := sessionMoves[name]
+	if state.connector != ConnectorCSV {
+		return fmt.Errorf("import run %s is a %s run, which keeps no session: %w", id, state.connector, apperrors.ErrConflict)
+	}
+	if state.supersededBy != nil && !slices.Contains(move.from, state.status) {
+		return &SupersededError{RunID: id, By: *state.supersededBy}
+	}
 	if !slices.Contains(move.from, state.status) {
 		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, state.status, move.to, apperrors.ErrConflict)
 	}
@@ -173,7 +180,7 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 		set.WriteString(", " + literal)
 	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))
-	if _, err := tx.Exec(ctx, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
+	if err := execHoldingName(ctx, tx, id, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
 		return fmt.Errorf("moving import run %s to %s: %w", id, to, err)
 	}
 	before, after := map[string]any{}, map[string]any{}
@@ -209,7 +216,7 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (
 		if err := (runChange{version: version}).admits(id, moveValidate, state); err != nil {
 			return err
 		}
-		if err := supersedeName(ctx, tx, id, state.sourceName); err != nil {
+		if err := supersedeName(ctx, tx, id, state.sourceName, CauseSuperseded); err != nil {
 			return err
 		}
 		moved = true
@@ -249,12 +256,20 @@ func (s *RunStore) ReturnToDraft(ctx context.Context, id RunID, cause string) er
 }
 
 // Cancel ends a draft or a report that nobody will approve, and releases its
-// file. Neither has written anything, so nothing is left to undo.
+// file. Neither has written anything, so nothing is left to undo. A run already
+// cancelled is answered as it stands, so a second click is no error.
 func (s *RunStore) Cancel(ctx context.Context, id RunID) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		state, err := lockSession(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if state.status == StatusCancelled {
+			return nil
+		}
 		if err := stageTransition(ctx, tx, id, moveCancel, runChange{}); err != nil {
 			return err
 		}
@@ -266,29 +281,77 @@ func (s *RunStore) Cancel(ctx context.Context, id RunID) (Run, error) {
 	return s.GetStaged(ctx, id)
 }
 
-// SourceBusyError refuses a test run while another run of the same source
-// name is writing: two runs filing one name would race on its bindings.
+// SourceBusyError refuses a move while another run of the same source name
+// holds it: two runs filing one name would race on its bindings.
 type SourceBusyError struct {
 	RunID RunID
 }
 
 func (e *SourceBusyError) Error() string {
-	return fmt.Sprintf("import run %s of the same source is still writing", e.RunID)
+	return fmt.Sprintf("import run %s of the same source name is still in progress", e.RunID)
 }
 
 func (e *SourceBusyError) Unwrap() error { return apperrors.ErrConflict }
 
-// Supersede cancels every other test run and report of sourceName on the
-// caller's transaction, naming id as the run that replaced them. A run of
-// that name that is writing refuses it with SourceBusyError.
-func (s *RunStore) Supersede(ctx context.Context, tx pgx.Tx, id RunID, sourceName string) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return supersedeName(ctx, tx, id, sourceName)
+// SupersededError refuses a move on a run another run of its source name
+// replaced. It names that run, so the caller can go on with it.
+type SupersededError struct {
+	RunID, By RunID
 }
 
-func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName string) error {
+func (e *SupersededError) Error() string {
+	return fmt.Sprintf("import run %s was replaced by import run %s", e.RunID, e.By)
+}
+
+func (e *SupersededError) Unwrap() error { return apperrors.ErrConflict }
+
+// nameIndex keeps one run per source name among the statuses that hold it.
+const nameIndex = "import_run_one_active_per_source_name"
+
+// execHoldingName runs one status write under a savepoint. A write the name
+// index refuses then answers SourceBusyError naming the holder.
+func execHoldingName(ctx context.Context, tx pgx.Tx, id RunID, sql string, args ...any) error {
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("opening a savepoint: %w", err)
+	}
+	_, err = savepoint.Exec(ctx, sql, args...)
+	if constraint, unique := storekit.UniqueViolation(err); unique && constraint == nameIndex {
+		if err := savepoint.Rollback(ctx); err != nil {
+			return fmt.Errorf("rolling back to the savepoint: %w", err)
+		}
+		return nameHolder(ctx, tx, id)
+	}
+	if err != nil {
+		return err
+	}
+	return savepoint.Commit(ctx)
+}
+
+// nameHolder names the other run that holds id's source name.
+func nameHolder(ctx context.Context, tx pgx.Tx, id RunID) error {
+	var holder RunID
+	err := tx.QueryRow(ctx, `
+		SELECT other.id FROM import_run run
+		  JOIN import_run other ON other.connector = run.connector AND other.source_name = run.source_name
+		 WHERE run.id = $1 AND other.id <> run.id AND other.status = ANY($2)
+		 LIMIT 1`, id, nameHeldBy).Scan(&holder)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("another run of import run %s's source name moved at the same time: %w", id, apperrors.ErrConflict)
+	}
+	if err != nil {
+		return fmt.Errorf("finding the run that holds the source name: %w", err)
+	}
+	return &SourceBusyError{RunID: holder}
+}
+
+// nameHeldBy is the statuses nameIndex covers.
+var nameHeldBy = []string{StatusValidating, StatusAwaitingApproval, StatusRunning, StatusUndoing}
+
+// supersedeName makes way for id on its source name. It cancels every other
+// run of the name that wrote nothing, with cause. A run that is writing
+// refuses it with SourceBusyError.
+func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName, cause string) error {
 	if sourceName == "" {
 		return nil
 	}
@@ -303,16 +366,10 @@ func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName string) 
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("checking for a writing run of the source: %w", err)
 	}
-	return supersedeWhere(ctx, tx, id, "source_name", sourceName)
-}
-
-// supersedeWhere cancels and releases every unwritten csv run, other than
-// id, whose column equals value. column is a literal at every call site.
-func supersedeWhere(ctx context.Context, tx pgx.Tx, id RunID, column, value string) error {
-	rows, err := tx.Query(ctx, storekit.SQLf(`
+	rows, err := tx.Query(ctx, `
 		SELECT id FROM import_run
-		 WHERE connector = $1 AND %s = $2 AND id <> $3 AND status = ANY($4)
-		 ORDER BY id`, column), ConnectorCSV, value, id, sessionMoves[moveSupersede].from)
+		 WHERE connector = $1 AND source_name = $2 AND id <> $3 AND status = ANY($4)
+		 ORDER BY id`, ConnectorCSV, sourceName, id, sessionMoves[moveSupersede].from)
 	if err != nil {
 		return fmt.Errorf("finding the runs a new test run replaces: %w", err)
 	}
@@ -322,7 +379,7 @@ func supersedeWhere(ctx context.Context, tx pgx.Tx, id RunID, column, value stri
 	}
 	for _, old := range replaced {
 		if err := stageTransition(ctx, tx, old, moveSupersede, runChange{
-			values: []runValue{{"superseded_by", id}, {"error", CauseSuperseded}},
+			values: []runValue{{"superseded_by", id}, {"error", cause}},
 			after:  map[string]any{"superseded_by": id},
 		}); err != nil {
 			return err

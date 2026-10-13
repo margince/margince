@@ -8198,7 +8198,10 @@ paths:
         approver is looking at a state that is not the one they judged. A
         `version`, when sent, must equal the run's, so the report approved is
         the one read. A `failed` run that was approved once resumes from its
-        checkpoint; one never approved is a 409.
+        checkpoint; one never approved is a 409. A run that a newer test run
+        replaced is a 409 whose `details.run_id` names that run. A resume while
+        another run of the same `source_name` holds the name is a 409
+        `import_source_busy` naming it the same way.
 
         Needs the passport permission Change records.
 
@@ -9573,7 +9576,7 @@ components:
           allOf: [{$ref: '#/components/schemas/ImportSourceProfile'}]
           description: 'What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.'
         approved_at: {type: string, format: date-time, description: 'When the run was approved. Absent for a run never approved.'}
-        superseded_by: {type: string, format: uuid, description: 'The newer test run of the same source that cancelled this one.'}
+        superseded_by: {type: string, format: uuid, description: 'The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.'}
         source_released: {type: boolean, description: 'The uploaded file is no longer kept: the run completed, was cancelled or was superseded.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}

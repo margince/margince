@@ -107,7 +107,7 @@ func (h importHandlers) UpdateImportRun(w http.ResponseWriter, r *http.Request, 
 	}
 	saved, err := migration.NewRunStore(h.db).UpdateDraft(ctx, run.ID, req.Version, patch)
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, h.sessionRefusal(ctx, err))
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractImportRun(saved))

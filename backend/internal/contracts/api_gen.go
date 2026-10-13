@@ -36607,7 +36607,7 @@ type ImportRun struct {
 	// its source, or left idle as a draft. Its file is released.
 	Status ImportRunStatus `json:"status"`
 
-	// SupersededBy The newer test run of the same source that cancelled this one.
+	// SupersededBy The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.
 	SupersededBy *openapi_types.UUID `json:"superseded_by,omitempty"`
 	UpdatedAt    time.Time           `json:"updated_at"`
 

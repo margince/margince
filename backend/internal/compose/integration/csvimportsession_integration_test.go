@@ -130,13 +130,62 @@ func TestCancelReleasesTheSource(t *testing.T) {
 		cancelled.Status != "cancelled" || !cancelled.Released {
 		t.Fatalf("cancel → %d %+v, want 200, cancelled with its file released", status, cancelled)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+profile.RunID+"/cancel", nil, nil, nil); status != http.StatusConflict {
-		t.Fatalf("a second cancel → %d, want 409", status)
+	var again importRunDTO
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+profile.RunID+"/cancel", nil, nil, &again); status != http.StatusOK ||
+		again.Status != "cancelled" {
+		t.Fatalf("a second cancel → %d %+v, want 200 with the run as it stands", status, again)
 	}
 	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
 	}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("testing a released upload → %d, want 409: its file is on its way out", status)
+	}
+}
+
+// testFairRun uploads the prospect file and tests it under one source name.
+func testFairRun(t *testing.T, e *apptest.AppEnv) importRunDTO {
+	const sourceName = "Fair 2026"
+	t.Helper()
+	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	var run importRunDTO
+	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef,
+		"mapping": profile.SuggestedMapping, "source_name": sourceName,
+	}, nil, &run); status != http.StatusAccepted || run.Status != "awaiting_approval" {
+		t.Fatalf("testing %q → %d %+v, want 202 awaiting approval", sourceName, status, run)
+	}
+	return run
+}
+
+func TestAnUndoClosesAWaitingReportOfItsName(t *testing.T) {
+	e := setupImportApp(t)
+	done := testFairRun(t, e)
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+done.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	waiting := testFairRun(t, e)
+
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+done.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("undo beside a report of the name → %d, want 202", status)
+	}
+	if got := readImportRun(t, e, waiting.ID); got.Status != "cancelled" || got.SupersededBy != done.ID || !got.Released {
+		t.Fatalf("the waiting report = %+v, want cancelled, superseded by the undone run %s and released", got, done.ID)
+	}
+}
+
+func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
+	e := setupImportApp(t)
+	older := testFairRun(t, e)
+	newer := testFairRun(t, e)
+
+	var refusal struct {
+		Details struct {
+			RunID string `json:"run_id"`
+		} `json:"details"`
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+older.ID+"/approve", nil, nil, &refusal); status != http.StatusConflict ||
+		refusal.Details.RunID != newer.ID {
+		t.Fatalf("approving the replaced report → %d naming %q, want 409 naming %s", status, refusal.Details.RunID, newer.ID)
 	}
 }
 

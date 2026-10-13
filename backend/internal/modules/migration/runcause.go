@@ -19,6 +19,9 @@ const (
 	// CauseSuperseded is a run a newer test run of its source replaced. The
 	// import-session migration writes the same text.
 	CauseSuperseded = "a newer test run of this source replaced this one"
+	// CauseReplacedByUndo is a report an undo of another run of its source
+	// name closed: the undo needs the name, and the report wrote nothing.
+	CauseReplacedByUndo = "an undo of another import of this source name closed this test run; upload the file again to import it"
 	// CauseTestRunStopped is a draft whose test run lost its process; the
 	// choices are kept, so the way on is to test again.
 	CauseTestRunStopped = "the test run stopped before it finished and imported nothing; run the test again"

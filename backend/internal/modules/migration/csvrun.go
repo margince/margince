@@ -137,13 +137,16 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 // This is what IEM-WIRE-6 means by a resumable failure being "a resumable
 // state, not a dead end". Without it an interrupted import can only be
 // abandoned and re-uploaded. Only an approved run resumes: a failed run
-// nobody approved never reached a commit.
-func (s *RunStore) ResumeApproved(ctx context.Context, id RunID) (Run, error) {
+// nobody approved never reached a commit. A version other than zero must equal
+// the run's, as it must for Approve.
+func (s *RunStore) ResumeApproved(ctx context.Context, id RunID, version int) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveResume, runChange{approved: true, literals: []string{"error = NULL"}})
+		return stageTransition(ctx, tx, id, moveResume, runChange{
+			version: version, approved: true, literals: []string{"error = NULL"},
+		})
 	})
 	if err != nil {
 		return Run{}, err

@@ -305,7 +305,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("clearing the approval: %v", err)
 	}
-	if _, err := s.ResumeApproved(ctx, unapproved); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ResumeApproved(ctx, unapproved, 0); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("resuming a failed run nobody approved = %v, want a conflict: it never reached a commit", err)
 	}
 
@@ -316,7 +316,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	if err := s.FailRunning(ctx, approved.ID, CauseStopped); err != nil {
 		t.Fatalf("FailRunning: %v", err)
 	}
-	resumed, err := s.ResumeApproved(ctx, approved.ID)
+	resumed, err := s.ResumeApproved(ctx, approved.ID, 0)
 	if err != nil || resumed.Status != StatusRunning || resumed.Error != "" || resumed.ApprovedAt == nil {
 		t.Errorf("resuming an approved failure = (%+v, %v), want running with its approval kept", resumed, err)
 	}

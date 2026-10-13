@@ -19086,8 +19086,8 @@ export interface paths {
          * @description Writes the choices the body names onto a `pending` run, or onto an
          *     `awaiting_approval` run, which a changed choice returns to `pending`
          *     with its report cleared. A field left out is left as it is, and a body
-         *     that changes nothing writes nothing and keeps the `version`. Every write
-         *     bumps `version`.
+         *     that changes nothing writes nothing and keeps the `version`. A changed
+         *     choice bumps `version`; a changed `draft_step` alone does not.
          *
          *     `version` must equal the run's, so a write made on an older read is a
          *     409 rather than an overwrite. A body changing only `draft_step` on an
@@ -19144,7 +19144,8 @@ export interface paths {
          * Cancel a draft or a report nobody will approve.
          * @description Moves a `pending` or `awaiting_approval` run to `cancelled` and
          *     releases its uploaded file. Neither state has written anything, so
-         *     nothing is left to undo. Any other state is a 409.
+         *     nothing is left to undo. A run already `cancelled` is answered as it
+         *     stands. Any other state is a 409.
          */
         post: operations["cancelImportRun"];
         delete?: never;
@@ -19225,7 +19226,10 @@ export interface paths {
          *     approver is looking at a state that is not the one they judged. A
          *     `version`, when sent, must equal the run's, so the report approved is
          *     the one read. A `failed` run that was approved once resumes from its
-         *     checkpoint; one never approved is a 409.
+         *     checkpoint; one never approved is a 409. A run that a newer test run
+         *     replaced is a 409 whose `details.run_id` names that run. A resume while
+         *     another run of the same `source_name` holds the name is a 409
+         *     `import_source_busy` naming it the same way.
          *
          *     The commit is checkpointed and idempotent on the source's own key, so a
          *     re-run of the same file converges rather than duplicating (IEM-AC-9),
@@ -19277,6 +19281,12 @@ export interface paths {
          *     run is a conflict, not a no-op; a second call while one is already
          *     under way for the same run is a conflict too, not a second
          *     concurrent pass.
+         *
+         *     Starting an undo takes the run's `source_name` back. A test run or a
+         *     report of that name, which wrote nothing, is cancelled with
+         *     `superseded_by` naming this run. A run of that name that is writing
+         *     refuses the undo with 409 `import_source_busy`, whose
+         *     `details.run_id` names it when the caller may read it.
          */
         post: operations["undoImportRun"];
         delete?: never;
@@ -23800,7 +23810,7 @@ export interface components {
             approved_at?: string;
             /**
              * Format: uuid
-             * @description The newer test run of the same source that cancelled this one.
+             * @description The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back.
              */
             superseded_by?: string;
             /** @description The uploaded file is no longer kept: the run completed, was cancelled or was superseded. */

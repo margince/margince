@@ -264,13 +264,17 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		// concurrent second caller; this covers one retrying right after the
 		// first releases its lock.
 		var reportRaw []byte
+		var sourceName string
+		if err := lockSourceName(ctx, tx, id); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, `
-			SELECT id, connector, status, checkpoint, undo_report, report
+			SELECT id, connector, status, checkpoint, undo_report, report, source_name
 			  FROM import_run
 			 WHERE id = $1
 			 FOR UPDATE`, id)
 		if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.Checkpoint,
-			&undoReportRaw, &reportRaw); err != nil {
+			&undoReportRaw, &reportRaw, &sourceName); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
@@ -282,6 +286,9 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		before := run.Status
 		switch run.Status {
 		case StatusComplete:
+			if err := supersedeName(ctx, tx, id, sourceName, CauseReplacedByUndo); err != nil {
+				return err
+			}
 			updated, err := updatesInRun(reportRaw)
 			if err != nil {
 				return fmt.Errorf("reading import run %s's own report: %w", id, err)
@@ -302,15 +309,11 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		if err != nil {
 			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
 		}
-		tag, err := tx.Exec(ctx, `
+		if err := execHoldingName(ctx, tx, id, `
 			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now()
 			 WHERE id = $1`,
-			id, StatusUndoing, run.Checkpoint, encoded)
-		if err != nil {
+			id, StatusUndoing, run.Checkpoint, encoded); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 		}
 		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing})

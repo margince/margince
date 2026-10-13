@@ -72,7 +72,7 @@ func (h importHandlers) testRun(
 	}
 	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version)
 	if err != nil {
-		return crmcontracts.ImportRun{}, h.sourceBusy(ctx, err)
+		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
 	if !moved {
 		return toContractImportRun(queued), nil
@@ -84,8 +84,10 @@ func (h importHandlers) testRun(
 	if err := runs.AwaitApproval(ctx, saved.ID, report); err != nil {
 		// A run that cannot be parked for a human goes back to its draft
 		// rather than sitting in `validating`, which nothing else moves.
-		returnToDraft(ctx, runs, saved.ID, err)
-		return crmcontracts.ImportRun{}, err
+		if _, replaced := errors.AsType[*migration.SupersededError](err); !replaced {
+			returnToDraft(ctx, runs, saved.ID, err)
+		}
+		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
 	staged, err := runs.GetStaged(ctx, saved.ID)
 	if err != nil {
@@ -170,19 +172,23 @@ func sentText(s string) *string {
 	return &s
 }
 
-// sourceBusy names the writing run that holds the source name, so the caller
-// can look at it. A run the caller may not read is not named.
-func (h importHandlers) sourceBusy(ctx context.Context, err error) error {
-	busy, ok := errors.AsType[*migration.SourceBusyError](err)
-	if !ok {
+// sessionRefusal answers a refusal that points at another run of the source
+// name: the one holding it, or the one that replaced this run. That run is
+// named only when the caller may read it.
+func (h importHandlers) sessionRefusal(ctx context.Context, err error) error {
+	var other migration.RunID
+	refusal := &httperr.DetailedError{Status: http.StatusConflict}
+	if busy, ok := errors.AsType[*migration.SourceBusyError](err); ok {
+		other, refusal.Code = busy.RunID, httperr.SourceBusyCode
+		refusal.Detail = "another import of this source name is in progress; let it finish or cancel it, then try again"
+	} else if replaced, ok := errors.AsType[*migration.SupersededError](err); ok {
+		other, refusal.Code = replaced.By, "conflict"
+		refusal.Detail = "a newer test run of this source name replaced this one; go on with that run"
+	} else {
 		return err
 	}
-	refusal := &httperr.DetailedError{
-		Status: http.StatusConflict, Code: httperr.SourceBusyCode,
-		Detail: "another import of this source name is still writing; wait for it to finish, then test again",
-	}
-	if _, readErr := h.stagedFor(ctx, openapi_types.UUID(busy.RunID)); readErr == nil {
-		refusal.Details = map[string]any{"run_id": busy.RunID.String()}
+	if _, readErr := h.stagedFor(ctx, openapi_types.UUID(other)); readErr == nil {
+		refusal.Details = map[string]any{"run_id": other.String()}
 	}
 	return refusal
 }

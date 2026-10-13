@@ -61,6 +61,7 @@ type importRunDTO struct {
 	// Released is the run's source_released.
 	Released     bool   `json:"source_released"`
 	OnBrokenLink string `json:"on_broken_link"`
+	SupersededBy string `json:"superseded_by"`
 }
 
 type importDispositionDTO struct {
