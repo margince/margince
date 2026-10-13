@@ -18,6 +18,31 @@ type SkippedRow struct {
 	// can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
+	Column string `json:"column,omitempty"`
+	// Kind is one of ProblemKinds, so a screen can group the problems.
+	Kind  string `json:"kind,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+// The kinds of problem a report names. The contract's ImportProblemKind enum
+// is this same list, and a test holds the two equal.
+const (
+	ProblemBrokenLink   = "broken_link"
+	ProblemDroppedLink  = "dropped_link"
+	ProblemInvalidValue = "invalid_value"
+	ProblemUnknownOwner = "unknown_owner"
+	ProblemNewTag       = "new_tag"
+	ProblemDuplicate    = "duplicate"
+	ProblemPermission   = "permission"
+	ProblemUnusableRow  = "unusable_row"
+)
+
+// ProblemKinds answers every problem kind, in a new slice the caller may sort.
+func ProblemKinds() []string {
+	return []string{
+		ProblemBrokenLink, ProblemDroppedLink, ProblemInvalidValue, ProblemUnknownOwner,
+		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow,
+	}
 }
 
 // skipReasonEmptyPayload marks a source row with no fields at all — the
@@ -27,7 +52,9 @@ const skipReasonEmptyPayload = "empty_payload"
 
 // ObjectReport is one object class's slice of the run/dry-run report.
 type ObjectReport struct {
-	Object      string `json:"object"`
+	Object string `json:"object"`
+	// File is the ZIP entry this object's rows came from; empty for a single CSV.
+	File        string `json:"file,omitempty"`
 	MirrorCount int    `json:"mirror_count"`
 	WillCreate  int    `json:"will_create"`
 	WillUpdate  int    `json:"will_update"`
@@ -61,6 +88,10 @@ type ObjectReport struct {
 	WillDuplicate int      `json:"duplicates,omitempty"`
 	Duplicated    int      `json:"duplicated,omitempty"`
 	Disclosures   []string `json:"disclosures,omitempty"`
+	// Warnings are rows that land with something reported about them, such as
+	// a dropped link. Not skips, so they never count in Skipped. The dry run and
+	// the commit both list a row's warning; the report names it once.
+	Warnings []SkippedRow `json:"warnings,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
@@ -104,7 +135,11 @@ type SkippedAssoc struct {
 func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason})
+		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason}
+		if res.Problem != nil {
+			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
+		}
+		or.Skipped = append(or.Skipped, skip)
 	case res.Unchanged:
 		or.Unchanged++
 	case res.Created:
@@ -120,6 +155,11 @@ func (or *ObjectReport) record(row Row, res EnsureResult) {
 	}
 	if res.Disclosure != "" {
 		or.Disclosures = append(or.Disclosures, res.Disclosure)
+	}
+	if res.Problem != nil && !res.Skipped {
+		warning := *res.Problem
+		warning.ExternalID, warning.Line = row.ExternalID, row.Line
+		or.Warnings = append(or.Warnings, warning)
 	}
 }
 
@@ -147,15 +187,13 @@ func withPartial(rep Report, or ObjectReport) Report {
 // true one — it was computed against the estate as it stands now — so it wins
 // outright.
 func (r Report) mergedWith(next Report) Report {
-	// The later attempt's edges win — unless it never reached them. A resume
-	// that failed before the association phase reports zero applied and zero
-	// skipped, and taking that as the answer would erase what an earlier
-	// attempt actually linked and report a run that connected nothing. Two
-	// zeroes are indistinguishable from a phase that ran and found no edges, so
-	// keeping the earlier answer is right either way: there the earlier is zero
-	// too.
+	// The later attempt's edges win, unless it never reached them. A resume
+	// that died before the association phase reports zero applied and zero
+	// skipped, and that would erase what an earlier attempt linked. A phase that
+	// found no edges also reports two zeroes, and there the earlier is zero too.
+	// A report of one walk is the test run's prediction, so it is never kept.
 	associations, associationsSkipped := next.Associations, next.AssociationsSkipped
-	if next.Associations == 0 && len(next.AssociationsSkipped) == 0 {
+	if next.Associations == 0 && len(next.AssociationsSkipped) == 0 && r.Walks() > 1 {
 		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
 	}
 	out := Report{
@@ -186,6 +224,12 @@ func (r Report) mergedWith(next Report) Report {
 		into.WillDuplicate += or.WillDuplicate
 		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
+		// Warnings add as skips do: the row walk has a checkpoint, so a resume
+		// never repeats the warnings of the rows before it.
+		into.Warnings = append(into.Warnings, or.Warnings...)
+		if or.File != "" {
+			into.File = or.File
+		}
 	}
 	return out
 }

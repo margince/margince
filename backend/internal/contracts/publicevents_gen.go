@@ -30,6 +30,42 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCalendarMethod.
+const (
+	CalendarMethodAdd            PublicEventActivityChangedFieldsCalendarMethod = "ADD"
+	CalendarMethodCancel         PublicEventActivityChangedFieldsCalendarMethod = "CANCEL"
+	CalendarMethodCounter        PublicEventActivityChangedFieldsCalendarMethod = "COUNTER"
+	CalendarMethodDeclineCounter PublicEventActivityChangedFieldsCalendarMethod = "DECLINECOUNTER"
+	CalendarMethodPublish        PublicEventActivityChangedFieldsCalendarMethod = "PUBLISH"
+	CalendarMethodRefresh        PublicEventActivityChangedFieldsCalendarMethod = "REFRESH"
+	CalendarMethodReply          PublicEventActivityChangedFieldsCalendarMethod = "REPLY"
+	CalendarMethodRequest        PublicEventActivityChangedFieldsCalendarMethod = "REQUEST"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCalendarMethod enum.
+func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
+	switch e {
+	case CalendarMethodAdd:
+		return true
+	case CalendarMethodCancel:
+		return true
+	case CalendarMethodCounter:
+		return true
+	case CalendarMethodDeclineCounter:
+		return true
+	case CalendarMethodPublish:
+		return true
+	case CalendarMethodRefresh:
+		return true
+	case CalendarMethodReply:
+		return true
+	case CalendarMethodRequest:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
 	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
@@ -449,6 +485,7 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
@@ -588,6 +625,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityCaptured:
 		return true
 	case ActivityDispositionRecorded:
+		return true
+	case ActivityMarkedHandled:
 		return true
 	case ActivityUpdated:
 		return true
@@ -885,7 +924,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -895,6 +934,9 @@ type PublicEventActivityChangedFields struct {
 
 	// Body Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire).
 	Body *bool `json:"body,omitempty"`
+
+	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
 
 	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
 	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
@@ -933,22 +975,30 @@ type PublicEventActivityChangedFields struct {
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
 
+// PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+type PublicEventActivityChangedFieldsCalendarMethod string
+
 // PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
 
-// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
+// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
-	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 	Disposition PublicEventActivityDispositionRecordedDisposition `json:"disposition"`
 }
 
-// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked a waiting message done: they dealt with it another way, by phone, in a meeting, or with no reply owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
+type PublicEventActivityMarkedHandled struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+}
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -961,7 +1011,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus the undo of a project filing, explicit request-reminder restoration's restored flag and capture's own-sent-mail direction correction — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -2570,6 +2620,10 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
+func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
+
+func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
+
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
 func (PublicEventActivityUpdated) EntityType() string { return "activity" }
@@ -3105,6 +3159,7 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.marked_handled":                   1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,

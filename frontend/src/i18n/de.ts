@@ -325,7 +325,6 @@ export const de = {
   "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
   "scheduling.discard": "Verwerfen",
   "scheduling.brand": "Firmenname und Logo",
-  "scheduling.copyBookingLink": "Buchungslink kopieren",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -423,6 +422,7 @@ export const de = {
   "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
   "scheduling.calendar": "Kalender für Einladungen",
   "scheduling.bookContact": "Termin buchen",
+  "scheduling.bookPickContact": "Kontakte dieses Unternehmens durchsuchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
 
   "scheduling.chooseProvider": "Kalenderanbieter auswählen",
@@ -902,6 +902,7 @@ export const de = {
   "systemJob.graph_edge": "Aktualisierung der Beziehungsstärke",
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
+  "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
   "systemJob.introduction_expiry": "Ablauf von Vorstellungen",
@@ -913,12 +914,14 @@ export const de = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.waiting_horizon_refresh": "Aktualisierung des Wartehorizonts",
   "systemJob.meeting_delivery": "Kalenderzustellung",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",
   "systemJob.notification_digest": "Benachrichtigungsübersicht",
   "systemJob.notification_mail": "Benachrichtigungs-E-Mail",
   "systemJob.owed_verdict": "Prüfung offener Antworten",
+  "systemJob.own_sent_mail_repair": "Korrektur gesendeter E-Mails",
   "systemJob.participant_backfill": "Ergänzung der E-Mail-Teilnehmer",
   "systemJob.private_thread_strip": "Entfernen privater Threads",
   "systemJob.provider_recovery": "Wiederherstellung beim Anreicherungsdienst",
@@ -1266,7 +1269,8 @@ export const de = {
   "explain.excluded_other":
     "Bei {count} Datensätzen ist ein Feld für deine Rolle ausgeblendet, deshalb fehlen sie in dieser Zahl und in den Zeilen darunter.",
 
-  "board.count": "Deals: {count}",
+  "board.count_one": "Deal: {count}",
+  "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen, keine Gesamtsumme",
   "dealfiles.hidden": "An diesem Deal ausgeblendet",
@@ -1402,6 +1406,8 @@ export const de = {
   "merge.pickTarget": "Beizubehaltenden Datensatz auswählen",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+  "merge.confirmDetail":
+    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
   "merge.submit": "Zusammenführen",
 
   "tab.overview": "Übersicht",
@@ -1551,6 +1557,16 @@ export const de = {
     "Dieser Platz hat nur Lesezugriff, daher wurde die Anfrage abgelehnt. Lass den Platz von einem Admin hochstufen.",
   "common.versionSkew":
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
+  "common.duplicate.email":
+    "Ein anderer Kontakt oder Lead hat diese E-Mail-Adresse schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.domain":
+    "Ein anderes Unternehmen hat diese Domain schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.linkedinUrl":
+    "Ein anderer Lead hat dieses LinkedIn-Profil schon, deshalb wurde es hier nicht gespeichert.",
+  "common.duplicate.contactLead":
+    "Für diesen Kontakt gibt es schon einen aktiven Lead, deshalb wurde kein zweiter angelegt.",
+  "common.duplicate.slotTaken":
+    "Dieser Termin ist nicht mehr frei. Wähle eine andere Zeit.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
@@ -2540,6 +2556,10 @@ export const de = {
   "linkedinReach.onFileOf": "{onFile} von {total}",
   "linkedinReach.footnote":
     "{shown} von {total} Unternehmen angezeigt. Verbindungen bei noch nicht erfassten Unternehmen: {unresolved}.",
+  "linkedinReach.connectionsCount_one": "{count} Verbindung",
+  "linkedinReach.connectionsCount_other": "{count} Verbindungen",
+  "linkedinReach.onFileFolded": "{figure} bereits erfasst",
+  "linkedinReach.openNamed": "{name} öffnen",
   "linkedinImport.skipped": "Übersprungene Zeilen (kein verwertbarer Name)",
   "co.signals.title": "Signale",
   "co.signals.emptyDetail":
@@ -3414,6 +3434,24 @@ export const de = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.lostReason": "Verlustgrund",
+  "deals.closeTasks.legend_one":
+    "Was passiert mit der {count} offenen Aufgabe dieses Deals?",
+  "deals.closeTasks.legend_other":
+    "Was passiert mit den {count} offenen Aufgaben dieses Deals?",
+  "deals.closeTasks.listLabel": "Offene Aufgaben dieses Deals",
+  "deals.closeTasks.untitled": "Aufgabe ohne Titel",
+  "deals.closeTasks.complete": "Alle erledigen",
+  "deals.closeTasks.completeHint":
+    "Als erledigt markieren, sobald der Deal geschlossen ist. Du kannst das rückgängig machen.",
+  "deals.closeTasks.loading": "Offene Aufgaben des Deals werden geladen…",
+  "deals.closeTasks.readFailed":
+    "Beim Schließen bleiben alle Aufgaben dieses Deals offen.",
+  "deals.closeTasks.noneCompleted": "Keine Aufgabe konnte erledigt werden.",
+  "deals.closeTasks.keep": "Behalten",
+  "deals.closeTasks.keepHint": "Offen lassen.",
+  "deals.closeTasks.choose": "Wähle, was mit den offenen Aufgaben passiert.",
+  "deals.closeTasks.failed":
+    "Der Deal ist geschlossen, aber einige Aufgaben konnten nicht erledigt werden. Erledige sie in der Worklist.",
   "deals.winNoEvidence":
     "Es ist kein unterschriebener Vertrag angehängt. Erfasse, wie der Deal gewonnen wurde; die Antwort bleibt am Deal und wird in Berichten gezählt.",
   "deals.winReason": "Wie wurde er gewonnen?",
@@ -4332,6 +4370,8 @@ export const de = {
   "field.unset": "Nicht festgelegt",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
+  "field.editEmails": "E-Mail-Adressen bearbeiten",
+  "field.editPhones": "Telefonnummern bearbeiten",
   "field.addDomain": "Domain hinzufügen",
 
   "field.addRegisterVat": "USt-ID hinzufügen",
@@ -4575,10 +4615,16 @@ export const de = {
   "log.transcriptUploadFailed":
     "Die Datei wurde nicht gelesen. Füge stattdessen den Text ein.",
   "log.attendee": "Teilnehmende",
+  "log.otherAttendees": "Weitere Teilnehmende",
+  "log.removeAttendee": "{name} entfernen",
+  "log.colleagues": "Teammitglieder, die dabei waren",
+  "log.addColleague": "Teammitglied hinzufügen",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
   "log.date": "Datum",
+  "log.dateHint":
+    "Der Tag, an dem es stattfand; für einen späteren Tag lege eine Aufgabe an.",
   "log.assignee": "Zugewiesen an",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
@@ -4989,6 +5035,7 @@ export const de = {
   "analytics.sectionQuestions": "Eigene Berichte",
   "analytics.sectionReports": "Berichte",
   "analytics.setup": "Einrichtung",
+  "analytics.filters": "Filter",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
   "analytics.attentionChecks_other": "{count} Prüfungen zur Einschätzung offen",
@@ -5713,27 +5760,10 @@ export const de = {
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
   "import.title": "Datei importieren",
-  "import.sub":
-    "Importiere eine CSV-Datei mit Leads, Kontakten oder Unternehmen. Es wird nichts geschrieben, bevor du geprüft hast, was der Import tun wird.",
-  "import.startLabel": "CSV-Datei importieren",
-  "import.start": "Import starten",
-  "import.continue": "Import weiterführen",
   "import.back": "Zurück zum Datenimport",
-  "import.objectLabel": "Zeilentyp",
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
-  "import.objectHint.lead":
-    "Importiert eine unbearbeitete Liste als Leads, die ein Teammitglied qualifiziert, bevor sie zu Kontakten werden.",
-  "import.objectHint.company":
-    "Abgleich über den zugeordneten Namen: Erneutes Hochladen aktualisiert, statt Duplikate anzulegen.",
-  "import.objectHint.contact":
-    "Für bestehende Kontakte. Abgleich über die E-Mail-Adresse: Erneutes Hochladen aktualisiert, statt Duplikate anzulegen, und bereits gespeicherte Adressen bleiben unverändert.",
-  "import.fileLabel": "CSV-Datei",
-  "import.choose": "Datei auswählen",
-  "import.chooseAnother": "Andere Datei auswählen",
-  "import.discardFile":
-    "Neu beginnen entfernt den angefangenen Import von dieser Seite, samt Datei, Spaltenzuordnung und Bericht.",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
@@ -5743,48 +5773,19 @@ export const de = {
   "import.dontImport": "Nicht importieren",
   "import.noSamples": "Leer",
   "import.destinationFor": "Feld für {column}",
-  "import.identifiedBy":
-    "Zeilen werden über {column} erkannt, daher aktualisiert ein erneuter Import dieser Datei die Zeilen, statt sie zu duplizieren.",
-  "import.needsIdentifier":
-    "Ordne {field} eine Spalte zu. Ohne sie lassen sich Zeilen bei einem späteren Hochladen nicht abgleichen oder rückgängig machen.",
-  "import.validate": "Importvorschau anzeigen",
-  "import.validating": "Wird geprüft…",
-  "import.previewTitle": "Importvorschau",
-  "import.outcomeTitle": "Importergebnis",
-  "import.resumedRun":
-    "Dieser Import lief am {when}. Alle Aktionen unten sind weiterhin verfügbar.",
-  "import.count.created": "Anlegen",
-  "import.count.updated": "Aktualisieren",
-  "import.count.unchanged": "Unverändert",
-  "import.count.skipped": "Übersprungen",
-  "import.rowsRead": "Gelesene Zeilen: {rows}, erkannt über {column}.",
-  "import.linksOffered":
-    "Zeilen mit Arbeitgeber: {offered}. Zeilen mit einem Unternehmen, das noch nicht im CRM ist: {unresolved}.",
   "import.linksApplied":
     "{applied} von {offered} Arbeitgeber-Verknüpfungen geschrieben.",
-  "import.issuesLead":
-    "Einige Zeilen können nicht importiert werden. Jede ist mit ihrer Zeilennummer in der Datei aufgeführt.",
-  "import.issueLine": "Zeile {line}:",
-  "import.commit_one": "1 Zeile importieren",
-  "import.commit_other": "{rows} Zeilen importieren",
   "import.importing": "Wird importiert…",
   "import.done": "Import abgeschlossen",
   "import.failed":
     "Der Import wurde angehalten. Verarbeitete Zeilen: {checkpoint}. Fortsetzen macht an dieser Stelle weiter.",
   "import.resume": "Import fortsetzen",
   "import.uploadFailed": "Datei konnte nicht gelesen werden",
-  "import.resumedRunTitle": "Früherer Import",
   "import.failedTitle": "Import vorzeitig angehalten",
   "import.commitFailed": "Import nicht ausgeführt",
-  "import.undoInterruptedTitle": "Import nur teilweise rückgängig gemacht",
   "import.undoFailed": "Import nicht rückgängig gemacht",
-  "import.validateFailed": "Vorschau nicht erstellt",
   "import.another": "Weitere Datei importieren",
-  "import.undo_one": "Import rückgängig machen (1 Zeile)",
-  "import.undo_other": "Import rückgängig machen ({rows} Zeilen)",
   "import.undoing": "Wird rückgängig gemacht…",
-  "import.undoInterrupted":
-    "Das Rückgängigmachen wurde unterbrochen. Mit „Weiter rückgängig machen“ geht es dort weiter, wo es angehalten hat.",
   "import.continueUndo": "Weiter rückgängig machen",
   "import.undone": "Import rückgängig gemacht",
   "import.undoReversed_one": "1 Zeile rückgängig gemacht.",
@@ -5792,6 +5793,157 @@ export const de = {
   "import.undoKeptLead": "Beibehalten, weil nach dem Import bearbeitet:",
   "import.undoErroredLead":
     "Nicht rückgängig gemacht und unverändert belassen:",
+  "import.hub.title": "Neuer Import",
+  "import.hub.templateTitle": "Vorlage",
+  "import.hub.templateBody":
+    "Ein ZIP mit einer CSV je Datensatztyp, benutzerdefinierten Feldern als Spalten und einer README mit den erlaubten Werten.",
+  "import.hub.preview": "Vorlage ansehen",
+  "import.hub.uploadLabel": "Daten hochladen",
+  "import.hub.uploadHint":
+    "Ein ZIP mit CSV-Dateien oder eine CSV. Bis {mb} MB.",
+  "import.hub.uploadEmpty": "Datei wählen oder hier ablegen",
+  "import.hub.order": "Importreihenfolge:",
+  "import.recent.title": "Letzte Importe",
+  "import.recent.empty": "Noch keine Importe.",
+  "import.recent.col.date": "Datum",
+  "import.recent.col.file": "Datei",
+  "import.recent.col.rows": "Zeilen",
+  "import.recent.col.status": "Status",
+  "import.recent.col.actions": "Aktionen",
+  "import.recent.files_one": "1 Datei",
+  "import.recent.files_other": "{count} Dateien",
+  "import.recent.filesBy": "{files} · von {name}",
+  "import.recent.undo": "Rückgängig",
+  "import.status.pending": "Ausstehend",
+  "import.status.validating": "Wird geprüft",
+  "import.status.awaiting_approval": "Nicht importiert",
+  "import.status.running": "Wird importiert",
+  "import.status.complete": "Abgeschlossen",
+  "import.status.failed": "Angehalten",
+  "import.status.undoing": "Wird rückgängig gemacht",
+  "import.status.undone": "Rückgängig gemacht",
+  "import.undoConfirm.title": "Diesen Import rückgängig machen?",
+  "import.undoConfirm.confirm": "Import rückgängig machen",
+  "import.undoConfirm.order": "Rückgängig in umgekehrter Reihenfolge: {order}.",
+  "import.undoConfirm.archived":
+    "Von diesem Import angelegte Datensätze werden archiviert, Interessenten werden disqualifiziert.",
+  "import.undoConfirm.kept":
+    "Seit dem Import bearbeitete Datensätze bleiben erhalten und werden aufgelistet.",
+  "import.undoConfirm.updated":
+    "Von diesem Import aktualisierte Datensätze behalten ihre neuen Werte.",
+  "import.undoConfirm.tags":
+    "Neue Tags bleiben, weil sie in Gebrauch sein können.",
+  "import.guide.custom": "benutzerdefiniertes Feld",
+  "import.guide.required": "Für neue Zeile nötig",
+  "import.guide.example": "Beispiel: {example}",
+  "import.guide.whatGoesIn": "Was gehört in {column}",
+  "import.template.title": "Vorlagenvorschau",
+  "import.template.download": "Vorlage herunterladen",
+  "import.template.lead":
+    "Beim Herunterladen aus deinen Feldern erstellt. Die Bezeichnung eines benutzerdefinierten Felds ist seine Spaltenüberschrift.",
+  "import.template.files": "Dateien der Vorlage",
+  "import.template.col.file": "Datei",
+  "import.template.col.columns": "Spalten",
+  "import.template.legend":
+    "Zeige auf eine Spalte oder tippe sie an, um zu sehen, was hineingehört. ● markiert eine Spalte, die eine neue Zeile braucht.",
+  "import.template.rules": "So werden Zeilen zugeordnet",
+  "import.step.label": "Importschritte",
+  "import.step.hint":
+    "Jeder Schritt öffnet sich, sobald der vorige erledigt ist.",
+  "import.step.upload": "Hochladen",
+  "import.step.files": "Dateien",
+  "import.step.map": "Spalten zuordnen",
+  "import.step.test": "Testlauf",
+  "import.step.import": "Import",
+  "import.step.result": "Ergebnis",
+  "import.step.title.upload": "Datei hochladen",
+  "import.step.title.files": "Dateien prüfen",
+  "import.step.title.map": "Spalten zuordnen",
+  "import.step.title.test": "Testlauf",
+  "import.step.title.import": "Wird importiert",
+  "import.step.title.result": "Importergebnis",
+  "import.upload.reading": "Datei wird gelesen…",
+  "import.wizard.back": "Zurück",
+  "import.wizard.cancel": "Abbrechen",
+  "import.files.table": "Dateien im Upload",
+  "import.files.col.file": "Datei",
+  "import.files.col.rows": "Geprüfte Zeilen",
+  "import.files.col.type": "Importieren als",
+  "import.files.columns_one": "1 Spalte",
+  "import.files.columns_other": "{count} Spalten",
+  "import.files.skip": "Datei überspringen",
+  "import.files.typeFor": "Datensatztyp für {file}",
+  "import.files.ignoredTitle": "Ausgelassene Dateien",
+  "import.files.ignored.unknown_name": "der Name passt zu keinem Datensatztyp",
+  "import.files.ignored.not_yet_importable":
+    "dieser Datensatztyp kann noch nicht importiert werden",
+  "import.files.sourceName": "Quellname",
+  "import.files.sourceNameHint":
+    "Mit demselben Namen aktualisiert ein späterer Upload diese Datensätze, statt sie neu anzulegen.",
+  "import.files.noneTyped":
+    "Wähle für mindestens eine Datei einen Datensatztyp.",
+  "import.files.clash":
+    "{first} und {second} sind beide {type}. Jeder Typ nimmt eine Datei.",
+  "import.files.next_one": "Weiter: 1 Datei zuordnen",
+  "import.files.next_other": "Weiter: {count} Dateien zuordnen",
+  "import.map.tabs": "Zuzuordnende Dateien",
+  "import.map.lead":
+    "{file} als {type}. Eine Spalte auf „Nicht importieren“ wird ausgelassen.",
+  "import.map.link": "Verknüpfung",
+  "import.map.run": "Testlauf starten",
+  "import.map.running": "Testlauf läuft…",
+  "import.map.stageFailed": "Testlauf nicht gestartet",
+  "import.step.hintStaged":
+    "Ein Testlauf ist angelegt, Dateien und Zuordnung stehen fest. Korrigieren und neu hochladen fängt von vorn an.",
+  "import.progress.waiting": "Wartet",
+  "import.progress.running": "Läuft",
+  "import.progress.done": "Fertig",
+  "import.progress.rows": "{type}: {done} von {total} Zeilen",
+  "import.progress.leave":
+    "Du kannst diese Seite verlassen. Der Import läuft weiter, und unter „Letzte Importe“ siehst du, wann er fertig ist.",
+  "import.result.detail": "{created} angelegt · {updated} aktualisiert",
+  "import.result.skipped_one":
+    "1 Zeile wurde übersprungen. problems.csv nennt sie.",
+  "import.result.skipped_other":
+    "{count} Zeilen wurden übersprungen. problems.csv nennt jede.",
+  "import.result.undoing":
+    "Das Rückgängigmachen läuft. Hält es an, macht „Weiter rückgängig machen“ dort weiter.",
+  "import.result.problemsFile": "problems.csv",
+  "import.result.undo": "Diesen Import rückgängig machen",
+  "import.result.done": "Fertig",
+  "import.test.detail":
+    "{created} neu · {updated} aktualisiert · {unchanged} gleich",
+  "import.test.invalid_one":
+    "1 Zeile hat ungültige Werte und wird übersprungen",
+  "import.test.invalid_other":
+    "{count} Zeilen haben ungültige Werte und werden übersprungen",
+  "import.test.invalidBody":
+    "Korrigiere sie in der Datei und lade sie erneut hoch, um sie zu übernehmen.",
+  "import.test.anyway_one":
+    "Die 1 Zeile mit fehlerhafter Verknüpfung trotzdem importieren, ohne die Verknüpfung. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
+  "import.test.anyway_other":
+    "Die {count} Zeilen mit fehlerhaften Verknüpfungen trotzdem importieren, ohne diese Verknüpfungen. Das Ergebnis nennt jede ausgelassene Verknüpfung.",
+  "import.test.reupload": "Korrigieren und neu hochladen",
+  "import.test.import_one": "1 Zeile importieren",
+  "import.test.import_other": "{count} Zeilen importieren",
+  "import.test.importAnyway": "Trotzdem importieren",
+  "import.test.counts": "Zeilen je Datensatztyp",
+  "import.test.problems_one": "1 Problem",
+  "import.test.problems_other": "{count} Probleme",
+  "import.test.col.where": "Ort",
+  "import.test.col.problem": "Problem",
+  "import.test.col.value": "Wert",
+  "import.test.row": "Zeile {line}",
+  "import.test.rowColumn": "Zeile {line} · {column}",
+  "import.test.wholeFile": "Ganze Datei",
+  "import.problem.broken_link": "Fehlerhafte Verknüpfung",
+  "import.problem.dropped_link": "Verknüpfung ausgelassen",
+  "import.problem.invalid_value": "Ungültiger Wert",
+  "import.problem.unknown_owner": "Unbekannter Inhaber",
+  "import.problem.new_tag": "Neuer Tag",
+  "import.problem.duplicate": "Duplikat",
+  "import.problem.permission": "Keine Berechtigung",
+  "import.problem.unusable_row": "Unbrauchbare Zeile",
   "settings.dangerZone": "Gefahrenbereich",
   "settings.dangerZoneSub":
     "Nur für nicht produktive Installationen. Kann nicht rückgängig gemacht werden.",
@@ -5824,19 +5976,18 @@ export const de = {
     "Einträge ohne Unternehmen: Ein Dispatcher verteilt Arbeit an jedes Unternehmen und führt selbst keine aus. Deren Zahlen gehören zur Installation.",
   "jobs.dispatcherEmpty":
     "Keine Dispatcher-Einträge. Periodische Ticks legen sie neu an, eine leere Liste heißt also, dass gerade keiner geplant ist.",
-  "jobs.count.waiting": "Wartend: {count}",
-  "jobs.count.running": "Laufend: {count}",
-  "jobs.count.retrying": "In Wiederholung: {count}",
-  "jobs.count.dead": "Gestoppt: {count}",
-  "jobs.queue": "Warteschlange {queue}",
-  "jobs.waitedSeconds_one": "der älteste wartet seit {count} Sekunde",
-  "jobs.waitedSeconds_other": "der älteste wartet seit {count} Sekunden",
-  "jobs.waitedMinutes_one": "der älteste wartet seit {count} Minute",
-  "jobs.waitedMinutes_other": "der älteste wartet seit {count} Minuten",
-  "jobs.waitedHours_one": "der älteste wartet seit {count} Stunde",
-  "jobs.waitedHours_other": "der älteste wartet seit {count} Stunden",
-  "jobs.waitedDays_one": "der älteste wartet seit {count} Tag",
-  "jobs.waitedDays_other": "der älteste wartet seit {count} Tagen",
+  "jobs.col.job": "Job",
+  "jobs.col.queue": "Warteschlange",
+  "jobs.col.waiting": "Wartend",
+  "jobs.col.running": "Laufend",
+  "jobs.col.retrying": "Wird wiederholt",
+  "jobs.col.dead": "Gestoppt",
+  "jobs.col.oldestWait": "Längste Wartezeit",
+  "jobs.col.state": "Status",
+  "jobs.col.reason": "Grund",
+  "jobs.col.attempt": "Versuch",
+  "jobs.col.failedAt": "Fehlgeschlagen am",
+  "jobs.col.jobId": "Job-ID",
   "jobs.deadTitle_one": "{count} gestoppter Job in den letzten {hours} Stunden",
   "jobs.deadTitle_other":
     "{count} gestoppte Jobs in den letzten {hours} Stunden",
@@ -5852,9 +6003,9 @@ export const de = {
   "jobs.state.retryable": "Wird wiederholt",
   "jobs.state.discarded": "Verworfen",
   "jobs.state.cancelled": "Abgebrochen",
-  "jobs.attempt": "Versuch {attempt} von {max} · {when}",
+  "jobs.attempt": "Versuch {attempt} von {max}",
+  "jobs.attemptOf": "{attempt} von {max}",
   "jobs.remedy": "Zu tun: {remedy}",
-  "jobs.jobId": "Job {id}",
   "jobs.failingSince": "fehlerhaft seit {when}",
   "jobs.reasonVetted":
     "Gründe, Klassen und Abhilfen stammen aus der Job-Schicht, nie aus der Rohursache des Workers. Einen Fehler, den sie nicht formulieren kann, zeigt sie mit einem festen Ersatztext und ohne Klasse.",
@@ -5866,6 +6017,8 @@ export const de = {
   "providerHealth.adminOnly":
     "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "providerHealth.healthy": "Alle KI-Anbieter antworten.",
+  "providerHealth.noneConfigured":
+    "Es ist kein KI-Anbieter eingerichtet, also gibt es nichts zu prüfen.",
   "aiProviderHealth.label.degraded": "Eingeschränkt",
   "aiProviderHealth.label.down": "Nicht erreichbar",
   "aiProviderHealth.label.outOfCredit": "Kein Guthaben",
@@ -5907,6 +6060,10 @@ export const de = {
   "extIngest.refusal.participants": "Teilnehmende",
   "extIngest.refusal.size": "Größenbeschränkungen",
   "extIngest.refusalCount": "{refusal}: {count}",
+  "extIngest.col.connector": "Connector",
+  "extIngest.col.refused": "Abgewiesen",
+  "extIngest.col.reasons": "Gründe",
+  "extIngest.col.lastRefused": "Zuletzt abgewiesen",
   "extIngest.noDetail":
     "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, weil das abgewiesene Feld Inhalte des Absenders zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
   "extIngest.generatedAt": "Stand: {time}",
@@ -5951,44 +6108,41 @@ export const de = {
   "captureHealth.sweep.settledThreads": "Entschiedene Threads",
   "captureHealth.sweep.strandedContacts": "Nie erfragte Kontakte",
   "captureHealth.sweep.filedMeetings": "Zugeordnete Termine",
-  "captureHealth.keepingUp": "Aktuell",
   "captureHealth.warn.neverRun": "Nie gelaufen",
   "captureHealth.warn.failed": "Letzter Lauf fehlgeschlagen",
   "captureHealth.warn.skipped": "Letzter Lauf übersprungen",
   "captureHealth.warn.overdue": "Überfällig",
   "captureHealth.warn.backlog": "Rückstand offen",
+  "captureHealth.col.pass": "Lauf",
+  "captureHealth.col.lastSuccess": "Zuletzt erfolgreich",
+  "captureHealth.col.runsEvery": "Intervall",
+  "captureHealth.col.processed": "Verarbeitet",
+  "captureHealth.col.state": "Status",
+  "captureHealth.col.owner": "Postfachinhaber",
+  "captureHealth.col.contacts": "Wartende Kontakte",
+  "captureHealth.col.threads": "Wartende Threads",
+  "captureHealth.col.oldestWait": "Längste Wartezeit",
+  "captureHealth.never": "Noch nie",
+  "captureHealth.runsEvery": "Intervall: {interval}",
+  "captureHealth.processed_one": "{count} Eintrag verarbeitet",
+  "captureHealth.processed_other": "{count} Einträge verarbeitet",
+  "captureHealth.fact.pending": "Absender vor der Prüfung",
+  "captureHealth.fact.unsure": "Absender, bei denen die Prüfung unsicher ist",
+  "captureHealth.fact.exhausted": "Absender ohne verbleibende Versuche",
+  "captureHealth.oldestWaited": "längste Wartezeit: {age}",
+  "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
+  "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
+  "captureHealth.threadsWaiting_one": "{count} Thread wartet",
+  "captureHealth.threadsWaiting_other": "{count} Threads warten",
   "captureHealth.lastSucceeded": "zuletzt erfolgreich {when}",
   "captureHealth.neverSucceeded": "noch nie erfolgreich",
-  "captureHealth.everyMinutes_one": "Intervall: {count} Minute",
-  "captureHealth.everyMinutes_other": "Intervall: {count} Minuten",
-  "captureHealth.everyHours_one": "Intervall: {count} Stunde",
-  "captureHealth.everyHours_other": "Intervall: {count} Stunden",
-  "captureHealth.everyDays_one": "Intervall: {count} Tag",
-  "captureHealth.everyDays_other": "Intervall: {count} Tage",
   "captureHealth.mailboxes": "Postfächer",
   "captureHealth.noDetail":
     "Nur Zahlen. Welche Kontakte und Threads warten, sieht allein, wem das Postfach gehört.",
   "captureHealth.mailboxesEmpty": "In keinem Postfach wartet etwas.",
   "captureHealth.unnamedMailbox": "Postfach ohne Namen",
-  "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
-  "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
-  "captureHealth.threadsWaiting_one": "{count} Thread wartet",
-  "captureHealth.threadsWaiting_other": "{count} Threads warten",
-  "captureHealth.oldestContact": "Kontakte: {waited}",
-  "captureHealth.oldestThread": "Threads: {waited}",
   "captureHealth.installation": "Gesamte Installation",
-  "captureHealth.classifier": "Absenderprüfung",
-  "captureHealth.pending_one": "{count} ausstehend",
-  "captureHealth.pending_other": "{count} ausstehend",
-  "captureHealth.unsure_one": "{count} unsicher",
-  "captureHealth.unsure_other": "{count} unsicher",
-  "captureHealth.exhausted_one": "{count} Absender ohne weitere Versuche",
-  "captureHealth.exhausted_other": "{count} Absender ohne weitere Versuche",
-  "captureHealth.oldestPending": "ausstehend: {waited}",
   "captureHealth.heldMeetings": "Zurückgehaltene Termine",
-  "captureHealth.meetingsHeld_one": "{count} Termin zurückgehalten",
-  "captureHealth.meetingsHeld_other": "{count} Termine zurückgehalten",
-  "captureHealth.oldestMeeting": "zurückgehalten: {waited}",
   "captureHealth.heldMeetingsSub":
     "Zugeordnete Termine, die das Team noch nicht sieht. Der nächtliche Lauf gibt sie frei.",
   "captureHealth.generatedAt": "Stand: {time}",
@@ -6429,22 +6583,36 @@ export const de = {
   "stage.removeTitle": "Diese Phase entfernen?",
   "stage.removeBody":
     "„{name}“ wird aus der Pipeline entfernt, spätere Phasen rücken auf. Frühere Phasenwechsel bleiben lesbar. Verschiebe die Deals dieser Phase, bevor du sie entfernst.",
-  "stage.openGroup": "Offene Phasen",
-  "stage.closingGroup": "Abschlussphasen",
-  "stage.closingNote":
-    "Jeder Deal endet in einer davon, deshalb bleiben sie nach den offenen Phasen.",
   "stage.closingMissing":
     "Noch keine Phase für gewonnene oder verlorene Deals. Lege eine neue Phase dieses Typs an.",
   "stage.orderHint":
     "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
-  "stage.handle": "{name} verschieben, Phase {position} von {total}",
-  "stage.moved": "{name} ist jetzt Phase {position} von {total}",
+  "stage.handle": "{name} verschieben, Schritt {position} von {total}",
+  "stage.moved": "{name} ist jetzt Schritt {position} von {total}",
   "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
   "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
   "stage.noneOpen": "Noch keine offenen Phasen",
   "stage.noneOpenNote":
     "Lege die erste Phase eines Deals an, vor den Abschlussphasen.",
   "stage.added": "Phase hinzugefügt",
+  "stage.group": "Phasen",
+  "stage.orderHeader": "Reihenfolge",
+  "stage.colStep": "Schritt",
+  "stage.colStage": "Phase",
+  "stage.fixedLast": "Bleibt am Ende",
+  "stage.endsDeal": "Beendet den Deal",
+  "stage.criteriaRequired_one": "{count} erforderlich",
+  "stage.criteriaRequired_other": "{count} erforderlich",
+  "stage.criteriaOptional_one": "{count} optional",
+  "stage.criteriaOptional_other": "{count} optional",
+  "stage.criteriaNone": "Keine",
+  "stage.criteriaCount_one": "{count} Kriterium",
+  "stage.criteriaCount_other": "{count} Kriterien",
+  "stage.criteriaNoneFolded": "Keine Kriterien",
+  "stage.criteriaDetail": "Kriteriendetails",
+  "stage.criteriaFor": "Austrittskriterien für {name}",
+  "stage.occupied_one": "{count} Deal ist in dieser Phase",
+  "stage.occupied_other": "{count} Deals sind in dieser Phase",
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
@@ -6456,8 +6624,6 @@ export const de = {
   "stage.criteria.unreadable":
     "Lade die Seite neu, bevor du sie änderst; die Liste ist möglicherweise unvollständig.",
   "stage.criteria.none": "Noch keine Austrittskriterien.",
-  "stage.criteria.terminal":
-    "Eine Phase vom Typ „Gewonnen“ oder „Verloren“ ist endgültig und hat daher keine Austrittskriterien.",
   "stage.criteria.add": "Kriterium hinzufügen",
   "stage.criteria.key": "Schlüssel",
   "stage.criteria.keyHint":
@@ -6467,7 +6633,8 @@ export const de = {
   "stage.criteria.required": "Erforderlich",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hinweis",
-  "stage.criteria.edit": "Kriterium bearbeiten",
+  "stage.criteria.editOf": "{name} bearbeiten",
+  "stage.criteria.removeOf": "{name} entfernen",
   "stage.criteria.remove": "Entfernen",
   "stage.criteria.removeTitle": "Dieses Kriterium entfernen?",
   "stage.criteria.removeBody":
@@ -6804,7 +6971,6 @@ export const de = {
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
-  "extUnits.open": "Öffnen",
   "extUnits.openNamed": "Seite {name} öffnen",
   "extUnits.user.title": "Deine weiteren Konten",
   "extUnits.user.sub":
@@ -6848,7 +7014,6 @@ export const de = {
   "heldThreads.colThread": "Thread",
   "heldThreads.colWhy": "Grund",
   "heldThreads.colWhen": "Eingegangen",
-  "heldThreads.colActions": "Aktionen",
   "heldThreads.release": "Mit dem Team teilen",
   "heldThreads.released": "Mit dem Team geteilt",
   "heldThreads.noSubject": "Erste Nachricht gelöscht",
@@ -6874,23 +7039,23 @@ export const de = {
   "heldThreads.kind.personal": "Privat",
   "heldThreads.kind.securityIncident": "Sicherheitsvorfall",
   "heldThreads.kind.explicitlyConfidential": "Als vertraulich markiert",
+  "heldThreads.kind.unsure": "Unklar",
+  "heldThreads.kind.other": "Anderer Grund",
   "senders.title": "Absender",
   "senders.sub":
     "Die Entscheidung zu jeder Adresse, die dein Postfach eingebracht hat, und deine eigene Antwort, sofern gegeben. Nur du siehst diese Liste.",
-  "senders.emptyTitle": "Noch keine Absender",
   "senders.emptyBody":
     "Sobald dein Postfach E-Mails einbringt, erscheint hier jeder Absender mit seinem Ergebnis.",
   "senders.colSender": "Absender",
   "senders.colDecision": "Entscheidung",
   "senders.colRecord": "Kontakt",
-  "senders.colActions": "Aktionen",
-  "senders.recordYes": "Ja",
-  "senders.recordNo": "Nein",
-  "senders.byYou": "Deine Entscheidung",
+  "senders.recordYes": "Vorhanden",
+  "senders.recordNo": "Kein Kontakt",
+  "senders.byYou": "Von dir entschieden",
   "senders.deletesOn": "Älteste Nachricht am {date} gelöscht",
-  "senders.markBusiness": "Geschäftlich",
+  "senders.markBusiness": "Als geschäftlich markieren",
   "senders.keepOut": "Ausschließen",
-  "senders.withdraw": "Rückgängig machen",
+  "senders.withdraw": "Meine Antwort zurückziehen",
   "senders.keepOutTitle": "Diesen Absender dauerhaft ausschließen?",
   "senders.keepOutBody":
     "Es wird kein Kontakt angelegt, und E-Mails, die dieser Absender bereits in dein Postfach gebracht hat, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",
@@ -6906,12 +7071,16 @@ export const de = {
   "senders.kind.business": "Geschäftlich",
   "senders.kind.keptOut": "Ausgeschlossen",
   "senders.kind.undecided": "Nicht entschieden",
+  "senders.kind.other": "Sonstiges",
   "senders.waiting.title": "Warten auf eine Entscheidung",
   "senders.waiting.sub":
     "Kontakte aus deinen Mails, die nur du siehst, bis über ihren Absender entschieden ist.",
   "senders.waiting.colContact": "Kontakt",
-  "senders.waiting.colAddresses": "Adressen",
   "senders.waiting.colSince": "Wartet seit",
+  "senders.waiting.moreAddresses_one": "+{count} weitere",
+  "senders.waiting.moreAddresses_other": "+{count} weitere",
+  "senders.waiting.openNamed": "{name} öffnen",
+  "senders.waiting.openUnnamed": "Kontakt öffnen",
   "mailSharing.title": "Teilen von E-Mails",
   "mailSharing.sub":
     "Erfasste E-Mails sind für alle Teammitglieder lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet, damit die Arbeit an Deals geteilt werden kann.",
@@ -6937,9 +7106,7 @@ export const de = {
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
   "mailSharing.save": "Speichern",
   "connectors.originLabel": "Adresse in versendeten Links",
-  "connectors.originReachable": "Erreichbar",
   "connectors.originUnreachable": "Nicht erreichbar",
-  "connectors.originUnchecked": "Nicht geprüft",
   "connectors.sub":
     "Postfächer und Kalender, aus denen das CRM Daten erfasst. Beim Trennen bleiben die bereits erfassten Datensätze erhalten.",
   "connectors.loading": "Connectors werden geladen…",
@@ -6968,6 +7135,7 @@ export const de = {
   "connectors.notConfigured":
     "Die E-Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
+  "connectors.reconnectNamed": "{name} neu verbinden",
   "connectors.disconnect": "Trennen",
   "connectors.signatureEnrich.label": "Kontaktdaten aus diesem Postfach lesen",
   "connectors.contextTag.label": "Tag für angelegte Kontakte",
@@ -7073,7 +7241,6 @@ export const de = {
   "connectors.addOpen": "Connector hinzufügen",
   "connectors.connect": "Verbinden",
   "connectors.connectProvider": "{provider} verbinden",
-  "connectors.rosterLabel": "Aktive Connectors",
   "connectors.addGmailBrings":
     "In Gmail gesendete und empfangene E-Mails. Margince kann auch darüber senden.",
   "connectors.addGcalBrings":
@@ -7122,7 +7289,6 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Nachrichtenkanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
-  "connectors.telegramRosterLabel": "Verbundener Bot",
   "connectors.telegramEmpty": "Kein Bot verbunden.",
   "connectors.telegramReadOnly":
     "Nur Admins und Operations können den Bot verbinden oder ändern.",
@@ -7139,6 +7305,7 @@ export const de = {
   "connectors.telegramReplaceCta": "Token ersetzen",
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
+  "connectors.openNamed": "{name} öffnen",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
@@ -7196,13 +7363,10 @@ export const de = {
   "blockedDomains.none":
     "Noch keine abgelehnten Domains. Ergebnisse zu Massenversand und manuelle Ablehnungen erscheinen hier.",
   "blockedDomains.unit": "Domain-Entscheidungen",
-  "blockedDomains.openCompany": "Unternehmen öffnen",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Entscheidung",
   "blockedDomains.col.source": "Entschieden von",
-  "blockedDomains.col.reason": "Begründung",
   "blockedDomains.col.decided": "Zeitpunkt",
-  "blockedDomains.col.revise": "Ändern",
   "blockedDomains.source.verdict": "Modellergebnis",
   "blockedDomains.source.heuristic": "Heuristik",
   "blockedDomains.source.human": "Mensch",
@@ -7212,9 +7376,21 @@ export const de = {
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
   "blockedDomains.rowAdmit": "Zulassen",
   "blockedDomains.rowRefuse": "Ablehnen",
-  "blockedDomains.rowReopen": "Wieder öffnen",
-  "blockedDomains.reopened": "{domain} wieder geöffnet",
-  "blockedDomains.reopenFailed": "Domain nicht wieder geöffnet",
+  "blockedDomains.rowReopen": "Erneut prüfen",
+  "blockedDomains.reopened": "{domain} wird erneut geprüft",
+  "blockedDomains.reopenFailed": "Domain nicht erneut geprüft",
+  "blockedDomains.reason.companyCreated":
+    "Ein Teammitglied hat ein Unternehmen auf dieser Domain angelegt",
+  "blockedDomains.reason.keptAsCompany":
+    "Ein Teammitglied hat die offene Frage beantwortet und die Domain als Unternehmen behalten",
+  "blockedDomains.reason.bulkSender":
+    "Mails von dieser Domain wurden als Massen- oder automatische Mails eingestuft",
+  "blockedDomains.reason.bulkNewsletter":
+    "Mails von dieser Domain wurden als Newsletter eingestuft",
+  "blockedDomains.reason.bulkTransactional":
+    "Mails von dieser Domain wurden als automatische Mails eingestuft",
+  "blockedDomains.reason.bulkSpam":
+    "Mails von dieser Domain wurden als Spam eingestuft",
 
   "ob.s4.googleFailed": "Google-Verbindung nicht abgeschlossen",
   "ob.s4.imapHost": "IMAP-Host",
@@ -8640,32 +8816,40 @@ export const de = {
     "Dokumentensammlungen, die dieses Unternehmen befragen kann. Antworten stützen sich nur auf abgelegte Dokumente, und Fragen, die diese nicht abdecken, werden abgelehnt.",
   "knowledge.withheld":
     "Du hast keinen Zugriff auf die Liste der Dokumentensammlungen.",
-  "knowledge.coverage":
-    "{documents} Dokumente · {embedded} von {total} Textstellen durchsuchbar",
+  "knowledge.documentCount_one": "{count} Dokument",
+  "knowledge.documentCount_other": "{count} Dokumente",
+  "knowledge.passages_one": "{embedded} von {count} Textstelle durchsuchbar",
+  "knowledge.passages_other": "{embedded} von {count} Textstellen durchsuchbar",
+  "knowledge.notSearchable": "Nicht durchsuchbar",
+  "knowledge.indexing": "Wird indexiert",
+  "knowledge.reason.noEmbeddingModel":
+    "Es ist kein Embedding-Modell eingerichtet, daher ist keine Textstelle durchsuchbar.",
+  "knowledge.reason.indexing": "Die Textstellen werden noch indexiert.",
+  "knowledge.documentsIn": "Dokumente in {set}",
+  "knowledge.col.name": "Name",
+  "knowledge.col.passages": "Textstellen",
+  "knowledge.col.size": "Größe",
+  "knowledge.col.added": "Hinzugefügt",
+  "knowledge.col.status": "Status",
+  "knowledge.col.actions": "Aktionen",
+  "knowledge.passageCount_one": "{count} Textstelle",
+  "knowledge.passageCount_other": "{count} Textstellen",
+  "knowledge.addedOn": "hinzugefügt am {date}",
   "knowledge.reindexingTitle": "Sammlung wird neu indexiert",
   "knowledge.reindexing":
     "Eine Änderung an der Textindexierung hat die Neuindexierung gestartet. Bis sie abgeschlossen ist, melden Fragen „nicht bereit“. Es sind keine Daten verloren gegangen.",
-  "knowledge.showDocuments": "Dokumente anzeigen",
-  "knowledge.hideDocuments": "Dokumente ausblenden",
-  "knowledge.documents": "Dokumente",
   "knowledge.noDocuments": "Noch keine Dokumente.",
   "knowledge.archive": "Sammlung archivieren",
-  "knowledge.archiveFailed": "Sammlung nicht archiviert",
-  "knowledge.archiveConfirm.title": "Diese Dokumentensammlung archivieren?",
+  "knowledge.archiveConfirm.title": "{name} archivieren?",
   "knowledge.archiveConfirm.body":
     "Die Sammlung und ihre Dokumente sind nicht mehr durchsuchbar. Es wird nichts gelöscht.",
   "knowledge.deleteDocument": "Löschen",
-  "knowledge.deleteFailed":
-    "Das Dokument wurde nicht gelöscht. Versuche es erneut.",
-  "knowledge.deleteConfirm.title": "Dieses Dokument löschen?",
+  "knowledge.deleteConfirm.title": "{name} löschen?",
   "knowledge.deleteConfirm.body":
     "Die Datei, ihr extrahierter Text und ihr Suchindex werden endgültig gelöscht.",
   "knowledge.ingest.queued": "Eingereiht",
   "knowledge.ingest.running": "Wird importiert…",
-  "knowledge.ingest.done": "Importiert",
   "knowledge.ingest.failed": "Konnte nicht gelesen werden",
-  "knowledge.ingestDetailTitle":
-    "Warum diese Datei nicht gelesen werden konnte",
   "knowledge.upload.label": "Dokument hinzufügen",
   "knowledge.upload.hint":
     "Reiner Text, Markdown, CSV oder JSON. PDF- und Word-Dateien werden nicht unterstützt und abgelehnt.",
@@ -8705,8 +8889,10 @@ export const de = {
     "Gezählt ab dem Zeitpunkt, an dem ein Connector eine Nachricht an dieses CRM übergibt. Was ein Connector auf seiner eigenen Seite gefiltert hat, etwa eine Chat-Reaktion oder eine E-Mail-Regel, ist nicht enthalten. Umfasst nur Nachrichten. Die Lead-Erfassung wird hier nicht angezeigt.",
   "captureActivity.filtered":
     "Angezeigt: {shown} von {total} mit dem Ergebnis „{outcome}“ in diesem Zeitraum.",
-  "captureActivity.openTrace":
-    "Alle Verarbeitungsschritte dieser Nachricht anzeigen",
+  "captureActivity.openTraceFrom":
+    "Alle Verarbeitungsschritte der Nachricht von {sender} vom {at} anzeigen",
+  "captureActivity.openTraceAt":
+    "Alle Verarbeitungsschritte der Nachricht vom {at} anzeigen",
   "captureActivity.emptyFiltered":
     "Keine geladene Zeile passt. Lade mehr, um den Rest des Zeitraums zu sehen.",
   "captureActivity.loadMore": "Mehr laden",
@@ -8722,41 +8908,46 @@ export const de = {
   "captureActivity.outcome.fault": "Ableitung fehlgeschlagen",
   "captureActivity.funnel.captured": "Erfasst",
   "captureActivity.funnel.internal": "Intern",
-  "captureActivity.funnel.suppressed": "Kein Kontakt",
+  "captureActivity.funnel.suppressed": "Kein Kontakt angelegt",
   "captureActivity.funnel.deferred": "Wartet auf Prüfung",
   "captureActivity.funnel.fault": "Fehlgeschlagen",
   "captureActivity.reason.internal_only":
-    "alle Beteiligten waren auf den Domains deines Unternehmens",
+    "Alle Beteiligten waren auf den Domains deines Unternehmens",
   "captureActivity.reason.deferral_capped":
-    "das Limit für offene Fragen war erreicht, daher kommt kein Ergebnis",
+    "Das Limit für offene Fragen war erreicht, daher kommt kein Ergebnis",
   "captureActivity.reason.noise_prior":
-    "eine frühere Prüfung hat diesen Absender als Rauschen eingestuft, daher wird die Nachricht archiviert",
+    "Eine frühere Prüfung hat diesen Absender als Rauschen eingestuft, daher wird die Nachricht archiviert",
   "captureActivity.reason.decided_prior":
-    "über diesen Absender wurde bereits entschieden, daher wird kein Kontakt angelegt",
+    "Über diesen Absender wurde bereits entschieden, daher wird kein Kontakt angelegt",
   "captureActivity.reason.no_granting_human":
-    "die Verbindung nennt kein Nutzerkonto, in dessen Namen gehandelt werden kann",
+    "Die Verbindung nennt kein Nutzerkonto, in dessen Namen gehandelt werden kann",
   "captureActivity.reason.invisible_incumbent":
-    "sie passte zu einem Datensatz, den du nicht sehen kannst",
+    "Die Nachricht passte zu einem Datensatz, den du nicht sehen kannst",
   "captureActivity.reason.derivation_failed":
-    "der Kontaktschritt ist fehlgeschlagen, die Nachricht selbst ist nicht betroffen",
+    "Der Kontaktschritt ist fehlgeschlagen, die Nachricht selbst ist nicht betroffen",
   "captureActivity.reason.no_counterparty":
-    "kein Absender, der erfasst werden kann",
+    "Kein Absender, der erfasst werden kann",
   "captureActivity.reason.role_mailbox":
-    "ein Sammelpostfach, keine Person: gespeichert, aber kein Kontakt angelegt",
+    "Ein Sammelpostfach, keine Person: gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.private_thread":
-    "ein privater Thread: für dich gespeichert, aber kein Kontakt angelegt",
+    "Ein privater Thread: für dich gespeichert, aber kein Kontakt angelegt",
   "captureActivity.reason.transactional_infra":
-    "der Absender ist E-Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
+    "Der Absender ist E-Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
   "captureActivity.reason.transactional_prefix":
-    "der Absender wirkt wie ein automatischer Versand, nicht wie eine Person",
+    "Der Absender wirkt wie ein automatischer Versand, nicht wie eine Person",
   "captureActivity.outcome.deferred_capped": "Nicht eingereiht",
   "captureActivity.outcome.deferred_sent": "Zur Absenderprüfung gesendet",
-  "captureActivity.resolution.pending": "wartet noch",
-  "captureActivity.resolution.unsure": "zur Prüfung weitergeleitet",
-  "captureActivity.resolution.real": "als echte Person eingestuft",
-  "captureActivity.resolution.noise": "als Rauschen eingestuft",
-  "captureActivity.resolution.rejected": "von einer Person abgelehnt",
-  "captureActivity.resolution.suppressed": "unterdrückt",
+  "captureActivity.resolution.pending": "Wartet noch",
+  "captureActivity.resolution.unsure": "Zur Prüfung weitergeleitet",
+  "captureActivity.resolution.real": "Als echte Person eingestuft",
+  "captureActivity.resolution.noise": "Als Rauschen eingestuft",
+  "captureActivity.resolution.rejected": "Von einer Person abgelehnt",
+  "captureActivity.resolution.suppressed": "Unterdrückt",
+  "captureActivity.windowTitle": "Letzte 24 Stunden",
+  "captureActivity.col.when": "Zeitpunkt",
+  "captureActivity.col.message": "Absender und Betreff",
+  "captureActivity.col.outcome": "Ergebnis",
+  "captureActivity.col.via": "Über",
   "pipeline.title": "Wie diese Nachricht verarbeitet wurde",
   "pipeline.sub":
     "Jeder Erfassungsschritt, in der Reihenfolge, in der diese Nachricht ihn durchlaufen hat.",
@@ -8965,7 +9156,6 @@ export const de = {
   "settings.voice.emptyBody":
     "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Das dauert etwa eine Minute.",
   "settings.voice.status.collecting": "Wird gesammelt",
-  "settings.voice.status.ready": "Bereit",
   "settings.voice.status.stale": "Neuaufbau nötig",
   "settings.voice.bandThin": "dünn",
   "settings.voice.bandGood": "gut",
@@ -8988,7 +9178,7 @@ export const de = {
   "settings.voice.register.spoken": "gesprochen",
   "settings.voice.register.general": "allgemein",
   "settings.voice.bandDrop":
-    "Durch das Entfernen fällt der Schreibstil von {from} auf {to}. Wähle zum Bestätigen erneut „Entfernen“.",
+    "Ohne diese Probe sinkt die Stimme von {from} auf {to}.",
   "voice.insights.avoidLabel": "Was dein Schreibstil vermeidet",
   "voice.insights.voiceScore": "Stilübereinstimmung {pct} %",
   "voice.insights.next.addTranscript":
@@ -9003,14 +9193,13 @@ export const de = {
   "voice.status.candidate": "Wartet auf Pr\u00fcfung",
   "voice.status.superseded": "Abgel\u00f6st",
   "voice.status.rejected": "Abgelehnt",
-  "voice.classification.routine": "routinem\u00e4\u00dfige \u00c4nderung",
-  "voice.classification.material": "wesentliche \u00c4nderung",
-  "voice.outcome.autoActivated": "automatisch aktiviert",
-  "voice.outcome.reviewRequired": "Pr\u00fcfung erforderlich",
-  "voice.outcome.manuallyActivated": "von dir aktiviert",
-  "voice.outcome.rejected": "abgelehnt",
-  "voice.outcome.rollback": "wiederhergestellt",
-  "voice.history.versionRow": "v{n} \u00b7",
+  "voice.classification.routine": "Routine",
+  "voice.classification.material": "Wesentlich",
+  "voice.outcome.autoActivated": "Automatisch aktiviert",
+  "voice.outcome.reviewRequired": "Prüfung erforderlich",
+  "voice.outcome.manuallyActivated": "Von dir aktiviert",
+  "voice.outcome.rejected": "Abgelehnt",
+  "voice.outcome.rollback": "Wiederhergestellt",
   "voice.history.loadMore": "\u00c4ltere Eintr\u00e4ge anzeigen",
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
@@ -9050,10 +9239,53 @@ export const de = {
   "voice.history.deltaRow": "v{from} \u2192 v{to}",
   "voice.history.learning":
     "Lernt fortlaufend: erstellte Entwürfe {drafted}, vor dem Senden bearbeitet {edited}, abgelehnt {rejected}.",
-  "voice.history.rollback": "Version {n} wiederherstellen",
+  "voice.history.rollback": "Auf Version {n} zurücksetzen",
+  "voice.history.rollbackConfirm.title": "Auf Version {n} zurücksetzen?",
+  "voice.history.rollbackConfirm.body":
+    "Version {n} wird wieder deine aktive Stimme. Die aktuelle Version bleibt in dieser Liste.",
+  "voice.history.version": "Version {n}",
+  "voice.history.col.version": "Version",
+  "voice.history.col.status": "Status",
+  "voice.history.col.created": "Erstellt",
+  "voice.history.col.reason": "Anlass",
+  "voice.history.col.samples": "Proben",
+  "voice.history.col.actions": "Aktionen",
+  "voice.history.col.change": "Änderung",
+  "voice.history.col.kind": "Art",
+  "voice.history.col.outcome": "Ergebnis",
+  "voice.history.col.wordsAdded": "Neue Wörter",
+  "voice.history.col.date": "Datum",
+  "voice.history.sampleCount_one": "{count} Probe",
+  "voice.history.sampleCount_other": "{count} Proben",
+  "voice.history.wordsAdded_one": "{count} Wort neu",
+  "voice.history.wordsAdded_other": "{count} Wörter neu",
+  "voice.reason.onboarding": "Erster Aufbau",
+  "voice.reason.manual": "Von Hand aufgebaut",
+  "voice.reason.automatic": "Automatisch",
+  "voice.reason.rollback": "Zurückgesetzt",
   "settings.voice.corpusEmpty": "Noch keine Proben.",
-  "settings.voice.excluded": "ausgeschlossen",
+  "settings.voice.excluded": "Ausgeschlossen",
   "settings.voice.removeSource": "Probe entfernen",
+  "settings.voice.removeConfirm.title": "{name} entfernen?",
+  "settings.voice.removeConfirm.body":
+    "Der nächste Aufbau lernt nicht mehr aus dieser Probe.",
+  "settings.voice.col.sample": "Probe",
+  "settings.voice.col.register": "Register",
+  "settings.voice.col.words": "Wörter",
+  "settings.voice.col.added": "Hinzugefügt",
+  "settings.voice.col.state": "Status",
+  "settings.voice.col.actions": "Aktionen",
+  "settings.voice.wordCount_one": "{count} Wort",
+  "settings.voice.wordCount_other": "{count} Wörter",
+  "settings.voice.kind.email": "E-Mail",
+  "settings.voice.kind.linkedin": "LinkedIn-Beitrag",
+  "settings.voice.kind.proposal": "Angebot",
+  "settings.voice.kind.transcript": "Transkript",
+  "settings.voice.kind.document": "Dokument",
+  "settings.voice.kind.other": "Sonstiges",
+  "settings.voice.exclusion.ownerExcluded": "Aus deiner Stimme herausgenommen",
+  "settings.voice.exclusion.ownerRemoved": "Entfernt",
+  "settings.voice.exclusion.corpusCleared": "Beim Leeren der Proben entfernt",
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
@@ -10134,7 +10366,6 @@ export const de = {
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails lesen",
   "captureSettings.signatureEnrich.help":
     "Wenn eingeschaltet, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Position, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen; eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens; ein Postfach mit eigener Einstellung behält diese.",
-  "captureSettings.removeFailed": "Ausschluss nicht entfernt",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
   "captureReading.title": "Website-Lesevorgänge",
@@ -10177,6 +10408,8 @@ export const de = {
   "operations.adminOnly": "Nur Admins und Operations können das ändern.",
   "operations.updateFailed": "Einstellung nicht geändert",
   "operations.refusal": "Gib eine ganze Zahl im angegebenen Bereich ein.",
+  "operations.inWords": "= {interval}",
+  "operations.off": "Aus",
   "operations.agentRunner.label": "Agentenläufe (Sekunden)",
   "operations.agentRunner.help":
     "Wie oft geplante Agenten auf einen fälligen Lauf geprüft werden, 10 bis 3.600.",
@@ -10264,9 +10497,14 @@ export const de = {
   "ownerIdentities.kind.domain": "Eine ganze Domain",
   "ownerIdentities.valueLabel": "Adresse oder Domain",
   "ownerIdentities.addressPlaceholder": "du@beispiel.example",
-  "ownerIdentities.removeFailed": "Adresse nicht entfernt",
   "ownerIdentities.addFailed": "Adresse nicht hinzugefügt",
   "ownerIdentities.domainPlaceholder": "beispiel.de",
+  "ownerIdentities.removedToast": "Adresse entfernt",
+  "ownerIdentities.restoredToast": "Adresse wiederhergestellt",
+  "ownerIdentities.removeLearnedTitle": "{value} entfernen?",
+  "ownerIdentities.removeLearnedBody":
+    "Margince hat diese Adresse in deinen E-Mails gefunden. Fügst du sie später wieder hinzu, wird sie als von dir eingegeben gespeichert.",
+  "ownerIdentities.removeConfirm": "Entfernen",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -10277,7 +10515,6 @@ export const de = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, Ordner oder Postfach",
   "captureExclusions.scopeLabel": "Gilt für",
-  "capturePurge.open": "Bereits erfasste Post von {value} löschen",
   "capturePurge.title": "Bereits erfasste Post von {value} löschen?",
   "capturePurge.intro":
     "Das vernichtet die Nachrichten, auf die diese Regel bereits zugetroffen hat: Text, Original, Anhänge und alles daraus Abgeleitete. Das lässt sich nicht rückgängig machen. Sieh dir zuerst an, was wegfiele.",
@@ -10324,12 +10561,13 @@ export const de = {
     "{count} Nachricht bleibt erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
   "capturePurge.keptRequest_other":
     "{count} Nachrichten bleiben erhalten: eine datenschutzrechtliche Anfrage wird noch bearbeitet und braucht sie.",
+  "capturePurge.openShort": "Passende Mails löschen",
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
   "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
   "captureExclusions.containersPartialBody":
-    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Gib seinen Namen unten ein, oder schließe Absender per Adresse oder Domain aus.",
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Schließe seine Absender stattdessen per Adresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":
@@ -10340,7 +10578,7 @@ export const de = {
   "captureExclusions.placeholder.domain": "beispiel.example",
   "captureExclusions.add": "Ausschließen",
   "captureExclusions.addOpen": "Neuer Ausschluss",
-  "captureExclusions.remove": "Erfassung von {value} fortsetzen",
+  "captureExclusions.removeRule": "Regel entfernen",
   "ownDomains.title": "Eigene E-Mail-Domains",
   "ownDomains.sub":
     "Domains, die zu diesem Unternehmen gehören. Nachrichten zwischen Teammitgliedern werden für niemanden gespeichert, auch nicht für dich.",
@@ -10351,16 +10589,15 @@ export const de = {
   "ownDomains.openCompany": "Unternehmensprofil öffnen",
   "ownDomains.empty":
     "Keine weiteren Domains eingetragen. Füge eine hinzu, wenn dein Unternehmen auch von einer anderen Domain sendet.",
-  "ownDomains.confirmed": "Bestätigt",
-  "ownDomains.candidate":
-    "In einem verbundenen Postfach gesehen, nicht bestätigt",
+  "ownDomains.candidate": "Vorschlag",
   "ownDomains.add": "Hinzufügen",
   "ownDomains.addOpen": "Domain hinzufügen",
   "ownDomains.addLabel": "Eigene Domain hinzufügen",
   "ownDomains.placeholder": "beispiel.example",
-  "ownDomains.removeFailed": "Domain nicht entfernt",
   "ownDomains.addFailed": "Domain nicht hinzugefügt",
   "ownDomains.remove": "{domain} entfernen",
+  "ownDomains.candidateNote":
+    "In einem verbundenen Postfach gesehen. Nicht bestätigt, daher stoppt sie die Erfassung nicht.",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
@@ -11225,7 +11462,7 @@ export const de = {
   "filters.keepViewHint":
     "Nur du findest sie. Bei jedem Öffnen wird neu gezählt.",
   "filters.keepListHint":
-    "Wird alle 15 Minuten geprüft und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
+    "Wird alle 15 Minuten geprüft, bei sehr vielen Listen seltener, und hält fest, wer hinzukommt und wer geht. Wähle, wer sie finden kann.",
   "filters.purpose": "Zweck (optional)",
   "filters.viewSaved": "Ansicht gespeichert",
   "filters.listCreated": "Live-Liste „{name}“ erstellt",
@@ -11413,11 +11650,11 @@ export const de = {
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
-  "lists.head.facts":
-    "{type} \u00b7 {visible} f\u00fcr dich sichtbar \u00b7 wer sie finden kann: {sharing} \u00b7 verantwortlich: {steward}",
-  "lists.filterLine": "Filter: {records}, für die gilt: {sentence}",
-  "lists.head.exported_one": "{count}-mal exportiert, zuletzt am {when}",
-  "lists.head.exported_other": "{count}-mal exportiert, zuletzt am {when}",
+  "lists.filterLine": "Filter: {sentence}",
+  "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
+  "lists.head.exported_other": "{count}-mal, zuletzt am {when}",
+  "lists.fact.steward": "Verantwortlich",
+  "lists.fact.exported": "Exportiert",
   "lists.archived.title": "Diese Liste ist archiviert",
   "lists.archived.body":
     "Bis zur Wiederherstellung ist die Liste schreibgesch\u00fctzt. Mitglieder und Verlauf bleiben erhalten.",
@@ -11505,10 +11742,10 @@ export const de = {
   "lists.pulse.chip": "+{entered} / −{left}",
   "lists.pulse.label":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
-  "lists.head.lastChecked": "Zuletzt geprüft {when}",
-  "lists.head.notChecked":
+  "lists.history.lastChecked": "Zuletzt geprüft {when}",
+  "lists.history.notChecked":
     "Noch nicht geprüft. Wer hinzukommt und wegfällt, wird ab der ersten Prüfung festgehalten.",
-  "lists.head.tooLarge":
+  "lists.history.tooLarge":
     "Zuletzt geprüft {when}. Die Liste enthält zu viele Datensätze, um festzuhalten, wer hinzukam und wegfiel.",
   "lists.head.pulse":
     "Seit deinem letzten Besuch: {entered} hinzugekommen, {left} weggefallen",
@@ -11517,12 +11754,13 @@ export const de = {
   "lists.members.addedBy": "Hinzugef\u00fcgt von",
   "lists.members.addedOn": "Hinzugef\u00fcgt am",
   "lists.members.note": "Notiz",
-  "lists.history.entered": "Hinzugekommen, Stand {when}",
-  "lists.history.left": "Weggefallen, Stand {when}",
+  "lists.history.entered": "Hinzugekommen",
+  "lists.history.left": "Weggefallen",
   "lists.history.reason.filterChanged": "nachdem der Filter geändert wurde",
   "lists.history.checker": "Die 15-Minuten-Prüfung",
   "lists.history.liveNote":
-    "Die Prüfung läuft alle 15 Minuten und nimmt sich zuerst die Listen vor, die am längsten nicht geprüft wurden. Bei sehr vielen Listen kann eine Liste daher länger warten; „Zuletzt geprüft“ zeigt, wann es war. Wer hinzukam oder wegfiel, wird zum Zeitpunkt der Prüfung festgehalten, die die Änderung bemerkt hat. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+    "Listen werden alle 15 Minuten geprüft, bei sehr vielen Listen seltener. Ein Datensatz, der zwischen zwei Prüfungen hinzukommt und wieder wegfällt, wird nicht festgehalten.",
+  "lists.history.howChecks": "Prüfablauf anzeigen",
   "lists.editFilter": "Filter bearbeiten",
   "lists.filterCannotOpen":
     "Der Filter dieser Liste lässt sich hier nicht öffnen.",
@@ -11941,15 +12179,20 @@ export const de = {
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
   "worklist.disposition.snoozeFor": "Dauer der Zurückstellung",
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
+  "worklist.disposition.verb.handled": "Erledigt",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",
+  "worklist.disposition.hint.not_mine":
+    "Entfernt den Eintrag nur von deiner Liste. Die Zuständigkeit bleibt. Wechselt sie, kommt der Eintrag zurück.",
   "worklist.disposition.verb.not_sales": "Kein Kunde",
   "worklist.disposition.doneSnooze_one": "Morgen wieder auf deiner Liste.",
   "worklist.disposition.doneSnooze_other":
     "In {value} Tagen wieder auf deiner Liste.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Wieder auf deiner Liste, sobald eine Antwort kommt.",
+  "worklist.disposition.done.handled":
+    "Für dich erledigt. Bei einer neuen Nachricht kommt der Eintrag zurück.",
   "worklist.disposition.done.not_mine":
-    "Von deiner Liste entfernt. Wer zuständig ist, sieht den Eintrag weiterhin.",
+    "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
   "worklist.disposition.swipeCancel": "Behalten",
   "worklist.disposition.menu": "Aus der Liste entfernen",
@@ -11970,6 +12213,8 @@ export const de = {
   "worklist.owner.nobodyYet": "Noch niemand",
   "worklist.owner.mine": "Meine Worklist",
   "worklist.owner.backToMine": "Zurück zu deiner Worklist",
+  "worklist.owner.refused":
+    "Diese Worklist darfst du nicht lesen. Frage die zuständige Person, oder gehe zurück zu deiner.",
   "worklist.manager.reassign": "Neu zuweisen",
   "worklist.manager.reassignTo": "Neu zuweisen an",
   "worklist.manager.reassignConfirm": "Neu zuweisen",
@@ -12191,6 +12436,7 @@ export const de = {
   "worklist.because.met_days_ago.value_one": "vor {value} Tag getroffen",
   "worklist.because.met_days_ago.value_other": "vor {value} Tagen getroffen",
   "worklist.because.nothing_sent_since": "seitdem nichts geschickt",
+  "worklist.because.no_attendee_on_file": "kein Teilnehmer erfasst",
   "worklist.because.response_overdue": "Antwort überfällig",
   "worklist.because.response_due_soon": "Antwort bald fällig",
   "worklist.because.response_due_soon.value": "Antwort fällig bis {value}",
@@ -12248,6 +12494,10 @@ export const de = {
   "worklist.consequence.mailbox_blind":
     "Ohne Reaktion fehlen auf dieser Seite weiterhin E-Mails, die nicht ankommen.",
   "worklist.consequence.data_drifts": "Ohne Reaktion veralten die Datensätze.",
+  "worklist.consequence.calendar_blind":
+    "Ohne Reaktion fehlen auf dieser Seite weiterhin Termine, die nicht ankommen.",
+  "worklist.consequence.connection_blind":
+    "Ohne Reaktion fehlt auf dieser Seite weiterhin, was diese Verbindung bringt.",
   "worklist.untitled.approval": "Freigabe ausstehend",
   "worklist.untitled.dedupe_candidate": "Mögliche doppelte Datensätze",
   "worklist.untitled.task": "Aufgabe ohne Titel",
@@ -12385,6 +12635,8 @@ export const de = {
   "worklist.batch.held_draft_one": "{count} Entwurf wartet auf den Versand",
   "worklist.batch.held_draft_other": "{count} Entwürfe warten auf den Versand",
   "worklist.untitled.batch": "Zu prüfende Routineeinträge",
+  "worklist.untitled.capture_health_calendar":
+    "Kalenderverbindung braucht Aufmerksamkeit",
   "worklist.verb.review_batch": "Prüfen",
   "worklist.verb.draft_reply": "Lesen und antworten",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.

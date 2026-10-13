@@ -46,16 +46,17 @@ stays the same. You hold at most 50 pins: a newer one takes the place of your ol
 "Item was not pinned. Retry." Also called: star, flag, keep on top.
 
 ### How do I remove something from my worklist?
-To take an item off your Worklist in Margince, open **Remove from list** on its row and choose **Not
-mine** or **Not a customer**.
+To take an item off your Worklist in Margince, open **Remove from list** on its row and choose
+**Done**, **Not mine** or **Not a customer**.
 1. Open **Home** → **Show Worklist** and find the row.
 2. Open **Remove from list**.
-3. Choose **Not mine** ("Removed from your list. The owner still sees it.") or **Not a customer**
-   ("Removed from every list.").
-4. Press **Undo** in the note if you picked wrong.
+3. Choose **Done** if you handled it another way, such as by phone.
+4. Or choose **Not mine** if someone else should answer, or **Not a customer**.
+5. Press **Undo** in the note if you picked wrong.
 
-**Not a customer** removes the whole thread for everyone, and does not run out. Also called:
-dismiss, delete from worklist, hide, not relevant.
+**Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
+owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
+out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
 
 Archiving a contact also takes the messages they wait on a reply to off your Worklist. Restoring the
 contact brings them back. Only the contacts you can see count. A message stays if it is filed under another
@@ -256,13 +257,20 @@ counting.
 
 ### Taking something off the list
 
-Taking an item off the Worklist uses three choices, and they reach different numbers of users:
+Taking an item off the Worklist uses four choices, and they reach different numbers of users:
 
 | Choice | What it does | Who it touches |
 |---|---|---|
+| **Done** | "Marked done for you. It comes back if they write again." | **Your list only** |
 | **Snooze** | Comes back tomorrow, in 3 days, in 7, or when they reply | **Your list only** |
-| **Not mine** | "Removed from your list. The owner still sees it." | **Your list only** |
+| **Not mine** | "Removed from your list. It comes back if the record changes hands." | **Your list only** |
 | **Not a customer** | "Removed from every list." | **Everybody** |
+
+**Done** is for a message you handled another way: by phone, in a meeting, or with no reply
+owed. It does not count as a reply sent.
+
+**Not mine** shows only on a row someone else owns, or nobody owns. Point at it to read what it
+does. The record keeps its owner, and nobody is told.
 
 "Not a customer" is judged on the **thread**, not the message, so the next reply in it comes in
 already judged.

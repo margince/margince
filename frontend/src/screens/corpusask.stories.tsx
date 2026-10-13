@@ -50,6 +50,7 @@ const SET: Corpus = {
     documents_total: 12,
     chunks_total: 1_180,
     chunks_embedded: 1_180,
+    embed_state: "complete",
   },
   created_at: "2026-08-01T00:00:00Z",
 };
@@ -128,7 +129,12 @@ const NOT_COVERED_UNWRITTEN: Answer = {
 const NOT_READY: Answer = {
   ...NOT_COVERED_UNWRITTEN,
   outcome: "not_ready",
-  coverage: { documents_total: 12, chunks_total: 1_180, chunks_embedded: 407 },
+  coverage: {
+    documents_total: 12,
+    chunks_total: 1_180,
+    chunks_embedded: 407,
+    embed_state: "indexing",
+  },
 };
 
 const RETRIEVAL_UNAVAILABLE: Answer = {

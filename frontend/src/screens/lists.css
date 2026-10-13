@@ -4,21 +4,90 @@
   gap: var(--space-4);
 }
 
+/* The page's own gap spaces its panels; the shell's fallback rhythm for a
+   gapless .wrap would double it. Four classes beat the shell's three. */
+.wrap.lists-page > :is(.card, .panel) + :is(.card, .panel) {
+  margin-top: 0;
+}
+
 .lists-head {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
+/* Top-aligned like `.record-head-wide`, so a wrapped name keeps its verbs
+   beside its first line; one 32px line box matches one 32px control. */
+.lists-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block-end: var(--space-1);
+}
+
+/* The 16rem floor is the one `.record-head .record-id` holds
+   (design-system/composed.css): below it the verbs take their own line. */
 .lists-head-title {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+  flex: 1 1 16rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Focusable only so an arrival can land here; a keyboard reader needs the
+   house ring to see where focus went. */
+.lists-head-title .heading:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+.lists-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  flex: none;
+  margin-inline-start: auto;
+}
+
+/* FOLD_MAX_WIDTH (app/viewport.ts): folded, the verbs take a row of their own
+   at the leading edge, held open while Export CSV waits on the members. */
+@media (max-width: 720px) {
+  .lists-head-actions {
+    flex-basis: 100%;
+    min-block-size: var(--controlHeight);
+    margin-inline-start: 0;
+  }
+}
+
+/* The head's own gap spaces its lines, so the prose margin between two
+   paragraphs goes; 72ch is the reading measure `.filters-reading` keeps. */
+.lists-head > p {
+  margin: 0;
+  max-inline-size: 72ch;
+}
+
+.lists-head-facts {
+  padding-block-start: var(--space-3);
 }
 
 .lists-note {
   margin: 0;
+}
+
+.lists-change-name {
+  white-space: nowrap;
+}
+
+.lists-member-notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .lists-member-name {

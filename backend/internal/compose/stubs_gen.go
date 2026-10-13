@@ -1843,12 +1843,24 @@ func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
 }
 
+func (stubs) ListImportRuns(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListImportRunsParams) {
+	httperr.NotImplemented(w, r, "ListImportRuns")
+}
+
 func (stubs) CreateImportRun(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "CreateImportRun")
 }
 
+func (stubs) GetImportFormat(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetImportFormatParams) {
+	httperr.NotImplemented(w, r, "GetImportFormat")
+}
+
 func (stubs) UploadImportSource(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadImportSource")
+}
+
+func (stubs) DownloadImportTemplate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DownloadImportTemplate")
 }
 
 func (stubs) GetImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
@@ -1857,6 +1869,10 @@ func (stubs) GetImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id opena
 
 func (stubs) ApproveImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ApproveImportRun")
+}
+
+func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DownloadImportProblems")
 }
 
 func (stubs) GetImportRunReport(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {

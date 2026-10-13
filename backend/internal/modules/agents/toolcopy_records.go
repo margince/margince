@@ -65,7 +65,7 @@ var createRecordCopy = toolCopy{
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
 		"When the user says where they met the contact, pass that word as offer_tag: it only offers " +
-		"the tag, and apply_tag still needs their yes.",
+		"the tag, and change_tags still needs their yes.",
 }
 
 var updateRecordCopy = toolCopy{
@@ -77,7 +77,7 @@ var updateRecordCopy = toolCopy{
 		"of the write has not happened. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's.",
-	Instead: "Use advance_deal or progress_deal to move a deal between stages, and relink_activity " +
+	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
 	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +
 		"result if you intend to retry the same change once a human has released it.",
@@ -120,7 +120,7 @@ var relinkActivityCopy = toolCopy{
 		"the wrong record or on none.",
 	Limits: "Changes only the association; content is untouched. By default the new link is " +
 		"ADDED beside existing ones. Onto a project it waits for the user's yes; the answer says " +
-		"whether you may relay it with decide_approval.",
+		"whether you may relay it with decide_approvals.",
 	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
 		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
@@ -138,7 +138,7 @@ var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
 	Limits: "Each id must be visible and writable to you. A project destination, or any move the " +
 		"installation's policy raises, is staged for confirmation and the retry moves exactly " +
-		"these ids; once the user says yes, relay it with decide_approval. A filing under a " +
+		"these ids; once the user says yes, relay it with decide_approvals. A filing under a " +
 		"project can be undone by a member from the activity.",
 	Instead: "relink_activity moves one message.",
 	Retain:  "The answer is the count moved.",
@@ -167,7 +167,7 @@ var archiveRecordCopy = toolCopy{
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
 	Instead: "Use merge_records when a duplicate's history should end up on the record that " +
-		"survives, and disqualify_lead when a lead is going nowhere — a lead's own transition " +
+		"survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
 		"has raised this verb to confirm first, the answer is a staged approval and you must not " +
@@ -200,15 +200,15 @@ var advanceDealCopy = toolCopy{
 }
 
 var progressDealCopy = toolCopy{
-	Purpose: "Move a deal to a new stage and leave a note on its timeline saying why, in one " +
-		"call.",
-	Limits: "The move commits first and the note follows it, so a note that fails to write does " +
-		"not put the deal back — the answer says so, and the note is then log_activity's to " +
-		"retry. The note itself is optional. Same rules as the bare move otherwise: call " +
-		"list_pipelines for the id of the stage you are moving to, and moving onto or off a " +
-		"stage that closes a deal as won or lost is staged for a human to approve.",
-	Instead: "Use advance_deal when there is genuinely nothing to say about the move, and " +
-		"log_activity when something happened but the deal did not move.",
+	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
+		"timeline saying why, in one call.",
+	Limits: "The stage is named by id from list_pipelines — call it first; a deal you read " +
+		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
+		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"stage's semantic rather than guessing from its name. The move commits first and the " +
+		"note follows it, so a note that fails to write does not put the deal back — the answer " +
+		"says so, and the note is then log_activity's to retry.",
+	Instead: "Use log_activity when something happened but the deal did not move.",
 	Retain: "Send if_version with the version you read of the deal; keep the staged approval id " +
 		"if a closing move is sent for approval.",
 }
@@ -272,7 +272,7 @@ var advanceProjectPhaseCopy = toolCopy{
 		"on the project: its tasks and commitments stay open on their own records. When the " +
 		"user has asked for the close, report what is still open and close — an open " +
 		"commitment is something to tell them, not a reason to hold back a close they asked for.",
-	Instead: "Use advance_deal for a deal's pipeline stages; a project's phases are a different " +
+	Instead: "Use progress_deal for a deal's pipeline stages; a project's phases are a different " +
 		"vocabulary on a different record.",
 	Retain: "Send if_version with the version you read. By default the phase moves when this " +
 		"call answers. Where an installation has raised this verb to confirm first, the answer " +
@@ -289,6 +289,6 @@ var listPipelinesCopy = toolCopy{
 		"— and that, not its name, is what decides whether moving onto it needs a human's " +
 		"approval; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
-		"deal requires both, and advance_deal and progress_deal take that stage_id as their " +
+		"deal requires both, and progress_deal takes that stage_id as its " +
 		"to_stage_id.",
 }

@@ -148,33 +148,7 @@ func listPipelinesTx(ctx context.Context, tx pgx.Tx, archived storekit.ArchivedF
 	if archived == storekit.LiveOnly {
 		archivedFilter = liveRowsClause
 	}
-	rows, err := tx.Query(ctx,
-		`SELECT id FROM pipeline WHERE `+whereSeed+archivedFilter+` ORDER BY position, created_at`)
-	if err != nil {
-		return nil, err
-	}
-	var pipelineIDs []ids.PipelineID
-	for rows.Next() {
-		var id ids.PipelineID
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		pipelineIDs = append(pipelineIDs, id)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	out := []crmcontracts.Pipeline{}
-	for _, id := range pipelineIDs {
-		p, err := readPipelineWith(ctx, tx, id, archived)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, nil
+	return readPipelines(ctx, tx, whereSeed+archivedFilter, nil)
 }
 
 // DefaultPipeline returns the workspace's seeded default.
@@ -199,8 +173,6 @@ func (s *Store) DefaultPipeline(ctx context.Context) (crmcontracts.Pipeline, err
 	return out, err
 }
 
-// readPipeline is the single-row read every live-only caller uses: a
-// pipeline that has been archived reads as missing.
 // ReadPipelineTx shares the authorized live catalog read with transactional reporting.
 func ReadPipelineTx(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
@@ -209,64 +181,65 @@ func ReadPipelineTx(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontr
 	return readPipeline(ctx, tx, id)
 }
 
+// readPipeline is the single-row read every live-only caller uses: a
+// pipeline that has been archived reads as missing.
 func readPipeline(ctx context.Context, tx pgx.Tx, id ids.PipelineID) (crmcontracts.Pipeline, error) {
-	return readPipelineWith(ctx, tx, id, storekit.LiveOnly)
+	pipelines, err := readPipelines(ctx, tx, `id = $1`+liveRowsClause, []any{id})
+	if err != nil {
+		return crmcontracts.Pipeline{}, err
+	}
+	if len(pipelines) == 0 {
+		return crmcontracts.Pipeline{}, apperrors.ErrNotFound
+	}
+	return pipelines[0], nil
 }
 
-// readPipelineWith is that read with the archived rows admitted or not, so
-// the catalog list can serve include_archived through the same assembly
-// rather than a second copy of it.
-func readPipelineWith(
-	ctx context.Context, tx pgx.Tx, id ids.PipelineID, archived storekit.ArchivedFilter,
-) (crmcontracts.Pipeline, error) {
-	var p crmcontracts.Pipeline
-	var pid ids.UUID
-	live := ""
-	if archived == storekit.LiveOnly {
-		live = liveRowsClause
-	}
-	// The version travels because archivePipeline takes an If-Match, and a
-	// guard whose value no response carries is one a caller can only satisfy by
-	// omitting the header. Read here rather than at that one route: this is the
-	// single assembly every pipeline response passes through, and a version on
-	// some of them would let a caller hold a read that cannot be conditioned on.
-	var version crmcontracts.RowVersion
-	err := tx.QueryRow(ctx,
-		`SELECT id, name, is_default, position, created_at, updated_at, archived_at, version
-		 FROM pipeline WHERE id = $1`+live, id).
-		Scan(&pid, &p.Name, &p.IsDefault, &p.Position, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &version)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return p, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return p, err
-	}
-	p.Id = openapi_types.UUID(pid)
-	p.Version = &version
-
+// readPipelines is the one assembly of a Pipeline: the rows where admits, in
+// catalog order, with their live stages read in one statement.
+func readPipelines(ctx context.Context, tx pgx.Tx, where string, args []any) ([]crmcontracts.Pipeline, error) {
+	// The version travels because archivePipeline takes an If-Match. A guard
+	// whose value no response carries can only be satisfied by omitting it.
 	rows, err := tx.Query(ctx,
-		`SELECT id, pipeline_id, name, position, semantic, win_probability, created_at, updated_at
-		 FROM stage WHERE pipeline_id = $1 AND archived_at IS NULL ORDER BY position`, id)
+		`SELECT id, name, is_default, position, created_at, updated_at, archived_at, version
+		 FROM pipeline WHERE `+where+` ORDER BY position, created_at`, args...)
 	if err != nil {
-		return p, err
+		return nil, fmt.Errorf("read pipelines: %w", err)
 	}
-	defer rows.Close()
-
-	stages := []crmcontracts.Stage{}
+	out := []crmcontracts.Pipeline{}
+	var pipelineIDs []ids.UUID
 	for rows.Next() {
-		var st crmcontracts.Stage
-		var stID, stPipeline ids.UUID
-		var semantic string
-		if err := rows.Scan(&stID, &stPipeline, &st.Name, &st.Position, &semantic, &st.WinProbability, &st.CreatedAt, &st.UpdatedAt); err != nil {
-			return p, err
+		var p crmcontracts.Pipeline
+		var pid ids.UUID
+		var version crmcontracts.RowVersion
+		if err := rows.Scan(&pid, &p.Name, &p.IsDefault, &p.Position, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &version); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scan pipeline: %w", err)
 		}
-		st.Id = openapi_types.UUID(stID)
-		st.PipelineId = openapi_types.UUID(stPipeline)
-		st.Semantic = crmcontracts.StageSemantic(semantic)
-		stages = append(stages, st)
+		p.Id = openapi_types.UUID(pid)
+		p.Version = &version
+		out = append(out, p)
+		pipelineIDs = append(pipelineIDs, pid)
 	}
-	p.Stages = &stages
-	return p, rows.Err()
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read pipelines: %w", err)
+	}
+	stages, err := readStages(ctx, tx, `s.pipeline_id = ANY($1) AND s.archived_at IS NULL`, []any{pipelineIDs})
+	if err != nil {
+		return nil, err
+	}
+	byPipeline := map[openapi_types.UUID][]crmcontracts.Stage{}
+	for _, stage := range stages {
+		byPipeline[stage.PipelineId] = append(byPipeline[stage.PipelineId], stage)
+	}
+	for i := range out {
+		ladder := byPipeline[out[i].Id]
+		if ladder == nil {
+			ladder = []crmcontracts.Stage{}
+		}
+		out[i].Stages = &ladder
+	}
+	return out, nil
 }
 
 // defaultStages is the seeded pipeline shape a fresh workspace gets.
@@ -295,6 +268,9 @@ func (s *Store) SeedDefaults(ctx context.Context) error {
 // committed or all rolled back. The caller must have bound the workspace
 // GUC and a system actor on ctx.
 func (s *Store) SeedDefaultsTx(ctx context.Context, tx pgx.Tx) error {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	_, err := createPipelineTx(ctx, tx, CreatePipelineInput{
 		Name: "Sales", IsDefault: true, Position: 0, Stages: defaultStages,
 	})
@@ -316,6 +292,9 @@ type StageSeed struct {
 // authenticated pipeline change: createPipelineTx rejects what a runtime
 // create would reject.
 func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open []StageSeed) error {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	stages := make([]StageInput, 0, len(open)+2)
 	for i, st := range open {
 		stages = append(stages, StageInput{

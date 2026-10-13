@@ -325,7 +325,7 @@ describe("putting a row down below the fold", () => {
     // Start a write from the gesture and confirm it.
     swipe(...FORWARD);
     await user.click(
-      screen.getAllByRole("button", { name: verb("snooze") })[0],
+      screen.getAllByRole("button", { name: verb("handled") })[0],
     );
 
     // The menu's own item now reads that write as in flight.
@@ -333,7 +333,7 @@ describe("putting a row down below the fold", () => {
       screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
     );
     await waitFor(() => {
-      const items = screen.getAllByRole("button", { name: verb("snooze") });
+      const items = screen.getAllByRole("button", { name: verb("handled") });
       expect(
         items.some((one) => one.getAttribute("aria-disabled") === "true"),
         "the menu offers a fresh press over a row already being written, so " +
@@ -361,7 +361,7 @@ describe("putting a row down below the fold", () => {
 
     swipe(...FORWARD);
     await user.click(
-      screen.getAllByRole("button", { name: verb("snooze") })[0],
+      screen.getAllByRole("button", { name: verb("handled") })[0],
     );
     // The OTHER direction, staged and confirmed before the first answer comes
     // back — two judgements that contradict each other on one message.
@@ -374,17 +374,17 @@ describe("putting a row down below the fold", () => {
       fetchSpy.mock.calls.length,
       "a second confirm reached the server over a write already out",
     ).toBe(1);
-    expect((await sentBody(fetchSpy)).disposition).toBe("snooze");
+    expect((await sentBody(fetchSpy)).disposition).toBe("handled");
 
-    // And the row still reports the FIRST answer as the one in flight: the
-    // snooze is the busy control, and the judgement whose confirm was refused
-    // is merely standing down rather than claiming a write of its own.
+    // The row still reports the first answer as the one in flight. Done is
+    // the busy control. The judgement whose confirm was refused stands down
+    // rather than claiming a write of its own.
     await user.click(
       screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
     );
     expect(
       screen
-        .getByRole("button", { name: verb("snooze") })
+        .getByRole("button", { name: verb("handled") })
         .getAttribute("aria-busy"),
     ).toBe("true");
     expect(

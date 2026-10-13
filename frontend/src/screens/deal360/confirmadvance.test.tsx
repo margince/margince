@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -37,7 +37,7 @@ const WON: components["schemas"]["Stage"] = {
 it("keeps naming the stage it asked about while the dialog animates out", () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const exits = holdExits();
   const client = new QueryClient();
@@ -68,7 +68,7 @@ it("keeps naming the stage it asked about while the dialog animates out", () => 
 it("holds the dialog through a write and closes it on the answer", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const user = userEvent.setup();
   const client = new QueryClient();
@@ -91,6 +91,12 @@ it("holds the dialog through a write and closes it on the answer", async () => {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  // Confirm waits for the deal's task read before it takes a press.
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
+    ).toBe(false),
+  );
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await user.keyboard("{Escape}");
   expect(onClose).not.toHaveBeenCalled();
@@ -106,7 +112,7 @@ it("holds the dialog through a write and closes it on the answer", async () => {
 it("lets go of the dialog when the write rejects instead of holding it busy", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => Response.json({ data: [] })),
+    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
   );
   const user = userEvent.setup();
   const client = new QueryClient();
@@ -125,6 +131,12 @@ it("lets go of the dialog when the write rejects instead of holding it busy", as
         />
       </LocaleProvider>
     </QueryClientProvider>,
+  );
+  // Confirm waits for the deal's task read before it takes a press.
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
+    ).toBe(false),
   );
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await act(async () => {

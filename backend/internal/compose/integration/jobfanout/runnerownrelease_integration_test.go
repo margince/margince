@@ -24,14 +24,14 @@ import (
 )
 
 // releasingSpecName is a scheduled agent allowed to answer approvals, which no
-// shipped agent is: it is how this lane reaches decide_approval from a run.
+// shipped agent is: it is how this lane reaches decide_approvals from a run.
 const releasingSpecName = "e2e_releasing_agent"
 
 var releasingSpec = runner.AgentSpec{
 	Name:       releasingSpecName,
 	Goal:       "Answer the approvals waiting on this workspace.",
 	DueHourUTC: 2,
-	Tools:      []string{"decide_approval"},
+	Tools:      []string{"decide_approvals"},
 }
 
 // A scheduled run has nobody behind it to have said yes, so it never releases
@@ -51,14 +51,14 @@ func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T)
 
 	trigger := releasingSpecName + ":e2e-own-release"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"decide_approval","args":{"staged_action_id":"%s","decision":"approve"}}`, approvalID),
+		fmt.Sprintf(`{"tool":"decide_approvals","args":{"staged_action_id":"%s","decision":"approve"}}`, approvalID),
 		`{"final":{"summary":"tried to answer one approval"}}`,
 	)
 	re.enqueue(t, releasingSpecName, trigger, &re.passportID)
 	re.tick(t)
 
 	_, trace, _ := re.runRow(t, trigger)
-	if len(trace) == 0 || trace[0].Tool != "decide_approval" || trace[0].Admission != runner.AdmissionRefused ||
+	if len(trace) == 0 || trace[0].Tool != "decide_approvals" || trace[0].Admission != runner.AdmissionRefused ||
 		!strings.Contains(trace[0].Observation, "proposed the action") {
 		t.Fatalf("the run never had its own release refused: trace = %+v", trace)
 	}

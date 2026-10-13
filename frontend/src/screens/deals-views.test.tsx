@@ -282,6 +282,16 @@ describe("a saved view over the deals board", () => {
     );
   });
 
+  // A filter narrowed to one deal is when the count is read most closely. The
+  // head and the column both say "deal".
+  it("counts a single deal in the singular", async () => {
+    vi.stubGlobal("fetch", stubBackend({ deals: [deal({})] }));
+    render(<DealsScreen />);
+
+    expect(await screen.findAllByText("1 deal")).toHaveLength(2);
+    expect(screen.queryByText("1 deals")).toBeNull();
+  });
+
   // The Display menu's dials describe COLUMNS and ROW HEIGHT, and the board
   // draws neither. Offered there they are controls a reader can press twice and
   // see nothing happen, which reads as broken rather than as absent — and the

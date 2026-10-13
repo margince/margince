@@ -124,6 +124,7 @@ func RegisterApprovalTools(r *Registry, inbox ApprovalInbox) {
 	r.Register(readApprovalTool{inbox: inbox})
 	r.Register(decideApprovalTool{inbox: inbox})
 	r.Register(decideBundleTool{inbox: inbox})
+	r.Register(decideApprovals{})
 }
 
 // --- list_approvals (🟢 read) ---
@@ -243,7 +244,7 @@ func (t decideApprovalTool) Spec() mcp.ToolSpec {
 		Name: "decide_approval", Title: "Approve or reject one staged action", Version: toolVersionV1,
 		Description:   decideApprovalCopy.render(),
 		Instead:       decideApprovalCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "approveApproval/rejectApproval",
 		InputSchema: schema(`{"type":"object","required":["staged_action_id","decision"],"properties":{
 			"staged_action_id":{"type":"string","format":"uuid","description":"From list_approvals."},
@@ -289,7 +290,7 @@ func (t decideBundleTool) Spec() mcp.ToolSpec {
 		Name: "decide_approval_bundle", Title: "Approve or reject one act's proposals together", Version: toolVersionV1,
 		Description:   decideBundleCopy.render(),
 		Instead:       decideBundleCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "approveApprovalBundle/rejectApprovalBundle",
 		InputSchema: schema(`{"type":"object","required":["bundle_id","decision"],"properties":{
 			"bundle_id":{"type":"string","format":"uuid"},

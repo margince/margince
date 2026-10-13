@@ -54,6 +54,5 @@ func (e *CounterpartyVerdictEngine) suppressSenderDomain(ctx context.Context, tx
 	if corresponds {
 		return nil
 	}
-	return e.contacts.SuppressBulkSenderDomainTx(ctx, tx, row.Domain,
-		"mail from this domain was judged "+kind+", so it is not a company this business works with")
+	return e.contacts.SuppressBulkSenderDomainTx(ctx, tx, row.Domain, kind)
 }

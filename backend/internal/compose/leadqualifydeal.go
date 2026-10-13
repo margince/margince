@@ -35,7 +35,7 @@ func (o leadDealOpener) OpenDealForLead(ctx context.Context, tx pgx.Tx, in conta
 		// The deal inherits the LEAD's owner exactly — an unassigned lead
 		// qualifies into an unassigned deal, not the promoting actor's.
 		OwnerID: in.OwnerID, OwnerExact: true,
-	})
+	}, deals.CustomColumns{})
 	if err != nil {
 		return ids.Nil, err
 	}

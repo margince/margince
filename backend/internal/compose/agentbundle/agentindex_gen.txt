@@ -375,6 +375,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `POST /imports` | createImportRun | Create an import run from an uploaded source and a column mapping, and dry-run it. | Change records | at once |
+| `GET /imports/format` | getImportFormat | Describe the files an import takes, column by column, for this workspace. | Read records | at once |
 | `GET /imports/{id}` | getImportRun | Read one import run's lifecycle state. | Read records | at once |
 | `GET /imports/{id}/report` | getImportRunReport | Read the run's report — what will happen, or what did. | Read records | at once |
 | `POST /imports/{id}/approve` | approveImportRun | Approve a validated import run and commit it. | Change records | at once |

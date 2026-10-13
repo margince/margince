@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -24,8 +25,12 @@ func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
 	}
 	human := as(principal.Principal{Type: principal.PrincipalHuman, ID: "human:admin", Permissions: grant})
 	agent := as(principal.Principal{Type: principal.PrincipalAgent, ID: "agent:assistant", OnBehalfOf: ids.NewV7(), Permissions: grant})
-	withAuthor := map[string]string{"Name": "display_name", "Owner": csvTargetAuthor}
-	withoutAuthor := map[string]string{"Name": "display_name"}
+	withAuthor := migration.RunMapping{Fields: map[string]string{"Name": "display_name", "Owner": csvTargetAuthor}}
+	withoutAuthor := migration.RunMapping{Fields: map[string]string{"Name": "display_name"}}
+	authorInAPart := migration.RunMapping{Parts: []migration.PartMapping{
+		{File: "companies.csv", Object: migration.ObjectCompany, Fields: withoutAuthor.Fields},
+		{File: "contacts.csv", Object: migration.ObjectContact, Fields: withAuthor.Fields},
+	}}
 
 	if err := refuseAuthorFromNonImporter(human, withAuthor); err != nil {
 		t.Errorf("the declared importer was refused its author column: %v", err)
@@ -33,6 +38,9 @@ func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
 	var refused *provenance.AuthorError
 	if err := refuseAuthorFromNonImporter(agent, withAuthor); !errors.As(err, &refused) || refused.Code != "reserved_source_author" {
 		t.Errorf("an agent mapped an author column: %v", err)
+	}
+	if err := refuseAuthorFromNonImporter(agent, authorInAPart); !errors.As(err, &refused) {
+		t.Errorf("an agent mapped an author column in the second file of a ZIP: %v", err)
 	}
 	if err := refuseAuthorFromNonImporter(agent, withoutAuthor); err != nil {
 		t.Errorf("an agent's import without an author column was refused: %v", err)

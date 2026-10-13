@@ -62,6 +62,22 @@ func NormalizeLinkedInURL(raw string) (string, error) {
 	return "https://" + strings.ToLower(u.Hostname()) + path, nil
 }
 
+// NormalizeContactLinkedInURL is the spelling a contact's LinkedIn slot holds:
+// a profile URL normalized as above, on one of LinkedInSlotHosts.
+func NormalizeContactLinkedInURL(raw string) (string, error) {
+	normalized, err := NormalizeLinkedInURL(raw)
+	if err != nil {
+		return "", err
+	}
+	if !isLinkedinURL(normalized) {
+		return "", &values.ParseError{
+			Field: linkedinURLField, Code: "linkedin_url_not_linkedin",
+			Message: "a LinkedIn profile URL is on linkedin.com",
+		}
+	}
+	return normalized, nil
+}
+
 // LinkedInSlotHosts are the hosts a value has to be on before this product will
 // store it as a contact's LinkedIn profile — the contact_social slot, the vCard
 // import's slot, and the classifier that decides LinkedIn from website.

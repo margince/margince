@@ -11,35 +11,31 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// captureItem draws one capture concern. It carries no subject and no verbs —
-// fixing a mailbox lives on the capture settings screen. `kind` names the condition; `detail` names the mailbox in the
-// reader's own terms: the account label the connector reported, or the
-// provider where none was.
+// captureItem carries no subject and no verbs: fixing a connection lives on the
+// capture settings screen.
 func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 	kind := concern.Kind
-	mailbox := concern.AccountLabel
-	if mailbox == "" {
-		mailbox = concern.Provider
-	}
+	medium := captureMedium(concern.Calendar)
 	item := crmcontracts.AttentionItem{
 		Id:      concern.ConnectionID.String(),
 		Source:  crmcontracts.AttentionItemSource("capture_health"),
 		Kind:    &kind,
 		Actions: []crmcontracts.AttentionItemActions{},
+		Connection: &crmcontracts.AttentionConnectionFacts{
+			Provider: concern.Provider,
+			Medium:   medium,
+		},
 	}
-	// The condition AND the mailbox it is about. Two disconnected mailboxes
-	// are two things to reconnect, and one row saying "disconnected" would
-	// send the reader to fix one and silently lose the other.
-	if mailbox != "" {
-		item.Detail = &mailbox
-		cause := "capture_health:" + kind + ":" + mailbox
-		item.CauseRef = &cause
-		// The mailbox is the condition's NAME as well as part of its identity,
-		// and both travel. A group formed on the identity draws from the label;
-		// a reader shown the identity reads "capture_health:disconnected:…".
-		label := mailbox
+	// Two broken connections are two things to reconnect, so the identity names
+	// the connection itself where no account label tells them apart. One
+	// account's mailbox and calendar share a label and are still two.
+	cause := "capture_health:" + kind + ":" + concern.ConnectionID.String()
+	if label := concern.AccountLabel; label != "" {
+		item.Detail = &label
+		cause = "capture_health:" + kind + ":" + string(medium) + ":" + label
 		item.CauseLabel = &label
 	}
+	item.CauseRef = &cause
 	// WHEN the condition started, for the conditions that have a start. The
 	// reader's question about a failing mailbox is how long, not whether — a
 	// class alone is the same sentence at one minute and at six hours — and
@@ -52,6 +48,13 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		item.OccurredAt = &started
 	}
 	return item
+}
+
+func captureMedium(calendar bool) crmcontracts.AttentionConnectionFactsMedium {
+	if calendar {
+		return crmcontracts.AttentionConnectionFactsMediumCalendar
+	}
+	return crmcontracts.AttentionConnectionFactsMediumMailbox
 }
 
 // aiWorkItem draws one troubled AI run. `kind` is the closed failed/stalled

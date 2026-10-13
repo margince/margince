@@ -49,6 +49,7 @@ type owedFixtureMessage struct {
 	To              []string `json:"to,omitempty"`
 	Cc              []string `json:"cc,omitempty"`
 	HasCalendarPart bool     `json:"has_calendar_part,omitempty"`
+	CalendarMethod  string   `json:"calendar_method,omitempty"`
 	// PriorOutbound is our own earlier message in the thread, which the backlog
 	// read supplies and the prompt renders as context. Absent for a message that
 	// opens a conversation, and for one carrying no thread at all.
@@ -120,7 +121,7 @@ func (owedVerdictCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 			// would certify a candidate the store never produces.
 			ID: ids.NewV7(), Kind: string(crmcontracts.ActivityKindEmail),
 			Subject: m.Subject, Body: m.Body,
-			To: m.To, Cc: m.Cc, HasCalendarPart: m.HasCalendarPart,
+			To: m.To, Cc: m.Cc, HasCalendarPart: m.HasCalendarPart, CalendarMethod: m.CalendarMethod,
 		}
 		if prior := m.PriorOutbound; prior != nil {
 			batch[i].PriorOutbound = &activities.PriorOutbound{

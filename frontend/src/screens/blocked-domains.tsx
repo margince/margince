@@ -5,9 +5,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { navigate } from "../app/router";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { DataTable } from "../design-system/datatable";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { CountLine } from "../design-system/listsurface";
 import {
   Panel,
@@ -29,6 +36,7 @@ import {
   useSetBlockedDomain,
 } from "./blocked-domains-decision";
 import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import "./blocked-domains.css";
 
 // The domains this installation refuses a company (ADR-0072). A vendor the
 // business merely USES has a real corporate website, so every piece of evidence
@@ -48,16 +56,34 @@ import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 // version to quote and none to send, so no `ifMatch` here — an entry for a
 // domain already on the list REPLACES it, which is also how a refusal is undone.
 
-// What decided a row — or, for an open question, what stopped the machine
-// deciding. The two are one column because they answer one thing a reader wants
-// to know: why this domain stands where it does.
-const SOURCE_LABEL: Record<BlockedDomain["source"], MessageKey> = {
+// Who decided a row. An open question has no decider, so its source is the
+// reason instead and the column says nobody.
+const DECIDER_LABEL: Partial<Record<BlockedDomain["source"], MessageKey>> = {
   verdict: "blockedDomains.source.verdict",
   heuristic: "blockedDomains.source.heuristic",
   human: "blockedDomains.source.human",
+};
+
+// Why the domain stands where it does, in the reader's language. `stated`
+// carries the decider's own words in `note`; `unknown` keeps the stored sentence.
+const REASON_LABEL: Record<
+  Exclude<BlockedDomain["reason_code"], "stated" | "bulk_sender" | "unknown">,
+  MessageKey
+> = {
+  company_created: "blockedDomains.reason.companyCreated",
+  kept_as_company: "blockedDomains.reason.keptAsCompany",
   unevidenced: "blockedDomains.source.unevidenced",
   stale_evidence: "blockedDomains.source.staleEvidence",
   near_duplicate: "blockedDomains.source.nearDuplicate",
+};
+
+const BULK_LABEL: Record<
+  NonNullable<BlockedDomain["sender_kind"]>,
+  MessageKey
+> = {
+  newsletter: "blockedDomains.reason.bulkNewsletter",
+  transactional: "blockedDomains.reason.bulkTransactional",
+  spam: "blockedDomains.reason.bulkSpam",
 };
 
 function useBlockedDomains() {
@@ -129,20 +155,14 @@ export function BlockedDomainsCard() {
   const denialId = useId();
   const refusal = canManage ? undefined : denialId;
 
-  // Revising a standing decision starts on its row and finishes in the dialog.
-  // The contract requires a reason for every write, so a one-click flip has
-  // nowhere to get one — and a refusal nobody can explain is one nobody can
-  // review, which is the whole point of the column. The row therefore opens
-  // the dialog on the domain with the OPPOSITE decision and no reason, so what
-  // is left to do is type the sentence: that is the McKinsey case, a newsletter
-  // publisher that became a client.
-  const revise = useCallback((entry: BlockedDomain) => {
-    setEditing({
-      domain: entry.domain,
-      admission: entry.admission === "suppressed" ? "admitted" : "suppressed",
-      reason: "",
-    });
-  }, []);
+  // Revising opens the dialog, because every write owes a reason a one-click
+  // flip has nowhere to get.
+  const revise = useCallback(
+    (entry: BlockedDomain, admission: Decision["admission"]) => {
+      setEditing({ domain: entry.domain, admission, reason: "" });
+    },
+    [],
+  );
 
   const hasOutcome =
     !canManage ||
@@ -178,15 +198,14 @@ export function BlockedDomainsCard() {
             <>
               <DataTable
                 bleed
+                fold
+                stickyFirst
                 label={t("blockedDomains.listTitle")}
                 columns={decisionColumns({
                   t,
                   locale,
                   zone,
-                  revise,
-                  refusal,
-                  set,
-                  reopen,
+                  verbs: { revise, refusal, set, reopen },
                 })}
                 rows={list.data}
                 rowKey={(row) => row.domain}
@@ -256,120 +275,156 @@ export function BlockedDomainsCard() {
   );
 }
 
-/**
- * The table's columns.
- *
- * A function of what they need rather than a constant, because two of them
- * render translated copy and one renders a control whose refusal is the
- * reader's — none of which is knowable at module scope.
- */
+type RowVerbs = Readonly<{
+  revise: (entry: BlockedDomain, admission: Decision["admission"]) => void;
+  refusal: string | undefined;
+  set: SetDecision;
+  reopen: ReopenDomain;
+}>;
+
 function decisionColumns({
   t,
   locale,
   zone,
-  revise,
-  refusal,
-  set,
-  reopen,
+  verbs,
 }: Readonly<{
   t: ReturnType<typeof useT>;
   locale: Locale;
   zone: string;
-  revise: (entry: BlockedDomain) => void;
-  refusal: string | undefined;
-  set: SetDecision;
-  reopen: ReopenDomain;
-}>) {
+  verbs: RowVerbs;
+}>): DataTableColumn<BlockedDomain>[] {
   return [
     {
       key: "domain",
       header: t("blockedDomains.col.domain"),
-      render: (row: BlockedDomain) => (
-        <>
-          <span>{row.domain}</span>
-          {/* The company an admitted domain produced, when there is one. A
-              link rather than the id it is built from: the payload carries no
-              name, and printing a UUID at an operator is not a fact they can
-              use. */}
-          {row.company_id != null && (
-            <>
-              {" "}
-              <a href={`#/companies/${row.company_id}`}>
-                {t("blockedDomains.openCompany")}
-              </a>
-            </>
+      render: (row) => (
+        <CellStack>
+          <span className="blocked-domains-domain">{row.domain}</span>
+          {row.company_id != null && row.company_name != null && (
+            <span className="t-caption">
+              <button
+                type="button"
+                className="cell-link"
+                onClick={() =>
+                  navigate({ screen: "companies", id: row.company_id ?? "" })
+                }
+              >
+                {row.company_name}
+              </button>
+            </span>
           )}
-        </>
+        </CellStack>
       ),
     },
     {
       key: "admission",
       header: t("blockedDomains.col.admission"),
-      render: (row: BlockedDomain) => (
-        <Badge tone={admissionTone(row.admission)}>
-          {t(ADMISSION_LABEL[row.admission])}
-        </Badge>
-      ),
+      render: (row) => {
+        const reason = reasonWords(row, t);
+        return (
+          <CellStack>
+            <Badge tone={admissionTone(row.admission)}>
+              {t(ADMISSION_LABEL[row.admission])}
+            </Badge>
+            {reason && <span className="t-caption">{reason}</span>}
+          </CellStack>
+        );
+      },
     },
     {
       key: "source",
       header: t("blockedDomains.col.source"),
-      // A human decision is the one an operator is hunting for, so it is the
-      // one the eye finds: the machine sources read as plain pills beside it.
-      render: (row: BlockedDomain) => (
-        <Badge tone={row.source === "human" ? "accent" : undefined}>
-          {t(SOURCE_LABEL[row.source])}
-        </Badge>
-      ),
-    },
-    {
-      key: "reason",
-      header: t("blockedDomains.col.reason"),
-      render: (row: BlockedDomain) => row.reason,
+      render: (row) => {
+        const decider = DECIDER_LABEL[row.source];
+        return (
+          <span className="blocked-domains-decider">
+            {decider ? t(decider) : "—"}
+          </span>
+        );
+      },
     },
     {
       key: "decided",
       header: t("blockedDomains.col.decided"),
-      render: (row: BlockedDomain) => (
+      align: "end",
+      render: (row) => (
         <time dateTime={row.decided_at}>
           {formatDate(row.decided_at, locale, zone)}
         </time>
       ),
     },
     {
-      key: "revise",
-      header: t("blockedDomains.col.revise"),
-      // An undecided row gets a different verb, because it is a different act:
-      // the other two REPLACE a decision and owe a reason, while this one only
-      // asks the crawl to look again. Offering "Allow this one" on a domain
-      // nobody has judged would invite a decision the operator has no grounds
-      // for — the whole reason the row is here is that nothing knows yet.
-      render: (row: BlockedDomain) =>
-        row.admission === "undecided" ? (
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (row) => <DecisionMenu row={row} verbs={verbs} />,
+    },
+  ];
+}
+
+function reasonWords(row: BlockedDomain, t: ReturnType<typeof useT>): string {
+  switch (row.reason_code) {
+    case "stated":
+      return row.note ?? "";
+    case "unknown":
+      return row.reason;
+    case "bulk_sender":
+      return t(
+        row.sender_kind
+          ? BULK_LABEL[row.sender_kind]
+          : "blockedDomains.reason.bulkSender",
+      );
+    default: {
+      // An older server sends no code: its English sentence beats a blank.
+      const label = REASON_LABEL[row.reason_code];
+      return label ? t(label) : row.reason;
+    }
+  }
+}
+
+const OPPOSITE: Record<
+  BlockedDomain["admission"],
+  { admission: Decision["admission"]; verb: MessageKey } | null
+> = {
+  admitted: { admission: "suppressed", verb: "blockedDomains.rowRefuse" },
+  suppressed: { admission: "admitted", verb: "blockedDomains.rowAdmit" },
+  undecided: null,
+};
+
+// An undecided domain offers only Ask again: nobody has grounds to decide it.
+// A decided one offers its opposite, which owes a reason in the dialog.
+function DecisionMenu({
+  row,
+  verbs: { revise, refusal, set, reopen },
+}: Readonly<{ row: BlockedDomain; verbs: RowVerbs }>) {
+  const t = useT();
+  const opposite = OPPOSITE[row.admission];
+  return (
+    <span className="cell-actions">
+      <OverflowMenu label={t("table.rowActions", { name: row.domain })}>
+        {opposite ? (
           <Button
-            variant="ghost"
+            aria-haspopup="dialog"
+            disabled={set.isPending}
+            reasonId={refusal}
+            onClick={() => revise(row, opposite.admission)}
+          >
+            {t(opposite.verb)}
+          </Button>
+        ) : (
+          <Button
             disabled={reopen.isPending}
             reasonId={refusal}
             onClick={() => reopen.mutate(row.domain)}
           >
             {t("blockedDomains.rowReopen")}
           </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            disabled={set.isPending}
-            reasonId={refusal}
-            onClick={() => revise(row)}
-          >
-            {t(
-              row.admission === "suppressed"
-                ? "blockedDomains.rowAdmit"
-                : "blockedDomains.rowRefuse",
-            )}
-          </Button>
-        ),
-    },
-  ];
+        )}
+      </OverflowMenu>
+    </span>
+  );
 }
 
 /**

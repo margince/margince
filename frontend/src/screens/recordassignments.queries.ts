@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
@@ -68,21 +73,22 @@ export function useRecordAssignments(
 ) {
   return useQuery({
     queryKey: recordAssignmentsKey(recordType, recordId ?? ""),
-    enabled: Boolean(recordId),
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/records/{record_type}/{record_id}/assignments",
-        {
-          params: {
-            path: { record_type: recordType, record_id: recordId as string },
-          },
-        },
-      );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
+    queryFn: recordId
+      ? async () => {
+          const { data, error, response } = await api.GET(
+            "/records/{record_type}/{record_id}/assignments",
+            {
+              params: {
+                path: { record_type: recordType, record_id: recordId },
+              },
+            },
+          );
+          if (error || !response.ok) {
+            throwProblem(error);
+          }
+          return data.data;
+        }
+      : skipToken,
   });
 }
 

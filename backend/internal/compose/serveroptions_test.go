@@ -15,6 +15,8 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -85,14 +87,9 @@ func insertOnlyRunnerForTest(t *testing.T) *jobs.Runner {
 	return inserter
 }
 
-// TestWithEmbedReindexLeavesEngineNilOnUnboundLane is the reindex-surface
-// half of the F1 fix (the unbound embed lane is a system-wide no-op):
-// EmbedIdentity() == "" (--ai-fake, or any routing config that never
-// bound an embeddings model) must leave the engine nil exactly like a nil
-// router does, so EmbedReindexStatus/Preview/Start fall through to their
-// generated 501 instead of wiring a handler that would 500 the first time
-// it tries to read a binding marker seedEmbedBinding never planted.
-func TestWithEmbedReindexLeavesEngineNilOnUnboundLane(t *testing.T) {
+// An unbound embed lane (--ai-fake, or routing with no embeddings model) answers
+// 501, not a 500 on a marker seedEmbedBinding never planted. /me offers nothing.
+func TestAnUnboundLaneAnswers501AndOffersNoReindexSurface(t *testing.T) {
 	s := &Server{}
 	cfg := ai.RoutingConfig{
 		Profile: ai.ProfileEUHosted,
@@ -113,8 +110,13 @@ func TestWithEmbedReindexLeavesEngineNilOnUnboundLane(t *testing.T) {
 
 	WithEmbedReindex(router, insertOnlyRunnerForTest(t))(s, nil)
 
-	if s.embedReindexHandlers.engine != nil {
-		t.Fatal("WithEmbedReindex must leave the engine nil on an unbound embed lane")
+	w := httptest.NewRecorder()
+	s.EmbedReindexStatus(w, httptest.NewRequest(http.MethodGet, "/v1/embeddings/reindex/status", nil))
+	if w.Code != http.StatusNotImplemented {
+		t.Errorf("status on an unbound lane = %d, want 501: %s", w.Code, w.Body.String())
+	}
+	if s.EmbedReindexAvailable() {
+		t.Error("/me advertises the reindex surface on an unbound embed lane")
 	}
 	assertMeAgreesWithTheReindexEngine(t, s)
 }
@@ -148,14 +150,13 @@ func TestWithEmbedReindexWiresTheEngineWhenBound(t *testing.T) {
 	assertMeAgreesWithTheReindexEngine(t, s)
 }
 
-// /me offers the reindex surface exactly when the engine behind it is wired.
-// Either disagreement is silent: a settings entry whose routes 501, or a bound
-// lane nobody can reach.
+// /me offers the reindex surface when, and only when, its routes serve. Either
+// disagreement is silent: a settings entry that 501s, or an unreachable lane.
 func assertMeAgreesWithTheReindexEngine(t *testing.T, s *Server) {
 	t.Helper()
-	advertised, wired := s.EmbedReindexAvailable(), s.embedReindexHandlers.engine != nil
-	if advertised != wired {
-		t.Errorf("/me advertises embedding_reindex=%v while the reindex engine is wired=%v", advertised, wired)
+	advertised, serving := s.EmbedReindexAvailable(), s.serving()
+	if advertised != serving {
+		t.Errorf("/me advertises embedding_reindex=%v while the reindex routes serve=%v", advertised, serving)
 	}
 }
 

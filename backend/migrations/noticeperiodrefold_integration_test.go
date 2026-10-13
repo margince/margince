@@ -5,7 +5,7 @@
 
 package migrations_test
 
-// 1791782102 refolds every stored company clock to what last_activity_of_company
+// 1791859728 refolds every stored company clock to what last_activity_of_company
 // answers. The stale values are seeded under the head schema and the shipped
 // file is replayed over them.
 
@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const noticePeriodRefold = "1791782102_stored_company_clocks_count_a_contact_serving_notice.up.sql"
+const noticePeriodRefold = "1791859728_stored_company_clocks_count_a_contact_serving_notice.up.sql"
 
 // seedEmployerWithMail files one note against a contact employed at a new
 // company, ending endsInDays after current_date, and answers the company's id.

@@ -12,6 +12,7 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 // this card is a settings card, and `render` there already provides the two
 // providers every one of them needs.
 import { jsonResponse, render } from "./settings.testkit";
+import { tableRowCells } from "./tablerow.testkit";
 
 // Every request the card could make, recorded: the ABSENCE of one is what the
 // withheld case is about (the harness shape the sibling health cards use).
@@ -82,6 +83,9 @@ it("names the unit and which check refused, so an operator knows what to fix", a
   expect(await screen.findByText(/45 on participants/)).toBeInTheDocument();
   expect(await screen.findByText(/3 on record key/)).toBeInTheDocument();
   expect(await screen.findByText(/48 records refused/)).toBeInTheDocument();
+  const unit = await tableRowCells("Refused connector records", "openchannel");
+  expect(unit.Refused).toHaveTextContent("48");
+  expect(unit.Reasons).toHaveTextContent("45 on participants");
 });
 
 it("says nothing was refused rather than showing an empty card", async () => {

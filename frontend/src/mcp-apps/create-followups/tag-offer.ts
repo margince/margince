@@ -159,7 +159,10 @@ async function accept(
   set({ ...state, phase: "busy", reason: undefined });
   let tagID = state.tagID;
   if (tagID === "") {
-    const made = await callServerTool("create_tag", { name: offer.name });
+    const made = await callServerTool("change_tags", {
+      action: "create",
+      name: offer.name,
+    });
     if (!made.ok) {
       set(failure(state, made));
       return;
@@ -167,7 +170,8 @@ async function accept(
     tagID = asText(asRecord(made.data).tag_id);
   }
   const held = { ...state, tagID };
-  const applied = await callServerTool("apply_tag", {
+  const applied = await callServerTool("change_tags", {
+    action: "apply",
     ...record,
     tag_id: tagID,
   });
@@ -187,7 +191,8 @@ async function undo(
   set: (next: State) => void,
 ): Promise<void> {
   set({ ...state, phase: "busy", reason: undefined });
-  const removed = await callServerTool("remove_tag", {
+  const removed = await callServerTool("change_tags", {
+    action: "remove",
     ...record,
     tag_id: state.tagID,
   });

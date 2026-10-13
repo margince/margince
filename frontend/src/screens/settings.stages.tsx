@@ -1,332 +1,207 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The stage ladder inside one pipeline: its shape, the open stages a reader
-// puts in order by hand, the closing pair that always comes last, and the verbs
-// that change a stage.
+// The stage ladder inside one pipeline, as one table. The open stages come
+// first, in the order a reader sets, and the closing pair always last.
 //
 // Split from settings.pipelines.tsx beside it because a stage answers to its
 // pipeline and not the other way round: this file receives the pipeline it
 // draws and never reaches for the catalog around it.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, Lock } from "lucide-react";
-import { useId, useRef, useState } from "react";
-import { api } from "../api/client";
+import { useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import {
-  Badge,
-  Button,
-  Disclosure,
-  EmptyState,
-  SectionHeader,
-} from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { Badge, EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { PanelBody, PanelGroupHead, PanelIntro } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
 import { Meter } from "../design-system/readings";
-import { SortableList } from "../design-system/sortablelist";
 import { StageStrip } from "../design-system/stagestrip";
-import { useToast } from "../design-system/toast";
+import { foldForMatch } from "../format/collate";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { type CreateField, CreateRecordModal } from "./create";
-import { EditAction } from "./edit";
-import { StageExitCriteria } from "./settings.exitcriteria";
+import { type PluralTranslator, useLocale, usePlural, useT } from "../i18n";
+import type { Locale } from "../i18n/locale";
+import {
+  CriterionCreateDialog,
+  StageExitCriteria,
+} from "./settings.exitcriteria";
 import { useStageOrder } from "./settings.pipelineorder";
+import {
+  ladderOf,
+  StageCreate,
+  StageMenu,
+  StageRemoveConfirm,
+  type StageVerbs,
+  useStageRemoval,
+} from "./settings.stageverbs";
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
 type T = ReturnType<typeof useT>;
 
-// Coerces a form value down to the trimmed string these forms always produce.
-// Exported because the pipeline form beside this one maps its own body the same
-// way, and this file is the leaf of the two.
-export function str(v: unknown): string {
-  return typeof v === "string" ? v.trim() : "";
+// A badge only where the name leaves the outcome unsaid: "Won" needs no [Won].
+function ClosingName({ stage }: Readonly<{ stage: Stage }>) {
+  const t = useT();
+  const outcome =
+    stage.semantic === "won" ? t("stage.semWon") : t("stage.semLost");
+  const said = foldForMatch(stage.name.trim()) === foldForMatch(outcome);
+  return (
+    <span className="stage-name">
+      {stage.name}
+      {!said && (
+        <Badge tone={stage.semantic === "won" ? "success" : "danger"}>
+          {outcome}
+        </Badge>
+      )}
+    </span>
+  );
 }
 
-// Narrows the form's free-text semantic into the Stage enum without a cast; an
-// unrecognized value falls back to "open" rather than shipping a bad literal.
-function stageSemantic(v: unknown): Stage["semantic"] {
-  switch (v) {
-    case "won":
-      return "won";
-    case "lost":
-      return "lost";
-    default:
-      return "open";
+// Pointed out, never refused. A dip is usually a stage dragged one place too
+// far, and sometimes a pipeline built that way.
+function OpenName({
+  stage,
+  above,
+}: Readonly<{ stage: Stage; above: Stage | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (above === undefined || stage.win_probability >= above.win_probability) {
+    return <span className="stage-name">{stage.name}</span>;
   }
+  return (
+    <CellStack>
+      <span className="stage-name">{stage.name}</span>
+      <span className="stage-dip">
+        <ArrowDown aria-hidden="true" />
+        {t("stage.lowerThanAbove", {
+          name: above.name,
+          reading: `${formatNumber(above.win_probability, locale)}%`,
+        })}
+      </span>
+    </CellStack>
+  );
 }
 
-// What create and edit share. No position: a stage's place is set by where it
-// is dragged, never typed.
-function mapStageBody(v: Record<string, unknown>) {
-  return {
-    name: str(v.name),
-    semantic: stageSemantic(v.semantic),
-    win_probability: v.win_probability ? Number(str(v.win_probability)) : 0,
-  };
+type ColumnsOf = Readonly<{
+  t: T;
+  plural: PluralTranslator;
+  locale: Locale;
+  open: readonly Stage[];
+  verbs: StageVerbs;
+}>;
+
+function criteriaCell(stage: Stage, { t, plural, locale }: ColumnsOf) {
+  if (stage.semantic !== "open") return t("stage.endsDeal");
+  const counts = stage.exit_criteria;
+  if (counts === undefined) return "—";
+  const parts = [
+    counts.required > 0 &&
+      plural("stage.criteriaRequired", counts.required, {
+        count: formatNumber(counts.required, locale),
+      }),
+    counts.optional > 0 &&
+      plural("stage.criteriaOptional", counts.optional, {
+        count: formatNumber(counts.optional, locale),
+      }),
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : t("stage.criteriaNone");
 }
 
-function stageFields(t: T): CreateField[] {
+function criteriaFolded(stage: Stage, { t, plural, locale }: ColumnsOf) {
+  const counts = stage.exit_criteria;
+  if (stage.semantic !== "open" || counts === undefined) return undefined;
+  const all = counts.required + counts.optional;
+  return all === 0
+    ? t("stage.criteriaNoneFolded")
+    : plural("stage.criteriaCount", all, { count: formatNumber(all, locale) });
+}
+
+function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
+  const { t, locale, open, verbs } = of;
+  const reading = (stage: Stage) =>
+    `${formatNumber(stage.win_probability, locale)}%`;
   return [
-    { key: "name", label: "stage.name", required: true },
     {
-      key: "semantic",
-      label: "stage.semantic",
-      type: "select",
-      required: true,
-      options: [
-        { value: "open", label: t("stage.semOpen") },
-        { value: "won", label: t("stage.semWon") },
-        { value: "lost", label: t("stage.semLost") },
-      ],
+      key: "step",
+      header: t("stage.colStep"),
+      align: "end",
+      fold: "hide",
+      render: (stage) =>
+        stage.semantic === "open" ? (
+          formatNumber(open.indexOf(stage) + 1, locale)
+        ) : (
+          <Lock
+            className="stage-lock"
+            role="img"
+            aria-label={t("stage.fixedLast")}
+          />
+        ),
     },
-    { key: "win_probability", label: "stage.winProb", type: "number" },
+    {
+      key: "name",
+      header: t("stage.colStage"),
+      fold: "title",
+      grow: true,
+      render: (stage) =>
+        stage.semantic === "open" ? (
+          <OpenName stage={stage} above={open[open.indexOf(stage) - 1]} />
+        ) : (
+          <ClosingName stage={stage} />
+        ),
+    },
+    {
+      key: "odds",
+      header: t("stage.winProb"),
+      align: "end",
+      render: (stage) => (
+        <span className="stage-odds">
+          <Meter
+            value={stage.win_probability}
+            max={100}
+            label={t("stage.oddsOf", { name: stage.name })}
+            dense
+            flat
+          />
+          {reading(stage)}
+        </span>
+      ),
+      folded: reading,
+    },
+    {
+      key: "criteria",
+      header: t("stage.criteria.title"),
+      render: (stage) => criteriaCell(stage, of),
+      folded: (stage) => criteriaFolded(stage, of),
+    },
+    {
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (stage) => <StageMenu stage={stage} verbs={verbs} />,
+    },
   ];
 }
 
-/** The ladder in position order. */
-export function ladderOf(pipeline: Pipeline): Stage[] {
-  return [...(pipeline.stages ?? [])].sort((a, b) => a.position - b.position);
-}
-
-// A new stage is created at the end of the ladder; the server puts an open one
-// in front of the closing pair in the same write.
-async function createStage(
-  input: Readonly<{ values: Record<string, string>; pipeline: Pipeline }>,
-) {
-  const last = Math.max(0, ...ladderOf(input.pipeline).map((s) => s.position));
-  return unwrap(
-    await api.POST("/stages", {
-      body: {
-        ...mapStageBody(input.values),
-        pipeline_id: input.pipeline.id,
-        position: last + 1,
-      },
-    }),
-  );
-}
-
-function StageCreate({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
+/** The ladder's shape at a glance, above the table that edits it. */
+function StageFlow({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const t = useT();
-  const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: createStage,
-    onSuccess: () => {
-      setOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      toast.show(t("stage.added"));
-    },
-  });
+  const { locale } = useLocale();
   return (
-    <>
-      <Button
-        data-testid={`new-stage-${pipeline.id}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.new")}
-      </Button>
-      <CreateRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={t("stage.new")}
-        fields={stageFields(t)}
-        pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
-        onSubmit={(values) => mutation.mutate({ values, pipeline })}
-      />
-    </>
-  );
-}
-
-// Removal is pipeline:delete, not the pipeline:update the rest of this ladder
-// runs on. Both refusals are the server's (a stage still holding deals, and the
-// closing pair), so this asks and then shows what it was told: the refusal
-// names the deals in the way, which is the part an admin acts on.
-function StageRemove({
-  stage,
-  returnFocusTo,
-}: Readonly<{ stage: Stage; returnFocusTo: () => HTMLElement | null }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const canRemove = useCanWrite("pipeline", "delete");
-  const remove = useMutation({
-    mutationFn: async (target: Stage) => {
-      unwrap(
-        await api.DELETE("/stages/{id}", {
-          params: { path: { id: target.id } },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      // The refetched ladder FIRST, then the dialog: closing it hands focus
-      // back to a list that must no longer hold this row.
-      await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-      setOpen(false);
-    },
-  });
-  const close = () => {
-    remove.reset();
-    setOpen(false);
-  };
-  if (!canRemove) {
-    return null;
-  }
-  return (
-    <>
-      <Button
-        data-testid={`remove-stage-${stage.id}`}
-        onClick={() => setOpen(true)}
-      >
-        {t("stage.remove")}
-      </Button>
-      <ConfirmModal
-        open={open}
-        onClose={close}
-        title={t("stage.removeTitle")}
-        confirmLabel={t("stage.removeConfirm")}
-        confirmVariant="danger"
-        pending={remove.isPending}
-        error={remove.isError ? problemMessageOf(remove.error, t) : null}
-        onConfirm={() => remove.mutate(stage)}
-        returnFocusTo={returnFocusTo}
-      >
-        <p>{t("stage.removeBody", { name: stage.name })}</p>
-      </ConfirmModal>
-    </>
-  );
-}
-
-function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
-  const t = useT();
-  return (
-    <EditAction<Stage>
-      label={t("stage.edit")}
-      savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-      invalidate="pipelines"
-      recordKey="stage"
-      record={{
-        id: stage.id,
+    <StageStrip
+      label={t("pipeline.flow")}
+      empty={t("stage.noneOpen")}
+      steps={ladderOf(pipeline).map((stage) => ({
+        key: stage.id,
         name: stage.name,
-        semantic: stage.semantic,
-        win_probability: String(stage.win_probability),
-      }}
-      fields={stageFields(t)}
-      update={async (values) => {
-        return unwrap(
-          await api.PATCH("/stages/{id}", {
-            params: { path: { id: stage.id } },
-            body: mapStageBody(values),
-          }),
-        );
-      }}
+        probability: stage.win_probability,
+        reading: `${formatNumber(stage.win_probability, locale)}%`,
+        outcome: stage.semantic === "open" ? undefined : stage.semantic,
+      }))}
     />
-  );
-}
-
-// One open stage: its step number, its name, how likely a deal standing here is
-// to close won, and its verbs, with the exit criteria folded under it.
-function OpenStageRow({
-  stage,
-  step,
-  above,
-  canEdit,
-  returnFocusTo,
-}: Readonly<{
-  stage: Stage;
-  step: number;
-  above: Stage | undefined;
-  canEdit: boolean;
-  returnFocusTo: () => HTMLElement | null;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const reading = `${formatNumber(stage.win_probability, locale)}%`;
-  // Pointed out, never refused: a ladder whose odds dip is usually a stage
-  // dragged one place too far, and sometimes a pipeline built that way on
-  // purpose. The reader decides which.
-  const dips =
-    above !== undefined && stage.win_probability < above.win_probability;
-  return (
-    <div className="stage-row">
-      <span className="stage-step t-num" aria-hidden="true">
-        {formatNumber(step, locale)}
-      </span>
-      <span className="stage-name">
-        {stage.name}
-        {dips && (
-          <span className="stage-dip">
-            <ArrowDown aria-hidden="true" />
-            {t("stage.lowerThanAbove", {
-              name: above.name,
-              reading: `${formatNumber(above.win_probability, locale)}%`,
-            })}
-          </span>
-        )}
-      </span>
-      <span className="stage-odds">
-        <Meter
-          value={stage.win_probability}
-          max={100}
-          label={t("stage.oddsOf", { name: stage.name })}
-          dense
-          flat
-        />
-        <span className="t-num">{reading}</span>
-      </span>
-      <span className="stage-verbs">
-        {canEdit && <StageEdit stage={stage} />}
-        <StageRemove stage={stage} returnFocusTo={returnFocusTo} />
-      </span>
-      <div className="stage-criteria">
-        <Disclosure summary={t("stage.criteria.title")}>
-          <StageExitCriteria
-            stageId={stage.id}
-            semantic={stage.semantic}
-            canEdit={canEdit}
-          />
-        </Disclosure>
-      </div>
-    </div>
-  );
-}
-
-function ClosingStages({
-  closing,
-  canEdit,
-}: Readonly<{ closing: readonly Stage[]; canEdit: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (closing.length === 0) {
-    return <EmptyState>{t("stage.closingMissing")}</EmptyState>;
-  }
-  return (
-    <ul className="stage-closing">
-      {closing.map((stage) => (
-        <li key={stage.id} className="stage-row is-closing">
-          <Lock className="stage-lock" aria-hidden="true" />
-          <span className="stage-name">
-            {stage.name}
-            <Badge tone={stage.semantic === "won" ? "success" : "danger"}>
-              {stage.semantic === "won"
-                ? t("stage.semWon")
-                : t("stage.semLost")}
-            </Badge>
-          </span>
-          <span className="stage-odds t-num">
-            {formatNumber(stage.win_probability, locale)}%
-          </span>
-          <span className="stage-verbs">
-            {canEdit && <StageEdit stage={stage} />}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -337,87 +212,161 @@ function ClosingStages({
 export function StageLadderEditor({
   pipeline,
   canEdit,
-}: Readonly<{ pipeline: Pipeline; canEdit: boolean }>) {
+  hintId,
+}: Readonly<{ pipeline: Pipeline; canEdit: boolean; hintId: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
-  const hintId = useId();
-  const list = useRef<HTMLDivElement>(null);
   const order = useStageOrder();
   const writable = canEdit && !pipeline.archived_at;
+  const orders = ordersStages(pipeline, canEdit);
+  const canRemove = useCanWrite("pipeline", "delete") && !pipeline.archived_at;
   const ladder = ladderOf(pipeline);
   const open = ladder.filter((stage) => stage.semantic === "open");
-  const closing = ladder.filter((stage) => stage.semantic !== "open");
-  const closingIds = closing.map((stage) => stage.id);
+  const head = useRef<HTMLSpanElement>(null);
+  const removal = useStageRemoval(
+    ladder,
+    () =>
+      document.querySelector<HTMLElement>(
+        `[data-testid="new-stage-${pipeline.id}"]`,
+      ) ?? head.current,
+  );
+  const [adding, setAdding] = useState<Stage | null>(null);
+  const added = useLastSubject(adding);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (key: string, keep = false) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(key) || keep) next.add(key);
+      return next;
+    });
+  const verbs: StageVerbs = {
+    writable,
+    canRemove,
+    onAddCriterion: (stage) => {
+      toggle(stage.id, true);
+      setAdding(stage);
+    },
+    onRemove: removal.ask,
+  };
+  const label = t("stage.group");
   return (
     <>
-      <StageStrip
-        label={t("pipeline.flow")}
-        empty={t("stage.noneOpen")}
-        steps={[...open, ...closing].map((stage) => ({
-          key: stage.id,
-          name: stage.name,
-          probability: stage.win_probability,
-          reading: `${formatNumber(stage.win_probability, locale)}%`,
-          outcome: stage.semantic === "open" ? undefined : stage.semantic,
-        }))}
+      <PanelGroupHead
+        level="h3"
+        title={
+          <span ref={head} tabIndex={-1}>
+            {label}
+          </span>
+        }
+        action={writable && <StageCreate pipeline={pipeline} />}
       />
-      <SectionHeader
-        title={t("stage.openGroup")}
-        level={3}
-        actions={writable && <StageCreate pipeline={pipeline} />}
-      />
-      {writable && open.length > 1 && (
-        <p id={hintId} className="t-caption stage-hint">
-          {t("stage.orderHint")}
-        </p>
-      )}
-      {/* tabIndex -1 so a removal can hand focus to the list it changed: the
-          row's own Remove button is gone by then. */}
-      <div ref={list} tabIndex={-1}>
-        {open.length === 0 ? (
+      {ladder.length === 0 ? (
+        <PanelBody>
           <EmptyState plate title={t("stage.noneOpen")}>
             {t("stage.noneOpenNote")}
           </EmptyState>
-        ) : (
-          <SortableList
-            label={t("stage.openGroup")}
-            items={open.map((stage) => ({ key: stage.id, stage }))}
-            hintId={writable ? hintId : undefined}
-            busy={order.pending}
-            onReorder={
-              writable
-                ? (keys) => order.reorder(pipeline, [...keys, ...closingIds])
-                : undefined
-            }
-            labels={{
-              handle: (item, position, count) =>
-                t("stage.handle", {
-                  name: item.stage.name,
-                  position: formatNumber(position, locale),
-                  total: formatNumber(count, locale),
-                }),
-              moved: (item, position, count) =>
-                t("stage.moved", {
-                  name: item.stage.name,
-                  position: formatNumber(position, locale),
-                  total: formatNumber(count, locale),
-                }),
-            }}
-            renderItem={(item, position) => (
-              <OpenStageRow
-                stage={item.stage}
-                step={position}
-                above={open[open.indexOf(item.stage) - 1]}
+        </PanelBody>
+      ) : (
+        <DataTable<Stage>
+          bleed
+          fold
+          label={label}
+          rows={ladder}
+          rowKey={(stage) => stage.id}
+          rowTestId={(stage) => `stage-${stage.id}`}
+          columns={stageColumns({ t, plural, locale, open, verbs })}
+          detail={{
+            header: t("stage.criteriaDetail"),
+            toggleLabel: (stage) =>
+              t("stage.criteriaFor", { name: stage.name }),
+            has: (stage) => stage.semantic === "open",
+            expanded,
+            onToggle: toggle,
+            render: (stage) => (
+              <StageExitCriteria
+                stageId={stage.id}
+                stageName={stage.name}
                 canEdit={writable}
-                returnFocusTo={() => list.current}
               />
-            )}
-          />
+            ),
+          }}
+          reorder={
+            orders
+              ? {
+                  header: t("stage.orderHeader"),
+                  hintId,
+                  busy: order.pending,
+                  can: (stage) => stage.semantic === "open",
+                  labels: {
+                    handle: (stage, position, count) =>
+                      t("stage.handle", {
+                        name: stage.name,
+                        position: formatNumber(position, locale),
+                        total: formatNumber(count, locale),
+                      }),
+                    moved: (stage, position, count) =>
+                      t("stage.moved", {
+                        name: stage.name,
+                        position: formatNumber(position, locale),
+                        total: formatNumber(count, locale),
+                      }),
+                  },
+                  onReorder: (keys) => order.reorder(pipeline, keys),
+                }
+              : undefined
+          }
+        />
+      )}
+      {ladder.length > 0 &&
+        (open.length === 0 || open.length === ladder.length) && (
+          <PanelBody>
+            <p className="t-caption stage-hint">
+              {open.length === 0
+                ? t("stage.noneOpenNote")
+                : t("stage.closingMissing")}
+            </p>
+          </PanelBody>
         )}
-      </div>
-      <SectionHeader title={t("stage.closingGroup")} level={3} />
-      <p className="t-caption stage-hint">{t("stage.closingNote")}</p>
-      <ClosingStages closing={closing} canEdit={writable} />
+      <CriterionCreateDialog
+        stageId={added?.id ?? ""}
+        open={adding !== null}
+        onClose={() => setAdding(null)}
+      />
+      <StageRemoveConfirm removal={removal} />
     </>
   );
+}
+
+/**
+ * What stands above the ladder: why a retired one is read-only, how to order
+ * it, and its shape. Bare holds the strip alone, which a phone does not draw.
+ */
+export function StageLadderIntro({
+  pipeline,
+  canEdit,
+  hintId,
+}: Readonly<{ pipeline: Pipeline; canEdit: boolean; hintId: string }>) {
+  const t = useT();
+  const retired = Boolean(pipeline.archived_at);
+  const hinted = ordersStages(pipeline, canEdit);
+  return (
+    <PanelBody
+      className={retired || hinted ? "pipeline-flow" : "pipeline-flow is-bare"}
+    >
+      {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
+      {hinted && (
+        <PanelIntro>
+          <span id={hintId}>{t("stage.orderHint")}</span>
+        </PanelIntro>
+      )}
+      <StageFlow pipeline={pipeline} />
+    </PanelBody>
+  );
+}
+
+/** Whether the ladder takes the arrow-key order hint: a writer, and two open stages to swap. */
+function ordersStages(pipeline: Pipeline, canEdit: boolean): boolean {
+  const open = ladderOf(pipeline).filter((stage) => stage.semantic === "open");
+  return canEdit && !pipeline.archived_at && open.length > 1;
 }

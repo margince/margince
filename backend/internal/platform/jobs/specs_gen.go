@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "5a10980781eedb7af276fd7426bb4ea3c7077d89aa5dc095bcca6016d5a08a5a"
+const JobContractHash = "c7c58c9121068fdbafe62182dcd4af37bdd3216ee204c4178aef267738ec3aa9"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -542,6 +542,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"import_run_sweep": {
+		Kind:      "import_run_sweep",
+		GoType:    "ImportRunSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
+		Fault:     FaultPolicy{NilAfterLogging: "the warn line is this pass's FINDING, not a failure: it counts the runs it moved to failed, which approve now resumes. A pass that could not read or move them returns that through jobs.Fault."},
+	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",
 		GoType:      "IntroExpiryArgs",
@@ -885,6 +895,16 @@ var specs = map[string]Spec{
 		FanOutTo:   "voice_build",
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 15 * time.Minute},
+	},
+	"waiting_horizon_refresh": {
+		Kind:        "waiting_horizon_refresh",
+		GoType:      "WaitingHorizonRefreshArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
 	},
 	"webhook_retry": {
 		Kind:         "webhook_retry",

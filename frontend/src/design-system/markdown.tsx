@@ -303,16 +303,35 @@ function renderInline(node: Inline): ReactNode {
   return (
     <a
       href={node.href}
-      // An outbound document link leaves this pane rather than replacing the
-      // answer the reader is holding it against. `noopener` is not optional on
-      // a target from a customer-uploaded file: without it the opened page can
-      // steer this one.
-      target={node.external ? "_blank" : undefined}
+      // An outbound link leaves this pane rather than replacing the answer
+      // the reader holds it against. `noopener` stops the opened page steering this one.
+      target={leavesTheApp(node.href) ? "_blank" : undefined}
       rel="noopener noreferrer"
     >
       {children(node.children)}
     </a>
   );
+}
+
+/**
+ * Whether a link leaves the app. Only a hash route on this page's own path is
+ * in-app; the same origin also serves the API and downloads, which would replace the app.
+ */
+function leavesTheApp(href: string): boolean {
+  if (!/^https?:/i.test(href)) return false;
+  if (typeof window === "undefined") return true;
+  try {
+    const target = new URL(href);
+    const here = window.location;
+    const inApp =
+      target.origin === here.origin &&
+      target.pathname === here.pathname &&
+      target.hash.startsWith("#/");
+    return !inApp;
+  } catch {
+    // An address the URL parser refuses has no origin to match, so it is not ours.
+    return true;
+  }
 }
 
 function children(nodes: readonly Inline[]): ReactNode[] {

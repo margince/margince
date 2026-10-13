@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ */
+
+/* No width of its own, so a long subject truncates inside the growing column
+   instead of widening the table past the panel. */
+.held-threads-subject {
+  display: block;
+  inline-size: 0;
+  min-inline-size: 100%;
+}

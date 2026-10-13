@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId } from "react";
+import { opensRow } from "./datatable";
 import { Eyebrow } from "./eyebrow";
 import { Heading, type HeadingElement } from "./heading";
 import {
@@ -41,29 +42,8 @@ const TITLE_ELEMENT: Readonly<Record<2 | 3, HeadingElement>> = {
   3: "h3",
 };
 
-// Panel is the titled-card shape Card does not offer: a header band, full-bleed
-// rows under it, and an optional footer for a figure that belongs to the whole
-// panel rather than to any one row.
-//
-// THE HEAD IS A TITLE AND, OPTIONALLY, THE VERBS THAT ACT ON IT. Never a
-// description: the title and the body are what give the panel its meaning, and
-// a sentence between them is a third voice saying what one of the two already
-// said. So the band carries a title alone or a title beside a badge or a
-// button, and both draw the same fixed `--panel-head-h`, which is what makes a
-// page of panels read as a column of titles at one interval. A floor is what
-// this used to be, and a floor is an invitation — a description raised the band
-// here, a screen re-spaced it there, and the same card stood at three heights
-// on one page. Whatever does not fit on one band is not header content: it goes
-// in the body, as a toolbar row or a `PanelBody`. What overruns INSIDE the band
-// ends in an ellipsis, and only the title gives way — a badge squeezed to buy
-// the title room reads as a different control, or loses its label outright.
-//
-// The header and the body are two different rhythms living in one box — that
-// band versus the body's padded content versus a row that wants to touch the
-// panel's own edges — which is why the padded content is a separate
-// `PanelBody` rather than a prop: a caller who needs both padded text and
-// full-bleed rows in the same panel nests `PanelBody` and `PanelRow` as
-// siblings instead of fighting one slot that tries to be both.
+// The head holds a title and its verbs, never a description; padded text goes
+// in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
 export function Panel({
   title,
   titleAction,
@@ -195,7 +175,7 @@ export function PanelGroupHead({
   action,
   id,
 }: Readonly<{
-  title: string;
+  title: ReactNode;
   // Where the group sits in the outline: one under whatever heads the pane.
   level: "h3" | "h4";
   // The verb that opens one of these. Absent on a record nobody may write to.
@@ -257,6 +237,7 @@ export function PanelIntro({
 export function PanelRow({
   interactive,
   record,
+  onOpen,
   children,
   className,
 }: Readonly<{
@@ -264,19 +245,31 @@ export function PanelRow({
   interactive?: boolean;
   // A list of things reads as a table, so its rows hover like one.
   record?: boolean;
+  // A press on no control inside the row opens it; its chevron is the keyboard path.
+  onOpen?: () => void;
   children: ReactNode;
   className?: string;
 }>) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut; the row's own chevron is the control.
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard reaches the same verb through the row's chevron.
     <div
       className={[
         "panel-row",
         interactive ? "panel-row-interactive" : "",
         record ? "panel-row-record" : "",
+        onOpen ? "panel-row-opens" : "",
         className ?? "",
       ]
         .filter(Boolean)
         .join(" ")}
+      onClick={
+        onOpen
+          ? (event) => {
+              if (opensRow(event)) onOpen();
+            }
+          : undefined
+      }
     >
       {children}
     </div>

@@ -6,8 +6,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { TableScroll } from "./atoms";
@@ -15,6 +16,7 @@ import {
   DataTable,
   type DataTableColumn,
   type DataTableDetail,
+  type DataTableReorder,
 } from "./datatable";
 import { Heading } from "./heading";
 
@@ -373,7 +375,9 @@ it("hides a folded heading and an empty cell by clipping, never by display", () 
   const css = datatableCss();
   const fold = css.slice(css.indexOf("@container table-fold"));
   expect(fold).toContain(".table-scroll-fold > .table > thead,");
-  expect(fold).toContain(':is(:empty, [data-fold="hide"])');
+  expect(fold).toMatch(
+    /:is\(\s*:empty:not\(\[data-fold="lead"\], \[data-fold="trail"\]\),\s*\[data-fold="hide"\]\s*\)/,
+  );
   expect(fold).toContain("clip-path: inset(50%);");
   // `folded` swaps a figure for its phrase, and only one of the two may be heard.
   const swap =
@@ -537,15 +541,29 @@ it("points the toggle at the caller's element when nothing opens under the row",
   expect(document.querySelector(".datatable-detail")).toBeNull();
 });
 
-it("keeps a folded row's toggle at the end of its first line", () => {
-  render(<CallLog fold />);
+// A row with nothing to open keeps the toggle's empty slot. A control before
+// it then ends on the edge it ends on in the rows that open.
+it("keeps the toggle's place at the end of a folded row's first line, opening or not", () => {
+  render(
+    <CallLog fold detail={{ ...TRACE, has: (call) => call.id === "a" }} />,
+  );
   const toggle = screen.getByRole("button", { name: "Show Triage" });
-  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("end");
+  expect(toggle.closest("td")?.getAttribute("data-fold")).toBe("trail");
+  const slot = screen.getByTestId("call-b").lastElementChild;
+  expect(slot?.childElementCount).toBe(0);
+  expect(slot?.getAttribute("data-fold")).toBe("trail");
   expect(
     screen
       .getByRole("columnheader", { name: "Detail" })
       .querySelector(".sr-only"),
   ).not.toBeNull();
+});
+
+it("lets the toggle column fold away where no row has anything to open", () => {
+  render(<CallLog fold detail={{ ...TRACE, has: () => false }} />);
+  expect(
+    screen.getByTestId("call-a").lastElementChild?.getAttribute("data-fold"),
+  ).toBe("end");
 });
 
 it("names the table itself, whether or not its box scrolls", () => {
@@ -588,4 +606,185 @@ it("leaves a press on any control that keeps its own state to that control", asy
     await user.click(screen.getByText(name));
   }
   expect(opened).toEqual([]);
+});
+
+type Stage = Readonly<{ id: string; name: string; closing?: boolean }>;
+const STAGES: readonly Stage[] = [
+  { id: "q", name: "Qualified" },
+  { id: "d", name: "Discovery" },
+  { id: "p", name: "Proposal" },
+  { id: "w", name: "Won", closing: true },
+  { id: "l", name: "Lost", closing: true },
+];
+const STAGE_COLUMNS: DataTableColumn<Stage>[] = [
+  { key: "name", header: "Name", render: (stage) => stage.name },
+];
+
+function Ladder({
+  onReorder = () => undefined,
+  onOpen,
+  fold,
+  detail,
+  busy,
+}: Readonly<{
+  busy?: boolean;
+  onReorder?: (keys: string[]) => void;
+  onOpen?: (stage: Stage) => void;
+  fold?: boolean;
+  detail?: DataTableDetail<Stage>;
+}>) {
+  const [stages, setStages] = useState(STAGES);
+  const reorder: DataTableReorder<Stage> = {
+    header: "Order",
+    busy,
+    can: (stage) => !stage.closing,
+    labels: {
+      handle: (stage, position, count) =>
+        `Move ${stage.name}, ${position} of ${count}`,
+      moved: (stage, position, count) =>
+        `${stage.name} is ${position} of ${count}`,
+    },
+    onReorder: (keys) => {
+      onReorder(keys);
+      setStages(keys.flatMap((key) => STAGES.filter((s) => s.id === key)));
+    },
+  };
+  return (
+    <DataTable
+      label="Stages"
+      columns={STAGE_COLUMNS}
+      rows={[...stages]}
+      rowKey={(stage) => stage.id}
+      rowTestId={(stage) => `stage-${stage.id}`}
+      onRowClick={onOpen}
+      fold={fold}
+      detail={detail}
+      reorder={reorder}
+    />
+  );
+}
+
+it("moves a row from its grip with the arrow keys, says where it landed, and keeps focus on the grip", async () => {
+  const user = userEvent.setup();
+  const onReorder = vi.fn();
+  render(<Ladder onReorder={onReorder} />);
+  screen.getByRole("button", { name: "Move Proposal, 3 of 3" }).focus();
+  await user.keyboard("{ArrowUp}");
+  expect(onReorder).toHaveBeenLastCalledWith(["q", "p", "d", "w", "l"]);
+  expect(screen.getByText("Proposal is 2 of 3").getAttribute("aria-live")).toBe(
+    "polite",
+  );
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Move Proposal, 2 of 3" }),
+  );
+  expect(
+    screen.getAllByRole("row").map((row) => row.dataset.testid ?? "head"),
+  ).toEqual(["head", "stage-q", "stage-p", "stage-d", "stage-w", "stage-l"]);
+});
+
+// happy-dom lays every row out at zero height, so a pointer at 100 is below
+// them all. The carried row goes as far down as its run lets it.
+const carry = (name: string) => {
+  const grip = screen.getByRole("button", { name });
+  fireEvent.pointerDown(grip, { pointerId: 1, button: 0 });
+  fireEvent.pointerMove(globalThis.window, { pointerId: 1, clientY: 100 });
+};
+
+it("commits a pointer drag on release, and cancels one on Escape", () => {
+  const onReorder = vi.fn();
+  render(<Ladder onReorder={onReorder} />);
+  carry("Move Discovery, 2 of 3");
+  expect(screen.getByTestId("stage-d").className).toContain("is-lifted");
+  fireEvent.keyDown(globalThis.window, { key: "Escape" });
+  fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+  expect(onReorder).not.toHaveBeenCalled();
+  carry("Move Discovery, 2 of 3");
+  fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+  expect(onReorder).toHaveBeenCalledWith(["q", "p", "d", "w", "l"]);
+});
+
+it("draws no grip on a fixed row, keeps its cell, and never carries a row past it", async () => {
+  const user = userEvent.setup();
+  const onReorder = vi.fn();
+  render(<Ladder onReorder={onReorder} />);
+  expect(screen.queryByRole("button", { name: /Won|Lost/ })).toBeNull();
+  const won = screen.getByTestId("stage-w").querySelector(".datatable-grip");
+  expect(won?.tagName).toBe("TD");
+  expect(won?.childElementCount).toBe(0);
+  expect(
+    screen.getByRole("columnheader", { name: "Order" }).className,
+  ).toContain("datatable-grip");
+  screen.getByRole("button", { name: "Move Proposal, 3 of 3" }).focus();
+  await user.keyboard("{ArrowDown}");
+  expect(onReorder).not.toHaveBeenCalled();
+});
+
+it("never opens a row from its grip, nor from the release that ends a carry", async () => {
+  const user = userEvent.setup();
+  const onOpen = vi.fn();
+  render(<Ladder onOpen={onOpen} />);
+  await user.click(
+    screen.getByRole("button", { name: "Move Qualified, 1 of 3" }),
+  );
+  carry("Move Discovery, 2 of 3");
+  fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+  fireEvent.click(screen.getByText("Discovery"));
+  expect(onOpen).not.toHaveBeenCalled();
+  await user.click(screen.getByText("Won"));
+  expect(onOpen).toHaveBeenCalledWith(STAGES[3]);
+});
+
+it("never opens a row from a press that carried nothing, cancelled or refused", async () => {
+  const user = userEvent.setup();
+  const onOpen = vi.fn();
+  const { rerender } = render(<Ladder onOpen={onOpen} />);
+  carry("Move Discovery, 2 of 3");
+  fireEvent.keyDown(globalThis.window, { key: "Escape" });
+  fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+  fireEvent.click(screen.getByText("Discovery"));
+  rerender(<Ladder onOpen={onOpen} busy />);
+  const grip = screen.getByRole("button", { name: "Move Proposal, 3 of 3" });
+  fireEvent.pointerDown(grip, { pointerId: 2, button: 0 });
+  fireEvent.pointerUp(globalThis.window, { pointerId: 2 });
+  fireEvent.click(screen.getByText("Proposal"));
+  expect(onOpen).not.toHaveBeenCalled();
+  await user.click(screen.getByText("Won"));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the grip at the start of a folded row's first line, on every row", () => {
+  render(<Ladder fold />);
+  const places = (id: string) =>
+    [...screen.getByTestId(`stage-${id}`).querySelectorAll("td")].map((cell) =>
+      cell.getAttribute("data-fold"),
+    );
+  expect(places("q")).toEqual(["lead", "title"]);
+  expect(places("w")).toEqual(["lead", "title"]);
+  const css = datatableCss();
+  const fold = css.slice(css.indexOf("@container table-fold"));
+  expect(fold).toMatch(
+    /> :is\(\[data-fold="lead"\], \[data-fold="trail"\]\) \{\s*flex: none;\s*min-inline-size: var\(--controlHeight\);\s*min-block-size: var\(--controlHeight\);/,
+  );
+});
+
+it("spans the grip column with an opened detail, and moves the detail with its row", async () => {
+  const user = userEvent.setup();
+  render(
+    <Ladder
+      detail={{
+        header: "Criteria",
+        toggleLabel: (stage) => `Show ${stage.name}`,
+        has: (stage) => !stage.closing,
+        render: (stage) => <p>{`Exit ${stage.name}`}</p>,
+      }}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "Show Proposal" }));
+  const detail = screen.getByText("Exit Proposal").closest("td");
+  expect(detail?.getAttribute("colspan")).toBe("3");
+  screen.getByRole("button", { name: "Move Proposal, 3 of 3" }).focus();
+  await user.keyboard("{ArrowUp}");
+  expect(screen.getByTestId("stage-p").nextElementSibling?.textContent).toBe(
+    "Exit Proposal",
+  );
 });

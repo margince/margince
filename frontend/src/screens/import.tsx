@@ -1,62 +1,49 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Upload } from "lucide-react";
-import { useRef } from "react";
+import { useState } from "react";
 import { useCan, useCanWrite } from "../app/capability";
 import { navigate, routeHash } from "../app/router";
-import { useArrivalFocus } from "../design-system/arrivalfocus";
-import {
-  Button,
-  EmptyState,
-  Field,
-  SegmentedControl,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { ConfirmModal } from "../design-system/confirmmodal";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
-import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
+import { useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, QueryStates, useMe } from "./common";
+import { ImportDropzone } from "./import.files";
+import { UndoConfirm } from "./import.notices";
+import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
+import { ImportWizardPage } from "./import.wizard";
+import { runHref } from "./importaddress";
 import {
-  type Locale,
-  type PluralTranslator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../i18n";
-import { problemMessageOf, useMe } from "./common";
-import { UndoErrors, UndoInterruptedNotice } from "./import.notices";
-import { useAddressedImportFlow } from "./importaddress";
-import { useImportFlow } from "./importflow";
-import { ImportMappingTable } from "./importmapping";
-import type {
-  ImportObject,
-  ImportProfile,
-  ImportReport,
-  ImportRun,
-} from "./importtypes";
-import { identifyingFieldFor, UNNAMED_IMPORT_OBJECT } from "./importtypes";
-import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
-import { useTagVocabulary } from "./tags.queries";
+  handOverUpload,
+  useImportFormat,
+  useLandedRecords,
+  useRecentImports,
+  useUndoImport,
+} from "./importflow";
+import type { ImportFormat, ImportRun } from "./importtypes";
+import { useMemberNames } from "./membernames";
+import {
+  IMPORT_RUN_SUBPAGE,
+  IMPORT_TEMPLATE_SUBPAGE,
+  settingsHref,
+} from "./settingsrouting";
 import "./import.css";
 
-// Bringing a customer's file into the estate (S-E11.6): upload it, see what its
-// columns actually hold, map them, read what the import WILL do, then commit.
+// Bringing a customer's data into the estate. Download the template or upload
+// a file on the hub, then check, map, test and import on the run page.
 //
-// The dry run is the point of the whole screen. An import is the least
-// reversible write in the product — thousands of rows across several entity
-// types in one act — so nothing is written until a human has read a report of
-// what will happen and pressed the button again.
-//
-// On the settings page it is one row, because an import is an ACT rather than
-// an answer this installation holds: the row carries the verb, and the steps
-// that make up the act belong to the page that verb opens.
+// An import is the least reversible write in the product: thousands of rows
+// across several record types in one act. So nothing is written until a human
+// has read the dry run's report and pressed the button again.
 const IMPORT_HOME = settingsHref("import");
 const openRun = () => navigate({ ...IMPORT_HOME, id2: IMPORT_RUN_SUBPAGE });
+const openTemplate = () =>
+  navigate({ ...IMPORT_HOME, id2: IMPORT_TEMPLATE_SUBPAGE });
 
 export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   const t = useT();
@@ -92,697 +79,204 @@ export function ImportCard({ subpage }: Readonly<{ subpage?: string }>) {
   if (!mayImport) {
     return null;
   }
-  return subpage === IMPORT_RUN_SUBPAGE ? <ImportRunPage /> : <ImportStart />;
+  if (subpage === IMPORT_RUN_SUBPAGE) {
+    return <ImportWizardPage />;
+  }
+  if (subpage === IMPORT_TEMPLATE_SUBPAGE) {
+    return (
+      <div>
+        <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />
+        <TemplatePreview />
+      </div>
+    );
+  }
+  return <ImportHub />;
 }
 
-function ImportStart() {
+// The hub shows the two ways in (a template to fill, or a file to upload).
+// It also shows the order files land in, and the runs already made.
+function ImportHub() {
   const t = useT();
-  // The flow reads a parked run back on mount, so the row can say one is left
-  // to finish: an operator who does not know it stopped cannot finish it.
-  const { resumed } = useImportFlow(UNNAMED_IMPORT_OBJECT);
+  const { locale } = useLocale();
+  const format = useImportFormat(locale);
+  // The file goes to the run page, which starts the upload. The drop zone
+  // unmounts with the hub, and the run page's title takes the focus.
+  const start = (file: File) => {
+    handOverUpload(file);
+    openRun();
+  };
   return (
-    <Panel title={t("import.title")}>
-      <SettingList bleed="settings">
-        <SettingRow
-          label={t("import.startLabel")}
-          description={t("import.sub")}
-          control={
-            <Button variant="ghost" onClick={openRun}>
-              {resumed ? t("import.continue") : t("import.start")}
-            </Button>
-          }
-        />
-      </SettingList>
-    </Panel>
-  );
-}
-
-function ImportRunPage() {
-  const t = useT();
-  const flow = useAddressedImportFlow();
-  const title = useArrivalFocus<HTMLSpanElement>();
-  return (
-    <div>
-      <RecordBack href={routeHash(IMPORT_HOME)} label={t("import.back")} />
-      <Panel
-        title={
-          <span ref={title} tabIndex={-1}>
-            {t("import.title")}
-          </span>
-        }
-      >
+    <>
+      <Panel title={t("import.hub.title")}>
         <PanelBody>
-          <ImportWizard flow={flow} />
+          <div className="import-hub__ways">
+            <div className="import-hub__way">
+              <Heading size="small" as="h3">
+                {t("import.hub.templateTitle")}
+              </Heading>
+              <p className="import__hint t-sub">
+                {t("import.hub.templateBody")}
+              </p>
+              <div className="import-hub__verbs">
+                <Button variant="ghost" onClick={openTemplate}>
+                  {t("import.hub.preview")}
+                </Button>
+                <a className="link-button" href={IMPORT_TEMPLATE_HREF} download>
+                  {t("import.template.download")}
+                </a>
+              </div>
+            </div>
+            <ImportDropzone
+              sizeLimitMb={format.data?.size_limit_mb}
+              onPick={start}
+            />
+          </div>
+          {format.data ? <ImportOrder order={format.data.order} /> : null}
         </PanelBody>
       </Panel>
-    </div>
-  );
-}
-
-// ImportWizard is the act itself, in the order it is performed: what the rows
-// are, which file, where each column goes, what the run WILL do, and only then
-// the commit — with the undo that follows it.
-function ImportWizard({
-  flow,
-}: Readonly<{
-  flow: ReturnType<typeof useAddressedImportFlow>;
-}>) {
-  const t = useT();
-  const fileInput = useRef<HTMLInputElement>(null);
-  const {
-    profile,
-    mapping,
-    run,
-    report,
-    resumed,
-    upload,
-    validate,
-    commit,
-    undo,
-    busy,
-    committed,
-  } = flow;
-
-  // The mapping table shows while a file is profiled and has no report yet —
-  // the one window in which the human is choosing destinations.
-  const showMapping = profile !== null && report === null;
-
-  return (
-    <div className="import">
-      {/* The control carries its own group label, so it needs no Field
-          around it — a second label would announce the same words twice. */}
-      <SegmentedControl
-        options={["company", "contact", "lead"] as const}
-        value={flow.object}
-        onChange={busy ? () => undefined : flow.chooseObject}
-        label={t("import.objectLabel")}
-        labels={{
-          company: t("import.object.company"),
-          contact: t("import.object.contact"),
-          lead: t("import.object.lead"),
-        }}
-      />
-      <p className="import__hint t-sub">
-        {t(`import.objectHint.${flow.object}`)}
-      </p>
-
-      <input
-        ref={fileInput}
-        type="file"
-        accept=".csv,text/csv"
-        /* The design system's own visually-hidden class, not a copy of it:
-         the file input stays reachable by label and keyboard while the
-         Button beside it is what a reader actually sees and presses. */
-        className="sr-only"
-        aria-label={t("import.fileLabel")}
-        // Cleared after every pick: a browser fires no change event when the
-        // SAME path is chosen again, and the natural next move after reading
-        // "Line 3 is empty" is to fix that line in that file and choose it
-        // once more. Without this the click does nothing, the old report
-        // stays on screen, and the commit button writes the FIRST upload's
-        // bytes.
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (file) {
-            flow.chooseFile(file);
-          }
-        }}
-        // Out of the tab order: it is invisible, so a keyboard user landing
-        // on it has a focus stop they cannot see. The Button beside it is the
-        // keyboard path, and the label keeps the input reachable by name.
-        tabIndex={-1}
-      />
-      <Button
-        variant="ghost"
-        disabled={busy}
-        onClick={() => fileInput.current?.click()}
-      >
-        <Upload aria-hidden />
-        <span>{profile ? t("import.chooseAnother") : t("import.choose")}</span>
-      </Button>
-
-      {upload.error ? (
-        <Callout tone="danger" kind="outcome" title={t("import.uploadFailed")}>
-          {problemMessageOf(upload.error, t)}
-        </Callout>
-      ) : null}
-
-      {showMapping ? (
-        <ImportMappingStep
-          profile={profile}
-          mapping={mapping}
-          object={flow.object}
-          busy={busy}
-          locked={validate.isPending}
-          pending={validate.isPending}
-          error={validate.error}
-          onChange={flow.setTarget}
-          contextTagID={flow.contextTagID}
-          onContextTag={flow.chooseContextTag}
-          onValidate={() =>
-            validate.mutate({
-              object: flow.object,
-              profile,
-              mapping,
-              contextTagID: flow.contextTagID,
-            })
-          }
-        />
-      ) : null}
-
-      {report && run ? (
-        <ImportOutcome
-          report={report}
-          run={run}
-          committed={committed}
-          resumed={resumed}
-          busy={busy}
-          onCommit={() => commit.mutate(run)}
-          onUndo={() => undo.mutate(run)}
-          onRestart={flow.restart}
-          error={commit.error}
-          commitBusy={commit.isPending}
-          undoError={undo.error}
-          undoBusy={undo.isPending}
-          contextTagID={flow.contextTagID}
-        />
-      ) : null}
-      <ConfirmModal
-        open={flow.asking}
-        title={t("unsaved.title")}
-        confirmLabel={t("unsaved.discard")}
-        confirmVariant="danger"
-        onClose={flow.keepWork}
-        onConfirm={flow.discardWork}
-      >
-        <p>{t("import.discardFile")}</p>
-      </ConfirmModal>
-    </div>
-  );
-}
-
-// ImportOutcome draws one report — the dry run's prediction before approval and
-// the run's own outcome after it, in the same shape, so a human comparing the
-// two is comparing like with like.
-function ImportOutcome({
-  report,
-  run,
-  committed,
-  resumed,
-  busy,
-  onCommit,
-  onUndo,
-  onRestart,
-  error,
-  commitBusy,
-  undoError,
-  undoBusy,
-  contextTagID,
-}: Readonly<{
-  report: ImportReport;
-  run: ImportRun;
-  committed: boolean;
-  // True when this run was read back on mount rather than produced by the
-  // reader's last press. It changes nothing about what the card offers — only
-  // whether the card says where the run came from.
-  resumed: boolean;
-  busy: boolean;
-  onCommit: () => void;
-  onUndo: () => void;
-  onRestart: () => void;
-  error: unknown;
-  // `busy` is every import mutation; `commitBusy` and `undoBusy` are the one
-  // this control started. A button barred because a SIBLING write is out is a
-  // precondition; a button waiting on its own write is a wait, and only there
-  // does the reader keep focus on the control they just pressed.
-  commitBusy: boolean;
-  undoError: unknown;
-  undoBusy: boolean;
-  /** The word this run files its created records under, empty for none. */
-  contextTagID: string;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  // The run's own timestamp is rendered in the reader's locale, not the
-  // browser's default: everything else on this card already follows the catalog.
-  const { locale } = useLocale();
-  const d = report.disposition;
-  const resumable = run.status === "failed";
-  // undoing doubles as "reversing" and "a reversal that stopped part-way" —
-  // pressing the same button again resumes it, the same shape `resumable`
-  // already gives the forward commit.
-  const undoInterrupted = run.status === "undoing";
-  const undone = run.status === "undone";
-  // Only a run nobody has touched an undo on yet offers to start one — once
-  // it is undoing or undone, the button below speaks to THAT state instead.
-  const undoable = run.status === "complete";
-
-  return (
-    <div className="import__outcome">
-      <Heading size="small" as="h3" className="import__outcomeTitle">
-        {committed ? t("import.outcomeTitle") : t("import.previewTitle")}
-      </Heading>
-      {/* What the approver is about to apply. The mapping step is off screen by
-          now, so without this the word chosen there is invisible at exactly the
-          moment somebody decides whether to commit. */}
-      <ImportContextTagSummary tagID={contextTagID} />
-      {/* A run the reader did not just cause, shown as though they had, reads as
-          an import that ran by itself — so the card says when it happened. */}
-      {resumed ? (
-        <Callout kind="standing" title={t("import.resumedRunTitle")}>
-          {t("import.resumedRun", {
-            when: formatDateTime(run.created_at, locale, viewerZone()),
-          })}
-        </Callout>
-      ) : null}
-      <dl className="import__counts">
-        <Count label={t("import.count.created")} value={d.created} />
-        <Count label={t("import.count.updated")} value={d.updated} />
-        <Count label={t("import.count.unchanged")} value={d.unchanged} />
-        <Count label={t("import.count.skipped")} value={d.skipped} />
-      </dl>
-      <p className="import__hint t-sub">
-        {t("import.rowsRead", {
-          rows: formatNumber(report.rows_read, locale),
-          column: report.source_key_used,
-        })}
-      </p>
-      <LinkCount links={report.links} committed={committed} />
-
-      {/* The lead is the notice's heading and the rows are its body. A band
-          standing over a list it introduces is a heading in notice clothing —
-          and the list is what the reader came here to read. */}
-      {report.issues.length > 0 ? (
-        <Callout tone="warning" kind="outcome" title={t("import.issuesLead")}>
-          <ul className="import__issues t-sub">
-            {report.issues.map((issue) => (
-              <li key={`${issue.line}-${issue.reason}`}>
-                {t("import.issueLine", { line: ordinalNumber(issue.line) })}{" "}
-                {issue.reason}
-              </li>
-            ))}
-          </ul>
-        </Callout>
-      ) : null}
-
-      {resumable ? (
-        <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
-          {t("import.failed", {
-            checkpoint: formatNumber(run.checkpoint, locale),
-          })}
-        </Callout>
-      ) : null}
-
-      {committed && !resumable && !undoInterrupted && !undone ? (
-        <Callout tone="success" kind="outcome" title={t("import.done")} />
-      ) : null}
-
-      {!committed ? (
-        <Button
-          variant="primary"
-          disabled={busy && !commitBusy}
-          pending={commitBusy}
-          busyLabel={t("import.importing")}
-          onClick={onCommit}
-        >
-          {commitLabel(plural, locale, d.created + d.updated)}
-        </Button>
-      ) : null}
-
-      {resumable ? (
-        <Button
-          variant="primary"
-          disabled={busy && !commitBusy}
-          pending={commitBusy}
-          busyLabel={t("import.importing")}
-          onClick={onCommit}
-        >
-          {t("import.resume")}
-        </Button>
-      ) : null}
-      {error ? (
-        <Callout tone="danger" kind="outcome" title={t("import.commitFailed")}>
-          {problemMessageOf(error, t)}
-        </Callout>
-      ) : null}
-
-      <UndoSection
-        report={report}
-        undoable={undoable}
-        undoInterrupted={undoInterrupted}
-        undone={undone}
-        busy={busy}
-        undoBusy={undoBusy}
-        undoError={undoError}
-        onUndo={onUndo}
-      />
-
-      {committed && !resumable ? (
-        <Button variant="ghost" onClick={onRestart}>
-          {t("import.another")}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-// UndoSection is the whole reversal affordance, pulled out of ImportOutcome
-// to keep that function's branching readable: the interrupted callout, the
-// outcome once undone, the button (which doubles as "start" and "continue"),
-// and its own error.
-function UndoSection({
-  report,
-  undoable,
-  undoInterrupted,
-  undone,
-  busy,
-  undoBusy,
-  undoError,
-  onUndo,
-}: Readonly<{
-  report: ImportReport;
-  undoable: boolean;
-  undoInterrupted: boolean;
-  undone: boolean;
-  busy: boolean;
-  undoBusy: boolean;
-  undoError: unknown;
-  onUndo: () => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  return (
-    <>
-      <UndoInterruptedNotice interrupted={undoInterrupted} />
-
-      {undone ? <UndoOutcome undo={report.undo} /> : null}
-
-      {undoable || undoInterrupted ? (
-        <Button
-          variant="ghost"
-          disabled={busy && !undoBusy}
-          pending={undoBusy}
-          busyLabel={t("import.undoing")}
-          onClick={onUndo}
-        >
-          {undoInterrupted
-            ? t("import.continueUndo")
-            : undoLabel(plural, locale, report.disposition.created)}
-        </Button>
-      ) : null}
-      {undoError ? (
-        <Callout tone="danger" kind="outcome" title={t("import.undoFailed")}>
-          {problemMessageOf(undoError, t)}
-        </Callout>
-      ) : null}
+      <RecentImports format={format.data} />
     </>
   );
 }
 
-// UndoOutcome shows what a reversal did: how many rows it reversed, the
-// "kept — you edited these" list (A93 — a human-edited row is disclosed by
-// name, never silently rewritten back over what they typed), and any row
-// that could not be reversed at all, named with why rather than dropped.
-//
-// undo can be absent even though the run is undone: the commit itself
-// already finished server-side by the time the follow-up report read
-// answers, so a failed read must still say the import was undone rather
-// than rendering nothing.
-function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
+// The order the engine lands files in, read from the format. A link can only
+// name a record an earlier file made, so a reader planning a ZIP needs it.
+function ImportOrder({ order }: Readonly<{ order: ImportFormat["order"] }>) {
+  const t = useT();
+  return (
+    <p className="import-hub__order t-sub">
+      <span>{t("import.hub.order")}</span>
+      {order.map((object, index) => (
+        <span key={object} className="import-hub__step">
+          {index > 0 ? <span aria-hidden>→</span> : null}
+          <Badge>{t(`import.object.${object}`)}</Badge>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+const STATUS_TONE = {
+  pending: "default",
+  validating: "info",
+  awaiting_approval: "default",
+  running: "info",
+  complete: "success",
+  failed: "danger",
+  undoing: "info",
+  undone: "default",
+} as const satisfies Record<ImportRun["status"], string>;
+
+// The rows a run holds, once a dry run has counted them.
+function rowsOf(run: ImportRun): number {
+  return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
+}
+
+// The runs made so far, newest first. Undo is offered on a complete run only:
+// every other state either is still moving or has nothing left to reverse.
+function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const recent = useRecentImports();
+  const runs = recent.data ?? [];
+  useLandedRecords(runs.map((one) => one.status));
+  const names = useMemberNames(runs.map((one) => one.captured_by));
+  const undo = useUndoImport();
+  const [undoing, setUndoing] = useState<string | null>(null);
+  const close = () => {
+    setUndoing(null);
+    undo.reset();
+  };
   return (
-    <div>
-      <Callout tone="success" kind="outcome" title={t("import.undone")} />
-      {undo ? (
-        <>
-          <p className="import__hint t-sub">
-            {plural("import.undoReversed", undo.reversed_count, {
-              rows: formatNumber(undo.reversed_count, locale),
-            })}
-          </p>
-          {undo.kept.length > 0 ? (
-            <>
-              <p className="import__hint t-sub">{t("import.undoKeptLead")}</p>
-              <ul className="import__issues t-sub">
-                {undo.kept.map((row) => (
-                  <li key={`${row.object}-${row.id}`}>
-                    {t(`import.object.${row.object}`)} — {row.id}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-          <UndoErrors rows={undo.errored} />
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-// commitLabel counts the rows the commit will write. One row is "1 row": the
-// button is the last thing a human reads before the least reversible write in
-// the product, and "1 rows" reads like a machine wrote it.
-function commitLabel(
-  plural: PluralTranslator,
-  locale: Locale,
-  rows: number,
-): string {
-  return plural("import.commit", rows, {
-    rows: formatNumber(rows, locale),
-  });
-}
-
-// undoLabel names the count on the undo button for the same reason
-// commitLabel does: it is the last thing a human reads before undo
-// archives every row this run created.
-function undoLabel(
-  plural: PluralTranslator,
-  locale: Locale,
-  rows: number,
-): string {
-  return plural("import.undo", rows, { rows: formatNumber(rows, locale) });
-}
-
-function Count({ label, value }: Readonly<{ label: string; value: number }>) {
-  const { locale } = useLocale();
-  return (
-    <div className="import__count">
-      <dt className="t-sub">{label}</dt>
-      {/* Grouped, like the row counts in the sentences around it: one card
-          spelling the same kind of count two ways is the drift this closes. */}
-      <dd>{formatNumber(value, locale)}</dd>
-    </div>
-  );
-}
-
-// columnFor answers which column was mapped onto a field — the one the run will
-// identify rows by.
-function columnFor(mapping: Record<string, string>, field: string): string {
-  for (const [column, target] of Object.entries(mapping)) {
-    if (target === field) {
-      return column;
-    }
-  }
-  return "";
-}
-
-// ImportMappingStep is the window in which a human chooses destinations: the
-// table, what will identify a row, and the button that asks the server what
-// the import would do.
-//
-// The identifier rule lives here rather than in the card because it is the one
-// thing this step will not let pass — a mapping that identifies no row cannot
-// be re-imported or undone, and the server would refuse it anyway.
-function ImportMappingStep({
-  profile,
-  mapping,
-  object,
-  busy,
-  locked,
-  pending,
-  error,
-  onChange,
-  onValidate,
-  contextTagID,
-  onContextTag,
-}: Readonly<{
-  profile: ImportProfile;
-  mapping: Record<string, string>;
-  object: ImportObject;
-  busy: boolean;
-  // Set while the validation this mapping was sent with is in flight. A change
-  // accepted now could not reach that request, so the table would show a
-  // destination the run does not have.
-  locked: boolean;
-  pending: boolean;
-  error: unknown;
-  onChange: (column: string, target: string) => void;
-  onValidate: () => void;
-  /** The word this run's created records are filed under, and how it changes. */
-  contextTagID: string;
-  onContextTag: (next: string) => void;
-}>) {
-  const t = useT();
-  const identifying = identifyingFieldFor(object);
-  const identifiedBy = columnFor(mapping, identifying);
-
-  return (
-    <>
-      <ImportMappingTable
-        profile={profile}
-        mapping={mapping}
-        locked={locked}
-        onChange={onChange}
+    <Panel title={t("import.recent.title")}>
+      <PanelBody>
+        <QueryStates query={recent} pendingLabel={t("common.loading")}>
+          {runs.length === 0 ? (
+            <EmptyState>{t("import.recent.empty")}</EmptyState>
+          ) : (
+            <DataTable<ImportRun>
+              label={t("import.recent.title")}
+              rows={runs}
+              rowKey={(one) => one.id}
+              columns={[
+                {
+                  key: "date",
+                  header: t("import.recent.col.date"),
+                  render: (one) =>
+                    formatDate(one.created_at, locale, viewerZone()),
+                },
+                {
+                  key: "file",
+                  header: t("import.recent.col.file"),
+                  grow: true,
+                  render: (one) => {
+                    const files = plural(
+                      "import.recent.files",
+                      one.parts?.length ?? 0,
+                      { count: formatNumber(one.parts?.length ?? 0, locale) },
+                    );
+                    const by = names.get(one.captured_by);
+                    return (
+                      <>
+                        <a className="cell-link" href={runHref(one.id)}>
+                          {one.file_name || one.source_name || one.id}
+                        </a>
+                        <div className="t-caption">
+                          {by
+                            ? t("import.recent.filesBy", { files, name: by })
+                            : files}
+                        </div>
+                      </>
+                    );
+                  },
+                },
+                {
+                  key: "rows",
+                  header: t("import.recent.col.rows"),
+                  align: "end",
+                  render: (one) => formatNumber(rowsOf(one), locale),
+                },
+                {
+                  key: "status",
+                  header: t("import.recent.col.status"),
+                  render: (one) => (
+                    <Badge tone={STATUS_TONE[one.status]}>
+                      {t(`import.status.${one.status}`)}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: t("import.recent.col.actions"),
+                  headerHidden: true,
+                  render: (one) =>
+                    one.status === "complete" ? (
+                      <div className="cell-actions">
+                        <Button
+                          variant="ghost"
+                          onClick={() => setUndoing(one.id)}
+                        >
+                          {t("import.recent.undo")}
+                        </Button>
+                      </div>
+                    ) : null,
+                },
+              ]}
+            />
+          )}
+        </QueryStates>
+      </PanelBody>
+      <UndoConfirm
+        open={undoing !== null}
+        order={format?.order ?? []}
+        pending={undo.isPending}
+        error={undo.error ? problemMessageOf(undo.error, t) : null}
+        onClose={close}
+        onConfirm={() => {
+          if (undoing !== null) undo.mutate(undoing, { onSuccess: close });
+        }}
       />
-      {identifiedBy ? (
-        <p className="import__hint t-sub">
-          {t("import.identifiedBy", {
-            column: identifiedBy,
-            field: identifying,
-          })}
-        </p>
-      ) : (
-        <Callout
-          tone="warning"
-          kind="standing"
-          title={t("import.needsIdentifier", { field: identifying })}
-        />
-      )}
-      {/* Chosen BEFORE the dry run, because the commit honours what the dry
-          run reported on — a word picked afterwards would file records the
-          report never said would be filed. */}
-      <ImportContextTag value={contextTagID} onChange={onContextTag} />
-      <Button
-        variant="primary"
-        disabled={!identifiedBy || (busy && !pending)}
-        pending={pending}
-        busyLabel={t("import.validating")}
-        onClick={onValidate}
-      >
-        {t("import.validate")}
-      </Button>
-      {error ? (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("import.validateFailed")}
-        >
-          {problemMessageOf(error, t)}
-        </Callout>
-      ) : null}
-    </>
-  );
-}
-
-/**
- * What the approver is committing to, named rather than implied.
- *
- * The picker lives on the mapping step, which is off screen once a report
- * exists — so the run's word would otherwise be invisible at the one moment
- * somebody decides whether to write it onto every created record.
- */
-export function ImportContextTagSummary({
-  tagID,
-}: Readonly<{ tagID: string }>) {
-  const t = useT();
-  const vocabulary = useTagVocabulary();
-  if (tagID === "") {
-    return null;
-  }
-  const word = vocabulary.data?.tags.find((tag) => tag.id === tagID);
-  return (
-    <p className="import__hint t-sub">
-      {word
-        ? t("import.contextTagChosen", { name: word.name })
-        : // The vocabulary has not landed, or no longer holds the word. Saying
-          // "a tag" is honest; naming the wrong one, or none, is not.
-          t("import.contextTagChosenUnnamed")}
-    </p>
-  );
-}
-
-/**
- * The word every record this run CREATES is filed under.
- *
- * Optional, and an existing word only: an import that coined one would hand the
- * vocabulary's one governed door to anyone who can upload a file, and a
- * misspelled column header would become a permanent tag nobody chose.
- *
- * Creates only, which the label says. A row that UPDATES a record the estate
- * already held leaves its tags alone — the run did not put it there, and
- * tagging it would claim the batch contains records it only touched.
- */
-export function ImportContextTag({
-  value,
-  onChange,
-}: Readonly<{ value: string; onChange: (next: string) => void }>) {
-  const t = useT();
-  const vocabulary = useTagVocabulary();
-  const words = vocabulary.data?.tags ?? [];
-  if (words.length === 0) {
-    // No vocabulary, or none this caller may read. A dial whose only option is
-    // "none" asks a question with one answer.
-    return null;
-  }
-  return (
-    <Field
-      label={t("import.contextTag")}
-      hint={
-        // The catalog is capped and carries no cursor, so past the cap a word
-        // that exists cannot be picked — and an importer who cannot find the
-        // word they meant would file the batch under nothing, or ask an admin
-        // to coin a duplicate.
-        vocabulary.data?.truncated
-          ? `${t("import.contextTagHint")} ${t("tags.catalogTruncated")}`
-          : t("import.contextTagHint")
-      }
-    >
-      {(control) => (
-        <Select
-          {...control}
-          value={value}
-          onChange={onChange}
-          options={[
-            { value: "", label: t("import.contextTagNone") },
-            ...words.map((tag) => ({ value: tag.id, label: tag.name })),
-          ]}
-        />
-      )}
-    </Field>
-  );
-}
-
-// LinkCount reports the connections a run makes, apart from the rows it writes.
-//
-// Its own component because it is its own question: one contact can arrive as a
-// created row AND an applied link, so putting links among the four counts above
-// would make them stop summing to the rows read. Renders nothing when the file
-// asked for no links, which is every import that mapped no company column.
-function LinkCount({
-  links,
-  committed,
-}: {
-  links: ImportReport["links"];
-  committed: boolean;
-}) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (!links || links.offered === 0) return null;
-  return (
-    <p className="import__hint t-sub">
-      {committed
-        ? t("import.linksApplied", {
-            applied: formatNumber(links.applied, locale),
-            offered: formatNumber(links.offered, locale),
-          })
-        : t("import.linksOffered", {
-            offered: formatNumber(links.offered, locale),
-            unresolved: formatNumber(links.unresolved?.length ?? 0, locale),
-          })}
-    </p>
+    </Panel>
   );
 }

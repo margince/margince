@@ -7,7 +7,8 @@ import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
 import type { ComposeThread } from "./composeanchor";
-import type { DraftAsk } from "./composedraftcall";
+import type { DraftAsk, FollowUp } from "./composedraftcall";
+
 import { fillFromDraft, keptTag, useDraftMutation } from "./composedraftcall";
 import type { PendingAction } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
@@ -80,6 +81,7 @@ export function useVoiceDraft({
   answering,
   entityType,
   entityId,
+  followUp,
   projectId,
   groundable,
   thread,
@@ -92,6 +94,7 @@ export function useVoiceDraft({
   answering: string | undefined;
   entityType: RelinkKind;
   entityId: string;
+  followUp?: FollowUp;
   /** The project the picker holds, which grounds the draft. */
   projectId: string;
   groundable: boolean;
@@ -199,6 +202,7 @@ export function useVoiceDraft({
     activityId: answering,
     entityType,
     entityId,
+    followUp,
     intent,
     epoch: draftEpoch.current,
     body,

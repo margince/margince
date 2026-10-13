@@ -66,21 +66,43 @@ type sharedApproval struct {
 	Status string `json:"status"`
 }
 
-// A run of a CSV import reads the same on GET /imports/{id} and read_import_run,
-// and its report on GET /imports/{id}/report and read_import_report.
+// A run of a CSV import reads the same on GET /imports/{id} and
+// read_import_report, and its report on GET /imports/{id}/report and the
+// tool's report member.
 func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
-	d := newTwoDoors(t, "import-read-doors", "read")
+	d := newTwoDoorsWith(t, "import-read-doors", []compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read")
 	run, _ := importContactFile(t, d.e, "Email,Full Name,Title\nada@doors.example,Ada Doors,Engineer\n")
 
-	bothDoorsName(t, "import run",
-		d.rest(t, "GET", "/v1/imports/"+run, nil), d.tool(t, "read_import_run", map[string]any{"run_id": run}), run)
+	tool := d.tool(t, "read_import_report", map[string]any{"run_id": run})
+	runRoute := d.rest(t, "GET", "/v1/imports/"+run, nil)
+	bothDoorsName(t, "import run", runRoute, tool, run)
+	var fromREST struct {
+		Status     string `json:"status"`
+		Checkpoint int    `json:"checkpoint"`
+	}
+	var fromTool struct {
+		State      string `json:"state"`
+		Checkpoint int    `json:"checkpoint"`
+	}
+	if json.Unmarshal(runRoute, &fromREST) != nil || json.Unmarshal(tool, &fromTool) != nil ||
+		fromREST.Status == "" || fromREST.Status != fromTool.State || fromREST.Checkpoint != fromTool.Checkpoint {
+		t.Errorf("the run reads %+v on the route and %+v on the tool", fromREST, fromTool)
+	}
 	// The route also carries links; the run, its status and its counts must agree.
 	report := sameRecords[sharedImportReport](t, "import report",
-		d.rest(t, "GET", "/v1/imports/"+run+"/report", nil),
-		memberOf(t, d.tool(t, "read_import_report", map[string]any{"run_id": run}), "report"))
+		d.rest(t, "GET", "/v1/imports/"+run+"/report", nil), memberOf(t, tool, "report"))
 	if report.RunID != run || report.RowsRead != 1 {
 		t.Errorf("the import report reads %+v, want run %s with its 1 row", report, run)
 	}
+}
+
+// The import format reads the same on GET /imports/format and
+// describe_import_format, custom fields included.
+func TestImportFormatRouteAnswersAsItsTool(t *testing.T) {
+	d := newTwoDoorsWith(t, "import-format-doors", nil, "read")
+	sameDocument(t, "import format",
+		d.rest(t, "GET", "/v1/imports/format", nil),
+		memberOf(t, d.tool(t, "describe_import_format", map[string]any{}), "format"))
 }
 
 type sharedImportReport struct {

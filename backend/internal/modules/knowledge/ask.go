@@ -294,31 +294,17 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 		Name:           corpus.Name,
 		TopicStatement: corpus.TopicStatement,
 	}
-	var inFlight, done int
+	var done int
 	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FILTER (WHERE ingest_status IN ('queued', 'running')),
-		        count(*) FILTER (WHERE ingest_status = 'done')
-		   FROM knowledge_document
-		  WHERE corpus_id = $1 AND archived_at IS NULL`, corpusID).Scan(&inFlight, &done); err != nil {
+		`SELECT count(*) FROM knowledge_document
+		  WHERE corpus_id = $1 AND archived_at IS NULL AND ingest_status = 'done'`, corpusID).Scan(&done); err != nil {
 		return state, fmt.Errorf("count the corpus's documents: %w", err)
 	}
-	var retrievable int
-	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM knowledge_chunk
-		  WHERE corpus_id = $1 AND archived_at IS NULL AND embed_identity = $2`,
-		corpusID, identity).Scan(&retrievable); err != nil {
-		return state, fmt.Errorf("count the corpus's retrievable passages: %w", err)
-	}
 	state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered
-	switch {
-	case corpus.Reindexing != nil && *corpus.Reindexing,
-		inFlight > 0,
-		done == 0,
-		corpus.Coverage.ChunksTotal == 0,
-		// Counted at the LIVE identity, not at any identity. Vectors under
-		// a superseded binding retrieve nothing, and saying not_covered
-		// would blame the question for prose the corpus is holding.
-		retrievable < corpus.Coverage.ChunksTotal:
+	// The embed state is the screen's answer and the ask's, read once: anything
+	// short of complete, counted at the LIVE identity, retrieves nothing whole.
+	if corpus.Coverage.EmbedState != crmcontracts.KnowledgeCoverageEmbedStateComplete ||
+		done == 0 || corpus.Coverage.ChunksTotal == 0 {
 		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady
 	}
 	return state, nil

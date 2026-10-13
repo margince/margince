@@ -6,7 +6,7 @@
 # `run_report` used to recite, into its `report` argument, every prebuilt
 # report's grouping, filter and measure names — 3.4KB, six per cent of the
 # served tool catalog in one tool. That moved to margince://schema/reports, with
-# describe_report_vocabulary as the door, and what stayed behind is the enum plus
+# describe_vocabulary (topic report_vocabulary) as the door, and what stayed behind is the enum plus
 # the fact that a wrong name is refused BY name with that argument's accepted
 # list.
 #
@@ -16,7 +16,7 @@
 #
 #   - guess `direction`, which is a good guess, and be right first time;
 #   - guess wrong, read the refusal, and use the list it carries;
-#   - open describe_report_vocabulary and read the names;
+#   - open describe_vocabulary and read the names;
 #   - take the same population through the analytics engine instead, which is
 #     where the catalog's silence about `direction` sends a careful reader.
 #
@@ -79,8 +79,7 @@ may_call:
   # The doors, when a name is wanted rather than guessed. Optional on purpose:
   # a run that guesses `direction` correctly and never opens one has done the
   # better thing, and requiring the call would score the cheap path as a failure.
-  - describe_report_vocabulary
-  - describe_analytics_vocabulary
+  - describe_vocabulary
   - query_workspace
   - search_records
   - list_records

@@ -176,10 +176,8 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      companyNameColumn,
-		identifier: storekit.Identifier{
-			Table: "company_domain", FK: companyFK, Column: domainColumn,
-		},
-		Membership: in.Membership,
+		identifier:      storekit.CompanyDomains,
+		Membership:      in.Membership,
 	}
 }
 

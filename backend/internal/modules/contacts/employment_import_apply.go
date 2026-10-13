@@ -163,7 +163,7 @@ func (s *Store) matchEmploymentCompany(ctx context.Context, tx pgx.Tx, e employm
 	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 		DisplayName: e.CompanyName, Source: e.provider,
 		Domains: []CompanyDomainInput{{Domain: e.CompanyDomain, IsPrimary: true}},
-	})
+	}, CustomColumns{})
 	if err != nil {
 		return nil, fmt.Errorf("creating a resolved employer: %w", err)
 	}

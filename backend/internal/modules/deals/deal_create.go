@@ -109,21 +109,20 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontract
 // one whose own write must land with this deal or not at all. Same gates in
 // the same order; only the transaction is borrowed.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection a caller-opened seam must not take.
-func (s *Store) CreateDealTx(ctx context.Context, tx pgx.Tx, in CreateDealInput) (crmcontracts.Deal, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveDealColumns); with none, they are refused, never dropped.
+func (s *Store) CreateDealTx(ctx context.Context, tx pgx.Tx, in CreateDealInput, cols CustomColumns) (crmcontracts.Deal, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionCreate); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	if len(in.CustomFields) > 0 {
+	if len(in.CustomFields) > 0 && len(cols.cols) == 0 {
 		return crmcontracts.Deal{}, ErrCustomFieldsNeedTheStoresOwnTransaction
 	}
 	born, err := s.readyDealCreate(ctx, in)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return s.createDealInTx(ctx, tx, in, born, nil)
+	return s.createDealInTx(ctx, tx, in, born, cols.cols)
 }
 
 // bornDeal is what a create settles before any transaction opens: who is

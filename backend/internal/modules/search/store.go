@@ -206,12 +206,13 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
 		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, arg)
+		identifierPos := bindIdentifier(query, arg)
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, arg)
 		if err != nil {
 			return err
 		}
 		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
-			arm, armErr := employerArmSQL(ctx, headPos, tailPos, hasFragment, arg)
+			arm, armErr := employerArmSQL(ctx, headPos, tailPos, hasFragment, identifierPos, arg)
 			if armErr != nil {
 				return armErr
 			}
@@ -298,7 +299,9 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool, arg func(any) int) ([]string, error) {
+func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
+	identifierPos func() int, arg func(any) int,
+) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
 		if !slices.Contains(types, branch.entity) {
@@ -324,11 +327,11 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
 			        %s::float8 AS score, %s
 			 FROM %s t
-			 WHERE t.search_tsv @@ %s
+			 WHERE %s
 			   AND t.archived_at IS NULL`,
 			branch.entity, branch.title, snippet,
-			scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment),
-			noEmployer, branch.table, tsquery)
+			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
+			noEmployer, branch.table, branch.ownMatch("t", tsquery, identifierPos))
 		if narrowing := branch.narrowing("t"); narrowing != "" {
 			sql += " AND " + narrowing
 		}

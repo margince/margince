@@ -71,6 +71,8 @@ type Input struct {
 	Envelope draftfloor.Envelope `json:"envelope"`
 
 	Recipient RecipientIn `json:"recipient"`
+	// AlsoTo names the further contacts the same message goes to.
+	AlsoTo []CoRecipientIn `json:"also_to,omitempty"`
 	// Deal is the open opportunity this contact sits on, when the caller can see
 	// deals and one is open.
 	Deal *DealIn `json:"deal,omitempty"`
@@ -82,7 +84,9 @@ type Input struct {
 	// promised, or objected to. They outrank the conversation below them: a
 	// message is context for writing, where a claim is a reason to write.
 	Claims []ClaimIn `json:"claims,omitempty"`
-	Recent []ActIn   `json:"recent,omitempty"`
+	// About is the activity this message follows up, read before Recent.
+	About  *ActIn  `json:"about,omitempty"`
+	Recent []ActIn `json:"recent,omitempty"`
 	// Meeting is the next scheduled meeting THIS CONTACT is on, when there is
 	// one. A draft that asks for a call when one is already booked reads as not
 	// knowing, and it is the most concrete thing a follow-up can refer to.
@@ -246,6 +250,8 @@ type ActIn struct {
 	// account of contact that happened outside the mailbox, such as where they
 	// met and the slots offered. Fenced with the rest of the input.
 	Record string `json:"record,omitempty"`
+	// DealID is the deal the activity is filed under, set on About only.
+	DealID string `json:"deal_id,omitempty"`
 }
 
 // ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.

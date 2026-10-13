@@ -2,14 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
@@ -21,7 +27,6 @@ import {
   useMe,
 } from "./common";
 import { statusLabel, statusTone } from "./connector-status";
-import { ConnectionIdentity } from "./connectors.identity";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
 // The workspace's messaging bot, as its own file. It shares the connections
@@ -60,8 +65,8 @@ function useChannelConnections() {
   });
 }
 
-// One live bot as a row: which bot it is on the left, whether it is live on the
-// right, and whichever of the two verbs that change it this reader holds.
+// One live bot as a row: its handle, a badge only when it is not live, and
+// whichever of the two verbs this reader holds.
 function TelegramConnectionRow({
   connection,
   onEdit,
@@ -72,35 +77,40 @@ function TelegramConnectionRow({
   onDisconnect?: () => void;
 }>) {
   const t = useT();
+  const handle = `@${connection.channelLabel}`;
   return (
     <SettingRow
       testId="telegram-connection"
       label={
-        <ConnectionIdentity
-          icon={Send}
-          name={t("connectors.provTelegram")}
-          account={`@${connection.channelLabel}`}
-        />
-      }
-      value={
-        <Badge tone={statusTone(connection.status)}>
-          {t(statusLabel(connection.status))}
-        </Badge>
+        <span className="connector-head">
+          <KeyedName name={t("connectors.provTelegram")} code={handle} />
+          {connection.status !== "connected" && (
+            <Badge tone={statusTone(connection.status)}>
+              {t(statusLabel(connection.status))}
+            </Badge>
+          )}
+        </span>
       }
       control={
         (onEdit || onDisconnect) && (
-          <div className="connector-actions">
-            {onEdit && (
-              <Button onClick={onEdit}>
-                <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
-              </Button>
-            )}
-            {onDisconnect && (
-              <Button variant="ghost" onClick={onDisconnect}>
-                {t("connectors.disconnect")}
-              </Button>
-            )}
-          </div>
+          <span className="cell-actions">
+            <OverflowMenu label={t("table.rowActions", { name: handle })}>
+              {onEdit && (
+                <Button aria-haspopup="dialog" onClick={onEdit}>
+                  {t("connectors.telegramEditToken")}
+                </Button>
+              )}
+              {onDisconnect && (
+                <Button
+                  variant="danger"
+                  aria-haspopup="dialog"
+                  onClick={onDisconnect}
+                >
+                  {t("connectors.disconnect")}
+                </Button>
+              )}
+            </OverflowMenu>
+          </span>
         )
       }
     />
@@ -220,37 +230,28 @@ export function TelegramConnectorsPanel() {
           <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
         )}
         <TelegramNotice query={query} />
-        {live && (
-          <SettingList>
-            {connections.length === 0 ? (
-              // What the card is FOR, in the roster's own place: which bot is
-              // carrying messages. The verb that changes it is in the header.
-              <SettingRow
-                label={t("connectors.telegramRosterLabel")}
-                layout="stack"
-                control={
-                  <EmptyState>{t("connectors.telegramEmpty")}</EmptyState>
-                }
-              />
-            ) : (
-              connections.map((connection) => (
-                <TelegramConnectionRow
-                  key={connection.id}
-                  connection={connection}
-                  onEdit={
-                    canEdit ? () => setEditingConnection(connection) : undefined
-                  }
-                  onDisconnect={
-                    canDisconnect
-                      ? () => setDisconnecting(connection)
-                      : undefined
-                  }
-                />
-              ))
-            )}
-          </SettingList>
+        {live && connections.length === 0 && (
+          <EmptyState>
+            <p>{t("connectors.telegramEmpty")}</p>
+          </EmptyState>
         )}
       </PanelBody>
+      {connections.length > 0 && (
+        <SettingList bleed="records">
+          {connections.map((connection) => (
+            <TelegramConnectionRow
+              key={connection.id}
+              connection={connection}
+              onEdit={
+                canEdit ? () => setEditingConnection(connection) : undefined
+              }
+              onDisconnect={
+                canDisconnect ? () => setDisconnecting(connection) : undefined
+              }
+            />
+          ))}
+        </SettingList>
+      )}
       <TelegramConnectForm
         // Keyed to the row that opened it, so the form never carries one
         // connection's in-progress state onto another's rotation.
