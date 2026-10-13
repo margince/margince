@@ -14,9 +14,9 @@ import { useState } from "react";
  * routed subtree by the record id (lib/router.tsx's IDENTITY_DEPTH, depth 2 for
  * a contact, an account, a deal). Moving from one record to the next throws the
  * page away and this state with it. App.tabkey.test.tsx's "still throws the
- * page away when the record itself changes" is the proof. A tab change
- * deliberately does not remount, and does not need to: the same reader is
- * still on the same record.
+ * page away when the record itself changes" is the proof. A tab change does
+ * not remount, and does not need to: the same reader is still on the same
+ * record.
  *
  * `initial` is for a page ROUTED to a message — the search results reached from
  * the palette, where the reader picked the email rather than the page. It is an

@@ -29,10 +29,10 @@ import (
 // the token lands in a third party's request line whichever form we choose. The
 // fragment is the right default; the containment is single use plus the TTL.
 //
-// The shape is the app's own hash route rather than a bare `#token=` because
-// `parseHash` (frontend lib/router.tsx) reads the first hash segment as the screen
-// name and strips a hash-local query: `#/reset-password?token=…` parses, while
-// `#token=…` would make the token itself the screen name.
+// The shape is the app's own hash route, not a bare `#token=`.
+// `parseHash` (frontend lib/router.tsx) reads the first hash segment as the
+// screen name and strips a hash-local query. So `#/reset-password?token=…`
+// parses, while `#token=…` would make the token itself the screen name.
 //
 // `baseURL` arrives with any trailing slash already trimmed (see
 // `Handlers.WithPasswordLinkBase`), so this concatenation cannot produce `//#/`.

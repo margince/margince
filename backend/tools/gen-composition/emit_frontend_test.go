@@ -32,10 +32,10 @@ func TestVanillaFrontendRegistryMatchesTheCommittedStub(t *testing.T) {
 	}
 }
 
-// The empty registry is a value the SPA reads, not merely a file that exists:
-// `extensions` has to be an empty ARRAY, because lib/extensions.ts calls .find
-// on it unconditionally and a `null`, `{}` or `as const` tuple would crash the
-// vanilla lane at its first unit route.
+// The empty registry is a value the SPA reads, not only a file that exists.
+// `extensions` must be an empty array: lib/extensions.ts calls .find on it with
+// no check. A `null`, `{}` or `as const` tuple would crash the vanilla lane at
+// its first unit route.
 func TestVanillaFrontendRegistryIsAnEmptyArray(t *testing.T) {
 	got := string(frontendGen(nil, nil, nil))
 	if !strings.HasSuffix(got, "export const extensions: readonly ExtensionDescriptor[] = [];\n") {
@@ -77,9 +77,9 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 		`    name: "beta",`,
 		`        operationId: "betaPing",`,
 		// A verb declaring no object emits the empty string rather than
-		// omitting the field: the descriptor type has no optional member, and
-		// lib/extensions.ts reads it unconditionally to decide whether the
-		// screen has a capability gate at all.
+		// omitting the field. The descriptor type has no optional member, and
+		// lib/extensions.ts reads the field to decide whether the screen has a
+		// capability gate at all.
 		`        rbacObject: "",`,
 	} {
 		if !strings.Contains(got, want) {
