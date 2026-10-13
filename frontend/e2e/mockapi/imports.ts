@@ -10,11 +10,11 @@ import type {
   ImportReport,
   ImportRun,
 } from "../../src/screens/importtypes";
-import { type MockRoute, page, reply } from "./server";
+import { type Handler, type MockRoute, page, reply } from "./server";
 
 // The import screens' calls: the hub's list, and one CSV taken from upload to
 // an approved run. Every write answers the run moved, so each screen of the
-// wizard renders; nothing is remembered between calls.
+// wizard renders, and the run is remembered between calls.
 
 const draftId = "019ff-run-draft";
 
@@ -74,11 +74,22 @@ const listed: ImportRun[] = [
 
 const RUN = /^\/imports\/([^/]+)$/;
 
+// The run the wizard works on. Staging a file resets it to the tested run.
+// Every later write moves it, so a read answers what the last write did.
+let current: ImportRun = tested;
+
+function moveTo(next: ImportRun): Handler {
+  return ({ json }) => {
+    current = next;
+    return json(current, 200);
+  };
+}
+
 export const importRoutes: readonly MockRoute[] = [
   { method: "GET", path: "/imports/format", handle: reply(formatFixture) },
   { method: "GET", path: "/imports", handle: reply(page(listed)) },
   { method: "POST", path: "/imports/sources", handle: reply(profile) },
-  { method: "POST", path: "/imports", handle: reply(tested) },
+  { method: "POST", path: "/imports", handle: moveTo(tested) },
   {
     method: "GET",
     path: /^\/imports\/[^/]+\/report$/,
@@ -87,27 +98,27 @@ export const importRoutes: readonly MockRoute[] = [
   {
     method: "PATCH",
     path: RUN,
-    handle: reply({ ...tested, status: "pending", version: 3 }),
+    handle: moveTo({ ...tested, status: "pending", version: 3 }),
   },
   {
     method: "POST",
     path: /^\/imports\/[^/]+\/validate$/,
-    handle: reply({ ...tested, version: 4 }),
+    handle: moveTo({ ...tested, version: 4 }),
   },
   {
     method: "POST",
     path: /^\/imports\/[^/]+\/cancel$/,
-    handle: reply({ ...draft, status: "cancelled", source_released: true }),
+    handle: moveTo({ ...draft, status: "cancelled", source_released: true }),
   },
   {
     method: "POST",
     path: /^\/imports\/[^/]+\/approve$/,
-    handle: reply({ ...tested, status: "complete", source_released: true }),
+    handle: moveTo({ ...tested, status: "complete", source_released: true }),
   },
   {
     method: "POST",
     path: /^\/imports\/[^/]+\/undo$/,
-    handle: reply({ ...tested, status: "undoing", source_released: true }),
+    handle: moveTo({ ...tested, status: "undoing", source_released: true }),
   },
-  { method: "GET", path: RUN, handle: reply(tested) },
+  { method: "GET", path: RUN, handle: ({ json }) => json(current, 200) },
 ];

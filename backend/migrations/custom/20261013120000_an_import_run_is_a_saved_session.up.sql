@@ -99,6 +99,14 @@ UPDATE import_run r
   FROM ranked
  WHERE r.id = ranked.id AND ranked.rank > 1;
 
+-- A key released here is declared provisional the way releasing a source does,
+-- so the reaper deletes the bytes once no unreleased run names them.
+INSERT INTO stored_object_intent (storage_key, kind)
+SELECT DISTINCT source_ref, 'import'
+  FROM import_run
+ WHERE connector = 'csv' AND source_released_at IS NOT NULL AND source_ref <> ''
+ON CONFLICT (storage_key) DO NOTHING;
+
 -- Built plainly in the transaction that deduplicated, so no writer can add a
 -- duplicate between the dedupe and the index. The table holds one row per import.
 CREATE UNIQUE INDEX import_run_one_active_per_source_name ON import_run (source_name)

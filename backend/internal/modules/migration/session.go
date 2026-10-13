@@ -43,8 +43,9 @@ const (
 	DraftStepMap   = "map"
 )
 
-// ErrVersionMismatch refuses a write made against an older read of the run.
-var ErrVersionMismatch = fmt.Errorf("the import run changed since it was read: %w", apperrors.ErrConflict)
+// ErrVersionMismatch refuses a write made against an older read of the run. It
+// answers version_skew, and stays a conflict for the callers that test for one.
+var ErrVersionMismatch = fmt.Errorf("the import run changed since it was read: %w: %w", apperrors.ErrVersionSkew, apperrors.ErrConflict)
 
 // moveName names one row of sessionMoves.
 type moveName string

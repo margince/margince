@@ -131,6 +131,35 @@ func TestTheBackfillCancelsEveryLegacyValidationFailure(t *testing.T) {
 	}
 }
 
+func TestTheBackfillDeclaresEveryReleasedUploadToTheReaper(t *testing.T) {
+	conn := connect(t, ownerDSNOf(t))
+	rewindImportSession(t, conn)
+	seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/released",
+		runError: oldCauseValidationStopped,
+	})
+	seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/held",
+		runError: oldCauseStopped,
+	})
+	replayImportSession(t, conn)
+
+	declared := func(key string) bool {
+		var n int
+		if err := conn.QueryRow(context.Background(),
+			`SELECT count(*) FROM stored_object_intent WHERE storage_key = $1 AND kind = 'import'`, key).Scan(&n); err != nil {
+			t.Fatalf("reading the ledger for %s: %v", key, err)
+		}
+		return n == 1
+	}
+	if !declared("ws/import/released") {
+		t.Error("a released upload is not declared provisional, so its bytes outlive every run that named them")
+	}
+	if declared("ws/import/held") {
+		t.Error("an upload a stopped commit still holds is declared provisional, so the reaper could take its resume")
+	}
+}
+
 func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)

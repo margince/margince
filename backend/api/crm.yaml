@@ -27867,7 +27867,8 @@ paths:
         complete is a conflict, not a no-op, because each of those means the
         approver is looking at a state that is not the one they judged. A
         `version`, when sent, must equal the run's, so the report approved is
-        the one read. A `failed` run that was approved once resumes from its
+        the one read; a mismatch is a 409 `version_skew`. A `failed` run that
+        was approved once resumes from its
         checkpoint; one never approved is a 409. A run that a newer test run
         replaced is a 409 whose `details.run_id` names that run. A resume while
         another run of the same `source_name` holds the name is a 409
