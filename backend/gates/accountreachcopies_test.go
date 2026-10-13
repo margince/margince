@@ -49,7 +49,7 @@ var accountReachFiles = []string{
 // two of them because one is shared with a producer that stops short of the
 // last arm, and holding only the shared half equal would leave the arm that
 // split them free to drift — which is this gate's whole subject.
-var accountReachArms = []string{"companyArms", "participantEmployerArm"}
+var accountReachArms = []string{"companyArms", "participantEmployerArm", "participantEntry"}
 
 func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 	t.Parallel()

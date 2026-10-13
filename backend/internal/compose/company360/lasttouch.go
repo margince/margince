@@ -105,16 +105,16 @@ func LastTouchFor(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH touched AS (
 		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
-		         %[5]s AS directed, %[6]s AS counts
+		         %[5]s AS held, %[6]s AS is_interaction
 		  %[2]s
 		), clocks AS (
 		  SELECT company_id,
-		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND directed) AS inbound_at,
-		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND directed) AS outbound_at
+		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND held) AS inbound_at,
+		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND held) AS outbound_at
 		  FROM touched GROUP BY company_id
 		), last_contact AS (
 		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
-		  FROM touched WHERE counts
+		  FROM touched WHERE is_interaction
 		  ORDER BY company_id, occurred_at DESC, id DESC
 		)
 		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at, lc.id, lc.occurred_at, lc.kind

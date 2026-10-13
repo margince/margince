@@ -6,7 +6,8 @@
 package activities
 
 // The account reach admits each arm, both as the timeline's predicate and as
-// the set. It refuses the rows each arm's date and currency bounds leave out.
+// the set. It refuses the rows each arm's date and current-employment bounds
+// leave out.
 
 import (
 	"context"
@@ -58,10 +59,13 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 	link(onDeal, "deal", deal)
 	link(aboutEmployee, "contact", employee)
 	copied(employeeCopied, employee)
-	beforeTheyJoined, leaverCopied, otherAccount := mail("before"), mail("leaver"), mail("other")
+	beforeTheyJoined, copiedBeforeJoining := mail("before"), mail("copied before joining")
+	leaverCopied, otherAccount := mail("leaver"), mail("other")
 	link(beforeTheyJoined, "contact", joinedLater)
+	copied(copiedBeforeJoining, joinedLater)
 	copied(leaverCopied, leaver)
 	link(otherAccount, "company", elsewhere)
+	refused := []ids.UUID{beforeTheyJoined, copiedBeforeJoining, leaverCopied, otherAccount}
 
 	want := map[ids.UUID]bool{filed: true, onDeal: true, aboutEmployee: true, employeeCopied: true}
 	reads := map[string]map[ids.UUID]bool{
@@ -76,6 +80,11 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 		for id := range want {
 			if !got[id] {
 				t.Errorf("%s does not reach %s, which one of the account's arms admits", read, id)
+			}
+		}
+		for _, id := range refused {
+			if got[id] {
+				t.Errorf("%s reaches %s, which every arm's bounds leave out", read, id)
 			}
 		}
 	}
