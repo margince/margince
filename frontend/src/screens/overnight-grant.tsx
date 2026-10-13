@@ -10,7 +10,7 @@ import {
   removeStored,
   STORAGE_KEYS,
   writeStored,
-} from "../app/storage";
+} from "../lib/storage";
 import { Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";

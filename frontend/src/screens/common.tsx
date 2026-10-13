@@ -7,8 +7,8 @@ import {
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ConnectivityError, writeFailureKey } from "../app/connectivity";
-import { forgetSeat } from "../app/storage";
+import { ConnectivityError, writeFailureKey } from "../lib/connectivity";
+import { forgetSeat } from "../lib/storage";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import type { Provenance, SourceAuthor } from "../design-system/trust";

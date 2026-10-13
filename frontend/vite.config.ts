@@ -231,7 +231,7 @@ export default defineConfig({
     // The DESKTOP viewport, stated rather than inherited.
     //
     // A list header folds its verbs into one overflow menu at or under
-    // NARROW_MAX_WIDTH (1100, app/viewport.ts), and it asks matchMedia. Under
+    // NARROW_MAX_WIDTH (1100, lib/viewport.ts), and it asks matchMedia. Under
     // jsdom that question was never really asked: jsdom ships no matchMedia, so
     // vitest.setup.ts installed a stub answering `matches: false` to everything
     // — which happens to mean "not narrow", and every suite asserting a primary

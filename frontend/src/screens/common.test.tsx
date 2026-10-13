@@ -12,10 +12,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
-import { ConnectivityError, connectivityNow } from "../app/connectivity";
+import { ConnectivityError, connectivityNow } from "../lib/connectivity";
 import { meFixture } from "../app/mefixture";
 import { createQueryClient } from "../app/queryclient";
-import { STORAGE_KEYS } from "../app/storage";
+import { STORAGE_KEYS } from "../lib/storage";
 import { LocaleProvider, translate } from "../i18n";
 import { memoryStorage } from "../testing/appharness";
 import {

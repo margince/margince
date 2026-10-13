@@ -358,7 +358,7 @@
 }
 
 /* THE NARROW ARRANGEMENT, and one engine for both ways the row is drawn.
-   720px is the tree's own fold (app/viewport.ts, FOLD_MAX_WIDTH), and here it
+   720px is the tree's own fold (lib/viewport.ts, FOLD_MAX_WIDTH), and here it
    is load-bearing rather than conventional: below it the row is wrapped in
    `SwipeRow` so a thumb can answer it, and that wrapper is a flex box of its
    own that the row's grid columns cannot reach through. A grid at this width

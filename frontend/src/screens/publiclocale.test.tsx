@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocaleProvider, useT } from ".";
+import { LocaleProvider, useT } from "../i18n";
 import { usePublicLocale } from "./publiclocale";
 
 // The language a public page speaks, taken from the link that opened it.

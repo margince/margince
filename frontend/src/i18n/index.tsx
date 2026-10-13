@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { STORAGE_KEYS, writeStored } from "../app/storage";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
 import { de } from "./de";

@@ -1052,7 +1052,7 @@
  * entries are reached from here. It stands AS the page's heading — the control
  * names the page and opens the others, and a heading repeating that name above
  * it would be the page named twice. Rendered only at that width (app/shell.tsx
- * asks app/viewport.ts), so it needs no media query of its own — but it is a
+ * asks lib/viewport.ts), so it needs no media query of its own — but it is a
  * phone control, which is why it takes the 44px target WCAG 2.5.5 asks for
  * rather than the compact row rhythm the sidebar uses under a pointer. */
 /* Full width, because what it switches is the whole page: a pill hugging its own
@@ -1338,7 +1338,7 @@
  * nav and content reflows — the BODY never scrolls horizontally; wide
  * content scrolls inside its own container.
  *
- * 700px is the same breakpoint `PHONE_MAX_WIDTH` names in app/viewport.ts, which
+ * 700px is the same breakpoint `PHONE_MAX_WIDTH` names in lib/viewport.ts, which
  * is where the components that must KNOW the width read it — the bar renders the
  * destinations at this width even on a section route, and that is a decision in
  * TypeScript rather than a layout a stylesheet can make. A sheet cannot read that

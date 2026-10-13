@@ -12,7 +12,7 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { AccountMenu } from "./account";
 import { meFixture } from "./mefixture";
-import { STORAGE_KEYS } from "./storage";
+import { STORAGE_KEYS } from "../lib/storage";
 import { setThemeChoice } from "./theme";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;

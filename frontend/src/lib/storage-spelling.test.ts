@@ -12,7 +12,7 @@ import {
   parseSource,
 } from "../../scripts/lib/source-tree";
 
-// Web Storage has ONE spelling, `app/storage.ts`: a key stored anywhere else is
+// Web Storage has ONE spelling, `lib/storage.ts`: a key stored anywhere else is
 // missing from its registry, so a sign-out cannot forget it.
 
 // Matched on the parsed name, so a comment never counts and an alias does; a
@@ -22,7 +22,7 @@ const frontendRoot = resolve(__dirname, "..", "..");
 const repoRoot = resolve(frontendRoot, "..");
 const extensionsDir = join(repoRoot, "extensions");
 
-const OWNER = "frontend/src/app/storage.ts";
+const OWNER = "frontend/src/lib/storage.ts";
 
 const STORAGE_GLOBALS: ReadonlySet<string> = new Set([
   "localStorage",
@@ -93,7 +93,7 @@ const PLANTED_INNOCENTS = [
 ] as const;
 
 describe("one Web Storage spelling", () => {
-  it("is reached for nowhere but app/storage.ts", {
+  it("is reached for nowhere but lib/storage.ts", {
     timeout: 60_000,
   }, () => {
     const files = filesInTheCensus();

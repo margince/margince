@@ -11,7 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { useNarrowViewport } from "../app/viewport";
+import { useNarrowViewport } from "../lib/viewport";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";

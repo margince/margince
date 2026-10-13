@@ -3,7 +3,7 @@ import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuthCapabilities } from "../app/capabilities";
-import { useOutageRecovery } from "../app/connectivity";
+import { useOutageRecovery } from "../lib/connectivity";
 import {
   forgetHashCredential,
   navigate,

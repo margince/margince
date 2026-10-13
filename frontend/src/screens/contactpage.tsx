@@ -10,7 +10,7 @@ import { revealOnceMounted, scrollPageToTop } from "../app/reveal";
 import { navigate } from "../app/router";
 import { useHasUnsavedChanges } from "../app/unsaved";
 import { useUrlParams } from "../app/urlstate";
-import { useFoldedViewport } from "../app/viewport";
+import { useFoldedViewport } from "../lib/viewport";
 import { Badge, Modal } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
 import { Heading } from "../design-system/heading";

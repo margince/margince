@@ -13,7 +13,7 @@ import {
   removeStored,
   STORAGE_KEYS,
   writeStored,
-} from "../app/storage";
+} from "../lib/storage";
 import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";

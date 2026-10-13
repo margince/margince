@@ -16,7 +16,7 @@
 2 react-hooks/set-state-in-effect src/app/scrollmemory.ts
 1 react-hooks/set-state-in-effect src/app/shell.tsx
 1 react-hooks/set-state-in-effect src/app/unsaved.tsx
-1 react-hooks/set-state-in-effect src/app/viewport.ts
+1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
 3 react-hooks/refs src/design-system/breadcrumb.tsx

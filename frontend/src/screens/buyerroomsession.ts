@@ -6,7 +6,7 @@ import {
   removeStored,
   STORAGE_KEYS,
   writeStored,
-} from "../app/storage";
+} from "../lib/storage";
 import type { useT } from "../i18n";
 import { throwProblem } from "./common";
 

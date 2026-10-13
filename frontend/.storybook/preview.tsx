@@ -82,7 +82,7 @@ const preview: Preview = {
   // The phone width, declared ONCE for the whole catalog rather than copied into
   // every meta that wants it. Named after the RULE and not after a device: the
   // shell's bottom bar and the settings section switcher are media queries at
-  // `PHONE_MAX_WIDTH` (src/app/viewport.ts), so 390px is a width that sits
+  // `PHONE_MAX_WIDTH` (src/lib/viewport.ts), so 390px is a width that sits
   // inside that rule rather than a particular handset. A story opts in with
   // `globals: { viewport: { value: "phone" } }`.
   //

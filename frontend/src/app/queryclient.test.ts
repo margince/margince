@@ -12,7 +12,7 @@ import {
   reportReached,
   reportUnreached,
   watchConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
 import {
   createQueryClient,
   liveInterval,

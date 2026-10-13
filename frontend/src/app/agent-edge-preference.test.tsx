@@ -14,7 +14,7 @@ import { edgeLightShown, setEdgeLightShown } from "./agent-edge-preference";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { meFixture } from "./mefixture";
-import { STORAGE_KEYS } from "./storage";
+import { STORAGE_KEYS } from "../lib/storage";
 
 const EDGE_LIGHT_KEY = STORAGE_KEYS.edgeLight.name;
 

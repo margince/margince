@@ -12,7 +12,7 @@ import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the

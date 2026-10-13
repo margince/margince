@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePageName } from "../app/pagemeta";
 import { useRecordZone } from "../app/recordzone";
-import { readStored, STORAGE_KEYS, writeStored } from "../app/storage";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { replaceDial, useUrlParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";

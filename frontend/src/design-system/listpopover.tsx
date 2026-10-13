@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFoldedViewport } from "../app/viewport";
+import { useFoldedViewport } from "../lib/viewport";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../screens/common";

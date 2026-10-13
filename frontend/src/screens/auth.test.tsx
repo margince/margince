@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { STORAGE_KEYS } from "../app/storage";
+import { STORAGE_KEYS } from "../lib/storage";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../i18n";
 import { AuthScreen, AvailabilityScreen } from "./auth";

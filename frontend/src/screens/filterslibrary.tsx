@@ -9,7 +9,7 @@ import { Plus } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { navigate } from "../app/router";
 import { replaceDial, useUrlParams } from "../app/urlstate";
-import { useFoldedViewport } from "../app/viewport";
+import { useFoldedViewport } from "../lib/viewport";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Button,

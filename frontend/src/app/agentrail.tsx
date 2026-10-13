@@ -69,7 +69,7 @@ import type { LicensePosture } from "./license-posture";
 import { usePopoverDismiss } from "./popover";
 import type { Route } from "./router";
 import { routeHash } from "./router";
-import { usePhoneViewport } from "./viewport";
+import { usePhoneViewport } from "../lib/viewport";
 import "./agentrail.css";
 
 // The agent's place in the app: the foot of the workspace rail, under the

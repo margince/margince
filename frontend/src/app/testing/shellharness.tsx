@@ -81,7 +81,7 @@ export const ignoreSearch = () => undefined;
 
 /**
  * Phone width, for the chrome that has to KNOW it rather than merely be laid out
- * by it (app/viewport.ts). jsdom's own window answers every media query with
+ * by it (lib/viewport.ts). jsdom's own window answers every media query with
  * false, so the wide arrangement is what every other case renders — which is the
  * honest default and exactly what the desktop assertions rely on.
  *
