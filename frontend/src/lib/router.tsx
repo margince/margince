@@ -3,8 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { hashWithParams, type UrlParams } from "./urlstate";
 
 // Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
-// Client routes live behind '#', so any static host serves index.html for
-// every entry point — no server-side SPA fallback needed.
+// Routes live behind '#', so a static host serves index.html for every one.
 
 // Every address this product answers, spelled ONCE. The other places that
 // enumerate destinations — the nav table and RAIL_LESS_SCREENS in app/nav.ts,
@@ -42,6 +41,7 @@ export const SCREENS = [
   "filters",
   "scheduled",
   "offers",
+  "legal-reviews",
   "search",
   "share",
   // A tag has a page of its own: the records carrying one word, grouped by
@@ -206,6 +206,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   filters: WHOLE_ADDRESS,
   scheduled: WHOLE_ADDRESS,
   offers: WHOLE_ADDRESS,
+  "legal-reviews": WHOLE_ADDRESS,
   search: WHOLE_ADDRESS,
   // A different tag is a different page, not a tab of one: the whole address
   // keys it, so opening a second word starts a fresh read rather than showing

@@ -330,6 +330,12 @@ var catalog = map[string]struct {
 	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
 	"deal_suggestion.superseded": {dealStreamEntity, 1},
 
+	// A deal's legal review: asked for, answered, taken back. Internal only,
+	// and entity-less for the reason api/internal-events.yaml gives.
+	"legal_review.requested": {dealStreamEntity, 1},
+	"legal_review.decided":   {dealStreamEntity, 1},
+	"legal_review.withdrawn": {dealStreamEntity, 1},
+
 	// The tag scout's suggestions and the decisions on them. Internal only, and
 	// entity-less for the reason api/internal-events.yaml gives. Tags ride the
 	// contact stream, as lists do.

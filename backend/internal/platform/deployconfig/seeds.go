@@ -25,6 +25,9 @@ type Seeds struct {
 	Retention          *RetentionSeed   `yaml:"retention"`
 	StarterAutomations *bool            `yaml:"starter_automations"`
 	BookingPage        *bool            `yaml:"booking_page"`
+	// LegalReview set to false starts the installation with legal review
+	// switched off. Omitted or true leaves the default, which is on.
+	LegalReview *bool `yaml:"legal_review"`
 	// AIRouting is the tier→model binding a fresh installation is bootstrapped
 	// with, so a deployment can declare which vendor it uses in the file it
 	// reviews rather than having to call an API after first boot. Consumed

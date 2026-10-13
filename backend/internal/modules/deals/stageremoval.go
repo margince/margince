@@ -135,6 +135,13 @@ func (s *Store) ArchiveStage(ctx context.Context, id ids.StageID, ifVersion *int
 		if err := refuseUnremovableStage(ctx, tx, id, ifVersion); err != nil {
 			return err
 		}
+		if gated, err := stageCarriesLegalGate(ctx, tx, id.UUID); err != nil {
+			return err
+		} else if gated {
+			if err := requireAdminToWeakenLegalGate(ctx); err != nil {
+				return err
+			}
+		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE stage SET archived_at = $2 WHERE id = $1`, id, time.Now().UTC()); err != nil {
 			return fmt.Errorf("archive stage: %w", err)
