@@ -474,6 +474,20 @@ const propsOf = (def: ts.Node) => {
 };
 // A destructured prop by the name a call hands it: `{ tone: t }` is `tone`.
 const propKey = (b: ts.BindingElement) => (b.propertyName ?? b.name).getText();
+// The name a member or attribute is spelled with, not a value read:
+// `cfg.intent`, `{ intent: x }`, `intent="…"`, a method or field.
+const spelled = (e: ts.Identifier) => {
+  const p = e.parent;
+  return (
+    (ts.isPropertyAccessExpression(p) ||
+      ts.isPropertyAssignment(p) ||
+      ts.isJsxAttribute(p) ||
+      ts.isMethodDeclaration(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isPropertySignature(p)) &&
+    p.name === e
+  );
+};
 const readers = new WeakMap<ts.Node, (e: ts.Node) => string | undefined>();
 /** The prop of `def` an expression reads: a destructured binding by its local
  * name, `children` always, or `props.x`. */
@@ -487,7 +501,7 @@ export function propReadBy(def: ts.Node) {
   }
   const props = first && ts.isIdentifier(first) ? first.text : undefined;
   const read = (e: ts.Node) => {
-    if (ts.isIdentifier(e)) return locals.get(e.text);
+    if (ts.isIdentifier(e)) return spelled(e) ? undefined : locals.get(e.text);
     if (!ts.isPropertyAccessExpression(e)) return undefined;
     return e.expression.getText() === props ? e.name.text : undefined;
   };
