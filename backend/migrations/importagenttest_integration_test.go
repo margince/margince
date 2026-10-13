@@ -45,8 +45,8 @@ func TestAnAgentHoldsOneTestRunAtATime(t *testing.T) {
 	admitted := []struct{ name, status, actorType, actorID string }{
 		{"another agent's test run", "validating", "agent", "agent-b"},
 		{"one agent's report awaiting approval", "awaiting_approval", "agent", "agent-a"},
-		{"a person's first test run", "validating", "human", "person-a"},
-		{"a person's second test run", "validating", "human", "person-a"},
+		{"a human's first test run", "validating", "human", "human-a"},
+		{"a human's second test run", "validating", "human", "human-a"},
 	}
 	for i, run := range admitted {
 		if err := moveAs(t, conn, seed(fmt.Sprint("admitted-", i)), run.status, run.actorType, run.actorID); err != nil {
