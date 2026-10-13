@@ -29,10 +29,22 @@ export function useImportFormat(lang: Locale) {
   });
 }
 
-// A run that is still moving under the server's hand. The commit and the undo
-// both run detached, so only a read tells the screen when they finish.
-function moving(status: ImportRun["status"] | undefined): boolean {
+// A run writing or reversing records. The commit and the undo both run
+// detached, so only a read tells the screen when they finish.
+function writing(status: ImportRun["status"] | undefined): boolean {
   return status === "running" || status === "undoing";
+}
+
+// A run still moving under the server's hand, so its reads are polled. A test
+// another tab started is moving too, though it writes no record.
+export function moving(status: ImportRun["status"] | undefined): boolean {
+  return status === "validating" || writing(status);
+}
+
+// A draft and a cancelled run wrote nothing, and no screen offers an action on
+// them beyond starting again.
+export function wroteNothing(status: ImportRun["status"]): boolean {
+  return status === "pending" || status === "cancelled";
 }
 
 const POLL_MS = 2000;
@@ -75,7 +87,7 @@ export function useUndoImport() {
       unwrap(
         await api.POST("/imports/{id}/undo", { params: { path: { id } } }),
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
 }
 
@@ -105,7 +117,7 @@ export function useLandedRecords(
   statuses: readonly (ImportRun["status"] | undefined)[],
 ): void {
   const queryClient = useQueryClient();
-  const now = statuses.some(moving);
+  const now = statuses.some(writing);
   const seen = useRef(now);
   useEffect(() => {
     const before = seen.current;

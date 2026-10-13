@@ -5824,11 +5824,14 @@ export const de = {
   "import.status.cancelled": "Abgebrochen",
   "import.closed.cancelled": "Dieser Import wurde abgebrochen",
   "import.closed.draft":
-    "Lade die Datei erneut hoch, um mit diesem Import weiterzumachen",
+    "Dieser Entwurf wird nicht mehr angeboten. Lade die Datei erneut hoch, um neu zu beginnen.",
+  "import.closed.stopped":
+    "Dieser Import wurde angehalten, bevor etwas importiert wurde.",
   "import.closed.upload": "Datei hochladen",
   "import.sourceBusy":
     "Ein anderer Import mit diesem Quellnamen schreibt noch. Warte, bis er fertig ist, und teste dann erneut.",
   "import.sourceBusyOpen": "Diesen Import öffnen",
+  "import.upload.tooManyRowsTitle": "Datei ist zu lang für einen Testlauf",
   "import.upload.tooManyRows":
     "Diese Datei hat mehr Zeilen, als ein Testlauf lesen kann. Teile sie in kleinere Dateien auf und importiere jede einzeln.",
   "import.undoConfirm.title": "Diesen Import rückgängig machen?",

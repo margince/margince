@@ -262,7 +262,7 @@ export function MapStep({
       ) : stopped ? (
         <Callout
           tone="danger"
-          kind="outcome"
+          kind="standing"
           title={t("import.map.stageFailed")}
         >
           {stopped}

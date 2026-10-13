@@ -111,7 +111,8 @@ function busyRunOf(error: unknown): string | null {
 
 /**
  * Why the server refused an upload or a test run. A file too long for one
- * test run says to split it; a busy source name links to the run holding it.
+ * test run is named as such and says to split it. A busy source name links to
+ * the run holding it.
  */
 export function ImportRefusal({
   title,
@@ -126,7 +127,7 @@ export function ImportRefusal({
     <Callout
       tone="danger"
       kind="outcome"
-      title={title}
+      title={tooLong ? t("import.upload.tooManyRowsTitle") : title}
       actions={
         busyRun ? (
           <a className="link-button" href={runHref(busyRun)}>

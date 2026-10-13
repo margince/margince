@@ -3,7 +3,20 @@
 
 import { describe, expect, it } from "vitest";
 import { stepOfRun, type WizardStep } from "./importflow";
+import { moving, wroteNothing } from "./importrun";
 import type { ImportRun } from "./importtypes";
+
+const STATUSES = [
+  "pending",
+  "validating",
+  "awaiting_approval",
+  "running",
+  "failed",
+  "complete",
+  "undoing",
+  "undone",
+  "cancelled",
+] as const satisfies readonly ImportRun["status"][];
 
 // One row per status the contract names; a status it adds fails to compile
 // here until the wizard is taught where that run stands.
@@ -21,10 +34,25 @@ const STEP_OF_STATUS = {
 
 describe("stepOfRun", () => {
   it("stepOfRun answers every status", () => {
-    for (const [status, step] of Object.entries(STEP_OF_STATUS)) {
-      expect(stepOfRun(status as ImportRun["status"], "map")).toBe(step);
+    expect([...STATUSES].sort()).toEqual(Object.keys(STEP_OF_STATUS).sort());
+    for (const status of STATUSES) {
+      expect(stepOfRun(status, "map")).toBe(STEP_OF_STATUS[status]);
     }
     expect(stepOfRun("pending", "files")).toBe("files");
     expect(stepOfRun(undefined, "map")).toBe("test");
+  });
+});
+
+describe("what a run's status says to the screen", () => {
+  it("polls a run the server is still testing, writing or reversing", () => {
+    expect(STATUSES.filter(moving)).toEqual([
+      "validating",
+      "running",
+      "undoing",
+    ]);
+  });
+
+  it("names a draft and a cancelled run as runs that wrote nothing", () => {
+    expect(STATUSES.filter(wroteNothing)).toEqual(["pending", "cancelled"]);
   });
 });

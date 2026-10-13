@@ -33,6 +33,9 @@ function RoutedImport() {
 
 const RUN_PAGE = "#/settings/import/run";
 
+const DRAFT_CLOSED =
+  "This draft is not offered again. Upload the file again to start over.";
+
 // The run page is a page of its own under the hub. Nothing is on screen until
 // /me has answered whether this seat may import at all, so the page is waited
 // for rather than looked up.
@@ -248,10 +251,14 @@ describe("one CSV through the run page", () => {
     );
 
     expect(
-      await screen.findByText(
+      await screen.findByText("File is too long for one test run"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
         "This file has more rows than one test run can read. Split it into smaller files and import each one.",
       ),
     ).toBeVisible();
+    expect(screen.queryByText("File could not be read")).toBeNull();
   });
 
   it("refuses an upload answer that names no run", async () => {
@@ -390,13 +397,22 @@ describe("a run named by the address", () => {
     });
     renderAtImport("r1");
 
-    expect(
-      await screen.findByText(
-        "Upload the file again to go on with this import",
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
     expect(
       screen.getByText("The test run stopped before it finished."),
+    ).toBeVisible();
+  });
+
+  it("says a draft that never stopped wrote nothing, rather than an empty notice", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "pending", error: null }),
+    });
+    renderAtImport("r1");
+
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
+    expect(
+      screen.getByText("This import stopped before anything was imported."),
     ).toBeVisible();
   });
 

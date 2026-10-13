@@ -246,8 +246,8 @@ export function useImportWizard() {
   const [sourceName, setSourceName] = useState("");
   const [contextTagID, setContextTagID] = useState("");
   const [anyway, setAnyway] = useState(false);
-  // Whether any run was staged from this upload. It outlives a failed restage,
-  // which leaves the earlier run on the server.
+  // Whether any run was staged from this upload. It outlives a failed retest,
+  // which leaves the run on the server.
   const [staged, setStaged] = useState(false);
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
@@ -293,8 +293,8 @@ export function useImportWizard() {
       setStaged(true);
       retest.reset();
       setRunId(run.id);
-      queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
 
   // The same run tested again with the one choice changed. The version comes
@@ -319,7 +319,8 @@ export function useImportWizard() {
   });
 
   // The version is the one the reader's report was read at, so a run that
-  // changed since is refused rather than imported unread.
+  // changed since is refused rather than imported unread. Every write re-reads
+  // on refusal too, so the next attempt carries the version the server holds.
   const approve = useMutation({
     mutationFn: async ({ id, version }: Pick<ImportRun, "id" | "version">) =>
       unwrap(
@@ -328,7 +329,7 @@ export function useImportWizard() {
           body: { version },
         }),
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
 
   const files = profile ? filesOf(profile) : [];

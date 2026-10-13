@@ -128,23 +128,115 @@ describe("the test run", () => {
   it("returns to the map with the reason when a test run of Import anyway stops", async () => {
     const user = userEvent.setup();
     let tested = false;
-    const reason = "The file changed since it was uploaded.";
+    const refusal = "The file changed since it was uploaded.";
+    const stored = "The test run stopped at row 3.";
     stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
       [`GET /imports/${run.id}`]: () =>
         jsonResponse(
-          tested ? { ...run, status: "pending", error: reason } : run,
+          tested ? { ...run, status: "pending", error: stored } : run,
         ),
       [`POST /imports/${run.id}/validate`]: () => {
         tested = true;
-        return jsonResponse({ status: 422, detail: reason }, 422);
+        return jsonResponse({ status: 422, detail: refusal }, 422);
       },
     });
     await renderAtTestRun(user);
     await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
     expect(await screen.findByText("Test run did not start")).toBeVisible();
-    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(refusal);
+    expect(screen.queryByText(stored)).toBeNull();
     expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
+  });
+
+  it("shows the reason stored on a draft whose test stopped in another tab", async () => {
+    const user = userEvent.setup();
+    const stored = "The test run stopped at row 3.";
+    stubRoutes({
+      "POST /imports": () =>
+        jsonResponse({ ...run, status: "pending", error: stored }, 202),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({ ...run, status: "pending", error: stored }),
+    });
+    await renderAtTestRun(user);
+    expect(await screen.findByText(stored)).toBeVisible();
+    expect(screen.getByText("Test run did not start")).toBeVisible();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("reads the run again after an approve refused for its version, and the next approve sends the new one", async () => {
+    const user = userEvent.setup();
+    let approvals = 0;
+    let moved = false;
+    const sent = stubRoutes({
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse(moved ? { ...run, version: 5 } : run),
+      [`POST /imports/${run.id}/approve`]: () => {
+        approvals += 1;
+        if (approvals > 1) {
+          return jsonResponse({ ...run, status: "complete" }, 202);
+        }
+        moved = true;
+        return jsonResponse(
+          { status: 409, code: "conflict", detail: "The run changed." },
+          409,
+        );
+      },
+    });
+    await renderAtTestRun(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Import 3 rows" }),
+    );
+    expect(await screen.findByText("Import did not run")).toBeVisible();
+    const approve = sent.findIndex(
+      (s) => s.path === `POST /imports/${run.id}/approve`,
+    );
+    await waitFor(() =>
+      expect(sent.slice(approve).map((s) => s.path)).toContain(
+        `GET /imports/${run.id}`,
+      ),
+    );
+    await user.click(screen.getByRole("button", { name: "Import 3 rows" }));
+    await waitFor(() =>
+      expect(
+        sent.filter((s) => s.path === `POST /imports/${run.id}/approve`).at(-1)
+          ?.body,
+      ).toEqual({ version: 5 }),
+    );
+  });
+
+  it("reads the run again after a test run refused to start", async () => {
+    const user = userEvent.setup();
+    let tested = false;
+    let stages = 0;
+    const sent = stubRoutes({
+      [REPORT]: () => jsonResponse(bundleReportFixture),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse(tested ? { ...run, status: "pending" } : run),
+      [`POST /imports/${run.id}/validate`]: () => {
+        tested = true;
+        return jsonResponse({ status: 422, detail: "Stopped." }, 422);
+      },
+      "POST /imports": () => {
+        stages += 1;
+        return stages > 1
+          ? jsonResponse(
+              { status: 409, code: "conflict", detail: "The file moved on." },
+              409,
+            )
+          : jsonResponse(run, 202);
+      },
+    });
+    await renderAtTestRun(user);
+    await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
+    await user.click(await screen.findByRole("button", { name: "Run test" }));
+    expect(await screen.findByText("The file moved on.")).toBeVisible();
+    const refused = sent.map((s) => s.path).lastIndexOf("POST /imports");
+    await waitFor(() =>
+      expect(sent.slice(refused).map((s) => s.path)).toContain(
+        `GET /imports/${run.id}`,
+      ),
+    );
   });
 
   it("names the import that holds a busy source name, with a link to it", async () => {

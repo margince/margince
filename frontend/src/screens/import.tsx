@@ -24,6 +24,7 @@ import {
   useLandedRecords,
   useRecentImports,
   useUndoImport,
+  wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import { useMemberNames } from "./membernames";
@@ -173,11 +174,6 @@ function rowsOf(run: ImportRun): number {
   return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
 }
 
-// Drafts and cancelled runs wrote nothing, and this list offers nothing on them.
-function listed(run: ImportRun): boolean {
-  return run.status !== "pending" && run.status !== "cancelled";
-}
-
 // The runs made so far, newest first. Undo is offered on a complete run only:
 // every other state either is still moving or has nothing left to reverse.
 function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
@@ -185,7 +181,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const recent = useRecentImports();
-  const runs = (recent.data ?? []).filter(listed);
+  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
   useLandedRecords(runs.map((one) => one.status));
   const names = useMemberNames(runs.map((one) => one.captured_by));
   const undo = useUndoImport();

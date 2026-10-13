@@ -24,7 +24,7 @@ import {
   type WizardStep,
 } from "./importflow";
 import { MapStep } from "./importmapping";
-import { useImportFormat, useRecentImports } from "./importrun";
+import { useImportFormat, useRecentImports, wroteNothing } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import { settingsHref } from "./settingsrouting";
 
@@ -75,8 +75,7 @@ export function ImportWizardPage() {
 
 /**
  * The steps as one ladder, and the step the reader is on. An earlier step
- * opens again only while no run exists. A staged run was made from the files
- * and the map as they were.
+ * opens again only while the run is a draft whose upload this page holds.
  */
 export function ImportWizard({
   wizard,
@@ -161,7 +160,7 @@ function StepBody({
   const run = wizard.run.data;
   return (
     <QueryStates query={wizard.run} pendingLabel={t("common.loading")}>
-      {run && (run.status === "pending" || run.status === "cancelled") ? (
+      {run && wroteNothing(run.status) ? (
         <ClosedRun wizard={wizard} run={run} />
       ) : null}
       {run && wizard.step === "test" ? (
@@ -196,7 +195,7 @@ function ClosedRun({
         </Button>
       }
     >
-      {cancelled ? undefined : run.error}
+      {cancelled ? undefined : (run.error ?? t("import.closed.stopped"))}
     </Callout>
   );
 }
