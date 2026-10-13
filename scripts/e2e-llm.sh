@@ -175,7 +175,7 @@ echo "==> judge $E2E_LLM_JUDGE via $E2E_LLM_JUDGE_VIA"
 # replayed when the seed stops — the run is over either way, and only one of the
 # two says where.
 seed_everything() {
-  local trail="$ROOT/e2e/llm/records/seed.log"
+  local trail="$RECORD_DIR/seed.log"
   mkdir -p "$(dirname "$trail")"
   if ! (cd "$ROOT" && DEV_SLUG="$SLUG" API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >"$trail"); then
     echo "==> the seed stopped; its trail to that point:" >&2
@@ -306,6 +306,35 @@ mint_passport
 # a strong model recovers by browsing, a weaker one is scored for not doing so.
 # So the stack is bound (when a preset is named), restarted so every role
 # serves the binding, and asked before the world is snapshotted.
+# The seed is embedded under the binding the stack booted with, and a binding
+# change is never re-embedded without a human's confirm. Unconfirmed, search
+# ranks the seeded world on another model's vectors, which is noise that differs
+# from stack to stack. The lane confirms the reindex and waits for it to finish.
+reindex_to_binding() {
+  local status
+  status="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' --data '{}' \
+    -o "$WORK/reindex.out" -w '%{http_code}' "$APP_BASE/v1/embeddings/reindex")"
+  if [[ "$status" != "202" && "$status" != "409" ]]; then
+    echo "the stack refused the reindex (HTTP $status):" >&2
+    head -c 600 "$WORK/reindex.out" >&2
+    exit 1
+  fi
+  for _ in $(seq 1 90); do
+    curl -sS -b "$COOKIES" -o "$WORK/reindex.status" "$APP_BASE/v1/embeddings/reindex/status"
+    # Idle under the bound identity is done. An entity whose embed exhausted its
+    # attempts stays pending forever, so it is named, not waited on.
+    if pending="$(python3 -c 'import json, sys; s = json.load(open(sys.argv[1]))
+done = s.get("status") == "idle" and s.get("configured_identity") == s.get("populated_identity")
+print(s.get("entities_pending")); sys.exit(not done)' "$WORK/reindex.status" 2>/dev/null)"; then
+      echo "==> search index rebuilt for the binding ($pending entities left unembedded)"
+      return 0
+    fi
+    sleep 10
+  done
+  echo "HARNESS: the search reindex had not finished after 15 minutes: $(head -c 400 "$WORK/reindex.status")" >&2
+  exit 2
+}
+
 if [[ -n "$STACK_PRESET" ]]; then
   echo "==> binding the stack to $(basename "$STACK_PRESET")"
   body="$WORK/routing.json"
@@ -318,6 +347,7 @@ if [[ -n "$STACK_PRESET" ]]; then
     exit 1
   fi
   restart_stack
+  reindex_to_binding
 fi
 SEARCH=semantic
 ready=0
@@ -552,7 +582,17 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   results="$WORK/$name.results"
   : > "$results"
 
+  made=0
   for i in $(seq 1 "$runs"); do
+    # A run that cannot move the verdict is not paid for: two passes at 2-of-3
+    # already hold, two failures already fail. E2E_LLM_ALL_RUNS=1 makes every
+    # run, for a reliability figure rather than a verdict.
+    if [[ "$made" -gt 0 && "${E2E_LLM_ALL_RUNS:-0}" != "1" ]] &&
+      python3 "$ROOT/e2e/llm/check.py" --settled "$ok" "$made" "$runs" "$pass_at"; then
+      echo "  settled after $made runs"
+      break
+    fi
+    made=$i
     # RESET WHEN THE WORLD IS DIRTY, not when this case is the one that dirtied
     # it. Two things were wrong with keying the reset on `$i -gt 1`.
     #
@@ -695,10 +735,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   if [[ "$ok" -ge "$pass_at" ]]; then
     PASSED=$((PASSED + 1))
-    echo "  $name: PASS ($ok/$runs)" | tee -a "$REPORT"
+    echo "  $name: PASS ($ok/$made)" | tee -a "$REPORT"
   else
     FAILED=$((FAILED + 1))
-    echo "  $name: FAIL ($ok/$runs, needed $pass_at)" | tee -a "$REPORT"
+    echo "  $name: FAIL ($ok/$made, needed $pass_at)" | tee -a "$REPORT"
     sed 's/^/    /' "$results"
   fi
 
@@ -709,7 +749,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # what mcp-tool-coverage.md publishes, so the current answer has to be at a
   # stable path. Git carries what it replaced.
   mkdir -p "$VERDICT_DIR"
-  EXPECTED_RUNS=$((EXPECTED_RUNS + runs))
+  EXPECTED_RUNS=$((EXPECTED_RUNS + made))
 
   # The transcripts of this scenario's runs, as an array so an absent glob is an
   # empty list rather than the literal pattern. A run that died without writing
@@ -722,15 +762,17 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
-    python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
+    python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
     ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather
   # than assembled here out of JSON the shell would have to parse.
-  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" \
+  python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
+  # A settled scenario makes fewer runs than an earlier lane may have kept.
+  rm -f "$RECORD_DIR/$name".run*.jsonl
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
 

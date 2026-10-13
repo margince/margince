@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { provenanceLabel } from "../design-system/provenance";
+import { provenanceOf } from "../design-system/provenanceof";
 import {
   type AcquisitionKind,
   isAcquisitionKind,
@@ -11,7 +12,6 @@ import { formatDate } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { humanizeToken } from "./audit";
-import { provenanceOf } from "./common";
 
 export type NoticeAcquisition = NonNullable<
   components["schemas"]["NoticeAcquisition"]

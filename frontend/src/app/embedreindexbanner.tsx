@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { unwrap } from "../screens/common";
+import { unwrap } from "../lib/problem";
 import {
   embedReindexStatusQueryKey,
   useEmbedReindexAvailable,

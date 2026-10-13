@@ -16,14 +16,13 @@
 
 import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useRef, useState } from "react";
-
-import { useFoldedViewport } from "../app/viewport";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { useFoldedViewport } from "../lib/viewport";
 import {
   type ReopenCondition,
   useClearDisposition,

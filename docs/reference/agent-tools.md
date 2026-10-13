@@ -27,9 +27,8 @@ and what a live server shows can differ from the table:
   A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none. The operations of
-  `extensions/openchannel` are all `human-only`. One returns a lasting signing secret over a path open to all. One
-  moves a member's whole outbound mail route. On a plain install, the catalog below is all an agent can reach.
+- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and every operation of
+  `extensions/openchannel` is `human-only`. On a plain install, the catalog below is all an agent can reach.
 
 **Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
 and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
@@ -48,8 +47,7 @@ Every core verb the surface serves, including those a client reaches only throug
   - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
     to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
     cannot pin a version, so a named set always waits.
-  - `relink_thread` is not offered. It refuses at every target, because the retry reads a thread key again, and sends
-    the caller to `relink_activities`, whose approval binds the named IDs.
+  - `relink_thread` is not offered and refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
   - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
     The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
     also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
@@ -105,6 +103,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `disqualify_lead` | 🟢 | `write` | no |
 | `draft_email` | 🟢 | `draft` | no |
 | `draft_follow_ups_for` | 🟢 | `draft` | no |
+| `draft_outbound` | 🟢 | `draft` | no |
 | `enrich` | 🟡 | `enrich` | yes |
 | `get_record_tags` | 🟢 | `read` | no |
 | `get_tag` | 🟢 | `read` | no |
@@ -126,6 +125,9 @@ Every core verb the surface serves, including those a client reaches only throug
 | `promote_lead` | 🟢 | `write` | no |
 | `qualify_lead` | 🟢 | `write` | no |
 | `read_brief` | 🟢 | `read` | no |
+| `read_project` | 🟢 | `read` | no |
+| `read_directory` | 🟢 | `read` | no |
+| `read_forecast` | 🟢 | `read` | no |
 | `read_tags` | 🟢 | `read` | no |
 | `read_record` | 🟢 | `read` | no |
 | `read_approval` | 🟢 | `read` | no |
@@ -134,12 +136,14 @@ Every core verb the surface serves, including those a client reaches only throug
 | `read_input_checks` | 🟢 | `read` | no |
 | `read_lists` | 🟢 | `read` | no |
 | `read_project_360` | 🟢 | `read` | no |
+| `read_relationships` | 🟢 | `read` | no |
 | `query_workspace` | 🟢 | `read` | no |
 | `relink_activity` | dynamic | `write` | no |
 | `resolve_entities` | 🟢 | `read` | no |
 | `relink_activities` | dynamic | `write` | no |
 | `relink_thread` | dynamic | `write` | no |
 | `remove_tag` | 🟢 | `write` | no |
+| `resolve_duplicates` | 🟢 | `write` | no |
 | `review_commitments` | 🟢 | `read` | no |
 | `run_analytics_query` | 🟢 | `read` | no |
 | `run_report` | 🟢 | `read` | no |
@@ -156,6 +160,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `send_email` | 🟢 | `send` | yes |
 | `send_company_email` | 🟢 | `send` | yes |
 | `send_message` | 🟢 | `send` | yes |
+| `send_outbound` | 🟢 | `send` | yes |
 | `update_record` | 🟢 / 🟡 | `write` | no |
 | `update_tag` | 🟢 | `write` | no |
 | `whats_slipping_this_week` | 🟢 | `read` | no |
@@ -201,10 +206,9 @@ human who gave the passport. It is never both added up, and never the passport a
 The live count per scope is in [mcp-info.md](mcp-info.md).
 
 The `enrich` cap holds the two company read routes on REST, `scrapeCompany` (`POST /v1/companies/{id}/enrich`) and
-`deepReadCompany` (`POST /v1/companies/{id}/deep-read`). It also holds the `enrich` tool built on them on `/mcp`. A
-passport is a Bearer credential for `/v1`, under the same rules as `/mcp`. The cold-start routes are `human-only`,
-because they create the company and do not enrich one. Grant the cap when the job of the agent is research outside the
-CRM on a record that already exists.
+`deepReadCompany` (`POST /v1/companies/{id}/deep-read`), and the `enrich` tool built on them on `/mcp`. A passport is
+a Bearer credential for `/v1`, under the same rules as `/mcp`. The cold-start routes are `human-only`: they create the
+company and do not enrich one. Grant the cap when the agent's job is research outside the CRM on a record that exists.
 
 ## Operations an agent may not reach at all
 
@@ -236,7 +240,6 @@ route runs the tool through the registry (`served_by: registry`), so the verb is
 
 `destructiveHint` and `idempotentHint` are not set. The protocol defaults (destructive, not idempotent) are already
 the safe reading. Only a value that promises more would need a call per tool, with nothing to hold it true.
-
 These gates keep the catalog and the contract from drifting:
 
 | Gate | Where | What it holds |
@@ -246,8 +249,7 @@ These gates keep the catalog and the contract from drifting:
 | `TestNoWritingToolIsAdvertisedAsReadOnly` | `backend/internal/modules/agents/conformance_test.go` | The derived hint stays true across the whole registered set. |
 | `TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap` | `backend/internal/modules/agents/scope_fitness_test.go` | An egress tool cannot use a cap that is not outbound. |
 
-Both scans in that file come from the generated policy table. So a verb added to the contract later is covered, and
-nobody has to add it to a list.
+Both scans read the generated policy table, so a verb added to the contract later is covered with no list to edit.
 
 ## When a tool refuses
 
@@ -291,9 +293,8 @@ back*, never what it may do. Both reach the same registry and the same admission
 framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
 answer one would tell a client it had reached the era it was looking for.
 
-The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is
-`-32601 method not found`, with HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does
-not host the endpoint.
+The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is `-32601 method not found`, with
+HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does not host the endpoint.
 
 **Protocol versions**, newest first: `2026-07-28` (modern, per request), `2025-11-25` and `2025-06-18` (handshake
 era). `2025-03-26` is outside the window Margince still supports; `2024-11-05` is not served, because it is older than

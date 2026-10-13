@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { type Locale, useT } from "../../i18n";
-import { ProblemError, problemMessageOf } from "../common";
+import { ProblemError, problemMessageOf } from "../../lib/problem";
 import type { CompanyDraft } from "../onboarding";
 import { onboardingDraftPayload } from "../onboarding";
 import type { ClarifyAnswer } from "./company-proposal";

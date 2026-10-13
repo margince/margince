@@ -46,13 +46,13 @@ import {
 } from "./design-system/atoms";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
+import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
-import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";

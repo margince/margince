@@ -9,10 +9,11 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemCodeOf } from "../lib/problem";
 import { BillingContactsPanel } from "./billingcontacts";
-import { problemCodeOf, useFinanceSummary } from "./common";
 import { RecentInvoices } from "./financeinvoices";
 import { OverdueLead } from "./financeoverdue";
+import { useFinanceSummary } from "./financesummary";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in

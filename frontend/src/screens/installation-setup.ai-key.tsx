@@ -7,7 +7,7 @@ import { Field, TextInput } from "../design-system/atoms";
 import { ServiceAccountKeyField } from "../design-system/serviceaccountkeyfield";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import type { SetupProvider } from "./setup-providers";
 import { VertexLocationField } from "./vertex-location";
 

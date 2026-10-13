@@ -18,7 +18,7 @@ import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import { customColumnLabel, useFilterVocabulary } from "./filterdata";
 import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";

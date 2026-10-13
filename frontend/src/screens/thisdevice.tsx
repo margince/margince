@@ -11,7 +11,7 @@ import { Button } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { logUnexpectedError } from "./common";
+import { logUnexpectedError } from "../lib/problem";
 
 export function ThisDevicePanel() {
   return <InstallPanel install={useInstallState()} />;

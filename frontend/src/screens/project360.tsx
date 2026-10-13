@@ -11,6 +11,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { QueryGate } from "../design-system/querystates";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -20,9 +21,10 @@ import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
-import { QueryGate, unwrap, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
 import {

@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
+import { throwProblem, unwrap } from "../lib/problem";
 import type { BillingContact, BillingContactRole } from "./billingcontacts";
-import { throwProblem, unwrap } from "./common";
 
 // The three writes the billing-contacts panel makes, sharing one invalidation.
 // The same panel is read from two projections — the finance summary the

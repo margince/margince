@@ -28,7 +28,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 
 export type Theme = "light" | "dark";
 

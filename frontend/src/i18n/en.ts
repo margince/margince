@@ -1612,7 +1612,7 @@ export const en = {
   "offline.retry": "Retry",
 
   // The shell's connectivity banner and the failure a refused write shows
-  // (app/connectivitybanner.tsx, app/connectivity.ts).
+  // (app/connectivitybanner.tsx, lib/connectivity.ts).
   "connectivity.offline.title": "Device offline",
   "connectivity.offline.body":
     "Changes cannot be saved until the connection returns.",

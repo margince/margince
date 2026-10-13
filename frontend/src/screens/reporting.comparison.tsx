@@ -8,9 +8,10 @@ import { DataTable } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
   editionLabel,

@@ -16,7 +16,7 @@ what the parts are, what the service worker may do, and why its job is so small.
 | Sign-up and install state | `frontend/src/app/pwa.ts` | signs up the worker in a production build; keeps the browser's install offer for the app to show |
 
 What the client stores (the language, theme and the rest) lives behind
-`frontend/src/app/storage.ts`. The offline page reads the stored language through it, the same way
+`frontend/src/lib/storage.ts`. The offline page reads the stored language through it, the same way
 every other reader does.
 
 ## The worker answers two requests, and none is the app
@@ -144,7 +144,7 @@ answers one of:
 
 ## Network state
 
-`frontend/src/app/connectivity.ts` holds one of three states. The shell's banner
+`frontend/src/lib/connectivity.ts` holds one of three states. The shell's banner
 (`app/connectivitybanner.tsx`) says which problem holds:
 
 - `offline`: the browser reports no network (`navigator.onLine` and the `online`/`offline` events).

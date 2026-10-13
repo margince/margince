@@ -6,11 +6,10 @@ import type { components } from "../api/schema";
 /**
  * Reading a grant out of the access snapshot, with no React in the way.
  *
- * Split from `capability.ts` because that module's other exports are HOOKS: it
- * imports `useMe`, which reaches `screens/common`, which reaches the design
- * system and its stylesheets. Anything importing it therefore pulls the
- * component graph — fine inside the app, and fatal for a consumer that only
- * wants to read the vocabulary.
+ * Split from `capability.ts` because that module's other exports are hooks.
+ * It imports `useMe` from `lib/session.ts`, which brings React and the query
+ * client. That is fine inside the app, and wrong for a consumer that only reads
+ * the vocabulary.
  *
  * `e2e/ac.spec.ts` is that consumer. It derives its settings sweep from
  * `SETTINGS_PAGES`, and the catalog reached this predicate through

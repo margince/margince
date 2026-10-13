@@ -17,7 +17,7 @@ import { useT } from "../i18n";
 import "../design-system/recordcard.css";
 import "./company360.css";
 import "./companyrailprojects.css";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { SectionSummary } from "./companyrailshared";
 import { useEntityName } from "./entityref";
 import { LeadFillFromContact } from "./leadfillfromcontact";

@@ -159,5 +159,17 @@ must_not_mention:
   # way to do this" is a conclusion that stops the contact asking.
   - "no way to (?:promote|disqualify|qualify)|(?:cannot|can't|does not|doesn't) (?:promote|disqualify|qualify) leads|(?:CRM|Margince|workspace) (?:has no|does not have a) lead"
 
+
+# The three verbs, read from the world. Promoting and disqualifying both take
+# the lead out of list_records, so each is told by what else exists: Ines as a
+# contact, Bruno as nothing. qualify derives Piet's company from his mail
+# domain, so that value is the server's and not the model's wording.
+must_end_with:
+  - lead "Ines Waldner" records=0
+  - contact "Ines Waldner" records=1
+  - lead "Bruno Kellner" records=0
+  - contact "Bruno Kellner" records=0
+  - lead "Piet Brandsma" company_name=Brandsma Koeltechniek
+
 runs: 3
 pass_at: 2

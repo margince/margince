@@ -266,6 +266,12 @@ expect_actions "duplicates already filed: the oldest is the one closed" \
 	"$(printf '300\t%s\n12\t%s\n' "$GATE_TITLE" "$GATE_TITLE")" \
 	GATE_RESULT=success
 
+STORIES_TITLE="a story does not render clean on main"
+expect_actions "a red all-stories render files its issue" \
+	"create $STORIES_TITLE" "" STORIES_RESULT=failure
+expect_actions "a green all-stories render closes it" \
+	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
+
 # --- retraction where ONE job result feeds TWO titles ---------------------------
 #
 # Three lanes split their result into "could not run" and "the thing it measures

@@ -12,7 +12,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { RowOpen } from "../design-system/rowopen";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
 // answer the whole import is for.

@@ -100,7 +100,7 @@
    page edits), and an ancestor that never yields would push the page off the
    row. Its label is capped and clips under the same tip; on a phone, where the
    row holds two stops at most, it folds away and the trail keeps the way back
-   and the page. 700px is the phone width (PHONE_MAX_WIDTH, app/viewport.ts). */
+   and the page. 700px is the phone width (PHONE_MAX_WIDTH, lib/viewport.ts). */
 .crumbs > ol > li:not(:first-child):not(:last-child) .crumbs-label {
   max-width: 32ch;
   overflow: hidden;

@@ -5,7 +5,7 @@ import { useLayoutEffect, useRef } from "react";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 
 // On the hook, not on `mutate`: an Undo runs after its row has unmounted, and
 // React Query drops a `mutate` call's own callbacks once its observer is gone.

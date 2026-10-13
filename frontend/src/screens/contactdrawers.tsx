@@ -18,7 +18,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, usePlural, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { ContactProviderSection } from "./contactprovider";
 
 // The research drawer the contact page opens over itself.

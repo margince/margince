@@ -37445,7 +37445,7 @@ export interface components {
             name: string;
             /** @description The written display name a client shows in place of the name. */
             title: string;
-            /** @description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause. */
+            /** @description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope. */
             description: string;
             /** @description Passport scope required to call it. */
             required_scope?: string;

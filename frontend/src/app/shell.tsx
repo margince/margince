@@ -14,7 +14,9 @@ import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
 import { useLocale, useT } from "../i18n";
-import { useMe } from "../screens/common";
+import { useMe } from "../lib/session";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { usePhoneViewport } from "../lib/viewport";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settingsnav";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
@@ -55,9 +57,7 @@ import { usePopoverDismiss } from "./popover";
 import { useReadingColumn } from "./readingcolumn";
 import { type Route, routeHash, useRoute } from "./router";
 import { useScrollMemory } from "./scrollmemory";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 import { TopBar } from "./topbar";
-import { usePhoneViewport } from "./viewport";
 import "./shell.css";
 
 // The app shell: one sidebar against the left edge of the viewport, and the

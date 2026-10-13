@@ -3,8 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 import { en, type MessageKey } from "../i18n/en";
+import { ProblemError, problemMessageOf } from "../lib/problem";
 import { captureValueMessage } from "./capturevalue";
-import { ProblemError, problemMessageOf } from "./common";
 
 const t = (key: MessageKey) => en[key];
 

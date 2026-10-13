@@ -10,12 +10,13 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import "./settings.stageautomation.css";
 
 type TransitionPolicy = components["schemas"]["TransitionPolicy"];

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProblemError } from "../lib/problem";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
-import { ProblemError } from "./common";
 
 // One upload wrapper for every surface that files bytes, so what the document
 // dialog sends and what the contract form sends can no longer drift. These pin

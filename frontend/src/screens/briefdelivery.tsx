@@ -11,7 +11,7 @@ import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 type BriefDelivery = components["schemas"]["BriefDelivery"];
 

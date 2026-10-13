@@ -10,10 +10,11 @@ import { Button, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { FactRow } from "./companyfactrow";
 import { isTechnicalFact } from "./companytechnical";
 import {

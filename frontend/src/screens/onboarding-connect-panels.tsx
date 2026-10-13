@@ -8,17 +8,17 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
-} from "../app/storage";
-import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
-import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+} from "../lib/storage";
 import { CaptureNotice } from "./capture-notice";
-import { problemMessageOf, unwrap } from "./common";
 import { ConnectPostureStep } from "./connect-posture";
 import { useConnectors } from "./connectors";
 import { imapErrorMessage } from "./imap-connect-form";

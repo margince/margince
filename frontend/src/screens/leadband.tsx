@@ -7,8 +7,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { WriteRefused } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap, WriteRefused } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { leadWriteKeys } from "./leadkeys";
 import type { LeadWriter } from "./leads";
 

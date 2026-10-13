@@ -32,14 +32,10 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  unwrap,
-  useFinanceSummary,
-} from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
+import { useFinanceSummary } from "./financesummary";
 import "./company360.css";
 import { FactList } from "../design-system/factlist";
 import { HealthStat, WITHHELD_READING } from "./company360health";

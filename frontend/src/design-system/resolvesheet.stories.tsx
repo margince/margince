@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "../screens/common";
+import { ProblemError } from "../lib/problem";
 import { Button } from "./atoms";
 import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 

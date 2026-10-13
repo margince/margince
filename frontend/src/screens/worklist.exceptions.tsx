@@ -25,7 +25,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { useViewerId } from "./common";
+import { useViewerId } from "../lib/session";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";
 import { TakeOwnershipControl } from "./worklist.manager";

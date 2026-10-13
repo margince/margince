@@ -12,7 +12,7 @@ import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { useT } from "../i18n";
-import { useMe } from "../screens/common";
+import { useMe } from "../lib/session";
 import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
 import { usePopoverDismiss } from "./popover";

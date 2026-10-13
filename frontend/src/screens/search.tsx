@@ -25,10 +25,15 @@ import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
 import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import { LoadMoreButton, QueryGate, QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { companyTabRoute } from "./companytab";
 import { useOpenEmail } from "./openemail";
 import "./search.css";

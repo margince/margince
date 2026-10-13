@@ -7,7 +7,7 @@
 // splits them in two.
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import type { CreateField } from "./create";
 import type { NameOffer, NameOffers } from "./create.offered";
 

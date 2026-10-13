@@ -49,7 +49,7 @@ prompt: |
 # currency conversion and the weighting, and a total assembled beside them is a
 # second answer to the same question.
 must_call:
-  - forecast_readings
+  - read_forecast
 
 may_call:
   # The readiness verdict and the open findings. Genuinely optional: this
@@ -62,6 +62,9 @@ may_call:
   - list_records
   - query_workspace
   - read_record
+
+must_call_with:
+  - read_forecast.view=readings
 
 must_mention:
   # It came back with money, not with a description of the forecast.

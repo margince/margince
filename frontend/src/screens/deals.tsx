@@ -53,6 +53,8 @@ import {
 } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useRecordTimeline } from "../design-system/recordtimeline";
@@ -71,6 +73,8 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe, useViewerId } from "../lib/session";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
@@ -79,15 +83,6 @@ import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
-import {
-  LoadMoreButton,
-  provenanceOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useMe,
-  useViewerId,
-} from "./common";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import {

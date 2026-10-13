@@ -16,9 +16,11 @@ import {
 } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
+import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { throwProblem } from "../lib/problem";
 import {
   suggestionsFor,
   useAiModelCatalogue,
@@ -28,7 +30,6 @@ import {
 } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
-import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
 import {
   usePlatformDeclined,

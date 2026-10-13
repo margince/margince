@@ -18,7 +18,7 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { NewProjectAction } from "./companyactions";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";

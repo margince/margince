@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Readers of an RFC-7807 problem body. They import nothing from the screens,
-// so screens/common.tsx can re-export them without an import cycle.
+// so lib/problem.ts can re-export them without an import cycle.
 
 // An array is an object too, but no body field read here is ever one.
 export function isRecord(value: unknown): value is Record<string, unknown> {

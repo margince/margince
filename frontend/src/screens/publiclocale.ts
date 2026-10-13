@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { parseParams } from "../app/urlstate";
-import { isLocale, useLocale } from ".";
+import { isLocale, useLocale } from "../i18n";
 
 /**
  * Take the language from the link a reader followed.

@@ -10,7 +10,12 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCode, problemMessageOf, throwProblem, unwrap } from "./common";
+import {
+  problemCode,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
 import { AddConnectionDialog, ALL_PROVIDERS } from "./connectors.add";
 import { OAuthOutcomeNote } from "./connectors.notices";
 import { ConnectorRow, OAUTH_PROVIDERS } from "./connectors.row";

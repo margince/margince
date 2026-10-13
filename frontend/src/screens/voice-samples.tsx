@@ -13,6 +13,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { PanelBody } from "../design-system/panel";
 import { useLastSubject } from "../design-system/presence";
+import { QueryGate } from "../design-system/querystates";
 import { formatDate, formatNumber } from "../format/format";
 import {
   type Locale,
@@ -23,7 +24,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { VOICE_MIN_WORDS } from "./voice-intake-core";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];

@@ -20,7 +20,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { EntityRef } from "./entityref";
 import {
   acquisitionKindLabel,

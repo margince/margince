@@ -5,8 +5,8 @@ import { useUrlParams } from "../app/urlstate";
 import type { ListChip } from "../design-system/listsurface.dials";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
+import { useMe } from "../lib/session";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { useMe } from "./common";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 import { useMemberNames } from "./membernames";
 

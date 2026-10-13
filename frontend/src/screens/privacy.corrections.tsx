@@ -22,15 +22,11 @@ import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import {
-  LoadMoreButton,
-  problemMessageOf,
-  QueryStates,
-  unwrap,
-} from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { correctableFieldLabel } from "./confirmfields";
 import { EntityRef } from "./entityref";
 

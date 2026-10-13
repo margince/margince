@@ -8,15 +8,12 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import { approvalHref } from "../screens/approvaldrawer";
-import {
-  LoadMoreButton,
-  problemMessageOf,
-  QueryStates,
-} from "../screens/common";
 import {
   NOTIFICATIONS_KEY,
   type NotificationItem,

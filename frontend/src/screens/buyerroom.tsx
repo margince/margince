@@ -7,8 +7,10 @@ import { forgetHashCredential, takeHashCredential } from "../app/router";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { BuyerBoard } from "./buyerroomboard";
 import {
   BuyerFrame,
@@ -24,7 +26,6 @@ import {
   SessionRefusedError,
   writeSession,
 } from "./buyerroomsession";
-import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it — the one screen an outside contact ever

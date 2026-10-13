@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { unwrap } from "../screens/common";
+import { unwrap } from "../lib/problem";
 import { settingsHref } from "../screens/settingsrouting";
 import { useCan, useCanWrite } from "./capability";
 import { routeHash } from "./router";

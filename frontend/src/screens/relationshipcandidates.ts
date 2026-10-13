@@ -10,7 +10,7 @@
 
 import { api } from "../api/client";
 import type { EntityKind } from "../app/entity";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 export type Candidate = { id: string; name: string };
 

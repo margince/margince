@@ -21,8 +21,12 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
+import {
+  ProblemError,
+  problemExistingId,
+  problemMessageOf,
+} from "../lib/problem";
 import { derivedRecordKeys } from "./activitykeys";
-import { ProblemError, problemExistingId, problemMessageOf } from "./common";
 import {
   type CreateField,
   type FormRows,

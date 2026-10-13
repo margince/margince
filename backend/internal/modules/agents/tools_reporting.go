@@ -56,7 +56,7 @@ type readReporting struct{ read ReportingReader }
 var reportingReadCopy = toolCopy{
 	Purpose: "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions.",
 	Limits:  "Read only. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
-	Instead: "Use list_pipelines to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
+	Instead: "Use " + pipelinesSource + " to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
 }
 
 func (t readReporting) Spec() mcp.ToolSpec {

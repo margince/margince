@@ -7,7 +7,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useSinglePress } from "../design-system/presslatch";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { type SavedView, useSaveView } from "./savedviews.queries";
 import "./savedviews.css";
 

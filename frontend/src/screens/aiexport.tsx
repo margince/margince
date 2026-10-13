@@ -16,7 +16,7 @@ import {
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { downloadBytes } from "./download";
-import "./common.css";
+import "../design-system/querystates.css";
 
 export type AiCallDetail = Pick<
   components["schemas"]["AiCall"],

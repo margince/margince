@@ -231,13 +231,12 @@ export default defineConfig({
     // The DESKTOP viewport, stated rather than inherited.
     //
     // A list header folds its verbs into one overflow menu at or under
-    // NARROW_MAX_WIDTH (1100, app/viewport.ts), and it asks matchMedia. Under
-    // jsdom that question was never really asked: jsdom ships no matchMedia, so
-    // vitest.setup.ts installed a stub answering `matches: false` to everything
-    // — which happens to mean "not narrow", and every suite asserting a primary
-    // action on a list header rested on that accident. happy-dom ships a real
-    // matchMedia over a 1024-wide window, so the same suites saw the narrow
-    // arrangement and could not find a button that was in the overflow.
+    // NARROW_MAX_WIDTH (1100, lib/viewport.ts). It asks matchMedia. jsdom ships
+    // no matchMedia, so vitest.setup.ts installed a stub that answers
+    // `matches: false` to everything. That reads as "not narrow", and every suite
+    // that checks a primary action on a list header rested on it. happy-dom
+    // ships a real matchMedia over a 1024-wide window. There the same suites saw
+    // the narrow arrangement, with the button inside the overflow menu.
     //
     // 1280 is a desktop, which is the arrangement those suites are about. A
     // suite testing the folded one sets its own width; what must not happen

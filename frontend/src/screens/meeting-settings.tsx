@@ -7,12 +7,14 @@ import { useUnsavedGuard } from "../app/unsaved";
 import { Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SaveBar } from "../design-system/savebar";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingProfileScreen } from "./booking-profile";
-import { QueryGate, throwProblem, unwrap, useMe } from "./common";
 import { useConnectors } from "./connectors";
 import {
   CalendarSection,

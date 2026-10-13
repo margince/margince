@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { throwProblem } from "../common";
+import { throwProblem } from "../../lib/problem";
 import type { CompanyForm } from "../onboarding";
 import {
   ONBOARDING_PROGRESS_KEY,

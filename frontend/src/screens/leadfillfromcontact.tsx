@@ -8,7 +8,7 @@ import {
   type ListPopoverOption,
 } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import type { LeadWriter } from "./leads";
 import { leadFillsFrom, searchContacts } from "./leads.contactoffers";
 

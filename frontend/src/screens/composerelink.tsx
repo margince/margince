@@ -9,8 +9,8 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { entityTimelineKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem, unwrap } from "./common";
 import { type RelinkKind, useRecordTargets } from "./recordtargets";
 
 // Moving a filed message to the record it actually belongs to, extracted from

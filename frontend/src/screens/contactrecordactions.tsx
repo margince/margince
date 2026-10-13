@@ -9,8 +9,8 @@ import { ifMatch, requireVersion } from "../api/version";
 import { navigate } from "../app/router";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { ArchiveAction } from "./archive";
-import { unwrap } from "./common";
 import { MergeAction } from "./merge";
 import { invalidateRecord } from "./recordwritekeys";
 

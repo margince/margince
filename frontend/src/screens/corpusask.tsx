@@ -25,7 +25,7 @@ import { useT } from "../i18n";
 import { CitedDocument } from "./citeddocument";
 import { AnswerView } from "./corpusanswer";
 import "./corpusask.css";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "../lib/problem";
 
 // Asking a document set a question, in the reader's own words.
 //

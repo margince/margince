@@ -8,7 +8,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
-import { STORAGE_KEYS } from "./storage";
+import { STORAGE_KEYS } from "../lib/storage";
 import {
   setThemeChoice,
   THEME_CHOICES,

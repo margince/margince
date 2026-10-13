@@ -8,10 +8,10 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatMoneyCompact, formatNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { openAnalyticsSection } from "./analytics.address";
 import { rowCount, rowMoney } from "./analytics.cells";
 import { MEETING_STATUSES } from "./analytics.questions.values";
-import { unwrap } from "./common";
 
 // What a reading says when the row it needs is not there. THREE facts, not one:
 // a read in flight resolves by waiting, a failed one never will, and a lens

@@ -18,9 +18,9 @@ import { middayInstant } from "../format/calendarday";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMe } from "../lib/session";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
-import { useMe } from "./common";
 import { EntityRef } from "./entityref";
 import {
   type SettableState,

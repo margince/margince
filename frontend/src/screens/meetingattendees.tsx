@@ -18,9 +18,10 @@ import {
 import { Select } from "../design-system/select";
 import { TokenList } from "../design-system/tokeninput";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import type { MeetingAttendees } from "./activitybody";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { unwrap, useMe } from "./common";
 import { useRosterPartial, useRosterPartialHint } from "./entityref";
 
 const SEARCH_LIMIT = 20;

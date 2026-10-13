@@ -215,7 +215,7 @@ func (t listRecords) sourceOfStageIDs() []string {
 	for _, filters := range t.filters {
 		for _, filter := range filters {
 			if filter.Name == "pipeline_id" || filter.Name == "stage_id" {
-				return []string{"A pipeline_id or stage_id comes from list_pipelines; " +
+				return []string{"A pipeline_id or stage_id comes from " + pipelinesSource + "; " +
 					"nothing else on this surface yields one."}
 			}
 		}

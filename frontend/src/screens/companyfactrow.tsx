@@ -16,7 +16,7 @@ import { PanelRow } from "../design-system/panel";
 import { provenanceLabel } from "../design-system/trust";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { settleFacts } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";

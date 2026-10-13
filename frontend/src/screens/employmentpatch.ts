@@ -2,7 +2,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import type { useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { sameEditValue, saveIndependentEdit } from "./independentedit";
 
 type Employment = components["schemas"]["Contact360Employment"];

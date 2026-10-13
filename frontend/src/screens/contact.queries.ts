@@ -3,7 +3,7 @@
 
 import { queryOptions, skipToken } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 // The contact row, under the key a record write invalidates (recordwritekeys.ts).
 // No id yet means no request, which a caller still waiting on one relies on.

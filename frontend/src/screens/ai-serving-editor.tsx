@@ -18,11 +18,11 @@ import {
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { OPENROUTER_ROUTING_DOCS } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
 import { type SliceValue, withSlice } from "./ai-routing-slice";
 import { FieldReference, RequestSummary } from "./ai-serving-reference";
-import { problemMessageOf, unwrap } from "./common";
 import "./ai-settings.css";
 
 // How OpenRouter serves one lane, as the JSON OpenRouter itself takes. The

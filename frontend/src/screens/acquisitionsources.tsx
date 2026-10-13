@@ -10,6 +10,7 @@ import { KeyedName } from "../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
+import { QueryStates } from "../design-system/querystates";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import {
@@ -20,13 +21,13 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { problemMessageOf } from "../lib/problem";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "./acquisitionsources.queries";
-import { problemMessageOf, QueryStates } from "./common";
 import { vocabMenuColumn } from "./leadvocab.rows";
 
 function sourceColumns({

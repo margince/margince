@@ -17,7 +17,7 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf, unwrap } from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 
 type Pipeline = components["schemas"]["Pipeline"];
 

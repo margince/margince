@@ -8,12 +8,13 @@ import { useCan, useCanWrite } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { providerName } from "./ai-provider-names";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   ProviderRefreshLine,
   RefreshModelPricesButton,

@@ -77,7 +77,8 @@ func (s *Dispatcher) instructions() string {
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
-	"stages the effect for review rather than performing it. " + mcp.ConflictingSourcesRule
+	"stages the effect for review rather than performing it. A tool whose description names no " +
+	"governance runs immediately and needs only the read scope. " + mcp.ConflictingSourcesRule
 
 // queueInstruction is the REPORTING RULE, appended where the queue is served.
 //

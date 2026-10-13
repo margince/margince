@@ -63,5 +63,13 @@ must_mention:
 judge:
   - "Criterion 1. The answer reports what the import would do before anything is written, and never tells the reader that the rows were created, imported, added or are now live. A preview stated in the future or the conditional — 'this would create three companies', '3 rows will be created once you confirm', 'nothing has been written yet' — is exactly right: answer yes. Answer no if the answer reports the import as already done."
 
+
+# Nothing is written before the asker has seen the numbers, so no company in
+# the file exists once the run ends.
+must_end_with:
+  - company "Weserblick Logistik GmbH" records=0
+  - company "Elbmarsch Systeme AG" records=0
+  - company "Alpenblick Sensorik GmbH" records=0
+
 runs: 3
 pass_at: 2

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { INTL_LOCALE } from "../format/format";
 import type { Locale } from "../i18n";
-import { throwProblem } from "../screens/common";
+import { throwProblem } from "../lib/problem";
 
 // The installation's own settings, and the one field on them a form has to act
 // on: how large a file this deployment accepts.

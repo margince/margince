@@ -25,6 +25,7 @@ import { foldForMatch } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   DEAL_MATCH_LIMIT,
   DEAL_PAGE_FRESH_MS,
@@ -37,7 +38,6 @@ import {
   type AttachmentParent,
   uploadAttachment,
 } from "./attachmentupload";
-import { problemMessageOf, unwrap } from "./common";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.

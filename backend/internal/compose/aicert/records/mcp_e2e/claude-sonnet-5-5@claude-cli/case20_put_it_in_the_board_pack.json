@@ -4,7 +4,7 @@
     1,
     3
   ],
-  "passed": 3,
+  "passed": 2,
   "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -13,12 +13,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 30,
-    "output_tokens": 6062,
-    "cache_creation_input_tokens": 33904,
-    "cache_read_input_tokens": 847615,
+    "input_tokens": 22,
+    "output_tokens": 5525,
+    "cache_creation_input_tokens": 31216,
+    "cache_read_input_tokens": 589041,
     "runs_measured": 3,
     "runs_costed": 3,
-    "cost_usd": 0.2811
+    "cost_usd": 0.2391
   }
 }

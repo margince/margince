@@ -16,11 +16,12 @@
 
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import {
   type NotificationClass,
   type NotificationDelivery,

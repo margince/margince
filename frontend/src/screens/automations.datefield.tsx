@@ -7,7 +7,7 @@ import type { FieldControl } from "../design-system/atoms";
 import type { SelectOption } from "../design-system/select";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import "./automations.datefield.css";
 
 // renewal_reminder's date_field param (GH-706) names a workspace's own cf_*

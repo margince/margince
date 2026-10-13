@@ -12,7 +12,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 type DealRoomState = components["schemas"]["DealRoomState"];
 

@@ -8,7 +8,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { type OpenReceipt, SentenceList, WrittenBy } from "./record360";
 
 type Dossier = components["schemas"]["CompanyDossier"];

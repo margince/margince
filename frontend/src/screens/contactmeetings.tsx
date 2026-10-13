@@ -12,6 +12,7 @@ import {
   RailPanel,
   type RailPanelState,
 } from "../design-system/panel";
+import { LoadMoreButton } from "../design-system/querystates";
 import {
   type TimelineFilters,
   useRecordTimeline,
@@ -23,8 +24,8 @@ import {
 } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useMe } from "../lib/session";
 import { useActivity } from "./activityread";
-import { LoadMoreButton, useMe } from "./common";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,

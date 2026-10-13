@@ -5,9 +5,11 @@ import type { components } from "../api/schema";
 import { Badge, Button, Card } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { KeyedName } from "../design-system/keyedname";
+import { QueryStates } from "../design-system/querystates";
 import { formatDecimal, formatNumber, ordinalNumber } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import {
   attemptReasonLabel,
   callCodeName,
@@ -15,7 +17,6 @@ import {
 } from "./ai-decision-labels";
 import { providerName } from "./ai-provider-names";
 import { ExportScenarioDialog } from "./aiexport";
-import { QueryStates, unwrap } from "./common";
 
 // A string response is shown verbatim (real newlines); an object is
 // pretty-printed. Either way the .code-block surface wraps and scrolls it.

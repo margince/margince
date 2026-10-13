@@ -19,7 +19,7 @@ import { Select } from "../design-system/select";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import {
   EntityRef,
   RosterPartialNote,

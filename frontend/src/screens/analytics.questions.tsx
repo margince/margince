@@ -10,10 +10,12 @@ import { Callout } from "../design-system/callout";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Stack } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,
@@ -41,7 +43,6 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
-import { QueryGate, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 // The population a query names, as one comparable string: the page's picker

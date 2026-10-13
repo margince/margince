@@ -12,7 +12,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // RECORDING a decision about a domain: the form, what it refuses to send, and
 // the write itself.

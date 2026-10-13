@@ -21,7 +21,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
