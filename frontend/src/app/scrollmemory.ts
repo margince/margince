@@ -119,6 +119,12 @@ const offsets = new Map<string, number>();
  * `span: "load"` keys the lane by name alone, for a surface the reader returns
  * to through a NEW entry — the Worklist drawer reopened by a record's way back.
  */
+// The element in state is a DOM node, not a React value: scrolling it is a
+// write to the page, which React state never holds.
+function scrollElementTo(element: HTMLElement, top: number): void {
+  element.scrollTop = top;
+}
+
 export function useScrollMemory(
   column: React.RefObject<HTMLElement | null>,
   address: string,
@@ -178,7 +184,7 @@ export function useScrollMemory(
         wanted.current = null;
         return;
       }
-      scroller.scrollTop = wanted.current;
+      scrollElementTo(scroller, wanted.current);
       // Within a pixel, not exactly: a scroll offset is fractional on a display
       // whose device pixel ratio is not a whole number, and an equality test
       // against the number asked for is then never satisfied. The restore never

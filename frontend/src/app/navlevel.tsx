@@ -10,7 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
+  useState,
 } from "react";
 import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
@@ -75,7 +75,34 @@ type NavWalk = {
   claimAt?: string;
 };
 
-const NavWalkMemory = createContext<RefObject<NavWalk> | undefined>(undefined);
+// Methods over a private record, so a holder of the context calls into the
+// memory and never writes a context value itself.
+export type NavWalkStore = Readonly<{
+  origin: () => Route;
+  remember: (route: Route) => void;
+  claim: (at: string) => void;
+  spend: (at: string) => boolean;
+}>;
+
+function navWalkStore(): NavWalkStore {
+  const walk: NavWalk = { origin: BRIEF };
+  return {
+    origin: () => walk.origin,
+    remember: (route) => {
+      walk.origin = route;
+    },
+    claim: (at) => {
+      walk.claimAt = at;
+    },
+    spend: (at) => {
+      if (walk.claimAt !== at) return false;
+      walk.claimAt = undefined;
+      return true;
+    },
+  };
+}
+
+const NavWalkMemory = createContext<NavWalkStore | undefined>(undefined);
 
 export const NavWalkProvider = NavWalkMemory.Provider;
 
@@ -87,14 +114,11 @@ export const NavWalkProvider = NavWalkMemory.Provider;
  * navigation to return into. No dependency list, because the route is parsed
  * fresh per render and would defeat one anyway.
  */
-export function useNavWalk(
-  route: Route,
-  remembers: boolean,
-): RefObject<NavWalk> {
-  const walk = useRef<NavWalk>({ origin: BRIEF });
+export function useNavWalk(route: Route, remembers: boolean): NavWalkStore {
+  const [walk] = useState(navWalkStore);
   useEffect(() => {
     if (remembers) {
-      walk.current.origin = route;
+      walk.remember(route);
     }
   });
   return walk;
@@ -135,7 +159,7 @@ export function useNavLevel(
   const parent = depth > 0 ? trail[depth - 1] : undefined;
   // With no shell above it the panel is all there is, so it keeps the walk's
   // memory itself — one lifetime, and no history before it.
-  const own = useRef<NavWalk>({ origin: BRIEF });
+  const [own] = useState(navWalkStore);
   const walk = useContext(NavWalkMemory) ?? own;
 
   // Walking between levels replaces every row in the panel, and an unmounted
@@ -150,8 +174,8 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const target = walkUpTarget(parent, walk.current.origin);
-    walk.current.claimAt = routeHash(target);
+    const target = walkUpTarget(parent, walk.origin());
+    walk.claim(routeHash(target));
     navigate(target);
   };
   const onSelect = useCallback(
@@ -165,7 +189,7 @@ export function useNavLevel(
       // hands its focus on rather than dropping it — to the address it opens,
       // which is the row's own.
       if (entry.children && entry.children.length > 0) {
-        walk.current.claimAt = navEntryHref(shown.path, entry);
+        walk.claim(navEntryHref(shown.path, entry));
       }
     },
     [onNavigate, shown, walk],
@@ -176,10 +200,9 @@ export function useNavLevel(
   // crossed into or out of a section. Every render at any other address finds a
   // claim that is not for it and does nothing.
   useEffect(() => {
-    if (walk.current.claimAt !== routeHash(route)) {
+    if (!walk.spend(routeHash(route))) {
       return;
     }
-    walk.current.claimAt = undefined;
     container.current
       ?.querySelector<HTMLElement>(".navlevel .navwrap .navitem")
       ?.focus();
