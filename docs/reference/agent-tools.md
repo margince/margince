@@ -92,7 +92,12 @@ Sorted by scope, so the read-only tools come first.
 | `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
 | `resolve_duplicates` | 🟢 | `write` | no | Merge two records or dismiss a flagged pair (actions below) |
 | `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
-| `book_meeting` | 🟢 | `sen### Actions inside one tool
+| `book_meeting` | 🟢 | `send` | yes | Book a meeting |
+| `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
+| `send_outbound` | 🟢 | `send` | yes | Send a message (actions below) |
+| `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
+
+### Actions inside one tool
 
 Some tools front several related actions. A client sees one tool, such as `change_tags`, and an argument says which
 action to run, such as `create_tag`. Each action keeps its own tier and scope. Open a tool below to see its actions.
