@@ -78,7 +78,8 @@ var sessionMoves = map[moveName]sessionMove{
 	moveResume:    {from: []string{StatusFailed}, to: StatusRunning},
 	moveCancel:    {from: []string{StatusPending, StatusAwaitingApproval}, to: StatusCancelled},
 	moveSupersede: {from: []string{StatusValidating, StatusAwaitingApproval}, to: StatusCancelled},
-	// moveAbandon closes a test run old code failed; the sweep selects only those.
+	// moveAbandon closes a failed run carrying CauseValidationStopped, which wrote
+	// nothing. Only the sweep selects such a run.
 	moveAbandon: {from: []string{StatusFailed}, to: StatusCancelled},
 }
 
@@ -105,7 +106,7 @@ type runChange struct {
 type sessionState struct {
 	status, connector, sourceName, sourceRef, draftStep string
 	version                                             int
-	approved                                            bool
+	approved, released                                  bool
 	supersededBy                                        *RunID
 	mapping                                             []byte
 }
@@ -116,10 +117,10 @@ func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error)
 	var state sessionState
 	err := tx.QueryRow(ctx, `
 		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version,
-		       approved_at IS NOT NULL, superseded_by, mapping
+		       approved_at IS NOT NULL, source_released_at IS NOT NULL, superseded_by, mapping
 		  FROM import_run WHERE id = $1 FOR UPDATE`, id).Scan(
 		&state.status, &state.connector, &state.sourceName, &state.sourceRef, &state.draftStep,
-		&state.version, &state.approved, &state.supersededBy, &state.mapping)
+		&state.version, &state.approved, &state.released, &state.supersededBy, &state.mapping)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sessionState{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 	}
@@ -146,6 +147,9 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 	}
 	if c.approved && !state.approved {
 		return fmt.Errorf("import run %s was never approved, so it cannot resume: %w", id, apperrors.ErrConflict)
+	}
+	if move.to == StatusRunning && state.released {
+		return fmt.Errorf("import run %s no longer holds its uploaded file, so it cannot run; upload the file again: %w", id, apperrors.ErrConflict)
 	}
 	return nil
 }

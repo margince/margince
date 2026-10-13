@@ -140,3 +140,21 @@ func TestAFlipRunKeepsNoSession(t *testing.T) {
 		t.Errorf("saving a choice on a flip run = %v, want a conflict: only a csv run keeps a session", err)
 	}
 }
+
+func TestAStoppedCommitWithoutItsFileCannotResume(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	released := seedFairRun(ctx, t, db, StatusFailed)
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE import_run SET source_released_at = now(), error = $2 WHERE id = $1`, released, CauseSourceTaken)
+		return err
+	}); err != nil {
+		t.Fatalf("releasing the run's file: %v", err)
+	}
+	if _, err := s.ResumeApproved(ctx, released, 0); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("resuming a stopped commit whose file is released = %v, want a conflict: the commit would read nothing", err)
+	}
+	if got := mustGetStaged(ctx, t, s, released); got.Status != StatusFailed {
+		t.Errorf("the refused run reads %s, want failed", got.Status)
+	}
+}

@@ -48,7 +48,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `source_ref` | `text` | yes |  |
 | `source_released_at` | `timestamp with time zone` |  |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 3 more. |
-| `superseded_by` | `uuid` |  | The newer test run of the same source that cancelled this one. |
+| `superseded_by` | `uuid` |  | The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back. |
 | `undo_report` | `jsonb` |  |  |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

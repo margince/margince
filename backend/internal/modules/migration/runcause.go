@@ -13,12 +13,15 @@ import (
 const (
 	CauseStopped    = "the import stopped on an error; approve it again to continue from its checkpoint"
 	CauseOverBudget = "the import ran past its time budget; approve it again to continue from its checkpoint"
-	// CauseValidationStopped is a test run that could not finish; nothing was
-	// written, so the way on is a new upload.
+	// CauseValidationStopped is matched, never written: a legacy row carries it
+	// for a test run that stopped. The backfill and the sweep cancel such a run.
 	CauseValidationStopped = "the test run stopped on an error; upload the file again to start a new import"
 	// CauseSuperseded is a run a newer test run of its source replaced. The
-	// import-session migration writes the same text.
+	// import-session backfill writes it too, so the text never changes.
 	CauseSuperseded = "a newer test run of this source replaced this one"
+	// CauseSourceTaken is a stopped commit the import-session backfill released
+	// because another run of its upload kept the file. Only the backfill writes it.
+	CauseSourceTaken = "another run of this upload holds its file, so this one cannot resume; upload the file again to go on"
 	// CauseReplacedByUndo is a report an undo of another run of its source
 	// name closed: the undo needs the name, and the report wrote nothing.
 	CauseReplacedByUndo = "an undo of another import of this source name closed this test run; upload the file again to import it"

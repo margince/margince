@@ -209,6 +209,26 @@ func TestAnUnnamedRunAndAFlipRunAreActiveBesideANamedOne(t *testing.T) {
 	} {
 		seedLegacyRun(t, conn, run)
 	}
+	var indexed int
+	if err := conn.QueryRow(context.Background(), `
+		SELECT count(*) FROM import_run
+		 WHERE connector = 'csv' AND source_name <> ''
+		   AND status IN ('validating', 'awaiting_approval', 'running', 'undoing')`).Scan(&indexed); err != nil {
+		t.Fatal(err)
+	}
+	if indexed != 1 {
+		t.Errorf("%d of the runs fall under the one-active-per-name index, want only the named csv run", indexed)
+	}
+	var predicate string
+	if err := conn.QueryRow(context.Background(),
+		`SELECT pg_get_indexdef('import_run_one_active_per_source_name'::regclass)`).Scan(&predicate); err != nil {
+		t.Fatal(err)
+	}
+	for _, clause := range []string{"connector = 'csv'", "source_name <> ''"} {
+		if !strings.Contains(predicate, clause) {
+			t.Errorf("the index reads %q, want it to leave out runs outside %s", predicate, clause)
+		}
+	}
 }
 
 func TestTwoActiveRunsOfOneNameAreRefused(t *testing.T) {

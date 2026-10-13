@@ -32,9 +32,26 @@ UPDATE import_run
    SET approved_at = updated_at
  WHERE status IN ('running', 'complete', 'undoing', 'undone', 'failed');
 
--- One active run per source name: a run that writes keeps the name, else the
--- newest report does, and every other report of it is superseded by that run.
--- The error is migration.CauseSuperseded.
+-- One run per source name among the statuses that hold it. Two undos of one
+-- name have no safe order, so the migration stops and names them.
+DO $$
+DECLARE
+    clash text;
+BEGIN
+    SELECT string_agg(id::text, ', ' ORDER BY id) INTO clash
+      FROM (SELECT id, count(*) OVER (PARTITION BY source_name) AS undos
+              FROM import_run
+             WHERE connector = 'csv' AND source_name <> '' AND status = 'undoing') named
+     WHERE undos > 1;
+    IF clash IS NOT NULL THEN
+        RAISE EXCEPTION 'import runs % are undoing one source name at once', clash
+            USING HINT = 'Press undo on each of these runs until all but one is undone, then run the migration again.';
+    END IF;
+END $$;
+
+-- An undo keeps the name, else the newest commit, else the newest report. An
+-- older commit stops, resumable from its checkpoint: migration.CauseStopped.
+-- Every other report is superseded by the keeper: migration.CauseSuperseded.
 WITH ranked AS (
     SELECT id,
            first_value(id) OVER named AS keeper,
@@ -43,18 +60,22 @@ WITH ranked AS (
      WHERE connector = 'csv' AND source_name <> ''
        AND status IN ('validating', 'awaiting_approval', 'running', 'undoing')
     WINDOW named AS (PARTITION BY source_name
-                     ORDER BY status IN ('running', 'undoing') DESC, created_at DESC, id DESC)
+                     ORDER BY status = 'undoing' DESC, status = 'running' DESC, updated_at DESC, id DESC)
 )
 UPDATE import_run r
-   SET status = 'cancelled', superseded_by = ranked.keeper, source_released_at = now(),
-       error = 'a newer test run of this source replaced this one'
+   SET status = CASE WHEN r.status = 'running' THEN 'failed' ELSE 'cancelled' END,
+       superseded_by = CASE WHEN r.status = 'running' THEN NULL ELSE ranked.keeper END,
+       source_released_at = CASE WHEN r.status = 'running' THEN NULL ELSE now() END,
+       error = CASE WHEN r.status = 'running'
+                    THEN 'the import stopped on an error; approve it again to continue from its checkpoint'
+                    ELSE 'a newer test run of this source replaced this one' END
   FROM ranked
- WHERE r.id = ranked.id AND ranked.rank > 1
-   AND r.status IN ('validating', 'awaiting_approval');
+ WHERE r.id = ranked.id AND ranked.rank > 1;
 
 -- One unreleased run per upload. The run that still needs the file keeps it: a
--- commit or undo in flight or resumable first, else the newest. A released run
--- that had written nothing is superseded; a finished one keeps its status.
+-- commit in flight, else the newest resumable commit, else the newest run. A
+-- released run that wrote nothing is superseded; a stopped commit that lost the
+-- file says so (migration.CauseSourceTaken), and every other keeps its status.
 WITH ranked AS (
     SELECT id,
            first_value(id) OVER upload AS keeper,
@@ -62,7 +83,7 @@ WITH ranked AS (
       FROM import_run
      WHERE connector = 'csv' AND source_released_at IS NULL
     WINDOW upload AS (PARTITION BY source_ref
-                      ORDER BY status IN ('running', 'failed', 'undoing') DESC, created_at DESC, id DESC)
+                      ORDER BY status = 'running' DESC, status = 'failed' DESC, created_at DESC, id DESC)
 )
 UPDATE import_run r
    SET source_released_at = now(),
@@ -71,7 +92,10 @@ UPDATE import_run r
        superseded_by = CASE WHEN r.status IN ('pending', 'validating', 'awaiting_approval')
                             THEN ranked.keeper ELSE r.superseded_by END,
        error = CASE WHEN r.status IN ('pending', 'validating', 'awaiting_approval')
-                    THEN 'a newer test run of this source replaced this one' ELSE r.error END
+                    THEN 'a newer test run of this source replaced this one'
+                    WHEN r.status = 'failed'
+                    THEN 'another run of this upload holds its file, so this one cannot resume; upload the file again to go on'
+                    ELSE r.error END
   FROM ranked
  WHERE r.id = ranked.id AND ranked.rank > 1;
 
