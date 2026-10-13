@@ -63,15 +63,7 @@ export type LoggedActivity = {
   updated_at: string;
 };
 
-export type CaptureSender = {
-  address: string;
-  kind?: string;
-  status?: string;
-  decision?: string;
-  overruled_kind?: string;
-  overruled: boolean;
-  record_exists: boolean;
-};
+export type CaptureSender = components["schemas"]["CaptureSenderDecision"];
 
 export type CounterpartyHold = {
   id: string;
@@ -99,6 +91,7 @@ function captureConnections() {
     {
       id: "conn-gmail",
       provider: "gmail",
+      can_backfill: true,
       status: "connected",
       account_label: "admin@demo.test",
       scopes: [],
@@ -113,11 +106,15 @@ function captureConnections() {
 function captureSenders(): CaptureSender[] {
   return [
     {
-      address: "jana@commercetools.com",
+      address: "anna.weber@brandt.example",
       kind: "contact",
       status: "real",
       overruled: false,
       record_exists: true,
+      contact_id: "p-anna",
+      contact_name: "Anna Weber",
+      message_count: 42,
+      last_seen_at: "2026-09-30T08:15:00Z",
     },
     {
       address: "news@substack.com",
@@ -125,6 +122,7 @@ function captureSenders(): CaptureSender[] {
       status: "noise",
       overruled: false,
       record_exists: false,
+      message_count: 0,
     },
     {
       address: "anne@hotmail.com",
@@ -132,6 +130,8 @@ function captureSenders(): CaptureSender[] {
       status: "noise",
       overruled: false,
       record_exists: false,
+      message_count: 3,
+      last_seen_at: "2026-09-12T19:40:00Z",
     },
   ];
 }

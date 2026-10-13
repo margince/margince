@@ -55,6 +55,7 @@ const SET = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   created_at: "2026-08-01T00:00:00Z",
   coverage: {
     documents_total: 1,

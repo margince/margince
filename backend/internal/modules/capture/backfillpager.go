@@ -82,7 +82,7 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		// StartBackfill for the connection and never surfacing as failed.
 		return true, false, 0, r.failBackfill(ctx, backfillID, err)
 	}
-	bf, ok := c.(connector.Backfiller)
+	bf, ok := supportsBackfill(c)
 	if !ok {
 		return true, false, 0, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported)
 	}

@@ -173,6 +173,23 @@ describe("JobHealthCard", () => {
     expect(kind["Oldest wait"]).toHaveTextContent(/^1 hour$/);
   });
 
+  it("names a kind it knows over its key, and shows an unknown kind's key once", async () => {
+    stubRoutes();
+    render(<JobHealthCard />);
+    const counted = await tableRowCells("This company", "capture_classify");
+    expect(within(counted.Job).getByText("Mail sorting")).toBeInTheDocument();
+    expect(within(counted.Job).getByText("capture_classify").tagName).toBe(
+      "CODE",
+    );
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(within(failure.Job).getByText("Mail sorting")).toBeInTheDocument();
+    const unnamed = await tableRowCells(
+      "Fleet dispatchers",
+      "retention_sweep_dispatch",
+    );
+    expect(unnamed.Job).toHaveTextContent(/^retention_sweep_dispatch$/);
+  });
+
   it("states nothing is runnable rather than claiming a wait of zero", async () => {
     stubRoutes();
     render(<JobHealthCard />);

@@ -17,6 +17,19 @@ const CLASSIFY = {
   oldest_waiting_age_seconds: 4_500,
 };
 
+// A long name over a long key, for the width of the pinned first column.
+const CONFIDENTIALITY = {
+  kind: "capture_confidentiality_verdict",
+  queue: "default",
+  fleet_wide: true,
+  waiting: 3,
+  running: 0,
+  retrying: 0,
+  dead: 0,
+  oldest_waiting_age_seconds: 600,
+};
+
+// A kind this build has no name for shows its key once.
 const DISPATCHER = {
   kind: "retention_sweep_dispatch",
   queue: "periodic",
@@ -73,7 +86,7 @@ function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
 
 const HEALTHY = {
   generated_at: "2026-08-13T09:30:00Z",
-  kinds: [CLASSIFY, DISPATCHER],
+  kinds: [CLASSIFY, CONFIDENTIALITY, DISPATCHER],
   recent_failures: [FAILURE],
 };
 

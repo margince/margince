@@ -29,12 +29,12 @@
 }
 /* Beside a growing column every other cell keeps its line: the growth is taken
    from the bar, never from a name folded onto two lines to make room for it. A
-   table too wide for its box scrolls inside it instead. An opened detail is
-   prose and wraps. */
+   table too wide for its box scrolls inside it instead. An opened detail and
+   a fold-only line are prose and wrap. */
 .table:has(.datatable-grow)
   > *
   > tr:not(.datatable-detail)
-  > :is(th, td):not(.datatable-grow) {
+  > :is(th, td):not(.datatable-grow, .datatable-fold-only) {
   white-space: nowrap;
 }
 
@@ -112,7 +112,14 @@
 .table-scroll-fold .datatable-folded {
   display: none;
 }
+/* Absent, not empty, so an unfolded table draws no column and spends no width. */
+.table-scroll-fold .datatable-fold-only {
+  display: none;
+}
 @container table-fold (width < 36rem) {
+  .table-scroll-fold > .table > thead > tr > th.datatable-fold-only {
+    display: table-cell;
+  }
   .table-scroll-fold .datatable-unfolded {
     display: none;
   }
@@ -200,11 +207,15 @@
   }
   /* Not row-gap: it falls on both sides of the line break, doubling the space
      under line one. */
-  .table-scroll-fold [data-fold="rest"] {
+  .table-scroll-fold :is([data-fold="rest"], [data-fold="only"]) {
     order: 3;
     margin-block-start: var(--space-1);
     font: var(--fontBodySmall);
     color: var(--textSecondary);
+  }
+  .table-scroll-fold > .table > tbody > tr > td.datatable-fold-only {
+    display: block;
+    flex-basis: 100%;
   }
 }
 

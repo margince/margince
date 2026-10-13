@@ -346,7 +346,9 @@ const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
   },
 ];
 
-function MembersPanel() {
+function MembersPanel({
+  columns = MEMBER_COLUMNS,
+}: Readonly<{ columns?: DataTableColumn<DemoMember>[] }>) {
   return (
     <Panel title="Members">
       <PanelBody>
@@ -356,7 +358,7 @@ function MembersPanel() {
         fold
         bleed
         label="Members"
-        columns={MEMBER_COLUMNS}
+        columns={columns}
         rows={DEMO_MEMBERS}
         rowKey={(member) => member.id}
       />
@@ -423,6 +425,54 @@ export const FoldedRecordsWide: Story = {
     }
     const inset = Number.parseFloat(getComputedStyle(heading).paddingLeft);
     await expect(name.left).toBe(heading.getBoundingClientRect().left + inset);
+  },
+};
+
+// `fold: "only"`: the address under a name is a line of its own once the row
+// folds. Unfolded it has no heading and no cell, so it takes no width.
+const WITH_REACH: DataTableColumn<DemoMember>[] = [
+  ...MEMBER_COLUMNS,
+  {
+    key: "reach",
+    header: "Reached through",
+    fold: "only",
+    render: (member) => `Reached through ${member.email}`,
+  },
+];
+
+export const FoldOnlyLineWide: Story = {
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    const headings = [...canvasElement.querySelectorAll("th")].filter(
+      (heading) => heading.getBoundingClientRect().width > 0,
+    );
+    await expect(headings.map((heading) => heading.textContent)).not.toContain(
+      "Reached through",
+    );
+    for (const cell of canvasElement.querySelectorAll(".datatable-fold-only")) {
+      await expect(cell.getBoundingClientRect().width).toBe(0);
+    }
+  },
+};
+
+export const FoldOnlyLinePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    for (const row of canvasElement.querySelectorAll("tbody tr")) {
+      const [line] = cellBox(row, '[data-fold="only"]');
+      const others = cellBox(row, 'td:not([data-fold="only"])');
+      await expect(line).toBeDefined();
+      for (const other of others) {
+        const beside = other.top < line.bottom && other.bottom > line.top;
+        await expect(beside).toBe(false);
+      }
+    }
   },
 };
 

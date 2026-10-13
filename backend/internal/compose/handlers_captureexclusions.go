@@ -60,11 +60,12 @@ func (h captureExclusionHandlers) DeleteCaptureExclusion(w http.ResponseWriter, 
 
 func toContractExclusion(rule capture.Exclusion) crmcontracts.CaptureExclusion {
 	return crmcontracts.CaptureExclusion{
-		Id:        openapi_types.UUID(rule.ID),
-		Scope:     crmcontracts.CaptureExclusionScope(rule.Scope),
-		Kind:      crmcontracts.CaptureExclusionKind(rule.Kind),
-		Value:     rule.Value,
-		CreatedAt: rule.CreatedAt,
+		Id:            openapi_types.UUID(rule.ID),
+		Scope:         crmcontracts.CaptureExclusionScope(rule.Scope),
+		Kind:          crmcontracts.CaptureExclusionKind(rule.Kind),
+		Value:         rule.Value,
+		CreatedAt:     rule.CreatedAt,
+		CreatedByName: rule.CreatedByName,
 	}
 }
 

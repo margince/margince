@@ -803,6 +803,10 @@ func (stubs) DeleteCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "DeleteCaptureOwnerIdentity")
 }
 
+func (stubs) RestoreCaptureOwnerIdentity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreCaptureOwnerIdentity")
+}
+
 func (stubs) ListCaptureSenders(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCaptureSenders")
 }

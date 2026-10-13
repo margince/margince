@@ -19,6 +19,11 @@ Biome holds the size of a function in product code: 300 lines, blank lines not c
 no such limit. A `biome-ignore` for either rule in product
 code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
 
+`make fe-compiler-lint` runs the rules of the React Compiler (`eslint-plugin-react-hooks`). Two
+examples: no read or write of `ref.current` during render, and no state set in an effect body. Findings from before the
+gate are counted per file and rule in `scripts/compiler-lint-waivers.txt`. When you fix a finding,
+lower its count there. Never raise a count to let a new one in.
+
 ## Read the design system before you build something a user can see
 
 Read [`src/design-system/README.md`](src/design-system/README.md) before you build a control, every
