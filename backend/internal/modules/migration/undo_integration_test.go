@@ -423,3 +423,64 @@ func TestACompletedRunReleasesItsSource(t *testing.T) {
 		t.Errorf("RunOfSource of an upload no run names = %v, want not found", err)
 	}
 }
+
+// archivingUndoWriters archives each row once, answering nil for one already
+// archived as the real writer does. dieAfter stands for the process dying once
+// that row's archive committed, before the page's checkpoint did.
+type archivingUndoWriters struct {
+	archived map[ids.UUID]int
+	dieAfter ids.UUID
+}
+
+func (w *archivingUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID, _ time.Time) error {
+	if w.archived[nativeID] > 0 {
+		return nil
+	}
+	w.archived[nativeID]++
+	if nativeID == w.dieAfter {
+		w.dieAfter = ids.Nil
+		panic(errProcessDied)
+	}
+	return nil
+}
+
+// A page replayed after the process died counts each row it reversed once:
+// the checkpoint and the report are one write, so both lost the same rows.
+func TestAReplayedUndoPageCountsEachRowOnce(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	run := completeCSVRun(ctx, t, s)
+	rows := []ids.UUID{landLead(ctx, t, s, run.ID, "row-1"), landLead(ctx, t, s, run.ID, "row-2"), landLead(ctx, t, s, run.ID, "row-3")}
+	l, err := claimUndoLease(ctx, t, s, run.ID)
+	if err != nil {
+		t.Fatalf("claiming the undo: %v", err)
+	}
+	w := &archivingUndoWriters{archived: map[ids.UUID]int{}}
+	got, err := s.mapRowsForRun(ctx, run.ID, 0, undoPageSize)
+	if err != nil || len(got) != len(rows) {
+		t.Fatalf("reading the page = %d rows, %v; want %d", len(got), err, len(rows))
+	}
+	w.dieAfter = got[1].nativeID
+
+	func() {
+		defer func() {
+			if died := recover(); died != errProcessDied {
+				t.Fatalf("the slice ended with %v, want the injected death", died)
+			}
+		}()
+		done, err := s.UndoSlice(ctx, l, w, Budget{})
+		t.Fatalf("the slice answered done %v, %v; want the injected death", done, err)
+	}()
+	if done, err := s.UndoSlice(ctx, l, w, Budget{}); err != nil || !done {
+		t.Fatalf("the replayed slice = done %v, %v; want it finished", done, err)
+	}
+
+	for _, id := range rows {
+		if w.archived[id] != 1 {
+			t.Errorf("row %s was archived %d times, want once", id, w.archived[id])
+		}
+	}
+	if reversed := mustGetStaged(ctx, t, s, run.ID).UndoReport.ReversedCount; reversed != len(rows) {
+		t.Errorf("the undo reports %d reversed, want each of the %d rows once", reversed, len(rows))
+	}
+}
