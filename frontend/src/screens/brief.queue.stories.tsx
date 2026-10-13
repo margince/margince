@@ -144,8 +144,8 @@ export const AFullDayInDark: Story = {
 
 /**
  * The same day with the drawer expanded to the window (`wide=1`). What to
- * check: wide enough, each row is one line with its verbs beside the work,
- * and Collapse sits beside the X.
+ * check: each row's verbs are one line beside the work, and Collapse sits
+ * beside the X. The first row's Remove from list menu opens above the drawer.
  */
 export const AFullDayExpanded: Story = {
   render: () => (
@@ -159,6 +159,24 @@ export const AFullDayExpanded: Story = {
     await expect(
       within(drawer).getByRole("button", { name: en["common.collapse"] }),
     ).toBeInTheDocument();
+    const [menu] = await within(drawer).findAllByRole("button", {
+      name: en["worklist.disposition.menu"],
+    });
+    if (!menu) throw new Error("the queue shows no Remove from list menu");
+    await userEvent.click(menu);
+    // The panel is portalled out of the drawer, so the layer on top at its
+    // centre decides whether a reader can press it.
+    const snooze = await within(document.body).findByRole("button", {
+      name: en["worklist.disposition.verb.snooze"],
+    });
+    const panel = snooze.closest(".overflow-menu-items");
+    const box = panel?.getBoundingClientRect();
+    if (!panel || !box) throw new Error("the menu drew no panel");
+    const top = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    );
+    await expect(panel.contains(top)).toBe(true);
   },
 };
 

@@ -13,6 +13,7 @@ import {
   type FormEventHandler,
   type InputHTMLAttributes,
   type ReactNode,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -25,6 +26,7 @@ import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
 import {
   coveredByDialog,
+  InsideDialog,
   panelsOpenedFrom,
   useDialogFocus,
 } from "./dialogfocus";
@@ -1307,6 +1309,7 @@ export function OverflowMenu({
   const panel = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
+  const inDialog = useContext(InsideDialog);
   const at = useAnchoredToTrigger(open, trigger, panel);
 
   // Choosing an item closes the menu, one commit after the press.
@@ -1443,7 +1446,11 @@ export function OverflowMenu({
         <div // NOSONAR: listener observes activation of the caller's own buttons; the panel itself is not pressable
           id={panelId}
           ref={panel}
-          className="overflow-menu-items"
+          className={
+            inDialog
+              ? "overflow-menu-items overflow-menu-items-in-dialog"
+              : "overflow-menu-items"
+          }
           hidden={!open}
           style={{
             top: `${at.top}px`,
