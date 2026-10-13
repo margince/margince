@@ -228,7 +228,7 @@ func confirmAskLines(line writeLine) {
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
-		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
+		"Sie erhalten etwa einmal im Monat Neuigkeiten. Ihre Entscheidung wird selbstverständlich respektiert.",
 		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",

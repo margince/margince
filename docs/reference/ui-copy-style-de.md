@@ -68,7 +68,7 @@ deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
   may still be sent. Outbound mail to a contact is written in Sie, and the
   consent question is published by the server in that wording, so a screen in
   du would ask one question and record another. Their instructions take the
-  Sie imperative too: "Schließen Sie diesen Tab".
+  Sie imperative too: "Öffnen Sie Ihre Einstellungen".
 - **Sie copy is fuller, formal and courteous.** It uses the set phrases of
   legal German: "Reichen Sie eine Beschwerde … ein", "Die Änderung tritt
   sofort in Kraft". Courtesy adds no fact, qualifier or reassurance. It prefers

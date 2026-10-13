@@ -201,14 +201,14 @@ describe("groupFacts", () => {
     // The row draws `t(factFieldLabelKey(field))`, so an order computed from
     // the identifiers is an order in words nobody reads. English and German
     // disagree here in opposite directions, which is the whole point:
-    // employee_range < founded_year as identifiers and as "Employees" before
-    // "Founded", but "Gegründet" comes before "Mitarbeitende".
+    // contact_email < founded_year as identifiers and as "Contact email" before
+    // "Founded", but "Gegründet" comes before "Kontakt-E-Mail".
     const tie = [
       fact({
         category: "company",
-        field: "employee_range",
-        value: "120",
-        value_key: "120",
+        field: "contact_email",
+        value: "info@example.com",
+        value_key: "info@example.com",
       }),
       fact({
         category: "company",
@@ -218,12 +218,12 @@ describe("groupFacts", () => {
       }),
     ];
     expect(fields(groupFacts(tie, tFor("en"), "en"), "company")).toEqual([
-      "employee_range",
+      "contact_email",
       "founded_year",
     ]);
     expect(fields(groupFacts(tie, tFor("de"), "de"), "company")).toEqual([
       "founded_year",
-      "employee_range",
+      "contact_email",
     ]);
   });
 

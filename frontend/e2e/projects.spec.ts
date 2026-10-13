@@ -43,7 +43,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     dialog.getByRole("combobox", { name: "Unternehmen" }),
     "Brandt Automotive GmbH",
   );
-  await dialog.getByRole("button", { name: "Anlegen" }).click();
+  await dialog.getByRole("button", { name: "Erstellen" }).click();
 
   // The create lands on the project's own page, born in Initiative with the
   // birth row in its history and nothing filed under it yet.
@@ -175,7 +175,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   expect((await refused).status()).toBe(422);
   await choose(
     page,
-    dialog.getByRole("combobox", { name: "Wie wurde er gewonnen?" }),
+    dialog.getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" }),
     "Per Bestellung",
   );
   const won = page.waitForRequest(

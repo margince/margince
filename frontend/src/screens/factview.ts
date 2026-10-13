@@ -216,9 +216,9 @@ export function groupFacts(
 // half is the one that is easy to get half right:
 //
 //   - The field sorts by its TRANSLATED LABEL, not by the wire identifier. The
-//     row draws `t(factFieldLabelKey(field))`, so comparing `employee_range`
+//     row draws `t(factFieldLabelKey(field))`, so comparing `contact_email`
 //     against `founded_year` orders by words the reader never sees — in German
-//     "Mitarbeitende" comes after "Gegründet" while the identifiers go the
+//     "Kontakt-E-Mail" comes after "Gegründet" while the identifiers go the
 //     other way, and the list reads as unsorted.
 //   - Both halves go through `forReader`, because code-unit order puts every
 //     accented vowel after Z: "Ähnliche Marken" below "Zielgruppe".

@@ -63,7 +63,7 @@ const TemplateSubscriptionQuestion = "subscription_question"
 // Held by: TestThePublishedQuestionIsTheOneTheScreenAsks
 // (backend/gates/marketingquestion_test.go), which compares this catalog
 // against the frontend's own strings.
-const marketingQuestionVersion = 4
+const marketingQuestionVersion = 5
 
 // QuestionKeyForLink names which published question a link will ask.
 //

@@ -32,7 +32,7 @@ describe("useHealthReason", () => {
         reason_code: "quiet",
         reason_params: { days: 77 },
       }),
-    ).toBe("Seit 77 Tagen keine Antwort und kein Treffen.");
+    ).toBe("Seit 77 Tagen keine Antwort und kein Termin.");
   });
 
   it("counts the sentence by its number", () => {

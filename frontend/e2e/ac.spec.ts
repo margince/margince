@@ -249,7 +249,7 @@ const primaryDestinations = [
   "Deals",
   "Projekte",
   "Filter und Ansichten",
-  "Analysen",
+  "Analytics",
 ];
 
 // settleAnimations' own case, because the gap it closes is invisible to every
@@ -318,10 +318,10 @@ test("AC-shell-2: exactly one rail item is active and tracks the route", async (
     "aria-label",
     "Deals",
   );
-  await page.locator('nav.rail a[aria-label="Analysen"]').click();
+  await page.locator('nav.rail a[aria-label="Analytics"]').click();
   await expect(page.locator("nav.rail a.navitem.active")).toHaveAttribute(
     "aria-label",
-    "Analysen",
+    "Analytics",
   );
   await expect(page.locator("nav.rail a.navitem.active")).toHaveCount(1);
 });
@@ -986,11 +986,13 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   // paperwork already explains stays one click, because a field every rep must
   // fill is a field every rep fills with the same lie.
   await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText("Wie wurde er gewonnen?")).toBeVisible();
+  await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
   await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
 
-  await page.getByRole("combobox", { name: "Wie wurde er gewonnen?" }).click();
+  await page
+    .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
+    .click();
   await page.getByRole("option", { name: "Per Bestellung" }).click();
   await page.getByRole("button", { name: "Bestätigen" }).click();
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
@@ -1057,11 +1059,13 @@ test("AC-automations-1 (B-EP09.15): create from the catalog arrives paused; enab
   await expect(
     form.getByRole("spinbutton", { name: "due_in_days" }),
   ).toHaveValue("3");
-  await form.getByRole("button", { name: "Anlegen" }).click();
+  await form.getByRole("button", { name: "Erstellen" }).click();
   // The outcome lands on the CARD: by the time it is true the dialog that
   // produced it is gone.
   await expect(
-    page.getByText("Pausiert angelegt. Nichts läuft, bis sie aktiviert ist."),
+    page.getByText(
+      "Pausiert erstellt. Nichts läuft, bis die Automatisierung aktiviert ist.",
+    ),
   ).toBeVisible();
   const row = page.getByTestId("automation-au-2");
   // The row states its status on the control that changes it, rather than on a
@@ -1235,9 +1239,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
       name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
     })
     .click();
-  await expect(
-    page.getByText(de["common.duplicate.slotTaken"]),
-  ).toBeVisible();
+  await expect(page.getByText(de["common.duplicate.slotTaken"])).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
@@ -1280,7 +1282,7 @@ test("AC-create-1: a contact is created from the list and lands on its 360", asy
   // Email is now a repeatable row group (P-15): add a row, then fill it.
   await page.getByRole("button", { name: "E-Mail hinzufügen" }).click();
   await page.getByLabel("E-Mail *").fill("peter@neu.example");
-  await page.getByRole("button", { name: "Anlegen" }).click();
+  await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/contacts\/p-new$/);
 });
 
@@ -1312,12 +1314,9 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  // By ROLE, not by label: the rail's "Auswertung" group carries a real
-  // accessible name, and a label lookup for "Wert" matches inside it. The
-  // amount is a number input, so the role is what the query meant all along
-  // and a group can never answer to it.
+  // By role: a label lookup for "Wert" also matches a group whose name contains it.
   await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
-  await page.getByRole("button", { name: "Anlegen" }).click();
+  await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
