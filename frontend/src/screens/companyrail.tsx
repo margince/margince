@@ -145,10 +145,15 @@ export function CompanyRail({
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
-        <DealsSection view={view} loading={loading} onTab={onTab} />
-        <ProjectsSection view={view} loading={loading} onTab={onTab} />
-        <ContactsSection view={view} loading={loading} onTab={onTab} />
-        <ListsSection companyId={companyId} />
+        {/* The server refuses an archived account's 360 and its lists. */}
+        {!resolved?.archived_at && (
+          <>
+            <DealsSection view={view} loading={loading} onTab={onTab} />
+            <ProjectsSection view={view} loading={loading} onTab={onTab} />
+            <ContactsSection view={view} loading={loading} onTab={onTab} />
+            <ListsSection companyId={companyId} />
+          </>
+        )}
         <CompanyHoldSection company={resolved} />
         {/* Beside the hold, and for the same reason: both are about the
             account's mail DOMAIN rather than about the work on it. */}

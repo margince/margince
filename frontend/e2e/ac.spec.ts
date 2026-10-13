@@ -1235,9 +1235,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
       name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
     })
     .click();
-  await expect(
-    page.getByText(de["common.duplicate.slotTaken"]),
-  ).toBeVisible();
+  await expect(page.getByText(de["common.duplicate.slotTaken"])).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
@@ -3295,6 +3293,76 @@ test.describe("the contact's access panel, open", () => {
       await page.keyboard.press("Escape");
       await expect(panel).toBeHidden();
       await expect(chip).toBeFocused();
+    });
+  }
+});
+
+// An archived contact opens on its row: the server refuses its 360, brief and
+// guard. The seeded contact is live, so no sweep above reaches this page.
+test.describe("an archived contact opens read-only", () => {
+  const schemes: readonly ("light" | "dark")[] = ["light", "dark"];
+  for (const colorScheme of schemes) {
+    test(`row, reason and history, with no AA violations (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.route(/\/v1\/contacts\/p-anna$/, (route) =>
+        route.fulfill({
+          json: {
+            ...anna,
+            writable: false,
+            version: 2,
+            archived_at: "2026-06-20T09:00:00Z",
+          },
+        }),
+      );
+      await page.route(
+        /\/v1\/contacts\/p-anna\/(360|brief|consent\/guard)$/,
+        (route) =>
+          route.fulfill({
+            status: 404,
+            json: { status: 404, code: "not_found", title: "Not Found" },
+          }),
+      );
+      await page.route(/\/v1\/records\/contact\/p-anna\/history/, (route) =>
+        route.fulfill({
+          json: {
+            data: [
+              {
+                id: "h-archive",
+                actor_type: "human",
+                actor_id: meFixture().user.id,
+                actor_name: "Demo Admin",
+                action: "archive",
+                occurred_at: "2026-06-20T09:00:00Z",
+                summary: "Demo Admin archived the record",
+                undoable: { undoable: true },
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          },
+        }),
+      );
+      await page.goto("/#/contacts/p-anna");
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: "Anna Weber",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(de["contact.rail.archivedReadOnly"]),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: de["history.undo.action"] }),
+      ).toBeVisible();
+      await expect(page.getByText(de["contact.page.notOpened"])).toHaveCount(0);
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `contacts/p-anna archived (${colorScheme})`,
+      );
     });
   }
 });

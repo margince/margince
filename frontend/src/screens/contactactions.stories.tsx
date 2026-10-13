@@ -185,3 +185,29 @@ export const LogRefused: Story = {
     );
   },
 };
+
+// An archived contact takes no activity either: every verb points at the
+// page's one sentence, and no second refusal is printed beside it.
+export const Archived: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header
+          view={{
+            ...VIEW,
+            contact: {
+              ...VIEW.contact,
+              writable: false,
+              archived_at: "2026-08-14T09:00:00Z",
+            },
+          }}
+          refusedReasonId="contact-archived"
+        />
+        <p id="contact-archived" className="t-caption">
+          This contact is archived and takes no changes.
+        </p>
+      </StoryProviders>
+    );
+  },
+};

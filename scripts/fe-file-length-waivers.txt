@@ -22,7 +22,7 @@
 1136 frontend/src/screens/record360/spine.test.tsx
 1106 frontend/src/design-system/conformance.test.ts
 1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1005 frontend/src/screens/contactpage.tsx
+912 frontend/src/screens/contactpage.tsx
 1182 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
 959 frontend/src/screens/worklist.row.tsx
@@ -45,7 +45,7 @@
 1509 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
 2235 frontend/src/screens/companies.test.tsx
-2302 frontend/src/screens/companies.tsx
+2129 frontend/src/screens/companies.tsx
 2409 frontend/src/screens/deals.test.tsx
 1082 frontend/src/screens/compose.tsx
 901 frontend/src/screens/settings.tsx
