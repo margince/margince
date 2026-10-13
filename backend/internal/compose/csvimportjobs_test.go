@@ -164,3 +164,24 @@ func TestARunPastItsTagPhaseCreatesNoTag(t *testing.T) {
 		t.Fatalf("a run already importing ran its tag phase again: %v", err)
 	}
 }
+
+func TestATestRunsHeartbeatEndsWhenItsReadPanics(t *testing.T) {
+	t.Parallel()
+	var reading context.Context
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("the read's panic did not reach the caller")
+			}
+		}()
+		_, err := (&importValidateWorker{}).readBeating(t.Context(), importSlice{},
+			func(ctx context.Context) (migration.Report, error) {
+				reading = ctx
+				panic("a row the reader could not handle")
+			})
+		t.Errorf("readBeating answered %v past a panic", err)
+	}()
+	if reading == nil || reading.Err() == nil {
+		t.Fatal("the heartbeat's context is still live after its read panicked")
+	}
+}

@@ -90,18 +90,32 @@ func (w *importValidateWorker) validate(ctx context.Context, slice importSlice) 
 	if err != nil {
 		return false, testRunRefusal(err)
 	}
-	reading, stop := context.WithCancelCause(ctx)
-	beating := w.heartbeat(reading, stop, slice)
-	report, err := validateParts(reading, slice.db, run.ID, source, skipped, run.Mapping, progress)
-	stop(nil)
-	<-beating
-	if lost := context.Cause(reading); errors.Is(lost, migration.ErrSuperseded) {
-		return false, lost
-	}
+	report, err := w.readBeating(ctx, slice, func(reading context.Context) (migration.Report, error) {
+		return validateParts(reading, slice.db, run.ID, source, skipped, run.Mapping, progress)
+	})
 	if err != nil {
 		return false, testRunRefusal(err)
 	}
 	return true, slice.runs.FinishValidation(ctx, slice.lease, report)
+}
+
+// readBeating runs read with a heartbeat beside it, and stops and joins the
+// heartbeat however read ends, a panic included. A heartbeat that found the
+// attempt moved on answers ErrSuperseded whatever read answered.
+func (w *importValidateWorker) readBeating(
+	ctx context.Context, slice importSlice, read func(context.Context) (migration.Report, error),
+) (migration.Report, error) {
+	reading, stop := context.WithCancelCause(ctx)
+	beating := w.heartbeat(reading, stop, slice)
+	defer func() {
+		stop(nil)
+		<-beating
+	}()
+	report, err := read(reading)
+	if lost := context.Cause(reading); errors.Is(lost, migration.ErrSuperseded) {
+		return report, lost
+	}
+	return report, err
 }
 
 // heartbeat beats until ctx ends, and stops the read with ErrSuperseded once
