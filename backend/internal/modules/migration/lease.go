@@ -223,37 +223,38 @@ func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		switch l.Status {
-		case StatusRunning:
-			return failLeaseInTx(ctx, tx, l, cause)
-		case StatusUndoing:
-			var prior *string
-			err := tx.QueryRow(ctx, `SELECT error FROM import_run`+fence+` FOR UPDATE`, l.args()...).Scan(&prior)
-			if errors.Is(err, pgx.ErrNoRows) {
-				return fmt.Errorf("import run %s attempt %d: %w", l.Run, l.Attempt, ErrSuperseded)
-			}
-			if err != nil {
-				return fmt.Errorf("reading import run %s: %w", l.Run, err)
-			}
-			if err := execFenced(ctx, tx, l, `error = $4, job_status = NULL, updated_at = now()`, cause); err != nil {
-				return err
-			}
-			_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
-				map[string]any{errorColumn: prior}, map[string]any{errorColumn: cause})
-			return err
-		default:
-			return fmt.Errorf("import run %s: a %s attempt has no failed state: %w", l.Run, l.Status, apperrors.ErrConflict)
-		}
+		return failLeaseInTx(ctx, tx, l, cause)
 	})
 }
 
+// failLeaseInTx is FailLease on the caller's transaction.
 func failLeaseInTx(ctx context.Context, tx pgx.Tx, l Lease, cause string) error {
-	if err := execFenced(ctx, tx, l, `status = $4, error = $5, updated_at = now()`, StatusFailed, cause); err != nil {
+	switch l.Status {
+	case StatusRunning:
+		if err := execFenced(ctx, tx, l, `status = $4, error = $5, updated_at = now()`, StatusFailed, cause); err != nil {
+			return err
+		}
+		_, err := storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
+			map[string]any{auditFieldStatus: l.Status}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
+	case StatusUndoing:
+		var prior *string
+		err := tx.QueryRow(ctx, `SELECT error FROM import_run`+fence+` FOR UPDATE`, l.args()...).Scan(&prior)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("import run %s attempt %d: %w", l.Run, l.Attempt, ErrSuperseded)
+		}
+		if err != nil {
+			return fmt.Errorf("reading import run %s: %w", l.Run, err)
+		}
+		if err := execFenced(ctx, tx, l, `error = $4, job_status = NULL, updated_at = now()`, cause); err != nil {
+			return err
+		}
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
+			map[string]any{errorColumn: prior}, map[string]any{errorColumn: cause})
+		return err
+	default:
+		return fmt.Errorf("import run %s: a %s attempt has no failed state: %w", l.Run, l.Status, apperrors.ErrConflict)
 	}
-	_, err := storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
-		map[string]any{auditFieldStatus: l.Status}, map[string]any{auditFieldStatus: StatusFailed})
-	return err
 }
 
 // completeLeaseInTx finishes a commit attempt: its last leg, then complete, and

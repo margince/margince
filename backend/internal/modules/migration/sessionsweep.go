@@ -170,12 +170,21 @@ func (s *RunStore) ResumeStaleAttempts(ctx context.Context, staleAfter time.Dura
 		return 0, err
 	}
 	return settleEach(due, func(d dueAttempt) error {
-		if d.resumes >= maxResumes {
-			return s.FailLease(ctx, d.lease, staleCause(d.lease.Status))
+		return s.settleStale(ctx, d, staleAfter, maxResumes, requeue)
+	})
+}
+
+// settleStale resumes or stops one attempt the read found stale, once its row
+// lock shows it still is: a slice that beat since then keeps its run.
+func (s *RunStore) settleStale(ctx context.Context, d dueAttempt, staleAfter time.Duration, maxResumes int, requeue Requeue) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		if err := lockGuarded(ctx, tx, d.lease, staleClaim, staleAfter); err != nil {
+			return err
 		}
-		return s.tx(ctx, func(tx pgx.Tx) error {
-			return reopenStale(ctx, tx, d.lease, staleAfter, requeue)
-		})
+		if d.resumes >= maxResumes {
+			return failLeaseInTx(ctx, tx, d.lease, staleCause(d.lease.Status))
+		}
+		return reopenStale(ctx, tx, d.lease, requeue)
 	})
 }
 
@@ -271,12 +280,9 @@ func lockGuarded(ctx context.Context, tx pgx.Tx, l Lease, guard string, age time
 	return nil
 }
 
-// reopenStale fences off the stale attempt, opens the next one with its own
-// trace, and queues it.
-func reopenStale(ctx context.Context, tx pgx.Tx, l Lease, staleAfter time.Duration, requeue Requeue) error {
-	if err := lockGuarded(ctx, tx, l, staleClaim, staleAfter); err != nil {
-		return err
-	}
+// reopenStale fences off the stale attempt the caller locked, opens the next
+// one with its own trace, and queues it.
+func reopenStale(ctx context.Context, tx pgx.Tx, l Lease, requeue Requeue) error {
 	if err := execFenced(ctx, tx, l, `job_attempt = job_attempt + 1, attempt_correlation_id = $4,
 		resume_count = resume_count + 1, updated_at = now()`, ids.NewV7()); err != nil {
 		return err
