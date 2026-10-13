@@ -1727,7 +1727,7 @@ export const de = {
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
     "Berechtigungen gelten für den genannten Zweck. Konto- und Servicehinweise berechtigen nicht zu Vertrieb oder Marketing. Jede Nachricht wird vor dem Versand geprüft.",
-  "consent.manage": "Einwilligungen und Nachweise verwalten",
+  "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
@@ -1737,7 +1737,7 @@ export const de = {
     "Nur dieser Kontakt kann diesen Zweck bestätigen. Der Bestätigungslink wird an die hinterlegte Adresse des Kontakts gesendet. Nutze dafür „Bestätigung der Angaben anfordern“ unter „Kontakterlaubnis“.",
   "consent.askToConfirm": "Bestätigung der Angaben anfordern",
   "consent.askToConfirmWhat":
-    "Sende diesem Kontakt per E-Mail einen privaten Link. Über diesen Link kann er sehen, welche Daten über ihn gespeichert sind, diese korrigieren und angeben, ob er von deinem Unternehmen hören möchte. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
+    "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link kann er sehen, welche Daten über ihn gespeichert sind, diese korrigieren und angeben, ob er von deinem Unternehmen hören möchte. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
   "consent.askQueued": "Link für {address} zum Versand vorgemerkt.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber nicht gesendet, da diese Installation keine E-Mails versendet.",
@@ -1750,7 +1750,7 @@ export const de = {
   "consent.basis": "Grundlage: {basis}",
   "consent.proofLog": "Nachweisprotokoll",
   "consent.proofEmpty":
-    "Für diesen Zweck ist keine Einwilligung oder Ablehnung erfasst. Ein leeres Protokoll bedeutet, dass nichts zur Einwilligung erfasst wurde, nicht, dass eine Einwilligung fehlt.",
+    "Für diesen Zweck ist keine Entscheidung zur Einwilligung erfasst. Ein leeres Protokoll bedeutet, dass nichts zur Einwilligung erfasst wurde, nicht, dass ein Eintrag fehlt.",
   "consent.sourceUnknown": "Quelle nicht erfasst",
   "consent.actorHuman": "Mensch",
   "consent.actorAgent": "Agent",
@@ -2350,7 +2350,7 @@ export const de = {
   "co.evidence.producedBy": "erfasst von {who}",
   "co.evidence.retrievedAt": "Gelesen am {when}",
   "co.evidence.verifiedAt": "Von einer Person bestätigt am {when}",
-  "co.evidence.confidence": "Konfidenz {percent} %",
+  "co.evidence.confidence": "Konfidenz des Modells {percent} %",
   "co.evidence.gaps": "Nicht erfasst: {fields}.",
   "co.evidence.kind.site_read": "Von der Unternehmenswebsite gelesen",
   "co.evidence.kind.connector": "Aus einem verbundenen System",
@@ -3839,7 +3839,7 @@ export const de = {
   "offer.template": "Vorlage",
   "offer.validUntil": "Gültig bis",
   "offer.introText": "Einleitungstext",
-  "offer.termsText": "Bedingungen",
+  "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
   "offer.position": "Position",
@@ -4914,7 +4914,7 @@ export const de = {
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
   "sendPermission.ready": "Bereit zum Senden",
-  "sendPermission.markName": "Sendeerlaubnis für diese Nachricht",
+  "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "sendPermission.unanswered":
@@ -5780,7 +5780,7 @@ export const de = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Die erteilte Berechtigung gilt als Freigabe.",
+    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
   "settings.tierWait":
     "Anreicherung, eigene Felder, Webhooks, Zusammenführen von Tags: warten in Freigaben.",
   "settings.tierAdvance":
@@ -6482,7 +6482,7 @@ export const de = {
   "privacynotice.source.mailboxHistory":
     "Bevor unser Postfach an dieses System angeschlossen wurde, enthielt es bereits E-Mails, die wir an Sie gesendet hatten, oder E-Mails, die wir erhalten hatten und die ebenfalls an Sie adressiert waren.",
   "privacynotice.source.purchasedOrImported":
-    "Ihre Daten stammen aus einer Liste, die entweder gekauft oder importiert wurde.",
+    "Ihre Daten stammen aus einer Liste, die gekauft oder importiert wurde.",
   "privacynotice.source.unknown":
     "Wir können nicht sagen, wie Ihre Daten zu uns gelangt sind.",
   "privacynotice.purposes.title": "Wofür wir Ihre Daten nutzen",
@@ -7239,7 +7239,7 @@ export const de = {
   "mailSharing.sharedPosture.help":
     "Erlaubt Teammitgliedern, ihr Postfach auf „geteilt“ zu stellen, sodass erfasste E-Mails beim Eingang für das Team lesbar sind, noch vor jeder Einstufung. Standardmäßig deaktiviert.",
   "mailSharing.sharedPosture.warning":
-    "Ob Postfächer von Mitarbeitenden in ein gemeinsames CRM eingelesen werden, regelt in Deutschland und Österreich eine Betriebsvereinbarung. Wenn du diese Option aktivierst, erklärst du, dass dein Unternehmen eine solche Vereinbarung hat. Margince prüft das nicht.",
+    "Ob Postfächer von Mitarbeitenden in ein gemeinsames CRM eingelesen werden, regelt in Deutschland und Österreich eine Betriebsvereinbarung. Wer diese Option aktiviert, erklärt damit, dass dein Unternehmen eine solche Vereinbarung hat. Margince prüft das nicht.",
   "mailSharing.dangerTitle": "Teilen von E-Mails ist deaktiviert",
   "mailSharing.sharedPosture.warningTitle":
     "Damit wird eine Rechtsgrundlage erklärt",
@@ -7550,7 +7550,7 @@ export const de = {
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden ist enthalten.",
   "ob.s4.scope2Rest":
-    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Die Vergabe dieses Passports ist die Freigabe. Du kannst den Passport jederzeit entziehen.",
+    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Mit diesem Passport ist die Freigabe bereits erteilt. Du kannst den Passport jederzeit entziehen.",
   "ob.s4.scope3Lead": "Die Daten bleiben in deinem Unternehmen.",
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
@@ -8249,7 +8249,7 @@ export const de = {
     "Jeder Zweck steht für sich. Transaktionale Nachrichten lassen sich hier nicht deaktivieren, da Sie diese benötigen. Über alle anderen Zwecke bestimmen Sie selbst.",
   "prefs.unsub.title": "Diese E-Mails nicht mehr erhalten?",
   "prefs.unsub.lead":
-    "Mit nur einem Klick können Sie Nachrichten dieses Typs für Ihre E-Mail-Adresse unterbinden. Ansonsten wird nichts geändert.",
+    "Mit einem Klick stoppen Sie Nachrichten dieses Typs an Ihre E-Mail-Adresse. Ansonsten ändert sich nichts.",
   "prefs.unsub.loading": "E-Mail-Einstellungen werden geöffnet…",
   "prefs.unsub.afterTitle": "Wie geht es weiter?",
   "prefs.unsub.afterBody":
@@ -8401,7 +8401,7 @@ export const de = {
   "confirm.field.none": "Nicht erfasst",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
-    "Sie erhalten etwa einmal im Monat Neuigkeiten. Ihre Entscheidung wird selbstverständlich respektiert.",
+    "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird selbstverständlich respektiert.",
   "confirm.marketing.yes": "Neuigkeiten abonnieren",
   "confirm.marketing.no": "Keine Neuigkeiten senden",
   "confirm.provenance.title": "Herkunft Ihrer Angaben",
@@ -8425,7 +8425,7 @@ export const de = {
   "confirm.receipt.rectify": "Korrektur angefordert",
   "confirm.receipt.erasure": "Löschung angefordert",
   "confirm.done.body":
-    "Ihre Antwort wurde erfasst. Änderungen werden von einer Person aus dem Team übernommen. Dieser Link kann nun nicht mehr verwendet werden.",
+    "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Der Link wurde möglicherweise bereits verwendet oder ist abgelaufen.",
   "prefs.lockedWhy":
@@ -11457,7 +11457,7 @@ export const de = {
   "provider.disconnect": "Trennen",
   "provider.disconnectConfirm.title": "Diesen Anbieter trennen?",
   "provider.disconnectConfirm.body":
-    "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen, da das Trennen sie nicht löscht.",
+    "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen. Das Trennen löscht sie nicht.",
   "provider.deleteData": "Gekaufte Daten löschen",
   "provider.deleteDataConfirm.title": "Alle Daten dieses Anbieters löschen?",
   "provider.deleteDataConfirm.body":
