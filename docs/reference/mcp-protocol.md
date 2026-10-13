@@ -5,6 +5,10 @@ How `/mcp` speaks MCP: the two framing forms, headers, caching, limits and how a
 tools it serves is in [agent-tools.md](agent-tools.md); the tool texts a client receives are in
 [mcp-info.md](mcp-info.md).
 
+**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
+and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
+[how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md); the credential: [mint-a-passport.md](../how-to/mint-a-passport.md).
+
 `/mcp` serves the tools-only part of MCP over Streamable HTTP, sent on by
 `backend/internal/modules/agents/dispatch.go`, behind the transport in `httpmcp.go`.
 
@@ -19,7 +23,7 @@ back*, never what it may do. Both reach the same registry and the same admission
 framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
 answer one would tell a client it had reached the era it was looking for.
 
-The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is `-32601 method not found`, with
+Version `2026-07-28` has no `ping`. The handshake era still answers it. Anything else is `-32601 method not found`, with
 HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does not host the endpoint.
 
 **Protocol versions**, newest first: `2026-07-28` (modern, per request), `2025-11-25` and `2025-06-18` (handshake
@@ -53,7 +57,7 @@ every caller, and a test holds that claim. Every catalog (`tools/list`, `resourc
 **`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
 data to the wrong caller.
 
-The server would never see that, so it could not audit it. A TTL is a hint for caches, never a permission. Every call
+The server could not audit a wrong cache hit, because it never sees one. A TTL is a hint for caches, never a permission. Every call
 signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
@@ -119,6 +123,55 @@ picks the first:
 Either way, the consent screen names the **host** the authorization goes back to. It says so again when that host is
 an address on this machine. A metadata document can prove what a client calls itself, and cannot prove which program
 holds a loopback port.
+
+## When a tool refuses
+
+When a tool refuses, the agent gets a normal result with `isError: true` and one line of text, so it can read the line
+and act on it. Nothing has changed. The first column names the Go error behind each line. `Dispatcher.explain`
+(`backend/internal/modules/agents/explain.go`) turns the sentinel errors into that text. The next move of the agent
+turns on what the answer means. It may be "you may never", "a human must say yes", or "you typed the ID wrong".
+
+| Error | What the agent reads | Retry? |
+|---|---|---|
+| `ErrRequiresApproval` | Confirm-first (🟡) action; needs human approval; nothing was changed | No: wait for the approval, then replay with `approval_id` |
+| `ErrScopeExceeded` | The passport does not grant the scope this tool needs | No: the cap is fixed for as long as the passport lasts |
+| `ErrPermissionDenied` | The human this passport acts for may not do this | No: the agent gets their access and no more |
+| `ErrNotFound` | No such record in this workspace, or outside the row scope of the user it acts for | No: it hides whether the record exists |
+| `ErrVersionSkew` | The record changed since it was read | **Yes**: read again, and retry with the new version |
+| `ErrApprovalTokenInvalid` | The token was used, ran out, or is for another call | **Yes**: after asking for a new approval |
+| `ErrUnsupportedBySoR` | The system of record of this workspace cannot serve this tool | **Never**: a declared gap; use another tool or tell the user |
+| `UnknownToolError` | The name is not on the surface | No: call `tools/list` and use a name from it |
+| `BadArgsError` | A named argument was refused *before* the tool ran; nothing changed | No: fix the argument against `inputSchema` first |
+| anything else | Sorted through `httperr.Classify`: a short error says "the same call can work later"; any other `4xx` says "refused as sent" | Per the message |
+| not sorted | "The tool failed for an internal reason", the only answer on the surface the agent cannot act on | Yes, then tell a human |
+
+- **Nothing has changed when a tool refuses.** Every branch above runs before the write, or in place of it.
+- **Details from inside never leave the server.** Driver errors, hosts and wrapped error text go to the server log;
+  the agent sees the own words of the sentinel. Text sent back from the arguments of the caller is limited and
+  escaped. So a new line in a tool name cannot forge a line in the run transcript that later prompts read.
+
+## How the tool hints are set
+
+`tools/list` publishes two hints, and no human sets either by hand:
+
+- **`readOnlyHint` comes from the scope**: `ToolSpec.ReadOnly()` is `RequiredScope == ScopeRead`. A copy written by
+  hand could disagree with the scope the gate holds, and the hint is the half a client would trust. `draft` is not
+  read-only. One scope covers both a tool that writes nothing and a tool that stores a draft activity. So the scope
+  cannot answer the question, and the safe answer is the only right one.
+- **`openWorldHint` is the `Egress` flag**, the same bool the catalog above reports, read off the same spec.
+
+`destructiveHint` and `idempotentHint` are not set. The protocol defaults (destructive, not idempotent) are already
+the safe reading. Only a value that promises more would need a call per tool, with nothing to hold it true.
+These gates keep the catalog and the contract from drifting:
+
+| Gate | Where | What it holds |
+|---|---|---|
+| `TestTheContractScopeMatchesTheRegisteredToolScope` | `backend/internal/compose/agentscopeparity_test.go` | One verb, one cap, both wires: a passport refused a verb on REST cannot spend it over MCP. |
+| `TestEveryToolRouteDeclaresAGrantableScope` | same file | No contract route asks for a cap no passport can hold. |
+| `TestNoWritingToolIsAdvertisedAsReadOnly` | `backend/internal/modules/agents/conformance_test.go` | The derived hint stays true across the whole registered set. |
+| `TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap` | `backend/internal/modules/agents/scope_fitness_test.go` | An egress tool cannot use a cap that is not outbound. |
+
+Both scans read the generated policy table, so a verb added to the contract later is covered with no list to edit.
 
 ## Where to go next
 

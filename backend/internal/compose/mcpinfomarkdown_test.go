@@ -78,7 +78,7 @@ func renderMCPInfoMarkdown(t *testing.T, doc mcpInfo) []byte {
 
 	var page strings.Builder
 	writeMCPInfoHead(&page, doc)
-	writeMCPInfoIndex(&page, tools.Tools, resources.Resources)
+	writeMCPInfoIndex(&page, tools.Tools, resources.Resources, renderAgentToolBudget(t))
 	writeMCPInfoResources(&page, resources.Resources)
 	writeMCPInfoTools(&page, tools.Tools)
 	return []byte(page.String())
@@ -103,8 +103,9 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 	page.WriteString("Those are the bytes on the wire: they carry each tool's output schema and the\n")
 	page.WriteString("governance clause the transport appends. The listing a run re-sends every step is\n")
 	page.WriteString("smaller (name, description and input schema only) and is held against its own\n")
-	page.WriteString("budget in `agenttooldescriptions_test.go`. What that listing costs each scheduled\n")
-	page.WriteString("agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).\n\n")
+	page.WriteString("budget in `agenttooldescriptions_test.go`. The Prompt tokens column below is what each\n")
+	page.WriteString("tool adds to that listing, and what it costs each scheduled agent, agent by agent, is\n")
+	page.WriteString("[agent-tool-budget.md](agent-tool-budget.md).\n\n")
 	writeMCPInfoComposition(page, doc.Totals)
 }
 
@@ -136,14 +137,20 @@ func writeMCPInfoComposition(page *strings.Builder, totals mcpInfoTotals) {
 	page.WriteString("descriptions and input schemas are what each step pays for.\n\n")
 }
 
-func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []mcpResourceEntry) {
+// writeMCPInfoIndex takes the per-tool prompt cost from the budget computed
+// from the same registry, so this column and the budget page cannot differ.
+func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []mcpResourceEntry, budget agentToolBudget) {
+	tokens := map[string]int{}
+	for _, row := range budget.ToolCost {
+		tokens[row.Name] = row.Tokens
+	}
 	page.WriteString("## Index\n\n")
 	fmt.Fprintf(page, "### Resources (%d)\n\n", len(resources))
 	for _, r := range resources {
 		fmt.Fprintf(page, "- [`%s`](#%s): %s\n", r.URI, anchor(r.Name), r.Title)
 	}
 	fmt.Fprintf(page, "\n### Tools (%d)\n\n", len(tools))
-	page.WriteString("| Tool | What it is for | Read-only | View | Size |\n|---|---|:-:|---|---:|\n")
+	page.WriteString("| Tool | What it is for | Read-only | View | Prompt tokens |\n|---|---|:-:|---|---:|\n")
 	for _, tool := range tools {
 		mark := ""
 		if tool.Annotations.ReadOnlyHint {
@@ -153,8 +160,8 @@ func writeMCPInfoIndex(page *strings.Builder, tools []mcpToolEntry, resources []
 		if tool.Meta.UI != nil && tool.Meta.UI.ResourceURI != "" {
 			view = "[`" + tool.Meta.UI.ResourceURI + "`](#" + anchor(viewNameOf(tool.Meta.UI.ResourceURI)) + ")"
 		}
-		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %s | %s | %s |\n",
-			tool.Name, anchor(tool.Name), cell(tool.Title), mark, view, humanBytes(toolBytes(tool)))
+		fmt.Fprintf(page, "| [`%s`](#%s) | %s | %s | %s | %d |\n",
+			tool.Name, anchor(tool.Name), cell(tool.Title), mark, view, tokens[tool.Name])
 	}
 	page.WriteString("\n")
 }
@@ -200,19 +207,6 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 func viewNameOf(uri string) string {
 	file := uri[strings.LastIndexByte(uri, '/')+1:]
 	return strings.ReplaceAll(strings.TrimSuffix(file, ".html"), "-", "_") + "_view"
-}
-
-// toolBytes is one entry's served size, which is what the index sorts a
-// reader's attention by: a catalog is bounded by its total, and the total is
-// spent by whichever entries are largest.
-func toolBytes(tool mcpToolEntry) int {
-	encoded, err := json.Marshal(tool)
-	if err != nil {
-		// Marshal of a value decoded FROM json cannot fail; a size of zero is
-		// still honest here rather than a panic in a page renderer.
-		return 0
-	}
-	return len(encoded)
 }
 
 // anchor is the fragment GitHub derives from a heading: lowercased, spaces to
