@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=../margince.schema.json
+# config/presets/openrouter_openai.yaml — every lane on OpenAI's GPT-6 family,
+# reached through the OpenRouter broker.
+#
+# One credential (OPENAI_COMPATIBLE_API_KEY), the same one the other broker
+# presets use. The models are first-party OpenAI endpoints on the broker, so
+# there is no serving lottery for `routing:` to bound.
+#
+# Not loaded automatically — see README.md. Copy the `seeds` block into your own
+# config/margince.yaml, or:
+#
+#     make e2e-ai ROUTING=config/presets/openrouter_openai.yaml
+#
+# The default judge is a Claude model through `claude -p`, so nothing bound here
+# grades itself.
+version: 1
+
+seeds:
+  ai_routing:
+    # cloud_frontier, not eu_hosted: no tier pins a region.
+    profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
+    providers:
+      openai_compatible:
+        base_url: https://openrouter.ai/api
+    tiers:
+      # Every tier opts out of the inherited routing with `routing: {}`. The
+      # product default filters on `quantizations: [fp16, bf16]`, and OpenAI
+      # declares no precision for a hosted model, so inheriting it empties the
+      # candidate set and the broker answers "No endpoints found for the
+      # request with quantization: fp16,bf16". Nothing is given up: one vendor
+      # serves each model.
+      local_small:
+        provider: openai_compatible
+        model: openai/gpt-6-luna
+        routing: {}
+      cheap_cloud:
+        provider: openai_compatible
+        model: openai/gpt-6-luna
+        routing: {}
+      premium:
+        provider: openai_compatible
+        model: openai/gpt-6-sol
+        routing: {}
+      frontier:
+        provider: openai_compatible
+        model: openai/gpt-6.1-sol
+        routing: {}
+    # KNOWN GAP: this preset cannot serve document_extract, which sends a PDF.
+    # The models take file input, but the OpenAI-compatible wire here declares
+    # only text and image, so the adapter refuses the attachment instead of
+    # dropping it. Bind that tier to a provider whose wire carries PDFs if a
+    # deployment needs it.
+    #
+    # The embed lane takes no serving preferences. text-embedding-3-large is
+    # asked for 1024 dimensions, the width every other preset stores.
+    embeddings:
+      provider: openai_compatible
+      model: openai/text-embedding-3-large
+      dimensions: 1024

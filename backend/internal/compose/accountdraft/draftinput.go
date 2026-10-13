@@ -37,6 +37,9 @@ func (in Input) GreetingNames() (string, string) {
 	return in.Recipient.FirstName, in.Recipient.LastName
 }
 
+// CoRecipientNames is empty: an account draft goes to one recipient.
+func (in Input) CoRecipientNames() []string { return nil }
+
 // Addresses is where the draft goes: the recipient's own, when the record
 // carries one.
 func (in Input) Addresses() []string {

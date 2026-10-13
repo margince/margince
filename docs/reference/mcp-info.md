@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 66 |
 | Resources | 9 |
-| Tool catalog | 213.8 KB |
+| Tool catalog | 214.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55619 |
+| Approx. wire tokens | 55669 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 85.6 KB | 40% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 57.1 KB | 26% | Yes, every step |
+| Output schemas | 85.6 KB | 39% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 57.3 KB | 26% | Yes, every step |
 | Input schemas | 55.3 KB | 25% | Yes, every step |
 | _Names, annotations, punctuation_ | 15.8 KB | 7% | Partly |
-| **Description + input schema** | **112.4 KB** | **52%** | **the recurring cost** |
+| **Description + input schema** | **112.6 KB** | **52%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -79,8 +79,8 @@ descriptions and input schemas are what each step pays for.
 | [`draft_email`](#draft_email) | Draft an email |  |  | 3.2 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.7 KB |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 2.7 KB |
-| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.4 KB |
-| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.2 KB |
+| [`forecast_movement`](#forecast_movement) | What moved the forecast | yes |  | 3.6 KB |
+| [`forecast_readings`](#forecast_readings) | Read the forecast | yes |  | 4.3 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 2.6 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 3.0 KB |
@@ -4684,7 +4684,9 @@ yet. Reading forecast_readings twice and subtracting is NOT the same answer and 
 as one: the difference between two reads is a number with no account of where it went.
 `reopened_or_archived` carries a deal that left the population entirely — archived, or no longer
 visible to this caller — with its whole prior contribution, so no money disappears without a row
-that says where it went. (Governance: runs immediately; requires passport scope "read".)
+that says where it went. Every `_minor` figure is in minor units of forecast_readings'
+`base_currency`: 3100000 in EUR is EUR 31,000. (Governance: runs immediately; requires passport
+scope "read".)
 ```
 
 <details><summary>Input schema</summary>
@@ -4908,7 +4910,8 @@ frozen states, newest first: the ids forecast_movement takes. Empty means nothin
 this population, which includes managed teams. Quote `as_of`, `timezone` and `base_currency` with
 the number — a total placed in the reader's own zone is a different total — and
 `eligible_count`, `priced_count` and `fx_missing_count` are the counts `coverage_note` is written
-from. (Governance: runs immediately; requires passport scope "read".)
+from. Every `_minor` figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.
+(Governance: runs immediately; requires passport scope "read".)
 ```
 
 <details><summary>Input schema</summary>

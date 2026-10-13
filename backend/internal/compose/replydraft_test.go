@@ -151,7 +151,7 @@ func TestVoicedDraftInjectsTheProfileAndStampsTheVersion(t *testing.T) {
 	drafter := replyDrafter{brain: brain}
 
 	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, testVoiceContext())
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestVoicedDraftRetriesOnceOnAntiAIViolations(t *testing.T) {
 	drafter := replyDrafter{brain: brain}
 
 	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, testVoiceContext())
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestVoicedDraftFallsBackToPlainWhenViolationsSurvive(t *testing.T) {
 	drafter := replyDrafter{brain: brain}
 
 	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, testVoiceContext())
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	}}
 	drafter := replyDrafter{brain: brain}
 	_, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, draftvoice.Context{})
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, draftvoice.Context{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -406,7 +406,7 @@ func TestAFailedVoiceCriticRetryIsLoggedAndTheFirstDraftStands(t *testing.T) {
 	drafter := replyDrafter{brain: brain, log: slog.New(slog.NewTextHandler(&logged, nil))}
 
 	draft, version, _, err := drafter.completeVoiced(context.Background(), ids.NewV7(),
-		replyActivityData{Subject: "plan", Thread: "inbound_mail"}, testVoiceContext())
+		replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna"}, testVoiceContext())
 	if err != nil {
 		t.Fatalf("a failed critic retry must not fail the draft: %v", err)
 	}
@@ -486,7 +486,7 @@ func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
 // greeting brings exactly to it is served. Every lane that greets is held.
 func TestAGreetingThatCarriesTheBodyPastItsBoundIsRefused(t *testing.T) {
 	data := replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna", Intent: "confirm the plan"}
-	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, data.Recipient, ""), "x")
+	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, draftcheck.Grounds{FirstName: data.Recipient}), "x")
 	lanes := map[string]func(*replyBrainStub) (replyDraft, error){
 		"reply": func(brain *replyBrainStub) (replyDraft, error) {
 			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})
