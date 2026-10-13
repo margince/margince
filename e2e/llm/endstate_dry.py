@@ -15,16 +15,14 @@ Exit 1 when any scenario read 3, else 0.
 import argparse
 import glob
 import os
-import subprocess
 import sys
-import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import check  # noqa: E402
 import endstate  # noqa: E402
-import transcript  # noqa: E402
+import mcpclient  # noqa: E402
 
 
 def main():
@@ -34,25 +32,24 @@ def main():
     parser.add_argument("scenarios", nargs="*")
     args = parser.parse_args()
     scenarios = args.scenarios or sorted(glob.glob(os.path.join(HERE, "scenarios", "*.yaml")))
+    session = mcpclient.Session(args.mcp_url, os.environ.get(args.token_env, ""))
+    session.open()
     faults = 0
-    with tempfile.TemporaryDirectory() as work:
-        for scenario in scenarios:
-            if not check.parse_scenario(scenario).get("must_end_with"):
-                continue
-            # A run that called nothing: the reader waits on no import and
-            # reads the world exactly as the seed left it.
-            run = os.path.join(work, os.path.basename(scenario) + ".jsonl")
-            with transcript.Transcript(run) as out:
-                out.finish(False, "", 0)
-            read = subprocess.run(
-                [sys.executable, os.path.join(HERE, "endstate.py"), "--scenario", scenario, "--transcript", run,
-                 "--mcp-url", args.mcp_url, "--token-env", args.token_env],
-                capture_output=True, text=True, check=False)
-            print(f"{os.path.basename(scenario)}: exit {read.returncode}")
-            for line in read.stdout.splitlines():
-                print(f"  {line.strip()}")
-            if read.returncode not in (0, endstate.FAILED):
-                faults += 1
+    for scenario in scenarios:
+        entries = check.parse_scenario(scenario).get("must_end_with")
+        if not entries:
+            continue
+        # A run that called nothing: the reader waits on no import and reads
+        # the world exactly as the seed left it.
+        try:
+            _, problems = endstate.end_state(session, entries, [])
+        except (endstate.Unreadable, mcpclient.McpFault, ValueError) as fault:
+            faults += 1
+            print(f"{os.path.basename(scenario)}: exit {endstate.HARNESS}\n  {fault}")
+            continue
+        print(f"{os.path.basename(scenario)}: exit {endstate.FAILED if problems else 0}")
+        for problem in problems:
+            print(f"  {problem}")
     return 1 if faults else 0
 
 
