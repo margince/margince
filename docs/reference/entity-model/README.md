@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 308 |
-| Columns | 3634 |
+| Columns | 3647 |
 | Foreign keys | 507 |
 | Owning areas | 36 |
 
@@ -299,7 +299,7 @@ erDiagram
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 6 | 0 |
-| [`import_run`](migration.md#import_run) | migration | 21 | 1 |
+| [`import_run`](migration.md#import_run) | migration | 34 | 1 |
 | [`intro_request`](introductions.md#intro_request) | introductions | 29 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
