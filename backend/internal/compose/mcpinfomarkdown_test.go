@@ -3,20 +3,15 @@
 
 package compose
 
-// docs/reference/mcp-info.md — the same served surface as its .json sibling,
-// for a reader rather than a differ.
+// docs/reference/mcp-info.md is the served surface as its .json sibling carries
+// it, for a reader rather than a differ.
 //
-// Both artifacts are rendered in one pass and gated together, and the markdown
-// is rendered FROM the JSON document rather than from the registry a second
-// time. That is what makes it a view and not a second source: a page built from
-// its own walk of the specs could disagree with the payload it claims to
-// describe, and nothing would catch it.
+// The markdown is rendered FROM the JSON document, never from a second walk of
+// the registry, which could disagree with the payload it claims to describe.
 //
-// The JSON stays the artifact of record because it is what a client receives
-// byte for byte. It is also 200 KB of nested schema, which is not a thing a
-// contact reads to answer "what can this tool do" — so this page carries the
-// index, the sizes and each tool's description, and leaves the schemas to the
-// JSON beside it.
+// The JSON stays the artifact of record because a client receives it byte for
+// byte. This page carries the index, the sizes and each tool's description, and
+// leaves the schemas to the JSON.
 
 import (
 	"bytes"
