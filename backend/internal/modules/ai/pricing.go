@@ -176,13 +176,14 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// Gemini: cache read = 0.1x input; Gemini's implicit context caching
 		// carries no separate write charge. Prices are
 		// config/ai-routing.example.yaml's default bindings — premium
-		// (gemini-3.5-flash), cheap_cloud (gemini-3.1-flash-lite) and frontier
+		// (gemini-3.6-flash), cheap_cloud (gemini-3.1-flash-lite) and frontier
 		// (gemini-3.1-pro-preview). Both Flash rows are flat: their rate does
 		// not vary with prompt size, so what is seeded is what a call of any
 		// length pays. This CORRECTS the 2026-07-20 note that had them carrying
 		// a >200k tier — that is Pro's pricing shape, ascribed to the Flash rows
 		// in error; reconfirmed against the live sheet 2026-08-12.
 		rateOn(day, providerGemini, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
+		rateOn(day, providerGemini, "gemini-3.6-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		// gemini-3.1-pro-preview — the example file's frontier binding — is
 		// DELIBERATELY NOT SEEDED, and that is the point rather than an
@@ -238,6 +239,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// Gemini on Vertex AI: the same models at the gemini rows' rates. NEEDS
 		// OPERATOR CONFIRMATION against the Vertex sheet for the bound location.
 		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
 		// TypeSafe's own API serves the model the broker resells as
