@@ -1229,6 +1229,8 @@ export const vi = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.expand": "Mở rộng",
+  "common.collapse": "Thu gọn",
   "clipboard.copyFailedTitle": "Truy cập bộ nhớ tạm bị từ chối",
 
   "explain.open": "Giải thích con số này",

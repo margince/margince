@@ -22,7 +22,10 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {
+function QueueFrame({
+  day,
+  address = "#/home?queue=1",
+}: Readonly<{ day?: Worklist; address?: string }>) {
   useEffect(() => {
     const before = window.location.hash;
     installFetchStub({
@@ -63,16 +66,16 @@ function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {
           truncated: false,
         }),
     });
-    window.location.hash = "#/home?queue=1";
+    window.location.hash = address;
     announceAddressChanged();
     return () => {
       window.location.hash = before;
       announceAddressChanged();
     };
-    // The day this frame serves. A story hands it once and never changes it,
-    // but the stub is installed inside the effect, so a frame that swapped its
-    // fixture would otherwise keep serving the first one.
-  }, [day]);
+    // The day and address this frame serves. A story hands them once. The stub
+    // is installed inside the effect, so a frame that swapped its fixture would
+    // otherwise keep serving the first one.
+  }, [day, address]);
   return (
     <StoryProviders>
       <BriefQueue />
@@ -137,6 +140,26 @@ export const AFullDay: Story = {
 export const AFullDayInDark: Story = {
   ...AFullDay,
   globals: { theme: "dark" },
+};
+
+/**
+ * The same day with the drawer expanded to the window (`wide=1`). What to
+ * check: wide enough, each row is one line with its verbs beside the work,
+ * and Collapse sits beside the X.
+ */
+export const AFullDayExpanded: Story = {
+  render: () => (
+    <QueueFrame day={aLeadsDay()} address="#/home?queue=1&wide=1" />
+  ),
+  play: async () => {
+    const drawer = await within(document.body).findByRole("dialog", {
+      name: en["brief.queue.title"],
+    });
+    await expect(drawer).toHaveClass("modal-drawer-window");
+    await expect(
+      within(drawer).getByRole("button", { name: en["common.collapse"] }),
+    ).toBeInTheDocument();
+  },
 };
 
 /** A lead's day: every scope on offer and enough rows that the queue is a list

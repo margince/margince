@@ -10,6 +10,9 @@ import {
   type WorklistScope,
 } from "./worklist.queries";
 
+/** The drawer is expanded to the window while the address carries this dial. */
+export const DRAWER_WIDE_PARAM = "wide";
+
 /**
  * Which queue the DRAWER is on, off the address it keeps its state in.
  *

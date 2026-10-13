@@ -5,12 +5,13 @@ import { useEffect, useId, useRef } from "react";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import type { DrawerSpan } from "../design-system/modal";
 import { useT } from "../i18n";
 import { navigateReplacing, useHash } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useUrlParams } from "../lib/urlstate";
 import { WorklistScreen } from "./worklist";
-import { drawerScope } from "./worklist.address";
+import { DRAWER_WIDE_PARAM, drawerScope } from "./worklist.address";
 import { worklistFilterFrom } from "./worklist.header";
 import { WorklistReturnScope } from "./worklist.return";
 import "./brief.css";
@@ -46,9 +47,17 @@ export function BriefQueue() {
     `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
     "load",
   );
+  // Closing keeps `wide`, as it keeps the scope: the next opening is as wide
+  // as the reader left it.
   const close = () => {
     const next = new Map(params);
     next.delete("queue");
+    setParams(next);
+  };
+  const changeSpan = (span: DrawerSpan) => {
+    const next = new Map(params);
+    if (span === "window") next.set(DRAWER_WIDE_PARAM, "1");
+    else next.delete(DRAWER_WIDE_PARAM);
     setParams(next);
   };
   return (
@@ -57,6 +66,8 @@ export function BriefQueue() {
       onClose={close}
       labelledBy={titleId}
       intent="drawer-reading"
+      span={params.get(DRAWER_WIDE_PARAM) === "1" ? "window" : "intent"}
+      onSpanChange={changeSpan}
     >
       {/* The BANDED head, not the composer's one scrolling column: the queue is
           a list a reader pages through, so its title and the dialog's own close

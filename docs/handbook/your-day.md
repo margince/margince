@@ -24,6 +24,14 @@ Worklist opens as a panel headed **Worklist**, with the day's count on the butto
 There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks,
 work queue, inbox, today list.
 
+### How do I make my worklist fill the window?
+To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
+1. Open **Home** → **Show Worklist**.
+2. Press **Expand**, next to the close button. Press **Collapse** to make it narrow again.
+3. A refresh of the page keeps the size you chose. On a phone the panel always fills the screen.
+
+Also called: full screen, big worklist, wide view.
+
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **Snooze** on its row. It comes back tomorrow ("Back on
 your list tomorrow.").

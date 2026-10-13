@@ -47,6 +47,32 @@ it("keeps queue scope separate from the weekly team brief and closes with Escape
   expect(window.location.hash).not.toContain("queue=1");
 });
 
+it("opens as wide as the address says, and writes the reader's choice there", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home?queue=1&wide=1";
+  stubApi({
+    "GET /worklist": () =>
+      jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
+  });
+  render(<BriefQueue />);
+  const drawer = await screen.findByRole("dialog", {
+    name: en["brief.queue.title"],
+  });
+  expect(drawer.classList.contains("modal-drawer-window")).toBe(true);
+
+  await user.click(screen.getByRole("button", { name: en["common.collapse"] }));
+  await waitFor(() =>
+    expect(drawer.classList.contains("modal-drawer-window")).toBe(false),
+  );
+  expect(window.location.hash).toBe("#/home?queue=1");
+
+  await user.click(screen.getByRole("button", { name: en["common.expand"] }));
+  await waitFor(() =>
+    expect(drawer.classList.contains("modal-drawer-window")).toBe(true),
+  );
+  expect(window.location.hash).toBe("#/home?queue=1&wide=1");
+});
+
 it("restores the queue opener's keyboard focus after closing", async () => {
   const user = userEvent.setup();
   window.location.hash = "#/home";

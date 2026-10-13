@@ -1257,6 +1257,8 @@ export const de = {
 
   "common.undo": "Rückgängig machen",
   "common.close": "Schließen",
+  "common.expand": "Vergrößern",
+  "common.collapse": "Verkleinern",
   "clipboard.copyFailedTitle": "Zugriff auf die Zwischenablage verweigert",
 
   "explain.open": "Diese Zahl erklären",
