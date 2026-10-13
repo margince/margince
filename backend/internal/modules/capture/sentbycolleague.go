@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,9 +21,11 @@ import (
 //
 // Filed inbound, the copy made the customer's question look unanswered and
 // stood as a question owed to the colleague. The From must be a seat's exact
-// login address, never a domain: a domain names every mailbox at it.
-// From is a header the sender types, so the row is not attested. It names the
-// colleague in SentByColleague, which no correspondence gate reads.
+// login address, never a domain: a domain names every mailbox at it. And the
+// receiving server must have authenticated it (fromAuthenticated), since a
+// sender types From. The row is still not attested: no provider filed it as
+// sent. It names the colleague in SentByColleague, which no correspondence
+// gate reads.
 //
 // The counterparty is the ladder's stand-in, picked among the recipients only.
 // rec.Addresses also lists every From address, so a co-author beside the
@@ -32,7 +35,8 @@ func (s *Sink) asSentByColleagueTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, ActivityFields, error) {
 	cp := rec.Counterparty
-	if fields.Kind != kindEmail || fields.HasCalendarPart || cp.Direction != connector.DirectionInbound || cp.Email == "" {
+	if fields.Kind != kindEmail || fields.HasCalendarPart || cp.Direction != connector.DirectionInbound ||
+		!fromAuthenticated(rec, cp.Email) {
 		return rec, fields, nil
 	}
 	colleague, err := colleagueTx(ctx, tx, cp.Email)
@@ -105,3 +109,20 @@ func stampMessageEnds(
 	}
 	return nil
 }
+
+// fromAuthenticated reports that Gmail's receiving server passed DMARC for the
+// domain of from. Gmail writes its result, under the authserv-id
+// mx.google.com, above every header the sender submitted, so the topmost one
+// is Gmail's own. The trust comes from that position; nothing here verifies a
+// signature on the header. Other
+// transports answer false: Microsoft writes no server name, and an IMAP
+// server is whatever the seat chose.
+func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
+	auth := rec.SenderAuthentication
+	domain := domainOfAddress(from)
+	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
+		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
+}
+
+// gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
+const gmailAuthServer = "mx.google.com"

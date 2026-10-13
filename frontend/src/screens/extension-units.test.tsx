@@ -51,16 +51,12 @@ describe("the units offered on a settings page", () => {
   it("names the unit and links to its own screen", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
-    // The row draws the unit's name; the link's VISIBLE text is the verb. Its
-    // accessible NAME still carries the unit, because a list of links all
-    // announced as "Open" tells a screen-reader user nothing about which unit
-    // each one leads to.
+    // The whole row is the link, named with the verb and the unit it opens.
     const link = screen.getByRole("link", {
       name: "Open dispact-connector page",
     });
     expect(link.getAttribute("href")).toBe("#/ext/dispact-connector");
-    // The name is the row's, so it is on the page as text a reader can see
-    // rather than only inside the link's accessible name.
+    // The name is visible text, not only part of the link's accessible name.
     expect(screen.getByText("dispact-connector")).toBeTruthy();
   });
 

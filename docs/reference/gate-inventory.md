@@ -85,6 +85,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendpriceinput_test.go` | H3 | The frontend's price pattern accepts what the server's price parser and the contract pattern accept, so a value the form lets through is not refused for its shape. |
+| `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails silently when it falls short. |
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
@@ -328,6 +329,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `quickfindindex_test.go` | H2 | Every list quick-find is proved to read its trigram index. |
 | `ratelimitnames_test.go` | H2 | A rate limiter's name is its bucket. |
 | `ratparsebound_test.go` | H2 | A decimal string is shape-checked before math/big parses it. |
+| `readersetaside_test.go` | H1 | Every read that hides a message a reader set aside goes through one predicate, activities.readerSetAsideSQL. |
 | `recencyorigins_test.go` | H2 | Every reading of "when was this record last touched" excludes the origins the system wrote itself. |
 | `recordsourcespelling_test.go` | H2 | A record's `source` names where the row came from, and whoever uses this product is one origin with one spelling. |
 | `registrarparity_test.go` | H2 | A registry that claims to be complete must be. |

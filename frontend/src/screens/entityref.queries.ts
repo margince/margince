@@ -5,7 +5,7 @@
 // entity kind, keyed and cached), as opposed to the components that render
 // them, which stay in entityref.tsx.
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { EntityKind } from "../app/entity";
 import { leadIdentityName } from "../format/leadname";
@@ -138,8 +138,7 @@ export function useEntityName(
 ): { name: string | null; reading: NameReading } {
   const query = useQuery({
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id ?? ""),
-    enabled: Boolean(id),
+    queryFn: id ? () => fetchEntityName(kind, id) : skipToken,
     staleTime: 60_000,
   });
   // The reading travels with the name, because a caller handed only `null`

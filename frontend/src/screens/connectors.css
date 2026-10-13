@@ -1,19 +1,9 @@
-/* Connected inboxes and the workspace's messaging bot (Settings → Connections):
-   the two panels' row content. Split out of settings.css so the sheet sits
-   beside the screen that draws it.
-
-   Both panels' rows are SettingRows now, so the row itself — the two columns,
-   the hairline between them, the vertical rhythm — belongs to
-   design-system/settingrow.css. What is left here is only what is specific to a
-   CONNECTION: the identity block, the health facts under it, and the strips of
-   verbs that change it. */
+/* The row itself belongs to design-system/settingrow.css. */
 
 .connector-id {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  /* Lets the identity column shrink instead of pushing the actions off the
-     row when an account label runs long. */
   min-width: 0;
 }
 .connector-id > svg {
@@ -22,56 +12,55 @@
   color: var(--accentText);
   flex: none;
 }
-.connector-id > span {
+
+/* The name and any badge that says something is wrong, on one line. */
+.connector-head {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
 }
-/* A mailbox address is one unbroken token, and it must not be what makes the
-   page scroll sideways on a phone. */
+
+/* An address is one unbroken token; it must not widen the page on a phone. */
 .connector-account {
   overflow-wrap: anywhere;
 }
 
-/* One health fact per line inside the row's description. The description is a
-   single <p> that the row owns, so the facts inside it are spans and it is this
-   rule — not a stack of paragraphs — that puts each on its own line. */
-.connector-fact {
-  display: block;
-}
-
-/* Two badges answering one row — the status, and the send refusal that can ride
-   alongside it. They wrap rather than widen the control column. */
-.connector-badges {
+/* Facts sit apart with no separator glyph; a long one starts its own line. */
+.connector-caption {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
   flex-wrap: wrap;
+  column-gap: var(--space-3);
 }
 
-/* The verbs on a roster row — Reconnect beside Disconnect. They keep their own
-   widths on purpose: `small` is the rung that deliberately drops `.btn`'s 6rem
-   floor (design-system/base.css says why: it lives in dense rows, where a floor
-   is what breaks the layout), and a shared minimum only aligns buttons that are
-   STACKED. Side by side, every label longer than the floor still sets its own
-   width, so a floor here would widen one toward the other without ever making
-   the two ends line up. */
+.connector-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .connector-actions {
   display: flex;
   align-items: center;
   gap: var(--gapActions);
-  flex-wrap: wrap;
 }
 
-/* The history import belongs to the mailbox row ABOVE it, not beside it, so it
-   stands as its own child of the list and gives up the hairline that would
-   otherwise read as a row of its own. (It is a sibling rather than a
-   Disclosure because <details> renders its children while closed, and this
-   panel fires a scope-preview request from an effect — see the note in
-   connectors.tsx.) */
-.settinglist > .connector-backfill {
-  border-top: 0;
-  padding-bottom: var(--space-3);
-  min-width: 0;
+/* On a phone a roster row keeps its menu and chevron at the end of its first
+   line, and Reconnect takes a line of its own under the naming. */
+@media (max-width: 640px) {
+  .settinglist-records > .settingrow:has(.connector-head) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+  .settingrow:has(.connector-head) > .settingrow-control {
+    display: contents;
+  }
+  .connector-reconnect {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }

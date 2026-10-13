@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { usePresence } from "./presence";
+import { useLastSubject, usePresence } from "./presence";
 
 // The contract is "stay mounted until the exit is OVER", and the only thing
 // that knows when it is over is the element. So every case here is written
@@ -198,5 +198,22 @@ describe("a dismissed surface stays mounted while its exit plays", () => {
       await exit.promise.catch(() => undefined);
     });
     expect(result.current).toEqual({ mounted: true, state: "open" });
+  });
+});
+
+describe("useLastSubject", () => {
+  it("keeps naming the last subject after the caller clears it", () => {
+    const initialProps: { subject: string | null } = { subject: null };
+    const { result, rerender } = renderHook(
+      ({ subject }) => useLastSubject(subject),
+      { initialProps },
+    );
+    expect(result.current).toBeNull();
+    rerender({ subject: "handbook.pdf" });
+    expect(result.current).toBe("handbook.pdf");
+    rerender({ subject: null });
+    expect(result.current).toBe("handbook.pdf");
+    rerender({ subject: "pricing.pdf" });
+    expect(result.current).toBe("pricing.pdf");
   });
 });

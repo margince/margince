@@ -175,12 +175,7 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 // lane with no model id: the question is which calls that lane made, not what
 // they cost.
 func (r *Router) BoundModels() map[Tier]ModelRef {
-	meta := r.binding().routeMeta
-	out := make(map[Tier]ModelRef, len(meta))
-	for tier, m := range meta {
-		out[tier] = ModelRef{Provider: m.provider, Model: m.model}
-	}
-	return out
+	return r.binding().boundModels()
 }
 
 // buildClients turns validated bindings into live Clients via

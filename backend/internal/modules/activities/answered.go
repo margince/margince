@@ -243,7 +243,8 @@ func firstAnswerAtSQL(inbound, until string) string {
 // commitment mail) stays owed through replies until it is completed, settled
 // or dismissed: a reply is not proof the request was met. Any other inbound
 // is owed while it is the newest inbound on its thread and unanswered. Mail
-// from an address no human reads is owed only as a confirmed request.
+// from an address no human reads, and a calendar response, are owed only as a
+// confirmed request.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -252,13 +253,19 @@ func firstAnswerAtSQL(inbound, until string) string {
 // OR-ed in front of them; the hidden-backlog reading passes TRUE to count
 // what one hides, every other caller passes neverRelaxed.
 //
+// unjudgedResponseStillOwed admits an unjudged calendar response. Only the
+// owed-verdict backlog passes TRUE: a sender can mark any request REPLY, so
+// such mail must still be judged before it leaves the lane.
+//
 // The newer-inbound walk names its kinds for the index, as answerArms does.
-func owedSQL(asOf, dismissedStillOwed, informsStillOwed string) string {
+func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
+	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarResponseSQL + `
+	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
 	         WHERE newer.thread_key = a.thread_key

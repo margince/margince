@@ -9,7 +9,7 @@
 // is the deal's, and the address is the server's `primary_email`, which every
 // screen and the drafter read rather than choose again.
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../common";
 import { dealRecipientSeat } from "./dealrecipient";
@@ -38,16 +38,19 @@ export function useDealRecipientAddress(
   const seat = coverage.withheld
     ? undefined
     : dealRecipientSeat(coverage.coverage?.stakeholders);
+  const contactId = seat?.contact_id;
   const contact = useQuery({
-    queryKey: ["contact", seat?.contact_id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}", {
-          params: { path: { id: seat?.contact_id as string } },
-        }),
-      );
-    },
-    enabled: seat?.contact_id != null,
+    queryKey: ["contact", contactId],
+    queryFn:
+      contactId != null
+        ? async () => {
+            return unwrap(
+              await api.GET("/contacts/{id}", {
+                params: { path: { id: contactId } },
+              }),
+            );
+          }
+        : skipToken,
   });
   return contact.data?.primary_email ?? undefined;
 }

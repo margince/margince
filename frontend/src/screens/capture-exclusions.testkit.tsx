@@ -13,11 +13,14 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { screen } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { openRowMenu } from "./tablerow.testkit";
 
 // The two scopes this card draws are two different permissions, and that is the
 // whole subject: a rule that binds only the reader is theirs to write, while one
@@ -102,7 +105,10 @@ export function backend(
       calls.push({
         method,
         url,
-        body: method === "GET" ? undefined : await request.clone().json(),
+        body:
+          method === "GET" || method === "DELETE"
+            ? undefined
+            : await request.clone().json(),
       });
       const routed = routeOf(url, method, allow, connectedProvider);
       if (routed !== null) {
@@ -122,7 +128,12 @@ export function Providers({ children }: { children: ReactNode }) {
   });
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {children}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }
@@ -132,7 +143,19 @@ export function Providers({ children }: { children: ReactNode }) {
 export const openForm = () =>
   screen.getByRole("button", { name: en["captureExclusions.addOpen"] });
 
-export const removeVerb = (value: string) =>
-  screen.getByRole("button", {
-    name: en["captureExclusions.remove"].replace("{value}", value),
+export async function removeVerb(
+  user: UserEvent,
+  value: string,
+): Promise<HTMLButtonElement> {
+  const menu = await openRowMenu(user, value);
+  return menu.getByRole("button", {
+    name: en["captureExclusions.removeRule"],
   }) as HTMLButtonElement;
+}
+
+export async function openPurge(user: UserEvent, value: string) {
+  const menu = await openRowMenu(user, value);
+  await user.click(
+    menu.getByRole("button", { name: en["capturePurge.openShort"] }),
+  );
+}

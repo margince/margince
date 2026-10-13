@@ -42,6 +42,9 @@ type AwaitingReply struct {
 	ContactID  ids.UUID
 	CompanyID  ids.UUID
 	DealID     ids.UUID
+	// Recipients is who a meeting follow-up goes to, best first; ContactID is
+	// the first of them. Empty on a sent message.
+	Recipients []ids.UUID
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the
@@ -256,10 +259,7 @@ var awaitingRepliesSQL = `
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
-	   -- Set aside by this reader: not theirs, or snoozed and not yet lifted.
-	   AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine
-	                    WHERE mine.activity_id = a.id AND mine.reader_id = $%[9]d
-	                      AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT %[10]s)))
+	   AND NOT ` + readerSetAsideSQL("$%[9]d", "%[10]s") + `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`

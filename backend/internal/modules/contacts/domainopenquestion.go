@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -137,11 +136,11 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 // answers with is the same row shape the operator was looking at.
 func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedDomain, error) {
 	var d BlockedDomain
-	var companyID *ids.UUID
+	var company standingCompany
 	err := tx.QueryRow(ctx, `
-		SELECT id, domain, `+domainStanding+`
-		  FROM company_domain_disposition WHERE domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &companyID)
+		SELECT d.id, d.domain, `+domainStanding+`
+		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing has ever asked about this domain, so there is no question to
 		// re-open. Not-found rather than a fault: the caller named a domain
@@ -151,20 +150,8 @@ func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedD
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading where %s stands: %w", domain, err)
 	}
-	if companyID != nil {
-		// Withheld unless the caller could read that company, exactly as the
-		// list withholds it. A company captured from mail is owner-PRIVATE
-		// until somebody promotes it, and that privacy does not yield to
-		// row_scope=all — so answering with the id here would hand a colleague
-		// a pointer to a record the record's own endpoint correctly 404s.
-		visible, verr := auth.VisibleTo(ctx, tx, entityCompany, *companyID)
-		if verr != nil {
-			return BlockedDomain{}, verr
-		}
-		if visible {
-			typed := ids.From[ids.CompanyKind](*companyID)
-			d.CompanyID = &typed
-		}
+	if err := withVisibleCompanyTx(ctx, tx, &d, company); err != nil {
+		return BlockedDomain{}, err
 	}
 	return d, nil
 }

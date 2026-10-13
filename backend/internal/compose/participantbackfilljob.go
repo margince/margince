@@ -19,12 +19,14 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"slices"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -57,11 +59,14 @@ const participantBackfillBatchesPerTick = 25
 type participantBackfillWorker struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
-	log   *slog.Logger
+	// blob is where the calendar-method pass reads a slimmed original's parts.
+	// Nil leaves such an original unreadable.
+	blob blobstore.Store
+	log  *slog.Logger
 }
 
-func newParticipantBackfillWorker(pool *pgxpool.Pool, log *slog.Logger) *participantBackfillWorker {
-	return &participantBackfillWorker{pool: pool, store: activities.NewStore(InstallationDB(pool)), log: log}
+func newParticipantBackfillWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *participantBackfillWorker {
+	return &participantBackfillWorker{pool: pool, blob: blob, store: activities.NewStore(InstallationDB(pool)), log: log}
 }
 
 // Work sweeps every live workspace. A per-workspace fault is logged and never
@@ -105,7 +110,7 @@ func (w *participantBackfillWorker) backfillWorkspace(ctx context.Context, ws id
 		}
 		total += n
 	}
-	for _, pass := range backfillPasses {
+	for _, pass := range append(slices.Clone(backfillPasses), w.calendarMethodPass()) {
 		n, err := w.drainPass(wsCtx, pass)
 		total += n
 		if err != nil {
@@ -147,6 +152,19 @@ var backfillPasses = []backfillPass{
 	// Mail a seat sent from another address of theirs, still stored as
 	// received. Last, so a fault of its own stops none of the passes above.
 	{repairOwnSentMailBatch, ownSentMailRepairPerTick},
+}
+
+// calendarMethodPass reads the calendar method of mail captured before capture
+// recorded it. It needs the worker's object store, so it is not in the table
+// above. It writes only activity.calendar_method, so its place is free.
+func (w *participantBackfillWorker) calendarMethodPass() backfillPass {
+	files := w.store.WithBlobstore(w.blob)
+	return backfillPass{
+		batch: func(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
+			return backfillCalendarMethodBatch(ctx, pool, files, limit, log)
+		},
+		limit: calendarMethodBackfillPerTick,
+	}
 }
 
 // drainPass runs one pass's batches until a batch finds nothing or the tick's

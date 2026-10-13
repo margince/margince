@@ -1,13 +1,25 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+} from "./story-utils";
 
 // Where a claim came from is only worth saying when the seat did not make it.
 //
@@ -28,7 +40,12 @@ function render(ui: ReactNode) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -44,10 +61,11 @@ function identity(over: Record<string, unknown>) {
   };
 }
 
-function showing(identities: Record<string, unknown>[]) {
+function showing(identities: Record<string, unknown>[], routes: RouteMap = {}) {
   installFetchStub({
     "GET /me": meRoute({}),
     "GET /capture/owner-identities": () => jsonResponse({ data: identities }),
+    ...routes,
   });
   render(<OwnerIdentitiesCard />);
 }
@@ -136,4 +154,140 @@ it("says what an address must look like when the server refuses it", async () =>
     await screen.findByText(en["captureValue.refusedAddress"]),
   ).toBeTruthy();
   expect(screen.queryByText(/give one email address/)).toBeNull();
+});
+
+it("shows when each address was declared, under the address", async () => {
+  showing([identity({})]);
+
+  const list = await screen.findByTestId("owner-identities-list");
+  expect(
+    within(list).getByText(en["ownerIdentities.kind.address"]),
+  ).toBeTruthy();
+  expect(within(list).getByText(/2026/)).toBeTruthy();
+});
+
+// Declaring a typed address again is the exact inverse, so it goes at once.
+it("removes a typed address at once and declares it again through Undo", async () => {
+  const user = userEvent.setup();
+  const removed = vi.fn(() => new Response(null, { status: 204 }));
+  // The restored row is the same address, so the reply need not echo the body.
+  const declared = vi.fn((_body: unknown) =>
+    jsonResponse(identity({ id: "oi-2" }), 201),
+  );
+  showing([identity({})], {
+    "DELETE /capture/owner-identities/oi-1": removed,
+    "POST /capture/owner-identities": declared,
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  expect(screen.queryByRole("dialog")).toBeNull();
+  const said = await screen.findByRole("status");
+  await waitFor(() =>
+    expect(said.textContent).toContain(en["ownerIdentities.removedToast"]),
+  );
+  expect(removed).toHaveBeenCalledTimes(1);
+
+  await user.click(
+    await within(said).findByRole("button", { name: en["common.undo"] }),
+  );
+  await waitFor(() =>
+    expect(declared).toHaveBeenCalledWith({
+      kind: "address",
+      value: "founder@previous-employer.example",
+    }),
+  );
+});
+
+// Declared again, a learned address would read as typed: it asks first instead.
+it("asks before removing an address the product learned", async () => {
+  const user = userEvent.setup();
+  const removed = vi.fn(() => new Response(null, { status: 204 }));
+  showing([identity({ source: "delivered_to" })], {
+    "DELETE /capture/owner-identities/oi-1": removed,
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(removed).not.toHaveBeenCalled();
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["ownerIdentities.removeConfirm"],
+    }),
+  );
+  await waitFor(() => expect(removed).toHaveBeenCalledTimes(1));
+});
+
+// The removed row takes its verb with it, so focus moves on to the next one.
+it("hands focus to the next address once a typed one is gone", async () => {
+  const user = userEvent.setup();
+  const rows = [
+    identity({}),
+    identity({ id: "oi-2", value: "me@side-project.example" }),
+  ];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const next = screen.getByRole("button", {
+    name: "Remove me@side-project.example",
+  });
+  await waitFor(() => expect(document.activeElement).toBe(next));
+});
+
+// The confirm outlives its row, so it names where focus lands instead.
+it("returns focus to the add verb after a confirmed removal empties the list", async () => {
+  const user = userEvent.setup();
+  const rows = [identity({ source: "delivered_to" })];
+  showing(rows, {
+    "DELETE /capture/owner-identities/oi-1": () => {
+      rows.shift();
+      return new Response(null, { status: 204 });
+    },
+  });
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["ownerIdentities.removeConfirm"],
+    }),
+  );
+  const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
+  await waitFor(() => expect(document.activeElement).toBe(add));
+  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
+});
+
+it("keeps the address in the confirm's title while it closes", async () => {
+  const user = userEvent.setup();
+  showing([identity({ source: "delivered_to" })]);
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const title = within(dialog).getByRole("heading");
+  await user.keyboard("{Escape}");
+  expect(title.textContent).toContain("founder@previous-employer.example");
 });

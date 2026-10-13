@@ -55,8 +55,19 @@ func followUpCall(ctx context.Context, t *testing.T, h Handlers, method, body st
 	return rec.Code, out.FollowUpAfterDays
 }
 
+// restoreFollowUpWindow puts the default window back when the test ends. The
+// setting is installation-wide, so a value left behind moves every later test.
+func (e *loadEnv) restoreFollowUpWindow(t *testing.T) {
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, FollowUpAfterDays.Key()); err != nil {
+			t.Errorf("restoring the default follow-up window: %v", err)
+		}
+	})
+}
+
 func TestAnAdminSetsTheFollowUpWindowTheWorklistApplies(t *testing.T) {
 	e := setupLoad(t)
+	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	h := NewHandlers(db).WithSettings(settings.New(e.pool, settings.NewRegistry(FollowUpAfterDays)))
 	admin := e.settingsAdmin(true)
@@ -83,6 +94,7 @@ func TestAnAdminSetsTheFollowUpWindowTheWorklistApplies(t *testing.T) {
 // write committed, so the answer must not be a refusal.
 func TestAnUpdateOnlySeatSeesItsChangeConfirmed(t *testing.T) {
 	e := setupLoad(t)
+	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	h := NewHandlers(db).WithSettings(settings.New(e.pool, settings.NewRegistry(FollowUpAfterDays)))
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)

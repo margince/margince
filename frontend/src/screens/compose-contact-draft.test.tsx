@@ -333,3 +333,42 @@ describe("drafting to a contact", () => {
     expect(sent.some((call) => call.key.includes("/draft-email"))).toBe(false);
   });
 });
+
+describe("drafting to everyone a meeting was with", () => {
+  it("names the further contacts and opens with all of them in To", async () => {
+    const everyone = [
+      "ana@customer.example",
+      "ben@customer.example",
+      "cleo@customer.example",
+    ];
+    const sent = stubRoutes({
+      "POST /contacts/c-1/draft-email": () =>
+        jsonResponse({ ...CONTACT_DRAFT, to: everyone }),
+    });
+    render(
+      <ComposeModal
+        intent="follow up after the meeting"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        followUp={{ alsoTo: ["c-2", "c-3"], aboutActivityId: "m-1" }}
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+    await screen.findByDisplayValue("Zwei Produkte ohne Übersetzung");
+
+    const call = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
+    expect(call?.body).toMatchObject({
+      also_to: ["c-2", "c-3"],
+      about_activity_id: "m-1",
+    });
+    for (const address of everyone) {
+      expect(await screen.findByText(address)).toBeTruthy();
+    }
+  });
+});

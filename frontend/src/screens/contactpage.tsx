@@ -997,7 +997,6 @@ function ContactActivityDrawer({
       entityType="contact"
       entityId={contactId}
       askedKind={asTask ? "task" : undefined}
-      triggerLabel={asTask ? "log.addTask" : undefined}
       openOnMount
       onClose={onClose}
     />

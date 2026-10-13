@@ -67,6 +67,8 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"a retry reads",
 	"activity_meeting_rsvp_backfill": "one row per RSVP backfill settled. The settle stamp is the " +
 		"only column, so a window is the whole question",
+	"activity_calendar_method_backfill": "one row per calendar-method re-read settled. The check " +
+		"stamp is the only column, so a window is the whole question",
 	"webhook_delivery": "one row per delivery attempt, holding the dead-letter stamp and the retry " +
 		"schedule. The retry path reads it, so a window must clear the longest backoff",
 })

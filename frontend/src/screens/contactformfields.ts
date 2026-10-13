@@ -151,6 +151,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       label: "create.email",
       type: "repeatable",
       addLabel: "field.addEmail",
+      editLabel: "field.editEmails",
       rowFields: [
         {
           key: "email",
@@ -178,6 +179,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       label: "create.phone",
       type: "repeatable",
       addLabel: "field.addPhone",
+      editLabel: "field.editPhones",
       rowFields: [
         { key: "phone", label: "create.phone", required: true },
         {

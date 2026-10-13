@@ -1199,6 +1199,20 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  waiting_horizon_refresh:
+    role: worker
+    go_type: WaitingHorizonRefreshArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because readers treat a stored horizon older than a day as
+      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      fresh value, and a measurement that fails keeps the previous one. The
+      measurement is a year of inbound mail, which is why no read does it.
+
   idempotency_retention:
     role: worker
     fleet: true

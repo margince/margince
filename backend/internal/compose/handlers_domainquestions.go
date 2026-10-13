@@ -89,8 +89,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 	// empty admission and an empty source — neither of which the contract
 	// publishes. It carries the company-update gate the contract promises for
 	// this endpoint, which RequireHuman alone does not.
-	stored, err := h.contacts.SetDomainAdmission(r.Context(), base, contacts.DomainAdmitted,
-		"Kept from the open domain question: a colleague judged this domain a company.")
+	stored, err := h.contacts.SetDomainAdmission(r.Context(), base, contacts.DomainAdmitted, contacts.KeptDomainReason)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

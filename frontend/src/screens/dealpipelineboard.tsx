@@ -66,7 +66,6 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
           entityType="deal"
           entityId={taskFor}
           askedKind="task"
-          triggerLabel="log.addTask"
           openOnMount
           onClose={() => setTaskFor(null)}
         />

@@ -406,8 +406,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `log_activity` | 0.67 | 4/6 | - | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
+| `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.83 | 10/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |

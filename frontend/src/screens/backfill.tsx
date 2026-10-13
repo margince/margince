@@ -186,7 +186,7 @@ function BackfillSetup({
   // statement, not a retryable error inside the rest of the setup form.
   if (unsupported) {
     return (
-      <div className="backfill-setup">
+      <div className="backfill-setup form-stack">
         <Heading size="medium" className="backfill-h">
           <History aria-hidden /> {t("backfill.title")}
         </Heading>
@@ -196,7 +196,7 @@ function BackfillSetup({
   }
 
   return (
-    <div className="backfill-setup">
+    <div className="backfill-setup form-stack">
       <Heading size="medium" className="backfill-h">
         <History aria-hidden /> {t("backfill.title")}
       </Heading>

@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { providerName } from "../format/connectorprovider";
+import { useT } from "../i18n";
 import { unwrap } from "./common";
 
 type Carriage = components["schemas"]["ChannelProviderEntry"]["attachments"];
@@ -37,12 +39,10 @@ export function useChannelProviders(enabled = true) {
 // one list: one transport under two spellings, one of them provenance nobody
 // outside this repository can parse.
 //
-// The fallback is still the RAW ID rather than a placeholder, and that part is
-// deliberate: a provider this build has never heard of is exactly what a unit
-// creates, and "telegram" read by a human beats "Unknown" or an empty cell. The
-// directory is the resolver, not a gate — a label it cannot supply must not make
-// the row unreadable.
+// A capture connector (gmail, imap) is in neither half, so the capture names
+// answer next; an id nobody names falls back to itself.
 export function useProviderLabel(): (provider: string) => string {
+  const t = useT();
   const directory = useChannelProviders();
   const named = new Map<string, string>();
   for (const entry of directory.data?.data ?? []) {
@@ -56,7 +56,7 @@ export function useProviderLabel(): (provider: string) => string {
       named.set(entry.source, entry.label);
     }
   }
-  return (provider: string) => named.get(provider) ?? provider;
+  return (provider: string) => named.get(provider) ?? providerName(provider, t);
 }
 
 // useProviderCarriage returns a function that reads a transport's carriage

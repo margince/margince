@@ -318,7 +318,6 @@ export const en = {
   "scheduling.unsaved": "You have unsaved changes",
   "scheduling.discard": "Discard",
   "scheduling.brand": "Company name and logo",
-  "scheduling.copyBookingLink": "Copy booking link",
   "scheduling.back": "Back to Margince",
   "scheduling.prepare": "Prepare for this meeting",
   "scheduling.timezone": "Time zone",
@@ -415,6 +414,7 @@ export const en = {
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
+  "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
 
   "scheduling.chooseProvider": "Choose a calendar provider",
@@ -892,6 +892,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.waiting_horizon_refresh": "Waiting horizon refresh",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
   "systemJob.notice_case_open": "Privacy request intake",
@@ -1396,6 +1397,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  // The picked record's detail line, so two look-alike names stay apart here too.
+  "merge.confirmDetail":
+    "Merge {source} into {target} ({detail})? This archives {source}.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",
@@ -1558,6 +1562,16 @@ export const en = {
     "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
   "common.versionSkew":
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
+  "common.duplicate.email":
+    "Another contact or lead already has this email address, so it was not saved here.",
+  "common.duplicate.domain":
+    "Another company already has this domain, so it was not saved here.",
+  "common.duplicate.linkedinUrl":
+    "Another lead already has this LinkedIn profile, so it was not saved here.",
+  "common.duplicate.contactLead":
+    "This contact already has a live lead, so no second one was created.",
+  "common.duplicate.slotTaken":
+    "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
@@ -2594,6 +2608,10 @@ export const en = {
   "linkedinReach.onFileOf": "{onFile} of {total}",
   "linkedinReach.footnote":
     "Showing {shown} of {total} companies. {unresolved} connections work at companies not on file yet.",
+  "linkedinReach.connectionsCount_one": "{count} connection",
+  "linkedinReach.connectionsCount_other": "{count} connections",
+  "linkedinReach.onFileFolded": "{figure} already on file",
+  "linkedinReach.openNamed": "Open {name}",
   "linkedinImport.skipped": "Rows skipped (no usable name)",
   "co.signals.title": "Signals",
   "co.signals.emptyDetail":
@@ -3464,6 +3482,23 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
+  "deals.closeTasks.legend_one":
+    "What happens to the {count} open task on this deal?",
+  "deals.closeTasks.legend_other":
+    "What happens to the {count} open tasks on this deal?",
+  "deals.closeTasks.listLabel": "Open tasks on this deal",
+  "deals.closeTasks.untitled": "Untitled task",
+  "deals.closeTasks.complete": "Complete all",
+  "deals.closeTasks.completeHint":
+    "Mark them done once the deal closes. You can undo it.",
+  "deals.closeTasks.loading": "Loading the deal’s open tasks…",
+  "deals.closeTasks.readFailed": "Closing keeps every task on this deal open.",
+  "deals.closeTasks.noneCompleted": "No task could be completed.",
+  "deals.closeTasks.keep": "Keep",
+  "deals.closeTasks.keepHint": "Leave them open.",
+  "deals.closeTasks.choose": "Choose what happens to the open tasks.",
+  "deals.closeTasks.failed":
+    "The deal closed, but some of its tasks could not be completed. Complete them from the Worklist.",
   "deals.winNoEvidence":
     "No signed contract is attached. Record how the deal was won; the answer is kept on the deal and counted in reports.",
   "deals.winReason": "How was it won?",
@@ -4438,6 +4473,8 @@ export const en = {
   "field.unset": "Not set",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
+  "field.editEmails": "Edit emails",
+  "field.editPhones": "Edit phone numbers",
   "field.addDomain": "Add domain",
 
   "field.addRegisterVat": "Add VAT ID",
@@ -4668,6 +4705,10 @@ export const en = {
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
   "log.attendee": "Attendees",
+  "log.otherAttendees": "Other attendees",
+  "log.removeAttendee": "Remove {name}",
+  "log.colleagues": "Colleagues who attended",
+  "log.addColleague": "Add a colleague",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
@@ -4680,6 +4721,7 @@ export const en = {
     "File could not be read. Paste the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
@@ -5976,19 +6018,18 @@ export const en = {
     "Rows with no company: a dispatcher distributes work to every company and runs none itself. Their counts belong to the installation.",
   "jobs.dispatcherEmpty":
     "No dispatcher rows. Periodic ticks re-insert them, so an empty list means none is scheduled now.",
-  "jobs.count.waiting": "{count} waiting",
-  "jobs.count.running": "{count} running",
-  "jobs.count.retrying": "{count} retrying",
-  "jobs.count.dead": "{count} dead",
-  "jobs.queue": "queue {queue}",
-  "jobs.waitedSeconds_one": "oldest has waited {count} second",
-  "jobs.waitedSeconds_other": "oldest has waited {count} seconds",
-  "jobs.waitedMinutes_one": "oldest has waited {count} minute",
-  "jobs.waitedMinutes_other": "oldest has waited {count} minutes",
-  "jobs.waitedHours_one": "oldest has waited {count} hour",
-  "jobs.waitedHours_other": "oldest has waited {count} hours",
-  "jobs.waitedDays_one": "oldest has waited {count} day",
-  "jobs.waitedDays_other": "oldest has waited {count} days",
+  "jobs.col.job": "Job",
+  "jobs.col.queue": "Queue",
+  "jobs.col.waiting": "Waiting",
+  "jobs.col.running": "Running",
+  "jobs.col.retrying": "Retrying",
+  "jobs.col.dead": "Dead",
+  "jobs.col.oldestWait": "Oldest wait",
+  "jobs.col.state": "State",
+  "jobs.col.reason": "Reason",
+  "jobs.col.attempt": "Attempt",
+  "jobs.col.failedAt": "Failed at",
+  "jobs.col.jobId": "Job ID",
   // The window is in the TITLE, not only the body: a count with no span asks
   // the reader to guess, and the guess is "since forever" — which is what made
   // a finished outage keep this red for a week.
@@ -6006,9 +6047,9 @@ export const en = {
   "jobs.state.retryable": "Retrying",
   "jobs.state.discarded": "Discarded",
   "jobs.state.cancelled": "Canceled",
-  "jobs.attempt": "attempt {attempt} of {max} · {when}",
+  "jobs.attempt": "attempt {attempt} of {max}",
+  "jobs.attemptOf": "{attempt} of {max}",
   "jobs.remedy": "What to do: {remedy}",
-  "jobs.jobId": "job {id}",
   "jobs.failingSince": "failing since {when}",
   "jobs.reasonVetted":
     "Reasons, classes and remedies come from the job layer, never the worker’s raw cause. A failure it cannot phrase shows a fixed substitute and no class.",
@@ -6020,6 +6061,8 @@ export const en = {
   "providerHealth.adminOnly":
     "AI provider status covers the whole installation and requires a permission your role does not have.",
   "providerHealth.healthy": "All AI providers are answering.",
+  "providerHealth.noneConfigured":
+    "No AI provider is set up, so there is nothing to check.",
   "aiProviderHealth.label.degraded": "Degraded",
   "aiProviderHealth.label.down": "Unreachable",
   "aiProviderHealth.label.outOfCredit": "Out of credit",
@@ -6064,6 +6107,10 @@ export const en = {
   "extIngest.refusal.participants": "participants",
   "extIngest.refusal.size": "size limits",
   "extIngest.refusalCount": "{count} on {refusal}",
+  "extIngest.col.connector": "Connector",
+  "extIngest.col.refused": "Refused",
+  "extIngest.col.reasons": "Reasons",
+  "extIngest.col.lastRefused": "Last refused",
   // Said on the card because an operator who cannot find the detail here goes
   // looking for a bug rather than for the connector's own log.
   "extIngest.noDetail":
@@ -6110,44 +6157,41 @@ export const en = {
   "captureHealth.sweep.settledThreads": "Settled threads",
   "captureHealth.sweep.strandedContacts": "Unasked contacts",
   "captureHealth.sweep.filedMeetings": "Filed meetings",
-  "captureHealth.keepingUp": "Keeping up",
   "captureHealth.warn.neverRun": "Never run",
   "captureHealth.warn.failed": "Last run failed",
   "captureHealth.warn.skipped": "Last run skipped",
   "captureHealth.warn.overdue": "Overdue",
   "captureHealth.warn.backlog": "Backlog remains",
+  "captureHealth.col.pass": "Pass",
+  "captureHealth.col.lastSuccess": "Last success",
+  "captureHealth.col.runsEvery": "Runs every",
+  "captureHealth.col.processed": "Processed",
+  "captureHealth.col.state": "State",
+  "captureHealth.col.owner": "Mailbox owner",
+  "captureHealth.col.contacts": "Contacts waiting",
+  "captureHealth.col.threads": "Threads waiting",
+  "captureHealth.col.oldestWait": "Oldest wait",
+  "captureHealth.never": "Never",
+  "captureHealth.runsEvery": "runs every {interval}",
+  "captureHealth.processed_one": "{count} record processed",
+  "captureHealth.processed_other": "{count} records processed",
+  "captureHealth.fact.pending": "Senders waiting for the check",
+  "captureHealth.fact.unsure": "Senders the check is unsure of",
+  "captureHealth.fact.exhausted": "Senders with no retries left",
+  "captureHealth.oldestWaited": "oldest has waited {age}",
+  "captureHealth.contactsWaiting_one": "{count} contact waiting",
+  "captureHealth.contactsWaiting_other": "{count} contacts waiting",
+  "captureHealth.threadsWaiting_one": "{count} thread waiting",
+  "captureHealth.threadsWaiting_other": "{count} threads waiting",
   "captureHealth.lastSucceeded": "last succeeded {when}",
   "captureHealth.neverSucceeded": "has not succeeded yet",
-  "captureHealth.everyMinutes_one": "runs every {count} minute",
-  "captureHealth.everyMinutes_other": "runs every {count} minutes",
-  "captureHealth.everyHours_one": "runs every {count} hour",
-  "captureHealth.everyHours_other": "runs every {count} hours",
-  "captureHealth.everyDays_one": "runs every {count} day",
-  "captureHealth.everyDays_other": "runs every {count} days",
   "captureHealth.mailboxes": "Mailboxes",
   "captureHealth.noDetail":
     "Counts only. Each mailbox owner alone can see which contacts and threads wait.",
   "captureHealth.mailboxesEmpty": "No mailbox has anything waiting.",
   "captureHealth.unnamedMailbox": "Unnamed mailbox",
-  "captureHealth.contactsWaiting_one": "{count} contact waiting",
-  "captureHealth.contactsWaiting_other": "{count} contacts waiting",
-  "captureHealth.threadsWaiting_one": "{count} thread waiting",
-  "captureHealth.threadsWaiting_other": "{count} threads waiting",
-  "captureHealth.oldestContact": "contacts: {waited}",
-  "captureHealth.oldestThread": "threads: {waited}",
   "captureHealth.installation": "Whole installation",
-  "captureHealth.classifier": "Sender check",
-  "captureHealth.pending_one": "{count} pending",
-  "captureHealth.pending_other": "{count} pending",
-  "captureHealth.unsure_one": "{count} unsure",
-  "captureHealth.unsure_other": "{count} unsure",
-  "captureHealth.exhausted_one": "{count} sender with no retries left",
-  "captureHealth.exhausted_other": "{count} senders with no retries left",
-  "captureHealth.oldestPending": "pending: {waited}",
   "captureHealth.heldMeetings": "Held meetings",
-  "captureHealth.meetingsHeld_one": "{count} meeting held",
-  "captureHealth.meetingsHeld_other": "{count} meetings held",
-  "captureHealth.oldestMeeting": "held: {waited}",
   "captureHealth.heldMeetingsSub":
     "Filed meetings still hidden from colleagues. The nightly pass shares them.",
   "captureHealth.generatedAt": "As of {time}",
@@ -6575,10 +6619,6 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and later stages move up. Past stage changes stay readable. Move its deals before removing it.",
-  "stage.openGroup": "Open stages",
-  "stage.closingGroup": "Closing stages",
-  "stage.closingNote":
-    "Every deal ends in one of these, so they stay after the open stages.",
   "stage.closingMissing":
     "No won or lost stage yet. Add one as a new stage of that type.",
   "stage.orderHint":
@@ -6591,6 +6631,24 @@ export const en = {
   "stage.noneOpenNote":
     "Add the first step a deal takes. It goes before the closing stages.",
   "stage.added": "Stage added",
+  "stage.group": "Stages",
+  "stage.orderHeader": "Order",
+  "stage.colStep": "Step",
+  "stage.colStage": "Stage",
+  "stage.fixedLast": "Stays last",
+  "stage.endsDeal": "Ends the deal",
+  "stage.criteriaRequired_one": "{count} required",
+  "stage.criteriaRequired_other": "{count} required",
+  "stage.criteriaOptional_one": "{count} optional",
+  "stage.criteriaOptional_other": "{count} optional",
+  "stage.criteriaNone": "None",
+  "stage.criteriaCount_one": "{count} criterion",
+  "stage.criteriaCount_other": "{count} criteria",
+  "stage.criteriaNoneFolded": "No criteria",
+  "stage.criteriaDetail": "Criteria details",
+  "stage.criteriaFor": "Exit criteria for {name}",
+  "stage.occupied_one": "{count} deal is in this stage",
+  "stage.occupied_other": "{count} deals are in this stage",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",
@@ -6600,8 +6658,6 @@ export const en = {
   "stage.criteria.unreadable":
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
-  "stage.criteria.terminal":
-    "A won or lost stage is final, so it has no exit criteria.",
   "stage.criteria.add": "Add criterion",
   "stage.criteria.key": "Key",
   "stage.criteria.keyHint":
@@ -6611,7 +6667,8 @@ export const en = {
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
-  "stage.criteria.edit": "Edit criterion",
+  "stage.criteria.editOf": "Edit {name}",
+  "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
   "stage.criteria.removeTitle": "Remove this criterion?",
   "stage.criteria.removeBody":
@@ -6946,7 +7003,6 @@ export const en = {
   // already holds the kind of credential each one is configured with. The two
   // headings differ because the two pages mean different things — one is your
   // own account somewhere, the other is the installation's.
-  "extUnits.open": "Open",
   "extUnits.openNamed": "Open {name} page",
   "extUnits.user.title": "Your other accounts",
   "extUnits.user.sub":
@@ -6993,7 +7049,6 @@ export const en = {
   "heldThreads.colThread": "Thread",
   "heldThreads.colWhy": "Reason",
   "heldThreads.colWhen": "Arrived",
-  "heldThreads.colActions": "Actions",
   "heldThreads.release": "Share with the team",
   "heldThreads.released": "Shared with the team",
   "heldThreads.noSubject": "First message erased",
@@ -7019,23 +7074,23 @@ export const en = {
   "heldThreads.kind.personal": "Personal",
   "heldThreads.kind.securityIncident": "Security incident",
   "heldThreads.kind.explicitlyConfidential": "Marked confidential",
+  "heldThreads.kind.unsure": "Unclear",
+  "heldThreads.kind.other": "Other reason",
   "senders.title": "Senders",
   "senders.sub":
     "The decision on each address your mailbox brought in, and your own answer where given. Only you see this list.",
-  "senders.emptyTitle": "No senders yet",
   "senders.emptyBody":
     "After your mailbox brings in mail, each sender appears here with its outcome.",
   "senders.colSender": "Sender",
   "senders.colDecision": "Decision",
   "senders.colRecord": "Contact",
-  "senders.colActions": "Actions",
-  "senders.recordYes": "Yes",
-  "senders.recordNo": "No",
-  "senders.byYou": "Your decision",
+  "senders.recordYes": "On file",
+  "senders.recordNo": "No contact",
+  "senders.byYou": "You decided",
   "senders.deletesOn": "Oldest message deleted on {date}",
-  "senders.markBusiness": "Business",
+  "senders.markBusiness": "Mark as business",
   "senders.keepOut": "Exclude",
-  "senders.withdraw": "Undo",
+  "senders.withdraw": "Withdraw my answer",
   "senders.keepOutTitle": "Exclude this sender permanently?",
   "senders.keepOutBody":
     "No contact is created, and mail this sender already brought into your mailbox is destroyed. Copies a colleague imported stay theirs.",
@@ -7051,12 +7106,16 @@ export const en = {
   "senders.kind.business": "Business",
   "senders.kind.keptOut": "Excluded",
   "senders.kind.undecided": "Undecided",
+  "senders.kind.other": "Other",
   "senders.waiting.title": "Waiting on a decision",
   "senders.waiting.sub":
     "Contacts from your mail that only you can see until their sender is decided.",
   "senders.waiting.colContact": "Contact",
-  "senders.waiting.colAddresses": "Addresses",
   "senders.waiting.colSince": "Waiting since",
+  "senders.waiting.moreAddresses_one": "+{count} more",
+  "senders.waiting.moreAddresses_other": "+{count} more",
+  "senders.waiting.openNamed": "Open {name}",
+  "senders.waiting.openUnnamed": "Open contact",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default, so deal work can be shared.",
@@ -7080,9 +7139,7 @@ export const en = {
   "mailSharing.saveFailed": "Setting not saved",
   "mailSharing.save": "Save",
   "connectors.originLabel": "Address used in emailed links",
-  "connectors.originReachable": "Reachable",
   "connectors.originUnreachable": "Unreachable",
-  "connectors.originUnchecked": "Not checked",
   "connectors.sub":
     "Mailboxes and calendars capturing into the CRM. Disconnecting one keeps the records already captured.",
   "connectors.loading": "Loading connectors…",
@@ -7110,6 +7167,7 @@ export const en = {
   "connectors.notConfigured":
     "Mail capture is not configured on this installation.",
   "connectors.reconnect": "Reconnect",
+  "connectors.reconnectNamed": "Reconnect {name}",
   "connectors.disconnect": "Disconnect",
   "connectors.signatureEnrich.label": "Read contact details from this mailbox",
   "connectors.contextTag.label": "Tag for created contacts",
@@ -7216,7 +7274,6 @@ export const en = {
   "connectors.addOpen": "Add connector",
   "connectors.connect": "Connect",
   "connectors.connectProvider": "Connect {provider}",
-  "connectors.rosterLabel": "Active connectors",
   "connectors.addGmailBrings":
     "Mail sent and received in Gmail. Margince can also send from it.",
   "connectors.addGcalBrings":
@@ -7266,7 +7323,6 @@ export const en = {
   "connectors.telegramNotConfigured":
     "Messaging channels are not configured on this installation.",
   "connectors.telegramConnectCta": "Connect Telegram bot",
-  "connectors.telegramRosterLabel": "Connected bot",
   "connectors.telegramEmpty": "No bot connected.",
   "connectors.telegramReadOnly":
     "Only an administrator or operations user can connect or change the bot.",
@@ -7283,6 +7339,7 @@ export const en = {
   "connectors.telegramReplaceCta": "Replace token",
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
+  "connectors.openNamed": "Open {name}",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -7341,13 +7398,10 @@ export const en = {
   "blockedDomains.none":
     "No domains refused yet. Bulk-sender results and manual refusals appear here.",
   "blockedDomains.unit": "domain decisions",
-  "blockedDomains.openCompany": "Open company",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Decision",
   "blockedDomains.col.source": "Decided by",
-  "blockedDomains.col.reason": "Reason",
   "blockedDomains.col.decided": "When",
-  "blockedDomains.col.revise": "Change",
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
@@ -7356,9 +7410,20 @@ export const en = {
   "blockedDomains.source.nearDuplicate": "Company name already exists",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
-  "blockedDomains.rowReopen": "Reopen",
-  "blockedDomains.reopened": "{domain} reopened",
-  "blockedDomains.reopenFailed": "Domain not reopened",
+  "blockedDomains.rowReopen": "Ask again",
+  "blockedDomains.reopened": "{domain} will be checked again",
+  "blockedDomains.reopenFailed": "Domain not checked again",
+  "blockedDomains.reason.companyCreated":
+    "A colleague created a company on this domain",
+  "blockedDomains.reason.keptAsCompany":
+    "A colleague answered its open question and kept it as a company",
+  "blockedDomains.reason.bulkSender":
+    "Mail from this domain was judged bulk or automated",
+  "blockedDomains.reason.bulkNewsletter":
+    "Mail from this domain was judged a newsletter",
+  "blockedDomains.reason.bulkTransactional":
+    "Mail from this domain was judged automated",
+  "blockedDomains.reason.bulkSpam": "Mail from this domain was judged spam",
 
   "ob.s4.googleFailed": "Google connection not completed",
   "ob.s4.imapHost": "IMAP host",
@@ -8805,30 +8870,40 @@ export const en = {
   "knowledge.sub":
     "Document collections this company can query. Answers use only filed documents, and questions they do not cover are refused.",
   "knowledge.withheld": "You do not have access to the list of document sets.",
-  "knowledge.coverage":
-    "{documents} documents · {embedded} of {total} passages searchable",
+  "knowledge.documentCount_one": "{count} document",
+  "knowledge.documentCount_other": "{count} documents",
+  "knowledge.passages_one": "{embedded} of {count} passage searchable",
+  "knowledge.passages_other": "{embedded} of {count} passages searchable",
+  "knowledge.notSearchable": "Not searchable",
+  "knowledge.indexing": "Indexing",
+  "knowledge.reason.noEmbeddingModel":
+    "No embedding model is set up, so no passage can be searched.",
+  "knowledge.reason.indexing": "Passages are still being indexed.",
+  "knowledge.documentsIn": "Documents in {set}",
+  "knowledge.col.name": "Name",
+  "knowledge.col.passages": "Passages",
+  "knowledge.col.size": "Size",
+  "knowledge.col.added": "Added",
+  "knowledge.col.status": "Status",
+  "knowledge.col.actions": "Actions",
+  "knowledge.passageCount_one": "{count} passage",
+  "knowledge.passageCount_other": "{count} passages",
+  "knowledge.addedOn": "added {date}",
   "knowledge.reindexingTitle": "Reindexing this set",
   "knowledge.reindexing":
     "A change to text indexing started the reindex. Questions return “not ready” until it finishes. No data was lost.",
-  "knowledge.showDocuments": "Show documents",
-  "knowledge.hideDocuments": "Hide documents",
-  "knowledge.documents": "Documents",
   "knowledge.noDocuments": "No documents yet.",
   "knowledge.archive": "Archive set",
-  "knowledge.archiveFailed": "Set not archived",
-  "knowledge.archiveConfirm.title": "Archive this document set?",
+  "knowledge.archiveConfirm.title": "Archive {name}?",
   "knowledge.archiveConfirm.body":
     "The set and its documents are no longer searchable. Nothing is deleted.",
   "knowledge.deleteDocument": "Delete",
-  "knowledge.deleteFailed": "The document was not deleted. Retry.",
-  "knowledge.deleteConfirm.title": "Delete this document?",
+  "knowledge.deleteConfirm.title": "Delete {name}?",
   "knowledge.deleteConfirm.body":
     "The file, its extracted text and its search index are permanently deleted.",
   "knowledge.ingest.queued": "Queued",
   "knowledge.ingest.running": "Importing…",
-  "knowledge.ingest.done": "Imported",
   "knowledge.ingest.failed": "Could not be read",
-  "knowledge.ingestDetailTitle": "Why this file could not be read",
   "knowledge.upload.label": "Add document",
   "knowledge.upload.hint":
     "Plain text, Markdown, CSV or JSON. PDF and Word files are not supported and are refused.",
@@ -8866,7 +8941,10 @@ export const en = {
     "Counted from when a connector hands a message to this CRM. Items a connector filtered on its own side, such as a chat reaction or a mail rule, are not included. Covers messages only; lead capture is not shown here.",
   "captureActivity.filtered":
     "Showing {shown} of {total} {outcome} in this window.",
-  "captureActivity.openTrace": "Show every processing step for this message",
+  "captureActivity.openTraceFrom":
+    "Show every processing step for the message from {sender} at {at}",
+  "captureActivity.openTraceAt":
+    "Show every processing step for the message at {at}",
   "captureActivity.emptyFiltered":
     "No loaded rows match. Load more to see the rest of the window.",
   "captureActivity.loadMore": "Load more",
@@ -8881,40 +8959,45 @@ export const en = {
   "captureActivity.outcome.fault": "Derivation failed",
   "captureActivity.funnel.captured": "Captured",
   "captureActivity.funnel.internal": "Internal",
-  "captureActivity.funnel.suppressed": "No contact",
+  "captureActivity.funnel.suppressed": "No contact created",
   "captureActivity.funnel.deferred": "Awaiting check",
   "captureActivity.funnel.fault": "Failed",
   "captureActivity.reason.internal_only":
-    "every party was on your company’s domains",
+    "Every party was on your company’s domains",
   "captureActivity.reason.deferral_capped":
-    "the open-question limit was reached, so no result is coming",
+    "The open-question limit was reached, so no result is coming",
   "captureActivity.reason.noise_prior":
-    "an earlier check marked this sender as noise, so the message is archived",
+    "An earlier check marked this sender as noise, so the message is archived",
   "captureActivity.reason.decided_prior":
-    "this sender was already decided, so no contact is created",
+    "This sender was already decided, so no contact is created",
   "captureActivity.reason.no_granting_human":
-    "the connection names no user to act for",
+    "The connection names no user to act for",
   "captureActivity.reason.invisible_incumbent":
-    "it matched a record you cannot see",
+    "The message matched a record you cannot see",
   "captureActivity.reason.derivation_failed":
-    "the contact step failed; the message itself is unaffected",
-  "captureActivity.reason.no_counterparty": "no sender that can be recorded",
+    "The contact step failed; the message itself is unaffected",
+  "captureActivity.reason.no_counterparty": "No sender that can be recorded",
   "captureActivity.reason.role_mailbox":
-    "a shared mailbox, not a person: kept, but no contact created",
+    "A shared mailbox, not a person: kept, but no contact created",
   "captureActivity.reason.private_thread":
-    "a private thread: kept for you, but no contact created",
+    "A private thread: kept for you, but no contact created",
   "captureActivity.reason.transactional_infra":
-    "the sender is mail infrastructure, not a company you work with",
+    "The sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
-    "the sender looks like an automated mailer, not a person",
+    "The sender looks like an automated mailer, not a person",
   "captureActivity.outcome.deferred_capped": "Not queued",
   "captureActivity.outcome.deferred_sent": "Sent for a sender check",
-  "captureActivity.resolution.pending": "still waiting",
-  "captureActivity.resolution.unsure": "sent for review",
-  "captureActivity.resolution.real": "judged a real person",
-  "captureActivity.resolution.noise": "judged noise",
-  "captureActivity.resolution.rejected": "declined by a human",
-  "captureActivity.resolution.suppressed": "suppressed",
+  "captureActivity.resolution.pending": "Still waiting",
+  "captureActivity.resolution.unsure": "Sent for review",
+  "captureActivity.resolution.real": "Judged a real person",
+  "captureActivity.resolution.noise": "Judged noise",
+  "captureActivity.resolution.rejected": "Declined by a human",
+  "captureActivity.resolution.suppressed": "Suppressed",
+  "captureActivity.windowTitle": "Last 24 hours",
+  "captureActivity.col.when": "When",
+  "captureActivity.col.message": "From and subject",
+  "captureActivity.col.outcome": "Outcome",
+  "captureActivity.col.via": "Via",
   "pipeline.title": "How this message was handled",
   "pipeline.sub":
     "Each capture step, in the order this message passed through it.",
@@ -9115,7 +9198,6 @@ export const en = {
   "settings.voice.emptyBody":
     "Add writing samples to build your Voice DNA. It takes about a minute.",
   "settings.voice.status.collecting": "Collecting",
-  "settings.voice.status.ready": "Ready",
   "settings.voice.status.stale": "Rebuild needed",
   "settings.voice.bandThin": "thin",
   "settings.voice.bandGood": "good",
@@ -9138,7 +9220,7 @@ export const en = {
   "settings.voice.register.spoken": "spoken",
   "settings.voice.register.general": "general",
   "settings.voice.bandDrop":
-    "Removing this lowers the voice from {from} to {to}. Select remove again to confirm.",
+    "Removing this lowers the voice from {from} to {to}.",
   "voice.insights.avoidLabel": "What your voice avoids",
   "voice.insights.voiceScore": "Voice match {pct}%",
   "voice.insights.next.addTranscript":
@@ -9153,14 +9235,13 @@ export const en = {
   "voice.status.candidate": "Awaiting review",
   "voice.status.superseded": "Superseded",
   "voice.status.rejected": "Rejected",
-  "voice.classification.routine": "routine change",
-  "voice.classification.material": "material change",
-  "voice.outcome.autoActivated": "activated automatically",
-  "voice.outcome.reviewRequired": "review required",
-  "voice.outcome.manuallyActivated": "activated by you",
-  "voice.outcome.rejected": "rejected",
-  "voice.outcome.rollback": "restored",
-  "voice.history.versionRow": "v{n} \u00b7",
+  "voice.classification.routine": "Routine",
+  "voice.classification.material": "Material",
+  "voice.outcome.autoActivated": "Activated automatically",
+  "voice.outcome.reviewRequired": "Review required",
+  "voice.outcome.manuallyActivated": "Activated by you",
+  "voice.outcome.rejected": "Rejected",
+  "voice.outcome.rollback": "Restored",
   "voice.history.loadMore": "Show older entries",
   "voice.insights.provenance": "Built from your writing samples · v{n}",
   "voice.insights.statWords": "Words: {count}",
@@ -9198,10 +9279,54 @@ export const en = {
   "voice.history.deltaRow": "v{from} \u2192 v{to}",
   "voice.history.learning":
     "Learning continuously: drafts served {drafted}, edited before sending {edited}, rejected {rejected}.",
-  "voice.history.rollback": "Restore version {n}",
+  "voice.history.rollback": "Roll back to version {n}",
+  "voice.history.rollbackConfirm.title": "Roll back to version {n}?",
+  "voice.history.rollbackConfirm.body":
+    "Version {n} becomes your active voice again. The current version stays in this list.",
+  "voice.history.version": "Version {n}",
+  "voice.history.col.version": "Version",
+  "voice.history.col.status": "Status",
+  "voice.history.col.created": "Created",
+  "voice.history.col.reason": "Reason",
+  "voice.history.col.samples": "Samples",
+  "voice.history.col.actions": "Actions",
+  "voice.history.col.change": "Change",
+  "voice.history.col.kind": "Kind",
+  "voice.history.col.outcome": "Outcome",
+  "voice.history.col.wordsAdded": "Words added",
+  "voice.history.col.date": "Date",
+  "voice.history.sampleCount_one": "{count} sample",
+  "voice.history.sampleCount_other": "{count} samples",
+  "voice.history.wordsAdded_one": "{count} word added",
+  "voice.history.wordsAdded_other": "{count} words added",
+  "voice.reason.onboarding": "First build",
+  "voice.reason.manual": "Built by hand",
+  "voice.reason.automatic": "Automatic",
+  "voice.reason.rollback": "Rolled back",
   "settings.voice.corpusEmpty": "No samples yet.",
-  "settings.voice.excluded": "excluded",
+  "settings.voice.excluded": "Excluded",
   "settings.voice.removeSource": "Remove sample",
+  "settings.voice.removeConfirm.title": "Remove {name}?",
+  "settings.voice.removeConfirm.body":
+    "The next build no longer learns from this sample.",
+  "settings.voice.col.sample": "Sample",
+  "settings.voice.col.register": "Register",
+  "settings.voice.col.words": "Words",
+  "settings.voice.col.added": "Added",
+  "settings.voice.col.state": "State",
+  "settings.voice.col.actions": "Actions",
+  "settings.voice.wordCount_one": "{count} word",
+  "settings.voice.wordCount_other": "{count} words",
+  "settings.voice.kind.email": "Email",
+  "settings.voice.kind.linkedin": "LinkedIn post",
+  "settings.voice.kind.proposal": "Proposal",
+  "settings.voice.kind.transcript": "Transcript",
+  "settings.voice.kind.document": "Document",
+  "settings.voice.kind.other": "Other",
+  "settings.voice.exclusion.ownerExcluded": "Left out of your voice",
+  "settings.voice.exclusion.ownerRemoved": "Removed",
+  "settings.voice.exclusion.corpusCleared":
+    "Removed when the samples were cleared",
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
@@ -10255,7 +10380,6 @@ export const en = {
   "captureSettings.signatureEnrich.label": "Read contact details from mail",
   "captureSettings.signatureEnrich.help":
     "When on, Margince reads what a person states under their own name in mail they sent you: a signature, or a business card attached to it, with title, phone number, address or company. This happens within minutes of arrival. Nothing is inferred; a detail the mail does not state is not written. This is the company default; a mailbox with its own setting keeps it.",
-  "captureSettings.removeFailed": "Exclusion not removed",
   "captureSettings.addFailed": "Exclusion not added",
   "captureSettings.adminOnly":
     "Only an administrator or operations user can change this.",
@@ -10301,6 +10425,8 @@ export const en = {
     "Only an administrator or operations user can change this.",
   "operations.updateFailed": "Setting not changed",
   "operations.refusal": "Enter a whole number in the range shown.",
+  "operations.inWords": "= {interval}",
+  "operations.off": "Off",
   "operations.agentRunner.label": "Agent runs (seconds)",
   "operations.agentRunner.help":
     "How often scheduled agents are checked for a run that is due, 10 to 3,600.",
@@ -10386,9 +10512,14 @@ export const en = {
   "ownerIdentities.kind.domain": "A whole domain",
   "ownerIdentities.valueLabel": "Address or domain",
   "ownerIdentities.addressPlaceholder": "you@example.com",
-  "ownerIdentities.removeFailed": "Address not removed",
   "ownerIdentities.addFailed": "Address not added",
   "ownerIdentities.domainPlaceholder": "example.com",
+  "ownerIdentities.removedToast": "Address removed",
+  "ownerIdentities.restoredToast": "Address restored",
+  "ownerIdentities.removeLearnedTitle": "Remove {value}?",
+  "ownerIdentities.removeLearnedBody":
+    "Margince found this address in your mail. If you add it again later, it is saved as an address you typed.",
+  "ownerIdentities.removeConfirm": "Remove",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",
   "captureValue.refusedDomain":
@@ -10399,7 +10530,6 @@ export const en = {
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, folder or mailbox",
   "captureExclusions.scopeLabel": "Applies to",
-  "capturePurge.open": "Delete mail already captured from {value}",
   "capturePurge.title": "Delete mail already captured from {value}?",
   "capturePurge.intro":
     "This destroys the messages this rule already matched: text, original, attachments and everything derived from them. It cannot be undone. Check first what it would remove.",
@@ -10445,12 +10575,13 @@ export const en = {
     "{count} message was kept: a data-protection request is still being answered and needs it.",
   "capturePurge.keptRequest_other":
     "{count} messages were kept: a data-protection request is still being answered and needs them.",
+  "capturePurge.openShort": "Delete matching mail",
   "captureExclusions.containerLabel": "Folder or label",
   "captureExclusions.noContainers":
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
   "captureExclusions.containersPartial": "This folder list stopped short",
   "captureExclusions.containersPartialBody":
-    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. Type its name below instead, or keep senders out by address or domain.",
+    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. To keep its mail out, add a rule for its senders' address or domain instead.",
   "captureExclusions.containersUnreadable": "Your folders could not be read",
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",
@@ -10460,7 +10591,7 @@ export const en = {
   "captureExclusions.placeholder.domain": "example.com",
   "captureExclusions.add": "Exclude",
   "captureExclusions.addOpen": "New exclusion",
-  "captureExclusions.remove": "Resume capture of {value}",
+  "captureExclusions.removeRule": "Remove rule",
   "ownDomains.title": "Own email domains",
   "ownDomains.sub":
     "Domains that belong to this company. Messages between colleagues are not stored for anyone, including you.",
@@ -10471,15 +10602,15 @@ export const en = {
   "ownDomains.openCompany": "Open the company profile",
   "ownDomains.empty":
     "No additional domains registered. Add one if your company also sends from another domain.",
-  "ownDomains.confirmed": "Confirmed",
-  "ownDomains.candidate": "Seen on a connected mailbox, not confirmed",
+  "ownDomains.candidate": "Candidate",
   "ownDomains.add": "Add",
   "ownDomains.addOpen": "Add domain",
   "ownDomains.addLabel": "Add own domain",
   "ownDomains.placeholder": "example.com",
-  "ownDomains.removeFailed": "Domain not removed",
   "ownDomains.addFailed": "Domain not added",
   "ownDomains.remove": "Remove {domain}",
+  "ownDomains.candidateNote":
+    "Seen on a connected mailbox. Not confirmed, so it does not stop capture.",
 
   "webhooks.title": "Webhooks",
   "webhooks.readOnly":
@@ -12080,14 +12211,19 @@ export const en = {
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
   "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
+  "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",
+  "worklist.disposition.hint.not_mine":
+    "Removes it from your list only. The record keeps its owner. It comes back if the record changes hands.",
   "worklist.disposition.verb.not_sales": "Not a customer",
   "worklist.disposition.doneSnooze_one": "Back on your list tomorrow.",
   "worklist.disposition.doneSnooze_other": "Back on your list in {value} days.",
   "worklist.disposition.doneSnoozeUntil.reply":
     "Back on your list when they reply.",
+  "worklist.disposition.done.handled":
+    "Marked done for you. It comes back if they write again.",
   "worklist.disposition.done.not_mine":
-    "Removed from your list. The owner still sees it.",
+    "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
   "worklist.disposition.swipeCancel": "Keep",
   "worklist.disposition.menu": "Remove from list",
@@ -12327,6 +12463,7 @@ export const en = {
   "worklist.because.met_days_ago.value_one": "met {value} day ago",
   "worklist.because.met_days_ago.value_other": "met {value} days ago",
   "worklist.because.nothing_sent_since": "nothing sent since",
+  "worklist.because.no_attendee_on_file": "no attendee on file",
   "worklist.because.response_overdue": "reply overdue",
   "worklist.because.response_due_soon": "reply due soon",
   "worklist.because.response_due_soon.value": "reply due by {value}",
@@ -12377,6 +12514,10 @@ export const en = {
   "worklist.consequence.mailbox_blind":
     "If ignored, mail that is not arriving stays missing from this page.",
   "worklist.consequence.data_drifts": "If ignored, the records go out of date.",
+  "worklist.consequence.calendar_blind":
+    "If ignored, meetings that are not arriving stay missing from this page.",
+  "worklist.consequence.connection_blind":
+    "If ignored, what this connection brings in stays missing from this page.",
   "worklist.untitled.approval": "Approval waiting",
   "worklist.untitled.dedupe_candidate": "Possible duplicate records",
   "worklist.untitled.task": "Untitled task",
@@ -12534,6 +12675,8 @@ export const en = {
   "worklist.batch.held_draft_one": "{count} draft waiting to send",
   "worklist.batch.held_draft_other": "{count} drafts waiting to send",
   "worklist.untitled.batch": "Routine items to review",
+  "worklist.untitled.capture_health_calendar":
+    "Calendar connection needs attention",
   "worklist.verb.review_batch": "Review",
   "worklist.verb.draft_reply": "Read and reply",
   // Where the composer actually opens, the verb is the ACT rather than the way

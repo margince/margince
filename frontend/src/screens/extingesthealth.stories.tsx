@@ -85,3 +85,8 @@ export const RefusingDark: Story = {
   globals: { theme: "dark" },
   render: story(REFUSING),
 };
+
+export const RefusingAtPhoneWidth: Story = {
+  ...Refusing,
+  tags: ["uat-phone"],
+};

@@ -96,7 +96,7 @@ func connectMailbox(t *testing.T, e *integration.Env, seat ids.UUID, provider, l
 
 func runOwnSentMailRepair(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if _, err := newParticipantBackfillWorker(e.Pool, slog.Default()).backfillWorkspace(context.Background(), e.WS); err != nil {
+	if _, err := newParticipantBackfillWorker(e.Pool, nil, slog.Default()).backfillWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("running the participant backfill: %v", err)
 	}
 }

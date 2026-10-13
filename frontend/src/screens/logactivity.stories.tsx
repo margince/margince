@@ -101,7 +101,6 @@ export const HeaderTriggers: Story = {
             entityType="company"
             entityId="o1"
             askedKind="task"
-            triggerLabel="log.addTask"
             triggerIcon={<CheckSquare aria-hidden="true" />}
           />
         </div>

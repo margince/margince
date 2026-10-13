@@ -37,6 +37,8 @@ type CaptureConcern struct {
 	Provider     string
 	// AccountLabel is the display-only mailbox address when one was recorded.
 	AccountLabel string
+	// Calendar is true for a connection that carries a calendar rather than mail.
+	Calendar bool
 
 	// FailingSince is when this concern's failure streak began, nil for a
 	// condition that is a state rather than a streak — a disconnected mailbox

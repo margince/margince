@@ -60,16 +60,15 @@ func (h Handlers) CompanyContextAvailable() bool {
 	return h.companyContextAvailable
 }
 
-// WithEmbedReindexAvailable injects whether an embeddings model is bound. Its
-// one writer is the option that wires the reindex engine, so /me cannot offer
-// the reindex surface on an installation whose routes answer 501.
+// WithEmbedReindexAvailable injects whether an embeddings model is bound, read
+// on every /me. Its one writer is the option wiring the reindex routes.
 //
 // Held by: TestOneWriterDecidesWhetherTheReindexSurfaceExists
 // (backend/internal/compose/embedreindexavailability_test.go).
 //
 // Bound or unbound only: which model is bound stays behind the reindex status
 // route's own grant. Without it /me reports unavailable, failing closed.
-func (h Handlers) WithEmbedReindexAvailable(available bool) Handlers {
+func (h Handlers) WithEmbedReindexAvailable(available func() bool) Handlers {
 	h.embedReindexAvailable = available
 	return h
 }
@@ -77,7 +76,7 @@ func (h Handlers) WithEmbedReindexAvailable(available bool) Handlers {
 // EmbedReindexAvailable reports what /me will say about the reindex surface,
 // exported so the composition root can assert it agrees with the engine it wired.
 func (h Handlers) EmbedReindexAvailable() bool {
-	return h.embedReindexAvailable
+	return h.embedReindexAvailable != nil && h.embedReindexAvailable()
 }
 
 // WithListsAvailable injects whether the installation has switched lists on,

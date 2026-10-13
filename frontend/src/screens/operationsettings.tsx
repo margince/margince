@@ -8,7 +8,8 @@ import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatInterval } from "../format/interval";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate } from "./common";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
@@ -90,6 +91,28 @@ const PACING_ROWS: readonly OperationRow[] = [
   { property: "send_max_age_hours", copy: "sendMaxAge" },
 ];
 
+// The wire property names its unit, so the reading follows the property.
+function inWords(
+  row: OperationRow,
+  t: Translator,
+  locale: Locale,
+): ((typed: number) => string) | undefined {
+  const per = row.property.endsWith("_hours")
+    ? 3_600
+    : row.property.endsWith("_seconds")
+      ? 1
+      : undefined;
+  if (per === undefined) {
+    return undefined;
+  }
+  return (typed) =>
+    typed === 0 && row.lowestOn !== undefined
+      ? t("operations.off")
+      : t("operations.inWords", {
+          interval: formatInterval(typed * per, locale),
+        });
+}
+
 // One card over a slice of the installation's operating values. The page opens
 // on `job_health:read`, which a custom role can hold without
 // `installation_settings:read`; a card narrower than its page withholds itself
@@ -100,6 +123,7 @@ function OperationsCard({
   rows,
 }: Readonly<{ title: string; sub: string; rows: readonly OperationRow[] }>) {
   const t = useT();
+  const { locale } = useLocale();
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
@@ -126,6 +150,7 @@ function OperationsCard({
                 {...OPERATION_BOUNDS[row.property]}
                 lowestOn={row.lowestOn}
                 refusal={t("operations.refusal")}
+                reading={inWords(row, t, locale)}
                 disabled={!canManage || update.isPending}
                 onCommit={(next) => update.mutate({ [row.property]: next })}
               />

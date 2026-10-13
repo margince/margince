@@ -128,7 +128,7 @@ func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.Acqu
 		return nil, err
 	}
 	var args []any
-	dealCount, err := acquisitionDealCount(ctx, &args)
+	dealCount, err := visibleDealCount(ctx, &args, "d.acquisition_source = deal_acquisition_source.key")
 	if err != nil {
 		return nil, err
 	}
@@ -154,10 +154,9 @@ func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.Acqu
 	return out, err
 }
 
-// acquisitionDealCount renders the column counting the live deals that carry a
-// source, under the caller's own deal row scope. A caller who may not read
-// deals gets NULL, so the field is absent: a zero would claim no deal carries it.
-func acquisitionDealCount(ctx context.Context, args *[]any) (string, error) {
+// visibleDealCount honours the caller's own deal row scope. A caller who may not
+// read deals gets NULL, so the field is absent: a zero would claim none match.
+func visibleDealCount(ctx context.Context, args *[]any, match string) (string, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
 		return "NULL::bigint", nil
 	} else if err != nil {
@@ -172,7 +171,7 @@ func acquisitionDealCount(ctx context.Context, args *[]any) (string, error) {
 		scope = "true"
 	}
 	return `(SELECT count(*) FROM deal d
-	  WHERE d.archived_at IS NULL AND d.acquisition_source = deal_acquisition_source.key AND (` + scope + `))`, nil
+	  WHERE d.archived_at IS NULL AND ` + match + ` AND (` + scope + `))`, nil
 }
 
 // CreateAcquisitionSource adds a channel.

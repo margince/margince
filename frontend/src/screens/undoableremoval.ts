@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useLayoutEffect, useRef } from "react";
+import { useFocusHandoff } from "../design-system/focushandoff";
 import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -42,4 +44,23 @@ export function useUndoableRemoval<Handle>(
         ),
     }),
   };
+}
+
+/** The first live control in the row after `control`'s, else the row before. */
+export function neighbourVerb(control: Element | null): HTMLElement | null {
+  const row = control?.closest(".settingrow");
+  const sibling = row?.nextElementSibling ?? row?.previousElementSibling;
+  return sibling?.querySelector<HTMLElement>("button:not(:disabled)") ?? null;
+}
+
+// A removal unmounts the row holding focus; a neighbour takes it, else `fallback`.
+export function useRowHandoff(fallback: () => HTMLElement | null) {
+  const verbs = useRef<HTMLSpanElement>(null);
+  // Read at unmount, when the ref itself may already be detached.
+  const held = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    held.current = verbs.current;
+  });
+  useFocusHandoff(verbs, () => neighbourVerb(held.current) ?? fallback());
+  return verbs;
 }

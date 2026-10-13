@@ -1,0 +1,14 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion
+ */
+
+/* A domain has no spaces, so without this it would hold the column open past
+   the panel's edge. */
+.blocked-domains-domain {
+  overflow-wrap: anywhere;
+}
+
+/* A decider is two words at most; on one line it keeps its heading on one too. */
+.blocked-domains-decider {
+  white-space: nowrap;
+}

@@ -191,6 +191,13 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement": "internal/modules/activities",
+	// Which owed mails had their stored original re-read for a calendar method.
+	// Its candidates are owedSQL, which this module owns, so the marker is here
+	// rather than beside the compose-owned markers of the meeting passes.
+	"activity_calendar_method_backfill": "internal/modules/activities",
+	// The waiting horizon the worker pass measured, one row for the installation.
+	// The queue's own predicates are what read it, and they live in this module.
+	"activity_waiting_horizon": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the

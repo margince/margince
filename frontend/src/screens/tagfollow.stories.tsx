@@ -98,3 +98,41 @@ export const ToContacts: Story = {
     ).toBeDisabled();
   },
 };
+
+/** The content width of a record's details panel: 360px less its inset. */
+function DetailsPanelWidth({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <div style={{ inlineSize: "calc(360px - 2 * var(--padPanel))" }}>
+      {children}
+    </div>
+  );
+}
+
+/** The company offer at the details panel's width: the words on their own
+ * lines, the button under them, the dismiss at the top end. */
+export const ToContactsInTheDetailsPanel: Story = {
+  render: () => (
+    <Served>
+      <DetailsPanelWidth>
+        <ContactsTagOffer companyID={COMPANY} tag={TAG} onClose={() => {}} />
+      </DetailsPanelWidth>
+    </Served>
+  ),
+};
+
+/** The contact's offer to tag the employer, at the same width. */
+export const ToCompanyInTheDetailsPanel: Story = {
+  render: () => (
+    <Served>
+      <DetailsPanelWidth>
+        <EmployerTagOffer
+          employer={{ company_id: COMPANY, company_name: "Demo GmbH" }}
+          tag={TAG}
+          onClose={() => {}}
+        />
+      </DetailsPanelWidth>
+    </Served>
+  ),
+};

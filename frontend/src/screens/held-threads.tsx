@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -18,6 +18,7 @@ import { useThreadAudience } from "./audienceservice";
 import { problemMessageOf, QueryGate, unwrap } from "./common";
 import { useOpenEmail } from "./openemail";
 import { VerdictPassNote } from "./verdictpass";
+import "./held-threads.css";
 
 // What this mailbox is holding back from the team, and the one press that
 // releases a thread.
@@ -33,11 +34,10 @@ import { VerdictPassNote } from "./verdictpass";
 // exactly what holding them prevents.
 
 type HeldThread = components["schemas"]["HeldThread"];
+type HeldThreadList = components["schemas"]["HeldThreadListResponse"];
 
 // Why a thread is held, in the reader's words. A kind absent from the map is
-// one the server learned to say and this screen has not — it falls back to the
-// raw token rather than rendering nothing, so a new kind arrives as something
-// to name instead of a blank cell.
+// one the server learned to say and this screen has not.
 const kindLabel: Record<string, MessageKey> = {
   legal: "heldThreads.kind.legal",
   financial_corporate: "heldThreads.kind.financialCorporate",
@@ -60,33 +60,44 @@ export function HeldThreadsCard() {
     <Panel title={t("heldThreads.title")}>
       <PanelBody>
         <PanelIntro>{t("heldThreads.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("heldThreads.title")}>
-          {(list) =>
-            list.data.length === 0 ? (
-              // Nothing held is a READING, not an absent list: "my mailbox is
-              // withholding nothing right now" is exactly what an owner opens
-              // this card to confirm.
-              <EmptyState>{t("heldThreads.empty")}</EmptyState>
-            ) : (
-              <>
-                <BacklogCallout rows={list.data} />
-                {/* Only where a row is actually waiting on the pass. A thread
-                    held because the model judged it personnel is not waiting
-                    for anything, and telling its owner when the next pass runs
-                    would promise a change that is not coming. */}
-                {list.data.some((row) => row.pending) && (
-                  <VerdictPassNote
-                    clock={list.thread_verdict}
-                    subject="threads"
-                  />
-                )}
-                <HeldThreadTable rows={list.data} />
-              </>
-            )
-          }
-        </QueryGate>
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("heldThreads.title")}>
+        {(list) =>
+          list.data.length === 0 ? (
+            // Nothing held is a reading, not an absent list: "my mailbox is
+            // withholding nothing right now" is what an owner opens this to see.
+            <PanelBody>
+              <EmptyState>{t("heldThreads.empty")}</EmptyState>
+            </PanelBody>
+          ) : (
+            <>
+              <HeldThreadNotices list={list} />
+              <HeldThreadTable rows={list.data} />
+            </>
+          )
+        }
+      </QueryGate>
     </Panel>
+  );
+}
+
+function HeldThreadNotices({ list }: Readonly<{ list: HeldThreadList }>) {
+  const stalled = list.data.some(
+    (row) => row.pending && row.attempts >= backlogStallAttempts,
+  );
+  // Only where a row waits on the pass. A thread judged personnel waits for
+  // nothing, so naming the next pass would promise a change.
+  const waiting = list.data.some((row) => row.pending);
+  if (!stalled && !waiting) {
+    return null;
+  }
+  return (
+    <PanelBody className="form-stack">
+      <BacklogCallout rows={list.data} />
+      {waiting && (
+        <VerdictPassNote clock={list.thread_verdict} subject="threads" />
+      )}
+    </PanelBody>
   );
 }
 
@@ -130,9 +141,14 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
   // The message a held row opens. This table is the one place a reader meets
   // these threads, so the drawer belongs to it.
   const [openEmail, setOpenEmail] = useOpenEmail();
+  const base = useId();
+  const erasedId = (row: HeldThread) => `${base}-${row.thread_key}`;
+  const subjectId = (row: HeldThread) => `${base}-subject-${row.thread_key}`;
   return (
     <>
       <DataTable<HeldThread>
+        bleed
+        fold
         label={t("heldThreads.title")}
         rows={rows}
         rowKey={(row) => row.thread_key}
@@ -140,19 +156,23 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           {
             key: "subject",
             header: t("heldThreads.colThread"),
-            render: (row) =>
-              // A thread whose opening message was erased has no subject to
-              // show. It is still held, and saying so beats an empty cell that
-              // reads as a message sent with a blank subject line.
-              // Three states, not two: a subject, a message that carries
-              // none, and no message at all. Collapsing the last two would tell
-              // a reader their evidence was destroyed when it is sitting there
-              // unnamed.
-              row.has_message ? (
-                <ThreadSubject row={row} onOpen={setOpenEmail} />
-              ) : (
-                <span>{t("heldThreads.noSubject")}</span>
-              ),
+            grow: true,
+            render: (row) => (
+              // Three states, not two: a subject, a message that carries none,
+              // and no message at all, which still governs later mail.
+              <span className="held-threads-subject" id={subjectId(row)}>
+                {row.has_message ? (
+                  <ThreadSubject row={row} onOpen={setOpenEmail} />
+                ) : (
+                  <CellStack>
+                    <span>{t("heldThreads.noSubject")}</span>
+                    <span className="t-caption" id={erasedId(row)}>
+                      {t("heldThreads.nothingToShare")}
+                    </span>
+                  </CellStack>
+                )}
+              </span>
+            ),
           },
           {
             key: "why",
@@ -162,27 +182,24 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           {
             key: "when",
             header: t("heldThreads.colWhen"),
+            align: "end",
             render: (row) =>
-              row.occurred_at ? (
-                formatDateTime(row.occurred_at, locale, zone)
-              ) : (
-                <span>—</span>
-              ),
+              row.occurred_at
+                ? formatDateTime(row.occurred_at, locale, zone)
+                : "—",
           },
           {
             key: "actions",
-            header: t("heldThreads.colActions"),
+            header: t("table.actions"),
+            headerHidden: true,
+            align: "end",
+            fold: "end",
             render: (row) => (
               <Button
-                // A verdict outlives the message it was raised about, and the
-                // release endpoint works on the seat's MESSAGES on the thread —
-                // with none left it answers not-found. Offering the verb anyway
-                // would be a control whose only outcome is an error, so it says
-                // why instead. The row stays listed: the verdict still governs
-                // what a later message on this thread inherits.
-                reason={
-                  row.has_message ? undefined : t("heldThreads.nothingToShare")
-                }
+                // The release endpoint works on the seat's messages on the
+                // thread, so with none left it could only answer not-found.
+                reasonId={row.has_message ? undefined : erasedId(row)}
+                aria-describedby={subjectId(row)}
                 pending={
                   release.isPending &&
                   release.variables?.threadKey === row.thread_key
@@ -197,29 +214,33 @@ function HeldThreadTable({ rows }: Readonly<{ rows: HeldThread[] }>) {
           },
         ]}
       />
-      {release.isError && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("heldThreads.releaseFailed")}
-        >
-          {problemMessageOf(release.error, t)}
-        </Callout>
-      )}
-      {/* One notice with a line per thread, not a notice per thread: a reader
-          working down the table grew a stack of identical bands under it. */}
-      {stillHeld.length > 0 && (
-        <Callout kind="outcome" title={t("heldThreads.stillHeldTitle")}>
-          <ul>
-            {stillHeld.map(([threadKey, owners]) => (
-              <li key={threadKey}>
-                {plural("heldThreads.heldByOthers", owners, {
-                  count: formatNumber(owners, locale),
-                })}
-              </li>
-            ))}
-          </ul>
-        </Callout>
+      {(release.isError || stillHeld.length > 0) && (
+        <PanelBody className="form-stack">
+          {release.isError && (
+            <Callout
+              tone="danger"
+              kind="outcome"
+              title={t("heldThreads.releaseFailed")}
+            >
+              {problemMessageOf(release.error, t)}
+            </Callout>
+          )}
+          {/* One notice listing every thread, so releasing several rows adds
+              no stack of identical bands. */}
+          {stillHeld.length > 0 && (
+            <Callout kind="outcome" title={t("heldThreads.stillHeldTitle")}>
+              <ul>
+                {stillHeld.map(([threadKey, owners]) => (
+                  <li key={threadKey}>
+                    {plural("heldThreads.heldByOthers", owners, {
+                      count: formatNumber(owners, locale),
+                    })}
+                  </li>
+                ))}
+              </ul>
+            </Callout>
+          )}
+        </PanelBody>
       )}
       {/* One drawer over the table, at its level rather than inside a row:
           two mounted dialogs would be two `aria-modal` elements. */}
@@ -288,48 +309,33 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const asked = plural("heldThreads.attempts", row.attempts, {
+    count: formatNumber(row.attempts, locale),
+  });
   if (row.pending) {
     return (
       <CellStack>
-        {/* `info`: pending below the ceiling is ordinary latency — the same
-            reading the stalled-backlog callout above refuses to cry wolf
-            about — so amber told a reader to act on a queue that is moving. */}
+        {/* `info`: pending below the ceiling is ordinary latency, which the
+            stalled-backlog callout above already refuses to cry wolf about. */}
         <Badge tone="info">{t("heldThreads.pending")}</Badge>
-        <span className="t-caption">
-          {plural("heldThreads.attempts", row.attempts, {
-            count: formatNumber(row.attempts, locale),
-          })}
-        </span>
+        <span className="t-caption">{asked}</span>
+      </CellStack>
+    );
+  }
+  if (row.status === "unsure") {
+    return (
+      <CellStack>
+        <Badge>{t("heldThreads.kind.unsure")}</Badge>
+        <span className="t-caption">{asked}</span>
       </CellStack>
     );
   }
   const kindKey = row.kind ? kindLabel[row.kind] : undefined;
-  return <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>;
+  return <Badge>{t(kindKey ?? "heldThreads.kind.other")}</Badge>;
 }
 
-/**
- * A held thread's subject, as a citation of the message it was raised about.
- *
- * EmailReference rather than this file's own button: naming a message and
- * offering to open it is exactly what a citation is, and the hand-rolled
- * version here had grown its own copies of the blank-subject fallback, the
- * withheld reading and the not-openable branch — three rules that must agree
- * with every other citation in the product and had no way of doing so.
- *
- * No date, because the table has a When column of its own. A reference that
- * printed one would put the same timestamp twice in one row.
- *
- * Two flags, because there are three states and the caller must not collapse
- * them. `has_message` is whether the message still EXISTS, read without the
- * content gate; `activity_id` is read from the gated join, so the presence of
- * that field IS the permission. A message that exists and carries no id is one
- * this reader may not read — withheld — and one that carries an id but no
- * subject was simply sent with a blank subject line, which reads as "No
- * subject" and still opens.
- *
- * Only a thread whose message still exists reaches here; the caller draws the
- * erased case, which is a statement about the ledger rather than a citation.
- */
+// A held thread's subject as a citation, with no date beside the Arrived column.
+// `activity_id` is gated, so an existing message without one is withheld.
 function ThreadSubject({
   row,
   onOpen,

@@ -425,6 +425,14 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		}
 		in.HostUserID = idArg[ids.UserKind](req.HostUserId)
 	}
+	if req.AttendeeUserIds != nil {
+		if in.Kind != KindMeeting && in.Kind != string(crmcontracts.ActivityKindCall) {
+			return &KindFieldError{Field: fieldAttendeeUserIDs, Only: "a meeting or call"}
+		}
+		for _, attendee := range *req.AttendeeUserIds {
+			in.AttendeeUserIDs = append(in.AttendeeUserIDs, ids.From[ids.UserKind](ids.UUID(attendee)))
+		}
+	}
 	if req.Links != nil {
 		for _, link := range *req.Links {
 			in.Links = append(in.Links, ActivityLinkInput{

@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* One document set as one record row: its name, its figures at the end edge,
+ * then the row menu and the chevron at a fixed place. */
+.knowledge-set {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "name documents passages menu open";
+  align-items: center;
+  column-gap: var(--space-3);
+}
+.knowledge-set-name {
+  grid-area: name;
+  min-width: 0;
+}
+.knowledge-set-documents {
+  grid-area: documents;
+  text-align: end;
+}
+/* Capped, so the coverage reason wraps and the name takes the spare width. */
+.knowledge-set-passages {
+  grid-area: passages;
+  max-width: 13rem;
+}
+.knowledge-set-menu {
+  grid-area: menu;
+}
+.knowledge-set-open {
+  grid-area: open;
+}
+
+/* Below the width where the settings column is full, the row folds: the name
+ * with its verbs, then the figures under it. */
+@media (max-width: 900px) {
+  .knowledge-set {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name menu open"
+      "documents documents documents"
+      "passages passages passages";
+    row-gap: var(--space-1);
+  }
+  .knowledge-set-documents {
+    text-align: start;
+  }
+  .knowledge-set-passages {
+    max-width: none;
+  }
+}

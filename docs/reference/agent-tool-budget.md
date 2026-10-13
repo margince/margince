@@ -56,8 +56,8 @@ spends it on every run of every agent.
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29825 |  |  | 91% |  |  |  |
+| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2901 | 1972 | 5459 | 16% | 17751 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29909 |  |  | 91% |  |  |  |
 
 ### `morning_brief`
 
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5292 tokens on every step (2818 listing, 1888 step schema), leaving
-17918 of its budget and 27476 tokens of the
+Attaches 7 tools and pays 5459 tokens on every step (2901 listing, 1972 step schema), leaving
+17751 of its budget and 27309 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 354, across 84 served tools.
+Median 292 tokens, mean 355, across 84 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -158,11 +158,11 @@ listing once. Read a row as what that tool costs a menu.
 | `send_company_email` | 823 |  |
 | `list_records` | 817 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
+| `log_activity` | 784 | 3 scenarios |
 | `compose_analytics_report` | 772 |  |
 | `send_email` | 754 |  |
 | `read_lists` | 744 |  |
 | `preview_import` | 725 |  |
-| `log_activity` | 701 | 3 scenarios |
 | `create_record` | 667 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |

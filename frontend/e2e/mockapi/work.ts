@@ -195,16 +195,21 @@ export const listActivities: Handler = (
 ) => {
   const entityType = url.searchParams.get("entity_type");
   const entityId = url.searchParams.get("entity_id");
+  const kind = url.searchParams.get("kind");
   if (entityType !== "deal" && entityType !== "project") {
     return json(page([]));
   }
+  // `kind` narrows as the real list does: the close dialog asks for a deal's
+  // tasks, and a note logged on the deal is not one.
   return json(
     page(
-      loggedActivities.filter((row) =>
-        row.links.some(
-          (link) =>
-            link.entity_type === entityType && link.entity_id === entityId,
-        ),
+      loggedActivities.filter(
+        (row) =>
+          (kind === null || row.kind === kind) &&
+          row.links.some(
+            (link) =>
+              link.entity_type === entityType && link.entity_id === entityId,
+          ),
       ),
     ),
   );

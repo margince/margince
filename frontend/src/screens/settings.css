@@ -157,17 +157,19 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* On a phone the fixed vocabulary and the verbs are the width, so the label
-   takes a line of its own. */
+/* On a phone the label and the key each take a line, and the verbs wrap
+   under the badges when the badges leave them no room. */
 @media (max-width: 560px) {
   .criterion-row {
-    grid-template-columns: auto auto 1fr;
+    display: flex;
+    flex-wrap: wrap;
   }
-  .criterion-label {
-    grid-column: 1 / -1;
+  .criterion-label,
+  .criterion-key {
+    flex-basis: 100%;
   }
   .criterion-verbs {
-    justify-self: end;
+    margin-inline-start: auto;
   }
 }
 

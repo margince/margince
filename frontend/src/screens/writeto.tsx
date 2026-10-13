@@ -8,8 +8,8 @@ import {
   useContext,
   useState,
 } from "react";
+import { isMailbox } from "../format/connectorprovider";
 import { ComposeModal, type RelinkKind } from "./compose";
-import { isMailbox } from "./connectorproviders";
 import { useConnectors } from "./connectors";
 
 /**

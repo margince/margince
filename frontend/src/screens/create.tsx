@@ -107,6 +107,9 @@ export type CreateField = {
   // key and (if set) the kind's key, which scopes primaryKey to one kind.
   rowFields?: SubField[];
   addLabel?: MessageKey;
+  // The verb that opens the list's editor, naming the list: "Change Email"
+  // reads as one address, where the editor also adds and removes them.
+  editLabel?: MessageKey;
   primaryKey?: string;
   typeKey?: string;
   // typeKey's value when unanswered — must match the request mapper's own
