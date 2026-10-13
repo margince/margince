@@ -29,9 +29,9 @@ import (
 func queuedRun(actor principal.Principal, attempt int) migration.Run {
 	stored := migration.StoredActorOf(actor)
 	correlation := ids.NewV7()
-	return migration.Run{ID: migration.RunID(ids.NewV7()), Session: migration.Session{
-		JobAttempt: attempt, Actor: &stored, AttemptCorrelationID: &correlation,
-	}}
+	run := migration.Run{ID: migration.RunID(ids.NewV7())}
+	run.JobAttempt, run.Actor, run.AttemptCorrelationID = attempt, &stored, &correlation
+	return run
 }
 
 // agentOf is the principal the harness passport authenticates as today.
@@ -144,5 +144,26 @@ func TestEachAttemptCarriesItsOwnCorrelation(t *testing.T) {
 		if !ok || got != *run.AttemptCorrelationID {
 			t.Errorf("attempt %d runs in trace %v, want its own %v", run.JobAttempt, got, *run.AttemptCorrelationID)
 		}
+	}
+}
+
+func TestAnAgentActsWithNoVerbItsPassportLacks(t *testing.T) {
+	e := Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
+	run := queuedRun(agentOf(t, e), 1)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE passport SET scopes = ARRAY['read'] WHERE id = $1`, e.AgentPassport)
+		return err
+	}); err != nil {
+		t.Fatalf("narrowing the passport to read: %v", err)
+	}
+
+	ctx, err := compose.ActAsImportRunForTest(e.wsCtx(), e.Pool, run)
+	if err != nil {
+		t.Fatalf("acting as a read-only agent: %v", err)
+	}
+	acting, ok := principal.Actor(ctx)
+	if !ok || acting.Scopes.Has(principal.ScopeWrite) {
+		t.Errorf("an agent whose passport holds only read acts with scopes %v, want no write", acting.Scopes)
 	}
 }
