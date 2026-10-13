@@ -66,7 +66,7 @@ export function dirtyKeys(purposes: PurposeView[], draft: Draft): string[] {
 export function toChoices(
   purposes: PurposeView[],
   draft: Draft,
-  wordingOf: (key: string) => string,
+  wordingOf: (purpose: PurposeView) => string,
 ): Array<{
   purpose_key: string;
   state: "granted" | "withdrawn";
@@ -78,7 +78,7 @@ export function toChoices(
     .map((purpose) => ({
       purpose_key: purpose.key,
       state: draft[purpose.key] ? ("granted" as const) : ("withdrawn" as const),
-      wording: wordingOf(purpose.key),
+      wording: wordingOf(purpose),
     }));
 }
 
@@ -105,7 +105,7 @@ export const PURPOSE_LABEL_KEYS: Record<string, MessageKey> = {
 /** The purpose's name in the reader's language, or the catalog's own. */
 export function labelOf(
   t: (key: MessageKey, vars?: Record<string, string>) => string,
-  purpose: PurposeView,
+  purpose: Pick<PurposeView, "key" | "label">,
 ): string {
   const key = PURPOSE_LABEL_KEYS[purpose.key];
   return key ? t(key) : purpose.label;

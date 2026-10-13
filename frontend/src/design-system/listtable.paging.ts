@@ -234,11 +234,12 @@ export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
   );
   const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
   const window = Array.from({ length: span }, (_, index) => first + index);
+  const last = window.at(-1);
   return [
     first > 1 ? 1 : "room",
     first > 2 ? "gap" : "room",
     ...window,
     ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
-    window[span - 1] < lastPage ? "gap" : "room",
+    last !== undefined && last < lastPage ? "gap" : "room",
   ];
 }

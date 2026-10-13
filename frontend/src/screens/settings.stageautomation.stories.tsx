@@ -111,8 +111,8 @@ const populatedRoutes: RouteMap = {
         {
           id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
           pipeline_id: PIPELINE_ID,
-          from_stage_id: populated[0].from_stage_id,
-          to_stage_id: populated[0].to_stage_id,
+          from_stage_id: transition.from_stage_id,
+          to_stage_id: transition.to_stage_id,
           mode: "auto",
           clean_acceptance_threshold: 0.9,
           correction_reversal_threshold: 0.01,

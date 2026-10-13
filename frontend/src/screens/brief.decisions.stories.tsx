@@ -106,10 +106,11 @@ export const RowOpen: Story = {
   args: { ...BASE, items: MANY },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const triggers = await canvas.findAllByRole("button", {
+    const [trigger] = await canvas.findAllByRole("button", {
       name: "Proposal",
     });
-    await userEvent.click(triggers[0]);
+    if (!trigger) throw new Error("the deck shows no Proposal row to open");
+    await userEvent.click(trigger);
   },
 };
 
@@ -119,10 +120,11 @@ export const OtherAnswers: Story = {
   args: { ...BASE, items: MANY },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const menus = await canvas.findAllByRole("button", {
+    const [menu] = await canvas.findAllByRole("button", {
       name: "More options",
     });
-    await userEvent.click(menus[0]);
+    if (!menu) throw new Error("the deck shows no More options menu");
+    await userEvent.click(menu);
   },
 };
 

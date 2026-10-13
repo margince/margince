@@ -99,9 +99,10 @@ export function BookingReview({
       return plural("scheduling.reviewTimes", picks.length, {
         count: formatNumber(picks.length, locale),
       });
-    if (mode === "invite")
+    const [firstPick] = picks;
+    if (mode === "invite" && firstPick)
       return t("scheduling.sendInviteAt", {
-        time: formatDateTime(picks[0].start, locale, zone),
+        time: formatDateTime(firstPick.start, locale, zone),
       });
     return t("scheduling.createLinkReview");
   })();

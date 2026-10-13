@@ -298,15 +298,16 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   // A withheld project arrives as null with `masked_fields` naming it, and
   // is not the same as none; an archived deal takes no writes at all.
   const masked = (deal.masked_fields ?? []).includes("project_id");
+  const [project] = candidates;
   if (
     deal.status !== "won" ||
     masked ||
     deal.archived_at ||
-    candidates.length !== 1
+    candidates.length !== 1 ||
+    project === undefined
   ) {
     return null;
   }
-  const project = candidates[0];
   // The retry case: the deal already names this project but the advance
   // failed, so the project is still short of delivery.
   const attached = deal.project_id === project.id;

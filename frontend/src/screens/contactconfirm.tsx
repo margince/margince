@@ -39,7 +39,8 @@ export function ContactConfirmCallout({
   const pending = (view.profile_fields ?? []).filter(
     (field) => field.verdict === undefined,
   );
-  if (pending.length === 0) {
+  const [first] = pending;
+  if (first === undefined) {
     return null;
   }
   // Distinct field names, alphabetised in the reader's own order rather than
@@ -60,7 +61,7 @@ export function ContactConfirmCallout({
   // when THESE were read.
   const latest = pending.reduce(
     (max, field) => (field.captured_at > max ? field.captured_at : max),
-    pending[0].captured_at,
+    first.captured_at,
   );
   return (
     <Callout

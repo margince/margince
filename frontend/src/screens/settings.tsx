@@ -470,7 +470,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // carried, so a rewrite never invents an address: a legacy link to a page the
   // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
-    if (legacy) {
+    if (legacy && active) {
       navigateReplacing(settingsHref(active.id));
     }
   }, [legacy, active]);
@@ -501,6 +501,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
       </div>
     );
   }
+  if (active === undefined) return null;
 
   return (
     <div className="wrap">
@@ -561,15 +562,10 @@ function AgentsTab() {
 // you — how you sign in, how you sign off, and which language the product
 // speaks to you in.
 //
-// It used to be four panels with four header bands: Profile, Change password,
-// Email signature, Preferences. Each held exactly one decision, so a reader
-// auditing their own account read four titles to find three settings, and the
-// answers sat at four different x. The identity block is the card's SUBJECT,
-// drawn the way the product draws an identity everywhere else — the record
-// page's own header block (composed.css `.record-head`): a mark, the name, the
-// standing badges on the name's line, and the meta that qualifies it
-// underneath. Everything below it is a decision ABOUT that subject, in the
-// page's one row language.
+// The identity block is the card's subject, drawn like the record page's
+// header block (composed.css `.record-head`). It has a mark, the name, badges
+// on the name's line, and the meta under it. Everything below
+// it is a decision about that subject, in the page's one row language.
 function AccountCard() {
   const t = useT();
   const query = useMe();

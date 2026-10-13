@@ -67,7 +67,7 @@ export function sectionFromAddress(
     return segment;
   }
   if (segment && segment in SECTION_OF_REPORT) {
-    return SECTION_OF_REPORT[segment];
+    return SECTION_OF_REPORT[segment] ?? fallback;
   }
   return fallback;
 }

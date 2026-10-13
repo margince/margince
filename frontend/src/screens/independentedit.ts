@@ -50,6 +50,8 @@ function at(values: Values, path: string[]): unknown {
 function patchOnto(latest: Values, changes: Change[]): Values {
   const patch: Values = {};
   for (const { path, after } of changes) {
+    const leaf = path.at(-1);
+    if (leaf === undefined) continue;
     let target = patch;
     let source = latest;
     for (const key of path.slice(0, -1)) {
@@ -59,7 +61,7 @@ function patchOnto(latest: Values, changes: Change[]): Values {
       target[key] ??= structuredClone(source);
       target = target[key] as Values;
     }
-    target[path[path.length - 1]] = after;
+    target[leaf] = after;
   }
   return patch;
 }
@@ -99,7 +101,9 @@ export async function saveIndependentEdit<T extends Versioned>({
   const before = project(original);
   const changes = changesFrom(patch, before);
   if (changes.length === 0) return original;
-  const touched = new Set(changes.map(({ path }) => path[0]));
+  const touched = new Set(
+    changes.flatMap(({ path: [head] }) => (head === undefined ? [] : [head])),
+  );
   const dependencies = groups
     .filter((group) => group.some((key) => touched.has(key)))
     .flat();

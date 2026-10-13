@@ -46,7 +46,8 @@ const PLOT_PX = 56;
 const STACK_GAP_PX = 2;
 
 // Tick steps a reader can count in, and the most that fit under the strip.
-const TICK_STEP_HOURS = [1, 2, 3, 6, 12, 24, 48, 168];
+const COARSEST_STEP_HOURS = 168;
+const TICK_STEP_HOURS = [1, 2, 3, 6, 12, 24, 48, COARSEST_STEP_HOURS];
 const MAX_TICKS = 7;
 // A tick this close to an end would print over the start label, which is a
 // date or a time, or over the shorter "Now".
@@ -171,7 +172,7 @@ export function axisTicks(
   }
   const step =
     TICK_STEP_HOURS.find((hours) => span / HOUR_MS / hours <= MAX_TICKS) ??
-    TICK_STEP_HOURS[TICK_STEP_HOURS.length - 1];
+    COARSEST_STEP_HOURS;
   const ticks: AxisTick[] = [];
   let midnights = 0;
   for (

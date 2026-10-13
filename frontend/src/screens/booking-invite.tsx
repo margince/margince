@@ -224,10 +224,11 @@ function BookingHead({
 
 function bookingRecipient(contact?: Contact) {
   const addresses = contact?.emails ?? [];
+  const [only, ...others] = addresses;
   return (
     contact?.primary_email ??
     addresses.find((address) => address.is_primary)?.email ??
-    (addresses.length === 1 ? addresses[0].email : "")
+    (only !== undefined && others.length === 0 ? only.email : "")
   );
 }
 

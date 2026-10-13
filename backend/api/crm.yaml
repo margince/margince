@@ -54074,6 +54074,13 @@ components:
           type: array
           description: 'What the installation uses this contact''s data for, by published name.'
           items: { type: string }
+        purpose_keys:
+          type: array
+          description: |
+            The key of each entry in `purposes`, at the same index. A page names a purpose the
+            product seeds in its reader's language by its key, and shows the published name of any
+            other.
+          items: { type: string }
         rights:
           type: array
           description: |

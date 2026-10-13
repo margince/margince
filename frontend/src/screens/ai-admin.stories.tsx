@@ -91,6 +91,9 @@ export const Preview: Story = {
 // decision form it cannot use follows; a two-rung ladder opens to the rungs
 // behind its lead.
 const [lead] = feature.effective_candidates;
+if (!lead) {
+  throw new Error("the feature fixture carries no candidate to lead with");
+}
 const mixedFeatures = [
   { ...feature, task: "summarize" },
   {

@@ -16,11 +16,8 @@ import { Heading } from "./heading";
 
 // The account's routes, drawn.
 //
-// A picture earns its place here by showing what a list cannot: which of our
-// colleagues can reach which of their contacts, how warm each of those routes is,
-// and where the buying team has a hole. The previous diagram on this page was
-// unlabeled dots hidden from screen readers — it showed that the account had
-// many connections, which the page already said in words.
+// It shows what a list cannot: which colleague can reach which contact, how
+// warm each route is, and where the buying team has a hole.
 //
 // Data-only, and every string arrives translated. A primitive that reached for
 // the catalog would decide copy for screens it has never seen, and its stories
@@ -166,7 +163,9 @@ export function RelationshipMap({
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      press(focused);
+      if (focused !== undefined) {
+        press(focused);
+      }
     }
   };
 

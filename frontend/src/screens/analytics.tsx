@@ -794,10 +794,10 @@ function DataCoverageView({
                   {
                     key: "state",
                     header: t("analytics.covState"),
-                    render: (row: DataCoverageRow) =>
-                      COVERAGE_STATE_KEY[row.state]
-                        ? t(COVERAGE_STATE_KEY[row.state])
-                        : row.state,
+                    render: (row: DataCoverageRow) => {
+                      const stateKey = COVERAGE_STATE_KEY[row.state];
+                      return stateKey ? t(stateKey) : row.state;
+                    },
                   },
                   {
                     key: "through",

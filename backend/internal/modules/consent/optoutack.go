@@ -37,6 +37,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -164,6 +165,11 @@ func (s *Store) stageAcknowledgementTx(
 		if rbErr := nested.Rollback(ctx); rbErr != nil {
 			return fmt.Errorf("consent: the opt-out acknowledgement could not be rolled back: %w", rbErr)
 		}
+		// Logged rather than returned: the stop stands either way. A replay is
+		// the expected refusal; anything else is an acknowledgement the
+		// decree owed and nobody sent.
+		slog.WarnContext(ctx, "an opt-out acknowledgement was refused at staging; the stop stands and no acknowledgement was sent",
+			"subject_type", sub.entityType, "subject_id", sub.id, "message_id", messageID, "cause", err)
 		return nil
 	}
 	if err := nested.Commit(ctx); err != nil {

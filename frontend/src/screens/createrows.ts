@@ -51,11 +51,14 @@ export function withRowMoved(
   direction: "up" | "down",
 ): FormRow[] {
   const target = direction === "up" ? index - 1 : index + 1;
-  if (target < 0 || target >= rows.length) {
+  const moving = rows[index];
+  const displaced = rows[target];
+  if (moving === undefined || displaced === undefined) {
     return rows;
   }
   const next = [...rows];
-  [next[index], next[target]] = [next[target], next[index]];
+  next[index] = displaced;
+  next[target] = moving;
   return next;
 }
 

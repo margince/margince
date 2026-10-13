@@ -34,18 +34,13 @@ export function groupByKind(approvals: readonly Approval[]): {
   kind: string;
   approvals: Approval[];
 }[] {
-  const groups: { kind: string; approvals: Approval[] }[] = [];
-  const at = new Map<string, number>();
+  const byKind = new Map<string, Approval[]>();
   for (const approval of approvals) {
-    const index = at.get(approval.kind);
-    if (index === undefined) {
-      at.set(approval.kind, groups.length);
-      groups.push({ kind: approval.kind, approvals: [approval] });
-      continue;
-    }
-    groups[index].approvals.push(approval);
+    const group = byKind.get(approval.kind);
+    if (group === undefined) byKind.set(approval.kind, [approval]);
+    else group.push(approval);
   }
-  return groups;
+  return [...byKind].map(([kind, members]) => ({ kind, approvals: members }));
 }
 
 /**

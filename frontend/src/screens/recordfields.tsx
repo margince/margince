@@ -106,14 +106,18 @@ export function RecordFields(props: Readonly<Props>) {
       <PanelBody>
         {props.notice && <p>{props.notice}</p>}
         <FieldGrid>
-          {sections.map((section) => (
-            <RecordField
-              key={`${props.record.id}:${section.fields[0].key}`}
-              {...props}
-              label={section.label}
-              fields={section.fields}
-            />
-          ))}
+          {sections.map(({ label, fields }) => {
+            const [first] = fields;
+            return first ? (
+              <RecordField
+                key={`${props.record.id}:${first.key}`}
+                {...props}
+                label={label}
+                field={first}
+                fields={fields}
+              />
+            ) : null;
+          })}
           {props.extraRows}
         </FieldGrid>
       </PanelBody>
@@ -123,16 +127,18 @@ export function RecordFields(props: Readonly<Props>) {
 
 function RecordField({
   label,
+  field,
   ...props
 }: Readonly<
   Props & {
     label: string;
+    field: CreateField;
   }
 >) {
   const t = useT();
   const qc = useQueryClient();
   const opened = useRef(props.record);
-  const target = useDetailsFieldTarget(props.fields[0].key);
+  const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
@@ -171,7 +177,6 @@ function RecordField({
       ]);
     },
   });
-  const field = props.fields[0];
   const values = prefillFromRecord(
     props.fields,
     editing ? opened.current : props.record,
@@ -230,6 +235,7 @@ function RecordField({
         ) : (
           <GroupReading
             props={props}
+            field={field}
             editable={editable}
             canEdit={canEdit}
             reason={reason}
@@ -262,6 +268,7 @@ function RecordField({
 
 function GroupReading({
   props,
+  field,
   editable,
   canEdit,
   reason,
@@ -269,6 +276,7 @@ function GroupReading({
   onEdit,
 }: Readonly<{
   props: Props;
+  field: CreateField;
   editable: boolean;
   canEdit: boolean;
   reason?: string;
@@ -277,7 +285,7 @@ function GroupReading({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { key, editLabel } = props.fields[0];
+  const { key, editLabel } = field;
   const rendered = props.renderValues?.[key];
   if (rendered)
     return editable ? (

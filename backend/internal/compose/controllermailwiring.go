@@ -86,8 +86,12 @@ func WithControllerMail(runner *jobs.Runner) Option {
 // way the delivery row does.
 type mailerRelay struct{ m mailer.Mailer }
 
-// SendControllerMail hands one rendered message to the operator relay.
+// SendControllerMail hands one rendered message to the operator relay, under
+// the delivery row's own Message-ID so a bounce of it can find that row.
 func (r mailerRelay) SendControllerMail(ctx context.Context, msg comms.ControllerMessage) error {
+	if identified, ok := r.m.(mailer.IdentifiedSender); ok {
+		return identified.SendIdentified(ctx, msg.To, msg.Subject, msg.TextBody, msg.MessageID)
+	}
 	return r.m.Send(ctx, msg.To, msg.Subject, msg.TextBody)
 }
 

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { viewerZone } from "../format/timezone";
 import { bookingFrame } from "./book.storykit";
-import { bookingSlots } from "./book.testkit";
+import { firstBookingSlot } from "./book.testkit";
 import { BookingBlocked, BookingPicker } from "./booking-picker";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
@@ -25,7 +25,7 @@ function OpenTimes() {
   const profile = useSchedulingProfile(true);
   const [duration, setDuration] = useState(30);
   // The fixture's own week, so the story draws the same days whatever the date.
-  const [from, setFrom] = useState(bookingSlots[0].start);
+  const [from, setFrom] = useState(firstBookingSlot.start);
   const [searchAhead, setSearchAhead] = useState(false);
   return (
     <BookingPicker

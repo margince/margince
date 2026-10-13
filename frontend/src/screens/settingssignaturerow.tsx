@@ -183,6 +183,6 @@ function rowAnswer(
   if (templated) {
     return t("settings.signatureFromTemplate");
   }
-  const firstLine = body.split("\n")[0].trim();
+  const firstLine = (body.split("\n")[0] ?? "").trim();
   return firstLine === "" ? t("settings.signatureNone") : firstLine;
 }

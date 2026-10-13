@@ -1080,7 +1080,8 @@ export function buildStageTotals(
       0,
     );
     const mixed = stageRows.length > 1;
-    const single = stageRows[0];
+    const [single] = stageRows;
+    if (single === undefined) continue;
     // ONE row is not the same fact as one CURRENCY. A stage whose deals are all
     // unpriced groups into a single row whose `currency` is null, so the
     // cross-currency test says nothing about it — and its figures belong to no
@@ -1537,7 +1538,7 @@ function DealViewTools({
                 names from the place; a screen reader gets no place, so the
                 field says its own name to it. */}
             <span className="sr-only">{`${t("deals.pipeline")}: `}</span>
-            {pipelines[0].name}
+            {pipelines[0]?.name}
           </span>
         )
       )}

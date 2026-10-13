@@ -220,7 +220,7 @@ function useCreateWebhookSubscription(onCreated: (secret: string) => void) {
       return unwrap(
         await api.POST("/webhook-subscriptions", {
           body: {
-            target_url: values.target_url.trim(),
+            target_url: (values.target_url ?? "").trim(),
             event_types: splitMultiselectValue(values.event_types ?? ""),
           },
         }),

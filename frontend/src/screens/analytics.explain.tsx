@@ -65,7 +65,9 @@ export function parseDerivationQuery(
   const extra: Record<string, string | string[]> = {};
   for (const key of new Set(qs.keys())) {
     const values = qs.getAll(key);
-    extra[key] = values.length > 1 ? values : values[0];
+    const [only] = values;
+    if (only === undefined) continue;
+    extra[key] = values.length > 1 ? values : only;
   }
   return { ...extra, by: qs.getAll("by"), agg: qs.getAll("agg") };
 }

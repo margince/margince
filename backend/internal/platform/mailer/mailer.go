@@ -14,18 +14,29 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/smtp"
 	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Mailer sends one plain-text transactional message. Implementations
 // must never log the body: reset mail carries a live credential.
 type Mailer interface {
 	Send(ctx context.Context, to, subject, textBody string) error
+}
+
+// IdentifiedSender sends one message under a Message-ID the caller chose.
+//
+// A delivery report quotes the returned message's own Message-ID. A bounce is
+// matched back to its delivery row by that key alone, so a relay left to mint
+// the identity makes every bounce unmatchable.
+type IdentifiedSender interface {
+	SendIdentified(ctx context.Context, to, subject, textBody, messageID string) error
 }
 
 // SMTP is the operator-relay transport. STARTTLS is negotiated when the
@@ -46,13 +57,27 @@ type SMTP struct {
 // docker mailhog or a host postfix), where the wire never leaves the
 // machine.
 func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
+	return s.SendIdentified(ctx, to, subject, textBody, "")
+}
+
+// SendIdentified is Send with the Message-ID header set to messageID. An
+// empty messageID writes no header and leaves the identity to the relay.
+//
+// Once the relay accepts the DATA terminator the message is sent, so a QUIT
+// that fails after it is logged and the send still succeeds. Reporting it
+// would make the dispatcher retry and mail a second copy.
+func (s SMTP) SendIdentified(ctx context.Context, to, subject, textBody, messageID string) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
 	}
+	if messageID != "" && !connector.ValidMessageID(messageID) {
+		return connector.ErrInvalidMessageID
+	}
+	msg, err := s.compose(to, subject, textBody, messageID)
+	if err != nil {
+		return err
+	}
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n%s\r\n",
-		s.FromAddress, to, subject, textBody)
-
 	client, err := s.connect(ctx, addr)
 	if err != nil {
 		return err
@@ -69,13 +94,17 @@ func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
 	if err != nil {
 		return fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
 	}
-	if _, err := w.Write([]byte(msg)); err != nil {
+	if _, err := w.Write(msg); err != nil {
 		return fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)
 	}
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("mailer: relay %s did not accept the message: %w", addr, err)
 	}
-	return client.Quit()
+	if err := client.Quit(); err != nil {
+		slog.WarnContext(ctx, "the relay accepted the message and then failed the QUIT; the message is sent",
+			"relay", addr, "cause", err)
+	}
+	return nil
 }
 
 // helloName is what this installation announces to the relay.

@@ -39912,6 +39912,12 @@ export interface components {
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
+             * @description The key of each entry in `purposes`, at the same index. A page names a purpose the
+             *     product seeds in its reader's language by its key, and shows the published name of any
+             *     other.
+             */
+            purpose_keys?: string[];
+            /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */

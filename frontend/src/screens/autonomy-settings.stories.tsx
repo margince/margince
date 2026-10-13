@@ -22,14 +22,12 @@ type Row = {
   rejected: number;
 };
 
-function row(kind: string, mode: "manual" | "auto", counts: number[]): Row {
-  return {
-    kind,
-    mode,
-    approved_clean: counts[0],
-    approved_edited: counts[1],
-    rejected: counts[2],
-  };
+function row(
+  kind: string,
+  mode: "manual" | "auto",
+  [approved_clean, approved_edited, rejected]: [number, number, number],
+): Row {
+  return { kind, mode, approved_clean, approved_edited, rejected };
 }
 
 function story(data: Row[]) {
