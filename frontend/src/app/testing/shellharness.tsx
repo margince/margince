@@ -80,10 +80,10 @@ export const render = (ui: ReactNode): RenderResult =>
 export const ignoreSearch = () => undefined;
 
 /**
- * Phone width, for the chrome that has to KNOW it rather than merely be laid out
- * by it (app/viewport.ts). jsdom's own window answers every media query with
- * false, so the wide arrangement is what every other case renders — which is the
- * honest default and exactly what the desktop assertions rely on.
+ * Phone width, for the chrome that has to know it, not only be laid out by it
+ * (lib/viewport.ts). jsdom's own window answers every media query with false.
+ * So every other case renders the wide arrangement, which the desktop
+ * assertions rely on.
  *
  * Only the QUERY the app asks for matches: a stub that answered true to
  * everything would also tell the theme the reader prefers a dark one.

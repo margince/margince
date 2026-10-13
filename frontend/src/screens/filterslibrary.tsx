@@ -9,7 +9,6 @@ import { Plus } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { navigate } from "../app/router";
 import { replaceDial, useUrlParams } from "../app/urlstate";
-import { useFoldedViewport } from "../app/viewport";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Button,
@@ -25,6 +24,7 @@ import { Popover } from "../design-system/popover";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useFoldedViewport } from "../lib/viewport";
 import {
   type LibraryAnchor,
   type LibraryType,

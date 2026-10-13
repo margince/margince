@@ -10,7 +10,7 @@ import {
   type Connectivity,
   type Outage,
   useConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
 
 const NOTICE: Readonly<
   Record<Outage, { icon: LucideIcon; title: MessageKey; body: MessageKey }>

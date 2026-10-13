@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it } from "vitest";
-import { STORAGE_KEYS, writeStored } from "../app/storage";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { preferredLocale } from "./locale";
 
 function browserAsks(languages: readonly string[]): void {
