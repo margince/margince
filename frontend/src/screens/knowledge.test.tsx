@@ -56,7 +56,12 @@ function corpus(over: Record<string, unknown> = {}) {
     min_similarity: 0.35,
     default_ask: false,
     created_at: "2026-08-01T00:00:00Z",
-    coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
+    coverage: {
+      documents_total: 1,
+      chunks_total: 4,
+      chunks_embedded: 4,
+      embed_state: "complete",
+    },
     ...over,
   };
 }
@@ -84,6 +89,8 @@ function backendFor(
 ) {
   const posts: string[] = [];
   const deletes: string[] = [];
+  let sets = opts.sets ?? [corpus()];
+  let documents = opts.documents ?? [document()];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -93,6 +100,7 @@ function backendFor(
       }
       if (req.url.includes("/knowledge/documents/")) {
         deletes.push(req.url);
+        documents = documents.filter((doc) => !req.url.endsWith(doc.id));
         return new Response(null, { status: 204 });
       }
       if (req.url.includes("/documents")) {
@@ -100,7 +108,7 @@ function backendFor(
           posts.push(req.url);
           return jsonResponse(document({ ingest_status: "queued" }), 202);
         }
-        return jsonResponse({ items: opts.documents ?? [document()] });
+        return jsonResponse({ items: documents });
       }
       if (req.url.includes("/knowledge/corpora")) {
         if (req.method === "POST") {
@@ -109,9 +117,10 @@ function backendFor(
         }
         if (req.method === "DELETE") {
           deletes.push(req.url);
+          sets = sets.filter((set) => !req.url.endsWith(set.id));
           return new Response(null, { status: 204 });
         }
-        return jsonResponse({ items: opts.sets ?? [corpus()] });
+        return jsonResponse({ items: sets });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -154,6 +163,7 @@ describe("KnowledgeCard", () => {
               documents_total: 1,
               chunks_total: 4,
               chunks_embedded: 0,
+              embed_state: "no_embedding_model",
             },
           }),
         ],
@@ -164,11 +174,14 @@ describe("KnowledgeCard", () => {
 
     expect(await screen.findByText(/0 of 4 passages searchable/)).toBeTruthy();
     await user.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
+    // The set says why nothing is searchable, and a read document draws no
+    // green "Imported" beside it to contradict that.
+    expect(screen.getByText("Not searchable")).toBeTruthy();
+    expect(screen.getByText(/no embedding model is set up/i)).toBeTruthy();
     expect(await screen.findByText("operating.md")).toBeTruthy();
-    expect(screen.getByText("Imported")).toBeTruthy();
-    expect(screen.queryByText("Searchable")).toBeNull();
+    expect(screen.queryByText("Imported")).toBeNull();
   });
 
   it("offers no verbs to a reader who may ask but not administer", async () => {
@@ -178,7 +191,9 @@ describe("KnowledgeCard", () => {
     // The set is visible: read IS the ask, and every seeded role holds it.
     expect(await screen.findByText("How-to")).toBeTruthy();
     // And nothing that changes it is offered.
-    expect(screen.queryByRole("button", { name: /archive set/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Actions for How-to" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: /create set/i })).toBeNull();
   });
 
@@ -224,7 +239,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
 
     expect(await screen.findByText("operating.md")).toBeTruthy();
@@ -261,19 +276,61 @@ describe("KnowledgeCard", () => {
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<KnowledgeCard />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /archive set/i }),
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
     );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    expect(
+      within(screen.getByRole("dialog")).getByText("Archive How-to?"),
+    ).toBeTruthy();
     expect(backend.deletes).toHaveLength(0);
 
-    // The dialog's own confirm, not the row button that opened it: both carry
-    // the same verb, which is right on screen and ambiguous to a query.
-    await userEvent.click(
+    await user.click(
       within(screen.getByRole("dialog")).getByRole("button", {
         name: /^archive set$/i,
       }),
     );
     await waitFor(() => expect(backend.deletes.length).toBeGreaterThan(0));
+  });
+
+  // The archived row takes its menu with it, so focus cannot go back there.
+  it("hands focus to the card's title once a set is archived", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    await user.click(screen.getByRole("button", { name: /archive set/i }));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^archive set$/i,
+      }),
+    );
+    await waitFor(() => expect(screen.queryByText("How-to")).toBeNull());
+    expect(globalThis.document.activeElement?.textContent).toBe(
+      "Document sets",
+    );
+  });
+
+  it("returns focus to the menu when the archive is called off", async () => {
+    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    render(<KnowledgeCard />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for How-to" }),
+    );
+    const archive = screen.getByRole("button", { name: /archive set/i });
+    await user.click(archive);
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+    await waitFor(() =>
+      expect(globalThis.document.activeElement).toBe(archive),
+    );
   });
 
   it("keeps two files that share a name, because the server dedupes on content", async () => {
@@ -287,7 +344,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
     const input = await screen.findByLabelText(/add document/i);
     await userEvent.upload(
@@ -313,7 +370,7 @@ describe("KnowledgeCard", () => {
     render(<KnowledgeCard />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /show documents/i }),
+      await screen.findByRole("button", { name: "Documents in How-to" }),
     );
     // Named up front rather than after a refusal: there is no reader for a PDF
     // here, and a contact who has just watched an upload fail has learned it the
@@ -321,5 +378,58 @@ describe("KnowledgeCard", () => {
     expect(
       await screen.findByText(/plain text, markdown, csv or json/i),
     ).toBeTruthy();
+  });
+});
+
+describe("KnowledgeCard documents", () => {
+  it("lists a set's documents A to Z with their passages and size", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        documents: [
+          document({ id: "b", filename: "zeta.md", chunk_count: 12 }),
+          document({ id: "a", filename: "alpha.md", byte_size: 2_048 }),
+        ],
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    const table = await screen.findByRole("table", {
+      name: "Documents in How-to",
+    });
+    const names = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => within(row).getAllByRole("cell")[0]?.textContent);
+    expect(names).toEqual(["alpha.md", "zeta.md"]);
+    expect(within(table).getByText("2 kB")).toBeTruthy();
+  });
+
+  it("asks before deleting a document, naming it", async () => {
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for operating.md" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByText("Delete operating.md?")).toBeTruthy();
+    expect(backend.deletes).toHaveLength(0);
+    await user.click(dialog.getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(backend.deletes).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByText("operating.md")).toBeNull());
+    expect(globalThis.document.activeElement).toBe(
+      screen.getByRole("button", { name: "Documents in How-to" }),
+    );
   });
 });

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { CaptureSendersCard } from "./capture-senders";
 import {
@@ -65,6 +66,14 @@ const EVERY_KIND: SenderDecision[] = [
     overruled: false,
     record_exists: false,
   },
+  // A long address, and a kind this build has no word for.
+  {
+    address: "maximilian.oberstleutnant-von-hohenzollern@procurement.example",
+    kind: "export_control",
+    status: "unsure",
+    overruled: false,
+    record_exists: false,
+  },
 ];
 
 // The seat corrected the machine. The filled badge and the "you decided" clause
@@ -125,18 +134,45 @@ export const NothingDecided: Story = { render: story([]) };
 // Contacts still visible to this seat alone because nothing has decided their
 // sender. The second one's address never reached the senders list above it,
 // which is why the group is a read of its own: the admin card counts both.
+const WAITING: AwaitingContact[] = [
+  {
+    contact_id: "0190b7a2-0000-7000-8000-000000000011",
+    display_name: "Jana Keller",
+    emails: ["jana@commercetools.com", "j.keller@commercetools.com"],
+    captured_at: "2026-09-02T08:15:00Z",
+  },
+  {
+    contact_id: "0190b7a2-0000-7000-8000-000000000012",
+    emails: ["m.ortiz@steireif.de"],
+    captured_at: "2026-09-10T14:40:00Z",
+  },
+];
+
 export const WaitingOnDecision: Story = {
-  render: story(EVERY_KIND.slice(0, 2), [
-    {
-      contact_id: "0190b7a2-0000-7000-8000-000000000011",
-      display_name: "Jana Keller",
-      emails: ["jana@commercetools.com"],
-      captured_at: "2026-09-02T08:15:00Z",
-    },
-    {
-      contact_id: "0190b7a2-0000-7000-8000-000000000012",
-      emails: ["m.ortiz@steireif.de"],
-      captured_at: "2026-09-10T14:40:00Z",
-    },
-  ]),
+  render: story(EVERY_KIND.slice(0, 2), WAITING),
+};
+
+// The row's verbs sit behind one menu at a fixed place.
+export const RowMenu: Story = {
+  render: story(OVERRULED),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "Actions for news@substack.com",
+      }),
+    );
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Withdraw my answer",
+      }),
+    ).toBeVisible();
+  },
+};
+
+// Both tables fold to two lines at 390px.
+export const EveryKindPhone: Story = {
+  render: story(EVERY_KIND, WAITING),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,7 +36,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:ungranted",
 		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{importRunObject: {Read: false}}, // a rep: no import_run grant at all
+			Objects:  map[string]principal.ObjectGrant{ImportRunObject: {Read: false}}, // a rep: no import_run grant at all
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -81,18 +82,27 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
 		{"Approve", func() error { _, err := s.Approve(ctx, runID); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID); return err }},
-		{"FailValidation", func() error { return s.FailValidation(ctx, runID, errors.New("boom")) }},
+		{"FailValidation", func() error { return s.FailValidation(ctx, runID) }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
+		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
 			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+		}},
+		{"BindingsOf", func() error {
+			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
+			return err
 		}},
 		{"LookupBinding", func() error {
 			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
 			return err
 		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
+		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
+		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
+		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
+		{"FailStaleValidating", func() error { _, err := s.FailStaleValidating(ctx, time.Minute); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -643,9 +653,10 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
-		"ResumeApproved": true, "FailValidation": true, "GetStaged": true,
-		"RecordIdentityTx": true, "LookupBinding": true, "Undo": true,
+		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
+		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

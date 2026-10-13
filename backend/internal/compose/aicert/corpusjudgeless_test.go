@@ -183,6 +183,15 @@ func verdictProofs() map[string]judgelessProof {
 			correct: owedVerdicts("asks_us", "informs_us"), wrong: owedVerdicts("informs_us", "informs_us"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		// A decline judged asks_us is the mistake that put it on the waiting lane.
+		"a_declined_invitation_waits_on_nobody": {
+			correct: owedVerdicts("informs_us"), wrong: owedVerdicts("asks_us"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_declined_invitation_that_asks_for_another_day_waits_on_us": {
+			correct: owedVerdicts("asks_us"), wrong: owedVerdicts("informs_us"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 	}
 }
 

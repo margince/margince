@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { conditionOf, eyebrowKeyFor } from "./worklist.eyebrow";
 import type { WorklistItem } from "./worklist.queries";
+
+const t = (key: MessageKey) => translate("en", key);
 
 function row(over: Partial<WorklistItem>): WorklistItem {
   return {
@@ -55,15 +59,32 @@ describe("the word above a queue row", () => {
     expect(
       conditionOf(
         row({ category: "system", cause_label: "Gmail · lena@acme.example" }),
+        t,
       ),
     ).toBe("Gmail · lena@acme.example");
+  });
+
+  it("names a capture connection by its provider, never its id", () => {
+    const calendar = row({
+      category: "system",
+      source: "capture_health",
+      connection: { provider: "gcal", medium: "calendar" },
+    });
+    expect(conditionOf(calendar, t)).toBe("Google Calendar");
+    const mailbox = row({
+      category: "system",
+      source: "capture_health",
+      cause_label: "lena@acme.example",
+      connection: { provider: "imap", medium: "mailbox" },
+    });
+    expect(conditionOf(mailbox, t)).toBe("IMAP mailbox");
   });
 
   // ABSENT IS A REAL ANSWER. A lane whose candidate is a vocabulary rather than
   // a record mints no label, and an empty eyebrow would be worse than a vague
   // one — so the caller keeps the category word.
   it("says nothing where a system row named no cause", () => {
-    expect(conditionOf(row({ category: "system" }))).toBeNull();
+    expect(conditionOf(row({ category: "system" }), t)).toBeNull();
   });
 
   // And never on the six that already name their work: a deal at risk whose
@@ -72,10 +93,13 @@ describe("the word above a queue row", () => {
   // to show.
   it("leaves every other category its own word", () => {
     expect(
-      conditionOf(row({ category: "deals_at_risk", cause_label: "a cause" })),
+      conditionOf(
+        row({ category: "deals_at_risk", cause_label: "a cause" }),
+        t,
+      ),
     ).toBeNull();
     expect(
-      conditionOf(row({ category: "decisions", cause_label: "a cause" })),
+      conditionOf(row({ category: "decisions", cause_label: "a cause" }), t),
     ).toBeNull();
   });
 
@@ -93,6 +117,7 @@ describe("the word above a queue row", () => {
           source: "batch",
           batch: { key: "system_incident", count: 3, label: "Nightly sync" },
         } as Partial<WorklistItem>),
+        t,
       ),
     ).toBeNull();
   });

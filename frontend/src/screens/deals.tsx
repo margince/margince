@@ -69,7 +69,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   type AcquisitionSource,
@@ -2215,7 +2215,7 @@ export function DealsScreen({
         bodyCount={
           view === "board" &&
           dealsQuery.data &&
-          t("board.count", {
+          translatePlural(locale, "board.count", loadedDeals.length, {
             count: formatNumber(loadedDeals.length, locale),
           })
         }

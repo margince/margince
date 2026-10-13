@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 )
 
-const frontendMailProviders = "../frontend/src/screens/connectorproviders.ts"
+const frontendMailProviders = "../frontend/src/format/connectorprovider.ts"
 
 // tsProviderEntry reads one quoted provider name out of the set literal, in
 // either quote style: a name written in the other style than expected would

@@ -10,6 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -72,4 +74,30 @@ func taggableObjectOf(object string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// contextTagIsApplicable refuses a run naming a word that cannot be applied.
+//
+// Asked here, where the answer reaches the caller, not at the apply. The dry
+// run writes no rows, so nothing else tests the word before a human approves.
+// The apply's refusal would then fail a run mid-way, on a report silent about
+// the tag. A word retired after this check still fails the commit, and the
+// run's failure record reports it.
+func (h importHandlers) contextTagIsApplicable(ctx context.Context, raw string) error {
+	if raw == "" {
+		return nil
+	}
+	id, err := ids.Parse(raw)
+	if err != nil {
+		return httperr.Validation("context_tag_id", "invalid_uuid", "A context tag names an existing tag by id.")
+	}
+	live, err := collections.NewStore(h.db).TagIsLive(ctx, ids.TagID{UUID: id})
+	if err != nil {
+		return err
+	}
+	if !live {
+		return httperr.Validation("context_tag_id", "not_applicable",
+			"That tag does not exist or has been retired, so this import could not file its records under it.")
+	}
+	return nil
 }

@@ -447,6 +447,10 @@ function fixtureStage(
     position: n,
     semantic,
     win_probability: winProbability,
+    version: 1,
+    ...(semantic === "open"
+      ? { exit_criteria: { required: n % 2, optional: n > 2 ? 1 : 0 } }
+      : {}),
   };
 }
 const pipelinesFixture = {
@@ -541,23 +545,16 @@ export const PipelinesReadOnly: Story = {
   render: pipelinesCard({ pipeline: ["read"] }),
 };
 
-// The narrow render of the ladder's own breakpoint. A `.stage-row` carries a
-// fixed step and odds track beside the verbs, so on a phone those ARE the width
-// and the stage name has nothing left; under 560px the verbs take a line of
-// their own instead. The ladder is what makes this the right story on this
-// page: the other cards answer their list routes from the stub's empty-page
-// fallback, so a page-level narrow story would picture empty states and a head.
+// The ladder at phone width. A page-level phone story would picture only empty
+// states, since the other cards answer from the stub's empty page.
 export const PipelinesAdminPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// And the dark render of the same page, the densest real content it has: the
-// catalog's compact strips, the open ladder's shading, the Won and Lost plates
-// beside the Default badge, and the `.t-num` odds. What it watches is whether the
-// outcome plates stay distinguishable from each other and from the rows behind
-// them once the ground goes dark: each is tinted text on a tinted surface.
+// The dark render of the same page, its densest real content. The compact
+// strips, the meters and the Default badge are each tinted on a tinted ground.
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),

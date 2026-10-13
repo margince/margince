@@ -251,11 +251,13 @@ export function recordKindOf(route: Route): EntityKind | undefined {
 
 // Screens that keep the same reading column on every address they answer,
 // whatever segments follow, because none of them is drawn as a RecordView.
-// Every one of them reads DOWN: Brief is a briefing in sentences beside a rail
+// Every one of them reads DOWN. Brief is a briefing in sentences beside a rail
 // of context, with decision cards carrying drafted prose somebody has to read
-// before they can decide; Today is a queue worked top to bottom; Filters is a
-// list of saved views; Analytics is a column of report sections; a share view is one record handed to a
-// reader, prose beside facts; an offer is a detail page drawing its own
+// before they can decide. Today is a queue worked top to bottom. Filters is a
+// list of saved views. An opened list reads down from its facts to its members
+// and history, and its library and Edit filter page keep this column too.
+// Analytics is a column of report sections. A share view is one record handed
+// to a reader, prose beside facts. An offer is a detail page drawing its own
 // surface. Uncapped, each of them ran a line of text the full width of a wide
 // display with the words hugging the left edge, which is the failure the cap
 // exists to prevent.
@@ -266,6 +268,7 @@ export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
   "home",
   "worklist",
   "filters",
+  "lists",
   "analytics",
   "share",
   "offers",

@@ -96,12 +96,12 @@ describe("the approval card", () => {
     expect(root.querySelector("tbody td")?.textContent).toContain(long);
   });
 
-  it("approves through decide_approval and says the assistant still has to run it", async () => {
+  it("approves through decide_approvals and says the assistant still has to run it", async () => {
     const root = mount();
     await press(root, "Approve");
     expect(calls).toEqual([
       {
-        tool: "decide_approval",
+        tool: "decide_approvals",
         args: { staged_action_id: ID, decision: "approve" },
       },
     ]);

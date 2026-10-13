@@ -13,8 +13,12 @@ import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 type Stage = components["schemas"]["Stage"];
 
-import { AnalyticsScreen, buildStageAggregates } from "./analytics";
-import { sectionFromAddress } from "./analytics.address";
+import {
+  AnalyticsScreen,
+  analyticsTabs,
+  buildStageAggregates,
+} from "./analytics";
+import { SECTIONS, sectionFromAddress } from "./analytics.address";
 
 afterEach(() => {
   cleanup();
@@ -36,6 +40,20 @@ async function stageTable() {
   }
   return within(table);
 }
+
+it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
+  expect(analyticsTabs(SECTIONS)).toEqual([
+    "performance",
+    "forecast",
+    "pipeline",
+    "outcomes",
+    "delivery",
+    "reports",
+  ]);
+  expect(analyticsTabs([...SECTIONS].reverse())).toEqual(
+    analyticsTabs(SECTIONS),
+  );
+});
 
 describe("the delivery section", () => {
   it("draws the three project reports with converted money and real links", async () => {

@@ -38,7 +38,9 @@ const employerArmCompanies = maxPerType
 // error: the search still answers, and discloses nothing the lists would not.
 // Every refusal is decided before the first argument is bound, because a bound
 // parameter no statement references fails the whole search.
-func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool, arg func(any) int) (string, error) {
+func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool,
+	identifierPos func() int, arg func(any) int,
+) (string, error) {
 	if !auth.ReadGranted(ctx, entityContact) || !auth.ReadGranted(ctx, entityCompany) {
 		return "", nil
 	}
@@ -84,19 +86,20 @@ func employerArmSQL(ctx context.Context, headPos, tailPos int, hasFragment bool,
 	          FROM (
 	                SELECT o.id, %[3]s AS name, %[10]s::float8 AS match_rank
 	                  FROM company o
-	                 WHERE o.search_tsv @@ %[4]s AND %[5]s
+	                 WHERE %[4]s AND %[5]s
 	                 ORDER BY match_rank DESC, o.id
 	                 LIMIT $%[6]d
 	               ) m
 	          JOIN relationship r ON r.company_id = m.id AND %[7]s
 	          JOIN contact t ON t.id = r.contact_id AND %[8]s
-	         WHERE NOT (t.search_tsv @@ %[9]s)
+	         WHERE NOT %[9]s
 	         ORDER BY t.id, m.match_rank DESC, r.is_current_primary DESC, m.id
 	       ) e`,
-		contactBranch.entity, contactBranch.title, companyBranch.title, companyMatch, companyWhere,
+		contactBranch.entity, contactBranch.title, companyBranch.title,
+		companyBranch.ownMatch("o", companyMatch, identifierPos), companyWhere,
 		arg(employerArmCompanies), edgeWhere, contactWhere,
-		matchExpression(entityContact, headPos, tailPos, hasFragment),
-		scoreExpression(entityCompany, "o", headPos, tailPos, hasFragment)), nil
+		contactBranch.ownMatch("t", matchExpression(entityContact, headPos, tailPos, hasFragment), identifierPos),
+		companyBranch.ownScore("o", scoreExpression(entityCompany, "o", headPos, tailPos, hasFragment), identifierPos)), nil
 }
 
 // conjunction ANDs the clauses that are present, each parenthesised so a

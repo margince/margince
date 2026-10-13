@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -120,7 +121,10 @@ export function useSignals(): Signals {
   const connections = connectors.data?.data ?? [];
   const offline = connections
     .filter((connection) => connection.status !== "connected")
-    .map((connection) => connection.account_label ?? connection.provider);
+    .map(
+      (connection) =>
+        connection.account_label ?? providerName(connection.provider, t),
+    );
   const capture = liveCapture(connections);
 
   return {

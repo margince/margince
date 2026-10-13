@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 299 |
-| Columns | 3565 |
-| Foreign keys | 500 |
+| Tables | 303 |
+| Columns | 3578 |
+| Foreign keys | 502 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 129 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 59 | 34 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 36 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 24 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
@@ -88,7 +88,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 24 |
+| [activities](activities.md) | 26 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -100,7 +100,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 36 |
+| [compose](compose.md) | 38 |
 | [consent](consent.md) | 19 |
 | [contacts](contacts.md) | 39 |
 | [continuity](continuity.md) | 1 |
@@ -129,8 +129,9 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 59 | 34 |
+| [`activity`](activities.md#activity) | activities | 60 | 36 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
+| [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
 | [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |
@@ -138,6 +139,8 @@ erDiagram
 | [`activity_meeting_attendee_repair`](compose.md#activity_meeting_attendee_repair) | compose | 3 | 0 |
 | [`activity_meeting_history`](activities.md#activity_meeting_history) | activities | 12 | 0 |
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
+| [`activity_own_sent_mail_repair`](compose.md#activity_own_sent_mail_repair) | compose | 3 | 0 |
+| [`activity_own_sent_mail_repair_cutoff`](compose.md#activity_own_sent_mail_repair_cutoff) | compose | 2 | 0 |
 | [`activity_participant`](activities.md#activity_participant) | activities | 9 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
@@ -147,6 +150,7 @@ erDiagram
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 13 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 5 | 0 |
+| [`activity_waiting_horizon`](activities.md#activity_waiting_horizon) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 13 | 0 |

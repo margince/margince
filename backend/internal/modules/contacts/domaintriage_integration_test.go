@@ -479,7 +479,7 @@ func TestAHumanAdmissionOutranksEveryLaterMachineRefusal(t *testing.T) {
 
 	// The next newsletter from that domain tries to refuse it again.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -556,7 +556,7 @@ func TestClaimingASuppressedDomainForACompanyLiftsTheRefusal(t *testing.T) {
 	}
 	// And the refusal cannot come back on the next newsletter from them.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -591,7 +591,7 @@ func TestUnblockingADomainReopensTheCompanyQuestion(t *testing.T) {
 	// A newsletter arrives first: the contact lands, the domain is refused.
 	e.openTriage(ctx, t, "insights@mckinsey.example", "", "mckinsey.example")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "mckinsey.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -638,7 +638,7 @@ func TestTheBlockedDomainListShowsWhatDecidedEachRefusal(t *testing.T) {
 		t.Fatalf("block: %v", err)
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "saasweekly.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "saasweekly.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}
@@ -671,7 +671,7 @@ func TestUnblockingStampsTheHumanAnswerableForTheDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "ownerless.example", "judged a newsletter")
+		return e.store.SuppressBulkSenderDomainTx(ctx, tx, "ownerless.example", "newsletter")
 	}); err != nil {
 		t.Fatalf("machine suppression: %v", err)
 	}

@@ -65,6 +65,8 @@ func WithContactBrief(brain completer, routingVersion string) Option {
 func WithContactDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		svc := contactdraft.NewService(s.contact360Svc, brain).
+			WithCoRecipients(s.contactsStore).
+			WithAboutActivities(activities.NewStore(InstallationDB(pool))).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
 			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)

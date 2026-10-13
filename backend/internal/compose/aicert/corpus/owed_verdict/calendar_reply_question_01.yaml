@@ -1,0 +1,25 @@
+name: a_declined_invitation_that_asks_for_another_day_waits_on_us
+task: owed_verdict
+site: owed
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The same decline, with a question the contact typed into it. The calendar
+# recorded the "no"; the question about Thursday is still ours to answer.
+fixture:
+  - subject: 'Declined: Demo @ Wed 15:00 - 15:30 (CEST)'
+    body: |
+      Sorry, Wednesday does not work for us after all. Can we do Thursday
+      at the same time instead?
+
+      Jonas Weber has declined this invitation.
+    to: ['lars@ourco.test']
+    has_calendar_part: true
+    calendar_method: REPLY
+expect:
+  outcome: accepted
+  answer: [asks_us]
+  judge: none
+  judge_none_reason: >
+    The answer is one closed verdict per message, and the check requires every
+    verdict exactly. The rubric only ranked the wrong answers, which the check
+    fails outright.

@@ -48,7 +48,7 @@ function setup() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  client.setQueryData(HEALTH_KEY, { providers: [] });
+  client.setQueryData(HEALTH_KEY, { configured: [], providers: [] });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );

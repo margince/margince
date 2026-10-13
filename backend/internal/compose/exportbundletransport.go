@@ -22,6 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// zipContentType is the media type of every ZIP the API sends or stores.
+const zipContentType = "application/zip"
+
 type exportBundleHandlers struct {
 	writer *ExportWriter
 	log    *slog.Logger
@@ -63,7 +66,7 @@ func (h exportBundleHandlers) DownloadExportBundle(w http.ResponseWriter, r *htt
 	// Headers before the first byte: the bundle streams, so this is the last
 	// moment a header is settable. Size is unknown — the archive is written as
 	// it is produced — so Content-Length is deliberately omitted.
-	httperr.Download{ContentType: "application/zip", Filename: "margince-export.zip"}.WriteHeaders(w)
+	httperr.Download{ContentType: zipContentType, Filename: "margince-export.zip"}.WriteHeaders(w)
 	body := &startedWriter{ResponseWriter: w}
 	_, err := h.writer.WriteBundle(r.Context(), body)
 	switch {

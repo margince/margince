@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "d1026ba1d8f16f5cdb2b2d872e0f7f8a0c608bb37265cfd80cf40517c08a5243"
+const jobContractHash = "be57caecbc8cdcb46c8b4e8e1202d6049806e5edf264df79cb90f8056f5745e2"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -72,6 +72,7 @@ type declaredJobArgs interface {
 		GraphWatchArgs |
 		GraphWatchRenewArgs |
 		IdempotencyRetentionArgs |
+		ImportRunSweepArgs |
 		IntroExpiryArgs |
 		KnowledgeIngestArgs |
 		LinkReconcileArgs |
@@ -105,6 +106,7 @@ type declaredJobArgs interface {
 		VCardIngestArgs |
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
+		WaitingHorizonRefreshArgs |
 		WebhookRetryArgs |
 		WeeklyReviewGenerateArgs
 }

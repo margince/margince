@@ -34,6 +34,10 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			// representable).
 			continue
 		}
+		if spec.Unlisted {
+			// Never offered to a client, so this mirror does not show it.
+			continue
+		}
 		out = append(out, crmcontracts.AgentTool{
 			// Name doubles as the action verb in this registry (e.g.
 			// "search_records", "send_email"); OpenAPIOp is the

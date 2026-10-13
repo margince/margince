@@ -88,6 +88,9 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range activities.FollowUpWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
+	for _, handler := range activities.QuietReminderReopenWorkflows(activityStore) {
+		engine.RegisterSystemWorkflow(handler)
+	}
 	for _, handler := range activities.OwnershipWorkflows(activityStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}

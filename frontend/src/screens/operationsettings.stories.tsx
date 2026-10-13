@@ -58,3 +58,8 @@ export const SendPacingCannotChangeDark: Story = {
   globals: { theme: "dark" },
   render: story(SendPacingCard, READER),
 };
+
+export const SchedulesAtPhoneWidth: Story = {
+  ...Schedules,
+  tags: ["uat-phone"],
+};

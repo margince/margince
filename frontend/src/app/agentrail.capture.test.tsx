@@ -226,3 +226,24 @@ describe("a mailbox import", () => {
     expect(container.querySelector(".core-progress")).toBeNull();
   });
 });
+
+// A connection with no account label is named by its provider for a reader.
+it("names an unlabelled connection that cannot be reached by its provider", async () => {
+  const calendar: Connector = {
+    ...mailbox(),
+    provider: "gcal",
+    status: "reauth_required",
+    account_label: null,
+  };
+  const { container } = mount({ connectors: [calendar] });
+  await waitFor(
+    () =>
+      expect(container.querySelector(".arline")?.textContent).toContain(
+        "Google Calendar",
+      ),
+    { timeout: 3000 },
+  );
+  expect(container.querySelector(".arline")?.textContent).not.toMatch(
+    /\bgcal\b/,
+  );
+});

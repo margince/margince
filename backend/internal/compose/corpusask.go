@@ -371,13 +371,9 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 			embedder = unboundEmbedder{}
 		}
 		if log != nil {
-			identity, _ := embedder.EmbedIdentity()
-			knowledge.WarnIfUngated(log, identity)
+			knowledge.WarnIfUngated(log, embedLaneIdentity(embedder))
 		}
-		s.module = s.module.WithEmbedIdentity(func() string {
-			identity, _ := embedder.EmbedIdentity()
-			return identity
-		})
+		s.module = s.module.WithEmbedIdentity(func() string { return embedLaneIdentity(embedder) })
 		engine := &corpusAskEngine{
 			store:    knowledge.NewStore(InstallationDB(pool)),
 			embedder: embedder,
@@ -387,6 +383,13 @@ func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger
 		}
 		s.knowledgeHandlers = knowledgeWithAsk(s.knowledgeHandlers, engine.ask)
 	}
+}
+
+// embedLaneIdentity names the bound embed lane, empty when none is. System
+// health's reindex surface and a corpus's embed_state both decide from it.
+func embedLaneIdentity(embedder vectorkit.Embedder) string {
+	identity, _ := embedder.EmbedIdentity()
+	return identity
 }
 
 // unboundEmbedder stands where an installation composed no embed lane.

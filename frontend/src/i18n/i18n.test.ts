@@ -27,6 +27,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
+  // A file name the server sends, so every catalog shows the same one.
+  "import.result.problemsFile",
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
@@ -190,6 +192,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "auth.title",
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
+  "board.count_one",
   "deals.pipeline",
   "deal.fcPipeline",
   "filters.field.pipeline_id",
@@ -238,6 +241,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.rail.email",
   "history.field.email",
   "settings.voice.register.email",
+  "settings.voice.kind.email",
   "product.sku",
   "compose.cc",
   "compose.bcc",
@@ -261,7 +265,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
   "aicalls.ms",
-  "voice.history.versionRow",
+  "operations.inWords",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
   "share.ceiling.post",

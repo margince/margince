@@ -31,19 +31,22 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	}
 
 	runs := migration.NewRunStore(h.db)
-	writers := newCSVWriters(h.db, run.ID, run.Mapping)
-	// The reversal outlives the request deliberately, the same reason the
-	// commit does (ApproveImportRun): cancelling it when the browser goes
-	// away must not leave the run `undoing` with rows already reversed and
-	// nothing able to record how far it got.
-	undoCtx, releaseUndo := context.WithTimeout(context.WithoutCancel(ctx), importCommitTimeout)
-	defer releaseUndo()
-	if _, err := runs.Undo(undoCtx, run.ID, writers); err != nil {
+	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, nil)
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-
-	final, err := runs.GetStaged(undoCtx, run.ID)
+	// Moved to undoing before the answer, so a refused undo is still refused
+	// here; the reversal runs detached and holds its own claim.
+	if err := runs.ClaimUndo(ctx, run.ID); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	h.runDetached(ctx, run.ID, "undo", func(undoCtx context.Context) error {
+		_, err := runs.Undo(undoCtx, run.ID, writers)
+		return err
+	})
+	final, err := runs.GetStaged(ctx, run.ID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

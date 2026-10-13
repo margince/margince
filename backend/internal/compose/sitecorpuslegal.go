@@ -170,10 +170,13 @@ func matchingLegalEntity(existing []corpusLegalEntity, candidate corpusLegalEnti
 // sameLegalEntity answers the pair. A shared identifier is decisive whatever
 // the names say; otherwise the printed name decides, and only while that name
 // stands for ONE identity.
+//
+// That identifier is the registry number alone. A VAT group shares one number,
+// so folding on it dropped a second company from the choice a human is offered.
 func sameLegalEntity(entity, candidate corpusLegalEntity, contested map[string]bool) bool {
 	register, candidateRegister := normalizeEvidence(entity.RegisterNumber), normalizeEvidence(candidate.RegisterNumber)
 	vat, candidateVat := normalizeEvidence(entity.VatNumber), normalizeEvidence(candidate.VatNumber)
-	if sameLegalIdentifier(register, candidateRegister) || sameLegalIdentifier(vat, candidateVat) {
+	if sameLegalIdentifier(register, candidateRegister) {
 		return true
 	}
 	name := legalEntityNameKey(candidate.Name)

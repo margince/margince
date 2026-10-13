@@ -142,6 +142,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/forecast/movement": {
 		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case"}, Array: false, Explode: true},
 	},
+	"GET /v1/imports/format": {
+		{Name: "lang", Values: []string{"en", "de", "vi"}, Array: false, Explode: true},
+	},
 	"GET /v1/leads": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
 		{Name: "sla_state", Values: []string{"within_target", "at_risk", "breached"}, Array: false, Explode: true},

@@ -88,6 +88,9 @@ type EnsureResult struct {
 	// deal materialized onto the default pipeline because the source
 	// stage identity did not resolve).
 	Disclosure string
+	// Problem names what the report says about the row beyond its outcome. It is
+	// the column, kind and value of a skip, or the warning a landed row carries.
+	Problem *SkippedRow
 }
 
 // AssocResult reports what one Writers.Associate did — an edge whose

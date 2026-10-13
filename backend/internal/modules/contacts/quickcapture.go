@@ -103,7 +103,7 @@ func (s *Store) quickCaptureInTx(
 	in QuickCaptureInput,
 ) (QuickCaptureResult, error) {
 	var out QuickCaptureResult
-	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in))
+	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in), CustomColumns{})
 	if err != nil {
 		return out, err
 	}
@@ -154,7 +154,7 @@ func (s *Store) employerForQuickCapture(
 	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 		DisplayName: name,
 		Source:      quickCaptureSource,
-	})
+	}, CustomColumns{})
 	if err != nil {
 		return nil, false, err
 	}

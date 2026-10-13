@@ -68,7 +68,21 @@ func moveKey(move crmcontracts.DealStatusCardMove) string {
 		keySb65.WriteString(" [contact:" + id.String() + "]")
 	}
 	key += keySb65.String()
-	return key
+	return key + evidenceKey(move.Evidence)
+}
+
+// evidenceKey is what each cited record says and when it happened. A meeting
+// renamed or moved keeps its id, and the card naming it must still be rewritten.
+func evidenceKey(evidence []crmcontracts.DealNextBestActionEvidence) string {
+	var key strings.Builder
+	for _, cited := range evidence {
+		key.WriteString(" [evidence:" + cited.Text)
+		if cited.OccurredAt != nil {
+			key.WriteString(" @" + cited.OccurredAt.UTC().Format(time.RFC3339))
+		}
+		key.WriteString("]")
+	}
+	return key.String()
 }
 
 // operandActivity is NamedActivity over a move that has NOT been through JSON.

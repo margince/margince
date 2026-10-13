@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import {
   Badge,
   Button,
   Disclosure,
   EmptyState,
   Field,
+  OverflowMenu,
   TextInput,
 } from "./atoms";
 import { DataTable } from "./datatable";
@@ -22,12 +24,12 @@ import {
   RailPanel,
   type RailPanelState,
 } from "./panel";
+import { RowOpen } from "./rowopen";
 import { SettingList, SettingRow } from "./settingrow";
 import type { SectionDetail } from "./surfacestate";
 
-// The titled-card shape: a fixed-height header, an optional footer band, and
-// two ways to fill the middle — padded prose in PanelBody, or full-bleed rows
-// that touch the panel's own edges in PanelRow.
+// The titled-card shape: a header band, an optional footer band, and two ways
+// to fill the middle. PanelBody holds padded prose; PanelRow runs to the edges.
 const meta: Meta<typeof Panel> = {
   title: "Components/Layout and structure/Panel",
   component: Panel,
@@ -203,6 +205,64 @@ export const LongTitleTruncates: Story = {
         <PanelRow>Legitimate interest — account management</PanelRow>
       </>
     ),
+  },
+};
+
+// At 390px the verb drops under a title it would cut. A title wider than the
+// pane wraps.
+export const PhoneVerbUnderTitle: Story = {
+  tags: ["uat-phone"],
+  args: {
+    title: "Connected mailboxes and calendars",
+    titleAction: <Button>Add connector</Button>,
+    children: (
+      <>
+        <PanelRow>gmail.com</PanelRow>
+        <PanelRow>outlook.com</PanelRow>
+      </>
+    ),
+  },
+};
+
+const SETS = ["Pricing playbook", "Security answers"];
+
+function OpeningRows() {
+  const [opened, setOpened] = useState("nothing yet");
+  return (
+    <Panel title="Document sets">
+      {SETS.map((name) => (
+        <PanelRow key={name} record onOpen={() => setOpened(name)}>
+          <span style={{ flex: 1 }}>{name}</span>
+          <OverflowMenu label={`Actions for ${name}`}>
+            <Button>Archive</Button>
+          </OverflowMenu>
+          <RowOpen label={`Open ${name}`} onOpen={() => setOpened(name)} />
+        </PanelRow>
+      ))}
+      <PanelBody>
+        <p>Opened: {opened}</p>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+// `onOpen` makes the whole row a pointer target; the chevron is the keyboard
+// path, and a press on the row's menu stays the menu's.
+export const RowOpensOnPress: Story = {
+  render: () => <OpeningRows />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Open Security answers" });
+    await userEvent.click(canvas.getByText("Pricing playbook"));
+    await expect(canvas.getByText("Opened: Pricing playbook")).toBeVisible();
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Actions for Security answers" }),
+    );
+    await expect(canvas.getByText("Opened: Pricing playbook")).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    canvas.getByRole("button", { name: "Open Security answers" }).focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByText("Opened: Security answers")).toBeVisible();
   },
 };
 

@@ -113,19 +113,20 @@ The reason itself is hidden with the text, because a reason like "held because
 it is about a colleague" says what the message is about.
 
 ### How do I change who can read mail from my mailbox?
-To change who can read mail captured from your mailbox in Margince, open **Settings → Connections** and change **Mail visibility** under that mailbox.
+To change who can read mail captured from your mailbox in Margince, open **Settings → Connections**, open the mailbox, and change **Mail visibility**.
 1. Open the account menu, choose **Settings**, then **Connections**.
-2. Under the mailbox, set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
-3. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
-4. Confirm with **Change mail visibility**.
+2. Press the arrow at the end of the mailbox's row.
+3. Set **Mail visibility** to **Held until classified**, **Always held** or **Shared with the team**.
+4. When you narrow it, the **Apply to captured mail?** dialog offers **Also narrow captured mail**.
+5. Confirm with **Change mail visibility**.
 
 **Shared with the team** is refused until an administrator allows it for the company.
 Also called: mailbox privacy, mail posture, share my inbox.
 
 ## The three postures a mailbox can ask for
 
-You set the mailbox posture at **Settings → Connections**, under each mailbox,
-as **Mail visibility**.
+You set the mailbox posture at **Settings → Connections**, in each mailbox's
+settings, as **Mail visibility**.
 
 **Held until classified** is the default for every new mailbox. A message stays
 with whoever was on it until a model finds the thread to be plain business.

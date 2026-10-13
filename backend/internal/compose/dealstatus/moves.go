@@ -128,6 +128,9 @@ func (s *Service) CachedMoves(
 	if err != nil {
 		return nil, fmt.Errorf("read the cached deal moves: %w", err)
 	}
+	if err := s.dropSettledFollowUps(ctx, out); err != nil {
+		return nil, fmt.Errorf("recheck the cached follow-ups: %w", err)
+	}
 	return out, nil
 }
 
@@ -273,7 +276,7 @@ func NamedContacts(move crmcontracts.DealStatusCardMove) []ids.UUID {
 	if args == nil {
 		return nil
 	}
-	raw, present := (*args)["links"]
+	raw, present := (*args)[argLinks]
 	if !present {
 		return nil
 	}

@@ -59,6 +59,9 @@ func TestEveryDeclaredVocabularyBindsTheToolThatDeclaresIt(t *testing.T) {
 
 	probed := 0
 	for name, tool := range registry.tools {
+		if _, isRouter := tool.(router); isRouter {
+			continue // its arguments are bound by the targets, each walked here
+		}
 		for _, enum := range carriedEnums(t, name, tool.Spec().InputSchema) {
 			if enum.words == nil {
 				continue

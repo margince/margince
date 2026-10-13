@@ -205,3 +205,17 @@ func TestANamedNullOnTheScoreKeepsOtherClears(t *testing.T) {
 		t.Errorf("title was not cleared beside the score: %v", p.After())
 	}
 }
+
+func TestANullPhoneClearsTheLeadsNumber(t *testing.T) {
+	p, _, err := buildLeadPatch(crmcontracts.Lead{Phone: new("+84901234567")},
+		UpdateLeadInput{Clear: []string{leadPhoneColumn}})
+	if err != nil {
+		t.Fatalf("clearing the phone was refused: %v", err)
+	}
+	if v, ok := p.After()[leadPhoneColumn]; !ok || v != nil {
+		t.Errorf("phone was not cleared: %v", p.After())
+	}
+	if was, ok := p.Before()[leadPhoneColumn].(*string); !ok || *was != "+84901234567" {
+		t.Errorf("the audit image lost the number it cleared: %v", p.Before())
+	}
+}

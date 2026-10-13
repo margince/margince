@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
+import { consequenceText } from "./worklist.connection";
 import {
   comparisonText,
   itemTitle,
@@ -409,6 +410,69 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
     const title = itemTitle(incident({}), t, "en");
     expect(title).not.toContain("automation_run");
     expect(title).toContain("8 times");
+  });
+});
+
+describe("itemTitle — a capture connection says which kind it is", () => {
+  const health = (over: Partial<WorklistItem>): WorklistItem => ({
+    id: "c-1",
+    source: "capture_health",
+    level: 3,
+    category: "system",
+    because: [],
+    consequence: "mailbox_blind",
+    actions: [],
+    ...over,
+  });
+
+  it("calls a broken calendar a calendar", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gcal", medium: "calendar" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Calendar connection needs attention");
+  });
+
+  it("calls a broken mailbox a mailbox", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gmail", medium: "mailbox" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Mailbox connection needs attention");
+  });
+
+  it("says what a broken calendar costs, not what a mailbox does", () => {
+    const calendar = health({
+      connection: { provider: "gcal", medium: "calendar" },
+    });
+    const mailbox = health({
+      connection: { provider: "gmail", medium: "mailbox" },
+    });
+    const unsure = health({ source: "batch" });
+    expect(consequenceText(calendar, t)).toBe(
+      t("worklist.consequence.calendar_blind"),
+    );
+    expect(consequenceText(mailbox, t)).toBe(
+      t("worklist.consequence.mailbox_blind"),
+    );
+    expect(consequenceText(unsure, t)).toBe(
+      t("worklist.consequence.connection_blind"),
+    );
+  });
+
+  it("names a folded connection with no account by its provider", () => {
+    const title = itemTitle(
+      health({
+        source: "batch",
+        connection: { provider: "graphcal", medium: "calendar" },
+        batch: { key: "system_incident", count: 3, cause: "capture_health:x" },
+      }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Outlook Calendar failed 3 times");
   });
 });
 

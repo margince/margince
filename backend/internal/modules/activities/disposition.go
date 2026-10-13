@@ -15,10 +15,9 @@ package activities
 //
 //   - NOT SALES is a fact about the THREAD. Recognizing the procurement
 //     newsletter settles what the message is, for everybody.
-//   - SNOOZED and NOT MINE are one reader's own. A rep putting a reply down
-//     until Thursday must not take it off the colleague who owns the deal, and
-//     saying "this is not mine" is precisely saying it belongs to somebody who
-//     still has to see it.
+//   - SNOOZED, NOT MINE and HANDLED are one reader's own. A rep putting a reply
+//     down until Thursday must not take it off the colleague who owns the deal,
+//     and saying "this is not mine" is saying somebody else must still see it.
 
 import (
 	"context"
@@ -48,6 +47,7 @@ const (
 
 	stateSnoozed = "snoozed"
 	stateNotMine = "not_mine"
+	stateHandled = "handled"
 )
 
 // The thread-scoped judgement and the two UNDO verbs, named for the reason the
@@ -163,17 +163,8 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 		id).Scan(&key, &thread.kind, &provider, &direction); err != nil {
 		return threadIdentity{}, fmt.Errorf("activities: reading the message's thread: %w", err)
 	}
-	if thread.kind != kindEmail && thread.kind != kindMessage {
-		return threadIdentity{}, &values.ParseError{
-			Field: "id", Code: "not_a_message",
-			Message: "only an email or a channel message carries a disposition",
-		}
-	}
-	if direction == nil || *direction != directionInbound {
-		return threadIdentity{}, &values.ParseError{
-			Field: "id", Code: "not_inbound",
-			Message: "a disposition answers a message somebody sent US",
-		}
+	if err := inboundMessageShape(thread.kind, direction); err != nil {
+		return threadIdentity{}, err
 	}
 	if key == nil || *key == "" {
 		return threadIdentity{}, &values.ParseError{
@@ -186,6 +177,37 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 		thread.provider = *provider
 	}
 	return thread, nil
+}
+
+// inboundMessageShape refuses an activity that is not an inbound email or
+// channel message. threadOf and ensureInboundMessage both ask it, so the two
+// verbs that judge a message agree on what one is.
+func inboundMessageShape(kind string, direction *string) error {
+	if kind != kindEmail && kind != kindMessage {
+		return &values.ParseError{
+			Field: "id", Code: "not_a_message",
+			Message: "only an email or a channel message carries a disposition",
+		}
+	}
+	if direction == nil || *direction != directionInbound {
+		return &values.ParseError{
+			Field: "id", Code: "not_inbound",
+			Message: "a disposition answers a message somebody sent US",
+		}
+	}
+	return nil
+}
+
+// ensureInboundMessage is threadOf's shape check without the thread: Done is
+// offered on threadless waiting rows too.
+func ensureInboundMessage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	var kind string
+	var direction *string
+	if err := tx.QueryRow(ctx, `SELECT kind, direction FROM activity WHERE id = $1`,
+		id).Scan(&kind, &direction); err != nil {
+		return fmt.Errorf("activities: reading what the activity is: %w", err)
+	}
+	return inboundMessageShape(kind, direction)
 }
 
 // The other two halves of what the waiting lane reads. kindEmail is already
@@ -249,6 +271,15 @@ func (s *Store) SetMessageNotMine(ctx context.Context, id ids.ActivityID) error 
 	return s.setReaderState(ctx, id, stateNotMine, nil, "", nil)
 }
 
+// MarkMessageHandled records that this reader dealt with the message another
+// way: by phone, in a meeting, or with no reply owed.
+//
+// It carries no moment and nothing lifts it. The customer's next message is a
+// new activity with no state, so it reaches the list on its own.
+func (s *Store) MarkMessageHandled(ctx context.Context, id ids.ActivityID) error {
+	return s.setReaderState(ctx, id, stateHandled, nil, "", nil)
+}
+
 // ClearMessageDisposition picks a message back up — the undo behind every
 // set-aside verb.
 func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) error {
@@ -310,6 +341,14 @@ func (s *Store) setReaderState(
 			// the acting human's id would set aside work on their behalf.
 			return apperrors.ErrPermissionDenied
 		}
+		// Done says a customer's message was handled, so only such a message
+		// takes it. not_mine and snooze keep their wider reach: the meeting
+		// follow-up reminder reads them on a meeting.
+		if state == stateHandled {
+			if err := ensureInboundMessage(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		// The meeting a snooze names must exist, be a meeting, and be one this
 		// reader may read. Checked inside the transaction so it cannot be
 		// archived between the check and the row that waits on it.
@@ -354,14 +393,26 @@ func (s *Store) setReaderState(
 		if err := write(id, replaceReaderState); err != nil {
 			return err
 		}
-		// A time snooze already past hides nothing, so it is replaced like an
-		// absent state; any judgement still in force is kept.
 		return s.setOnEarlierRequests(ctx, tx, id, func(earlier ids.ActivityID) error {
-			return write(earlier, replaceReaderState+`
-				WHERE activity_reader_state.state = '`+stateSnoozed+`'
-				  AND activity_reader_state.snoozed_until <= EXCLUDED.set_at`)
+			return write(earlier, replaceReaderState+earlierRequestKeeps(state))
 		})
 	})
+}
+
+// earlierRequestKeeps is the upsert guard for the card's earlier requests:
+// which of their own judgements survive the card's.
+//
+// Done replaces any snooze, lifted or not, because the card stands for those
+// requests and they are handled with it. Every other verb replaces only a time
+// snooze already past, which hides nothing. not_mine and handled always stay.
+func earlierRequestKeeps(state string) string {
+	if state == stateHandled {
+		return `
+				WHERE activity_reader_state.state = '` + stateSnoozed + `'`
+	}
+	return `
+				WHERE activity_reader_state.state = '` + stateSnoozed + `'
+				  AND activity_reader_state.snoozed_until <= EXCLUDED.set_at`
 }
 
 // judgeMessage is the gate every disposition write takes before it writes.
@@ -414,6 +465,12 @@ func (s *Store) recordDisposition(
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", "activity", id.UUID, after)
 	if err != nil {
 		return err
+	}
+	// Done has its own event type: disposition_recorded's enum is closed at v1.
+	if state == stateHandled {
+		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityMarkedHandled{
+			ActivityId: openapi_types.UUID(id.UUID),
+		})
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityDispositionRecorded{
 		ActivityId:  openapi_types.UUID(id.UUID),

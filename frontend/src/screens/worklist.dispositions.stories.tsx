@@ -19,20 +19,19 @@ import "./worklist.row.css";
 
 // The ways a row can be PUT DOWN, on their own.
 //
-// Covered here rather than only through the row because these three verbs have
-// four arrangements and the row's stories show one of them: the split control
-// closed (the common press), its chooser open (the four spans), the whole band
-// folded into a menu below 720px, and a judgement mid-write with the rest of
-// the band standing down. Three of those are unreachable from a wide desktop
-// canvas, which is how the folded arrangement lost the snooze spans for a
+// Covered here rather than only through the row, because these verbs have four
+// arrangements and the row's stories show one. They are: the split control
+// closed, its chooser open, the band folded into a menu below 720px, and a
+// judgement mid-write. Three of those are unreachable from a wide desktop
+// canvas. That is how the folded arrangement lost the snooze spans for a
 // release with nothing on screen to notice.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
-// A buyer waiting on an answer, carrying all three judgements the contract
-// offers. Every one of them, because which verbs a reader may use is a SERVER
-// rule and a fixture offering two of three is a picture of a narrower row than
-// the product draws.
+// A buyer waiting on a colleague's answer, carrying all four judgements the
+// contract offers. Which verbs a reader may use is a server rule. A fixture
+// offering fewer is a picture of a narrower row than the product draws. On the
+// reader's own row the server leaves out Not mine.
 const WAITING: WorklistItem = {
   id: "01a05500-0000-7000-8000-0000000000a1",
   source: "customer_waiting",
@@ -42,7 +41,7 @@ const WAITING: WorklistItem = {
   title: "Re: pricing for the retrofit",
   because: [],
   actions: [],
-  dispositions: ["snooze", "not_mine", "not_sales"],
+  dispositions: ["handled", "snooze", "not_mine", "not_sales"],
 };
 
 // The write these verbs make, answered at once. A story that left the PUT to
@@ -102,18 +101,45 @@ const openTheChooser: Story["play"] = async ({ canvasElement }) => {
 };
 
 /**
- * The three judgements, and the snooze as ONE control in two halves.
+ * The four judgements, Done first, and the snooze as one control in two halves.
  *
  * The press is the common case — a rep reaching for "not today" most often
  * means tomorrow — and the caret is the rare one. Closed here, because closed
  * is what a reader meets: what the split has to show at rest is that it reads
  * as one control with a seam rather than as a verb and a chevron beside it.
  */
-export const TheThreeJudgements: Story = {
+export const TheFourJudgements: Story = {
   args: { item: WAITING },
   render: (args) => {
     settleAtOnce();
     return <DispositionVerbs {...args} />;
+  },
+};
+
+/** The same band in dark, where the ghost verbs sit on the darker panel. */
+export const TheFourJudgementsDark: Story = {
+  args: { item: WAITING },
+  globals: { theme: "dark" },
+  render: (args) => {
+    settleAtOnce();
+    return <DispositionVerbs {...args} />;
+  },
+};
+
+/**
+ * Not mine, focused: the hint says it leaves only this reader's list and the
+ * record keeps its owner. Focus rather than hover, so a keyboard reader's
+ * route is the one drawn.
+ */
+export const NotMineExplainsItself: Story = {
+  args: { item: WAITING },
+  render: (args) => {
+    settleAtOnce();
+    return <DispositionVerbs {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    (await canvas.findByRole("button", { name: "Not mine" })).focus();
   },
 };
 
@@ -158,13 +184,13 @@ export const HowLongToPutItDownForDark: Story = {
 };
 
 /**
- * The same three judgements at 390px, where the band is a MENU.
+ * The same judgements at 390px, where the band is a MENU.
  *
  * Below 720px the buttons are gone rather than smaller — the width belongs to
  * the work, and a swipe carries the fast path — so one overflow menu is what
  * keeps every judgement reachable by key. Opened, because the menu's lines are
- * the whole arrangement: the three verbs AND the snooze spans, which live in
- * the caret's popover above this width and as lines of their own here.
+ * the whole arrangement: the verbs and the snooze spans. Above this width the
+ * spans live in the caret's popover; here they are lines of their own.
  *
  * `uat-phone` is what makes the capture gate drive the browser to 390px.
  * Without it the frame is captured at the harness's own width and draws the

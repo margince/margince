@@ -14,7 +14,7 @@ import (
 )
 
 // One writer decides whether the reindex surface exists, and it is the option
-// that wires the engine, past the same gates, with a literal true.
+// that wires the engine, handing /me the routes' own serving predicate.
 //
 // A second writer is silent in both directions: /me offering a settings entry
 // whose routes answer 501, or hiding a bound lane nobody can then reach. Both
@@ -52,8 +52,8 @@ func TestOneWriterDecidesWhetherTheReindexSurfaceExists(t *testing.T) {
 				}
 				arg := ""
 				if len(call.Args) == 1 {
-					if ident, isIdent := call.Args[0].(*ast.Ident); isIdent {
-						arg = ident.Name
+					if predicate, isSelector := call.Args[0].(*ast.SelectorExpr); isSelector {
+						arg = predicate.Sel.Name
 					}
 				}
 				writers = append(writers, writer{file: path, fn: fn.Name.Name, arg: arg})
@@ -71,9 +71,9 @@ func TestOneWriterDecidesWhetherTheReindexSurfaceExists(t *testing.T) {
 			"of one question drift, and the drift is a surface a client offers that the server refuses.",
 			len(writers), writers)
 	}
-	if got := writers[0]; got.file != owner || got.fn != ownerFunc || got.arg != "true" {
-		t.Errorf("/me's reindex availability is set by %+v, want %s's %s passing the literal true "+
-			"beside the engine it wires — any other expression is a second predicate for one question",
+	if got := writers[0]; got.file != owner || got.fn != ownerFunc || got.arg != "serving" {
+		t.Errorf("/me's reindex availability is set by %+v, want %s's %s passing the handlers' serving "+
+			"predicate — any other expression is a second predicate for one question",
 			got, owner, ownerFunc)
 	}
 }

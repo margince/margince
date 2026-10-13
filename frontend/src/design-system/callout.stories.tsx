@@ -228,6 +228,46 @@ export const WithActions: Story = {
   ),
 };
 
+/** A fixed width for the callout, standing in for the column it sits in. */
+function Column({
+  width,
+  children,
+}: Readonly<{ width: string; children: ReactNode }>) {
+  return <div style={{ inlineSize: width }}>{children}</div>;
+}
+
+function ActionsAndDismiss() {
+  return (
+    <Callout
+      tone="accent"
+      title="Also tag contacts at this company with Product X?"
+      actions={<Button>Choose contacts</Button>}
+      dismiss={{ label: "Dismiss", onDismiss: () => {} }}
+    />
+  );
+}
+
+/** A verb and a dismiss in a 320px column on a wide window, the width of a
+ * record's details panel. The verb drops below the words because the card is
+ * narrow, whatever the window's width. */
+export const ActionsInANarrowColumn: Story = {
+  render: () => (
+    <Column width="320px">
+      <ActionsAndDismiss />
+    </Column>
+  ),
+};
+
+/** The same callout in a 720px column: the verb stays at the end of the
+ * heading's line. */
+export const ActionsInAWideColumn: Story = {
+  render: () => (
+    <Column width="720px">
+      <ActionsAndDismiss />
+    </Column>
+  ),
+};
+
 /** Prose over one line, so the paragraph rhythm inside the body is visible. */
 export const Prose: Story = {
   render: () => (

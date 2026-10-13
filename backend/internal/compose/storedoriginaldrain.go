@@ -55,6 +55,9 @@ type storedOriginalPass[C storedOriginalCandidate] struct {
 	// it. The payload is only valid for the duration of the call.
 	settle func(ctx context.Context, tx pgx.Tx, c C, payload []byte) (string, error)
 	mark   func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error
+	// settleUnread, when set, may settle a candidate without its original. A
+	// pass that must mark every offer then reads no bytes it has no use for.
+	settleUnread func(c C) (string, bool)
 }
 
 // storedOriginalCandidate is what every pass's candidate must answer: which
@@ -119,6 +122,11 @@ func drainStoredOriginals[C storedOriginalCandidate](
 func settleStoredOriginal[C storedOriginalCandidate](
 	ctx context.Context, tx pgx.Tx, pass storedOriginalPass[C], c C,
 ) (bool, error) {
+	if pass.settleUnread != nil {
+		if outcome, settled := pass.settleUnread(c); settled {
+			return true, pass.mark(ctx, tx, c.activity(), outcome)
+		}
+	}
 	payload, found, err := readStoredOriginal(ctx, tx, c.original())
 	if err != nil || !found {
 		return false, err
