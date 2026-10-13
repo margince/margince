@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 )
@@ -173,6 +174,14 @@ func WithBlobstore(store blobstore.Store) Option {
 		// it cannot keep — the same refusal the endpoint that serves the bytes
 		// already gives.
 		s.companyHandlers.blob = store
+	}
+}
+
+// WithImportJobs queues an import's commit and undo for the worker role,
+// through the insert-only runner, in the transaction that moves the run.
+func WithImportJobs(inserter *jobs.Runner) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.queue = &importEnqueuer{runner: inserter}
 	}
 }
 

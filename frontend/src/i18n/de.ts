@@ -902,6 +902,7 @@ export const de = {
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
   "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
+  "systemJob.import_worker": "Import-Verarbeitung",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
   "systemJob.introduction_expiry": "Ablauf von Vorstellungen",
@@ -6097,6 +6098,8 @@ export const de = {
   "jobs.kind.graph_watch_renew_connection": "Verlängerung des Outlook-Push",
   "jobs.kind.idempotency_retention":
     "Bereinigung gespeicherter Anfrageantworten",
+  "jobs.kind.import_commit": "Import übernehmen",
+  "jobs.kind.import_undo": "Import rückgängig machen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",

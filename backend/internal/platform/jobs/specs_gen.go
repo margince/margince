@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "765830ae19a956165a6c5b88af306923f8bda5541980813923178aa11a3cca55"
+const JobContractHash = "b0a693111854420fd319672634886f558210e7120ada3561f8e60b733e0cf6be"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -532,6 +532,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"import_commit": {
+		Kind:      "import_commit",
+		GoType:    "ImportCommitArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a failed row, an over-budget slice and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
 	"import_run_sweep": {
 		Kind:      "import_run_sweep",
 		GoType:    "ImportRunSweepArgs",
@@ -539,7 +549,17 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 15 * time.Minute},
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
+	},
+	"import_undo": {
+		Kind:      "import_undo",
+		GoType:    "ImportUndoArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: an undo that stops stays undoing with its cause and its cursor, and a lost fence is a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
 	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",
@@ -930,6 +950,7 @@ var queues = map[string]int{
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
+	"import_write":      1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

@@ -25,12 +25,12 @@ import (
 // refuseTooManyRows refuses an upload one test run cannot read, before any
 // run or stored file exists for it.
 func refuseTooManyRows(rows int) error {
-	if rows <= importTestRunRowCap {
+	if rows <= importRowCap {
 		return nil
 	}
 	return httperr.Validation("file", "too_many_rows", fmt.Sprintf(
 		"this upload has %d rows; a test run takes at most %d, so split it into smaller files and import each one",
-		rows, importTestRunRowCap))
+		rows, importRowCap))
 }
 
 // openDraft opens the upload's run in `pending`, keeping the profile so a

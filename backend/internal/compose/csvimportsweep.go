@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -34,10 +33,6 @@ const staleImportCause = "the import stopped because the server restarted; appro
 // staleValidationAfter is when a test run is past saving. Its request ends at
 // the response deadline, so twice that leaves the request time to record it.
 const staleValidationAfter = 2 * httpserver.ResponseDeadline
-
-// importDraftTTL is how long a draft or a report keeps its uploaded file
-// while nobody touches it.
-const importDraftTTL = 7 * 24 * time.Hour
 
 // ImportRunSweepArgs carries nothing: the pass reads which runs are stale.
 type ImportRunSweepArgs struct{}

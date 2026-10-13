@@ -15,13 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// importTestRunRowCap is the most rows one upload may hold, because one test
-// run reads them all. A mixed company, contact and lead file was read at about
-// 1,000 rows a second on a developer machine, so the budget reaches near
-// 22,000 rows. The cap keeps a third of the budget for an estate each row is
-// matched against.
-const importTestRunRowCap = 15_000
-
 // dryRun validates every part of a staged run inside the test-run budget. A
 // failure is recorded on the run before it is answered, so the run never stays
 // in `validating`.

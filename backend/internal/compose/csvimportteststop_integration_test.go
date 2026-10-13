@@ -113,14 +113,14 @@ func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 
 	var file strings.Builder
 	file.WriteString("Email,Full Name\n")
-	for i := range importTestRunRowCap + 1 {
+	for i := range importRowCap + 1 {
 		fmt.Fprintf(&file, "p%d@cap.example,P %d\n", i, i)
 	}
 	h.uploadLimit = 10_000_000
 	_, err = h.profileAndStore(importAdmin(e), migration.ObjectLead, "", []byte(file.String()))
 	var refusal *httperr.DetailedError
 	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "too_many_rows" ||
-		!strings.Contains(refusal.Detail, fmt.Sprint(importTestRunRowCap+1)) {
+		!strings.Contains(refusal.Detail, fmt.Sprint(importRowCap+1)) {
 		t.Fatalf("err = %v, want the row-cap refusal naming the file's row count", err)
 	}
 	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10); err != nil || len(listed) != 1 {

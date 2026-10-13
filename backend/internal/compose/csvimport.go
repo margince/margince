@@ -69,6 +69,8 @@ type importHandlers struct {
 	budget time.Duration
 	// testRunBudget bounds a dry run; zero is importTestRunBudget.
 	testRunBudget time.Duration
+	// queue enqueues an attempt's job; nil is a role that queues no import work.
+	queue *importEnqueuer
 }
 
 // UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its

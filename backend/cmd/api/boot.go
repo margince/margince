@@ -458,6 +458,9 @@ func workerHandoffOptions(
 		// table. Its relay, vault and public origin arrive on their own
 		// options; whichever lands last completes the lane.
 		compose.WithControllerMail(sendInserter),
+		// An approved import commits, and an undo reverses, in the worker: the
+		// move and its job are one transaction, so the 202 means work is queued.
+		compose.WithImportJobs(sendInserter),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)

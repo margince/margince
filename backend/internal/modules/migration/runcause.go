@@ -28,6 +28,12 @@ const (
 	// CauseTestRunStopped is a draft whose test run lost its process; the
 	// choices are kept, so the way on is to test again.
 	CauseTestRunStopped = "the test run stopped before it finished and imported nothing; run the test again"
+	// CausePermission is an attempt whose principal lost the access it was
+	// queued with: a seat gone or read-only, a passport revoked, a grant taken.
+	CausePermission = "whoever started this no longer has the access it needs; someone who does must start it again"
+	// CauseStorageUnavailable is a commit on a worker that stores no files, so
+	// it cannot read the upload.
+	CauseStorageUnavailable = "the server running this import has no file storage, so it cannot read the upload; approve it again once storage is configured"
 	// CauseDraftExpired is a draft or report left untouched past its time to live.
 	CauseDraftExpired = "this import was left unfinished too long, so it was closed and its file deleted"
 )
