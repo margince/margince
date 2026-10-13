@@ -15,7 +15,7 @@ import (
 )
 
 // previewWait is how long preview_import waits for its test run's report. Most
-// pasted files are tested well inside it, so most callers need no second call.
+// pasted files are tested well inside it, so most answers carry the report.
 const previewWait = 20 * time.Second
 
 // previewPoll is how often the wait reads the run again.
@@ -23,7 +23,12 @@ const previewPoll = time.Second
 
 // stillTesting is what a preview answers when its test outlasts the wait.
 const stillTesting = "the test is still running: call read_import (view report) with this run_id " +
-	"until state is awaiting_approval"
+	"until state is no longer validating. awaiting_approval carries the report, pending carries " +
+	"the error that stopped the test, cancelled means a newer preview replaced this run"
+
+// testEnded is what a preview answers when its test ended with no report: a
+// human stopped it, or a newer test of the same source_name replaced it.
+const testEnded = "the test ended without a report (state %s): call preview_import again to test the file"
 
 // WaitClock is what preview_import waits on between reads of its run.
 type WaitClock interface {
@@ -75,9 +80,9 @@ func (w importWait) awaitReport(
 	return run, nil
 }
 
-// answered waits for staged's test and answers preview with the run it reached.
-// A test that refused the file answers that refusal, as the call would have
-// had the test run inside it.
+// answered waits for staged's test and answers preview with the run it reached
+// and, at awaiting_approval, its report. A test that refused the file answers
+// that refusal, as the call would have had the test run inside it.
 func (t previewImport) answered(
 	ctx context.Context, staged crmcontracts.ImportRun, preview ImportPreviewResult,
 ) (json.RawMessage, error) {
@@ -85,13 +90,20 @@ func (t previewImport) answered(
 	if err != nil {
 		return nil, err
 	}
-	if run.Status == crmcontracts.ImportRunStatusPending && run.Error != nil {
+	switch {
+	case run.Status == crmcontracts.ImportRunStatusAwaitingApproval:
+		run, preview.Report, err = t.imports.ReadReport(ctx, ids.UUID(run.Id))
+		if err != nil {
+			return nil, err
+		}
+	case run.Status == crmcontracts.ImportRunStatusPending && run.Error != nil:
 		return nil, fmt.Errorf("the test of import run %s refused it: %s: %w",
 			run.Id, *run.Error, apperrors.ErrInvalidArgument)
+	case run.Status == crmcontracts.ImportRunStatusValidating:
+		preview.Next = stillTesting
+	default:
+		preview.Next = fmt.Sprintf(testEnded, run.Status)
 	}
 	preview.Run = importRunResult(run)
-	if run.Status == crmcontracts.ImportRunStatusValidating {
-		preview.Next = stillTesting
-	}
 	return json.Marshal(preview)
 }

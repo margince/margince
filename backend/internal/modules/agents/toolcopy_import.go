@@ -28,7 +28,7 @@ var previewImportCopy = toolCopy{
 		"`company_ref` names a company's ref. " +
 		"read_import with view format lists each file's columns.",
 	Instead: "create_record for one record you already know.",
-	Retain: "Keep the run_id. The counts it answers — created, duplicates, skipped — and the " +
+	Retain: "Keep the run_id. The counts its report answers — created, duplicates, skipped — and the " +
 		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
 }

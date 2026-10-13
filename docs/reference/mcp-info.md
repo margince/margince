@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 173.0 KB |
+| Tool catalog | 175.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45186 |
+| Approx. wire tokens | 45751 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 58.6 KB | 33% | **No**: a result's shape, never listed to a model |
+| Output schemas | 60.8 KB | 34% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.4 KB | 27% | Yes, every step |
 | Input schemas | 52.6 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **101.0 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **101.0 KB** | **57%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 986 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 988 |
 | [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
@@ -6126,10 +6126,10 @@ it corrects — read them out first. A row whose `id` is EMPTY is a new company,
 both correct and add. Files that link to each other go together in `files`, at most one per type,
 instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's
 `company_ref` names a company's ref. read_import with view format lists each file's columns.
-create_record for one record you already know. Keep the run_id. The counts it answers — created,
-duplicates, skipped — and the mapping it settled on are what the user weighs, so report both: a
-column this placed by a name they did not write is a decision they did not make. (Runs immediately;
-requires passport scope "write".)
+create_record for one record you already know. Keep the run_id. The counts its report answers —
+created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report
+both: a column this placed by a name they did not write is a decision they did not make. (Runs
+immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6291,6 +6291,249 @@ requires passport scope "write".)
         },
         "next": {
           "type": "string"
+        },
+        "report": {
+          "properties": {
+            "disposition": {
+              "properties": {
+                "created": {
+                  "type": "integer"
+                },
+                "duplicates": {
+                  "type": "integer"
+                },
+                "skipped": {
+                  "type": "integer"
+                },
+                "unchanged": {
+                  "type": "integer"
+                },
+                "updated": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "created",
+                "skipped",
+                "unchanged",
+                "updated"
+              ],
+              "type": "object"
+            },
+            "estimated_duration_seconds": {
+              "type": "integer"
+            },
+            "issues": {
+              "items": {
+                "properties": {
+                  "column": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "line": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "links": {
+              "properties": {
+                "applied": {
+                  "type": "integer"
+                },
+                "offered": {
+                  "type": "integer"
+                },
+                "unresolved": {
+                  "items": {
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "reason",
+                      "to"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "applied",
+                "offered"
+              ],
+              "type": "object"
+            },
+            "mapping": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "parts": {
+              "items": {
+                "properties": {
+                  "disposition": {
+                    "properties": {
+                      "created": {
+                        "type": "integer"
+                      },
+                      "duplicates": {
+                        "type": "integer"
+                      },
+                      "skipped": {
+                        "type": "integer"
+                      },
+                      "unchanged": {
+                        "type": "integer"
+                      },
+                      "updated": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "created",
+                      "skipped",
+                      "unchanged",
+                      "updated"
+                    ],
+                    "type": "object"
+                  },
+                  "file": {
+                    "type": "string"
+                  },
+                  "object": {
+                    "type": "string"
+                  },
+                  "rows_read": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "disposition",
+                  "file",
+                  "object",
+                  "rows_read"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "rows_read": {
+              "type": "integer"
+            },
+            "run_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "source_key_used": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "undo": {
+              "properties": {
+                "errored": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "object": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "object",
+                      "reason"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "kept": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "object": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "object"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "reversed_count": {
+                  "type": "integer"
+                },
+                "run_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "updates_not_reversed": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "errored",
+                "kept",
+                "reversed_count",
+                "run_id",
+                "status"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "disposition",
+            "issues",
+            "rows_read",
+            "run_id",
+            "source_key_used",
+            "status"
+          ],
+          "type": "object"
         },
         "run": {
           "properties": {

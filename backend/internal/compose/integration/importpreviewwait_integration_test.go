@@ -36,6 +36,9 @@ type waitedPreview struct {
 		RunID string `json:"run_id"`
 		State string `json:"state"`
 	} `json:"run"`
+	Report *struct {
+		RowsRead int `json:"rows_read"`
+	} `json:"report"`
 	Next string `json:"next"`
 }
 
@@ -73,6 +76,9 @@ func TestPreviewWaitsThenAnswersTheReport(t *testing.T) {
 	if preview.Run.State != "awaiting_approval" || preview.Next != "" {
 		t.Fatalf("the preview answered %+v, want the report ready after one wait", preview)
 	}
+	if preview.Report == nil || preview.Report.RowsRead != 1 {
+		t.Fatalf("the preview answered the report %+v, want the test's report of its one row", preview.Report)
+	}
 	select {
 	case <-clock.asked:
 		t.Fatal("the preview waited again after its report was ready")
@@ -84,8 +90,8 @@ func TestPreviewAnswersValidatingPastTheWait(t *testing.T) {
 	d := newTwoDoors(t, "preview-past-wait", "read", "write")
 	var preview waitedPreview
 	decode(t, d.tool(t, "preview_import", previewArgs("Unwaited GmbH")), &preview)
-	if preview.Run.State != "validating" || !strings.Contains(preview.Next, "read_import") {
-		t.Fatalf("the preview answered %+v, want validating and the copy to poll read_import", preview)
+	if preview.Run.State != "validating" || !strings.Contains(preview.Next, "read_import") || preview.Report != nil {
+		t.Fatalf("the preview answered %+v, want validating, no report and the copy to poll read_import", preview)
 	}
 
 	var report struct {

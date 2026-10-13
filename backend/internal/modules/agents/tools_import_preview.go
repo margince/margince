@@ -158,7 +158,8 @@ var busyRunCopy = map[string]string{
 	httperr.SourceBusyCode: "import run %s of this source_name is still writing. read_import that run " +
 		"until its state is complete or failed, then preview again",
 	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
-		"(view report) until its state is awaiting_approval, then preview again",
+		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
+		"then preview again",
 }
 
 // namingTheBusyRun points a busy refusal at the run it names, when the caller

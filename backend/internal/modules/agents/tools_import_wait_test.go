@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,6 +45,15 @@ func (s testedImports) ReadRun(context.Context, ids.UUID) (crmcontracts.ImportRu
 	*s.read++
 	return s.reads[at], nil
 }
+
+// ReadReport answers the last state read with a report of rowsRead rows, as
+// the seam answers a run that has reached awaiting_approval.
+func (s testedImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	run := s.reads[max(min(*s.read, len(s.reads))-1, 0)]
+	return run, &crmcontracts.ImportRunReport{RunId: openapi_types.UUID(s.run), RowsRead: rowsRead}, nil
+}
+
+const rowsRead = 300
 
 func newTestedImports(states ...crmcontracts.ImportRun) testedImports {
 	run := ids.NewV7()
@@ -96,6 +106,9 @@ func TestPreviewWaitsUntilTheReportIsReady(t *testing.T) {
 	if got.Run.State != "awaiting_approval" || got.Next != "" {
 		t.Fatalf("answer = %+v, want the report ready and no copy to poll", got)
 	}
+	if got.Report == nil || got.Report.RowsRead != rowsRead {
+		t.Fatalf("report = %+v, want the test's report of %d rows in the answer", got.Report, rowsRead)
+	}
 	if asked != 2 || *imports.read != 2 {
 		t.Fatalf("waited %d and read %d times, want 2 each: it stops at the report", asked, *imports.read)
 	}
@@ -110,6 +123,42 @@ func TestPreviewStopsWaitingAtItsBound(t *testing.T) {
 	}
 	if got.Run.State != "validating" || got.Next == "" || *imports.read != 3 {
 		t.Fatalf("answer = %+v after %d reads, want validating with the copy after 3", got, *imports.read)
+	}
+	if got.Report != nil {
+		t.Fatalf("report = %+v while the run is validating, want none", got.Report)
+	}
+}
+
+func TestATestThatEndedWithoutAReportSaysWhatToDo(t *testing.T) {
+	superseded := "superseded"
+	for name, ended := range map[string]crmcontracts.ImportRun{
+		"stopped by a human": {Status: crmcontracts.ImportRunStatusPending},
+		"replaced":           {Status: crmcontracts.ImportRunStatusCancelled, Error: &superseded},
+	} {
+		t.Run(name, func(t *testing.T) {
+			asked := 0
+			imports := newTestedImports(ended)
+			got, err := previewOnce(t.Context(), imports, importWait{clock: firingClock{asked: &asked}, within: previewWait})
+			if err != nil {
+				t.Fatalf("preview: %v", err)
+			}
+			if got.Run.State != string(ended.Status) || !strings.Contains(got.Next, "preview_import") || got.Report != nil {
+				t.Fatalf("answer = %+v, want state %s, no report, and copy sending the caller to preview again", got, ended.Status)
+			}
+		})
+	}
+}
+
+func TestTheWaitCopyNamesEveryStateATestEndsIn(t *testing.T) {
+	for _, state := range []crmcontracts.ImportRunStatus{
+		crmcontracts.ImportRunStatusAwaitingApproval, crmcontracts.ImportRunStatusPending, crmcontracts.ImportRunStatusCancelled,
+	} {
+		if !strings.Contains(stillTesting, string(state)) {
+			t.Errorf("stillTesting = %q, want it to name %s, a state a test can end in", stillTesting, state)
+		}
+		if !strings.Contains(busyRunCopy[httperr.AgentBusyCode], string(state)) {
+			t.Errorf("the agent-busy copy = %q, want it to name %s", busyRunCopy[httperr.AgentBusyCode], state)
+		}
 	}
 }
 
