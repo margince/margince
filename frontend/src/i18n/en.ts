@@ -6084,6 +6084,7 @@ export const en = {
   "import.map.run": "Run test",
   "import.map.running": "Running test…",
   "import.map.stageFailed": "Test run did not start",
+  "import.map.testStopped": "Test run stopped",
   "import.step.hintStaged":
     "A test run is staged, so the files and the map are fixed. Fix and re-upload starts again.",
   "import.progress.waiting": "Waiting",
@@ -6118,7 +6119,7 @@ export const en = {
   "import.test.counts": "Rows per record type",
   "import.test.testing": "Testing your file…",
   "import.test.stop": "Stop test",
-  "import.test.stopFailed": "Test did not stop",
+  "import.test.stopFailed": "The test did not stop. Press Stop test again.",
   "import.test.problems_one": "1 problem",
   "import.test.problems_other": "{count} problems",
   "import.test.col.where": "Where",

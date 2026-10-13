@@ -19125,7 +19125,10 @@ export interface paths {
          *     that `version` changes nothing and answers 200.
          *
          *     Supersede and `import_source_busy` work as they do for
-         *     `createImportRun`.
+         *     `createImportRun`. This call never answers `import_agent_busy`: only a
+         *     human session calls it, and the test it queues is that human's. That
+         *     409 holds an agent to one test at a time, and an agent tests through
+         *     `createImportRun`, which documents it.
          */
         post: operations["validateImportRun"];
         delete?: never;

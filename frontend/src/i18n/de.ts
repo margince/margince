@@ -5940,6 +5940,7 @@ export const de = {
   "import.map.run": "Testlauf starten",
   "import.map.running": "Testlauf läuft…",
   "import.map.stageFailed": "Testlauf nicht gestartet",
+  "import.map.testStopped": "Testlauf abgebrochen",
   "import.step.hintStaged":
     "Ein Testlauf ist angelegt, Dateien und Zuordnung stehen fest. Korrigieren und neu hochladen fängt von vorn an.",
   "import.progress.waiting": "Wartet",
@@ -5977,7 +5978,8 @@ export const de = {
   "import.test.counts": "Zeilen je Datensatztyp",
   "import.test.testing": "Deine Datei wird getestet …",
   "import.test.stop": "Test anhalten",
-  "import.test.stopFailed": "Test nicht angehalten",
+  "import.test.stopFailed":
+    "Der Test wurde nicht angehalten. Klicke erneut auf „Test anhalten“.",
   "import.test.problems_one": "1 Problem",
   "import.test.problems_other": "{count} Probleme",
   "import.test.col.where": "Ort",

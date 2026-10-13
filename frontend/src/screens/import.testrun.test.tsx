@@ -156,7 +156,8 @@ describe("the test run", () => {
       refused = true;
       await vi.advanceTimersByTimeAsync(2000);
       expect(await screen.findByText(reason)).toBeVisible();
-      expect(screen.getByText("Test run did not start")).toBeVisible();
+      expect(screen.getByText("Test run stopped")).toBeVisible();
+      expect(screen.queryByText("Test run did not start")).toBeNull();
       expect(screen.queryByText("Testing your file…")).toBeNull();
       expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
     } finally {
@@ -182,6 +183,22 @@ describe("the test run", () => {
     ).toBeEnabled();
     expect(sent.map((s) => s.path)).toContain(`POST /imports/${run.id}/cancel`);
     expect(screen.queryByText("Testing your file…")).toBeNull();
+  });
+
+  it("a refused stop says to press Stop test again, and the button is there", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({ ...run, status: "validating" }),
+      [`POST /imports/${run.id}/cancel`]: () =>
+        jsonResponse({ status: 503, detail: "Try again shortly." }, 503),
+    });
+    await renderAtTestRun(user);
+    await user.click(await screen.findByRole("button", { name: "Stop test" }));
+    expect(
+      await screen.findByText("The test did not stop. Press Stop test again."),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Stop test" })).toBeEnabled();
   });
 
   it("a reloaded validating run shows the testing state", async () => {
@@ -243,7 +260,7 @@ describe("the test run", () => {
     });
     await renderAtTestRun(user);
     expect(await screen.findByText(stored)).toBeVisible();
-    expect(screen.getByText("Test run did not start")).toBeVisible();
+    expect(screen.getByText("Test run stopped")).toBeVisible();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
