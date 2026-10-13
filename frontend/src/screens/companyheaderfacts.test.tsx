@@ -200,7 +200,7 @@ describe("a record imported from somewhere else", () => {
 });
 
 // A company an import wrote has the importing administrator's seat in
-// captured_by, so without its own arm the strip told that administrator they
+// captured_by. Without its own arm the strip tells that administrator they
 // typed the whole file.
 describe("a company an import wrote", () => {
   it("an imported company is labelled imported, not typed by you", async () => {
@@ -210,7 +210,7 @@ describe("a company an import wrote", () => {
         company={{
           ...COMPANY,
           captured_by: "human:u-reader",
-          source: "mirror:csv:pipedrive-export:company:org-12",
+          source: "mirror:csv:pipedrive-export:company:co-12",
         }}
       />,
     );

@@ -188,7 +188,7 @@ describe("what a tool is called on screen", () => {
 });
 
 // An import runs as one administrator, so captured_by names that seat on every
-// row it wrote and the reader who ran it would be told they typed the file.
+// row it wrote. The reader who ran it would be told they typed the file.
 describe("a row an import wrote", () => {
   const VIEWER = "u-admin";
 
@@ -198,7 +198,7 @@ describe("a row an import wrote", () => {
         `human:${VIEWER}`,
         VIEWER,
         undefined,
-        "mirror:csv:pipedrive-export:company:org-12",
+        "mirror:csv:pipedrive-export:company:co-12",
       ),
     ).toEqual({ kind: "import", source: "pipedrive-export" });
   });
