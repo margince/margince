@@ -133,17 +133,10 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if err := h.ownsSource(ctx, ref); err != nil {
 		return err
 	}
-	runs := migration.NewRunStore(h.db)
-	run, err := runs.RunOfSource(ctx, ref)
-	switch {
-	case errors.Is(err, apperrors.ErrNotFound):
+	err := migration.NewRunStore(h.db).DiscardOwnDraft(ctx, ref)
+	if errors.Is(err, apperrors.ErrNotFound) {
 		return h.blobs.Delete(ctx, ref)
-	case err != nil:
-		return err
-	case run.SourceReleased:
-		return nil
 	}
-	_, err = runs.Cancel(ctx, run.ID)
 	return err
 }
 

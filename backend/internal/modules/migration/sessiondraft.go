@@ -85,16 +85,9 @@ func (s *RunStore) RunOfSource(ctx context.Context, sourceRef string) (Run, erro
 	}
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		var id RunID
-		err := tx.QueryRow(ctx, `
-			SELECT id FROM import_run WHERE connector = $1 AND source_ref = $2
-			 ORDER BY source_released_at IS NULL DESC, created_at DESC, id DESC LIMIT 1`,
-			ConnectorCSV, sourceRef).Scan(&id)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("no import run holds this upload: %w", apperrors.ErrNotFound)
-		}
+		id, err := runOfSource(ctx, tx, sourceRef)
 		if err != nil {
-			return fmt.Errorf("finding the import run of an upload: %w", err)
+			return err
 		}
 		run, err = readStaged(ctx, tx, id)
 		return err
@@ -103,6 +96,56 @@ func (s *RunStore) RunOfSource(ctx context.Context, sourceRef string) (Run, erro
 		return Run{}, err
 	}
 	return run, nil
+}
+
+func runOfSource(ctx context.Context, tx pgx.Tx, sourceRef string) (RunID, error) {
+	var id RunID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM import_run WHERE connector = $1 AND source_ref = $2
+		 ORDER BY source_released_at IS NULL DESC, created_at DESC, id DESC LIMIT 1`,
+		ConnectorCSV, sourceRef).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return RunID{}, fmt.Errorf("no import run holds this upload: %w", apperrors.ErrNotFound)
+	}
+	if err != nil {
+		return RunID{}, fmt.Errorf("finding the import run of an upload: %w", err)
+	}
+	return id, nil
+}
+
+// DiscardOwnDraft ends the run its caller opened for an upload, and releases
+// the file. Opening it took only the create grant, so ending it takes no more;
+// a run someone else opened is theirs to cancel. A released upload is a no-op.
+func (s *RunStore) DiscardOwnDraft(ctx context.Context, sourceRef string) error {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
+		return err
+	}
+	opener, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		id, err := runOfSource(ctx, tx, sourceRef)
+		if err != nil {
+			return err
+		}
+		var capturedBy string
+		var released bool
+		if err := tx.QueryRow(ctx, `SELECT captured_by, source_released_at IS NOT NULL FROM import_run WHERE id = $1`,
+			id).Scan(&capturedBy, &released); err != nil {
+			return fmt.Errorf("reading import run %s: %w", id, err)
+		}
+		if released {
+			return nil
+		}
+		if capturedBy != opener {
+			return fmt.Errorf("import run %s was opened by someone else, so only a cancel ends it: %w", id, apperrors.ErrPermissionDenied)
+		}
+		if err := stageTransition(ctx, tx, id, moveCancel, runChange{}); err != nil {
+			return err
+		}
+		return releaseSource(ctx, tx, id)
+	})
 }
 
 // DraftPatch is the choices one PATCH changes; a nil field is left as it is.

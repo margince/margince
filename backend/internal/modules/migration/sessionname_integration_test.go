@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // fairName is the source name every run of these tests is filed under.
@@ -156,5 +157,55 @@ func TestAStoppedCommitWithoutItsFileCannotResume(t *testing.T) {
 	}
 	if got := mustGetStaged(ctx, t, s, released); got.Status != StatusFailed {
 		t.Errorf("the refused run reads %s, want failed", got.Status)
+	}
+}
+
+// openerWith is the caller of ctx under another identity holding only grant.
+func openerWith(ctx context.Context, id string, grant principal.ObjectGrant) context.Context {
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: id, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{ImportRunObject: grant}, RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func TestTheOpenerOfADraftDiscardsItWithTheGrantThatOpenedIt(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	createOnly := principal.ObjectGrant{Create: true}
+	opener := openerWith(ctx, "human:"+ids.NewV7().String(), createOnly)
+	draft := newDraft(opener, t, s, "")
+
+	other := openerWith(ctx, "human:"+ids.NewV7().String(), createOnly)
+	if err := s.DiscardOwnDraft(other, draft.SourceRef); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("discarding someone else's draft = %v, want permission denied", err)
+	}
+	if err := s.DiscardOwnDraft(opener, draft.SourceRef); err != nil {
+		t.Fatalf("its opener discarding the draft with only the create grant = %v, want it cancelled", err)
+	}
+	if got := mustGetStaged(ctx, t, s, draft.ID); got.Status != StatusCancelled || !got.SourceReleased {
+		t.Errorf("the discarded draft reads %s (released %t), want cancelled and released", got.Status, got.SourceReleased)
+	}
+	if err := s.DiscardOwnDraft(opener, draft.SourceRef); err != nil {
+		t.Errorf("discarding a released upload again = %v, want a no-op", err)
+	}
+}
+
+func TestAnApprovedRunKeepsNoProfile(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	report := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
+	if len(report.Profile) == 0 {
+		t.Fatal("the report has no profile to drop; the test proves nothing")
+	}
+	if _, err := s.Approve(ctx, report.ID, report.Version); err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+	if err := s.FailRunning(ctx, report.ID, CauseStopped); err != nil {
+		t.Fatalf("FailRunning: %v", err)
+	}
+	if got := mustGetStaged(ctx, t, s, report.ID); got.Profile != nil || got.SourceReleased {
+		t.Errorf("a stopped commit reads profile %s (released %t), want no profile and its file kept for a resume", got.Profile, got.SourceReleased)
 	}
 }

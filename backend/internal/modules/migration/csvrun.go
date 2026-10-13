@@ -120,9 +120,10 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 	}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		return stageTransition(ctx, tx, id, moveApprove, runChange{
-			version:  version,
-			values:   []runValue{{"approved_by", approver}},
-			literals: []string{"approved_at = now()"},
+			version: version,
+			values:  []runValue{{"approved_by", approver}},
+			// The profile serves only the choosing; a stopped commit must not keep its sample cells.
+			literals: []string{"approved_at = now()", "profile = NULL"},
 			after:    map[string]any{"approved_by": approver},
 		})
 	})

@@ -43,7 +43,9 @@ var runLedgerWindow = gatekit.Waive(map[string]string{
 		"(execute.go). The terminal states are what a window would take, and how long a failed send " +
 		"stays debuggable is the operator's call",
 	"import_run": "one row per migration run, holding the report a resumed run reads to avoid " +
-		"understating a one-way cutover. A window has to outlive the cutover it describes",
+		"understating a one-way cutover. A window has to outlive the cutover it describes. The " +
+		"profile of sample cells goes at approval, and the uploaded file at release; only a " +
+		"stopped commit keeps its file, for its resume",
 	"report_run": "one row per report generation. The edition it produced has its own retention " +
 		"ladder, so this is the attempt rather than the artefact",
 	"workflow_run": "one row per automation tick, and auth.LiveIntakeTaskClause reads the planned " +

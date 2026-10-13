@@ -107,6 +107,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
 		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
+		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -656,7 +657,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
-		"RunOfSource": true, "AwaitApproval": true, "Approve": true,
+		"RunOfSource": true, "DiscardOwnDraft": true, "AwaitApproval": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
