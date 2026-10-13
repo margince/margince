@@ -131,12 +131,12 @@ func openingGreeting(trimmed string) (greeting, bool) {
 	found := greeting{}
 	for _, lang := range []textlang.Lang{textlang.English, textlang.German, textlang.Vietnamese} {
 		for _, opener := range greetingOpeners[lang] {
-			if len(firstLine) < len(opener) || !strings.EqualFold(firstLine[:len(opener)], opener) ||
-				!boundary(firstLine, len(opener)) {
+			end, ok := foldedPrefix(firstLine, opener)
+			if !ok || !boundary(firstLine, end) {
 				continue
 			}
 			found.langs = append(found.langs, lang)
-			found.end = max(found.end, len(opener))
+			found.end = max(found.end, end)
 		}
 	}
 	if len(found.langs) == 0 {
@@ -146,6 +146,21 @@ func openingGreeting(trimmed string) (greeting, bool) {
 		found.names, found.end, found.closed = names, end, true
 	}
 	return found, true
+}
+
+// foldedPrefix reports whether line opens with opener, ignoring case, and the
+// byte offset in line where it stops. It counts runes, not bytes: "GRÜẞ" is a
+// byte longer than "grüß".
+func foldedPrefix(line, opener string) (int, bool) {
+	end := 0
+	for range utf8.RuneCountInString(opener) {
+		if end == len(line) {
+			return 0, false
+		}
+		_, width := utf8.DecodeRuneInString(line[end:])
+		end += width
+	}
+	return end, strings.EqualFold(line[:end], opener)
 }
 
 // addressee reads the words a greeting addresses from the opener's end. It

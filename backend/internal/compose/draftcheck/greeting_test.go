@@ -145,6 +145,7 @@ func TestAGreetingThatNamesSomebodyElseIsAFinding(t *testing.T) {
 		{"Hello Bob Smith\n\nWednesday works.", "Alice", "Weber"},
 		{"Hello, Bob,\n\nWednesday works.", "Alice", "Weber"},
 		{"Hallo Hr. Rietsch,\n\nMittwoch passt.", "Marcus", "Greven"},
+		{"GRÜẞ DICH Bob,\n\nMittwoch passt.", "Marcus", "Greven"},
 	} {
 		if !flags(draftcheck.RuleWrongAddressee, tc.body, textlang.Unknown, tc.first, tc.last) {
 			t.Errorf("a greeting to somebody other than %s %s passed: %q", tc.first, tc.last, tc.body)
