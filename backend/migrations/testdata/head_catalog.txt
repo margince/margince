@@ -4524,6 +4524,7 @@ public.idx_lead_merged_into CREATE INDEX idx_lead_merged_into ON public.lead USI
 public.idx_lead_name_trgm CREATE INDEX idx_lead_name_trgm ON public.lead USING gin (f_fold_apostrophes(lower(((COALESCE(full_name, ''::text) || ' '::text) || COALESCE(company_name, ''::text)))) gin_trgm_ops)
 public.idx_lead_owner CREATE INDEX idx_lead_owner ON public.lead USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_lead_project CREATE INDEX idx_lead_project ON public.lead USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
+public.idx_lead_promoted_contact CREATE INDEX idx_lead_promoted_contact ON public.lead USING btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)
 public.idx_lead_qualified_deal CREATE INDEX idx_lead_qualified_deal ON public.lead USING btree (qualified_deal_id) WHERE (qualified_deal_id IS NOT NULL)
 public.idx_lead_score CREATE INDEX idx_lead_score ON public.lead USING btree (score DESC) WHERE ((archived_at IS NULL) AND (status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text])))
 public.idx_lead_score_history_series CREATE INDEX idx_lead_score_history_series ON public.lead_score_history USING btree (lead_id, computed_at DESC, id DESC)
