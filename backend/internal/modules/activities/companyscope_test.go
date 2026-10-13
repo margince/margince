@@ -69,12 +69,12 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (where stri
 
 func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
 	where, args := filterFor(unscopedCtx(), t, "company")
-	if !strings.Contains(where, "EXISTS (") {
-		t.Fatalf("company filter is not an EXISTS: %s", where)
+	if !strings.Contains(where, "a.id IN (SELECT reach.activity_id") {
+		t.Fatalf("company filter is not a membership test against the account's reach: %s", where)
 	}
 	for _, arm := range []string{
 		"l.company_id = $1", "d.company_id = $1", "r.company_id = $1",
-		"emp.company_id = $1",
+		"e0.company_id = $1",
 	} {
 		if !strings.Contains(where, arm) {
 			t.Errorf("company filter misses the %q arm: %s", arm, where)

@@ -5,8 +5,8 @@
 
 package activities
 
-// The account-driven reach set answers what the timeline predicate answers,
-// arm by arm, including the rows each arm's date and currency bounds refuse.
+// The account reach admits each arm, both as the timeline's predicate and as
+// the set. It refuses the rows each arm's date and currency bounds leave out.
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestTheReachedSetAgreesWithThePredicateOnEveryArm(t *testing.T) {
+func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 	e := setupPromises(t)
 	account, elsewhere := ids.NewV7(), ids.NewV7()
 	for _, company := range []ids.UUID{account, elsewhere} {
@@ -64,27 +64,19 @@ func TestTheReachedSetAgreesWithThePredicateOnEveryArm(t *testing.T) {
 	link(otherAccount, "company", elsewhere)
 
 	want := map[ids.UUID]bool{filed: true, onDeal: true, aboutEmployee: true, employeeCopied: true}
-	for _, company := range []ids.UUID{account, elsewhere} {
-		byPredicate := e.activityIDs(t, `SELECT a.id FROM activity a WHERE `+CompanyLinkedActivityExists(1), company)
-		bySet := e.activityIDs(t, `SELECT reach.activity_id FROM (`+CompanyReachedActivities(1)+`) reach`,
-			[]ids.UUID{company})
-		if len(bySet) != len(byPredicate) {
-			t.Errorf("company %s: the set reached %d activities and the predicate %d", company, len(bySet), len(byPredicate))
+	reads := map[string]map[ids.UUID]bool{
+		"the predicate": e.activityIDs(t, `SELECT a.id FROM activity a WHERE `+CompanyLinkedActivityExists(1), account),
+		"the set": e.activityIDs(t, `SELECT reach.activity_id FROM (`+CompanyReachedActivities(1)+`) reach
+			WHERE reach.company_id = $2`, []ids.UUID{account, elsewhere}, account),
+	}
+	for read, got := range reads {
+		if len(got) != len(want) {
+			t.Errorf("%s reached %d activities on the account, want the 4 its arms admit: %v", read, len(got), got)
 		}
-		for id := range byPredicate {
-			if !bySet[id] {
-				t.Errorf("company %s: the predicate reaches %s and the set does not", company, id)
+		for id := range want {
+			if !got[id] {
+				t.Errorf("%s does not reach %s, which one of the account's arms admits", read, id)
 			}
-		}
-	}
-	got := e.activityIDs(t, `SELECT reach.activity_id FROM (`+CompanyReachedActivities(1)+`) reach
-		WHERE reach.company_id = $2`, []ids.UUID{account, elsewhere}, account)
-	if len(got) != len(want) {
-		t.Errorf("the account reached %d activities, want the 4 its arms admit: %v", len(got), got)
-	}
-	for id := range want {
-		if !got[id] {
-			t.Errorf("the account does not reach %s, which one of its arms admits", id)
 		}
 	}
 }

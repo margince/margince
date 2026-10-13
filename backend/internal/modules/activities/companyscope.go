@@ -62,25 +62,27 @@ func CompanyLinkedActivityExistsAny(companiesPos int) string {
 // CompanyReachedActivities is the predicate's four-arm walk as a set that
 // starts from the accounts. It yields (activity_id, company_id) for each bound
 // account an activity reaches.
-//
-// The predicate's arms are one `OR` of `EXISTS`, so no plan can start from the
-// account, and a quiet account walks the whole activity table. Here each arm is
-// a branch on its own indexed column, over the same companyArms text.
+func CompanyReachedActivities(companiesPos int) string {
+	return companyReach(sprintf("ANY($%d)", companiesPos))
+}
+
+// companyReach is the walk as a set with one branch per arm. Each branch filters
+// on its arm's indexed company column, so a plan starts from the account. An
+// `OR` across the arms would leave Postgres no index to start from.
 //
 // The participant `EXISTS` reads the activity's date inside a join, which keeps
 // Postgres from planning it as a join. Its branch reaches the employees'
 // activities first, and that same `EXISTS` decides which of them count.
-func CompanyReachedActivities(companiesPos int) string {
-	companies := sprintf("ANY($%d)", companiesPos)
+func companyReach(operand string) string {
 	linkBranch := func(column string) string {
 		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
-			column, companyArms, companies)
+			column, companyArms, operand)
 	}
 	participantBranch := sprintf(`SELECT a.id, e0.company_id FROM relationship e0
 		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
 		    JOIN activity a ON a.id = p0.activity_id
 		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `+participantEmployerArm,
-		companies, "e0.company_id")
+		operand, "e0.company_id")
 	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
 		"\n\t\t    UNION " + linkBranch("r.company_id") + "\n\t\t    UNION " + participantBranch
 }
@@ -140,20 +142,15 @@ var participantEmployerArm = `EXISTS (
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // activityReachesCompany is the walk as a PREDICATE, for a query that aliases
-// activity as a. operand is what each arm compares its company id against
-// — a single bind, ANY(array), or the enclosing query's company column.
+// activity as a. operand is what each arm compares its company id against: a
+// single bind or ANY(array).
 //
-// It stays an EXISTS rather than a join against CompanyReachSet: EXISTS stops at
-// the first arm that matches, and every one of this function's callers is a
-// hot read. The participant arm is a second EXISTS beside the first for the
-// same reason — it is probed only when the three links found nothing.
+// It is a membership test against companyReach rather than an `EXISTS` per arm.
+// Correlated `EXISTS` joined by `OR` made every reader walk activity
+// newest-first, so a quiet account cost the whole table. The set starts from
+// the account, at the price of building a busy account's whole set first.
 func activityReachesCompany(operand string) string {
-	linked := sprintf(`EXISTS (
-		    SELECT 1 %s
-		    WHERE l.activity_id = a.id
-		      AND (l.company_id = %[2]s OR d.company_id = %[2]s OR r.company_id = %[2]s))`,
-		companyArms, operand)
-	return "(" + linked + "\n\t\t    OR " + sprintf(participantEmployerArm, operand) + ")"
+	return "a.id IN (SELECT reach.activity_id FROM (" + companyReach(operand) + ") reach)"
 }
 
 // CompanyReachSet is the same walk as a SET: the body of a derived table producing
