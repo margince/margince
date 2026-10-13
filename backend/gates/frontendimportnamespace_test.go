@@ -49,8 +49,8 @@ var (
 )
 
 // tsImportObjectSet reads the Set's members. Anything in the brackets that is
-// not a quoted word (a spread, a constant) is refused, because a member this
-// reader cannot see is one the comparison would silently agree with.
+// not a quoted word (a spread, a constant) is refused. A member this reader
+// cannot see is one the comparison would silently agree with.
 func tsImportObjectSet(source string) ([]string, error) {
 	matches := tsImportObjects.FindAllStringSubmatch(tsComment.ReplaceAllString(source, " "), -1)
 	if len(matches) != 1 {

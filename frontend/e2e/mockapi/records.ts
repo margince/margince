@@ -90,7 +90,7 @@ export const newCompany = {
 };
 
 // A company and a contact the CSV importer created from an upload named
-// "pipedrive-export": the administrator who ran it holds captured_by, and the
+// "pipedrive-export". The administrator who ran it holds captured_by, and the
 // source is the importer's stamp.
 export const importedCompany = {
   ...brandt,

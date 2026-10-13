@@ -110,10 +110,10 @@ function administeredOf(
   );
 }
 
-// sourceLabelFor names a stored source value for a reader: the server's own
-// label when the row carries one, else the administered list's, else the
-// shipped label, else a connector value's family ("Apollo") — never the
-// raw `connector:apollo:a-1` token or an import's `mirror:` stamp.
+// sourceLabelFor names a stored source value for a reader. The server's own
+// label wins, then the administered list's, the shipped label, and a connector
+// value's family ("Apollo"). It never shows the raw `connector:apollo:a-1`
+// token or an import's stamp.
 export function sourceLabelFor(
   lead: Readonly<{ source?: string | null; source_label?: string | null }>,
   sources: readonly LeadSource[] | undefined,

@@ -168,9 +168,9 @@ export function importProvenance(
   return { kind: "import", uploadName: uploadNameOf(connector, tail) };
 }
 
-// The upload is named exactly when the segment after it is an object. Keyed on
-// that segment, an upload called "contact" keeps its name and an object the
-// browser does not know yet reads "Imported" instead of passing for a name.
+// The upload is named only when the segment after it is an object. So an upload
+// called "contact" keeps its name. An object the browser does not know yet
+// reads "Imported" instead of passing for a name.
 function uploadNameOf(
   connector: string | undefined,
   tail: readonly string[],

@@ -17,10 +17,10 @@ import "./trust.css";
 // carries and which four screens render without staging anything at all.
 
 // Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:contact_auto_enrich`), a human, a
-// buyer — the shapes captured_by can take — or an import, plus the honest last
-// arm for a row that records none of them. A reader has to be able to tell
-// WHICH KIND of thing produced a value, so each is its own arm: a scheduled
+// job the installation ran itself (`system:contact_auto_enrich`), a human or a
+// buyer. Those are the shapes captured_by can take. An import is one more arm,
+// and the last arm is a row that records none of them. A reader has to tell
+// which kind of thing produced a value, so each is its own arm. A scheduled
 // sweep announced as an AI agent misdescribes both.
 //
 // `buyer` is the contact on the other side of a Deal Room: outside the
