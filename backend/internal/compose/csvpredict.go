@@ -97,6 +97,8 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 		if target.reason != "" {
 			return predictUnwritable, target.reason, nil
 		}
+		// Linkable even when the update is refused, as ensureRow binds it.
+		w.links.markPending(w.object, row.ExternalID)
 		return w.reconcilePrediction(ctx, target.id, row, typed)
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
@@ -217,6 +219,13 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditReason(w.object), nil
+	}
+	refused, err := w.updateKeyRefusal(ctx, id, changed, typed)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if refused != "" {
+		return predictUnwritable, refused, nil
 	}
 	return predictUpdate, "", nil
 }

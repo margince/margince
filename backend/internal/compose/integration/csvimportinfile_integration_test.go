@@ -316,3 +316,44 @@ func TestAnUpdateMeetsTheAddressAnEarlierRowTakes(t *testing.T) {
 		})
 	}
 }
+
+// A re-import moves a key onto a record the importer landed before, while a
+// record made by hand holds it. The store refuses the move.
+func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
+	cases := []struct {
+		object, path, header, first, moved string
+		incumbent                          map[string]any
+		mapping                            map[string]string
+	}{{
+		object: "contact", path: "/v1/contacts", header: "Full Name,Email",
+		first: "Grace Hopper,grace@hopper.example", moved: "Grace Hopper,ada@lovelace.example",
+		incumbent: map[string]any{"source": "manual", "full_name": "Ada Lovelace",
+			"emails": []map[string]any{{"email": "ada@lovelace.example", "is_primary": true}}},
+		mapping: map[string]string{"Full Name": "full_name", "Email": "email"},
+	}, {
+		object: "lead", path: "/v1/leads", header: "Full Name,Email",
+		first: "Grace Hopper,grace@hopper.example", moved: "Grace Hopper,ada@lovelace.example",
+		incumbent: map[string]any{"source": "manual", "full_name": "Ada Lovelace", "email": "ada@lovelace.example"},
+		mapping:   map[string]string{"Full Name": "full_name", "Email": "email"},
+	}, {
+		object: "company", path: "/v1/companies", header: "Full Name,Website",
+		first: "Nordwind Logistik,nordwind.example", moved: "Nordwind Logistik,zephyr.example",
+		incumbent: map[string]any{"source": "manual", "display_name": "Zephyr Freight",
+			"domains": []map[string]any{{"domain": "zephyr.example", "is_primary": true}}},
+		mapping: map[string]string{"Full Name": "display_name", "Website": "domain"},
+	}}
+	for _, tc := range cases {
+		t.Run(tc.object, func(t *testing.T) {
+			e := setupImportApp(t)
+			if status := e.Call(t, http.MethodPost, tc.path, tc.incumbent, nil, nil); status != http.StatusCreated {
+				t.Fatalf("creating the incumbent → %d, want 201", status)
+			}
+			run := map[string]any{"mapping": tc.mapping, "source_key": "Full Name"}
+			previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.first+"\n", run)
+
+			preview, final := previewThenCommit(t, e, tc.object, tc.header+"\n"+tc.moved+"\n", run)
+
+			assertPreviewIsTheCommit(t, preview, final, dispositionOf(0, 0, 1, 0))
+		})
+	}
+}
