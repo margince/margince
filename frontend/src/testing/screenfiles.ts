@@ -16,7 +16,7 @@ export function screenFiles(): string[] {
     .filter((path) => path.endsWith(".tsx"))
     .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
     .map((path) => relative(SRC_ROOT, path).split(sep).join("/"))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function filesUnder(dir: string): string[] {

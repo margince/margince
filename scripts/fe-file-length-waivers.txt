@@ -8,6 +8,10 @@
 #
 # Regenerate with scripts/seed-fe-file-length-waivers.sh — to ESTABLISH this
 # baseline, never to absorb a file that grew.
+#
+# One exception: a PR that only moves modules may raise a line by the import
+# lines its rewritten paths added, and by nothing else. Its PR body lists each
+# raise.
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
 982 frontend/src/app/shell.tsx
