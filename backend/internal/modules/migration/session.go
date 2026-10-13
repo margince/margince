@@ -153,7 +153,7 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return &SupersededError{RunID: id, By: *state.supersededBy}
 	}
 	if !slices.Contains(move.from, state.status) {
-		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, state.status, move.to, apperrors.ErrConflict)
+		return refusedStart(id, state.status, move.to)
 	}
 	if err := c.admitsVersion(id, state); err != nil {
 		return err
@@ -165,6 +165,25 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return fmt.Errorf("import run %s no longer holds its uploaded file, so it cannot run; upload the file again: %w", id, apperrors.ErrConflict)
 	}
 	return nil
+}
+
+// nextStepWhenAlready is what a caller whose move the run has already made
+// should do instead; a repeated approve or validate is the common case.
+var nextStepWhenAlready = map[string]string{
+	StatusRunning:    "read it until it completes",
+	StatusValidating: "read it until its report is ready",
+	StatusCancelled:  "start a new import to bring the file in",
+}
+
+// refusedStart is the conflict for a move that may not start from status.
+func refusedStart(id RunID, status, to string) error {
+	if status != to {
+		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, status, to, apperrors.ErrConflict)
+	}
+	if next, ok := nextStepWhenAlready[status]; ok {
+		return fmt.Errorf("import run %s is already %s; %s: %w", id, status, next, apperrors.ErrConflict)
+	}
+	return fmt.Errorf("import run %s is already %s: %w", id, status, apperrors.ErrConflict)
 }
 
 // admitsVersion refuses a version other than zero that is not the run's.

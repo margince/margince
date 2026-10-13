@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -105,7 +106,22 @@ func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
 			if !errors.Is(err, apperrors.ErrConflict) || got != status {
 				t.Errorf("%s from %s = (%s, %v), want a conflict that leaves the run %s", name, status, got, err, status)
 			}
+			if err != nil && status == move.to && strings.Contains(err.Error(), "cannot become") {
+				t.Errorf("%s from %s = %q, want it to say the run is already %s, not that it cannot become so", name, status, err, status)
+			}
 		}
+	}
+}
+
+func TestARepeatedApproveSaysTheRunIsAlreadyRunning(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	id := seedRunIn(ctx, t, db, StatusRunning)
+	err := db.Tx(ctx, func(tx pgx.Tx) error { return stageTransition(ctx, tx, id, moveApprove, runChange{}) })
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("approving a running run = %v, want a conflict", err)
+	}
+	if want := "is already running; read it until it completes"; !strings.Contains(err.Error(), want) {
+		t.Errorf("approving a running run says %q, want it to contain %q", err, want)
 	}
 }
 
