@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
-import { throwProblem, unwrap } from "./common";
+import { unwrap } from "./common";
 import { useAddressedRun } from "./importaddress";
 import { asProfile } from "./importprofile";
 import {
@@ -21,6 +21,7 @@ import type {
   ImportRun,
 } from "./importtypes";
 import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
+import { postMultipart } from "./multipart";
 
 // The file the hub's drop zone took, held for the run page to start with. A
 // File cannot ride an address, and the two are separate routes.
@@ -136,21 +137,10 @@ type UploadInput = Readonly<{
 }>;
 
 async function postSource(input: UploadInput): Promise<ImportProfile> {
-  // Multipart by hand: the generated client serializes JSON bodies, and this
-  // operation takes a file part.
-  const body = new FormData();
-  if (input.object) body.append("object", input.object);
-  body.append("file", input.file);
-  // contract-fetch:allow multipart: see the note above
-  const response = await fetch("/v1/imports/sources", {
-    method: "POST",
-    body,
-    credentials: "include",
+  const payload = await postMultipart("/v1/imports/sources", {
+    ...(input.object ? { object: input.object } : {}),
+    file: input.file,
   });
-  const payload = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throwProblem(payload);
-  }
   return asProfile(payload);
 }
 

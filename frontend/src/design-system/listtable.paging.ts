@@ -172,7 +172,7 @@ function usePageState<Row>(control: PagingControl<Row>) {
 export function usePaging<Row>(
   control: PagingControl<Row>,
   narrowing: Narrowing,
-  scroller: RefObject<HTMLDivElement | null>,
+  scrollerRef: RefObject<HTMLDivElement | null>,
 ): Paging<Row> {
   const { page, setPage, perPage, setPerPage } = usePageState(control);
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
@@ -200,8 +200,8 @@ export function usePaging<Row>(
     setPage(Math.max(1, to));
     // The header is sticky and the body scrolls, so without this the reader
     // lands on page 2 already scrolled to its middle.
-    if (scroller.current) {
-      scroller.current.scrollTop = 0;
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = 0;
     }
   };
   return {

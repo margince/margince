@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { postMultipart } from "./multipart";
 
 // Putting bytes on a record, for every surface that does it: the document
 // dialog's library upload and the contract form's signed paper.
@@ -83,27 +83,11 @@ export async function uploadAttachment(
   file: File,
   extraParts: Readonly<Record<string, string>> = {},
 ): Promise<Attachment | undefined> {
-  const body = new FormData();
-  body.append("entity_type", parent.entityType);
-  body.append("entity_id", parent.entityId);
-  for (const [part, value] of Object.entries(extraParts)) {
-    body.append(part, value);
-  }
-  body.append("file", file);
-  // contract-fetch:allow multipart — the generated client serializes JSON only, and this operation takes a file part
-  const response = await fetch("/v1/attachments", {
-    method: "POST",
-    body,
-    credentials: "include",
+  const stored = await postMultipart("/v1/attachments", {
+    entity_type: parent.entityType,
+    entity_id: parent.entityId,
+    ...extraParts,
+    file,
   });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => undefined);
-    throwProblem(payload);
-  }
-  // Not thrown. Past the status check the bytes are stored, and nothing a
-  // failed parse tells us changes that.
-  const stored: Attachment | undefined = await response
-    .json()
-    .catch(() => undefined);
-  return stored;
+  return stored as Attachment | undefined;
 }

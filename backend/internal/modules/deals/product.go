@@ -170,10 +170,12 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 	return out, err
 }
 
-// buildProductPatch folds the caller's sparse product edit into a patch —
-// every set field carries its before/after image for the audit trail.
-// descriptionColumn is named because the clear map and the patch both spell it.
-const descriptionColumn = "description"
+// descriptionColumn and billingIntervalColumn are named because more than one
+// writer spells each.
+const (
+	descriptionColumn     = "description"
+	billingIntervalColumn = "billing_interval_months"
+)
 
 // clearableProductColumns are the product's independently nullable columns.
 //
@@ -189,6 +191,8 @@ func clearableProductColumns(current crmcontracts.Product) map[string]storekit.C
 	}
 }
 
+// buildProductPatch folds the caller's sparse product edit into a patch. Every
+// set field carries its before/after image for the audit trail.
 func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if err := storekit.ApplyClears(p, in.Clear, clearableProductColumns(current)); err != nil {
@@ -257,7 +261,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 			return nil, err
 		}
 		p.Set("billing_model", currentModel, in.BillingModel)
-		p.Set("billing_interval_months", currentMonths, in.BillingIntervalMonths)
+		p.Set(billingIntervalColumn, currentMonths, in.BillingIntervalMonths)
 	}
 	return p, nil
 }
