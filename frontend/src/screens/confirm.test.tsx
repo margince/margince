@@ -29,13 +29,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -157,5 +157,66 @@ describe("the confirm page branches on what the link was for", () => {
     expect(
       await screen.findByText(/link|no longer|invalid/i),
     ).toBeInTheDocument();
+  });
+});
+
+// The seeded purposes are stored with English labels, so a page that printed
+// the label put English inside a German or Vietnamese page.
+describe("a confirm page names the seeded purposes in the reader's language", () => {
+  // The heading is a label and speaks the reader's language. The sentence is
+  // the consent proof. The server records the published question with the
+  // stored label, so the page shows and submits that same sentence.
+  it("shows and submits the same consent sentence the server records", async () => {
+    const user = userEvent.setup();
+    const submitted: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const request = input instanceof Request ? input : undefined;
+      const method = request?.method ?? init?.method ?? "GET";
+      if (method === "GET") {
+        return jsonResponse({
+          ...SUBSCRIPTION,
+          purpose_key: "marketing_email",
+          purpose_label: "Marketing email",
+        });
+      }
+      const body = request ? await request.text() : String(init?.body);
+      submitted.push(JSON.parse(body).marketing_wording);
+      return jsonResponse({});
+    });
+
+    render(<ConfirmDetailsScreen token="tok-de-subscription" />, "de");
+
+    expect(
+      await screen.findByRole("heading", { name: "Produktneuigkeiten" }),
+    ).toBeInTheDocument();
+    const shown = "Bestätigen Sie, dass Sie Marketing email erhalten möchten.";
+    expect(screen.getByText(shown)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Abonnement bestätigen" }),
+    );
+    await screen.findByText("Abonnement aktiv");
+    expect(submitted).toEqual([shown]);
+  });
+
+  it("names the purposes a privacy notice lists, and keeps an operator's own", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        kind: "privacy_notice",
+        acquired_as: "referral",
+        purposes: ["Business correspondence", "Partner events"],
+        purpose_keys: ["business_correspondence", "partner_events"],
+        rights: ["access"],
+      }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-de-notice" />, "de");
+
+    expect(
+      await screen.findByText("Direkte Korrespondenz"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Partner events")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Business correspondence"),
+    ).not.toBeInTheDocument();
   });
 });

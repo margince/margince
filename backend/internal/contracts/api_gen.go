@@ -41024,6 +41024,11 @@ type PrivacyInformationPage struct {
 	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
 	Kind       PrivacyInformationPageKind `json:"kind"`
 
+	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
+	// product seeds in its reader's language by its key, and shows the published name of any
+	// other.
+	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
 
