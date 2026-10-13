@@ -341,7 +341,7 @@ func TestAnAnyOfEntryIsReadAsASetAndNotAsAToolName(t *testing.T) {
 }
 
 func TestTheMCPToolCoverageIsPublished(t *testing.T) {
-	specs := servedSurface(t).Specs()
+	specs := offeredSpecs(t)
 
 	cases, err := readE2ELLMCases(e2eLLMScenarioDir, e2eLLMRecordDir)
 	if err != nil {

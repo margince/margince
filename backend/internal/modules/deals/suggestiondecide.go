@@ -143,7 +143,7 @@ func (s *Store) AcceptSuggestion(ctx context.Context, id ids.UUID, in AcceptSugg
 		if err != nil {
 			return err
 		}
-		deal, err := s.CreateDealTx(ctx, tx, birth)
+		deal, err := s.CreateDealTx(ctx, tx, birth, CustomColumns{})
 		if err != nil {
 			return err
 		}

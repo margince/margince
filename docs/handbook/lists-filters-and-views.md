@@ -34,7 +34,7 @@ Also called: find a contact, look up a customer, search the table.
 To find a contact by email address in Margince, open **Contacts** in the sidebar and paste the whole address into the **Search** box. It matches the exact address, in capitals or not.
 1. Type or paste the full address, such as `anna@example.com`. Part of an address does not match.
 2. For a lead, do the same on **Leads**; for a company, type its domain on **Companies**.
-The command palette (`⌘K` or `Ctrl+K`) searches names and titles, not email addresses. So use the list's **Search** box for an address.
+The command palette (`⌘K` or `Ctrl+K`) finds a contact by its whole address too, and a company by its domain.
 Also called: look up by email, search by email, who is this address, find a sender.
 
 ### How do I filter a list?

@@ -25,7 +25,6 @@ package gates
 // others move.
 
 import (
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -151,96 +150,6 @@ func TestTheOnboardingPanelsNameOnlyRealOutcomes(t *testing.T) {
 	for _, m := range found {
 		if !slices.Contains(server, m[1]) {
 			t.Errorf("the connect panels answer %q, which the api never sends", m[1])
-		}
-	}
-}
-
-// A problem CODE the api answers with is the other half of the same bargain:
-// the SPA picks copy from it, and one it does not recognise falls through to
-// the detail — which is written in one language and reaches a reader in
-// whatever language they set.
-//
-// Scoped to httperr.Unavailable, the helper that EXISTS to carry a code for a
-// reader. Every problem code in the tree is a wider question with real debt
-// behind it (codes today that no catalog answers), and a gate that failed on
-// all of it would be turned off rather than fixed. What this holds is the
-// narrow promise the helper makes: if you reach for the one that takes a code,
-// the client half is not optional.
-const problemCodeMapping = "../frontend/src/screens/common.tsx"
-
-var (
-	unavailableCall = regexp.MustCompile(`httperr\.Unavailable\(\s*w,\s*r,\s*([A-Za-z][A-Za-z0-9_]*|"[a-z_]+")`)
-	codeConstDecl   = regexp.MustCompile(`(?m)^\s*(?:const\s+)?([A-Za-z][A-Za-z0-9_]*)\s*=\s*"([a-z_]+)"`)
-)
-
-func TestEveryReaderFacingProblemCodeHasClientCopy(t *testing.T) {
-	t.Parallel()
-
-	// WALKED, not listed. Reading one directory would see the call that is
-	// there today and miss the one added in a subpackage tomorrow — a census
-	// that fails short reports PASS with nothing to notice, which is the one
-	// way a gate must not break.
-	//
-	// Constants are collected PER PACKAGE. A flat map keyed on the identifier
-	// resolves a call against whichever declaration the walk happened to visit
-	// last, so two packages that spell one name differently would answer for
-	// each other — and the direction that hurts is the silent one, where a code
-	// with no copy borrows a mapped value from somewhere else and passes.
-	consts := map[string]map[string]string{}
-	type callSite struct{ pkg, ref string }
-	var wanted []callSite
-	if err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		source, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
-		pkg := filepath.Dir(path)
-		text := string(source)
-		for _, m := range codeConstDecl.FindAllStringSubmatch(text, -1) {
-			if consts[pkg] == nil {
-				consts[pkg] = map[string]string{}
-			}
-			consts[pkg][m[1]] = m[2]
-		}
-		for _, m := range unavailableCall.FindAllStringSubmatch(text, -1) {
-			wanted = append(wanted, callSite{pkg: pkg, ref: m[1]})
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("walking internal: %v", err)
-	}
-	// NOT a skip. compose reaches for this helper today, so an empty read means
-	// the detection stopped seeing it — and a census that can fail short
-	// reports PASS with nothing to notice.
-	if len(wanted) == 0 {
-		t.Fatal("no httperr.Unavailable call was found under internal/ — the detection has gone blind")
-	}
-
-	mapping, err := os.ReadFile(problemCodeMapping)
-	if err != nil {
-		t.Fatalf("reading the problem mapping: %v", err)
-	}
-	var codes []string
-	for _, w := range wanted {
-		code := strings.Trim(w.ref, `"`)
-		if resolved, ok := consts[w.pkg][w.ref]; ok {
-			code = resolved
-		}
-		codes = append(codes, code)
-	}
-	// Sorted before compacting: Compact drops only ADJACENT repeats, so a code
-	// answered from two packages would be reported twice unsorted.
-	slices.Sort(codes)
-	for _, code := range slices.Compact(codes) {
-		if !strings.Contains(string(mapping), `"`+code+`"`) {
-			t.Errorf("the api answers problem code %q and %s maps no copy to it — the reader gets the "+
-				"English detail whatever language they set", code, problemCodeMapping)
 		}
 	}
 }

@@ -32,7 +32,14 @@ const SOURCE = {
   label: "Merge into…",
   sourceId: "p-1",
   sourceName: "Anna Weber",
-  searchTargets: () => Promise.resolve([{ id: "p-2", name: "Otto Fischer" }]),
+  searchTargets: () =>
+    Promise.resolve([
+      {
+        id: "p-2",
+        name: "Otto Fischer",
+        detail: "Fischer AG · otto@example.com",
+      },
+    ]),
   merge: (targetId: string) => Promise.resolve({ id: targetId }),
   invalidate: "contacts",
   recordKey: "contact",
@@ -59,6 +66,36 @@ export const TargetPicked: Story = {
     // Past MergeAction's 250ms search debounce so the candidate list settles.
     await new Promise((resolve) => setTimeout(resolve, 400));
     await userEvent.click(await screen.findByText("Otto Fischer"));
+  },
+};
+
+// Two contacts of one name: each candidate carries its company, title and
+// email under the name, so the reader can tell them apart before picking.
+export const LookAlikeCandidates: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ contact: ["read", "update"] }) });
+  },
+  args: {
+    ...SOURCE,
+    searchTargets: () =>
+      Promise.resolve([
+        {
+          id: "p-2",
+          name: "Anna Berg",
+          detail: "Company A · CFO · anna.berg@example.com",
+        },
+        {
+          id: "p-3",
+          name: "Anna Berg",
+          detail: "Company B · a.berg@example.com",
+        },
+        { id: "p-4", name: "Anna Bergmann" },
+      ]),
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByTestId("merge-record"));
+    await userEvent.type(screen.getByPlaceholderText("Search…"), "anna");
+    await screen.findByText("Anna Bergmann");
   },
 };
 

@@ -172,7 +172,7 @@ var runReportCopy = toolCopy{
 		"is a lookup and a call — or when the figures go into a written document: a " +
 		"report's answer has no run_id, so compose_analytics_report cannot cite it.",
 	Retain: "Call a report with no plan first for its default answer, then narrow with the " +
-		"names describe_report_vocabulary gives.",
+		"names describe_vocabulary gives.",
 }
 
 var annotateBriefCopy = toolCopy{

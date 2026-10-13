@@ -33,7 +33,9 @@ type UpdateLeadInput struct {
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
-	Status              *string // only new ↔ working here; terminal states have their own paths
+	// LinkedInURL sets the profile URL in its normalized spelling.
+	LinkedInURL *string
+	Status      *string // only new ↔ working here; terminal states have their own paths
 	// Source corrects where the lead came from; the score follows it.
 	Source *string
 	Score  *int
@@ -378,6 +380,13 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	}
 	if in.CompanyName != nil {
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
+	}
+	if in.LinkedInURL != nil {
+		normalized, err := NormalizeLinkedInURL(*in.LinkedInURL)
+		if err != nil {
+			return nil, false, err
+		}
+		p.Set(linkedinURLField, current.LinkedinUrl, normalized)
 	}
 	if in.CandidateCompanyKey != nil {
 		p.Set("candidate_company_key", current.CandidateCompanyKey, *in.CandidateCompanyKey)

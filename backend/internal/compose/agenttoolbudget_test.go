@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -159,11 +160,13 @@ func TestTheBudgetPageCountsTheStepSchemaInEveryAgentsRow(t *testing.T) {
 
 func renderAgentToolBudget(t *testing.T) agentToolBudget {
 	t.Helper()
-	specs := servedSurface(t).Specs()
-	census, err := readWrongReachCensus(agentLoopCorpusDir, specs, scheduledAllowlists())
+	registered := servedSurface(t).Specs()
+	census, err := readWrongReachCensus(agentLoopCorpusDir, registered, scheduledAllowlists())
 	if err != nil {
 		t.Fatalf("reading the certification corpus at %s: %v", agentLoopCorpusDir, err)
 	}
+	// What a client is offered, so the catalog figures are the listing a run could be drawn from.
+	specs := slices.DeleteFunc(registered, func(spec mcp.ToolSpec) bool { return spec.Unlisted })
 
 	cost := make([]toolCostRow, 0, len(specs))
 	sum := 0

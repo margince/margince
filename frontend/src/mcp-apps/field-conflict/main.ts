@@ -186,7 +186,7 @@ async function keep(
   set: (next: Outcome) => void,
 ): Promise<void> {
   set({ kind: "busy" });
-  const result = await callServerTool("decide_approval", {
+  const result = await callServerTool("decide_approvals", {
     staged_action_id: conflict.approvalID,
     decision: "reject",
   });
@@ -198,7 +198,7 @@ async function use(
   set: (next: Outcome) => void,
 ): Promise<void> {
   set({ kind: "busy" });
-  const result = await callServerTool("decide_approval", {
+  const result = await callServerTool("decide_approvals", {
     staged_action_id: conflict.approvalID,
     decision: "approve",
   });

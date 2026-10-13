@@ -183,8 +183,9 @@ describe("the tag offer", () => {
     await press(root, "Tag it");
     expect(calls).toEqual([
       {
-        tool: "apply_tag",
+        tool: "change_tags",
         args: {
+          action: "apply",
           record_type: "contact",
           record_id: "0195c3a0-0000-7000-8000-000000000002",
           tag_id: existing.tag_id,
@@ -193,7 +194,10 @@ describe("the tag offer", () => {
     ]);
     expect(root.textContent).toContain("Tagged “K5 Conference 2026”.");
     await press(root, "Undo");
-    expect(calls[1].tool).toBe("remove_tag");
+    expect(calls[1]).toMatchObject({
+      tool: "change_tags",
+      args: { action: "remove" },
+    });
     expect(root.textContent).toContain("Not tagged.");
   });
 
@@ -204,8 +208,11 @@ describe("the tag offer", () => {
     );
     expect(labels(root)).toEqual(["Add the tag and tag it", "No thanks"]);
     await press(root, "Add the tag and tag it");
-    expect(calls.map((c) => c.tool)).toEqual(["create_tag", "apply_tag"]);
-    expect(calls[0].args).toEqual({ name: "Fair" });
+    expect(calls.map((c) => c.args.action)).toEqual(["create", "apply"]);
+    expect(calls[0]).toEqual({
+      tool: "change_tags",
+      args: { action: "create", name: "Fair" },
+    });
     expect(calls[1].args.tag_id).toBe("t9");
   });
 
@@ -221,10 +228,10 @@ describe("the tag offer", () => {
     await press(root, "Add the tag and tag it");
     expect(labels(root)).toEqual(["Tag it", "No thanks"]);
     await press(root, "Tag it");
-    expect(calls.map((c) => c.tool)).toEqual([
-      "create_tag",
-      "apply_tag",
-      "apply_tag",
+    expect(calls.map((c) => c.args.action)).toEqual([
+      "create",
+      "apply",
+      "apply",
     ]);
     expect(calls[2].args.tag_id).toBe("t9");
     expect(root.textContent).toContain("Tagged “Fair”.");

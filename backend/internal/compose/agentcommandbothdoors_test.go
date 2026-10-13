@@ -540,8 +540,16 @@ func (bothDoorsImports) ReadRun(context.Context, ids.UUID) (crmcontracts.ImportR
 	return crmcontracts.ImportRun{Status: "awaiting_approval"}, nil
 }
 
-func (bothDoorsImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
-	return crmcontracts.ImportRunReport{}, nil
+func (bothDoorsImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return crmcontracts.ImportRun{Status: "awaiting_approval"}, &crmcontracts.ImportRunReport{}, nil
+}
+
+func (bothDoorsImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+	return crmcontracts.ImportFormat{}, nil
+}
+
+func (bothDoorsImports) ProfileFiles(context.Context, []agents.ImportFile) (crmcontracts.ImportSourceProfile, error) {
+	return crmcontracts.ImportSourceProfile{}, nil
 }
 
 func (bothDoorsImports) Commit(context.Context, ids.UUID) (crmcontracts.ImportRun, error) {
