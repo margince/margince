@@ -14,6 +14,7 @@ import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
 import type { ImportWizardState } from "./importflow";
+import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
   ImportPartReport,
@@ -81,7 +82,7 @@ export function TestRunStep({
   const t = useT();
   const { report, runId } = wizard;
   if (wizard.run.data?.status === "validating") {
-    return <PendingBody visible label={t("import.test.testing")} />;
+    return <TestingBody runId={wizard.run.data.id} />;
   }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
@@ -94,6 +95,25 @@ export function TestRunStep({
         />
       ) : null}
     </QueryStates>
+  );
+}
+
+// A test can read for minutes, so the one waiting on it can stop it.
+function TestingBody({ runId }: Readonly<{ runId: string }>) {
+  const t = useT();
+  const stop = useStopImportTest();
+  return (
+    <>
+      <PendingBody visible label={t("import.test.testing")} />
+      <div className="import__actions">
+        <Button pending={stop.isPending} onClick={() => stop.mutate(runId)}>
+          {t("import.test.stop")}
+        </Button>
+      </div>
+      {stop.error ? (
+        <ImportRefusal title={t("import.test.stopFailed")} error={stop.error} />
+      ) : null}
+    </>
   );
 }
 

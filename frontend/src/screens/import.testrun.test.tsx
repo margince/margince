@@ -137,6 +137,53 @@ describe("the test run", () => {
     }
   });
 
+  it("returns to the map with the reason when the worker refuses the file", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const reason = "The file has no header row.";
+      let refused = false;
+      stubRoutes({
+        [`GET /imports/${run.id}`]: () =>
+          jsonResponse(
+            refused
+              ? { ...run, status: "pending", error: reason }
+              : { ...run, status: "validating" },
+          ),
+      });
+      await renderAtTestRun(user);
+      expect(await screen.findByText("Testing your file…")).toBeVisible();
+      refused = true;
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(await screen.findByText(reason)).toBeVisible();
+      expect(screen.getByText("Test run did not start")).toBeVisible();
+      expect(screen.queryByText("Testing your file…")).toBeNull();
+      expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops a validating run's test, and the run returns to the map", async () => {
+    const user = userEvent.setup();
+    let stopped = false;
+    const sent = stubRoutes({
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({ ...run, status: stopped ? "pending" : "validating" }),
+      [`POST /imports/${run.id}/cancel`]: () => {
+        stopped = true;
+        return jsonResponse({ ...run, status: "pending" });
+      },
+    });
+    await renderAtTestRun(user);
+    await user.click(await screen.findByRole("button", { name: "Stop test" }));
+    expect(
+      await screen.findByRole("button", { name: "Run test" }),
+    ).toBeEnabled();
+    expect(sent.map((s) => s.path)).toContain(`POST /imports/${run.id}/cancel`);
+    expect(screen.queryByText("Testing your file…")).toBeNull();
+  });
+
   it("a reloaded validating run shows the testing state", async () => {
     stubRoutes({
       [`GET /imports/${run.id}`]: () =>
@@ -241,7 +288,7 @@ describe("the test run", () => {
     );
   });
 
-  it("reads the run again after a test run refused to start", async () => {
+  it("reads the run again after a retest refused its mapping", async () => {
     const user = userEvent.setup();
     let tested = false;
     let stages = 0;
@@ -251,7 +298,14 @@ describe("the test run", () => {
         jsonResponse(tested ? { ...run, status: "pending" } : run),
       [`POST /imports/${run.id}/validate`]: () => {
         tested = true;
-        return jsonResponse({ status: 422, detail: "Stopped." }, 422);
+        return jsonResponse(
+          {
+            status: 422,
+            code: "validation_failed",
+            detail: "Two columns are mapped to Email.",
+          },
+          422,
+        );
       },
       "POST /imports": () => {
         stages += 1;

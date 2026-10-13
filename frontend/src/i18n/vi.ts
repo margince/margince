@@ -5843,6 +5843,8 @@ export const vi = {
   "import.test.importAnyway": "Vẫn nhập",
   "import.test.counts": "Số dòng theo loại hồ sơ",
   "import.test.testing": "Đang kiểm tra tệp của bạn…",
+  "import.test.stop": "Dừng kiểm tra",
+  "import.test.stopFailed": "Không thể dừng kiểm tra",
   "import.test.problems_one": "1 vấn đề",
   "import.test.problems_other": "{count} vấn đề",
   "import.test.col.where": "Vị trí",

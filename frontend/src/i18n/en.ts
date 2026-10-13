@@ -6115,6 +6115,8 @@ export const en = {
   "import.test.importAnyway": "Import anyway",
   "import.test.counts": "Rows per record type",
   "import.test.testing": "Testing your file…",
+  "import.test.stop": "Stop test",
+  "import.test.stopFailed": "Test did not stop",
   "import.test.problems_one": "1 problem",
   "import.test.problems_other": "{count} problems",
   "import.test.col.where": "Where",
