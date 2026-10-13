@@ -38,9 +38,9 @@ export function canonical(value: string): string {
 
 /** FACT_FIELD_LABELS names every fact field in the reader's language.
  *
- * The profile-field map in coldfieldlabels.ts covers a different vocabulary, so a fact
- * field fell through its fallback and rendered as raw English snake_case —
- * "served industry", "company size" — inside an otherwise German page.
+ * The profile-field map in coldfieldlabels.ts covers a different vocabulary.
+ * So a fact field fell through its fallback and rendered as raw English
+ * snake_case ("served industry", "company size") inside an otherwise German page.
  */
 export const FACT_FIELD_LABELS: Record<FactField, MessageKey> = {
   founded_year: "co.factField.founded_year",

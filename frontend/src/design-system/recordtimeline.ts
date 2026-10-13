@@ -120,9 +120,9 @@ export function useTimelineFilters(
 }
 
 /**
- * RecordTimeline is what a page renders a timeline from: every row loaded so
- * far, whether the server holds older ones, and the one verb that fetches
- * them. `LoadMoreButton` in screens/common takes it as-is.
+ * RecordTimeline is what a page renders a timeline from. It holds every row
+ * loaded so far, whether the server holds older ones, and the one verb that
+ * fetches them. `LoadMoreButton` in `querystates.tsx` takes it as-is.
  */
 export type RecordTimeline = Readonly<{
   activities: Activity[];

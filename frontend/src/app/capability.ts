@@ -1,9 +1,8 @@
 import type { components } from "../api/schema";
 import { useMe } from "../lib/session";
-// The pure half, in its own module so a consumer that only reads the
-// vocabulary does not pull `useMe` — and through it the design system and its
-// stylesheets — into its bundle. Re-exported here so every call site inside the
-// app keeps one import and there is still ONE answer to the question.
+// The pure half lives in its own module. A consumer that only reads the
+// vocabulary then leaves `useMe`, React and the query client out of its bundle.
+// It is re-exported here, so every call site in the app keeps one import.
 import { grants } from "./accessgrants";
 
 export { type AccessSnapshot, grants } from "./accessgrants";

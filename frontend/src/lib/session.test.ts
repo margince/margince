@@ -8,10 +8,9 @@ import { STORAGE_KEYS } from "./storage";
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  // Unconditionally, not at the end of the case that installed a spy: a case
-  // that fails its assertion never reaches its own teardown, and a leaked
-  // console spy silences the rest of the file — which looks exactly like a
-  // suite that passes.
+  // Unconditionally, not at the end of the case that installed a spy. A case
+  // that fails its assertion never reaches its own teardown. A leaked console
+  // spy then silences the rest of the file, which looks like a suite that passes.
   vi.restoreAllMocks();
 });
 

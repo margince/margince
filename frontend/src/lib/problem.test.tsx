@@ -21,10 +21,9 @@ const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  // Unconditionally, not at the end of the case that installed a spy: a case
-  // that fails its assertion never reaches its own teardown, and a leaked
-  // console spy silences the rest of the file — which looks exactly like a
-  // suite that passes.
+  // Unconditionally, not at the end of the case that installed a spy. A case
+  // that fails its assertion never reaches its own teardown. A leaked console
+  // spy then silences the rest of the file, which looks like a suite that passes.
   vi.restoreAllMocks();
 });
 
@@ -65,9 +64,9 @@ describe("problemMessage", () => {
     );
   });
 
-  // The sentinel string is what an object-RBAC denial and a read-share denial
-  // both arrive with, and it names neither the authority the reader holds nor
-  // what would widen it. Catalog copy replaces it.
+  // An object-RBAC denial and a read-share denial both arrive with the sentinel
+  // string. It names neither the authority the reader holds nor what would
+  // widen it. Catalog copy replaces it.
   it("translates a permission_denied refusal instead of echoing the sentinel", () => {
     const message = problemMessage(
       { code: "permission_denied", detail: "permission denied" },
@@ -94,9 +93,9 @@ describe("problemMessage", () => {
   });
 
   // The gate's own wrapping, which is the other real producer of this code. Its
-  // detail names the admission spec and the resolver state — the authority
-  // model's internals, not a sentence for a reader — so the copy stands in for
-  // this one too, and none of it reaches the screen.
+  // detail names the admission spec and the resolver state. Those are the
+  // authority model's internals, not a sentence for a reader. So the copy
+  // stands in for this one too, and none of it reaches the screen.
   it("stands in for the admission gate's detail, and shows none of it", () => {
     const message = problemMessage(
       {
@@ -111,9 +110,9 @@ describe("problemMessage", () => {
   });
 
   // The wrapped form of the same sentinel, which `auth.Require` sends for every
-  // object-RBAC denial. The prefix is the RBAC object and verb: internals no
-  // client may be shown, and no more use to a reader than the sentinel trailing
-  // them — so this is the same nothing, spelled longer.
+  // object-RBAC denial. The prefix is the RBAC object and verb, internals no
+  // client may be shown. They are no more use to a reader than the sentinel
+  // after them, so this is the same nothing, spelled longer.
   it("stands in for a wrapped sentinel too, and never shows the object and verb", () => {
     const message = problemMessage(
       {
@@ -204,9 +203,9 @@ describe("problemFieldErrors", () => {
 
   it("reads nothing out of a problem that is not a validation error", () => {
     // `details` is a free-form extension any problem may carry. A gateway or
-    // dependency failure that happens to spell an `errors` array is not the
-    // server asserting a rule about a submitted field, and reading it as one
-    // would turn an unrelated fault into an actionable send refusal.
+    // dependency failure may spell an `errors` array without the server
+    // asserting a rule about a submitted field. Reading it as one would turn an
+    // unrelated fault into an actionable send refusal.
     expect(
       problemFieldErrors({
         code: "internal_error",
@@ -298,10 +297,9 @@ describe("isConsentNotGranted", () => {
 });
 
 // The display side of the same rule: what a caught failure is allowed to say.
-// A server problem states an honest cause the reader can act on; a rejected
-// fetch or a bug in a handler states our internals in wording nobody wrote for
-// a user, and the two are indistinguishable at the point of rendering unless
-// the type is checked here.
+// A server problem states a cause the reader can act on. A rejected fetch or a
+// bug in a handler states our internals in wording nobody wrote for a user. At
+// the point of rendering the two look alike unless the type is checked here.
 describe("problemMessageOf", () => {
   it("shows the server's own detail when the failure carries a problem", () => {
     expect(
@@ -324,7 +322,7 @@ describe("problemMessageOf", () => {
   it("answers a problem body carrying no reader text with the shared line", () => {
     // A proxy 502, or a refusal the server sent no body with, reaches the
     // client as a ProblemError all the same. "request failed" is the message
-    // that error carries into a stack trace — a developer's words, in one
+    // that error carries into a stack trace. It is a developer's words, in one
     // language, and not a sentence anybody wrote for a reader.
     for (const body of [undefined, {}, "<html>502 Bad Gateway</html>", 42]) {
       expect(problemMessageOf(new ProblemError(body), t)).toBe(
@@ -334,10 +332,10 @@ describe("problemMessageOf", () => {
   });
 
   it("keeps the server's words whenever the body carries any", () => {
-    // The line above must not become a way to lose a real detail: a body with
+    // The line above must not become a way to lose a real detail. A body with
     // a detail, or with only a title, still speaks for itself. A blank detail
-    // is not words — it would render an error state with nothing in it — so
-    // the title behind it is what the reader gets.
+    // is not words and would render an empty error state, so the reader gets
+    // the title behind it.
     expect(
       problemMessageOf(new ProblemError({ title: "Seat expired" }), t),
     ).toBe("Seat expired");
@@ -357,7 +355,7 @@ describe("problemMessageOf", () => {
         t("connectors.loadFailed"),
       ),
     ).toBe(t("connectors.loadFailed"));
-    // A server problem still speaks for itself: the fallback is for the case
+    // A server problem still speaks for itself. The fallback is for the case
     // where there is nothing to say, not a way to overwrite the server.
     expect(
       problemMessageOf(
@@ -423,8 +421,8 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
   });
 });
 
-// The other half of that rule. Deciding a failure is not fit to show is only
-// honest if the failure still exists somewhere an operator can read.
+// The other half of that rule. Hiding a failure from the reader is only sound
+// if the failure still exists somewhere an operator can read.
 describe("logUnexpectedError", () => {
   it("keeps a failure the reader is only shown generic copy for", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});

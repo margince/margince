@@ -17,9 +17,9 @@ const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  // Unconditionally, not at the end of the case that installed a spy: a case
-  // that fails its assertion never reaches its own teardown, and a leaked
-  // console spy silences the rest of the file — which looks exactly like a
+  // Restored here rather than at the end of the case that installed a spy.
+  // A case that fails its assertion never reaches its own teardown. A leaked
+  // console spy then silences the rest of the file, which looks like a
   // suite that passes.
   vi.restoreAllMocks();
 });
@@ -68,9 +68,9 @@ describe("QueryStates", () => {
     expect(screen.queryByText(/Failed to fetch/)).toBeNull();
   });
 
-  // Every query-backed card in the product renders its failure through here, so
-  // a failure that reaches nobody who cannot see the screen reaches nobody on
-  // most of the product at once.
+  // Every query-backed card in the product renders its failure through here.
+  // A failure that does not reach a reader who cannot see the screen fails
+  // them on most of the product at once.
   it("announces a failed load, headline and cause in one region", () => {
     render(
       <QueryStates

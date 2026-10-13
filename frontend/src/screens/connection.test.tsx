@@ -19,10 +19,10 @@ import { memoryStorage } from "../testing/appharness";
 afterEach(() => {
   cleanup();
   window.location.hash = "";
-  // Unconditionally, not at the end of the case that installed a spy: a case
+  // Unconditionally, not at the end of the case that installed a spy. A case
   // that fails its assertion never reaches its own teardown, and a leaked
-  // console spy silences the rest of the file — which looks exactly like a
-  // suite that passes.
+  // console spy silences the rest of the file. That looks like a suite that
+  // passes.
   vi.restoreAllMocks();
 });
 

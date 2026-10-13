@@ -12,9 +12,9 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // words instead of the reader's.
 //
 // `problemMessageOf` (lib/problem.ts) calls itself the one way a caught
-// failure becomes words on a screen, and the reason is not tidiness: `httperr`
-// composes a refusal's detail from `err.Error()`, and every producer of
-// `permission_denied` wraps it with internals — `auth.Require` sends the RBAC
+// failure becomes words on a screen, and the reason is not tidiness. `httperr`
+// composes a refusal's detail from `err.Error()`. Every producer of
+// `permission_denied` wraps it with internals: `auth.Require` sends the RBAC
 // object and the verb, so the raw detail is literally
 // "contact.update: permission denied". Rendering it hands the reader who was
 // just refused the shape of the authority model that refused them.
