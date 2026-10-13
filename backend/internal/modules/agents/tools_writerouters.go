@@ -51,8 +51,8 @@ func (draftOutbound) routeTargets() map[string]string {
 }
 
 // resolveDuplicates fronts settling a flagged pair and merging two records.
-// The ids a call names say which it is, so there is no field to choose by,
-// and a view can call it with either tool's own arguments.
+// The ids a call names say which it is. A view can therefore call it with
+// either tool's own arguments.
 type resolveDuplicates struct{ routed }
 
 func (resolveDuplicates) Spec() mcp.ToolSpec {

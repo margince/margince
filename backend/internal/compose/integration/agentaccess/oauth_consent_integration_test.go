@@ -219,10 +219,8 @@ func (o *oauthEnv) mcpTools(t *testing.T, bearer string) []map[string]any {
 	return tools
 }
 
-// toolRequiresScope reads a tool's advertised required scope off the
-// description DescribeForClient renders — the same text a human or a model
-// reading tools/list sees — rather than re-deriving it from the tool's name,
-// which would let this test and the surface it checks drift apart. A
+// toolRequiresScope reads a tool's required scope off the description that
+// tools/list serves, so this test and the surface cannot drift apart. A
 // description naming no scope is a read tool's: read is the default it omits.
 func toolRequiresScope(t *testing.T, tool map[string]any, scope string) bool {
 	t.Helper()

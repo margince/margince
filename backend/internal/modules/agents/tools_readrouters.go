@@ -113,28 +113,31 @@ func (readRelationships) Spec() mcp.ToolSpec {
 	}
 }
 
+// relationshipCompanyID is spelled once: the generated record shapes repeat it.
+const relationshipCompanyID = "company_id"
+
+// relationshipTargetByID is each target by the one id it takes.
 var relationshipTargetByID = map[string]string{
-	"contact_id": "who_knows",
-	"company_id": "intro_path_to",
-	"deal_id":    "company_coverage",
+	"contact_id":          "who_knows",
+	relationshipCompanyID: "intro_path_to",
+	"deal_id":             "company_coverage",
 }
 
-func (readRelationships) routeTargets() map[string]string {
-	return map[string]string{"contact": "who_knows", "company": "intro_path_to", "deal": "company_coverage"}
-}
+func (readRelationships) routeTargets() map[string]string { return relationshipTargetByID }
 
 var errRelationshipsNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of contact_id, company_id or deal_id")}
 
 func (readRelationships) chooseTarget(members map[string]json.RawMessage) (string, error) {
-	dropNullMembers(members, "contact_id", "company_id", "deal_id")
 	var target string
 	for id, tool := range relationshipTargetByID {
-		if _, named := members[id]; named {
-			if target != "" {
-				return "", errRelationshipsNamesOneID
-			}
-			target = tool
+		dropNullMembers(members, id)
+		if _, named := members[id]; !named {
+			continue
 		}
+		if target != "" {
+			return "", errRelationshipsNamesOneID
+		}
+		target = tool
 	}
 	if target == "" {
 		return "", errRelationshipsNamesOneID

@@ -73,8 +73,8 @@ func TestDescribeForClientLeadsWithTheWrittenTextAndAppendsGovernance(t *testing
 	}
 }
 
-// A scope past read is named even when the call runs at once: it is what a
-// passport must hold, and a client choosing tools for one cannot guess it.
+// A scope past read is named even when the call runs at once. A client choosing
+// tools for a passport cannot guess it.
 func TestDescribeForClientNamesEveryScopePastRead(t *testing.T) {
 	got := DescribeForClient(mcp.ToolSpec{
 		Name: "t", Description: "Does the thing.", RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,

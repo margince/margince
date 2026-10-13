@@ -12,9 +12,9 @@ import (
 )
 
 // A choice card that no tool offers is a card nobody is shown, and the tests
-// that draw it stay green. Both directions are held here: every view the build
-// declares is named by a tool, and every tool a view may ask its host to run is a
-// registered, agent-reachable tool the model is offered.
+// that draw it stay green. Both directions are held here. Every view the build
+// declares is named by a tool. Every tool a view may ask its host to run is
+// registered, reachable by an agent, and offered to the model.
 
 func TestEveryDeclaredCardIsOfferedByATool(t *testing.T) {
 	offered := map[string]bool{}
