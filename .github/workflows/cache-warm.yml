@@ -217,9 +217,9 @@ jobs:
         env:
           INTEGRATION_SHARD: 1/12
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
-          # The tests are DB-bound, not CPU-bound: on the 4-core runner the
-          # nproc-derived default leaves the slice mostly waiting on Postgres.
-          INTEGRATION_JOBS: 16
+          # The value of the shard it mirrors, in _lane-integration.yml, for its
+          # reason: sixteen ran the 16GB runner out of memory and got it signalled.
+          INTEGRATION_JOBS: 8
         run: make test-integration
       - name: Refresh the shared build cache
         if: ${{ !cancelled() }}

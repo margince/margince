@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { OwnDomainsCard } from "./own-domains";
@@ -51,6 +52,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     anchor_domains: opts.anchors ?? [],
   };
   let capturedPost: unknown = null;
+  const deleted: string[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -58,6 +60,12 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       const url = new URL(req.url, "http://localhost");
       if (url.pathname.endsWith("/me")) {
         return jsonResponse(meFixture({ allow }));
+      }
+      if (req.method === "DELETE") {
+        const domain = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+        deleted.push(domain);
+        state.data = state.data.filter((row) => row.domain !== domain);
+        return new Response(null, { status: 204 });
       }
       if (url.pathname.endsWith("/capture/email-domains")) {
         if (req.method === "POST") {
@@ -72,7 +80,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       throw new Error(`unexpected request: ${req.method} ${url.pathname}`);
     },
   );
-  return { fetchMock, post: () => capturedPost };
+  return { fetchMock, post: () => capturedPost, deleted };
 }
 
 function render(node: ReactNode) {
@@ -81,7 +89,12 @@ function render(node: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {node}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -191,5 +204,91 @@ describe("OwnDomainsCard", () => {
     );
     expect(remove.getAttribute("aria-describedby")).toBe(denial.id);
     expect(add.getAttribute("aria-describedby")).toBe(denial.id);
+  });
+
+  // Adding a confirmed domain again restores it, so its removal runs at once
+  // and offers Undo instead of asking first.
+  it("removes a confirmed domain at once and puts it back on Undo", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, post, deleted } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "brandt.de", source: "admin", verified: true }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /remove brandt\.de/i }),
+    );
+    await waitFor(() => expect(deleted).toEqual(["brandt.de"]));
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+    await waitFor(() => expect(post()).toEqual({ domain: "brandt.de" }));
+  });
+
+  // The removed row takes its verb with it, so focus moves on rather than
+  // dropping to the page.
+  it("hands focus to the next domain's verb, then to the add verb", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(CAPTURE_EDITOR, {
+      domains: [
+        { domain: "brandt.de", source: "admin", verified: true },
+        { domain: "seen.de", source: "mailbox", verified: false },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /remove brandt\.de/i }),
+    );
+    const next = screen.getByRole("button", { name: /remove seen\.de/i });
+    await waitFor(() => expect(document.activeElement).toBe(next));
+
+    await user.click(next);
+    const add = screen.getByRole("button", { name: en["ownDomains.addOpen"] });
+    await waitFor(() => expect(document.activeElement).toBe(add));
+  });
+
+  // Adding a candidate again would confirm it, which is not the inverse.
+  it("offers no Undo for a candidate it removed", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, deleted } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "seen.de", source: "mailbox", verified: false }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    expect(await screen.findByText(en["ownDomains.candidate"])).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /remove seen\.de/i }));
+    await waitFor(() => expect(deleted).toEqual(["seen.de"]));
+    expect(
+      await screen.findByText(
+        en["settings.removedItem"].replace("{name}", "seen.de"),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
+  });
+
+  it("marks only an unconfirmed domain, since confirmed is the normal state", async () => {
+    const { fetchMock } = backendFor(CAPTURE_EDITOR, {
+      domains: [
+        { domain: "brandt.de", source: "admin", verified: true },
+        { domain: "seen.de", source: "mailbox", verified: false },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    const managed = await screen.findByTestId("own-domains-list");
+    expect(
+      within(managed).getAllByText(en["ownDomains.candidate"]),
+    ).toHaveLength(1);
   });
 });

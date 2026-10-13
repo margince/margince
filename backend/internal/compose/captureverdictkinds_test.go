@@ -11,9 +11,16 @@ package compose
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
@@ -259,4 +266,86 @@ func TestTheCreateFloorIsEnforcedWhereTheRecordIsMade(t *testing.T) {
 			t.Errorf("clearsItsFloor(%s at %.2f) = %v, want %v", tc.kind, tc.conf, got, tc.want)
 		}
 	}
+}
+
+// BlockedDomain's sender_kind enum and the kinds whose arm refuses a domain are
+// one list, compared in both directions.
+func TestTheBulkSenderKindsOnTheWireAreTheKindsThatRefuseADomain(t *testing.T) {
+	refusing, wire := noiseArmKinds(t), blockedDomainSenderKinds(t)
+	if !maps.Equal(refusing, wire) {
+		t.Errorf("apply's noise arm refuses domains for %v, while BlockedDomain.sender_kind publishes %v",
+			slices.Sorted(maps.Keys(refusing)), slices.Sorted(maps.Keys(wire)))
+	}
+}
+
+// noiseArmKinds reads which kinds the effect switch hands to applyNoise.
+func noiseArmKinds(t *testing.T) map[string]bool {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(), "captureverdictapply.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing captureverdictapply.go: %v", err)
+	}
+	byGoName := map[string]string{}
+	for _, kind := range verdictKindNames() {
+		byGoName["Kind"+goName(kind)] = kind
+	}
+	kinds := map[string]bool{}
+	ast.Inspect(parsed, func(node ast.Node) bool {
+		clause, ok := node.(*ast.CaseClause)
+		if !ok || !callsApplyNoise(clause) {
+			return true
+		}
+		for _, expr := range clause.List {
+			sel, isSelector := expr.(*ast.SelectorExpr)
+			kind, known := "", false
+			if isSelector {
+				kind, known = byGoName[sel.Sel.Name]
+			}
+			if !known {
+				t.Fatalf("the noise arm names %#v, which is no kind in verdictKinds", expr)
+			}
+			kinds[kind] = true
+		}
+		return true
+	})
+	if len(kinds) == 0 {
+		t.Fatal("no case in captureverdictapply.go calls applyNoise; this gate reads it by shape, so a refactor must re-point it")
+	}
+	return kinds
+}
+
+func callsApplyNoise(clause *ast.CaseClause) bool {
+	found := false
+	for _, stmt := range clause.Body {
+		ast.Inspect(stmt, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if sel, isSelector := call.Fun.(*ast.SelectorExpr); isSelector && sel.Sel.Name == "applyNoise" {
+					found = true
+				}
+			}
+			return !found
+		})
+	}
+	return found
+}
+
+func blockedDomainSenderKinds(t *testing.T) map[string]bool {
+	t.Helper()
+	doc, err := openapi3.NewLoader().LoadFromFile(contractFile)
+	if err != nil {
+		t.Fatalf("load contract: %v", err)
+	}
+	blocked := doc.Components.Schemas["BlockedDomain"]
+	if blocked == nil || blocked.Value == nil || blocked.Value.Properties["sender_kind"] == nil {
+		t.Fatal("BlockedDomain.sender_kind is absent from the contract")
+	}
+	kinds := map[string]bool{}
+	for _, raw := range blocked.Value.Properties["sender_kind"].Value.Enum {
+		kind, ok := raw.(string)
+		if !ok {
+			t.Fatalf("BlockedDomain.sender_kind has a non-string member %#v", raw)
+		}
+		kinds[kind] = true
+	}
+	return kinds
 }

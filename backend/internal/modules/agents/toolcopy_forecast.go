@@ -42,7 +42,7 @@ var forecastReadingsCopy = toolCopy{
 		"currency conversion and the weighting. These figures also cannot be cited in a " +
 		"composed document — for a board-pack section or anything a reader keeps, " +
 		"run_analytics_query with save and compose_analytics_report from the run id. Ask " +
-		"forecast_input_checks whether the inputs behind these numbers were read. `snapshots` " +
+		"read_input_checks whether the inputs behind these numbers were read. `snapshots` " +
 		"lists this period's frozen states, newest first: the ids forecast_movement takes. " +
 		"Empty means nothing was frozen for this population, which includes managed teams.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
@@ -116,4 +116,21 @@ var dataCoverageCopy = toolCopy{
 		"both are silent on whether it could look — a clean set of findings over sources " +
 		"nobody opened reads as good news and is not. Ask this one when the question is " +
 		"whether to trust the other two.",
+}
+
+var readInputChecksCopy = toolCopy{
+	Purpose: "Answer whether the forecast's inputs can be trusted, in three views. summary: the " +
+		"verdict — whether the numbers are sound enough to quote — and how much of the pipeline " +
+		"last night's check reached. exceptions: the open input problems themselves, most " +
+		"material first — a close date that went by, an amount that disagrees with the sent " +
+		"offer, a deal nobody has heard from in ninety days. sources: which connectors the " +
+		"nightly check could read at all, and how far back each reaches.",
+	Limits: "`checks_incomplete` is NOT a worse `needs_review`: one says the pipeline has " +
+		"problems, the other says nobody could look. exceptions is scoped to what you can open, " +
+		"and an empty list cannot be told apart from a clean pipeline — sources is what tells " +
+		"them apart. sources needs a coverage grant that operators hold and sellers do not, so " +
+		"a refusal there is a seat boundary, not a missing run.",
+	Retain: "Read summary's `readiness` before quoting any forecast figure. Only a `checked` " +
+		"source carries a date; any other state means nothing was read from it. In exceptions, " +
+		"`affected_minor` absent means the money at stake cannot be said, not that nothing is.",
 }

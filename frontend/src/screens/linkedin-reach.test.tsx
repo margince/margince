@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
@@ -21,6 +22,7 @@ type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
 
 // Counts past a thousand, so a figure printed without its grouping reads
@@ -71,20 +73,44 @@ it("shows, per account reached, how many connections work there and how many are
     rows.map((row) =>
       within(row)
         .getAllByRole("cell")
-        .map((cell) => cell.textContent),
+        .slice(0, 3)
+        .map(
+          (cell) =>
+            (cell.querySelector(".datatable-unfolded") ?? cell).textContent,
+        ),
     ),
   ).toEqual([
     ["Nordwind Logistik GmbH", "1,204", "3 of 1,204"],
     ["Havelmann & Söhne", "6", "6 of 6"],
   ]);
-  // Each account name leads to its record, where the gap can be closed.
+  // Folded on a phone, a bare figure says what it counts.
   expect(
-    within(rows[0]).getByRole("link", { name: "Nordwind Logistik GmbH" }),
-  ).toHaveAttribute("href", "#/companies/018f3a1b-0000-7000-8000-0000000000a1");
+    within(rows[0]).getByText("1,204 connections", { exact: false }),
+  ).toBeTruthy();
   // Two listed of nine reached: where the list stops is stated, not implied.
   expect(
     screen.getByText(
       "Showing 2 of 9 companies. 1,420 connections work at companies not on file yet.",
     ),
   ).toBeInTheDocument();
+});
+
+// Each account leads to its record, where the gap can be closed: from its
+// name, from the row and from the keyboard's chevron.
+it("opens the company an account row names", async () => {
+  renderReach(REACHED);
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole("button", { name: "Nordwind Logistik GmbH" }),
+  );
+  expect(globalThis.location.hash).toBe(
+    "#/companies/018f3a1b-0000-7000-8000-0000000000a1",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Open Havelmann & Söhne" }),
+  );
+  expect(globalThis.location.hash).toBe(
+    "#/companies/018f3a1b-0000-7000-8000-0000000000a2",
+  );
 });

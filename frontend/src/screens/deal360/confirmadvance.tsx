@@ -8,6 +8,7 @@ import { useT } from "../../i18n";
 import { problemFieldErrorsOf } from "../common";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
+import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -100,6 +101,9 @@ export function ConfirmAdvanceModal({
   const [wonReason, setWonReason] = useState<WonReason | "">("");
   const [wonDetail, setWonDetail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Read only while a close is being asked about; every move this dialog
+  // confirms is to a won or lost stage.
+  const closeTasks = useCloseTasks(pending?.dealId ?? null);
   // The deal this dialog has been told has no contract behind it, pinned to the
   // exact attempt that was refused.
   //
@@ -127,6 +131,7 @@ export function ConfirmAdvanceModal({
     setWonReason("");
     setWonDetail("");
     setRefusedDealId(null);
+    closeTasks.reset();
     onClose();
   };
 
@@ -145,6 +150,7 @@ export function ConfirmAdvanceModal({
     setSubmitting(true);
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
+    const tasksToComplete = closeTasks.chosen;
     const why = closeReason({
       wonAsked: needsWonReason,
       lost: lostReason,
@@ -169,6 +175,8 @@ export function ConfirmAdvanceModal({
       }
     } else {
       onClosed?.(result, why);
+      // Only after the close landed: a refused close completes nothing.
+      void closeTasks.complete(tasksToComplete);
     }
     dismiss();
   };
@@ -186,6 +194,7 @@ export function ConfirmAdvanceModal({
         (needsLostReason && lostReason.trim() === "") ||
         (needsWonReason && (wonReason === "" || detailMissing))
       }
+      confirmReason={closeTasks.refusal}
       pending={submitting}
       onConfirm={() => {
         if (pending) {
@@ -224,6 +233,7 @@ export function ConfirmAdvanceModal({
               onDetail={setWonDetail}
             />
           )}
+          <CloseTasksQuestion state={closeTasks} />
         </>
       )}
     </ConfirmModal>

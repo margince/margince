@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 84,
+    "tools": 66,
     "system_frame_tokens": 586,
-    "tokens": 29825,
-    "median_tool_tokens": 292,
-    "mean_tool_tokens": 354
+    "tokens": 27034,
+    "median_tool_tokens": 346,
+    "mean_tool_tokens": 409
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 84,
+      "of_served_tools": 66,
       "tokens": 3810,
       "listing_tokens": 1913,
       "step_schema_tokens": 1311,
@@ -67,12 +67,12 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 84,
-      "tokens": 5292,
-      "listing_tokens": 2818,
-      "step_schema_tokens": 1888,
+      "of_served_tools": 66,
+      "tokens": 5459,
+      "listing_tokens": 2901,
+      "step_schema_tokens": 1972,
       "percent_of_ceiling": 16,
-      "headroom_tokens": 17918,
+      "headroom_tokens": 17751,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -88,7 +88,11 @@
   "tool_cost": [
     {
       "name": "run_report",
-      "tokens": 1023
+      "tokens": 1020
+    },
+    {
+      "name": "preview_import",
+      "tokens": 986
     },
     {
       "name": "send_company_email",
@@ -103,8 +107,12 @@
       "tokens": 809
     },
     {
+      "name": "log_activity",
+      "tokens": 784
+    },
+    {
       "name": "compose_analytics_report",
-      "tokens": 772
+      "tokens": 777
     },
     {
       "name": "send_email",
@@ -112,19 +120,11 @@
     },
     {
       "name": "read_lists",
-      "tokens": 744
-    },
-    {
-      "name": "preview_import",
-      "tokens": 725
-    },
-    {
-      "name": "log_activity",
-      "tokens": 701
+      "tokens": 745
     },
     {
       "name": "create_record",
-      "tokens": 667
+      "tokens": 672
     },
     {
       "name": "send_message",
@@ -140,7 +140,7 @@
     },
     {
       "name": "forecast_readings",
-      "tokens": 553
+      "tokens": 552
     },
     {
       "name": "read_reporting",
@@ -151,28 +151,36 @@
       "tokens": 530
     },
     {
-      "name": "run_analytics_query",
-      "tokens": 506
+      "name": "progress_deal",
+      "tokens": 513
     },
     {
-      "name": "progress_deal",
-      "tokens": 505
+      "name": "run_analytics_query",
+      "tokens": 508
+    },
+    {
+      "name": "change_lead_state",
+      "tokens": 494
     },
     {
       "name": "resolve_entities",
       "tokens": 493
     },
     {
+      "name": "change_tags",
+      "tokens": 492
+    },
+    {
       "name": "search_records",
       "tokens": 456
     },
     {
-      "name": "advance_deal",
-      "tokens": 446
-    },
-    {
       "name": "forecast_movement",
       "tokens": 443
+    },
+    {
+      "name": "decide_approvals",
+      "tokens": 429
     },
     {
       "name": "annotate_brief",
@@ -191,28 +199,28 @@
       "tokens": 397
     },
     {
-      "name": "prep_for_meeting",
-      "tokens": 394
+      "name": "enrich",
+      "tokens": 396
     },
     {
-      "name": "enrich",
-      "tokens": 390
+      "name": "prep_for_meeting",
+      "tokens": 394
     },
     {
       "name": "draft_email",
       "tokens": 385
     },
     {
-      "name": "describe_report_vocabulary",
-      "tokens": 349
-    },
-    {
       "name": "catch_me_up_on",
       "tokens": 348
     },
     {
-      "name": "describe_record_fields",
-      "tokens": 345
+      "name": "describe_vocabulary",
+      "tokens": 346
+    },
+    {
+      "name": "read_input_checks",
+      "tokens": 346
     },
     {
       "name": "book_meeting",
@@ -231,20 +239,8 @@
       "tokens": 335
     },
     {
-      "name": "decide_approval",
-      "tokens": 332
-    },
-    {
-      "name": "forecast_input_checks",
-      "tokens": 324
-    },
-    {
-      "name": "demote_lead",
-      "tokens": 317
-    },
-    {
-      "name": "promote_lead",
-      "tokens": 304
+      "name": "read_tags",
+      "tokens": 322
     },
     {
       "name": "relink_activity",
@@ -260,11 +256,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 289
-    },
-    {
-      "name": "describe_analytics_vocabulary",
-      "tokens": 286
+      "tokens": 291
     },
     {
       "name": "draft_follow_ups_for",
@@ -283,44 +275,20 @@
       "tokens": 267
     },
     {
-      "name": "describe_query_vocabulary",
-      "tokens": 266
-    },
-    {
       "name": "invite_meeting",
       "tokens": 264
     },
     {
+      "name": "commit_import",
+      "tokens": 263
+    },
+    {
       "name": "relink_activities",
-      "tokens": 259
+      "tokens": 260
     },
     {
       "name": "company_coverage",
       "tokens": 246
-    },
-    {
-      "name": "describe_report_blocks",
-      "tokens": 245
-    },
-    {
-      "name": "relink_thread",
-      "tokens": 240
-    },
-    {
-      "name": "commit_import",
-      "tokens": 236
-    },
-    {
-      "name": "decide_approval_bundle",
-      "tokens": 235
-    },
-    {
-      "name": "qualify_lead",
-      "tokens": 229
-    },
-    {
-      "name": "apply_tag",
-      "tokens": 226
     },
     {
       "name": "create_task",
@@ -331,19 +299,7 @@
       "tokens": 209
     },
     {
-      "name": "disqualify_lead",
-      "tokens": 209
-    },
-    {
-      "name": "list_input_checks",
-      "tokens": 209
-    },
-    {
       "name": "read_brief",
-      "tokens": 205
-    },
-    {
-      "name": "update_tag",
       "tokens": 205
     },
     {
@@ -359,24 +315,20 @@
       "tokens": 197
     },
     {
-      "name": "data_coverage",
-      "tokens": 195
-    },
-    {
       "name": "list_colleagues",
       "tokens": 193
     },
     {
-      "name": "create_tag",
-      "tokens": 191
+      "name": "intro_path_to",
+      "tokens": 187
     },
     {
       "name": "list_pipelines",
-      "tokens": 191
+      "tokens": 186
     },
     {
-      "name": "intro_path_to",
-      "tokens": 187
+      "name": "read_import",
+      "tokens": 185
     },
     {
       "name": "list_documents",
@@ -387,10 +339,6 @@
       "tokens": 174
     },
     {
-      "name": "remove_tag",
-      "tokens": 166
-    },
-    {
       "name": "read_project_360",
       "tokens": 156
     },
@@ -399,28 +347,8 @@
       "tokens": 154
     },
     {
-      "name": "get_record_tags",
-      "tokens": 144
-    },
-    {
       "name": "whoami",
       "tokens": 129
-    },
-    {
-      "name": "list_tags",
-      "tokens": 95
-    },
-    {
-      "name": "get_tag",
-      "tokens": 88
-    },
-    {
-      "name": "read_import_report",
-      "tokens": 77
-    },
-    {
-      "name": "read_import_run",
-      "tokens": 67
     }
   ],
   "corpus_wrong_reach": [

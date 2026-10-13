@@ -411,6 +411,6 @@ func clearClaimedLinkedinSlot(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		     SELECT 1 FROM audit_log a
 		      WHERE a.entity_type = $4 AND a.entity_id = $1 AND a.occurred_at = $5
 		        AND a.after ? $6)`,
-		contactID, socialLinkedIn, handle, entityContact, fill.FilledAt, auditKeySocial)
+		contactID, SocialLinkedIn, handle, entityContact, fill.FilledAt, auditKeySocial)
 	return err
 }

@@ -113,6 +113,23 @@ describe("CreateAction dedupe link", () => {
 });
 
 describe("problemMessage", () => {
+  // httperr.Duplicate sends one fixed API sentence for every key it guards,
+  // which names neither the field nor the record that holds it.
+  it("names what a duplicate refusal collided with, not the API's sentence", () => {
+    const message = problemMessage(
+      {
+        status: 409,
+        code: "duplicate_email",
+        detail: "a live record with this key already exists",
+        details: { existing_id: "01ABC" },
+      },
+      t,
+    );
+    expect(message).toBe(
+      "Another contact or lead already has this email address, so it was not saved here.",
+    );
+  });
+
   // The sentinel string is what an object-RBAC denial and a read-share denial
   // both arrive with, and it names neither the authority the reader holds nor
   // what would widen it. Catalog copy replaces it.
@@ -762,14 +779,14 @@ describe("signing out", () => {
 
   it("forgets what the member left in storage and keeps what no one else inherits", async () => {
     const declined = `${STORAGE_KEYS.platformDeclined.prefix}account-1`;
-    localStorage.setItem(STORAGE_KEYS.importRun.name, "run-1");
+    localStorage.setItem(STORAGE_KEYS.faultsSeen.name, "run-1");
     sessionStorage.setItem(STORAGE_KEYS.oauthAttempt.name, "gmail");
     localStorage.setItem(STORAGE_KEYS.theme.name, "dark");
     localStorage.setItem(declined, "1");
 
     await resetToSignedOut(new QueryClient());
 
-    expect(localStorage.getItem(STORAGE_KEYS.importRun.name)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.faultsSeen.name)).toBeNull();
     expect(sessionStorage.getItem(STORAGE_KEYS.oauthAttempt.name)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEYS.theme.name)).toBe("dark");
     expect(localStorage.getItem(declined)).toBe("1");

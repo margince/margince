@@ -211,6 +211,19 @@ func Subject(lang textlang.Lang, band convstate.Band, topic string, threaded boo
 	return fill(phrases.SubjectAbout, topic)
 }
 
+// groupGreetings open a message written to several contacts at once, where
+// naming one of them would leave the others out.
+var groupGreetings = map[textlang.Lang]string{
+	textlang.English:    "Hello all,",
+	textlang.German:     "Guten Tag zusammen,",
+	textlang.Vietnamese: "Xin chào quý vị,",
+}
+
+// GroupGreeting renders the opening line of a message to several contacts.
+func GroupGreeting(lang textlang.Lang) string {
+	return groupGreetings[langOrDefault(lang)]
+}
+
 // Greeting renders the opening line, by name when one is known.
 func Greeting(lang textlang.Lang, band convstate.Band, firstName string) string {
 	phrases := For(lang, band)

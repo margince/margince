@@ -42,6 +42,8 @@ type AwaitedReply struct {
 	ContactID  ids.UUID
 	CompanyID  ids.UUID
 	DealID     ids.UUID
+	// Recipients is who a meeting follow-up goes to, ContactID first.
+	Recipients []ids.UUID
 	// Present when the reader may read the message, which is what the
 	// composer drafts the follow-up from.
 	EmailSummary *crmcontracts.EmailSummary
@@ -93,7 +95,9 @@ func (s *Service) readingAwaiting(ctx context.Context, asOf time.Time) (*Service
 		scoped.followUps.rows = append(scoped.followUps.rows, classifyAwaiting(row, asOf))
 	}
 	for _, meeting := range meetings {
-		scoped.followUps.rows = append(scoped.followUps.rows, classifyMeetingFollowUp(meeting, asOf))
+		if row, actionable := classifyMeetingFollowUp(meeting, asOf); actionable {
+			scoped.followUps.rows = append(scoped.followUps.rows, row)
+		}
 	}
 	return &scoped, []*crmcontracts.WorklistSourceUnavailable{repliesErr, meetingsErr}
 }
@@ -168,9 +172,10 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 }
 
 // classifyMeetingFollowUp is one meeting the reader owes a follow-up. A
-// meeting is not a message to answer. The composer writes a fresh message to
-// the contact instead, so the row needs a contact.
-func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) ranked {
+// meeting is not a message to answer, so the composer writes a fresh message
+// to everyone it was with. With nobody on file the row opens the deal or the
+// company instead; with neither there is nothing to act on, and no row.
+func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
 	days := daysSince(met.SentAt, asOf)
 	row := crmcontracts.WorklistItem{
 		Id:          met.ActivityID.String(),
@@ -186,22 +191,28 @@ func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) ranked {
 			DealID: met.DealID, ContactID: met.ContactID, CompanyID: met.CompanyID,
 		}),
 	}
+	if !openableSubject(row.Subject) {
+		return ranked{}, false
+	}
 	if met.Subject != "" {
 		row.Title = &met.Subject
 	}
-	if !met.ContactID.IsZero() {
-		row.Contact = &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(met.ContactID)}
-	}
-	if openableSubject(row.Subject) {
-		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
-		if row.Contact != nil {
-			row.Actions = append(row.Actions, crmcontracts.WorklistItemActionsReply)
+	row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
+	if len(met.Recipients) > 0 {
+		recipients := make([]crmcontracts.WorklistContactFacts, 0, len(met.Recipients))
+		for _, id := range met.Recipients {
+			recipients = append(recipients, crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(id)})
 		}
+		row.Recipients = &recipients
+		row.Contact = &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(met.Recipients[0])}
+		row.Actions = append(row.Actions, crmcontracts.WorklistItemActionsReply)
+	} else {
+		row.Because = append(row.Because, reason("no_attendee_on_file", nil))
 	}
 	held := met.SentAt
 	row.OccurredAt = &held
 	return ranked{
 		item: row, waitingDays: days, waitingRank: orderingAge(days), occurredAt: held,
 		ownerRef: ownedByWhoeverIsReading(), contact: met.ContactID,
-	}
+	}, true
 }

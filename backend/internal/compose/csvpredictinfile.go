@@ -6,13 +6,14 @@ package compose
 // The rows of the file the dry run has already counted as landing.
 //
 // The commit lands rows one at a time. When it reaches a row, every earlier
-// create of the same file is already in the estate. The collision ladder and
-// the key checks meet it there. The dry run writes nothing, so it carries
-// those earlier creates here.
+// row of the same file is already in the estate. The collision ladder and the
+// key checks meet it there. The dry run writes nothing, so it carries those
+// earlier rows here.
 
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,10 +32,10 @@ import (
 // for visibility.
 type inFileCreates struct {
 	writers *csvWriters
-	// keys are the estate-wide unique keys the earlier creates hold: a
-	// contact's address, a company's domain. A later row naming one is refused
-	// by the store whoever holds it.
-	keys        map[string]bool
+	// holders maps each estate-wide unique key an earlier row will hold (an
+	// address, a domain, a LinkedIn URL) to the record holding it. The store
+	// refuses the key to any other record, whoever holds it.
+	holders     map[string]string
 	companies   contacts.CompanyBatch
 	contactRows contacts.ContactBatch
 	// consumerMail is read once per walk, because the contact ladder judges a
@@ -42,8 +43,14 @@ type inFileCreates struct {
 	consumerMail *freemail.Matcher
 }
 
+// heldKey is one unique key a row claims, with the sentence the commit
+// refuses a second holder with on each path.
+type heldKey struct {
+	key, onCreate, onUpdate string
+}
+
 func newInFileCreates(ctx context.Context, writers *csvWriters) (*inFileCreates, error) {
-	ledger := &inFileCreates{writers: writers, keys: map[string]bool{}}
+	ledger := &inFileCreates{writers: writers, holders: map[string]string{}}
 	if writers.object != migration.ObjectContact {
 		return ledger, nil
 	}
@@ -58,48 +65,69 @@ func newInFileCreates(ctx context.Context, writers *csvWriters) (*inFileCreates,
 }
 
 // reconsider answers what the commit does with a row the estate alone said
-// would land. By then the file's earlier creates are in the estate too.
+// would land or be skipped as a duplicate. By then the file's earlier rows are
+// in the estate too.
 //
 // The order is Ensure's: a taken key first, then the collision check.
-func (f *inFileCreates) reconsider(row migration.Row, outcome predictedOutcome, refusal string) (predictedOutcome, string) {
-	if outcome != predictCreate && outcome != predictCollides {
-		return outcome, refusal
+func (f *inFileCreates) reconsider(
+	ctx context.Context, row migration.Row, outcome predictedOutcome, problem *migration.SkippedRow,
+) (predictedOutcome, *migration.SkippedRow, error) {
+	switch outcome {
+	case predictCreate, predictCollides, predictCollidesSkipped, predictUpdate:
+	default:
+		return outcome, problem, nil
 	}
 	fields := textFields(row.Fields)
-	if key, reason := f.keyOf(fields); key != "" && f.keys[key] {
-		return predictUnwritable, reason
+	if reason := f.takenKeyReason(row, fields, outcome == predictUpdate); reason != "" {
+		return predictUnwritable, &migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: reason}, nil
 	}
-	if outcome == predictCollides || !f.hasRival(fields) {
-		return outcome, refusal
+	if outcome != predictCreate {
+		return outcome, problem, nil
+	}
+	rival, err := f.hasRival(ctx, fields)
+	if err != nil || !rival {
+		return outcome, problem, err
 	}
 	if f.writers.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
-		return predictCollidesSkipped, ""
+		return predictCollidesSkipped, nil, nil
 	}
-	return predictCollides, ""
+	return predictCollides, problem, nil
+}
+
+// takenKeyReason is the refusal for a key of this row an earlier row's record
+// already holds, or "".
+func (f *inFileCreates) takenKeyReason(row migration.Row, fields map[string]string, update bool) string {
+	holder := recordOf(row, fields)
+	for _, k := range f.keysOf(fields) {
+		if held, ok := f.holders[k.key]; ok && held != holder {
+			if update {
+				return k.onUpdate
+			}
+			return k.onCreate
+		}
+	}
+	return ""
 }
 
 // record files a row the prediction says will land. A row that updates files
-// its key too: once it commits, the estate holds that key for its record.
+// its keys too: once it commits, the estate holds them for its record.
 func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
+	if outcome != predictCreate && outcome != predictCollides && outcome != predictUpdate {
+		return
+	}
 	fields := textFields(row.Fields)
+	holder := recordOf(row, fields)
+	for _, k := range f.keysOf(fields) {
+		f.holders[k.key] = holder
+	}
 	if outcome == predictUpdate {
-		if key, _ := f.keyOf(fields); key != "" {
-			f.keys[key] = true
-		}
 		return
-	}
-	if outcome != predictCreate && outcome != predictCollides {
-		return
-	}
-	key, _ := f.keyOf(fields)
-	if key != "" {
-		f.keys[key] = true
 	}
 	switch f.writers.object {
 	case migration.ObjectCompany:
 		held := companyCandidateOf(fields)
-		if key != "" {
-			held.Domains = []string{key}
+		if domain := canonicalFor(fieldDomain, fields[fieldDomain]); domain != "" {
+			held.Domains = []string{domain}
 		}
 		f.companies.Add(held)
 	case migration.ObjectContact:
@@ -107,34 +135,76 @@ func (f *inFileCreates) record(row migration.Row, outcome predictedOutcome) {
 	}
 }
 
-// keyOf is the row's estate-wide unique key, spelled as the store holds it,
-// with the sentence the commit refuses a second holder with.
-func (f *inFileCreates) keyOf(fields map[string]string) (string, string) {
-	switch f.writers.object {
-	case migration.ObjectCompany:
-		if domain := canonicalFor(fieldDomain, fields[fieldDomain]); domain != "" {
-			return domain, domainClaimedReason
-		}
-	case migration.ObjectContact:
-		if email := canonicalFor(fieldEmail, fields[fieldEmail]); email != "" {
-			return email, contactEmailClaimedReason
-		}
-	case migration.ObjectLead:
-		if email := canonicalFor(fieldEmail, fields[fieldEmail]); email != "" {
-			return email, leadEmailClaimedReason
+// recordOf names the record a row writes: the company its id column names,
+// else the one its external id lands or updates.
+func recordOf(row migration.Row, fields map[string]string) string {
+	if named := strings.ToLower(strings.TrimSpace(fields[csvTargetID])); named != "" {
+		return "id:" + named
+	}
+	return "row:" + row.ExternalID
+}
+
+// keysOf is the row's estate-wide unique keys, spelled as the store holds
+// them. A contact's LinkedIn handle is not a key.
+func (f *inFileCreates) keysOf(fields map[string]string) []heldKey {
+	var keys []heldKey
+	object := f.writers.object
+	if email := canonicalFor(fieldEmail, fields[fieldEmail]); email != "" {
+		switch object {
+		case migration.ObjectContact:
+			keys = append(keys, heldKey{"email:" + email, contactEmailClaimedReason, skipReasonDuplicateEmail})
+		case migration.ObjectLead:
+			keys = append(keys, heldKey{"email:" + email, leadEmailClaimedReason, leadEmailClaimedReason})
 		}
 	}
-	return "", ""
+	if object == migration.ObjectCompany {
+		if domain := canonicalFor(fieldDomain, fields[fieldDomain]); domain != "" {
+			keys = append(keys, heldKey{"domain:" + domain, domainClaimedReason, domainClaimedReason})
+		}
+	}
+	if object == migration.ObjectContact {
+		return keys
+	}
+	text := strings.TrimSpace(fields[fieldLinkedIn])
+	if url, err := storedSpelling(object, fieldLinkedIn, text); text != "" && err == nil {
+		keys = append(keys, heldKey{"linkedin:" + strings.ToLower(url), linkedInClaimedReason, linkedInClaimedReason})
+	}
+	return keys
 }
 
 // hasRival answers whether the ladder would meet an earlier create as this
 // row's duplicate.
-func (f *inFileCreates) hasRival(fields map[string]string) bool {
-	switch f.writers.object {
-	case migration.ObjectCompany:
-		return f.companies.HasRival(companyCandidateOf(fields))
-	case migration.ObjectContact:
-		return f.contactRows.HasRival(contactCandidateOf(fields, f.consumerMail))
+func (f *inFileCreates) hasRival(ctx context.Context, fields map[string]string) (bool, error) {
+	var rival bool
+	err := database.WithWorkspaceTx(ctx, f.writers.pool, func(tx pgx.Tx) error {
+		var err error
+		switch f.writers.object {
+		case migration.ObjectCompany:
+			rival, err = f.companies.HasRival(ctx, tx, companyCandidateOf(fields))
+		case migration.ObjectContact:
+			rival, err = f.contactHasRival(ctx, tx, contactCandidateOf(fields, f.consumerMail))
+		}
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("import: checking a row against the file's earlier rows: %w", err)
 	}
-	return false
+	return rival, nil
+}
+
+// contactHasRival weighs the best earlier create against the estate.
+// DedupeContact keeps one winner, and the estate's answer here was no visible
+// collision. So an estate contact scoring at least as high wins the commit's
+// ladder, being invisible, and hides the earlier create. A tie goes to the
+// lower id, which the older estate record holds.
+func (f *inFileCreates) contactHasRival(ctx context.Context, tx pgx.Tx, candidate contacts.ContactCandidate) (bool, error) {
+	best, err := f.contactRows.BestRival(ctx, tx, candidate)
+	if err != nil || best == 0 {
+		return false, err
+	}
+	estate, err := contacts.DedupeContact(ctx, tx, candidate)
+	if err != nil {
+		return false, err
+	}
+	return estate.Decision == contacts.DecisionNoMatch || estate.Confidence < best, nil
 }

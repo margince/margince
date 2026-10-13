@@ -583,6 +583,8 @@ describe("Shell", () => {
     // report sections, and a settings-like page of stacked choices.
     ["#/worklist", true],
     ["#/filters", true],
+    // An opened list carries an id but is no record, and it reads down.
+    ["#/lists/L1", true],
     ["#/analytics", true],
     // Analytics' old address parses to the same screen, so it inherits the
     // same column: a bookmark cannot land on a differently laid-out page.

@@ -37,6 +37,7 @@ DECLARE
   -- backend/gates/seedresetparity_test.go — edit neither side alone.
   preserved text[] := ARRAY[
     'activity_kind',
+    'activity_own_sent_mail_repair_cutoff',
     'activity_retention_evidence',
     'ai_call_config',
     'app_user',

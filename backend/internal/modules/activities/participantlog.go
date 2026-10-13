@@ -40,11 +40,25 @@ const (
 )
 
 // stampLoggedParticipants records who was in a hand-logged interaction: the
-// human who logged it, and the contacts it was linked to.
+// human who logged it, the colleagues named as attending, and the linked contacts.
 //
 // It is silent for a non-interaction kind and for an activity with no contact
 // link — an unlinked note is a workspace-shared thought, not a conversation
 // with anybody.
+func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput) error {
+	if !relstrength.IsParticipantKind(in.Kind) {
+		return nil
+	}
+	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in)}
+	ourSide := loggedOurSide(ctx, in)
+	if err := stampLoggedCounterparties(ctx, tx, activityID, stamp, ourSide); err != nil {
+		return err
+	}
+	return stampLoggedColleagues(ctx, tx, activityID, in.AttendeeUserIDs, ourSide)
+}
+
+// loggedOurSide is the seat a logged interaction names as our side, or ids.Nil
+// for nobody.
 //
 // A row that names its source author was not logged by the caller: an import
 // writes another system's history, and the caller is whoever ran the import.
@@ -52,26 +66,21 @@ const (
 // it names only an author with no seat here (an inbound mail's external sender,
 // a departed rep the source spelled by name). The backfill skips these rows for
 // the same reason (participantbackfill.go, class 3).
-func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput) error {
-	if !relstrength.IsParticipantKind(in.Kind) {
-		return nil
-	}
-	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in)}
+func loggedOurSide(ctx context.Context, in LogActivityInput) ids.UUID {
 	if in.Author.AuthorID != nil {
-		return stampLoggedCounterparties(ctx, tx, activityID, stamp, *in.Author.AuthorID)
+		return *in.Author.AuthorID
 	}
 	if in.Author.AuthorName != nil {
-		return stampLoggedCounterparties(ctx, tx, activityID, stamp, ids.Nil)
+		return ids.Nil
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID == ids.Nil {
-		// A logging path with no human behind it (a system backfill, an agent
-		// acting on its own) records no our-side participant rather than
-		// attributing the conversation to nobody. The contact side below still
-		// stands, so the timeline keeps what it knows.
-		return stampLoggedCounterparties(ctx, tx, activityID, stamp, ids.Nil)
+	if !ok {
+		// A logging path with no human behind it (a system backfill) records no
+		// our-side participant. The contact side still stands, so the timeline
+		// keeps what it knows.
+		return ids.Nil
 	}
-	return stampLoggedCounterparties(ctx, tx, activityID, stamp, actor.UserID)
+	return actor.UserID
 }
 
 // loggedStamp is what one logged interaction says about who was in it.

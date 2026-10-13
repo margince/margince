@@ -204,7 +204,13 @@ func undottedForm(word string) string {
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,
 // in [0,1].
 func nameSimilarity(a, b string) float64 {
-	return jaroWinkler(normalizeName(a), normalizeName(b))
+	return normalizedNameSimilarity(normalizeName(a), normalizeName(b))
+}
+
+// normalizedNameSimilarity is nameSimilarity over names already through
+// normalizeName, for a scorer that prepares each name once.
+func normalizedNameSimilarity(a, b string) float64 {
+	return jaroWinkler(a, b)
 }
 
 // jaroWinkler applies the Winkler prefix boost unconditionally — the

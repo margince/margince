@@ -6,6 +6,7 @@ package migration
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -115,4 +116,14 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 			t.Fatalf("rep = %+v, want nothing recorded for an unreachable estate", rep)
 		}
 	})
+}
+
+func TestAnUndoReversesTheTypesALaterImportLandedFirst(t *testing.T) {
+	want := []string{ObjectLead, ObjectContact, ObjectCompany}
+	if got := reverseImportOrder(); !slices.Equal(got, want) {
+		t.Fatalf("undo order = %v, want %v: a company archived first leaves its contacts naming an archived record", got, want)
+	}
+	if ImportOrder[0] != ObjectCompany {
+		t.Fatalf("reversing changed ImportOrder itself: %v", ImportOrder)
+	}
 }

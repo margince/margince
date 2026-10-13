@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EmptyState } from "../design-system/atoms";
 import { FactList } from "../design-system/factlist";
+import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ProblemError, type QueryLike } from "./common";
@@ -65,30 +66,29 @@ function Shell({
       query={query}
       footer={(report) => t("jobs.generatedAt", { time: report.readAt })}
     >
-      {(report) =>
-        report.waiting === 0 && report.retrying === 0 ? (
-          <EmptyState>{t("jobs.workspaceEmpty")}</EmptyState>
-        ) : (
-          <FactList
-            facts={[
-              {
-                key: "waiting",
-                term: t("jobs.workspaceKinds"),
-                value: t("jobs.count.waiting", {
-                  count: formatNumber(report.waiting, locale),
-                }),
-              },
-              {
-                key: "retrying",
-                term: t("jobs.failures"),
-                value: t("jobs.count.retrying", {
-                  count: formatNumber(report.retrying, locale),
-                }),
-              },
-            ]}
-          />
-        )
-      }
+      {(report) => (
+        <PanelBody>
+          {report.waiting === 0 && report.retrying === 0 ? (
+            <EmptyState>{t("jobs.workspaceEmpty")}</EmptyState>
+          ) : (
+            <FactList
+              numeric
+              facts={[
+                {
+                  key: "waiting",
+                  term: t("jobs.col.waiting"),
+                  value: formatNumber(report.waiting, locale),
+                },
+                {
+                  key: "retrying",
+                  term: t("jobs.col.retrying"),
+                  value: formatNumber(report.retrying, locale),
+                },
+              ]}
+            />
+          )}
+        </PanelBody>
+      )}
     </HealthCard>
   );
 }

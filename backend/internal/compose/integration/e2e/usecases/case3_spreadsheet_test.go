@@ -27,6 +27,7 @@ package usecases
 // be testing the app rather than the journey an assistant walks.
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -91,7 +92,10 @@ func (s *scenario) readReport(t *testing.T, runID string) crmcontracts.ImportRun
 	got := s.MCP.CallOK(t, "read_import_report", map[string]any{"run_id": runID})
 	var report agents.ImportReportResult
 	got.JSON(t, &report)
-	return report.Report
+	if report.Report == nil {
+		t.Fatalf("run %s is %s and has no report yet", runID, report.State)
+	}
+	return *report.Report
 }
 
 // runImport previews, commits and reads back what actually happened.
@@ -292,14 +296,14 @@ Alpenblick Sensorik GmbH,München,11-50,DE
 	found := false
 	for _, issue := range outcome.report.Issues {
 		if strings.TrimSpace(issue.Reason) == "" {
-			t.Fatalf("case 3 criterion 6: line %d was refused with no reason", issue.Line)
+			t.Fatalf("case 3 criterion 6: line %s was refused with no reason", lineLabel(issue))
 		}
-		if issue.Line == badLine {
+		if issue.Line != nil && *issue.Line == badLine {
 			found = true
 			if !mentionsTheMissingName(issue) {
-				t.Fatalf("case 3 criterion 7: line %d was refused because it carries no company "+
+				t.Fatalf("case 3 criterion 7: line %s was refused because it carries no company "+
 					"name, and the reason given is %q — a user cannot tell what to fix",
-					issue.Line, issue.Reason)
+					lineLabel(issue), issue.Reason)
 			}
 		}
 	}
@@ -335,11 +339,19 @@ func mentionsTheMissingName(issue crmcontracts.ImportRowIssue) bool {
 	return false
 }
 
+// lineLabel names an issue's line; a part-level issue has none.
+func lineLabel(issue crmcontracts.ImportRowIssue) string {
+	if issue.Line == nil {
+		return "(none)"
+	}
+	return strconv.Itoa(*issue.Line)
+}
+
 // linesOf names which lines were reported, for a failure worth reading.
-func linesOf(issues []crmcontracts.ImportRowIssue) []int {
-	out := make([]int, 0, len(issues))
+func linesOf(issues []crmcontracts.ImportRowIssue) []string {
+	out := make([]string, 0, len(issues))
 	for _, issue := range issues {
-		out = append(out, issue.Line)
+		out = append(out, lineLabel(issue))
 	}
 	return out
 }

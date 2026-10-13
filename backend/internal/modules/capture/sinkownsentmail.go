@@ -17,8 +17,9 @@ import (
 
 // OwnSentMailClaim rewrites a stored received message as the seat's own sent
 // mail. activities.ClaimOwnSentMailTx is the implementation; compose injects
-// it, because capture never imports a sibling.
-type OwnSentMailClaim func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, sender, recipient string) error
+// it, because capture never imports a sibling. It answers whether it rewrote
+// the row.
+type OwnSentMailClaim func(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, sender, recipient string) (bool, error)
 
 // WithOwnSentMailClaim returns a copy that corrects a colleague's earlier
 // reading of this seat's sent mail. Without one, the first reading stands.
@@ -63,7 +64,7 @@ func (s *Sink) claimOwnSentMailTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 	}
 	// Archived between the read above and the claim's lock, by an erasure
 	// racing this capture: nothing to correct, and the capture goes on.
-	if err := s.claimOwnSentMail(ctx, tx, id, stored, cp.Email); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := s.claimOwnSentMail(ctx, tx, id, stored, cp.Email); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return err
 	}
 	return nil

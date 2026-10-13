@@ -19,6 +19,7 @@ import { locationDouble } from "../testing/locationdouble";
 import { useMe } from "./common";
 import { ConnectorsCard } from "./connectors";
 import { type RouteMap, stubWithSession } from "./story-utils";
+import { openRowMenu } from "./tablerow.testkit";
 
 // The connected-inboxes card makes the onboarding promise ("disconnect in one
 // click", "manage in Settings") real. It renders server facts only, and a
@@ -150,6 +151,9 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
       if (path.endsWith("/disconnect") && request.method === "POST") {
         return new Response(null, { status: 204 });
       }
+      if (path.endsWith("/backfill") && request.method === "GET") {
+        return jsonResponse({ state: "done" });
+      }
       throw new Error(`unstubbed: ${request.method} ${path}`);
     }),
   );
@@ -196,6 +200,14 @@ async function openAddDialog() {
   return screen.getByRole("dialog", { name: "Add connector" });
 }
 
+// A row's settings live behind its chevron, in a drawer named after it.
+async function openRowDrawer(name: string) {
+  await userEvent.click(
+    await screen.findByRole("button", { name: `Open ${name}` }),
+  );
+  return within(await screen.findByRole("dialog"));
+}
+
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
 });
@@ -207,12 +219,13 @@ afterEach(() => {
 });
 
 describe("the connected-inboxes card", () => {
-  it("lists a live connection with its status and last-synced time", async () => {
+  // A healthy connection is the normal case, so it carries no badge.
+  it("lists a live connection with its last-synced time and no status badge", async () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("Gmail")).toBeTruthy();
-    expect(screen.getByText("Capturing")).toBeTruthy();
     expect(screen.getByText(/Last synced/)).toBeTruthy();
+    expect(screen.queryByText("Capturing")).toBeNull();
   });
 
   // Mail capture and the workspace's messaging bot are two subjects, so they
@@ -230,54 +243,59 @@ describe("the connected-inboxes card", () => {
     expect(inboxes.closest(".panel")).not.toBe(telegram.closest(".panel"));
   });
 
-  // The history import belongs to the mailbox it imports for. Mounted as a
-  // sibling of that row rather than inside a Disclosure: <details> renders its
-  // children while closed, and BackfillPanel fires a scope-preview POST from an
-  // effect, so a collapsed one would spend requests nobody asked for.
-  it("attaches the history import to the connected mailbox's own row", async () => {
-    stubApi([gmailConnected]);
+  // The import fires a scope preview on render, so it waits in a dialog.
+  it("imports old emails from a dialog, never on page load", async () => {
+    const calls = stubApi([{ ...gmailConnected, backfill: { state: "none" } }]);
     render(<ConnectorsCard />);
-    const row = await screen.findByTestId("connector-gmail");
-    const backfill = document.querySelector(".connector-backfill");
-    expect(backfill).not.toBeNull();
-    // Asserted as "after this mailbox's row and before the next one" rather
-    // than as its immediate sibling: the row now carries its own decisions
-    // between the two (the signature-enrichment switch), and an adjacency
-    // check would fail for every one of them while the import stayed exactly
-    // where it belongs.
+    await screen.findByTestId("connector-gmail");
+    expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
+    expect(document.querySelector(".backfill-setup")).toBeNull();
+
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(
+      menu.getByRole("button", { name: "Import old emails" }),
+    );
+    // Named for the task and the connection, so two imports are told apart.
+    const dialog = await screen.findByRole("dialog", {
+      name: "Import old emails Gmail",
+    });
     expect(
-      row.compareDocumentPosition(backfill as Node) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      within(dialog).getByRole("heading", { name: /Import old emails/ }),
     ).toBeTruthy();
   });
 
-  // A calendar is not a mailbox, and the three mail-shaped rows do not belong
-  // to one. Reported from a live installation: a member saw the history-import
-  // card under their Google Calendar answering "this mailbox type can't be
-  // backfilled" and read it as the product refusing to import their mail. The
-  // account label is their own email address on both connections, so the row
-  // itself gave them no reason to think otherwise.
-  it("draws no mail-shaped row against a calendar connection", async () => {
+  // A calendar is not a mailbox: no history to import, no posture to take.
+  it("draws no mail-shaped verb or setting against a calendar connection", async () => {
     stubApi([gcalConnected]);
     render(<ConnectorsCard />);
-    await screen.findByTestId("connector-gcal");
-    expect(document.querySelector(".connector-backfill")).toBeNull();
-    expect(screen.queryByTestId("connector-gcal-mail-posture")).toBeNull();
-    expect(screen.queryByText(/Import your mail history/)).toBeNull();
+    const menu = await openRowMenu(userEvent.setup(), "Google Calendar");
+    expect(
+      menu.queryByRole("button", { name: "Import old emails" }),
+    ).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    const drawer = await openRowDrawer("Google Calendar");
+    expect(drawer.queryByTestId("connector-gcal-mail-posture")).toBeNull();
   });
 
-  // The control: the same three rows against a mailbox. Without it a card that
-  // had stopped rendering rows at all would satisfy the case above.
-  it("draws the mail-shaped rows against a mailbox", async () => {
+  // The control, so a card that drew no settings cannot pass the case above.
+  it("draws the mail-shaped verb and settings against a mailbox", async () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
-    await screen.findByTestId("connector-gmail");
-    expect(document.querySelector(".connector-backfill")).not.toBeNull();
-    expect(screen.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    expect(
+      menu.getByRole("button", { name: "Import old emails" }),
+    ).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    const drawer = await openRowDrawer("Gmail");
+    expect(drawer.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+    // No account label: every id naming the drawer must still resolve.
+    const names = screen.getByRole("dialog").getAttribute("aria-labelledby");
+    for (const id of names?.split(" ") ?? []) {
+      expect(document.getElementById(id)).not.toBeNull();
+    }
   });
 
-  // And the tag row stays: a meeting brings in contacts exactly as a message
-  // does, so which source found them is the same question on either kind.
+  // A meeting brings in contacts as a message does, so a calendar keeps a tag.
   it("keeps the context tag row on a calendar connection", async () => {
     stubApi([
       {
@@ -290,21 +308,17 @@ describe("the connected-inboxes card", () => {
       },
     ]);
     render(<ConnectorsCard />);
-    await screen.findByTestId("connector-gcal");
-    expect(screen.getByTestId("connector-gcal-context-tag")).toBeTruthy();
+    const drawer = await openRowDrawer("Google Calendar");
+    expect(drawer.getByTestId("connector-gcal-context-tag")).toBeTruthy();
   });
 
-  // An empty roster is the ANSWER to the question this card asks, so it is a
-  // row of the card's own list rather than a bare paragraph floating between
-  // the description and whatever came next.
-  it("states an empty roster as a row of the list, with the connect verb in the header", async () => {
+  it("states an empty roster, with the connect verb in the header", async () => {
     stubApi([]);
     render(<ConnectorsCard />);
-    const row = await screen.findByTestId("connector-roster-empty");
-    expect(
-      within(row).getByText(/No mailbox or calendar is connected yet/),
-    ).toBeTruthy();
-    expect(row.closest(".settinglist")).not.toBeNull();
+    const empty = await screen.findByTestId("connector-roster-empty");
+    expect(empty.textContent).toMatch(
+      /No mailbox or calendar is connected yet/,
+    );
     expect(screen.getByRole("button", { name: "Add connector" })).toBeTruthy();
   });
 
@@ -351,17 +365,18 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("Capture only, no sending")).toBeTruthy();
-    expect(
-      screen.getByText(/Reconnect this mailbox to send from it/),
-    ).toBeTruthy();
     // The prompt is only actionable if reconnecting is one click from here.
     expect(screen.getByRole("button", { name: /Reconnect/ })).toBeTruthy();
+    const drawer = await openRowDrawer("Gmail");
+    expect(
+      drawer.getByText(/Reconnect this mailbox to send from it/),
+    ).toBeTruthy();
   });
 
   it("stays quiet about sending once the send scope is granted", async () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText("Capturing")).toBeTruthy();
+    expect(await screen.findByText("Gmail")).toBeTruthy();
     expect(screen.queryByText("Capture only, no sending")).toBeNull();
     expect(screen.queryByRole("button", { name: /Reconnect/ })).toBeNull();
   });
@@ -460,15 +475,17 @@ describe("the connected-inboxes card", () => {
   it("disconnects only after an explicit confirm", async () => {
     const calls = stubApi([gmailConnected]);
     render(<ConnectorsCard />);
-    await screen.findByText("Gmail");
 
-    // Opening the row's disconnect shows a confirm — nothing is called yet.
-    await userEvent.click(screen.getByRole("button", { name: /^Disconnect$/ }));
+    // The row's Disconnect opens a confirm; nothing is called yet.
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(requestsTo(calls, "/disconnect", "POST").length).toBe(0);
 
-    // The modal's confirm is the one that stops capture.
-    const confirms = screen.getAllByRole("button", { name: /^Disconnect$/ });
-    await userEvent.click(confirms[confirms.length - 1]);
+    // The confirm is the one that stops capture.
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Disconnect" }),
+    );
     await waitFor(() =>
       expect(requestsTo(calls, "/disconnect", "POST").length).toBe(1),
     );
@@ -500,8 +517,9 @@ describe("the connected-inboxes card's richer health line", () => {
         }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/polled/i)).toBeTruthy();
-    expect(screen.queryByText(/expired/i)).toBeNull();
+    const drawer = await openRowDrawer("IMAP mailbox");
+    expect(drawer.getByText(/polled/i)).toBeTruthy();
+    expect(drawer.queryByText(/expired/i)).toBeNull();
   });
 
   it("renders a push renewal deadline when watch_expires_at is set", async () => {
@@ -514,7 +532,8 @@ describe("the connected-inboxes card's richer health line", () => {
         }),
     });
     render(<ConnectorsCard />);
-    expect(await screen.findByText(/push renewal/i)).toBeTruthy();
+    const drawer = await openRowDrawer("Gmail");
+    expect(drawer.getByText(/push renewal/i)).toBeTruthy();
   });
 
   it("renders the error-class sentence for a reauth_required connection", async () => {
@@ -547,9 +566,8 @@ describe("the connected-inboxes card's richer health line", () => {
       "GET /connectors": () => jsonResponse({ data: [gmailConnected] }),
     });
     render(<ConnectorsCard />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Disconnect$/ }),
-    );
+    const menu = await openRowMenu(userEvent.setup(), "Gmail");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(
       await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
@@ -562,9 +580,8 @@ describe("the connected-inboxes card's richer health line", () => {
         jsonResponse({ data: [{ ...gmailConnected, provider: "imap" }] }),
     });
     render(<ConnectorsCard />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /^Disconnect$/ }),
-    );
+    const menu = await openRowMenu(userEvent.setup(), "IMAP mailbox");
+    await userEvent.click(menu.getByRole("button", { name: "Disconnect" }));
     expect(
       await screen.findByText(/deletes the stored credential/i),
     ).toBeTruthy();
@@ -796,19 +813,16 @@ describe("the Telegram connector panel", () => {
     stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
-    // One SettingRow per bot: the roster is a list of decisions now, so a bot
-    // is identified by its own row rather than by an <li> the list wrapper
-    // used to supply.
     const rows = await screen.findAllByTestId("telegram-connection");
     expect(rows.length).toBe(2);
     expect(within(rows[0]).getByText("@acme_sales_bot")).toBeTruthy();
     expect(within(rows[1]).getByText("@acme_support_bot")).toBeTruthy();
     // One shared Disconnect for two bots could only ever remove one of them,
     // which is exactly the state an admin is here to escape.
-    for (const row of rows) {
-      expect(
-        within(row).getByRole("button", { name: "Disconnect" }),
-      ).toBeTruthy();
+    for (const bot of ["@acme_sales_bot", "@acme_support_bot"]) {
+      const menu = await openRowMenu(userEvent.setup(), bot);
+      expect(menu.getByRole("button", { name: "Disconnect" })).toBeTruthy();
+      await userEvent.keyboard("{Escape}");
     }
   });
 
@@ -816,10 +830,8 @@ describe("the Telegram connector panel", () => {
     stubApi([], { channels: [salesBot, supportBot], me: botManager });
     render(<ConnectorsCard />);
 
-    const rows = await screen.findAllByTestId("telegram-connection");
-    await userEvent.click(
-      within(rows[1]).getByRole("button", { name: "Replace token" }),
-    );
+    const menu = await openRowMenu(userEvent.setup(), "@acme_support_bot");
+    await userEvent.click(menu.getByRole("button", { name: "Replace token" }));
     // The second bot is the pending one: the form showing its status is the
     // observable proof it bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
@@ -853,7 +865,6 @@ describe("the Telegram connector panel", () => {
     const row = screen.getByTestId("telegram-connection");
     expect(within(row).getByText("@acme_sales_bot")).toBeTruthy();
     expect(within(row).queryByRole("button")).toBeNull();
-    expect(row.querySelector(".connector-actions")).toBeNull();
   });
 
   it("withholds Connect on an empty roster from a reader without channel_connection:create", async () => {
@@ -889,13 +900,9 @@ describe("the Telegram connector panel", () => {
       me: meFixture({ allow: { channel_connection: ["read", "update"] } }),
     });
     render(<ConnectorsCard />);
-    const row = await screen.findByTestId("telegram-connection");
-    expect(
-      await within(row).findByRole("button", { name: "Replace token" }),
-    ).toBeTruthy();
-    expect(
-      within(row).queryByRole("button", { name: "Disconnect" }),
-    ).toBeNull();
+    const menu = await openRowMenu(userEvent.setup(), "@acme_sales_bot");
+    expect(menu.getByRole("button", { name: "Replace token" })).toBeTruthy();
+    expect(menu.queryByRole("button", { name: "Disconnect" })).toBeNull();
     expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
 
@@ -931,7 +938,9 @@ describe("the Telegram connector panel", () => {
   // configured with a localhost origin sends mail whose unsubscribe links
   // open nothing, and the only way to find out was for a recipient to
   // click one.
-  it("shows the address used in emailed links, and that it answers", async () => {
+  // A probe from inside cannot prove a recipient reaches it, so only a failed
+  // probe is news.
+  it("shows the address used in emailed links, with no badge while it answers", async () => {
     stubApi([], {
       publicOrigin: {
         origin: "https://crm.example.com",
@@ -943,7 +952,7 @@ describe("the Telegram connector panel", () => {
 
     const row = await screen.findByTestId("public-origin");
     expect(within(row).getByText("https://crm.example.com")).toBeTruthy();
-    expect(within(row).getByText("Reachable")).toBeTruthy();
+    expect(row.querySelector(".badge")).toBeNull();
   });
 
   it("says so when the address does not answer", async () => {
@@ -959,16 +968,13 @@ describe("the Telegram connector panel", () => {
   });
 
   // Null is "not asked yet", which must not read as a failure.
-  it("distinguishes an unchecked address from a failing one", async () => {
+  it("draws no failure for an address nobody has checked", async () => {
     stubApi([], {
       publicOrigin: { origin: "https://crm.example.com", reachable: null },
     });
     render(<ConnectorsCard />);
-    expect(
-      within(await screen.findByTestId("public-origin")).getByText(
-        "Not checked",
-      ),
-    ).toBeTruthy();
+    const row = await screen.findByTestId("public-origin");
+    expect(within(row).queryByText("Unreachable")).toBeNull();
   });
 
   // No origin configured is not a broken origin: the row is absent.
@@ -983,5 +989,7 @@ it("offers reconnect for a healthy read-only calendar", async () => {
   stubApi([gcalConnected]);
   render(<ConnectorsCard />);
   expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Reconnect Google Calendar" }),
+  ).toBeEnabled();
 });

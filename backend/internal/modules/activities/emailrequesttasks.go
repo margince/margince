@@ -74,9 +74,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM activity_reader_state mine
-       WHERE mine.activity_id = a.id AND mine.reader_id = (`+assigneeSQL+`)
-       AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT `+wake+`)))`)
+     AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)
 		if err != nil {
 			return err
 		}

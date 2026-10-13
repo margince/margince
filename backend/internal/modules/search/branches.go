@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -64,6 +65,42 @@ type searchBranch struct {
 	// `snippet` — for an excerpt that reads a SECOND record and so owes that
 	// record's own gate. `snippet` stays the ungated floor it falls back to.
 	snippetFor func(ctx context.Context, fallback string, arg func(any) int) (string, error)
+	// identifier is the table of handles a reader pastes instead of a name: a
+	// contact's address, a company's domain. The name index holds neither.
+	identifier storekit.Identifier
+}
+
+// ownMatch is the predicate that finds a record by its own text: the name index,
+// or an exact identifier the record carries. identifierPos binds the query the
+// first time an identifier arm asks for it.
+func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) string {
+	if b.identifier.Table == "" {
+		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
+	}
+	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
+		alias, tsquery, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+}
+
+// ownScore lifts an identifier hit into the whole-word tier, so a pasted address
+// ranks its contact above every name that merely starts like it.
+func (b searchBranch) ownScore(alias, score string, identifierPos func() int) string {
+	if b.identifier.Table == "" {
+		return score
+	}
+	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+}
+
+// bindIdentifier binds the whole query for the identifier arms on first use. A
+// bound parameter no statement references fails the whole search, and every
+// identifier branch may be denied.
+func bindIdentifier(query string, arg func(any) int) func() int {
+	pos := 0
+	return func() int {
+		if pos == 0 {
+			pos = arg(query)
+		}
+		return pos
+	}
 }
 
 // mayRead answers the object gate as a yes or a no, because that is what this
@@ -158,8 +195,11 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet},
-	{entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet, extraWhere: "NOT %s.is_anchor"},
+	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet, identifier: storekit.ContactEmails},
+	{
+		entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet,
+		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,
+	},
 	{entity: "deal", table: entityDeal, title: columnName, snippet: noSnippet},
 	{entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)", snippet: noSnippet},
 	// A project's name alone does not say which account's work it is, and two

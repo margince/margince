@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -166,9 +167,9 @@ func TestTheDescriptionRulesFailOnTheDefectsTheyDescribe(t *testing.T) {
 // true.
 func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
-	specs := registry.Specs()
+	specs := slices.DeleteFunc(registry.Specs(), func(spec mcp.ToolSpec) bool { return spec.Unlisted })
 	listed := toolsListDescriptions(t, registry)
-	served := agentToolsFromSpecs(specs)
+	served := agentToolsFromSpecs(registry.Specs())
 	if len(served) != len(specs) {
 		t.Fatalf("the console serves %d tools, the registry holds %d", len(served), len(specs))
 	}

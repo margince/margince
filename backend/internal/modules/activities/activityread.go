@@ -154,7 +154,7 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// activity list runs through here, and the spread is a percentile over
 		// a year — a scan no read that never mentions waiting should pay for.
 		if in.WaitingReplyAsOf != nil {
-			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
+			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
 				return err
 			}
 		}

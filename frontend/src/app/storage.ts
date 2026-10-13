@@ -45,7 +45,6 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
-  importRun: { name: "margince.import.run", area: "local", lifetime: "seat" },
   platformDeclined: {
     prefix: "margince.first-run.platform-declined:",
     area: "local",

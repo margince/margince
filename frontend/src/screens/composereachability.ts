@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./common";
@@ -71,14 +71,17 @@ export function useChannelReachable(
 ) {
   const contact = useQuery({
     queryKey: ["contact", contactId],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}", {
-          params: { path: { id: contactId as string } },
-        }),
-      );
-    },
-    enabled: isChannel && contactId != null,
+    queryFn:
+      contactId != null
+        ? async () => {
+            return unwrap(
+              await api.GET("/contacts/{id}", {
+                params: { path: { id: contactId } },
+              }),
+            );
+          }
+        : skipToken,
+    enabled: isChannel,
   });
   if (!isChannel || contactId == null) return true;
   // Matched against the row's OWN transport. A hardcoded "telegram" here would

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { Project } from "./projects.form";
 
@@ -29,16 +29,18 @@ export function useProjectRecord(
     // key outside that prefix would keep serving the old record for its whole
     // freshness window.
     queryKey: ["project", id, "record"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/projects/{id}", {
-        params: { path: { id: id ?? "" } },
-      });
-      // A project the reader may not open is not an error to shout about here:
-      // the caller draws nothing either way, and a throw would take the
-      // composer down over a record it only wanted to name.
-      return error ? null : data;
-    },
-    enabled: enabled && Boolean(id),
+    queryFn: id
+      ? async () => {
+          const { data, error } = await api.GET("/projects/{id}", {
+            params: { path: { id } },
+          });
+          // A project the reader may not open is not an error to shout about
+          // here. The caller draws nothing either way, and a throw would take
+          // the composer down over a record it only wanted to name.
+          return error ? null : data;
+        }
+      : skipToken,
+    enabled,
     staleTime: 60_000,
   });
   return {

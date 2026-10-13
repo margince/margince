@@ -2023,6 +2023,24 @@ func (e AttentionThisMorningState) Valid() bool {
 	}
 }
 
+// Defines values for AttentionConnectionFactsMedium.
+const (
+	AttentionConnectionFactsMediumCalendar AttentionConnectionFactsMedium = "calendar"
+	AttentionConnectionFactsMediumMailbox  AttentionConnectionFactsMedium = "mailbox"
+)
+
+// Valid indicates whether the value is a known member of the AttentionConnectionFactsMedium enum.
+func (e AttentionConnectionFactsMedium) Valid() bool {
+	switch e {
+	case AttentionConnectionFactsMediumCalendar:
+		return true
+	case AttentionConnectionFactsMediumMailbox:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
@@ -2998,6 +3016,63 @@ func (e BlockedDomainAdmission) Valid() bool {
 	case BlockedDomainAdmissionSuppressed:
 		return true
 	case BlockedDomainAdmissionUndecided:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainReasonCode.
+const (
+	BlockedDomainReasonCodeBulkSender     BlockedDomainReasonCode = "bulk_sender"
+	BlockedDomainReasonCodeCompanyCreated BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeKeptAsCompany  BlockedDomainReasonCode = "kept_as_company"
+	BlockedDomainReasonCodeNearDuplicate  BlockedDomainReasonCode = "near_duplicate"
+	BlockedDomainReasonCodeStaleEvidence  BlockedDomainReasonCode = "stale_evidence"
+	BlockedDomainReasonCodeStated         BlockedDomainReasonCode = "stated"
+	BlockedDomainReasonCodeUnevidenced    BlockedDomainReasonCode = "unevidenced"
+	BlockedDomainReasonCodeUnknown        BlockedDomainReasonCode = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
+func (e BlockedDomainReasonCode) Valid() bool {
+	switch e {
+	case BlockedDomainReasonCodeBulkSender:
+		return true
+	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeKeptAsCompany:
+		return true
+	case BlockedDomainReasonCodeNearDuplicate:
+		return true
+	case BlockedDomainReasonCodeStaleEvidence:
+		return true
+	case BlockedDomainReasonCodeStated:
+		return true
+	case BlockedDomainReasonCodeUnevidenced:
+		return true
+	case BlockedDomainReasonCodeUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BlockedDomainSenderKind.
+const (
+	BlockedDomainSenderKindNewsletter    BlockedDomainSenderKind = "newsletter"
+	BlockedDomainSenderKindSpam          BlockedDomainSenderKind = "spam"
+	BlockedDomainSenderKindTransactional BlockedDomainSenderKind = "transactional"
+)
+
+// Valid indicates whether the value is a known member of the BlockedDomainSenderKind enum.
+func (e BlockedDomainSenderKind) Valid() bool {
+	switch e {
+	case BlockedDomainSenderKindNewsletter:
+		return true
+	case BlockedDomainSenderKindSpam:
+		return true
+	case BlockedDomainSenderKindTransactional:
 		return true
 	default:
 		return false
@@ -10216,6 +10291,39 @@ func (e HistoryEdgeOtherEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ImportFormatVersion.
+const (
+	ImportFormatVersionMarginceImport1 ImportFormatVersion = "margince-import/1"
+)
+
+// Valid indicates whether the value is a known member of the ImportFormatVersion enum.
+func (e ImportFormatVersion) Valid() bool {
+	switch e {
+	case ImportFormatVersionMarginceImport1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportIgnoredEntryReason.
+const (
+	ImportIgnoredEntryReasonNotYetImportable ImportIgnoredEntryReason = "not_yet_importable"
+	ImportIgnoredEntryReasonUnknownName      ImportIgnoredEntryReason = "unknown_name"
+)
+
+// Valid indicates whether the value is a known member of the ImportIgnoredEntryReason enum.
+func (e ImportIgnoredEntryReason) Valid() bool {
+	switch e {
+	case ImportIgnoredEntryReasonNotYetImportable:
+		return true
+	case ImportIgnoredEntryReasonUnknownName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportObject.
 const (
 	ImportObjectCompany ImportObject = "company"
@@ -10237,6 +10345,24 @@ func (e ImportObject) Valid() bool {
 	}
 }
 
+// Defines values for ImportOnBrokenLink.
+const (
+	ImportOnBrokenLinkDropLink ImportOnBrokenLink = "drop_link"
+	ImportOnBrokenLinkSkipRow  ImportOnBrokenLink = "skip_row"
+)
+
+// Valid indicates whether the value is a known member of the ImportOnBrokenLink enum.
+func (e ImportOnBrokenLink) Valid() bool {
+	switch e {
+	case ImportOnBrokenLinkDropLink:
+		return true
+	case ImportOnBrokenLinkSkipRow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportOnDuplicate.
 const (
 	ImportOnDuplicateCreate ImportOnDuplicate = "create"
@@ -10249,6 +10375,42 @@ func (e ImportOnDuplicate) Valid() bool {
 	case ImportOnDuplicateCreate:
 		return true
 	case ImportOnDuplicateSkip:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportProblemKind.
+const (
+	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
+	ImportProblemKindDroppedLink  ImportProblemKind = "dropped_link"
+	ImportProblemKindDuplicate    ImportProblemKind = "duplicate"
+	ImportProblemKindInvalidValue ImportProblemKind = "invalid_value"
+	ImportProblemKindNewTag       ImportProblemKind = "new_tag"
+	ImportProblemKindPermission   ImportProblemKind = "permission"
+	ImportProblemKindUnknownOwner ImportProblemKind = "unknown_owner"
+	ImportProblemKindUnusableRow  ImportProblemKind = "unusable_row"
+)
+
+// Valid indicates whether the value is a known member of the ImportProblemKind enum.
+func (e ImportProblemKind) Valid() bool {
+	switch e {
+	case ImportProblemKindBrokenLink:
+		return true
+	case ImportProblemKindDroppedLink:
+		return true
+	case ImportProblemKindDuplicate:
+		return true
+	case ImportProblemKindInvalidValue:
+		return true
+	case ImportProblemKindNewTag:
+		return true
+	case ImportProblemKindPermission:
+		return true
+	case ImportProblemKindUnknownOwner:
+		return true
+	case ImportProblemKindUnusableRow:
 		return true
 	default:
 		return false
@@ -10855,6 +11017,27 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	case KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeRetrievalUnavailable:
 		return true
 	case KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeCoverageEmbedState.
+const (
+	KnowledgeCoverageEmbedStateComplete         KnowledgeCoverageEmbedState = "complete"
+	KnowledgeCoverageEmbedStateIndexing         KnowledgeCoverageEmbedState = "indexing"
+	KnowledgeCoverageEmbedStateNoEmbeddingModel KnowledgeCoverageEmbedState = "no_embedding_model"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeCoverageEmbedState enum.
+func (e KnowledgeCoverageEmbedState) Valid() bool {
+	switch e {
+	case KnowledgeCoverageEmbedStateComplete:
+		return true
+	case KnowledgeCoverageEmbedStateIndexing:
+		return true
+	case KnowledgeCoverageEmbedStateNoEmbeddingModel:
 		return true
 	default:
 		return false
@@ -15036,6 +15219,7 @@ func (e ServiceStatusStatus) Valid() bool {
 
 // Defines values for SetActivityDispositionRequestDisposition.
 const (
+	SetActivityDispositionRequestDispositionHandled  SetActivityDispositionRequestDisposition = "handled"
 	SetActivityDispositionRequestDispositionNotMine  SetActivityDispositionRequestDisposition = "not_mine"
 	SetActivityDispositionRequestDispositionNotSales SetActivityDispositionRequestDisposition = "not_sales"
 	SetActivityDispositionRequestDispositionSnooze   SetActivityDispositionRequestDisposition = "snooze"
@@ -15044,6 +15228,8 @@ const (
 // Valid indicates whether the value is a known member of the SetActivityDispositionRequestDisposition enum.
 func (e SetActivityDispositionRequestDisposition) Valid() bool {
 	switch e {
+	case SetActivityDispositionRequestDispositionHandled:
+		return true
 	case SetActivityDispositionRequestDispositionNotMine:
 		return true
 	case SetActivityDispositionRequestDispositionNotSales:
@@ -18594,6 +18780,7 @@ func (e WorklistItemDestination) Valid() bool {
 
 // Defines values for WorklistItemDispositions.
 const (
+	WorklistItemDispositionsWorklistDispositionHandled  WorklistItemDispositions = "handled"
 	WorklistItemDispositionsWorklistDispositionNotMine  WorklistItemDispositions = "not_mine"
 	WorklistItemDispositionsWorklistDispositionNotSales WorklistItemDispositions = "not_sales"
 	WorklistItemDispositionsWorklistDispositionSnooze   WorklistItemDispositions = "snooze"
@@ -18602,6 +18789,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistItemDispositions enum.
 func (e WorklistItemDispositions) Valid() bool {
 	switch e {
+	case WorklistItemDispositionsWorklistDispositionHandled:
+		return true
 	case WorklistItemDispositionsWorklistDispositionNotMine:
 		return true
 	case WorklistItemDispositionsWorklistDispositionNotSales:
@@ -18942,6 +19131,7 @@ const (
 	WorklistReasonKindMeetingSoon        WorklistReasonKind = "meeting_soon"
 	WorklistReasonKindMeetingUnprepared  WorklistReasonKind = "meeting_unprepared"
 	WorklistReasonKindMetDaysAgo         WorklistReasonKind = "met_days_ago"
+	WorklistReasonKindNoAttendeeOnFile   WorklistReasonKind = "no_attendee_on_file"
 	WorklistReasonKindNoChampion         WorklistReasonKind = "no_champion"
 	WorklistReasonKindNoNextStep         WorklistReasonKind = "no_next_step"
 	WorklistReasonKindNoReplyDays        WorklistReasonKind = "no_reply_days"
@@ -19001,6 +19191,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindMeetingUnprepared:
 		return true
 	case WorklistReasonKindMetDaysAgo:
+		return true
+	case WorklistReasonKindNoAttendeeOnFile:
 		return true
 	case WorklistReasonKindNoChampion:
 		return true
@@ -20947,6 +21139,27 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingOpen:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetImportFormatParamsLang.
+const (
+	GetImportFormatParamsLangDe GetImportFormatParamsLang = "de"
+	GetImportFormatParamsLangEn GetImportFormatParamsLang = "en"
+	GetImportFormatParamsLangVi GetImportFormatParamsLang = "vi"
+)
+
+// Valid indicates whether the value is a known member of the GetImportFormatParamsLang enum.
+func (e GetImportFormatParamsLang) Valid() bool {
+	switch e {
+	case GetImportFormatParamsLangDe:
+		return true
+	case GetImportFormatParamsLangEn:
+		return true
+	case GetImportFormatParamsLangVi:
 		return true
 	default:
 		return false
@@ -23437,7 +23650,13 @@ type AiProfileState string
 
 // AiProviderHealth defines model for AiProviderHealth.
 type AiProviderHealth struct {
-	// Providers Providers that are not answering normally, in name order. Empty when all are.
+	// Configured Every provider the routing binds now, answering or not, in name order and in the
+	// same names `providers` uses. Empty when no AI provider is configured. An empty
+	// `providers` means every provider answers only when this list is not empty too.
+	Configured []string `json:"configured"`
+
+	// Providers Providers that are not answering normally, in name order. Empty when every provider
+	// in `configured` answers, and empty too when `configured` is.
 	Providers []AiProviderHealthEntry `json:"providers"`
 }
 
@@ -24656,9 +24875,10 @@ type Attention struct {
 	// CaptureHealth The reader's OWN capture connections needing the reader's hand: a mailbox
 	// wanting re-authentication, a connection in error, a sync failing, a history
 	// import that ended in error. One card per connection, carrying its worst
-	// condition; `kind` names the condition and `detail` carries the mailbox (its
-	// account label, or the provider where none was recorded). Fixing the
-	// connection lives on the capture settings screen, so the card offers no verbs.
+	// condition; `kind` names the condition, `detail` carries the account label when
+	// the connector recorded one, and `connection` names the provider and whether it
+	// is a mailbox or a calendar. Fixing the connection lives on the capture settings
+	// screen, so the card offers no verbs.
 	//
 	// Capture is per-user, so this lane is each reader's own mailboxes and nobody
 	// else's. Withheld — named in `lanes_omitted` — for a caller with no human
@@ -24923,6 +25143,22 @@ type AttentionLanesOmitted string
 // when the lane itself was withheld (`lanes_omitted` names it).
 type AttentionThisMorningState string
 
+// AttentionConnectionFacts The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+//
+// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+// the account label when the connector reported one, and are absent when it did not:
+// neither ever carries a provider id.
+type AttentionConnectionFacts struct {
+	// Medium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+	Medium AttentionConnectionFactsMedium `json:"medium"`
+
+	// Provider The provider id the connection was made with (`gmail`, `imap`, `gcal`, …). A key the client maps to a display name, never prose.
+	Provider string `json:"provider"`
+}
+
+// AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
+type AttentionConnectionFactsMedium string
+
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
@@ -25116,6 +25352,13 @@ type AttentionItem struct {
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Connection The connection a `capture_health` row is about. Sent only for `source: capture_health`.
+	//
+	// Typed so the client names it in the reader's language. `detail` and `cause_label` carry
+	// the account label when the connector reported one, and are absent when it did not:
+	// neither ever carries a provider id.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
 
 	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
 	// draws value and ownership without a second read per row. Sent only for
@@ -26011,8 +26254,13 @@ type BlockedDomain struct {
 	// on the row for this state, it is what the absence of a decision is called on the wire.
 	Admission BlockedDomainAdmission `json:"admission"`
 
-	// CompanyId The company on this domain, when one exists — an admitted domain usually has one.
+	// CompanyId The company on this domain, when one exists and the reader may see it. An admitted
+	// domain usually has one. A company the reader may not open is withheld, never pointed at.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// CompanyName The name of the company `company_id` points at. Sent exactly when `company_id` is, so
+	// a company the reader may not see stays withheld by both.
+	CompanyName *string `json:"company_name,omitempty"`
 
 	// DecidedAt When the decision was recorded. For an `undecided` domain, when the row last moved.
 	DecidedAt time.Time `json:"decided_at"`
@@ -26020,8 +26268,32 @@ type BlockedDomain struct {
 	// Domain The registrable domain the decision is about.
 	Domain string `json:"domain"`
 
+	// Note The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`.
+	Note *string `json:"note,omitempty"`
+
 	// Reason One sentence an operator can act on: why this domain was refused, let in, or left open.
+	// Kept for clients that predate `reason_code`. A sentence the machine wrote is English
+	// whatever the reader's language, so a client says `reason_code` in the reader's own
+	// words and shows `note` for a decision somebody explained.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Reason string `json:"reason"`
+
+	// ReasonCode Why, as a code the client words in the reader's language.
+	//
+	// - `stated`: whoever decided wrote the reason down; it travels as `note`.
+	// - `company_created`: a colleague created a company on this domain, which let it in.
+	// - `kept_as_company`: a colleague answered the domain's open question by keeping it
+	//   as a company.
+	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+	//   company this business works with. `sender_kind` says which, when it is known.
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+	//   question, as `source` describes each one.
+	// - `unknown`: the row records a reason this server has no word for. `reason` still
+	//   carries its stored sentence.
+	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
+
+	// SenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+	SenderKind *BlockedDomainSenderKind `json:"sender_kind,omitempty"`
 
 	// Source What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 	// `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -26036,6 +26308,23 @@ type BlockedDomain struct {
 // refusals. `undecided` — the question is open and waiting to be answered; nothing is stored
 // on the row for this state, it is what the absence of a decision is called on the wire.
 type BlockedDomainAdmission string
+
+// BlockedDomainReasonCode Why, as a code the client words in the reader's language.
+//
+//   - `stated`: whoever decided wrote the reason down; it travels as `note`.
+//   - `company_created`: a colleague created a company on this domain, which let it in.
+//   - `kept_as_company`: a colleague answered the domain's open question by keeping it
+//     as a company.
+//   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
+//     company this business works with. `sender_kind` says which, when it is known.
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
+//     question, as `source` describes each one.
+//   - `unknown`: the row records a reason this server has no word for. `reason` still
+//     carries its stored sentence.
+type BlockedDomainReasonCode string
+
+// BlockedDomainSenderKind What the mail was judged to be. Sent only with `reason_code` `bulk_sender`, and only when recorded.
+type BlockedDomainSenderKind string
 
 // BlockedDomainSource What decided it, or — for an `undecided` domain — what stopped the machine deciding.
 // `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
@@ -31999,7 +32288,10 @@ type CreateAcquisitionSourceRequest struct {
 // CreateActivityRequest defines model for CreateActivityRequest.
 type CreateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
-	Body       *string             `json:"body,omitempty"`
+
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
+	Body            *string               `json:"body,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
@@ -32336,7 +32628,9 @@ type CreateDealRoomRequest struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// CreateImportRunRequest defines model for CreateImportRunRequest.
+// CreateImportRunRequest Exactly one of two shapes: `object` and `mapping` (and optionally
+// `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+// `source_key`. Both or neither is refused.
 type CreateImportRunRequest struct {
 	// Connector The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
 	Connector CreateImportRunRequestConnector `json:"connector"`
@@ -32355,6 +32649,9 @@ type CreateImportRunRequest struct {
 	// estate, and tagging it would claim the batch contains records it
 	// only touched.
 	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+
+	// FileName The uploaded file's name, echoed from the profile's `file_name`. Display only: nothing about the run is decided by it.
+	FileName *string `json:"file_name,omitempty"`
 
 	// Mapping `{source column → target field}`, as the human settled it. Validated against
 	// the object's live field catalog before the run is created.
@@ -32378,7 +32675,7 @@ type CreateImportRunRequest struct {
 	//
 	// A row naming an id nothing answers to is reported as a skipped row saying so,
 	// never created quietly under a new id.
-	Mapping map[string]string `json:"mapping"`
+	Mapping *map[string]string `json:"mapping,omitempty"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -32405,7 +32702,17 @@ type CreateImportRunRequest struct {
 	// already belongs to another contact, and files a review pair for a near
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
-	Object ImportObject `json:"object"`
+	Object *ImportObject `json:"object,omitempty"`
+
+	// OnBrokenLink What a run does with a contact row whose company link finds no single
+	// company, in the upload or in the estate. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link. A ZIP run applies it to `company_ref` and
+	// `company_name`; a row holding both is decided by its `company_ref`. A
+	// single CSV applies it to `company_ref` only, and lands a row whose
+	// `company_name` finds nothing, with the link reported as unresolved. A
+	// lead's `company_name` is text, not a link, so it never skips a lead.
+	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
 
 	// OnDuplicate What to do with a row naming a record the estate ALREADY holds — found
 	// by the same dedupe ladder every create path runs, not by this
@@ -32437,6 +32744,9 @@ type CreateImportRunRequest struct {
 	// the count is separate from `created`.
 	OnDuplicate *ImportOnDuplicate `json:"on_duplicate,omitempty"`
 
+	// Parts The files of a ZIP to import, one type per file. Two files naming one type are refused.
+	Parts *[]ImportPartRequest `json:"parts,omitempty"`
+
 	// SourceKey The source column holding the row's stable id. For a row this run
 	// CREATES it is written to the row's provenance, so a re-uploaded file
 	// updates rather than duplicates (IEM-AC-9) and an undo can find what
@@ -32453,6 +32763,9 @@ type CreateImportRunRequest struct {
 	// new companies therefore maps a column every row carries, and the
 	// `id` column says which rows are corrections.
 	SourceKey *string `json:"source_key,omitempty"`
+
+	// SourceName The name this source is filed under, so a re-upload of the same export updates rather than duplicates. The profile's `suggested_source_name` is the proposal.
+	SourceName *string `json:"source_name,omitempty"`
 
 	// SourceRef From `uploadImportSource`.
 	SourceRef string `json:"source_ref"`
@@ -35701,11 +36014,12 @@ type HiddenBacklog struct {
 	// read.
 	PastHorizon int `json:"past_horizon"`
 
-	// SetAside Work this reader has snoozed or marked `not_mine`. THEIR OWN CHOICE, and the
-	// least alarming of the four: a snooze lifts on its own moment, so this includes
-	// work that will come back without anybody remembering it. `not_mine` names no
-	// moment, and lifts only when the reader picks the message back up or the record
-	// it is filed under changes hands.
+	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
+	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
+	// this includes work that will come back without anybody remembering it. `not_mine`
+	// names no moment, and lifts only when the reader picks the message back up or the
+	// record it is filed under changes hands. `handled` lifts only when the reader picks
+	// it back up.
 	SetAside int `json:"set_aside"`
 
 	// Shown What the eligibility query FOUND under the rules as they stand. Here so the
@@ -35825,6 +36139,102 @@ type ImportColumn struct {
 	Samples []string `json:"samples"`
 }
 
+// ImportFormat The files an import takes, for this workspace. The template ZIP, the
+// column guide and the screen's file order are all read from it.
+type ImportFormat struct {
+	// Files One file per object, in `order`.
+	Files []ImportFormatFile `json:"files"`
+
+	// KeyRules How a row is recognised on a second upload and how files link to each other, one sentence each.
+	KeyRules []string `json:"key_rules"`
+
+	// Order The order the files land in, so a link can name a record an earlier file made.
+	Order []ImportObject `json:"order"`
+
+	// SizeLimitMb The largest upload this installation accepts, in MB.
+	SizeLimitMb int                 `json:"size_limit_mb"`
+	Version     ImportFormatVersion `json:"version"`
+}
+
+// ImportFormatVersion defines model for ImportFormat.Version.
+type ImportFormatVersion string
+
+// ImportFormatColumn One column and its guide. `name` is the mapping target a column is
+// mapped onto; `label` is what the screen shows, set for a custom field.
+// A header shows `label` when present, else `name`.
+type ImportFormatColumn struct {
+	// Custom Whether this is one of the workspace's custom fields.
+	Custom bool `json:"custom"`
+
+	// Description What goes in the column.
+	Description string `json:"description"`
+
+	// Example An example value, or several separated by " · ".
+	Example string `json:"example"`
+
+	// Label A custom field's label. Absent for a core column.
+	Label *string `json:"label,omitempty"`
+
+	// Name The mapping target: a core field, or a custom field's `cf_` key.
+	Name string `json:"name"`
+
+	// Options A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise.
+	Options *[]string `json:"options,omitempty"`
+
+	// RequiredOnNewRow Whether a row that creates a record needs this column filled.
+	RequiredOnNewRow bool `json:"required_on_new_row"`
+
+	// Type A custom field's type. Absent for a core column.
+	Type *string `json:"type,omitempty"`
+}
+
+// ImportFormatFile One file of the import and its columns.
+type ImportFormatFile struct {
+	Columns []ImportFormatColumn `json:"columns"`
+
+	// File The file name a ZIP entry needs for this object to be detected.
+	File string `json:"file"`
+
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object ImportObject `json:"object"`
+}
+
+// ImportIgnoredEntry One ZIP entry no part was made from.
+type ImportIgnoredEntry struct {
+	// File The entry's path inside the ZIP.
+	File string `json:"file"`
+
+	// Reason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+	Reason ImportIgnoredEntryReason `json:"reason"`
+}
+
+// ImportIgnoredEntryReason `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+type ImportIgnoredEntryReason string
+
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
@@ -35851,6 +36261,16 @@ type ImportColumn struct {
 // match — so a file of duplicates produces a review queue, not a silent
 // merge.
 type ImportObject string
+
+// ImportOnBrokenLink What a run does with a contact row whose company link finds no single
+// company, in the upload or in the estate. `skip_row` leaves the row out
+// and reports it; `drop_link` lands the row without the link and reports
+// the dropped link. A ZIP run applies it to `company_ref` and
+// `company_name`; a row holding both is decided by its `company_ref`. A
+// single CSV applies it to `company_ref` only, and lands a row whose
+// `company_name` finds nothing, with the link reported as unresolved. A
+// lead's `company_name` is text, not a link, so it never skips a lead.
+type ImportOnBrokenLink string
 
 // ImportOnDuplicate What to do with a row naming a record the estate ALREADY holds — found
 // by the same dedupe ladder every create path runs, not by this
@@ -35882,31 +36302,89 @@ type ImportObject string
 // the count is separate from `created`.
 type ImportOnDuplicate string
 
-// ImportRowIssue One row the import could not take, named by its line so a human can go fix it.
-type ImportRowIssue struct {
-	// Column The offending column, when one is to blame.
-	Column *string `json:"column,omitempty"`
+// ImportPartProfile One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`.
+type ImportPartProfile struct {
+	Columns []ImportColumn `json:"columns"`
 
-	// Line The line in the uploaded file, counting the header as line 1.
-	Line int `json:"line"`
+	// File The entry's path inside the ZIP.
+	File string `json:"file"`
 
-	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
-	Reason string `json:"reason"`
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object       ImportObject `json:"object"`
+	RowsProfiled int          `json:"rows_profiled"`
+
+	// SuggestedMappings One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call.
+	SuggestedMappings map[string]map[string]string `json:"suggested_mappings"`
 }
 
-// ImportRun defines model for ImportRun.
-type ImportRun struct {
-	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
-	CapturedBy *string `json:"captured_by,omitempty"`
+// ImportPartReport One file's slice of a run's report.
+type ImportPartReport struct {
+	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
+	Disposition ImportRunDisposition `json:"disposition"`
 
-	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
-	Checkpoint int                `json:"checkpoint"`
-	Connector  ImportRunConnector `json:"connector"`
-	CreatedAt  time.Time          `json:"created_at"`
+	// File The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`.
+	File string `json:"file"`
 
-	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
-	Error *string            `json:"error,omitempty"`
-	Id    openapi_types.UUID `json:"id"`
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object   ImportObject `json:"object"`
+	RowsRead int          `json:"rows_read"`
+}
+
+// ImportPartRequest One file of a ZIP run, with the type and mapping the human settled for it.
+type ImportPartRequest struct {
+	// File The entry's path inside the ZIP, as the profile's `parts[].file` spells it.
+	File string `json:"file"`
+
+	// Mapping `{source column → target field}` for this file, validated as the single-CSV `mapping` is. A column mapped to `ref` is the file's own row id, which other files' links name.
+	Mapping map[string]string `json:"mapping"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -35934,7 +36412,98 @@ type ImportRun struct {
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
 	Object ImportObject `json:"object"`
-	Source string       `json:"source"`
+
+	// SourceKey The column holding the row's stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it.
+	SourceKey *string `json:"source_key,omitempty"`
+}
+
+// ImportProblemKind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+type ImportProblemKind string
+
+// ImportRowIssue One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+type ImportRowIssue struct {
+	// Column The offending column, when one is to blame.
+	Column *string `json:"column,omitempty"`
+
+	// File The ZIP entry the line is in. Absent for a single CSV.
+	File *string `json:"file,omitempty"`
+
+	// Kind What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+	Kind *ImportProblemKind `json:"kind,omitempty"`
+
+	// Line The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.
+	Line *int `json:"line,omitempty"`
+
+	// Reason What is wrong, in terms of the file the human uploaded — never a database or driver message.
+	Reason string `json:"reason"`
+
+	// Value The cell value at fault, when one is, so a screen can group the rows that share it.
+	Value *string `json:"value,omitempty"`
+}
+
+// ImportRun defines model for ImportRun.
+type ImportRun struct {
+	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// Checkpoint Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from.
+	Checkpoint int                `json:"checkpoint"`
+	Connector  ImportRunConnector `json:"connector"`
+
+	// ContextTagId The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.
+	ContextTagId *openapi_types.UUID `json:"context_tag_id,omitempty"`
+	CreatedAt    time.Time           `json:"created_at"`
+
+	// Error Why a failed run stopped, in the uploader's terms. Never a driver or SQL message.
+	Error *string `json:"error,omitempty"`
+
+	// FileName The uploaded file's name, as the run was created with it. Display only.
+	FileName *string            `json:"file_name,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
+
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// OnBrokenLink What a run does with a contact row whose company link finds no single
+	// company, in the upload or in the estate. `skip_row` leaves the row out
+	// and reports it; `drop_link` lands the row without the link and reports
+	// the dropped link. A ZIP run applies it to `company_ref` and
+	// `company_name`; a row holding both is decided by its `company_ref`. A
+	// single CSV applies it to `company_ref` only, and lands a row whose
+	// `company_name` finds nothing, with the link reported as unresolved. A
+	// lead's `company_name` is text, not a link, so it never skips a lead.
+	OnBrokenLink *ImportOnBrokenLink `json:"on_broken_link,omitempty"`
+
+	// Parts The files the run imports, in import order. A single CSV is one part.
+	Parts  *[]ImportRunPart `json:"parts,omitempty"`
+	Source string           `json:"source"`
+
+	// SourceName The name the run's source is filed under.
+	SourceName *string `json:"source_name,omitempty"`
 
 	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
 	// carries the checkpoint it stopped at, and resuming continues from
@@ -35994,61 +36563,16 @@ type ImportRunLinks struct {
 	Unresolved *[]ImportUnresolvedLink `json:"unresolved,omitempty"`
 }
 
-// ImportRunReport The same shape before and after approval: a dry run reports what the
-// commit will do, a finished run reports what it did.
-type ImportRunReport struct {
-	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
-	Disposition ImportRunDisposition `json:"disposition"`
-
-	// EstimatedDurationSeconds A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record.
-	EstimatedDurationSeconds *int `json:"estimated_duration_seconds,omitempty"`
-
-	// Issues Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal.
-	Issues []ImportRowIssue `json:"issues"`
-
-	// Links The connections between records a run makes, counted apart from the rows
-	// it writes.
-	//
-	// A link is not a row and is never added to the disposition's four: one
-	// contact row can arrive with an employer and produce both a created contact
-	// and an applied link, and counting it twice would make the four stop
-	// summing to the rows read.
-	//
-	// Today the only link a delimited file carries is a contact's employer,
-	// named by a company column the mapping points at `company`.
-	Links *ImportRunLinks `json:"links,omitempty"`
-
-	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
-	Mapping  *map[string]string `json:"mapping,omitempty"`
-	RowsRead int                `json:"rows_read"`
-	RunId    openapi_types.UUID `json:"run_id"`
-
-	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
-	SourceKeyUsed string `json:"source_key_used"`
-
-	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-	// carries the checkpoint it stopped at, and resuming continues from
-	// there rather than re-reading the file from the top. `undoing`/`undone`
-	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
-	Status ImportRunStatus `json:"status"`
-
-	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
-	Undo *ImportUndoReport `json:"undo,omitempty"`
+// ImportRunList defines model for ImportRunList.
+type ImportRunList struct {
+	Data []ImportRun `json:"data"`
+	Page PageInfo    `json:"page"`
 }
 
-// ImportRunStatus IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-// carries the checkpoint it stopped at, and resuming continues from
-// there rather than re-reading the file from the top. `undoing`/`undone`
-// (IEM-WIRE-9) are the reversal's own states, reachable only from
-// `complete` and only for the `csv` connector.
-type ImportRunStatus string
-
-// ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
-// Nothing here is stored against a run yet: the human may change every
-// line of `suggested_mapping` before `createImportRun` accepts one.
-type ImportSourceProfile struct {
-	Columns []ImportColumn `json:"columns"`
+// ImportRunPart defines model for ImportRunPart.
+type ImportRunPart struct {
+	// File The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`.
+	File string `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -36077,6 +36601,105 @@ type ImportSourceProfile struct {
 	// merge.
 	Object ImportObject `json:"object"`
 
+	// RowCount Rows the file holds, once a dry run has read it; 0 before.
+	RowCount int `json:"row_count"`
+}
+
+// ImportRunReport The same shape before and after approval: a dry run reports what the
+// commit will do, a finished run reports what it did.
+type ImportRunReport struct {
+	// Disposition What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
+	Disposition ImportRunDisposition `json:"disposition"`
+
+	// EstimatedDurationSeconds A dry run's estimate for the commit. Null when the run has already finished and the real duration is on the run record.
+	EstimatedDurationSeconds *int `json:"estimated_duration_seconds,omitempty"`
+
+	// Issues Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal.
+	Issues []ImportRowIssue `json:"issues"`
+
+	// Links The connections between records a run makes, counted apart from the rows
+	// it writes.
+	//
+	// A link is not a row and is never added to the disposition's four: one
+	// contact row can arrive with an employer and produce both a created contact
+	// and an applied link, and counting it twice would make the four stop
+	// summing to the rows read.
+	//
+	// Today the only link a delimited file carries is a contact's employer,
+	// named by a company column the mapping points at `company`.
+	Links *ImportRunLinks `json:"links,omitempty"`
+
+	// Mapping `{source column → target field}` as the run was staged with it, after validation — the same shape the create request's `mapping` takes. A report says where each column went, not only how many rows landed. Absent for a run that carries no mapping.
+	Mapping *map[string]string `json:"mapping,omitempty"`
+
+	// Parts The same counts per file, in import order. A single CSV reports one part.
+	Parts    *[]ImportPartReport `json:"parts,omitempty"`
+	RowsRead int                 `json:"rows_read"`
+	RunId    openapi_types.UUID  `json:"run_id"`
+
+	// SourceKeyUsed Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it.
+	SourceKeyUsed string `json:"source_key_used"`
+
+	// Status IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
+	// carries the checkpoint it stopped at, and resuming continues from
+	// there rather than re-reading the file from the top. `undoing`/`undone`
+	// (IEM-WIRE-9) are the reversal's own states, reachable only from
+	// `complete` and only for the `csv` connector.
+	Status ImportRunStatus `json:"status"`
+
+	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
+	Undo *ImportUndoReport `json:"undo,omitempty"`
+}
+
+// ImportRunStatus IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
+// carries the checkpoint it stopped at, and resuming continues from
+// there rather than re-reading the file from the top. `undoing`/`undone`
+// (IEM-WIRE-9) are the reversal's own states, reachable only from
+// `complete` and only for the `csv` connector.
+type ImportRunStatus string
+
+// ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
+// Nothing here is stored against a run yet: the human may change every
+// line of `suggested_mapping` before `createImportRun` accepts one.
+type ImportSourceProfile struct {
+	Columns []ImportColumn `json:"columns"`
+
+	// FileName The uploaded file's name, for display. The client echoes it to `createImportRun`.
+	FileName *string `json:"file_name,omitempty"`
+
+	// Ignored The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one.
+	Ignored *[]ImportIgnoredEntry `json:"ignored,omitempty"`
+
+	// Object What the file's rows are, and therefore what the run creates.
+	//
+	// `company` creates companies.
+	//
+	// `lead` and `contact` are two answers to one question about a file of
+	// humans, and the caller picks the one that matches where the file came
+	// from.
+	//
+	// `lead` is the right answer for a machine-sourced list — a scraped
+	// export, a purchased list, a conference badge dump. Those rows land in
+	// the unworked `new` status and a human promotes the ones worth keeping.
+	// Landing them as contacts would put unqualified rows in the same table as
+	// the contacts the business actually deals with.
+	//
+	// `contact` is for a file of humans the business already knows — a
+	// migration off another CRM, a re-import of a corrected export, a
+	// customer list from a system being retired. Those rows were qualified
+	// somewhere else, and routing them through the lead table would force a
+	// human to re-approve records nobody doubts.
+	//
+	// Neither value bypasses anything. A `contact` run runs the same identity
+	// ladder every other contact create runs, refuses a row whose email
+	// already belongs to another contact, and files a review pair for a near
+	// match — so a file of duplicates produces a review queue, not a silent
+	// merge.
+	Object *ImportObject `json:"object,omitempty"`
+
+	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
+	Parts *[]ImportPartProfile `json:"parts,omitempty"`
+
 	// RowsProfiled Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.
 	RowsProfiled int `json:"rows_profiled"`
 
@@ -36086,13 +36709,17 @@ type ImportSourceProfile struct {
 	// SuggestedMapping Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.
 	SuggestedMapping map[string]string `json:"suggested_mapping"`
 
+	// SuggestedSourceName The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+	// every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+	// single CSV, so a re-upload of one keeps the namespace it was first imported under.
+	SuggestedSourceName *string `json:"suggested_source_name,omitempty"`
+
 	// Targets The closed set a mapping may name — every field this object can receive THROUGH AN
 	// IMPORT, which is not every field it has.
 	//
-	// Custom fields are absent on purpose. An import writes through the stores'
-	// caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
-	// target would be accepted, reported as written, and dropped. Naming one is refused by
-	// `createImportRun` rather than silently ignored.
+	// The object's active custom fields are targets, each by its `cf_` key. A column whose
+	// header is a field's label or key is suggested onto it, and its values are checked
+	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
 
@@ -37048,7 +37675,33 @@ type KnowledgeCoverage struct {
 	ChunksEmbedded int `json:"chunks_embedded"`
 	ChunksTotal    int `json:"chunks_total"`
 	DocumentsTotal int `json:"documents_total"`
+
+	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+	// searchable rather than shown a bare count.
+	//
+	// - `no_embedding_model`: this installation binds no embedding model, so no passage
+	//   gets a vector and nothing is searchable. It is the same answer as
+	//   `settings_availability.embedding_reindex` being false on `/me`, read from the
+	//   same embed lane.
+	// - `indexing`: a model is bound and work is still owed: a document is queued or
+	//   being read, a re-embed is running, or some passage has no vector under the
+	//   model bound now.
+	// - `complete`: every live passage carries a vector under the model bound now.
+	EmbedState KnowledgeCoverageEmbedState `json:"embed_state"`
 }
+
+// KnowledgeCoverageEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+// searchable rather than shown a bare count.
+//
+//   - `no_embedding_model`: this installation binds no embedding model, so no passage
+//     gets a vector and nothing is searchable. It is the same answer as
+//     `settings_availability.embedding_reindex` being false on `/me`, read from the
+//     same embed lane.
+//   - `indexing`: a model is bound and work is still owed: a document is queued or
+//     being read, a re-embed is running, or some passage has no vector under the
+//     model bound now.
+//   - `complete`: every live passage carries a vector under the model bound now.
+type KnowledgeCoverageEmbedState string
 
 // KnowledgeDocument defines model for KnowledgeDocument.
 type KnowledgeDocument struct {
@@ -38084,7 +38737,12 @@ type MagicReceipt struct {
 	// happened today". The window's own size arrives with the cursor, which is the
 	// thing that makes it worth counting; a figure asserted before then would be
 	// neither the page nor the window.
-	Totals   MagicTotals `json:"totals"`
+	Totals MagicTotals `json:"totals"`
+
+	// Watching One line per connection whose health needs restoring. Its summary values carry
+	// `provider`, the connection's provider id (`gmail`, `gcal`, …), which the client maps to
+	// a display name; `account`, the account label, when the connector reported one; and
+	// `failing_since` where the condition has a start.
 	Watching []MagicLine `json:"watching"`
 }
 
@@ -42929,8 +43587,8 @@ type ResponseMetrics struct {
 	// day still running is left out, because its next step can still be booked.
 	AtRiskToDay *openapi_types.Date `json:"at_risk_to_day,omitempty"`
 
-	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs, or
-	// judged not sales.
+	// Disposed How many rows a reader put DOWN in the window — snoozed, marked not theirs,
+	// marked done, or judged not sales. None of these is a reply sent.
 	//
 	// Counted from the audit record rather than from what is set aside now. A snooze
 	// that lifted and a not_mine somebody withdrew leave no trace in the current
@@ -44096,8 +44754,9 @@ type SetActivityAudienceRequest struct {
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
-	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-	// `not_mine` bind only the caller.
+	// Disposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+	// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+	// message another way; the customer's next message arrives as new work.
 	Disposition SetActivityDispositionRequestDisposition `json:"disposition"`
 
 	// ReopenOn What lifts a snooze. `time` is the original behaviour and the default, so a client
@@ -44120,8 +44779,9 @@ type SetActivityDispositionRequest struct {
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
 }
 
-// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `snooze` and
-// `not_mine` bind only the caller.
+// SetActivityDispositionRequestDisposition What the reader decided. `not_sales` binds the thread for everybody; `handled`,
+// `snooze` and `not_mine` bind only the caller. `handled` says the caller dealt with the
+// message another way; the customer's next message arrives as new work.
 type SetActivityDispositionRequestDisposition string
 
 // SetAiModelRateRequest defines model for SetAiModelRateRequest.
@@ -44730,16 +45390,28 @@ type SourceAuthor struct {
 
 // Stage A pipeline stage. Mirrors the `stage` table.
 type Stage struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time         `json:"created_at,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	Name       string             `json:"name"`
-	PipelineId openapi_types.UUID `json:"pipeline_id"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
+	DealCount *int `json:"deal_count,omitempty"`
+
+	// ExitCriteria The stage's live exit criteria, split by whether each blocks a deal leaving.
+	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
+	Id           openapi_types.UUID       `json:"id"`
+	Name         string                   `json:"name"`
+	PipelineId   openapi_types.UUID       `json:"pipeline_id"`
 
 	// Position Unique within the pipeline.
 	Position  int           `json:"position"`
 	Semantic  StageSemantic `json:"semantic"`
 	UpdatedAt *time.Time    `json:"updated_at,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WinProbability won=100, lost=0, open=0..100.
 	WinProbability int `json:"win_probability"`
@@ -44856,6 +45528,15 @@ type StageEvidenceListResponse struct {
 
 // StageEvidenceSource What kind of record the observation was read from.
 type StageEvidenceSource string
+
+// StageExitCriteriaCounts The stage's live exit criteria, split by whether each blocks a deal leaving.
+type StageExitCriteriaCounts struct {
+	// Optional Criteria gathered and shown that never block.
+	Optional int `json:"optional"`
+
+	// Required Criteria a deal must meet to leave the stage.
+	Required int `json:"required"`
+}
 
 // StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
 // `stage_exit_criterion` table. Configuration, not observation: whether a
@@ -48538,6 +49219,11 @@ type WorklistItem struct {
 	// have them, which is not the same as never.
 	Company *WorklistCompanyFacts `json:"company,omitempty"`
 
+	// Connection The connection a `capture_health` row is about, carried from the attention item. Sent
+	// only on a single `capture_health` row: a folded incident's members are connections of
+	// different providers, so `batch.label` names the account they share instead.
+	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
+
 	// Consequence What happens if the reader does nothing. Derived per ITEM rather than per
 	// source, because one source has several honest answers: a deal past its close
 	// date slips, one merely idle drifts.
@@ -48703,6 +49389,12 @@ type WorklistItem struct {
 	// Absent when the row offers no single obvious step, which is a real state
 	// rather than a gap: a dedupe pair genuinely asks the reader to choose.
 	PrimaryAction *WorklistItemPrimaryAction `json:"primary_action,omitempty"`
+
+	// Recipients Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
+	// is filed under, then the attendees its calendar entry resolved to a contact this
+	// caller may read. Best first, each once; `contact` is the first of them. Sent on
+	// `meeting_follow_up` rows only, and absent where no attendee is on file.
+	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
 
 	// Score Rank within the level. Higher is first. Meaningless across levels.
 	Score *float32 `json:"score,omitempty"`
@@ -51707,6 +52399,12 @@ type LiftSuppressionJSONBody struct {
 
 // DraftContactEmailJSONBody defines parameters for DraftContactEmail.
 type DraftContactEmailJSONBody struct {
+	// AboutActivityId The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
+	AboutActivityId *openapi_types.UUID `json:"about_activity_id,omitempty"`
+
+	// AlsoTo Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds.
+	AlsoTo *[]openapi_types.UUID `json:"also_to,omitempty"`
+
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 
@@ -52741,9 +53439,33 @@ type ListFxRatesParams struct {
 	From *string `form:"from,omitempty" json:"from,omitempty"`
 }
 
+// ListImportRunsParams defines parameters for ListImportRuns.
+type ListImportRunsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetImportFormatParams defines parameters for GetImportFormat.
+type GetImportFormatParams struct {
+	// Lang The language of the guide text. The installation's language when absent.
+	Lang *GetImportFormatParamsLang `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
+// GetImportFormatParamsLang defines parameters for GetImportFormat.
+type GetImportFormatParamsLang string
+
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import. UTF-8; the first row is the header.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -52771,7 +53493,7 @@ type UploadImportSourceMultipartBody struct {
 	// already belongs to another contact, and files a review pair for a near
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
-	Object ImportObject `json:"object"`
+	Object *ImportObject `json:"object,omitempty"`
 }
 
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
@@ -54949,6 +55671,13 @@ type UpdateStageParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // ListStageExitCriteriaParams defines parameters for ListStageExitCriteria.
@@ -68491,18 +69220,30 @@ type ServerInterface interface {
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
+	// List this workspace's recent CSV import runs, newest first.
+	// (GET /imports)
+	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
 	// Create an import run from an uploaded source and a column mapping, and dry-run it.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
+	// Describe the files an import takes, column by column, for this workspace.
+	// (GET /imports/format)
+	GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams)
 	// Upload a file to import, and read back what its columns actually contain.
 	// (POST /imports/sources)
 	UploadImportSource(w http.ResponseWriter, r *http.Request)
+	// Download the import template for this workspace.
+	// (GET /imports/template)
+	DownloadImportTemplate(w http.ResponseWriter, r *http.Request)
 	// Read one import run's lifecycle state.
 	// (GET /imports/{id})
 	GetImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Approve a validated import run and commit it.
 	// (POST /imports/{id}/approve)
 	ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Download the run's row problems as a CSV.
+	// (GET /imports/{id}/problems.csv)
+	DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Read the run's report — what will happen, or what did.
 	// (GET /imports/{id}/report)
 	GetImportRunReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -72316,15 +73057,33 @@ func (_ Unimplemented) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List this workspace's recent CSV import runs, newest first.
+// (GET /imports)
+func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create an import run from an uploaded source and a column mapping, and dry-run it.
 // (POST /imports)
 func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Describe the files an import takes, column by column, for this workspace.
+// (GET /imports/format)
+func (_ Unimplemented) GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Upload a file to import, and read back what its columns actually contain.
 // (POST /imports/sources)
 func (_ Unimplemented) UploadImportSource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the import template for this workspace.
+// (GET /imports/template)
+func (_ Unimplemented) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -72337,6 +73096,12 @@ func (_ Unimplemented) GetImportRun(w http.ResponseWriter, r *http.Request, id o
 // Approve a validated import run and commit it.
 // (POST /imports/{id}/approve)
 func (_ Unimplemented) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download the run's row problems as a CSV.
+// (GET /imports/{id}/problems.csv)
+func (_ Unimplemented) DownloadImportProblems(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -94141,6 +94906,58 @@ func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListImportRuns operation middleware
+func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListImportRunsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListImportRuns(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateImportRun operation middleware
 func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 
@@ -94163,6 +94980,47 @@ func (siw *ServerInterfaceWrapper) CreateImportRun(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetImportFormat operation middleware
+func (siw *ServerInterfaceWrapper) GetImportFormat(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetImportFormatParams
+
+	// ------------- Optional query parameter "lang" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "lang", r.URL.Query(), &params.Lang, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "lang"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lang", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetImportFormat(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadImportSource operation middleware
 func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *http.Request) {
 
@@ -94174,6 +95032,26 @@ func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadImportSource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadImportTemplate operation middleware
+func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadImportTemplate(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -94242,6 +95120,38 @@ func (siw *ServerInterfaceWrapper) ApproveImportRun(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveImportRun(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadImportProblems operation middleware
+func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadImportProblems(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -105601,6 +106511,25 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 
 	}
 
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateStage(w, r, id, params)
 	}))
@@ -110903,16 +111832,28 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports", wrapper.ListImportRuns)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports", wrapper.CreateImportRun)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/format", wrapper.GetImportFormat)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/sources", wrapper.UploadImportSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/template", wrapper.DownloadImportTemplate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{id}", wrapper.GetImportRun)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/imports/{id}/approve", wrapper.ApproveImportRun)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/imports/{id}/problems.csv", wrapper.DownloadImportProblems)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/imports/{id}/report", wrapper.GetImportRunReport)

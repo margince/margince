@@ -4,8 +4,7 @@
 package contacts
 
 // companyNameForm is one name with everything the pairing gate and the score
-// read, derived once. One name is scored against many, and normalizing it again
-// for every pair is where nearly all of that time went.
+// read, derived once, because one name is scored against many.
 type companyNameForm struct {
 	value string
 	// matching is companyNameForMatching: what the gate and the score compare.

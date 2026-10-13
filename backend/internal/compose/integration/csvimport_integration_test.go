@@ -20,6 +20,7 @@ import (
 	"context"
 	"maps"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
@@ -53,6 +55,7 @@ type importRunDTO struct {
 	Connector  string `json:"connector"`
 	Object     string `json:"object"`
 	Checkpoint int    `json:"checkpoint"`
+	Error      string `json:"error"`
 }
 
 type importDispositionDTO struct {
@@ -66,6 +69,10 @@ type importDispositionDTO struct {
 type importIssueDTO struct {
 	Line   int    `json:"line"`
 	Reason string `json:"reason"`
+	File   string `json:"file"`
+	Kind   string `json:"kind"`
+	Column string `json:"column"`
+	Value  string `json:"value"`
 }
 
 type importLinksDTO struct {
@@ -87,6 +94,11 @@ type importReportDTO struct {
 	Issues        []importIssueDTO     `json:"issues"`
 	SourceKeyUsed string               `json:"source_key_used"`
 	Mapping       map[string]string    `json:"mapping"`
+	Parts         []struct {
+		File     string `json:"file"`
+		Object   string `json:"object"`
+		RowsRead int    `json:"rows_read"`
+	} `json:"parts"`
 }
 
 type leadListDTO struct {
@@ -103,13 +115,14 @@ func setupImportApp(t *testing.T) *apptest.AppEnv {
 	return e
 }
 
-// setupImportAppWithStore hands the suite the same object store the server
-// holds, so a scenario can make an uploaded file disappear the way a retention
-// sweep or an operator would.
+// setupImportAppWithStore hands the suite the object store the server holds.
+// A scenario can then make an uploaded file disappear, as a retention sweep or
+// an operator would. Its commits run inline, so a scenario reads the
+// finished run from the approve that started it.
 func setupImportAppWithStore(t *testing.T) (*apptest.AppEnv, blobstore.Store) {
 	t.Helper()
 	store := blobstore.NewMemory()
-	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store))
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store), compose.WithImportCommitRunner(compose.RunImportInline))
 	e.BootstrapWorkspace(t)
 	return e, store
 }
@@ -452,6 +465,13 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	}
 	if runs[0].Status != "failed" {
 		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
+	}
+	var failed importRunDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+runs[0].ID, nil, nil, &failed); status != http.StatusOK {
+		t.Fatalf("read the failed run → %d, want 200", status)
+	}
+	if failed.Error != migration.CauseValidationStopped {
+		t.Fatalf("error = %q, want the fixed sentence; the parser's message stays in the log", failed.Error)
 	}
 
 	// A vanished upload cannot be read at all, so it is refused before a run
@@ -937,4 +957,35 @@ func duplicatesSaid(report importReportDTO) string {
 		return "no"
 	}
 	return strconv.Itoa(*report.Disposition.Duplicates)
+}
+
+func TestRecentImportsListsTheRunsNewestFirstAcrossPages(t *testing.T) {
+	e := setupImportApp(t)
+	first, _ := uploadCSV(t, e, "lead", prospectCSV)
+	oldest, _ := createRunWithMapping(t, e, "lead", first.SourceRef, first.SuggestedMapping)
+	second, _ := uploadCSV(t, e, "lead", prospectCSV)
+	newest, _ := createRunWithMapping(t, e, "lead", second.SourceRef, second.SuggestedMapping)
+	type runPage struct {
+		Data []importRunDTO `json:"data"`
+		Page struct {
+			NextCursor *string `json:"next_cursor"`
+			HasMore    bool    `json:"has_more"`
+		} `json:"page"`
+	}
+	var one runPage
+	if status := e.Call(t, http.MethodGet, "/v1/imports?limit=1", nil, nil, &one); status != http.StatusOK {
+		t.Fatalf("page one → %d", status)
+	}
+	if len(one.Data) != 1 || one.Data[0].ID != newest.ID || one.Data[0].Object != "lead" ||
+		!one.Page.HasMore || one.Page.NextCursor == nil {
+		t.Fatalf("page one = %+v, want %s with its object and a cursor to more", one, newest.ID)
+	}
+	var two runPage
+	path := "/v1/imports?limit=1&cursor=" + url.QueryEscape(*one.Page.NextCursor)
+	if status := e.Call(t, http.MethodGet, path, nil, nil, &two); status != http.StatusOK {
+		t.Fatalf("page two → %d", status)
+	}
+	if len(two.Data) != 1 || two.Data[0].ID != oldest.ID || two.Page.HasMore {
+		t.Fatalf("page two = %+v, want %s and the end of the list", two, oldest.ID)
+	}
 }

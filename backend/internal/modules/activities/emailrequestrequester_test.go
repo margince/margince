@@ -29,8 +29,13 @@ func (tx unreachableTx) Query(context.Context, string, ...any) (pgx.Rows, error)
 }
 
 func (tx unreachableTx) QueryRow(context.Context, string, ...any) pgx.Row {
-	return scriptedRow(func(...any) error { return tx.err })
+	return failedRow{err: tx.err}
 }
+
+// failedRow is a row whose scan reports the error the statement failed with.
+type failedRow struct{ err error }
+
+func (r failedRow) Scan(...any) error { return r.err }
 
 func TestAContactTheHeadersDoNotNameIsNeverRecordedAsTheSender(t *testing.T) {
 	for theirs, want := range map[string]string{"from": "cc", "to": "to"} {

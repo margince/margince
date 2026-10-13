@@ -221,8 +221,7 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 	//
 	// searchAxes drops a value equal to one already there, so the common case —
 	// a name with no legal form to strip — adds no arms.
-	arms := companyTrigramArms(&args, searchAxes(c)...)
-	arms = append(arms, companyExactNameArms(&args, c)...)
+	arms := companyAdmissionArms(&args, c)
 	if len(arms) == 0 {
 		return CompanyMatch{Decision: DecisionNoMatch}, nil
 	}
@@ -277,6 +276,13 @@ func fuzzyCompany(ctx context.Context, tx pgx.Tx, c CompanyCandidate) (CompanyMa
 		Confidence: ranked[0].Confidence,
 		Ranked:     ranked,
 	}, nil
+}
+
+// companyAdmissionArms is the fuzzy tier's candidate predicate, OR-ed: a row
+// is scored only when one arm admits it. CompanyBatch asks the same question
+// of rows not yet written.
+func companyAdmissionArms(args *[]any, c CompanyCandidate) []string {
+	return append(companyTrigramArms(args, searchAxes(c)...), companyExactNameArms(args, c)...)
 }
 
 // searchAxes are the strings the candidate query searches on: each name as the
@@ -453,8 +459,7 @@ func bestCompanyFormPairing(candidate, row companyNamePair) CompanyCandidateScor
 			if foldedKeysAreTheSame(left.folded, right.form.folded) {
 				exact = true
 			}
-			// nameSimilarity over the prepared forms.
-			score := jaroWinkler(left.scored, right.form.scored)
+			score := normalizedNameSimilarity(left.scored, right.form.scored)
 			if score > best.Confidence {
 				best = CompanyCandidateScore{
 					Confidence:     score,

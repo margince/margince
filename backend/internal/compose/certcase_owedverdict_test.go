@@ -236,6 +236,32 @@ func TestTheOwedRequestSaysWhenAMessageCarriedAnInvitation(t *testing.T) {
 	}
 }
 
+// A reply to an invitation says so instead of calling itself one: "Declined"
+// carries a calendar part, and the invitation rule would score it differently.
+func TestTheOwedRequestSaysWhenAMessageAnswersAnInvitation(t *testing.T) {
+	fixture, err := json.Marshal(owedFixture{
+		{Subject: "Declined: coffee", Body: "Declined.", HasCalendarPart: true, CalendarMethod: "REPLY"},
+	})
+	if err != nil {
+		t.Fatalf("encoding the fixture: %v", err)
+	}
+	prepared, err := owedVerdictCases{}.Prepare(fixture, owedExpectation(t, activities.OwedVerdictInformsUs))
+	if err != nil {
+		t.Fatalf("preparing the case: %v", err)
+	}
+	stub := &owedCompleterStub{answer: owedAnswer(activities.OwedVerdictInformsUs)}
+	if _, err := prepared.Run(context.Background(), stub); err != nil {
+		t.Fatalf("running the case: %v", err)
+	}
+	prompt := stub.seen[0].Messages[0].Content
+	if !strings.Contains(prompt, "reply to a calendar invitation (method REPLY)") {
+		t.Error("the prompt does not say the message answers an invitation")
+	}
+	if strings.Contains(prompt, "carried a calendar invitation") {
+		t.Error("the prompt calls a reply to an invitation an invitation")
+	}
+}
+
 // Every disagreement reaches the Detail, not just the first.
 func TestOwedCaseNamesEveryMessageItDisagreesWith(t *testing.T) {
 	outcome, _ := runOwedCase(t,

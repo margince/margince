@@ -153,6 +153,9 @@ func bootWithImports(t *testing.T) *scenario {
 			compose.WithMCPConnector(),
 			compose.WithMCPResource(origin + "/mcp"),
 			compose.WithBlobstore(blobstore.NewMemory()),
+			// The commit finishes before commit_import answers, so the report read
+			// after it is what the run did.
+			compose.WithImportCommitRunner(compose.RunImportInline),
 		}
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)

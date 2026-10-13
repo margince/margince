@@ -248,7 +248,7 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
 		Instead:       disqualifyLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
@@ -304,7 +304,7 @@ func (t demoteLead) Spec() mcp.ToolSpec {
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
 		Description:   demoteLeadCopy.render(),
 		Instead:       demoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},

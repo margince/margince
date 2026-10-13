@@ -180,7 +180,7 @@ FIXTURE_SOURCE="seed:llm-fixtures"
 with_source() {
   local path="$1" body="$2"
   case "$path" in
-    /companies|/contacts|/relationships|/deals|/projects|/tasks|/activities) ;;
+    /companies|/contacts|/relationships|/deals|/projects|/tasks|/activities|/leads) ;;
     *) printf '%s' "$body"; return 0 ;;
   esac
   printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
@@ -299,7 +299,7 @@ link_employment() {
   local contact="$1" company="$2" what="$3" body code
   body="$(printf '{"kind":"employment","contact_id":"%s","company_id":"%s"}' \
     "$contact" "$company")"
-  code="$(status_of POST /relationships "$body")"
+  code="$(status_of POST /relationships "$(with_source /relationships "$body")")"
   [[ "$code" = "201" || "$code" = "409" ]] || {
     echo "employing $what answered HTTP $code" >&2; exit 1; }
 }
@@ -1449,7 +1449,7 @@ if [[ -z "$heike" ]]; then
     body="$(printf '{"kind":"email","direction":"outbound","occurred_at":"%s","subject":"Austausch Armaturen","body":"Danke für das Gespräch, ich schicke die Unterlagen.","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
       "$(days_ago $((n * 6)))" "$heike")"
     code="$(curl -sS -b "$sofia_cookies" -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-      -d "$body" "$API_BASE/v1/activities")"
+      -d "$(with_source /activities "$body")" "$API_BASE/v1/activities")"
     [[ "$code" = "201" ]] || { echo "Sofia's mail to Heike Brandt answered HTTP $code" >&2; exit 1; }
   done
   rm -f "$sofia_cookies"

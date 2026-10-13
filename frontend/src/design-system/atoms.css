@@ -973,6 +973,15 @@
 .recordpicker-option {
   width: 100%;
   text-align: left;
+  /* The name with its detail line beneath it, both from the left edge. */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding-block: var(--space-1);
+}
+.recordpicker-option-detail {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .recordpicker-option[aria-pressed="true"] {
   border-color: var(--accent);
@@ -989,6 +998,11 @@
   border-radius: var(--r-sm);
   background: var(--accentLight);
   color: var(--textPrimary);
+}
+.recordpicker-selected-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .recordpicker-selected-check {
   color: var(--accentText);

@@ -17,7 +17,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -137,8 +136,8 @@ func (s *Store) updateCompanyInTx(
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
 			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
 		}
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == "company_linkedin_url_key" {
-			return crmcontracts.Company{}, apperrors.ErrConflict
+		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
+			return crmcontracts.Company{}, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
 		}
 		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
 	}

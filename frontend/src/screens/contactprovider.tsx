@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
@@ -807,35 +812,29 @@ function useRunWatch(contactId: string, profile: Profile) {
   const runId = profile.latest_run?.id;
   useQuery({
     queryKey: ["provider-run", contactId, runId],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/contacts/{id}/enrichment-runs/{run_id}", {
-          params: { path: { id: contactId, run_id: runId ?? "" } },
-        }),
-      );
-      // Re-read on every answer that is not still moving, INCLUDING the
-      // completed-but-unapplied tick. That tick is what turns the section from
-      // "asking the provider" into the values themselves, and skipping it left
-      // the page one refresh short of the thing being waited for.
-      if (!stillMoving(data)) {
-        void queryClient.invalidateQueries({
-          queryKey: ["contact360", contactId],
-        });
-      }
-      return data;
-    },
-    // The RUN's own state, never the section's. The section answers "what
-    // should this reader know about enrichment here", and the CONNECTION's
-    // condition outranks the run history in that answer — so on an impaired
-    // connection the section reads provider_error while a run the reader just
-    // started is genuinely in flight. Arming off the section left the watch
-    // asleep through exactly that lookup: it completed, the page never
-    // re-read, and the button looked dead for the half-minute it took.
-    //
-    // `applied` and `claims_unwritten` extend it past the terminal state: a run
-    // is not done from this page's point of view until its values are ON the
-    // record, and the apply commits after the run completes.
-    enabled: runId != null && stillMoving(profile.latest_run),
+    queryFn:
+      runId != null
+        ? async () => {
+            const data = unwrap(
+              await api.GET("/contacts/{id}/enrichment-runs/{run_id}", {
+                params: { path: { id: contactId, run_id: runId } },
+              }),
+            );
+            // Re-read on every answer that is not still moving, including the
+            // completed-but-unapplied tick that turns the section into values.
+            if (!stillMoving(data)) {
+              void queryClient.invalidateQueries({
+                queryKey: ["contact360", contactId],
+              });
+            }
+            return data;
+          }
+        : skipToken,
+    // The run's own state, never the section's: on an impaired connection the
+    // section reads provider_error while a run the reader started is in flight.
+    // `applied` and `claims_unwritten` keep it armed until the values are on
+    // the record, because the apply commits after the run completes.
+    enabled: stillMoving(profile.latest_run),
     // The same rule the arming uses, read from the answer just received rather
     // than from the prop: the prop only changes when the page refetches, which
     // is the thing this poll exists to cause.

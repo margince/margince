@@ -4,7 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { Badge, Button, EmptyState, SectionHeader, TableScroll } from "./atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+  SectionHeader,
+  TableScroll,
+} from "./atoms";
 import { DataTable, type DataTableColumn } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
 import { Meter } from "./readings";
@@ -672,4 +679,160 @@ export const FoldedFigurePhone: Story = {
   },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+type LadderStage = {
+  id: string;
+  name: string;
+  odds: number;
+  closing?: boolean;
+};
+const LADDER: LadderStage[] = [
+  { id: "q", name: "Qualified", odds: 10 },
+  { id: "d", name: "Discovery", odds: 25 },
+  { id: "p", name: "Proposal", odds: 50 },
+  { id: "n", name: "Negotiation", odds: 75 },
+  { id: "w", name: "Won", odds: 100, closing: true },
+  { id: "l", name: "Lost", odds: 0, closing: true },
+];
+
+function StageLadder() {
+  const [stages, setStages] = useState(LADDER);
+  const [opened, setOpened] = useState("");
+  return (
+    <Panel title="Stages">
+      <PanelBody>
+        <PanelIntro>
+          <span id="ladder-hint">
+            Drag a grip, or focus it and press ↑ or ↓. Won and Lost stay last.
+          </span>
+          {opened && ` Opened ${opened}.`}
+        </PanelIntro>
+      </PanelBody>
+      <DataTable<LadderStage>
+        bleed
+        fold
+        label="Stages"
+        rows={stages}
+        rowKey={(stage) => stage.id}
+        rowTestId={(stage) => `stage-${stage.id}`}
+        onRowClick={(stage) => setOpened(stage.name)}
+        columns={[
+          { key: "name", header: "Stage", render: (stage) => stage.name },
+          {
+            key: "odds",
+            header: "Win odds",
+            align: "end",
+            render: (stage) => `${stage.odds}%`,
+            folded: (stage) => `${stage.odds}% win odds`,
+          },
+          {
+            key: "verbs",
+            header: "Actions",
+            headerHidden: true,
+            fold: "end",
+            render: (stage) => (
+              <OverflowMenu label={`Actions for ${stage.name}`}>
+                <Button>Edit</Button>
+              </OverflowMenu>
+            ),
+          },
+        ]}
+        detail={{
+          header: "Exit criteria",
+          toggleLabel: (stage) => `Show exit criteria for ${stage.name}`,
+          has: (stage) => !stage.closing,
+          render: (stage) => (
+            <p>{`Leave ${stage.name} once the buyer agrees.`}</p>
+          ),
+        }}
+        reorder={{
+          header: "Order",
+          hintId: "ladder-hint",
+          can: (stage) => !stage.closing,
+          labels: {
+            handle: (stage, position, count) =>
+              `Move ${stage.name}, step ${position} of ${count}`,
+            moved: (stage, position, count) =>
+              `${stage.name} is now step ${position} of ${count}`,
+          },
+          onReorder: (keys) =>
+            setStages(
+              keys.flatMap((key) => LADDER.filter((s) => s.id === key)),
+            ),
+        }}
+      />
+    </Panel>
+  );
+}
+
+// A grip leads each row that moves; Won and Lost keep an empty cell of the
+// grip's width and stay last. A row still opens from anywhere but its grip.
+export const Reorderable: Story = {
+  render: () => <StageLadder />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const grip = await canvas.findByRole("button", {
+      name: "Move Proposal, step 3 of 4",
+    });
+    grip.focus();
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(
+      canvas.getByRole("button", { name: "Move Proposal, step 2 of 4" }),
+    ).toHaveFocus();
+    await expect(
+      canvas.getByText("Proposal is now step 2 of 4"),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
+    await expect(
+      canvas.getByRole("button", { name: "Move Proposal, step 4 of 4" }),
+    ).toHaveFocus();
+    const order = [...canvasElement.querySelectorAll("tbody tr[data-testid]")];
+    await expect(order.map((row) => row.getAttribute("data-testid"))).toEqual([
+      "stage-q",
+      "stage-d",
+      "stage-n",
+      "stage-p",
+      "stage-w",
+      "stage-l",
+    ]);
+  },
+};
+
+export const ReorderableDark: Story = {
+  ...Reorderable,
+  globals: { theme: "dark" },
+};
+
+// Folded at a phone's width, the grip stays at the start of line one. A fixed
+// row's empty grip cell holds its title on the same edge. Its empty toggle slot
+// holds its menu on the edge of the menus on rows that open.
+export const ReorderablePhone: Story = {
+  render: () => <StageLadder />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const grip = await canvas.findByRole("button", {
+      name: "Move Qualified, step 1 of 4",
+    });
+    const root = document.documentElement;
+    await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth);
+    const title = (id: string) =>
+      canvas
+        .getByTestId(`stage-${id}`)
+        .querySelector('[data-fold="title"]')
+        ?.getBoundingClientRect();
+    const name = title("q");
+    const gripBox = grip.getBoundingClientRect();
+    await expect(gripBox.right).toBeLessThanOrEqual(name?.left ?? 0);
+    await expect(gripBox.top).toBeLessThan(name?.bottom ?? 0);
+    await expect(gripBox.width).toBe(32);
+    await expect(title("w")?.left).toBe(name?.left);
+    const menuEnd = (stage: string) =>
+      canvas
+        .getByRole("button", { name: `Actions for ${stage}` })
+        .getBoundingClientRect().right;
+    await expect(menuEnd("Won")).toBe(menuEnd("Qualified"));
+  },
 };

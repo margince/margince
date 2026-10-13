@@ -54,6 +54,34 @@ export const liveList: List = {
   joined_since_visit: [MEMBER_ID],
 };
 
+/** Two exports of `liveList`, the older first, so the newer must be found. */
+export const exportDependencies: NonNullable<List["dependencies"]> = [
+  { kind: "export", occurred_at: "2026-09-01T09:00:00Z", blocking: false },
+  { kind: "export", occurred_at: "2026-09-20T14:30:00Z", blocking: false },
+];
+
+/**
+ * What moved on `liveList` since the reader's last visit: two of four joiners
+ * named, one leaver, one filter change.
+ */
+export const changesSinceVisit: NonNullable<List["changes_since_visit"]> = {
+  since: "2026-09-28T17:00:00Z",
+  joined: {
+    count: 4,
+    records: [
+      { entity_id: MEMBER_ID, name: "MiTek" },
+      { entity_id: "01a0f000-0000-7000-8000-000000000006", name: "Kessler" },
+    ],
+  },
+  left: {
+    count: 1,
+    records: [
+      { entity_id: "01a0f000-0000-7000-8000-000000000005", name: "Haberland" },
+    ],
+  },
+  filter_changes: 1,
+};
+
 /** The company vocabulary naming both fields `liveList` filters on. */
 export const liveVocabulary: FilterVocabulary = {
   resource: "company",

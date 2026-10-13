@@ -4,8 +4,8 @@
 package compose
 
 import (
+	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -17,13 +17,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // csvWriters implements migration.Writers for a delimited upload.
@@ -40,6 +42,9 @@ type csvWriters struct {
 	identities *migration.RunStore
 	runID      migration.RunID
 	object     string
+	// sourceSystem is the namespace the run files its rows under, from its
+	// source name (importSourceSystem).
+	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
 	// leaves the incumbent alone. Read from the stored mapping, so the commit
@@ -55,16 +60,38 @@ type csvWriters struct {
 	// the two would leave a row in the estate that its own batch cannot find.
 	tags *collections.Store
 
+	// bindings is the identity map of this part's source, preloaded by a dry
+	// run; nil reads the store per key.
+	bindings map[string]migration.Binding
+	// heldEmails answers, for the page a dry run is on, which of its addresses
+	// a live contact already holds; nil reads the store per row.
+	heldEmails map[string]bool
+	// consumerMail is the workspace's consumer-mail list, read once per run.
+	consumerMail *freemail.Matcher
+
 	// nativeIDs caches external key → native id within one run. A resumed run
 	// rebuilds it lazily through lookup, which falls back to the engine-owned
 	// identity map.
 	nativeIDs map[string]ids.UUID
-	// employers caches one answer per folded company name the FILE names, so a
-	// file naming one employer on every row asks the database once. Nil until
-	// the first row needs it; bounded by the file, never by the estate.
-	employers map[string]employerCandidate
+	// links finds the record a link cell names. One resolver serves every part
+	// of the run, so a contact can name a company of the same upload.
+	links *linkResolver
+	// companyRefColumn is the file's column mapped to company_ref, empty when
+	// none is; onBrokenLink decides a row whose ref finds nothing.
+	companyRefColumn, onBrokenLink string
+	// companyNameColumn is a contact part's company_name column in a ZIP run. It
+	// is empty in a single CSV, and for a lead, whose company_name is plain text.
+	companyNameColumn string
 	// authors caches the seat each author cell resolves to, per run.
 	authors authorSeats
+	// owners and tagNames resolve the owner and tag cells; the bundle reads
+	// them once for every part.
+	owners   *ownerResolver
+	tagNames *tagResolver
+	// cols is the part's custom fields, read before any row transaction opens.
+	cols importColumns
+	// columns is the part's mapping, file header → target.
+	columns map[string]string
 	// updated counts the rows this run rewrote. The engine's EnsureResult has
 	// no "updated" member — the frozen-source model it was built for had no
 	// such outcome — so the count rides here and the report reads it.
@@ -73,9 +100,6 @@ type csvWriters struct {
 
 var _ migration.Writers = (*csvWriters)(nil)
 
-// newCSVWriters takes the run's mapping by pointer because a stored run may
-// carry none: the object and the duplicate policy then fall back to empty,
-// which is what every caller before this did by passing them separately.
 // skipReasonNaturalKeyTaken marks an imported row that could not land because
 // something else already holds its natural key.
 const skipReasonNaturalKeyTaken = "natural_key_already_taken"
@@ -85,46 +109,48 @@ const skipReasonNaturalKeyTaken = "natural_key_already_taken"
 // resolves.
 const skipReasonDuplicateEmail = "duplicate_email"
 
-func newCSVWriters(db *database.DB, runID migration.RunID, mapping *migration.RunMapping) *csvWriters {
-	settled := migration.RunMapping{}
-	if mapping != nil {
-		settled = *mapping
-	}
-	return &csvWriters{
+// newCSVWriters builds the writer of one part: one object, one file.
+func newCSVWriters(
+	db *database.DB, runID migration.RunID, part migration.PartMapping, run runOptions, links *linkResolver,
+	cols importColumns,
+) *csvWriters {
+	w := &csvWriters{
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
-		contacts: contacts.NewStore(db).WithStopCarrier(consent.NewStore(db)).
+		contacts: contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)),
-		tags:        collections.NewStore(db),
-		identities:  migration.NewRunStore(db),
-		runID:       runID,
-		object:      settled.Object,
-		onDuplicate: settled.OnDuplicate,
+		tags:             collections.NewStore(db),
+		identities:       migration.NewRunStore(db),
+		runID:            runID,
+		object:           part.Object,
+		sourceSystem:     links.sourceSystem,
+		onDuplicate:      run.OnDuplicate,
+		links:            links,
+		companyRefColumn: columnFor(part.Fields, csvTargetCompanyRef),
+		onBrokenLink:     run.OnBrokenLink,
 		// An unparseable id files nothing rather than failing the run. The wire
 		// refused the shapes a client can send, so what reaches here is a stored
 		// mapping — and a run that already passed its dry run must not die at
 		// commit over a word.
-		contextTag: parseContextTag(settled.ContextTag),
+		contextTag: parseContextTag(run.ContextTag),
 		nativeIDs:  map[string]ids.UUID{},
 		authors:    authorSeats{},
+		cols:       cols,
+		columns:    part.Fields,
 	}
-}
-
-// csvSourceSystem namespaces the source_system imported rows carry. The
-// reserved prefix is refused at the wire mappers, so a client cannot pre-plant
-// a row under a guessed import id and have the store hand it back as already
-// existing; the engine-owned identity map remains the authority for "already
-// imported".
-func csvSourceSystem() string {
-	return provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV
+	if run.FromZip && linksEmployer(part.Object) {
+		w.companyNameColumn = columnFor(part.Fields, csvEmployerName)
+	}
+	return w
 }
 
 // provenanceOf is the imported row's source stamp: <source>:<object>:<id>, the
 // UC-E11-03 convention every importer writes.
 func (w *csvWriters) provenanceOf(externalID string) string {
-	return fmt.Sprintf("%s%s:%s:%s", provenance.ReservedSourceSystemPrefix, migration.ConnectorCSV, w.object, externalID)
+	return fmt.Sprintf("%s:%s:%s", w.sourceSystem, w.object, externalID)
 }
 
 // Updated reports how many rows this run rewrote, for the run report.
@@ -158,6 +184,9 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyName {
 		return w.linkEmployer(ctx, a)
 	}
+	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyRef {
+		return w.linkCompanyRef(ctx, a)
+	}
 	return migration.AssocResult{
 		Applied: false,
 		Reason:  fmt.Sprintf("a delimited import carries no %s→%s edge; it was not applied", a.FromType, a.ToType),
@@ -165,24 +194,45 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 }
 
 // Ensure lands one row: created the first time, updated when the file has
-// since changed, unchanged when it has not.
+// since changed, unchanged when it has not. It skips a row the importer may
+// not create, then a row with a cell the store would refuse. A contact whose
+// company link finds no single company follows the run's policy.
 func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
-	// The same refusal the dry run reported, so the two cannot disagree about
-	// this row. Without it the preview would disclose a skip and the commit
-	// would then fail on the store's own constraint instead — a different
-	// answer to the question a human already approved.
-	if reason := unwritableReason(object, textFields(row.Fields)); reason != "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: reason}, nil
+	if refused := w.createRefusal(ctx, row); refused != nil {
+		return migration.EnsureResult{Skipped: true, SkipReason: refused.Reason, Problem: refused}, nil
+	}
+	typed, invalid, unknownOwner := w.landingCells(row)
+	if invalid != nil {
+		return migration.EnsureResult{Skipped: true, SkipReason: invalid.Reason, Problem: invalid}, nil
+	}
+	link, err := w.linkProblemOf(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if link.skip {
+		return migration.EnsureResult{Skipped: true, SkipReason: link.problem.Reason, Problem: link.problem}, nil
+	}
+	landed, err := w.ensureRow(ctx, object, row, typed)
+	if err == nil && !landed.Skipped {
+		landed.Problem = cmp.Or(link.problem, unknownOwner)
+	}
+	return landed, err
+}
+
+// ensureRow is Ensure once the row's cells and links allow it to land.
+func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	target := w.targetIDOf(ctx, row)
+	if target.reason != "" {
+		return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
 	}
 	// A row that NAMES its record wins over every other way of finding one. The
 	// file said which company this is; nothing the importer could infer beats
 	// that, and inferring anyway is what made name-based updating unsafe.
-	target := w.targetIDOf(ctx, row)
 	if target.named {
-		if target.reason != "" {
-			return migration.EnsureResult{Skipped: true, SkipReason: target.reason}, nil
-		}
-		return w.reconcile(ctx, target.id, row)
+		// Bound even when reconcile refuses the update: the row still names a
+		// live company the caller can see, which the dry run counted as linkable.
+		w.links.markLanded(object, row.ExternalID, target.id)
+		return w.reconcile(ctx, target.id, row, typed)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
 	if errors.Is(err, errBoundRecordArchived) {
@@ -192,11 +242,11 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		return migration.EnsureResult{}, err
 	}
 	if found {
-		return w.reconcile(ctx, id, row)
+		return w.reconcile(ctx, id, row, typed)
 	}
 	// Refusals first and in the preview's order, so a row refused for a held key
 	// reads the same whoever holds it.
-	refused, err := w.createRefusal(ctx, row)
+	refused, err := w.createPathRefusal(ctx, row, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -237,7 +287,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 		_, skipReason := collisionWordingFor(object)
 		return migration.EnsureResult{Skipped: true, SkipReason: skipReason, Duplicate: true}, nil
 	}
-	created, err := w.create(ctx, object, row)
+	created, err := w.create(ctx, object, row, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -248,35 +298,38 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 }
 
 // create lands the row as a new record of its class.
-func (w *csvWriters) create(ctx context.Context, object string, row migration.Row) (migration.EnsureResult, error) {
+func (w *csvWriters) create(ctx context.Context, object string, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	switch object {
 	case migration.ObjectLead:
-		return w.createLead(ctx, row)
+		return w.createLead(ctx, row, typed)
 	case migration.ObjectCompany:
-		return w.createCompany(ctx, row)
+		return w.createCompany(ctx, row, typed)
 	case migration.ObjectContact:
-		return w.createContact(ctx, row)
+		return w.createContact(ctx, row, typed)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
 }
 
 // reconcile brings an already-landed record up to what the file now says.
-func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.Row) (migration.EnsureResult, error) {
+func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	current, err := w.read(ctx, id)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields))
+	changed, err := changedFields(current, textFields(row.Fields), typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	if len(changed) == 0 {
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
-		return migration.EnsureResult{Unchanged: true}, nil
+		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
 	}
-	if err := w.apply(ctx, id, changed, current, w.provenanceOf(row.ExternalID)); err != nil {
+	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return migration.EnsureResult{Skipped: true, SkipReason: cannotEditReason(w.object)}, nil
+	}
+	if err := w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID)); err != nil {
 		// A corrected file moving an address onto a contact who is not its owner
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
@@ -289,47 +342,19 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// onto a company that is not its owner.
 			return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
 		}
+		if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+			return migration.EnsureResult{Skipped: true, SkipReason: leadEmailClaimedReason}, nil
+		}
+		if linkedInClaimed(err) {
+			return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
+		}
+		return migration.EnsureResult{}, err
+	}
+	if err := w.tagExisting(ctx, id, row); err != nil {
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
 	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed))}, nil
-}
-
-// read answers the stored record as its own JSON — the surface changedFields
-// compares against, and the same shape the contract serves for it.
-func (w *csvWriters) read(ctx context.Context, id ids.UUID) ([]byte, error) {
-	switch w.object {
-	case migration.ObjectLead:
-		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(lead)
-	case migration.ObjectCompany:
-		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(company)
-	case migration.ObjectContact:
-		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.LiveOnly)
-		if err != nil {
-			return nil, err
-		}
-		return encodeRecord(contact)
-	default:
-		return nil, fmt.Errorf("import: %q is not an importable object", w.object)
-	}
-}
-
-// encodeRecord renders one stored record as JSON. Generic so no wire type
-// is widened to an empty interface on the way through.
-func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Contact](record T) ([]byte, error) {
-	encoded, err := json.Marshal(record)
-	if err != nil {
-		return nil, fmt.Errorf("import: reading the stored record: %w", err)
-	}
-	return encoded, nil
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
@@ -344,15 +369,17 @@ func encodeRecord[T crmcontracts.Lead | crmcontracts.Company | crmcontracts.Cont
 // archive every other address a human added by hand. The same rule applies: a
 // file whose columns are whatever the customer exported may not delete what it
 // never mentioned.
-func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]string, current []byte, source string) error {
+func (w *csvWriters) apply(
+	ctx context.Context, id ids.UUID, changed map[string]string, typed map[string]any, current []byte, source string,
+) error {
 	// The update half of the same rule — see land above.
 	ctx = contacts.WithBulkWrite(ctx)
 	switch w.object {
 	case migration.ObjectLead:
-		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed))
+		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), leadUpdateFrom(changed, typed))
 		return err
 	case migration.ObjectCompany:
-		in := companyUpdateFrom(changed)
+		in := companyUpdateFrom(changed, typed)
 		merged, given, err := addressMergedOnto(current, in.Address)
 		if err != nil {
 			return err
@@ -372,26 +399,7 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectContact:
-		in := contactUpdateFrom(changed)
-		// Emails added by an update carry the same provenance the create path
-		// stamps; without it contact_email.source lands empty.
-		in.Source = source
-		merged, given, err := addressMergedOnto(current, in.Address)
-		if err != nil {
-			return err
-		}
-		if given {
-			in.Address = merged
-		}
-		mergedEmails, given, err := emailsMergedOnto(current, in.Emails)
-		if err != nil {
-			return err
-		}
-		if given {
-			in.Emails = mergedEmails
-		}
-		_, err = w.contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id), in)
-		return err
+		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), current, source)
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}
@@ -404,13 +412,13 @@ func (w *csvWriters) apply(ctx context.Context, id ids.UUID, changed map[string]
 // one-shot disclosure into none.
 var errImportReplayed = errors.New("import: the record replayed under its natural key")
 
-func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := leadCreateFrom(textFields(row.Fields), csvSourceSystem(), row.ExternalID, w.provenanceOf(row.ExternalID))
-	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	in := leadCreateFrom(textFields(row.Fields), typed, w.sourceSystem, row.ExternalID, w.provenanceOf(row.ExternalID))
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
+		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating lead %s: %w", row.ExternalID, err)
 		}
@@ -425,24 +433,26 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row) (migrati
 	if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
 		return migration.EnsureResult{Skipped: true, SkipReason: leadEmailClaimedReason}, nil
 	}
+	if linkedInClaimed(err) {
+		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// different input builder, a different store call, a different emptiness to
-// refuse and a different sentence to refuse it with. Folding them together
-// would mean a generic seam that exists to satisfy a linter and nothing else.
+// createCompany lands one row as a company, its identity-map row in the same
+// transaction.
 //
-//nolint:dupl // createContact has the same SHAPE and not the same job: a
-func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	in := companyCreateFrom(textFields(row.Fields), w.provenanceOf(row.ExternalID))
-	err := w.land(ctx, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+//nolint:dupl // createContact has the same shape over a different store call and a different held key; one generic seam would hide which rule judged a row.
+func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
-		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
+		company, err := w.contacts.CreateCompanyTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
 		}
@@ -454,6 +464,9 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 		// a contact's claimed email has. One bad row is a skip with a reason, not
 		// a failed run: the rest of the file still lands.
 		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+	}
+	if linkedInClaimed(err) {
+		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -467,11 +480,10 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row) (migr
 const domainClaimedReason = "this domain is already held by another company in the CRM, " +
 	"so the row cannot create a second company under it"
 
-// land commits one native record and its identity-map row in ONE transaction,
-// then caches the binding — after the commit, never inside it: an entry for a
-// landing that then rolled back would make this run's later pages resolve an id
-// that does not exist, and lookup answers from the cache before it asks the map.
-func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx pgx.Tx) (ids.UUID, error)) error {
+// land commits one native record, its identity-map row and its tags in one
+// transaction, then caches the binding. It caches after the commit: a rolled
+// back landing would leave later pages resolving an id that does not exist.
+func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx pgx.Tx) (ids.UUID, error)) error {
 	// Every row this importer writes is one of many under a single approval, so
 	// it carries the marker that says so. What it buys today is one thing: a
 	// standing domain refusal is NOT lifted by a spreadsheet, because approving
@@ -483,13 +495,16 @@ func (w *csvWriters) land(ctx context.Context, externalID string, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, csvSourceSystem(), w.object, externalID, id); err != nil {
+		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id); err != nil {
+			return err
+		}
+		if err := w.tagNames.applyAll(ctx, tx, w.object, id, textFields(row.Fields)[csvTargetTags]); err != nil {
 			return err
 		}
 		return w.fileUnderContextTag(ctx, tx, id)
 	}); err != nil {
 		return err
 	}
-	w.nativeIDs[externalID] = id
+	w.nativeIDs[row.ExternalID] = id
 	return nil
 }

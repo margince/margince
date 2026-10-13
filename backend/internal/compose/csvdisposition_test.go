@@ -60,3 +60,48 @@ func TestAFinishedDispositionNeverExceedsTheRowsRead(t *testing.T) {
 			len(report.Issues))
 	}
 }
+
+// A commit that stopped part-way reports the rows it reached. The rows after
+// its checkpoint were neither created nor left unchanged. The stored report is
+// the test run's prediction folded with the stopped attempt's own counts.
+func TestAFailedCommitReportsOnlyTheRowsItReached(t *testing.T) {
+	stored := migration.Report{
+		Objects: []migration.ObjectReport{
+			{Object: migration.ObjectCompany, MirrorCount: 10, WillCreate: 10, Created: 4},
+			{Object: migration.ObjectContact, MirrorCount: 20, WillCreate: 20},
+		},
+		Attempts: 2,
+	}
+	run := migration.Run{Status: migration.StatusFailed, Checkpoint: 4, Report: &stored}
+
+	report := toContractImportReport(run)
+	d := report.Disposition
+	if report.RowsRead != 4 || d.Created != 4 || d.Unchanged != 0 || d.Skipped != 0 {
+		t.Errorf("rows read %d, disposition %+v; want the 4 rows the commit reached, all created", report.RowsRead, d)
+	}
+	if parts := *report.Parts; parts[1].RowsRead != 0 || parts[1].Disposition.Unchanged != 0 {
+		t.Errorf("contacts part = %+v, want nothing read: the commit never reached it", parts[1])
+	}
+}
+
+// A tag the commit created is reported as created, not as one still to come.
+func TestANewTagReadsAsCreatedOnceTheCommitRan(t *testing.T) {
+	tag := migration.SkippedRow{Kind: migration.ProblemNewTag, Value: "Partner", Reason: newTagReason}
+	stored := migration.Report{Objects: []migration.ObjectReport{
+		{Object: migration.ObjectCompany, MirrorCount: 1, Created: 1, Warnings: []migration.SkippedRow{tag}},
+	}}
+	for status, want := range map[string]string{
+		migration.StatusAwaitingApproval: newTagReason,
+		migration.StatusComplete:         createdTagReason,
+		migration.StatusFailed:           createdTagReason,
+	} {
+		report := toContractImportReport(migration.Run{Status: status, Checkpoint: 1, Report: &stored})
+		if len(report.Issues) != 1 || report.Issues[0].Reason != want {
+			t.Errorf("%s: issues = %+v, want the tag reported as %q", status, report.Issues, want)
+		}
+	}
+	notCreated := migration.Run{Status: migration.StatusFailed, Error: importTagsFailedCause, Report: &stored}
+	if report := toContractImportReport(notCreated); report.Issues[0].Reason != newTagReason {
+		t.Errorf("issues = %+v, want the prediction kept when creating the tags is what failed", report.Issues)
+	}
+}

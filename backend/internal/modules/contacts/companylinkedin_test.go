@@ -45,7 +45,7 @@ func TestNormalizeCompanyLinkedInURLCanonicalizesWhatTheUniqueIndexCompares(t *t
 		{"posts tab cut to the company", "https://www.linkedin.com/company/voltaq/posts/?feedView=all", "https://www.linkedin.com/company/voltaq"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := normalizeCompanyLinkedInURL(tc.raw)
+			got, err := NormalizeCompanyLinkedInURL(tc.raw)
 			if err != nil {
 				t.Fatalf("normalize %q: %v", tc.raw, err)
 			}
@@ -76,7 +76,7 @@ func TestNormalizeCompanyLinkedInURLRefusesWhatIsNotACompanyURL(t *testing.T) {
 		{"a numeric subdomain", "https://d3.linkedin.com/company/voltaq", "linkedin_url_not_linkedin"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := normalizeCompanyLinkedInURL(tc.raw)
+			got, err := NormalizeCompanyLinkedInURL(tc.raw)
 			if err == nil {
 				t.Fatalf("normalized %q to %q, want a refusal", tc.raw, got)
 			}

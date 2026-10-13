@@ -243,3 +243,76 @@ func TestASkipRunRefusesAHeldAddressForTheAddress(t *testing.T) {
 		}
 	}
 }
+
+// Two colleagues share a mail domain and nothing else. The ladder never admits
+// one as the other's candidate, so neither is a duplicate on either side.
+func TestColleaguesOnOneDomainAreNotLookAlikes(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Full Name,Email\n" +
+		"Tom Brandt,tom@kestrel.example\nTim Berger,tim@kestrel.example\n" +
+		"Anna Weber,anna@kestrel.example\nAnja Wolf,anja@kestrel.example\n" +
+		"Lukas Hoffmann,lukas@kestrel.example\nLena Hartmann,lena@kestrel.example\n"
+
+	preview, final := previewThenCommit(t, e, "contact", file, map[string]any{
+		"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+		"source_key": "Full Name", "on_duplicate": "skip",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(6, 0, 0, 0))
+}
+
+// The estate's look-alike makes the second row a duplicate, but the commit
+// refuses it for the domain the first row took before it asks about names.
+func TestADuplicateSkipStillMeetsTheDomainAnEarlierRowTakes(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/companies", map[string]any{
+		"display_name": "Nordwind Logistik", "source": "manual",
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent company → %d, want 201", status)
+	}
+	const file = "Company,Website\nZephyr Freight,zephyr.example\nNordwind Logistik,zephyr.example\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name", "Website": "domain"}, "on_duplicate": "skip",
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+func TestTheDryRunRefusesALinkedInURLAnEarlierRowTakes(t *testing.T) {
+	e := setupImportApp(t)
+	const file = "Company,LinkedIn\n" +
+		"Zephyr Freight,https://www.linkedin.com/company/zephyr\n" +
+		"Nordwind Logistik,https://www.linkedin.com/company/zephyr\n"
+
+	preview, final := previewThenCommit(t, e, "company", file, map[string]any{
+		"mapping": map[string]string{"Company": "display_name", "LinkedIn": "linkedin_url"},
+	})
+
+	assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+}
+
+// A re-import moves an address onto a record the importer landed before, after
+// an earlier row of the same file has taken it. The store refuses the move.
+func TestAnUpdateMeetsTheAddressAnEarlierRowTakes(t *testing.T) {
+	for _, object := range []string{"contact", "lead"} {
+		t.Run(object, func(t *testing.T) {
+			e := setupImportApp(t)
+			run := map[string]any{
+				"mapping":    map[string]string{"Full Name": "full_name", "Email": "email"},
+				"source_key": "Full Name",
+			}
+			previewThenCommit(t, e, object, "Full Name,Email\nGrace Hopper,grace@hopper.example\n", run)
+			const file = "Full Name,Email\nAda Lovelace,ada@lovelace.example\nGrace Hopper,ada@lovelace.example\n"
+
+			preview, final := previewThenCommit(t, e, object, file, run)
+
+			assertPreviewIsTheCommit(t, preview, final, dispositionOf(1, 0, 1, 0))
+			for name, report := range map[string]importReportDTO{"preview": preview, "commit": final} {
+				if len(report.Issues) != 1 || report.Issues[0].Line != 3 {
+					t.Errorf("%s issues = %+v, want only line 3 refused", name, report.Issues)
+				}
+			}
+		})
+	}
+}

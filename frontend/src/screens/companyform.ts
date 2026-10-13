@@ -18,6 +18,7 @@ import { ifMatch, requireVersion } from "../api/version";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "./common";
 import {
@@ -37,11 +38,11 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Merge-target search (P-2): mirrors searchContactsTargets (contacts.tsx) — the
-// caller filters out the source row.
+// Merge-target search (P-2): mirrors searchContactsTargets
+// (contactrecordactions.tsx), with the primary domain as the detail line.
 export async function searchCompanyTargets(
   q: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<RecordPickerCandidate[]> {
   const data = unwrap(
     await api.GET("/companies", {
       params: { query: { q, limit: 10 } },
@@ -50,6 +51,7 @@ export async function searchCompanyTargets(
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
+    detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
   }));
 }
 

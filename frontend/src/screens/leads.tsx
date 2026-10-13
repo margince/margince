@@ -1167,7 +1167,6 @@ function LeadActions({
           askedKind={
             drawer === "task" ? "task" : askedToLogCall ? "call" : undefined
           }
-          triggerLabel={drawer === "task" ? "log.addTask" : undefined}
           openOnMount
           onLogged={onLogged}
           onClose={() => setDrawer(null)}

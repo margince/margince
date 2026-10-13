@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
@@ -94,22 +94,24 @@ function useSetupRuntime(): AiRunSummary | undefined {
   const readId = wizard.data?.site_read_id ?? null;
   const read = useQuery({
     queryKey: ["onboarding-conv-read", readId],
-    enabled: readId !== null,
-    queryFn: async (): Promise<CompanySiteRead | null> => {
-      const { data, error, response } = await api.GET(
-        "/company/site-reads/{readId}",
-        { params: { path: { readId: readId ?? "" } } },
-      );
-      if (error) {
-        // A read the server no longer serves costs the band its figure, not
-        // the screen: the chip says it has nothing, nothing throws.
-        if (response.status === 404) {
-          return null;
-        }
-        throwProblem(error);
-      }
-      return data;
-    },
+    queryFn:
+      readId !== null
+        ? async (): Promise<CompanySiteRead | null> => {
+            const { data, error, response } = await api.GET(
+              "/company/site-reads/{readId}",
+              { params: { path: { readId } } },
+            );
+            if (error) {
+              // A read the server no longer serves costs the band its figure,
+              // not the screen: the chip says it has nothing, nothing throws.
+              if (response.status === 404) {
+                return null;
+              }
+              throwProblem(error);
+            }
+            return data;
+          }
+        : skipToken,
   });
   return read.data?.ai_runtime;
 }

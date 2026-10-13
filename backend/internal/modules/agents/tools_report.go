@@ -191,7 +191,7 @@ func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	b.WriteString("Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, ")
 	b.WriteString("published at ")
 	b.WriteString(ReportVocabularyURI)
-	b.WriteString(" and answered by describe_report_vocabulary; a name outside them is refused by ")
+	b.WriteString(" and answered by describe_vocabulary; a name outside them is refused by ")
 	b.WriteString("name, with that argument's accepted list.")
 	writePipelineSource(&b, catalog)
 	return b.String()

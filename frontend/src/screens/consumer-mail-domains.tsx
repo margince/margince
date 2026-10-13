@@ -261,7 +261,7 @@ export function ConsumerMailDomainsCard() {
                 <SettingRow
                   key={entry.id}
                   label={entry.domain}
-                  value={t(kindLabel[entry.kind])}
+                  description={t(kindLabel[entry.kind])}
                   control={
                     <IconAction
                       variant="ghost"

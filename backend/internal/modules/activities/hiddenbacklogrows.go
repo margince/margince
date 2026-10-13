@@ -122,10 +122,9 @@ func (s *Store) HiddenWaitingRows(
 	}
 	var out []WaitingReply
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// One horizon for both halves, for the reason HiddenWaiting measures it
-		// once: two cutoffs would make the difference report a change in the
-		// clock rather than the rule being relaxed.
-		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
+		// One horizon for both halves, as in HiddenWaiting: two cutoffs would
+		// make the difference report a changed clock, not the relaxed rule.
+		measured, err := s.waitingHorizonFor(ctx, tx)
 		if err != nil {
 			return err
 		}
