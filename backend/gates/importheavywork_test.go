@@ -35,11 +35,29 @@ const (
 	importQueuePrefix = "import_"
 )
 
+// importEntryPoint names one function that writes an import's rows.
+type importEntryPoint struct{ pkg, recv, name string }
+
 // importEngineEntryPoints are the engine's walks over a source or a run's rows.
 // A Work method reaches them through the slice function it hands its slicer.
 // Engine.Run, the unsliced flip, has no caller a Work method could name.
-var importEngineEntryPoints = []struct{ recv, name string }{
-	{"Engine", "Run"}, {"Engine", "RunSlice"}, {"RunStore", "UndoSlice"},
+// createMissing writes the tags a file names before its rows, through no seam.
+var importEngineEntryPoints = []importEntryPoint{
+	{"migration", "Engine", "Run"},
+	{"migration", "Engine", "RunSlice"},
+	{"migration", "RunStore", "UndoSlice"},
+	{"compose", "tagResolver", "createMissing"},
+}
+
+// importRowWriterSeams are the interfaces whose every implementation writes an
+// import's rows, by the method the engine calls. Exists is the read the test
+// run classifies its rows with, so it stays out.
+var importRowWriterSeams = []struct {
+	pkg, iface string
+	reads      map[string]bool
+}{
+	{"migration", "Writers", map[string]bool{"Exists": true}},
+	{"migration", "UndoWriters", nil},
 }
 
 // importHandlersFloor is under the methods importHandlers has, so a walk that
@@ -49,7 +67,7 @@ const importHandlersFloor = 20
 func TestImportRowsAreWrittenOnlyByTheImportJobs(t *testing.T) {
 	t.Parallel()
 	g := loadImportCallGraph(t, migrationPackageDir, composePackageDir, "cmd")
-	findings, err := g.heavyCallFindings(importHeavyArgsTypes(t), "migration")
+	findings, err := g.heavyCallFindings(importHeavyArgsTypes(t), importEngineEntryPoints)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,12 +133,16 @@ func importHeavyArgsTypes(t *testing.T) []string {
 
 // importCallGraph records, for every function declared in the packages read,
 // each place another declaration names it: a call, or a method value handed on.
+// A call through an interface names every method that could answer it.
 type importCallGraph struct {
 	fset  *token.FileSet
 	decls map[*types.Func]*ast.FuncDecl
 	owner map[*ast.FuncDecl]*types.Func
 	pkgOf map[*ast.FuncDecl]string
 	sites map[*types.Func][]callSite
+	// methods holds the declared methods by methodKey.
+	methods  map[string][]*types.Func
+	packages []*types.Package
 }
 
 // callSite is one reference; in is nil for a package-level initializer.
@@ -155,7 +177,7 @@ func loadImportCallGraph(t *testing.T, dirs ...string) *importCallGraph {
 func newImportCallGraph(fset *token.FileSet, groups [][]*ast.File) *importCallGraph {
 	g := &importCallGraph{
 		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, owner: map[*ast.FuncDecl]*types.Func{},
-		pkgOf: map[*ast.FuncDecl]string{}, sites: map[*types.Func][]callSite{},
+		pkgOf: map[*ast.FuncDecl]string{}, sites: map[*types.Func][]callSite{}, methods: map[string][]*types.Func{},
 	}
 	checked := sharedImports{}
 	infos := make([]*types.Info, len(groups))
@@ -165,6 +187,7 @@ func newImportCallGraph(fset *token.FileSet, groups [][]*ast.File) *importCallGr
 		conf := types.Config{Importer: checked, Error: func(error) {}}
 		pkg, _ := conf.Check(modulePath+"/"+dir, fset, files, infos[i])
 		checked[pkg.Path()] = pkg
+		g.packages = append(g.packages, pkg)
 		g.index(files, infos[i])
 	}
 	for i, files := range groups {
@@ -192,6 +215,9 @@ func (g *importCallGraph) index(files []*ast.File, info *types.Info) {
 			}
 			if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
 				g.decls[obj], g.owner[fn], g.pkgOf[fn] = fn, obj, file.Name.Name
+				if fn.Recv != nil {
+					g.methods[methodKey(obj)] = append(g.methods[methodKey(obj)], obj)
+				}
 			}
 		}
 	}
@@ -209,8 +235,12 @@ func (g *importCallGraph) collectSites(files []*ast.File, info *types.Info) {
 				if !ok {
 					return true
 				}
-				if used, ok := info.Uses[ident].(*types.Func); ok && g.decls[used.Origin()] != nil {
-					g.sites[used.Origin()] = append(g.sites[used.Origin()], callSite{in: in, pos: ident.Pos()})
+				used, ok := info.Uses[ident].(*types.Func)
+				if !ok {
+					return true
+				}
+				for _, callee := range g.callees(used.Origin()) {
+					g.sites[callee] = append(g.sites[callee], callSite{in: in, pos: ident.Pos()})
 				}
 				return true
 			})
@@ -218,10 +248,44 @@ func (g *importCallGraph) collectSites(files []*ast.File, info *types.Info) {
 	}
 }
 
+// methodKey names a method by its name and its parameter and result types,
+// never their names. Two packages read apart print a stand-in type alike, so
+// the text is compared.
+func methodKey(fn *types.Func) string {
+	var key strings.Builder
+	key.WriteString(fn.Name())
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok {
+		return key.String()
+	}
+	for _, tuple := range []*types.Tuple{sig.Params(), sig.Results()} {
+		key.WriteString("|")
+		for v := range tuple.Variables() {
+			key.WriteString(types.TypeString(v.Type(), nil) + ",")
+		}
+	}
+	if sig.Variadic() {
+		key.WriteString("...")
+	}
+	return key.String()
+}
+
+// callees is the declared functions a use of fn may run: fn itself, or every
+// method that could answer it when fn is an interface's.
+func (g *importCallGraph) callees(fn *types.Func) []*types.Func {
+	if g.decls[fn] != nil {
+		return []*types.Func{fn}
+	}
+	if sig, ok := fn.Type().(*types.Signature); ok && sig.Recv() != nil && types.IsInterface(sig.Recv().Type()) {
+		return g.methods[methodKey(fn)]
+	}
+	return nil
+}
+
 // heavyCallFindings derives the heavy set from the Work methods of argsTypes,
-// with the engine entry points of enginePkg. It reports every reference to one
-// from outside those Work methods and the functions only they reach.
-func (g *importCallGraph) heavyCallFindings(argsTypes []string, enginePkg string) ([]string, error) {
+// the entry points and every row writer of the seams. It reports every
+// reference to one from outside the work only those Work methods reach.
+func (g *importCallGraph) heavyCallFindings(argsTypes []string, entries []importEntryPoint) ([]string, error) {
 	roots, err := g.workMethodsOf(argsTypes)
 	if err != nil {
 		return nil, err
@@ -234,24 +298,95 @@ func (g *importCallGraph) heavyCallFindings(argsTypes []string, enginePkg string
 			}
 		}
 	}
-	for _, entry := range importEngineEntryPoints {
-		obj := g.method(enginePkg, entry.recv, entry.name)
+	for _, entry := range entries {
+		obj := g.method(entry.pkg, entry.recv, entry.name)
 		if obj == nil {
 			return nil, fmt.Errorf("the heavy-work census found no %s.%s.%s; it has stopped reading the tree it guards",
-				enginePkg, entry.recv, entry.name)
+				entry.pkg, entry.recv, entry.name)
 		}
 		heavy[obj] = true
 	}
+	if err := g.addRowWriters(heavy); err != nil {
+		return nil, err
+	}
+	inJob := g.reachedOnlyFrom(roots, heavy)
 	var findings []string
 	for _, obj := range slices.SortedFunc(maps.Keys(heavy), g.byPosition) {
 		for _, site := range g.sites[obj] {
-			if roots[site.in] || g.onlyReachedFrom(site.in, roots) {
-				continue
+			if !inJob[site.in] {
+				findings = append(findings, g.finding(obj, site))
 			}
-			findings = append(findings, g.finding(obj, site))
 		}
 	}
 	return findings, nil
+}
+
+// addRowWriters marks heavy every declared method that implements a writing
+// method of a row-writer seam.
+func (g *importCallGraph) addRowWriters(heavy map[*types.Func]bool) error {
+	for _, seam := range importRowWriterSeams {
+		iface := g.seam(seam.pkg, seam.iface)
+		if iface == nil {
+			return fmt.Errorf("the heavy-work census found no %s.%s; it has stopped reading the tree it guards", seam.pkg, seam.iface)
+		}
+		impls := g.implementations(iface)
+		if len(impls) == 0 {
+			return fmt.Errorf("the heavy-work census found no implementation of %s.%s; it reads none of the writers it guards",
+				seam.pkg, seam.iface)
+		}
+		for _, impl := range impls {
+			for _, m := range impl {
+				if !seam.reads[m.Name()] && g.decls[m] != nil {
+					heavy[m] = true
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (g *importCallGraph) seam(pkg, name string) *types.Interface {
+	for _, p := range g.packages {
+		if p.Name() != pkg {
+			continue
+		}
+		if obj, ok := p.Scope().Lookup(name).(*types.TypeName); ok {
+			if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
+				return iface
+			}
+		}
+	}
+	return nil
+}
+
+// implementations answers, for every named type of the packages read that has
+// all of iface's methods, the methods that implement them.
+func (g *importCallGraph) implementations(iface *types.Interface) [][]*types.Func {
+	var found [][]*types.Func
+	for _, p := range g.packages {
+		for _, name := range p.Scope().Names() {
+			obj, ok := p.Scope().Lookup(name).(*types.TypeName)
+			if !ok || types.IsInterface(obj.Type()) {
+				continue
+			}
+			byKey := map[string]*types.Func{}
+			for sel := range types.NewMethodSet(types.NewPointer(obj.Type())).Methods() {
+				if m, ok := sel.Obj().(*types.Func); ok {
+					byKey[methodKey(m)] = m
+				}
+			}
+			var impl []*types.Func
+			for m := range iface.Methods() {
+				if hit := byKey[methodKey(m)]; hit != nil {
+					impl = append(impl, hit)
+				}
+			}
+			if len(impl) == iface.NumMethods() {
+				found = append(found, impl)
+			}
+		}
+	}
+	return found
 }
 
 func (g *importCallGraph) finding(obj *types.Func, site callSite) string {
@@ -260,22 +395,29 @@ func (g *importCallGraph) finding(obj *types.Func, site callSite) string {
 		where = g.name(site.in)
 	}
 	return g.fset.Position(site.pos).String() + ": " + where + " reaches " + g.name(g.decls[obj]) +
-		", which writes an import's rows. Only an import job's Work method, or a function nothing but " +
-		"one calls, may reach it: a request queues the job and answers"
+		", which writes an import's rows. Only an import job's Work method, or work nothing but " +
+		"one reaches, may reach it: a request queues the job and answers"
 }
 
-// onlyReachedFrom reports whether fn is named somewhere and only in roots.
-func (g *importCallGraph) onlyReachedFrom(fn *ast.FuncDecl, roots map[*ast.FuncDecl]bool) bool {
-	if fn == nil {
-		return false
+// reachedOnlyFrom is the work only the roots reach: the roots, every heavy
+// function, and each function named somewhere and only from that work.
+func (g *importCallGraph) reachedOnlyFrom(roots map[*ast.FuncDecl]bool, heavy map[*types.Func]bool) map[*ast.FuncDecl]bool {
+	inJob := maps.Clone(roots)
+	for obj := range heavy {
+		inJob[g.decls[obj]] = true
 	}
-	sites := g.sites[g.owner[fn]]
-	for _, site := range sites {
-		if !roots[site.in] {
-			return false
+	for grew := true; grew; {
+		grew = false
+		for fn, obj := range g.owner {
+			if inJob[fn] || len(g.sites[obj]) == 0 {
+				continue
+			}
+			if !slices.ContainsFunc(g.sites[obj], func(site callSite) bool { return !inJob[site.in] }) {
+				inJob[fn], grew = true, true
+			}
 		}
 	}
-	return len(sites) > 0
+	return inJob
 }
 
 // workMethodsOf finds the one Work method taking *river.Job[T] for each T.
@@ -346,12 +488,26 @@ type Engine struct{}
 func (e *Engine) Run() {}
 func (e *Engine) RunSlice() {}
 type RunStore struct{}
-func (s *RunStore) UndoSlice() {}
+func (s *RunStore) UndoSlice(rows int) {}
 type worker struct{ e *Engine }
 func (w *worker) Work(_ int, _ *river.Job[CommitArgs]) error { return slice(w.commit) }
 func slice(func()) error { return nil }
 func (w *worker) commit() { w.e.RunSlice() }
+type Writers interface{ Exists() bool; Ensure() }
+type UndoWriters interface{ Reverse() }
+type rows struct{}
+func (rows) Exists() bool { return false }
+func (rows) Ensure() {}
+func (rows) Reverse() {}
+type tagResolver struct{}
+func (*tagResolver) createMissing() {}
 `
+	entries := []importEntryPoint{
+		{"migration", "Engine", "Run"},
+		{"migration", "Engine", "RunSlice"},
+		{"migration", "RunStore", "UndoSlice"},
+		{"migration", "tagResolver", "createMissing"},
+	}
 	for name, tc := range map[string]struct {
 		src  string
 		want []string
@@ -359,9 +515,14 @@ func (w *worker) commit() { w.e.RunSlice() }
 		"a slice reached only through the job": {``, nil},
 		"a handler that walks the engine":      {`func approve(e *Engine) { e.RunSlice() }`, []string{"migration.approve"}},
 		"a goroutine a handler spawns":         {`func approve(e *Engine) { go func() { e.Run() }() }`, []string{"migration.approve"}},
-		"a handler that calls the job's slice": {`func approve(w *worker) { _ = slice(w.commit) }`, []string{"migration.approve", "migration.approve", "migration.worker.commit"}},
-		"a helper the job and a handler share": {`func approve(w *worker) { w.commit() }`, []string{"migration.approve", "migration.worker.commit"}},
+		"a handler that calls the job's slice": {`func approve(w *worker) { _ = slice(w.commit) }`, []string{"migration.approve", "migration.approve"}},
+		"a helper the job and a handler share": {`func approve(w *worker) { w.commit() }`, []string{"migration.approve"}},
 		"a package-level value":                {`var hook = (*RunStore).UndoSlice`, []string{"a package-level value"}},
+		"a call through an interface":          {`type runner interface{ UndoSlice(n int) }; func approve(s *RunStore) { var r runner = s; r.UndoSlice(1) }`, []string{"migration.approve"}},
+		"a handler that writes a row":          {`func approve(w rows) { w.Ensure() }`, []string{"migration.approve"}},
+		"a handler that reverses a row":        {`func undo(w UndoWriters) { w.Reverse() }`, []string{"migration.undo"}},
+		"a handler that creates the tags":      {`func approve(t *tagResolver) { t.createMissing() }`, []string{"migration.approve"}},
+		"a test run that classifies a row":     {`func preview(w Writers) bool { return w.Exists() }`, nil},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -370,7 +531,7 @@ func (w *worker) commit() { w.e.RunSlice() }
 			if err != nil {
 				t.Fatalf("parse the planted package: %v", err)
 			}
-			findings, err := newImportCallGraph(fset, [][]*ast.File{{file}}).heavyCallFindings([]string{"CommitArgs"}, "migration")
+			findings, err := newImportCallGraph(fset, [][]*ast.File{{file}}).heavyCallFindings([]string{"CommitArgs"}, entries)
 			if err != nil {
 				t.Fatal(err)
 			}
