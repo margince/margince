@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { problemCode, problemDetails } from "./problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
 
@@ -199,29 +200,15 @@ const refusalReasons: Record<string, RefusalReason> = {
   unsupported_format: "unsupported",
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 // Every stable machine code an RFC 7807 body carries: the top-level `code` plus
 // any per-field `details.errors[].code`.
 function problemCodes(problem: unknown): string[] {
-  if (!isRecord(problem)) {
-    return [];
-  }
-  const codes: string[] = [];
-  if (typeof problem.code === "string") {
-    codes.push(problem.code);
-  }
-  const details = problem.details;
-  if (isRecord(details) && Array.isArray(details.errors)) {
-    for (const raw of details.errors) {
-      if (isRecord(raw) && typeof raw.code === "string") {
-        codes.push(raw.code);
-      }
-    }
-  }
-  return codes;
+  const top = problemCode(problem);
+  const errors = problemDetails(problem)?.errors;
+  const fieldCodes = Array.isArray(errors)
+    ? errors.map(problemCode).filter((code) => code !== null)
+    : [];
+  return top === null ? fieldCodes : [top, ...fieldCodes];
 }
 
 // The refusal category a 422 names, or null when no code here recognizes it.
