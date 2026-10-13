@@ -15,7 +15,7 @@ import (
 
 const importLeaseChecksVersion = "20261013130001"
 
-// leaseColumns is every column the lease migration adds, so the down test can
+// leaseColumns lists the columns the lease migration adds, so the down test can
 // prove each one leaves again.
 var leaseColumns = []string{
 	"job_attempt", "job_status", "claimed_attempt", "heartbeat_at", "progress_at", "started_at",
