@@ -9,12 +9,9 @@ German word per concept. It is the page the next German author reads, and the
 one a Vietnamese translator reads to know which German choices are intended;
 Vietnamese has its own page, [ui-copy-style-vi.md](ui-copy-style-vi.md).
 
-Part of it is mechanical. `frontend/src/i18n/copy-style-de.test.ts` holds the
-mechanics, `frontend/src/i18n/address-register.test.ts` holds the address, over
-`de.ts` and every extension `de.json`, and `frontend/src/i18n/record-noun.test.ts`
-holds the record noun and the human-sense word in `de.ts`.
-[What the gate holds](#what-the-gate-holds) lists all three. Everything else is
-the author's judgement, and a reviewer reads a German change against this page.
+Part of it is mechanical: [What the gate holds](#what-the-gate-holds) names
+the three tests that hold it. Everything else is the author's judgement, and a
+reviewer reads a German change against this page.
 
 ## Source and claim strength
 
@@ -27,8 +24,14 @@ the author's judgement, and a reviewer reads a German change against this page.
   "Durchführung der Speicherung nicht erfolgreich". An English verb with no
   object gets its object in German: "Reload" is "Lade die Seite neu", never
   "Lade neu".
+- **Idiom over calque.** Use the set German phrase, never a word-for-word
+  image of the English. "Vorzeitig abgebrochen", not "auf halbem Weg";
+  "Zuerst bestätigen", not "Erst Freigabe"; "Wie geht es weiter?", not "Was
+  als Nächstes passiert"; "steht noch aus", not "ist noch offen".
 - **Nothing added, nothing dropped.** No fact, feature, promise or limitation
-  the English does not carry.
+  the English does not carry. Say what the English says and no more:
+  "configured credential" is "hinterlegte Anmeldedaten", not the narrower
+  "API-Schlüssel".
 - **Claim strength is kept.** Legal, privacy, consent, retention, licence
   and AI-notice text keeps every qualifier. That covers can and may (kann, darf),
   designed to (ausgelegt auf, dafür gedacht), intended to (vorgesehen), subject
@@ -66,6 +69,15 @@ deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
   consent question is published by the server in that wording, so a screen in
   du would ask one question and record another. Their instructions take the
   Sie imperative too: "Schließen Sie diesen Tab".
+- **Sie copy is fuller, formal and courteous.** It uses the set phrases of
+  legal German: "Reichen Sie eine Beschwerde … ein", "Die Änderung tritt
+  sofort in Kraft". Courtesy adds no fact, qualifier or reassurance. It prefers
+  "dies" over "das" for a statement ("Wir teilen Ihnen dies mit"), and "da"
+  over "weil".
+- **`confirm.marketing.ask` is the consent question**, in Sie and with no wir.
+  A change to it also changes `backend/internal/platform/mailcopy/catalog.go`
+  and bumps `marketingQuestionVersion` in
+  `backend/internal/modules/consent/marketingquestion.go`.
 - **Never mix** du, Sie and neutral address inside one surface.
 - "Mein" and "Meine" only as a **scope label** naming the reader's own records
   ("Meine Deals", a "Meine" beside "Team"), mirroring "My deals". "Mir" only as
@@ -75,11 +87,13 @@ deine, deinem, deinen, deiner, deines. Never Sie, Ihr or Ihnen to the user.
 ## Never ich, never wir
 
 Margince is software and never speaks as ich or wir. "Wir konnten nicht
-speichern" becomes "Änderungen wurden nicht gespeichert". The exemptions mirror
-the English page:
+speichern" becomes "Die Änderungen konnten nicht gespeichert werden". The
+exemptions mirror the English page:
 
 - `ob.conv.`: the agent speaking in the onboarding conversation bubble says
-  "ich" in short, factual sentences.
+  "ich" in short, factual sentences. Its error lines are impersonal: "Der
+  Abschluss der Einrichtung konnte nicht gespeichert werden. Bitte versuche es
+  erneut."
 - `prefs.wording.`, `prefs.wordingGeneric`, `directSend.acknowledge`,
   `book.consentWording`: a consent statement is the reader's own sentence and
   may say ich and wir.
@@ -93,22 +107,41 @@ English, rendered neutrally: "Wartet auf Antwort".
 
 | Slot | Shape | Example |
 |---|---|---|
-| Button, menu item, fragment hint | Infinitive, verb last, no article | Änderungen speichern, Deal anlegen |
+| Button, menu item, fragment hint | Infinitive, verb last, no article; the object or "machen" drops where the surface makes it clear | Änderungen speichern, Aufgaben erstellen, Rückgängig, Erneut versuchen |
 | Label, heading, tab, table header | Noun phrase, no article, no period | Abschlussdatum |
 | Instruction as a full sentence | du imperative, with the -e for every verb that has one (prüfe, versuche, wähle, lege, füge, trage, klicke, gehe); a verb whose stem changes its vowel has only the short form (gib, nimm, lies, sieh, hilf, entwirf, übernimm), and "lass" stays | Melde dich erneut an. |
-| Statement | Impersonal; passive where the actor is the system | Änderungen wurden nicht gespeichert. |
+| Statement | Impersonal; passive where the actor is the system | Der Link wird an die hinterlegte Adresse des Kontakts gesendet. |
 | Status | Adjective or past participle | Gesendet, Überfällig |
-| Success | Noun and past participle, no period | Phase hinzugefügt |
-| In progress | Passive or present with one ellipsis character | Wird gespeichert…, Deals werden geladen… |
-| Error | What did not happen, then the one action | Änderungen wurden nicht gespeichert. Prüfe die Verbindung und versuche es erneut. |
+| Success | Noun and past participle, no article, no period | Prognosekategorie geändert |
+| In progress | Passive or present with one ellipsis character | Wird gespeichert…, Die Website von {name} wird geladen… |
+| Error | What could not happen, then the one action | Die Aufgabe konnte nicht abgeschlossen werden. Bitte versuche es erneut. |
 | Warning | What will happen, then what it costs | Beim Entfernen dieser Phase wandern 12 Deals in die Phase „Qualifizierung“. |
 | Confirmation | Title asks and names the object; primary button repeats verb and object; secondary is Abbrechen | Phase löschen? / Phase löschen |
-| Empty state | One fact, one action | Noch keine Deals. Lege den ersten Deal an. |
+| Empty state | One fact, one action | Noch keine Deals. Erstelle den ersten Deal. |
 | Permission denied | The fact and who can change it | Nur Admins können das Kontingent bearbeiten. |
 
 The imperative is one rule so that no value mixes forms: the verbs that need
 their -e (lade, sende, öffne, bearbeite, bestätige) cannot go short, so "Prüf
 und bearbeite" would put both forms in one sentence.
+
+- **A fragment or a full sentence, nothing between.** A noun with a participle
+  is a fragment, with no article and no period: "Zusammenfassung von {name}
+  geplant". A value with a finite verb is a full sentence, with an article on
+  its subject. It takes a period as body text or a status line ("Die
+  Deal-Risikoprüfung dauert ungewöhnlich lange.") and none as a step label
+  ("Der Kalender hat die Einladung nicht angenommen"). The fact that opens an
+  error message may be a short fragment: "Sitzung abgelaufen.", "Passwort
+  abgelehnt.", "Übernahme fehlgeschlagen."
+- **A failure says what could not happen.** A message says "konnte nicht …
+  werden" or "… war nicht möglich": "Die wöchentlichen Erkenntnisse konnten
+  nicht erstellt werden." A short title, toast or status may say "wurde nicht"
+  or drop the verb: "Passwort wurde nicht geändert".
+- **Result first, reason after**, joined with "da": "Die heutigen Termine
+  können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist."
+- **One fact per sentence.** No semicolons: split the sentence. Repeat the noun
+  where a pronoun would point back past a clause or a sentence: "Zugriff
+  widerrufen? Der Zugriff endet mit der nächsten Anfrage", never "Er endet".
+  The reassuring fact comes before the negative one.
 
 A confirmation button is never "Ja", "Nein", "OK" or a bare "Bestätigen".
 Sentence case follows German orthography: nouns capitalised, everything else
@@ -126,11 +159,17 @@ the English opens lowercase ("Über Partner" for "via partner").
   Never a straight " or ', never » « and never English “…” or ”. The catalog
   uses no single quotes; a quotation inside a quotation is rephrased rather
   than set in ‚…‘.
-- **Ellipsis** is the one character …, never three dots.
-- **No exclamation marks. Never "bitte".** One space between words; an edge
-  space only where the English value has the same one.
+- **Ellipsis** is the one character …, never three dots, set straight after
+  the word: "geladen…".
+- **No exclamation marks.** One space between words; an edge space only where
+  the English value has the same one.
+- **"Bitte" opens a recovery step** after a system fault: retry, reload, or
+  turn to an admin or the Systemadministration. "Bitte lade die Seite neu.";
+  the Sie families write "Bitte versuchen Sie es erneut." A step of the normal
+  flow goes without it ("Melde dich erneut an, um fortzufahren."), and so does
+  a button, label or title. Never twice in one value.
 - **No abbreviations**: z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl.,
-  ca., Tg. Write them out (zum Beispiel, das heißt, gegebenenfalls, bezüglich,
+  ca., Tg. Write them out (zum Beispiel, das heißt, gegebenenfalls, zu,
   inklusive, etwa) or cut them; "beziehungsweise" is usually "oder".
   Established acronyms stay: CRM, API, KI, DSGVO, PDF, CSV, UTC, IMAP, DNS, USt.
 - **Compact units** are unit symbols without a period: "h", "min", "s" and "T"
@@ -159,11 +198,15 @@ the English opens lowercase ("Über Partner" for "via partner").
 
 - **Groups** are named with nominalised participle plurals, the same way every
   time: Nutzende, Mitarbeitende, Vertriebsmitarbeitende, Teilnehmende,
-  Empfangende, Lesende. "Admins" is already neutral.
-- **A single human** is written around, never with a gendered noun:
-  Nutzerkonto, Mitglied, Teammitglied, Kontakt, "wer …". A headcount is the
-  Beschäftigtenzahl, a merged prospect is a Duplikat, a recipient address is
-  the Empfangsadresse.
+  Empfangende, Lesende. "Admins" is already neutral. Users are Nutzende, never
+  Benutzende.
+- **A single human** is written around, never with a gendered noun such as
+  Autor, Eigentümer or Administrator: Nutzerkonto, Mitglied, Teammitglied,
+  Kontakt, "wer …". "Geändert von: unbekannt." names no author, and "Der
+  Datensatz bleibt beim bisherigen Teammitglied." names no owner. A headcount
+  is the Beschäftigtenzahl, a merged prospect is a Duplikat, a recipient
+  address is the Empfangsadresse, and whoever runs the installation is "die
+  Systemadministration".
 - **Person and Personen** appear only where a value means a human being, and
   then the key is on the German human-sense list in `record-noun.test.ts`: "die
   zuständige Person", "die empfangende Person". A key that means the contact
@@ -177,14 +220,35 @@ the English opens lowercase ("Über Partner" for "via partner").
 
 ## Anglicisms
 
-Keep the English terms German B2B readers use: Deal, Pipeline, Forecast, Lead,
+Keep the English terms German B2B readers use: Deal, Pipeline, Lead,
 Follow-up, Dashboard, Workflow, Tag, Commit, Best Case, Legal Hold, Buying
-Center, Passport, Connector, Deal Room, Thread, Worklist, API, Webhook, Release
-and Embedding. Token also stays, for model tokens and for a credential the
+Center, Passport, Connector, Deal Room, Thread, Worklist, API, Webhook, Release,
+Embedding and Fallback. Token also stays, for model tokens and for a credential the
 vendor or the product calls a token (Bot-Token, Einrichtungs-Token,
-Lizenz-Token). Everything
-else is German: Einstellungen, Suche, hochladen, herunterladen, Termin, Aufgabe,
-Bericht, speichern.
+Lizenz-Token).
+
+The English names of product areas stay English: Analytics (navigation),
+Insights (navigation group), Sales (settings group) and Capture, as the
+settings tab "Capture-Regeln" with no E-Mail prefix. Setup and Crawling stay
+where the English uses them: "Das Crawling ist abgeschlossen."
+Everything else is German: Einstellungen, Suche, hochladen, herunterladen,
+Termin, Aufgabe, Bericht, speichern.
+
+## Compounds and officialese
+
+A compound of three or more noun parts, or a coined or opaque one, is resolved
+into a phrase: "Folgemaßnahmen von Terminen", "Termine ohne Protokoll". A
+fixed term of the domain stays whole: Gewinnwahrscheinlichkeit,
+Aufbewahrungsrichtlinie, Datenschutzbehörde. So does a transparent two-part
+compound, even one a corpus does not list: Berichtsname, Importergebnis. A
+retired word inside a compound is replaced too: Unternehmensprofil, never
+Firmenprofil; Termindatum, never Meetingdatum. No gate measures compounds,
+because a length or noun count flags good words with the bad ones.
+
+Officialese is rewritten with a verb: "Die wöchentlichen Erkenntnisse konnten
+nicht erstellt werden.", not "Die Erstellung der wöchentlichen Erkenntnisse ist
+fehlgeschlagen". The Vocabulary table retires the officialese words; a chain
+of nominalisations is the reviewer's.
 
 ## Length
 
@@ -211,7 +275,7 @@ gives, because it is ordinary German in another sense.
 | Sales object | Deal, Deals; Chance only as the lifecycle stage of a company | `Opportunity`, `Opportunities`, `Verkaufschance`, `Verkaufschancen`, Geschäft for a deal |
 | Ordered stages | Pipeline | `Trichter`, `Funnel` |
 | A pipeline step | Phase (Deal-Phase, Pipeline-Phase) | Stufe for a pipeline step (Modellstufe is another concept) |
-| Forecast object | Forecast | `Prognose`, `Prognosen` (the verb "prognostiziert" is fine) |
+| Forecast object | Prognose, Prognosen (Prognosekategorie, Prognosesicherheit); the categories Commit and Best Case stay English | `Forecast`, `Forecasts`, which the gate also finds in a hyphenated compound such as Forecast-Kategorie |
 | Manager's forecast number | Einschätzung | Call; Commit for this number (Commit is the per-deal category) |
 | The reader's queue | Worklist | `Arbeitsliste`; Warteschlange or Posteingang for the Worklist (the background job queue is a Warteschlange) |
 | Daily digest | Morgenbericht | `Briefing`, `Tagesbericht`, Digest |
@@ -226,13 +290,14 @@ gives, because it is ordinary German in another sense.
 | The legal entity behind an installation | Rechtsträger | rechtliche Einheit, juristische Person |
 | The running Margince system | Installation | `Deployment`, `Instanz`, Bereitstellung for the running system |
 | Administrator | Admin, Admins | `Administrator`, `Administratoren`, `Verwalter` |
+| Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), Systemadministrator and other gendered singulars |
 | Somebody with a seat in this installation | Mitglied, Mitglieder ("Mitglied einladen"); the account object is the Nutzerkonto | Person for a member |
-| Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Anwender`, `Anwendern` |
+| Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwendern` |
 | Staff | Mitarbeitende, Vertriebsmitarbeitende; a headcount is the Beschäftigtenzahl | `Mitarbeiter`, `Mitarbeitern`, `Vertriebsmitarbeiter` |
 | A message's recipients | Empfangende; one address is the Empfangsadresse; one human on a human-sense key is "die empfangende Person" | Empfänger |
 | Agent credential | Passport | Token or Schlüssel for a Passport (API-Schlüssel, Signaturschlüssel and Clientschlüssel name other credentials) |
 | A webhook's secret | Signaturschlüssel, in every value of one dialog | Schlüssel alone |
-| Mail or calendar link | Connector | Integration for a Connector |
+| Mail or calendar link | Connector; a user links their own accounts with "Konten verknüpfen" | Integration for a Connector |
 | Buyer-facing deal page | Deal Room | `Deal-Room`; Portal for the Deal Room (a vendor's portal keeps its name: Entra-Portal) |
 | The mail thread of a record | Thread | `Spine`, Konversation |
 | Import of mailbox history | Import des Postfachverlaufs | `Backread` |
@@ -243,6 +308,20 @@ gives, because it is ordinary German in another sense.
 | Writing voice | Schreibstil; the built profile is the Stilprofil, its corpus the Stilkorpus; Voice DNA where the English says Voice DNA | Stimme, Stimmprofil, Schreibstimme |
 | Proposals from the product | Vorschläge | Empfehlungen for proposals |
 | Drop a file | hier ablegen | hierher ziehen |
+| Make a new item | erstellen ("Aufgaben erstellen") | anlegen |
+| Turn a setting on or off | aktivieren, deaktivieren; aktiviert, deaktiviert | einschalten, ausschalten, eingeschaltet, ausgeschaltet for a setting |
+| Pick from a list | auswählen, ausgewählt ("Wählen Sie aus, welche E-Mails Sie erhalten möchten") | anhaken, angehakt |
+| A job waiting its turn | geplant ("Zusammenfassung von {name} geplant"); the background queue keeps the noun Warteschlange | eingereiht |
+| Done by a person | manuell ("manuell eingeben") | von Hand |
+| Statements a user confirmed | Angaben ("{count} bestätigte Angaben") | Aussagen for confirmed statements |
+| A job title | Stellenbezeichnung | Position for a job title |
+| A reversing ledger entry | Gegenposten | `Gegenbuchung` |
+| Send | senden, gesendet | schicken, geschickt for sending |
+| A kind of email or item | Typ ("E-Mail-Typ") | Art for a kind of email or item |
+| A source no human runs | automatisiert ("eine automatisierte Quelle") | automatisch for a source |
+| A record named in running text | Eintrag ("Partnereintrag"); Datensatz stays the record noun in labels | Datensatz where it reads technical in a sentence, judged per key |
+| A fallback | Fallback | Rückfall, Ausweich- in a compound |
+| An action in running text | Its verb ("konnten nicht erstellt werden") | `erfolgt`, `seitens`, `Seitens`, `hinsichtlich`, `Hinsichtlich`, `bezüglich`, `Bezüglich`, `mittels`, `zwecks`, `Durchführung`, `Vornahme`, `Inanspruchnahme` |
 | Sign in | anmelden, abmelden | `einloggen`, `eingeloggt` |
 | Retry | Erneut versuchen | `Nochmal`, `nochmal` |
 | Upload, download | hochladen, herunterladen | `uploaden`, `downloaden` |
@@ -277,7 +356,7 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Ellipsis | Three dots in a row |
 | Spacing | Two spaces in a row |
 | No exclamation marks | Any `!` |
-| Never "bitte" | The whole word, in any case |
+| "Bitte" only before a recovery step | "bitte" in any case, unless it opens a sentence straight before versuche, lade or wende (Sie: versuchen Sie, laden Sie, wenden Sie); a second one in a value; one in a value with no sentence period |
 | Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., with or without the inner space |
 | No contractions | ’s or 's straight after a letter |
 | Percent | A digit or a closing `}` followed by `%`, or by an ordinary space and `%` |
@@ -305,6 +384,9 @@ reviewer's judgement:
 
 - word order, tone, sentence case, articles, periods, slot grammar and the
   imperative form
+- idiom, fragment or sentence, the failure shape, semicolons, the order of
+  result and reason, and whether a "Bitte" follows a system fault
+- compounds, and officialese other than the retired words
 - claim strength
 - du used where nobody needed addressing, and a neutral value beside a du value
   on one surface

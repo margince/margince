@@ -19,15 +19,17 @@ function prose(value: string): string {
 }
 
 function offenders(
-  pattern: RegExp,
+  breaks: RegExp | ((value: string) => boolean),
   options: {
     text?: (value: string) => string;
     exempt?: (key: string) => boolean;
   } = {},
 ): string[] {
   const { text = (value: string) => value, exempt = () => false } = options;
+  const broken =
+    breaks instanceof RegExp ? (value: string) => breaks.test(value) : breaks;
   return entries()
-    .filter(([, key, value]) => !exempt(key) && pattern.test(text(value)))
+    .filter(([, key, value]) => !exempt(key) && broken(text(value)))
     .map(
       ([source, key, value]) => `${source} ${key}: ${JSON.stringify(value)}`,
     );
@@ -76,8 +78,8 @@ const RETIRED_WORDS = [
   "Verkaufschancen",
   "Trichter",
   "Funnel",
-  "Prognose",
-  "Prognosen",
+  "Forecast",
+  "Forecasts",
   "Arbeitsliste",
   "Briefing",
   "Tagesbericht",
@@ -103,6 +105,7 @@ const RETIRED_WORDS = [
   "Nutzern",
   "Benutzer",
   "Benutzern",
+  "Benutzende",
   "Anwender",
   "Anwendern",
   "Mitarbeiter",
@@ -138,6 +141,19 @@ const RETIRED_WORDS = [
   "Seats",
   "Privatsphäre",
   "GDPR",
+  "Gegenbuchung",
+  "erfolgt",
+  "seitens",
+  "Seitens",
+  "hinsichtlich",
+  "Hinsichtlich",
+  "bezüglich",
+  "Bezüglich",
+  "mittels",
+  "zwecks",
+  "Durchführung",
+  "Vornahme",
+  "Inanspruchnahme",
 ];
 
 // Keys where a retired word keeps a sense the table does not retire.
@@ -158,6 +174,20 @@ const RETIRED_WORD_KEPT = new Map<string, string>([
     "Vertex AI and its Vertex AI User role are Google's names",
   ],
 ]);
+
+// Read on the raw value, so a placeholder followed by a space opens a sentence
+// as it does for address-register.test.ts.
+const RECOVERY_BITTE = new RegExp(
+  `(?:^|[.?!:]\\s|\\}\\s)Bitte (?:versuche|lade|wende|versuchen Sie|laden Sie|wenden Sie)(?![${LETTER}])`,
+  "g",
+);
+
+function misplacedBitte(value: string): boolean {
+  const said = value.match(word("bitte", "gi"))?.length ?? 0;
+  if (said === 0) return false;
+  const placed = value.match(RECOVERY_BITTE)?.length ?? 0;
+  return said > 1 || placed < said || !/\.(?:\s|$)/.test(value);
+}
 
 function retiredWordPattern(retired: string): RegExp {
   return word(retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -220,8 +250,8 @@ describe("de copy style", () => {
     expect(offenders(/!/)).toEqual([]);
   });
 
-  it("never says bitte", () => {
-    expect(offenders(word("bitte", "i"), { text: prose })).toEqual([]);
+  it("says bitte once, to open a recovery step in a sentence", () => {
+    expect(offenders(misplacedBitte)).toEqual([]);
   });
 
   // Case-sensitive past the first letter, so the certificate authority "CA."
