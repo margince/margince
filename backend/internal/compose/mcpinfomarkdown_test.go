@@ -3,15 +3,10 @@
 
 package compose
 
-// docs/reference/mcp-info.md is the served surface as its .json sibling carries
-// it, for a reader rather than a differ.
-//
-// The markdown is rendered FROM the JSON document, never from a second walk of
-// the registry, which could disagree with the payload it claims to describe.
-//
-// The JSON stays the artifact of record because a client receives it byte for
-// byte. This page carries the index, the sizes and each tool's description, and
-// leaves the schemas to the JSON.
+// docs/reference/mcp-info.md is the served surface for a reader rather than a
+// differ. It is rendered from the JSON document, never from a second walk of the
+// registry, which could disagree with the payload it describes. It carries each
+// tool's description and leaves the schemas to the JSON.
 
 import (
 	"bytes"
