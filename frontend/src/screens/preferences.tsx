@@ -112,7 +112,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   // Whether this subject may take a grant at all — see subjectMayGrant.
   const mayGrant = subjectMayGrant(purposes);
 
-  // The wording rendered at each toggle IS the wording submitted for it: one
+  // The wording rendered at each toggle is the wording submitted for it: one
   // function, read both for display and for the save payload.
   const wordingOf = useCallback(
     (purpose: PurposeView) => {
