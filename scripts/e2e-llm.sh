@@ -306,6 +306,32 @@ mint_passport
 # a strong model recovers by browsing, a weaker one is scored for not doing so.
 # So the stack is bound (when a preset is named), restarted so every role
 # serves the binding, and asked before the world is snapshotted.
+# The seed is embedded under the binding the stack booted with, and a binding
+# change is never re-embedded without a human's confirm. Unconfirmed, search
+# ranks the seeded world on another model's vectors, which is noise that differs
+# from stack to stack. The lane confirms the reindex and waits for it to finish.
+reindex_to_binding() {
+  local status
+  status="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' --data '{}' \
+    -o "$WORK/reindex.out" -w '%{http_code}' "$APP_BASE/v1/embeddings/reindex")"
+  if [[ "$status" != "202" && "$status" != "409" ]]; then
+    echo "the stack refused the reindex (HTTP $status):" >&2
+    head -c 600 "$WORK/reindex.out" >&2
+    exit 1
+  fi
+  for _ in $(seq 1 90); do
+    curl -sS -b "$COOKIES" -o "$WORK/reindex.status" "$APP_BASE/v1/embeddings/reindex/status"
+    if python3 -c 'import json, sys; s = json.load(open(sys.argv[1])); sys.exit(s.get("status") != "idle" or s.get("reindex_needed") is not False)' \
+      "$WORK/reindex.status" 2>/dev/null; then
+      echo "==> search index rebuilt for the binding"
+      return 0
+    fi
+    sleep 10
+  done
+  echo "HARNESS: the search reindex had not finished after 15 minutes: $(head -c 400 "$WORK/reindex.status")" >&2
+  exit 2
+}
+
 if [[ -n "$STACK_PRESET" ]]; then
   echo "==> binding the stack to $(basename "$STACK_PRESET")"
   body="$WORK/routing.json"
@@ -318,6 +344,7 @@ if [[ -n "$STACK_PRESET" ]]; then
     exit 1
   fi
   restart_stack
+  reindex_to_binding
 fi
 SEARCH=semantic
 ready=0
