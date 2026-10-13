@@ -89,36 +89,6 @@ type mapRow struct {
 	createdAt time.Time
 }
 
-// Undo reverses a completed CSV import run row by row. An untouched row is
-// archived; a row a human touched is kept and listed in `kept` (A93). A row
-// that fails lands in `errored` and never aborts the rows after it.
-//
-// acquireRunWrites refuses a concurrent call; undoPageSize bounds memory and the report.
-func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoReport, error) {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return UndoReport{}, err
-	}
-	release, err := s.acquireRunWrites(ctx, id)
-	if err != nil {
-		return UndoReport{}, err
-	}
-	defer release()
-
-	// Undo reverses the rows itself, so it queues no job.
-	run, rep, err := s.beginUndo(ctx, id, nil)
-	if err != nil {
-		return UndoReport{}, err
-	}
-
-	if _, err := s.undoPages(ctx, id, w, &rep, run.Checkpoint, Budget{}, nil); err != nil {
-		return UndoReport{}, err
-	}
-	if err := s.completeUndo(ctx, id, rep, nil); err != nil {
-		return UndoReport{}, err
-	}
-	return rep, nil
-}
-
 // reverseOneRow decides and records one row's fate: kept (a human has
 // touched it), reversed, or errored (a refusal that belongs to the row
 // itself). Returns non-nil only when Reverse failed for a reason that is
@@ -226,13 +196,11 @@ func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), erro
 	}, nil
 }
 
-// beginUndo validates the run and starts (or resumes) its reversal,
-// returning the run as it stood and the report to carry forward: fresh
-// when starting, or a resumed attempt's own progress when continuing one
-// `undoing` already.
-func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, UndoReport, error) {
+// beginUndo validates the run, opens a new attempt of its reversal and queues
+// that attempt's job. The attempt carries the run's own progress if it was
+// undoing already.
+func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, error) {
 	var run Run
-	var rep UndoReport
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var undoReportRaw []byte
 		// FOR UPDATE: two calls reaching beginUndo back to back do not both
@@ -260,8 +228,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 			return fmt.Errorf("import run %s is a %s run, and undo is built for csv only: %w", id, run.Connector, apperrors.ErrConflict)
 		}
 		before := run.Status
-		var err error
-		rep, err = undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
+		rep, err := undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
 		if err != nil {
 			return err
 		}
@@ -285,17 +252,13 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing}); err != nil {
 			return err
 		}
-		if enqueue == nil {
-			return nil
-		}
 		run, err = queueMoved(ctx, tx, id, enqueue)
 		return err
 	})
 	if err != nil {
-		return Run{}, UndoReport{}, err
+		return Run{}, err
 	}
-	run.Status = StatusUndoing
-	return run, rep, nil
+	return run, nil
 }
 
 // undoStartReport is the report an undo of run carries forward: fresh for a

@@ -94,9 +94,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
 			return err
 		}},
-		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
 		{"ClaimUndo", func() error { _, err := s.ClaimUndo(ctx, runID, queueNothing); return err }},
-		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
 		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
 		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
@@ -676,9 +674,9 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
 		"RunOfSource": true, "DiscardOwnDraft": true, "AwaitApproval": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
-		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
-		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
+		"ClaimUndo": true, "FailStaleRunning": true,
 		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
 		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,

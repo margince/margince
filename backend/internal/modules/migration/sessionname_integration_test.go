@@ -200,11 +200,12 @@ func TestAnApprovedRunKeepsNoProfile(t *testing.T) {
 	if len(report.Profile) == 0 {
 		t.Fatal("the report has no profile to drop; the test proves nothing")
 	}
-	if _, err := s.Approve(ctx, report.ID, report.Version, queueNothing); err != nil {
+	running, err := s.Approve(ctx, report.ID, report.Version, queueNothing)
+	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	if err := s.FailRunning(ctx, report.ID, CauseStopped); err != nil {
-		t.Fatalf("FailRunning: %v", err)
+	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, CauseStopped); err != nil {
+		t.Fatalf("FailLease: %v", err)
 	}
 	if got := mustGetStaged(ctx, t, s, report.ID); got.Profile != nil || got.SourceReleased {
 		t.Errorf("a stopped commit reads profile %s (released %t), want no profile and its file kept for a resume", got.Profile, got.SourceReleased)

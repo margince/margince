@@ -310,11 +310,12 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	}
 
 	approved := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
-	if _, err := s.Approve(ctx, approved.ID, approved.Version, queueNothing); err != nil {
+	running, err := s.Approve(ctx, approved.ID, approved.Version, queueNothing)
+	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	if err := s.FailRunning(ctx, approved.ID, CauseStopped); err != nil {
-		t.Fatalf("FailRunning: %v", err)
+	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, CauseStopped); err != nil {
+		t.Fatalf("FailLease: %v", err)
 	}
 	resumed, err := s.ResumeApproved(ctx, approved.ID, 0, queueNothing)
 	if err != nil || resumed.Status != StatusRunning || resumed.Error != "" || resumed.ApprovedAt == nil {

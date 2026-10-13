@@ -23,28 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// FailRunning records why a running run's work stopped, when the engine could
-// not record it itself. A run in any other state is left as it is.
-func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET status = $2, error = $3, updated_at = now()
-			 WHERE id = $1 AND status = $4`, id, StatusFailed, cause, StatusRunning)
-		if err != nil {
-			return fmt.Errorf("failing import run %s: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return nil
-		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: StatusFailed})
-		return err
-	})
-}
-
 // FailStaleRunning fails every running import whose last checkpoint is older
 // than idle, and answers how many. updated_at moves on every checkpoint, so a
 // run that has not moved for that long has no process left working it. The
@@ -94,6 +72,5 @@ func (s *RunStore) ClaimUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		return Run{}, err
 	}
 	defer release()
-	run, _, err := s.beginUndo(ctx, id, enqueue)
-	return run, err
+	return s.beginUndo(ctx, id, enqueue)
 }

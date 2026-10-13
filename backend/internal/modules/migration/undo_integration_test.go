@@ -19,11 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// fakeUndoWriters is UndoWriters over a plain map — this package never
-// imports contacts, so a real archive path is compose's own integration
-// test (csvimport_integration_test.go); this one proves RunStore.Undo's
-// own SQL: the kept/reversed/errored split, checkpoint paging/resume, and
-// the lifecycle gates.
+// fakeUndoWriters is UndoWriters over a plain map, because this package never
+// imports contacts. The undo slice's own SQL is what these tests prove.
 type fakeUndoWriters struct {
 	reversed map[ids.UUID]bool
 	// failAlways, if set, refuses every time this native id is reversed —
@@ -54,7 +51,7 @@ func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID
 }
 
 // completeCSVRun drives a fresh staged run all the way to `complete`, the
-// only state Undo starts from.
+// only state an undo starts from.
 func completeCSVRun(ctx context.Context, t *testing.T, s *RunStore) Run {
 	t.Helper()
 	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
@@ -102,6 +99,48 @@ func markHumanTouched(ctx context.Context, t *testing.T, db interface {
 	}
 }
 
+// claimUndoLease queues an undo attempt of the run, as the undo request does,
+// and claims the lease its job is queued under.
+func claimUndoLease(ctx context.Context, t *testing.T, s *RunStore, id RunID) (Lease, error) {
+	t.Helper()
+	moved, err := s.ClaimUndo(ctx, id, queueNothing)
+	if err != nil {
+		return Lease{}, err
+	}
+	l := Lease{Run: id, Status: StatusUndoing, Attempt: moved.JobAttempt}
+	if _, err := s.Claim(ctx, l); err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+	return l, nil
+}
+
+// undoRun queues an undo of the run and works it in one unbounded slice under
+// the run's write lock, as the undo job does. It answers the stored report.
+func undoRun(ctx context.Context, t *testing.T, s *RunStore, id RunID, w UndoWriters) (UndoReport, error) {
+	t.Helper()
+	l, err := claimUndoLease(ctx, t, s, id)
+	if err != nil {
+		return UndoReport{}, err
+	}
+	release, err := s.LockRunWrites(ctx, id)
+	if err != nil {
+		t.Fatalf("LockRunWrites: %v", err)
+	}
+	defer release()
+	done, err := s.UndoSlice(ctx, l, w, Budget{})
+	if err != nil {
+		return UndoReport{}, err
+	}
+	if !done {
+		t.Fatal("an unbounded undo slice stopped with rows left")
+	}
+	got := mustGetStaged(ctx, t, s, id)
+	if got.UndoReport == nil {
+		t.Fatal("a finished undo stored no report")
+	}
+	return *got.UndoReport, nil
+}
+
 func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
@@ -112,9 +151,9 @@ func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
 	markHumanTouched(ctx, t, db, "update", edited)
 
 	w := &fakeUndoWriters{}
-	rep, err := s.Undo(ctx, run.ID, w)
+	rep, err := undoRun(ctx, t, s, run.ID, w)
 	if err != nil {
-		t.Fatalf("Undo: %v", err)
+		t.Fatalf("undo: %v", err)
 	}
 	if rep.ReversedCount != 1 || !w.reversed[untouched] {
 		t.Fatalf("undo report = %+v, reversed = %v, want the untouched row reversed and nothing else", rep, w.reversed)
@@ -138,7 +177,7 @@ func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
 	}
 
 	// Undoing an already-undone run is a conflict, not a no-op.
-	if _, err := s.Undo(ctx, run.ID, w); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("second undo err = %v, want ErrConflict", err)
 	}
 }
@@ -156,9 +195,9 @@ func TestUndoKeepsARowAHumanTouchedThroughAnyAction(t *testing.T) {
 	markHumanTouched(ctx, t, db, "archive", disqualified)
 
 	w := &fakeUndoWriters{}
-	rep, err := s.Undo(ctx, run.ID, w)
+	rep, err := undoRun(ctx, t, s, run.ID, w)
 	if err != nil {
-		t.Fatalf("Undo: %v", err)
+		t.Fatalf("undo: %v", err)
 	}
 	if rep.ReversedCount != 0 || len(rep.Kept) != 1 || rep.Kept[0].ID != disqualified {
 		t.Fatalf("undo report = %+v, want the disqualified row kept, not reversed", rep)
@@ -182,9 +221,9 @@ func TestUndoRecordsAnUnreversibleRowAndContinues(t *testing.T) {
 	fine := landLead(ctx, t, s, run.ID, "row-2")
 
 	w := &fakeUndoWriters{failAlways: stuck}
-	rep, err := s.Undo(ctx, run.ID, w)
+	rep, err := undoRun(ctx, t, s, run.ID, w)
 	if err != nil {
-		t.Fatalf("Undo: %v", err)
+		t.Fatalf("undo: %v", err)
 	}
 	if rep.ReversedCount != 1 || !w.reversed[fine] {
 		t.Fatalf("undo report = %+v, want the other row reversed despite the stuck one", rep)
@@ -214,8 +253,8 @@ func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
 	unreachable := landLead(ctx, t, s, run.ID, "row-1")
 
 	w := &fakeUndoWriters{failUnreachable: unreachable}
-	if _, err := s.Undo(ctx, run.ID, w); err == nil {
-		t.Fatal("Undo with an unreachable-estate error returned nil, want the error")
+	if _, err := undoRun(ctx, t, s, run.ID, w); err == nil {
+		t.Fatal("an undo with an unreachable-estate error returned nil, want the error")
 	}
 	got, err := s.GetStaged(ctx, run.ID)
 	if err != nil {
@@ -228,12 +267,12 @@ func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
 		t.Fatalf("errored = %+v, want the unreachable row NOT recorded as an individual refusal", got.UndoReport.Errored)
 	}
 
-	// A later call with a writer that can reach the estate resumes and
+	// A later attempt with a writer that can reach the estate resumes and
 	// reverses the row the first attempt never got to record either way.
 	resumed := &fakeUndoWriters{}
-	rep, err := s.Undo(ctx, run.ID, resumed)
+	rep, err := undoRun(ctx, t, s, run.ID, resumed)
 	if err != nil {
-		t.Fatalf("resumed Undo: %v", err)
+		t.Fatalf("resumed undo: %v", err)
 	}
 	if rep.ReversedCount != 1 || !resumed.reversed[unreachable] {
 		t.Fatalf("resumed undo report = %+v, want the row reversed", rep)
@@ -250,7 +289,7 @@ func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 	if err := s.complete(ctx, run.ID, Report{}); err != nil {
 		t.Fatalf("complete: %v", err)
 	}
-	if _, err := s.Undo(ctx, run.ID, &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("undo of a mirror run err = %v, want ErrConflict — undo is csv-only", err)
 	}
 }
@@ -262,28 +301,27 @@ func TestUndoRefusesAnythingButComplete(t *testing.T) {
 	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
-	if _, err := s.Undo(ctx, run.ID, &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("undo of a validating run err = %v, want ErrConflict", err)
 	}
 }
 
-// A second call while an undo is under way for the same run is a conflict,
-// not a second pass over the same rows. beginUndo's row lock covers only its
-// own transaction, so acquireRunWrites's advisory lock, held for the whole call, is
-// what refuses it.
+// A second undo while a slice of the same run is under way is a conflict, not
+// a second pass over the same rows. beginUndo's row lock covers only its own
+// transaction, so the write lock the slice holds is what refuses it.
 func TestUndoRefusesAConcurrentSecondCallOnTheSameRun(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
 	landLead(ctx, t, s, run.ID, "row-1")
 
-	release, err := s.acquireRunWrites(ctx, run.ID)
+	release, err := s.LockRunWrites(ctx, run.ID)
 	if err != nil {
-		t.Fatalf("acquireRunWrites: %v", err)
+		t.Fatalf("LockRunWrites: %v", err)
 	}
 	defer release()
 
-	if _, err := s.Undo(ctx, run.ID, &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("undo while the lock is held err = %v, want ErrConflict", err)
 	}
 }
@@ -300,42 +338,43 @@ func TestUndoResumesFromAPersistedCheckpointAcrossPages(t *testing.T) {
 	first := landLead(ctx, t, s, run.ID, "row-1")
 	second := landLead(ctx, t, s, run.ID, "row-2")
 
-	// Simulate a crash after one page (here, one row) already reversed and
-	// its checkpoint persisted: begin the reversal directly, then advance
-	// the cursor past `first` without going through the public loop.
-	if _, _, err := s.beginUndo(ctx, run.ID, nil); err != nil {
-		t.Fatalf("beginUndo: %v", err)
+	// A first attempt reverses one row, persists its checkpoint and dies.
+	l, err := claimUndoLease(ctx, t, s, run.ID)
+	if err != nil {
+		t.Fatalf("claiming the first undo attempt: %v", err)
 	}
-	partial := UndoReport{ReversedCount: 1}
-	if err := s.advanceUndoCheckpoint(ctx, run.ID, 1, partial, nil); err != nil {
-		t.Fatalf("simulating a partial undo: %v", err)
+	died := &fakeUndoWriters{}
+	if done, err := s.UndoSlice(ctx, l, died, Budget{Rows: 1}); err != nil || done {
+		t.Fatalf("a one-row undo slice = done %v, %v; want it stopped after one row", done, err)
+	}
+	if !died.reversed[first] || died.reversed[second] {
+		t.Fatalf("the first attempt reversed %v, want only the first row", died.reversed)
 	}
 
 	resumed := &fakeUndoWriters{}
-	rep, err := s.Undo(ctx, run.ID, resumed)
+	rep, err := undoRun(ctx, t, s, run.ID, resumed)
 	if err != nil {
-		t.Fatalf("resumed Undo: %v", err)
+		t.Fatalf("resumed undo: %v", err)
 	}
 	if resumed.reversed[first] {
-		t.Fatal("the resumed call redid a row the persisted checkpoint already covered")
+		t.Fatal("the resumed attempt redid a row the persisted checkpoint already covered")
 	}
 	if !resumed.reversed[second] {
-		t.Fatal("the resumed call never reached the row after the checkpoint")
+		t.Fatal("the resumed attempt never reached the row after the checkpoint")
 	}
-	// 1 carried from the simulated first page + 1 the resumed call itself
-	// reversed — the count survives across pages, not just within one.
+	// The count survives across attempts: 1 carried and 1 the resumed attempt reversed.
 	if rep.ReversedCount != 2 {
 		t.Fatalf("reversed_count = %d, want 2 (1 carried + 1 new)", rep.ReversedCount)
 	}
 }
 
-// Undo resolves its run before it reverses anything, so a run id that names no
-// run answers not-found rather than reporting a successful undo of nothing.
+// An undo resolves its run before it queues anything. A run id that names no
+// run answers not-found.
 func TestUndoOfAnUnknownRunIsNotFound(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	if _, err := s.Undo(ctx, RunID(ids.NewV7()), &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("Undo of an unknown run = %v, want ErrNotFound", err)
+	if _, err := s.ClaimUndo(ctx, RunID(ids.NewV7()), queueNothing); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("an undo of an unknown run = %v, want ErrNotFound", err)
 	}
 }
 
