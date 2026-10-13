@@ -164,10 +164,10 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("\n")
 
 	p.WriteString("## Related\n\n")
-	p.WriteString("- [mcp-info.md](mcp-info.md): the whole served surface as a client receives it,\n")
-	p.WriteString("  including the output schemas a run is never charged for.\n")
-	p.WriteString("- [agent-tools.md](agent-tools.md): the governed catalog: what each tool is, what it\n")
-	p.WriteString("  costs in passport scope, and whether a human must approve it.\n")
+	p.WriteString("- [agent-tools.md](agent-tools.md): start here. What each tool is, its scope, and\n")
+	p.WriteString("  whether a human must approve it.\n")
+	p.WriteString("- [mcp-info.md](mcp-info.md): each tool's description as a client receives it.\n")
+	p.WriteString("- [ai-certification.md](ai-certification.md): the scenarios behind the temptation weight.\n")
 	return []byte(p.String())
 }
 

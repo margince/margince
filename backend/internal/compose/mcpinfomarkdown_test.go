@@ -15,7 +15,8 @@ package compose
 // The JSON stays the artifact of record because it is what a client receives
 // byte for byte. It is also 200 KB of nested schema, which is not a thing a
 // contact reads to answer "what can this tool do" — so this page carries the
-// index, the sizes and the prose, and keeps each schema behind a fold.
+// index, the sizes and each tool's description, and leaves the schemas to the
+// JSON beside it.
 
 import (
 	"bytes"
@@ -98,7 +99,9 @@ func writeMCPInfoHead(page *strings.Builder, doc mcpInfo) {
 	page.WriteString("<!-- Generated together with mcp-info.json; do not edit by hand. -->\n\n")
 	page.WriteString(doc.Note + "\n\n")
 	page.WriteString("`mcp-info.json` beside this page is the same surface byte for byte, as a client\n")
-	page.WriteString("receives it. This page is rendered from that file.\n\n")
+	page.WriteString("receives it, with every input and output schema. This page is rendered from that file and\n")
+	page.WriteString("carries each tool's description. What a tool may do and whether a human must approve it is in\n")
+	page.WriteString("[agent-tools.md](agent-tools.md).\n\n")
 	page.WriteString("## Totals\n\n| | |\n|---|---:|\n")
 	fmt.Fprintf(page, "| Tools | %d |\n", doc.Totals.Tools)
 	fmt.Fprintf(page, "| Resources | %d |\n", doc.Totals.Resources)
@@ -197,12 +200,6 @@ func writeMCPInfoTools(page *strings.Builder, tools []mcpToolEntry) {
 			fmt.Fprintf(page, "Renders its result in [`%s`](#%s), visible to %s.\n\n",
 				tool.Meta.UI.ResourceURI, anchor(viewNameOf(tool.Meta.UI.ResourceURI)),
 				"`"+strings.Join(tool.Meta.UI.Visibility, "`, `")+"`")
-		}
-		page.WriteString("<details><summary>Input schema</summary>\n\n```json\n")
-		page.WriteString(indentJSON(tool.InputSchema) + "\n```\n\n</details>\n\n")
-		if len(tool.OutputSchema) > 0 {
-			page.WriteString("<details><summary>Output schema</summary>\n\n```json\n")
-			page.WriteString(indentJSON(tool.OutputSchema) + "\n```\n\n</details>\n\n")
 		}
 	}
 }

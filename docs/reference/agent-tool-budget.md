@@ -211,7 +211,7 @@ listing once. Read a row as what that tool costs a menu.
 
 ## Related
 
-- [mcp-info.md](mcp-info.md): the whole served surface as a client receives it,
-  including the output schemas a run is never charged for.
-- [agent-tools.md](agent-tools.md): the governed catalog: what each tool is, what it
-  costs in passport scope, and whether a human must approve it.
+- [agent-tools.md](agent-tools.md): start here. What each tool is, its scope, and
+  whether a human must approve it.
+- [mcp-info.md](mcp-info.md): each tool's description as a client receives it.
+- [ai-certification.md](ai-certification.md): the scenarios behind the temptation weight.

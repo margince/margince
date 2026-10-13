@@ -1,10 +1,21 @@
 <!-- prose:plain -->
-# The governed tool catalog
+# Agent tools
 
-This page lists every tool an agent can call. For each tool it gives the passport scope, and says whether it runs at
-once or waits for a human. It also says how the tool works when records live in another CRM. The rules for agents are
-in [authorization.md](../explanation/authorization.md) and [agent-surface.md](../explanation/agent-surface.md). What
-each tool costs in the context window of an agent is in [agent-tool-budget.md](agent-tool-budget.md).
+What an agent may call in Margince, what each call is allowed to do, and what it costs. Several pages cover it; start
+with the question you have.
+
+| Your question | Page |
+|---|---|
+| What can an agent call, and does a human have to approve it? | This page |
+| What does each scheduled agent's tool menu cost the context window? | [agent-tool-budget.md](agent-tool-budget.md) |
+| What does a connecting client receive, word for word? | [mcp-info.md](mcp-info.md) |
+| How do the transport, sessions, limits and client sign-in work? | [mcp-protocol.md](mcp-protocol.md) |
+| Can a given assistant do the everyday jobs? | [mcp-tool-coverage.md](mcp-tool-coverage.md) |
+| Which model passes which AI feature? | [ai-certification.md](ai-certification.md) |
+| What prompts does the build send? | [ai-prompts.md](ai-prompts.md) |
+
+The rules for agents are in [authorization.md](../explanation/authorization.md) and
+[agent-surface.md](../explanation/agent-surface.md).
 
 ## How to read this page
 
@@ -36,8 +47,9 @@ and the discovery documents. There is no stdio transport and no `cmd/mcp` binary
 
 ## The catalog
 
-Every core verb the surface serves, including those a client reaches only through a router
-([agent-surface.md](../explanation/agent-surface.md)); [mcp-info.md](mcp-info.md) has what a client is offered.
+A client lists the tools in the first table. The verbs in the second are reachable only through one of those tools,
+which picks its target from an argument ([agent-surface.md](../explanation/agent-surface.md)). Each table below gives the tier, the scope and
+whether the tool leaves the workspace.
 `TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and rows against the contract, both ways, and
 `TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold the verbs, both ways.
 
@@ -66,106 +78,120 @@ Every core verb the surface serves, including those a client reaches only throug
 - **Egress**: the `Egress` flag of the spec, true when the tool reaches outside the workspace. `tools/list` publishes
   it as `openWorldHint`.
 
-| Tool | Tier | Scope | Egress |
-|---|---|---|---|
-| `company_coverage` | 🟢 | `read` | no |
-| `advance_deal` | dynamic | `write` | no |
-| `advance_project_phase` | 🟢 | `write` | no |
-| `archive_record` | 🟢 | `write` | no |
-| `at_risk_relationships` | 🟢 | `read` | no |
-| `annotate_brief` | 🟢 | `write` | no |
-| `apply_tag` | 🟢 | `write` | no |
-| `attach_document` | 🟢 | `write` | no |
-| `book_meeting` | 🟢 | `send` | yes |
-| `bulk_update_records` | 🟢 | `write` | no |
-| `invite_meeting` | 🟡 | `send` | yes |
-| `catch_me_up_on` | 🟢 | `read` | no |
-| `change_lead_state` | 🟢 | `write` | no |
-| `change_lists` | 🟢 | `write` | no |
-| `change_tags` | 🟢 | `write` | no |
-| `check_availability` | 🟢 | `read` | no |
-| `commit_import` | 🟢 | `write` | no |
-| `create_record` | 🟢 / 🟡 | `write` | no |
-| `create_tag` | 🟢 | `write` | no |
-| `create_task` | 🟢 | `write` | no |
-| `decide_approval` | 🟢 | `write` | no |
-| `decide_approvals` | 🟢 | `write` | no |
-| `decide_duplicate` | 🟢 | `write` | no |
-| `decide_approval_bundle` | 🟢 | `write` | no |
-| `describe_query_vocabulary` | 🟢 | `read` | no |
-| `describe_vocabulary` | 🟢 | `read` | no |
-| `describe_analytics_vocabulary` | 🟢 | `read` | no |
-| `describe_import_format` | 🟢 | `read` | no |
-| `describe_record_fields` | 🟢 | `read` | no |
-| `describe_report_blocks` | 🟢 | `read` | no |
-| `describe_report_vocabulary` | 🟢 | `read` | no |
-| `demote_lead` | 🟢 | `write` | no |
-| `disqualify_lead` | 🟢 | `write` | no |
-| `draft_email` | 🟢 | `draft` | no |
-| `draft_follow_ups_for` | 🟢 | `draft` | no |
-| `draft_outbound` | 🟢 | `draft` | no |
-| `enrich` | 🟡 | `enrich` | yes |
-| `get_record_tags` | 🟢 | `read` | no |
-| `get_tag` | 🟢 | `read` | no |
-| `intro_path_to` | 🟢 | `read` | no |
-| `list_pipelines` | 🟢 | `read` | no |
-| `list_approvals` | 🟢 | `read` | no |
-| `list_channel_providers` | 🟢 | `read` | no |
-| `list_colleagues` | 🟢 | `read` | no |
-| `list_documents` | 🟢 | `read` | no |
-| `list_records` | 🟢 | `read` | no |
-| `log_activity` | 🟢 | `write` | no |
-| `merge_records` | 🟢 | `write` | no |
-| `list_tags` | 🟢 | `read` | no |
-| `merge_tags` | 🟡 | `write` | no |
-| `prep_for_meeting` | 🟢 | `read` | no |
-| `progress_deal` | dynamic | `write` | no |
-| `prepare_handoff` | 🟢 | `read` | no |
-| `preview_import` | 🟢 | `write` | no |
-| `promote_lead` | 🟢 | `write` | no |
-| `qualify_lead` | 🟢 | `write` | no |
-| `read_brief` | 🟢 | `read` | no |
-| `read_project` | 🟢 | `read` | no |
-| `read_directory` | 🟢 | `read` | no |
-| `read_forecast` | 🟢 | `read` | no |
-| `read_tags` | 🟢 | `read` | no |
-| `read_record` | 🟢 | `read` | no |
-| `read_approval` | 🟢 | `read` | no |
-| `read_import` | 🟢 | `read` | no |
-| `read_import_report` | 🟢 | `read` | no |
-| `read_input_checks` | 🟢 | `read` | no |
-| `read_lists` | 🟢 | `read` | no |
-| `read_project_360` | 🟢 | `read` | no |
-| `read_relationships` | 🟢 | `read` | no |
-| `query_workspace` | 🟢 | `read` | no |
-| `relink_activity` | dynamic | `write` | no |
-| `resolve_entities` | 🟢 | `read` | no |
-| `relink_activities` | dynamic | `write` | no |
-| `relink_thread` | dynamic | `write` | no |
-| `remove_tag` | 🟢 | `write` | no |
-| `resolve_duplicates` | 🟢 | `write` | no |
-| `review_commitments` | 🟢 | `read` | no |
-| `run_analytics_query` | 🟢 | `read` | no |
-| `run_report` | 🟢 | `read` | no |
-| `read_reporting` | 🟢 | `read` | no |
-| `compose_analytics_report` | 🟢 | `read` | no |
-| `forecast_readings` | 🟢 | `read` | no |
-| `forecast_movement` | 🟢 | `read` | no |
-| `forecast_input_checks` | 🟢 | `read` | no |
-| `list_input_checks` | 🟢 | `read` | no |
-| `data_coverage` | 🟢 | `read` | no |
-| `search_context` | 🟢 | `read` | no |
-| `search_records` | 🟢 | `read` | no |
-| `search_report_evidence` | 🟢 | `read` | no |
-| `send_email` | 🟢 | `send` | yes |
-| `send_company_email` | 🟢 | `send` | yes |
-| `send_message` | 🟢 | `send` | yes |
-| `send_outbound` | 🟢 | `send` | yes |
-| `update_record` | 🟢 / 🟡 | `write` | no |
-| `update_tag` | 🟢 | `write` | no |
-| `whats_slipping_this_week` | 🟢 | `read` | no |
-| `who_knows` | 🟢 | `read` | no |
-| `whoami` | 🟢 | `read` | no |
+### Tools a client lists
+
+| Tool | Tier | Scope | Egress | For |
+|---|---|---|---|---|
+| `advance_project_phase` | 🟢 | `write` | no | Move a project to a phase |
+| `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
+| `archive_record` | 🟢 | `write` | no | Archive a record |
+| `at_risk_relationships` | 🟢 | `read` | no | Relationships going cold |
+| `attach_document` | 🟢 | `write` | no | Attach a file to a record |
+| `book_meeting` | 🟢 | `send` | yes | Book a meeting |
+| `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
+| `catch_me_up_on` | 🟢 | `read` | no | Catch me up on a record |
+| `change_lead_state` | 🟢 | `write` | no | Change a lead's state |
+| `change_lists` | 🟢 | `write` | no | Make and change lists |
+| `change_tags` | 🟢 | `write` | no | Change tags |
+| `check_availability` | 🟢 | `read` | no | Check calendar availability |
+| `commit_import` | 🟢 | `write` | no | Commit an import |
+| `compose_analytics_report` | 🟢 | `read` | no | Compose an analytics report |
+| `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
+| `create_task` | 🟢 | `write` | no | Create a task |
+| `decide_approvals` | 🟢 | `write` | no | Approve or reject staged actions |
+| `describe_vocabulary` | 🟢 | `read` | no | Describe what a tool accepts |
+| `draft_outbound` | 🟢 | `draft` | no | Draft an email or follow-ups |
+| `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
+| `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
+| `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
+| `list_documents` | 🟢 | `read` | no | List a record's documents |
+| `list_records` | 🟢 | `read` | no | List records |
+| `log_activity` | 🟢 | `write` | no | Log an activity |
+| `merge_tags` | 🟡 | `write` | no | Fold one tag into another |
+| `prep_for_meeting` | 🟢 | `read` | no | Prepare for a meeting |
+| `preview_import` | 🟢 | `write` | no | Preview an import |
+| `progress_deal` | dynamic | `write` | no | Progress a deal with a note |
+| `query_workspace` | 🟢 | `read` | no | Query the workspace |
+| `read_approval` | 🟢 | `read` | no | Read one staged action in full |
+| `read_brief` | 🟢 | `read` | no | Read the morning brief |
+| `read_directory` | 🟢 | `read` | no | Read the workspace's colleagues, pipelines and channels |
+| `read_forecast` | 🟢 | `read` | no | Read the forecast and how it moved |
+| `read_import` | 🟢 | `read` | no | Read an import run or the import format |
+| `read_input_checks` | 🟢 | `read` | no | Can the forecast's inputs be trusted |
+| `read_lists` | 🟢 | `read` | no | Find and read lists |
+| `read_project` | 🟢 | `read` | no | Read a project or its handover |
+| `read_record` | 🟢 | `read` | no | Read a record |
+| `read_relationships` | 🟢 | `read` | no | Read who we know, and how well |
+| `read_reporting` | 🟢 | `read` | no | Read sales reporting |
+| `read_tags` | 🟢 | `read` | no | Read tags |
+| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record |
+| `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
+| `resolve_duplicates` | 🟢 | `write` | no | Merge two records or dismiss a flagged pair |
+| `resolve_entities` | 🟢 | `read` | no | Resolve contacts and companies |
+| `review_commitments` | 🟢 | `read` | no | Review open commitments |
+| `run_analytics_query` | 🟢 | `read` | no | Run an analytics query |
+| `run_report` | 🟢 | `read` | no | Run a report |
+| `search_context` | 🟢 | `read` | no | Search for relevant material |
+| `search_records` | 🟢 | `read` | no | Search records |
+| `search_report_evidence` | 🟢 | `read` | no | Search the evidence behind a saved run |
+| `send_outbound` | 🟢 | `send` | yes | Send a message |
+| `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
+| `whats_slipping_this_week` | 🟢 | `read` | no | What's slipping this week |
+| `whoami` | 🟢 | `read` | no | Who this passport acts for |
+
+### Verbs reached through a router tool
+
+A call names the router and the argument that picks the verb. The verb keeps its own tier and scope.
+
+| Tool | Tier | Scope | Egress | Reached through |
+|---|---|---|---|---|
+| `demote_lead` | 🟢 | `write` | no | `change_lead_state` |
+| `disqualify_lead` | 🟢 | `write` | no | `change_lead_state` |
+| `promote_lead` | 🟢 | `write` | no | `change_lead_state` |
+| `qualify_lead` | 🟢 | `write` | no | `change_lead_state` |
+| `apply_tag` | 🟢 | `write` | no | `change_tags` |
+| `create_tag` | 🟢 | `write` | no | `change_tags` |
+| `remove_tag` | 🟢 | `write` | no | `change_tags` |
+| `update_tag` | 🟢 | `write` | no | `change_tags` |
+| `decide_approval` | 🟢 | `write` | no | `decide_approvals` |
+| `decide_approval_bundle` | 🟢 | `write` | no | `decide_approvals` |
+| `describe_analytics_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
+| `describe_query_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
+| `describe_record_fields` | 🟢 | `read` | no | `describe_vocabulary` |
+| `describe_report_blocks` | 🟢 | `read` | no | `describe_vocabulary` |
+| `describe_report_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
+| `draft_email` | 🟢 | `draft` | no | `draft_outbound` |
+| `draft_follow_ups_for` | 🟢 | `draft` | no | `draft_outbound` |
+| `list_channel_providers` | 🟢 | `read` | no | `read_directory` |
+| `list_colleagues` | 🟢 | `read` | no | `read_directory` |
+| `list_pipelines` | 🟢 | `read` | no | `read_directory` |
+| `forecast_movement` | 🟢 | `read` | no | `read_forecast` |
+| `forecast_readings` | 🟢 | `read` | no | `read_forecast` |
+| `describe_import_format` | 🟢 | `read` | no | `read_import` |
+| `read_import_report` | 🟢 | `read` | no | `read_import` |
+| `data_coverage` | 🟢 | `read` | no | `read_input_checks` |
+| `forecast_input_checks` | 🟢 | `read` | no | `read_input_checks` |
+| `list_input_checks` | 🟢 | `read` | no | `read_input_checks` |
+| `prepare_handoff` | 🟢 | `read` | no | `read_project` |
+| `read_project_360` | 🟢 | `read` | no | `read_project` |
+| `company_coverage` | 🟢 | `read` | no | `read_relationships` |
+| `intro_path_to` | 🟢 | `read` | no | `read_relationships` |
+| `who_knows` | 🟢 | `read` | no | `read_relationships` |
+| `get_record_tags` | 🟢 | `read` | no | `read_tags` |
+| `get_tag` | 🟢 | `read` | no | `read_tags` |
+| `list_tags` | 🟢 | `read` | no | `read_tags` |
+| `decide_duplicate` | 🟢 | `write` | no | `resolve_duplicates` |
+| `merge_records` | 🟢 | `write` | no | `resolve_duplicates` |
+| `send_company_email` | 🟢 | `send` | yes | `send_outbound` |
+| `send_email` | 🟢 | `send` | yes | `send_outbound` |
+| `send_message` | 🟢 | `send` | yes | `send_outbound` |
+
+### Contract verbs with no tool of their own
+
+| Tool | Tier | Scope | Egress | Reached through |
+|---|---|---|---|---|
+| `advance_deal` | dynamic | `write` | no | `progress_deal`, whose staged approvals carry this name |
+| `relink_thread` | dynamic | `write` | no | nothing: it is refused on every call |
 
 - **`update_record` is 🟢, with a 🟡 part.** The patch works per field. The fields no human wrote last apply at once.
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
@@ -277,124 +303,8 @@ turns on what the answer means. It may be "you may never", "a human must say yes
   the agent sees the own words of the sentinel. Text sent back from the arguments of the caller is limited and
   escaped. So a new line in a tool name cannot forge a line in the run transcript that later prompts read.
 
-## The protocol surface
-
-`/mcp` serves the tools-only part of MCP over Streamable HTTP, sent on by
-`backend/internal/modules/agents/dispatch.go`, behind the transport in `httpmcp.go`.
-
-**Two framing forms, one dispatcher, picked per request.** Some requests are served as **modern** (`2026-07-28`): no
-handshake, no session, and everything the call needs comes with it. That is a request that declares its own protocol
-version in `params._meta["io.modelcontextprotocol/protocolVersion"]`, or whose `MCP-Protocol-Version` header names the
-modern version. Anything else is served as **handshake-era**. The framing decides how a call is *read and written
-back*, never what it may do. Both reach the same registry and the same admission gate.
-
-**Methods both forms answer:** `tools/list`, `tools/call`, `resources/list`, `resources/read`,
-`resources/templates/list`, `prompts/list`. **Methods each era owns:** `initialize` and `ping` in the handshake
-framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
-answer one would tell a client it had reached the era it was looking for.
-
-The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is `-32601 method not found`, with
-HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does not host the endpoint.
-
-**Protocol versions**, newest first: `2026-07-28` (modern, per request), `2025-11-25` and `2025-06-18` (handshake
-era). `2025-03-26` is outside the window Margince still supports; `2024-11-05` is not served, because it is older than
-Streamable HTTP. In the handshake era, `initialize` sends back the version the client asked for when the server
-supports it. If not, it answers with the newest one it does support.
-
-It never answers with a version the server does not support. It also never answers with the modern version, which
-needs no handshake. A version this server does not serve is refused `400` with `-32022 UnsupportedProtocolVersion` and
-a `data.supported` list naming every version it does. So a client retries, and does not guess.
-
-**A modern request must carry what it declares.** `_meta` must hold both `io.modelcontextprotocol/protocolVersion` and
-`io.modelcontextprotocol/clientCapabilities` (missing → `400` + `-32602`). The `MCP-Protocol-Version`, `Mcp-Method`
-and `Mcp-Name` headers must each say what the body says (missing or not the same → `400` + `-32020 HeaderMismatch`).
-The headers let a server in the middle route without reading the body.
-
-The server compares each header with the body value the handler will act on, read the way the handler reads it. That
-matters because `encoding/json` matches members no matter the case, and takes the last of two members with the same
-name. A map read does not do either. Margince never sends `-32021 MissingRequiredClientCapability`: no tool here needs
-sampling, elicitation or roots.
-
-**A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
-lets a client write *any* value that way, plain ASCII included. This server reads the value back before it compares.
-
-Take a server in the middle that filters on the header as sent, and does not read the sentinel form. A client can pass
-it by writing the value that way. Route on these headers only if you read them back the same way.
-
-**Every modern result carries `resultType: "complete"` and `_meta["io.modelcontextprotocol/serverInfo"]`**, and every
-result a client may cache carries `ttlMs` + `cacheScope`. `server/discover` is `public`: its bytes are the same for
-every caller, and a test holds that claim. Every catalog (`tools/list`, `resources/*`, `prompts/list`) is
-**`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
-data to the wrong caller.
-
-The server would never see that, so it could not audit it. A TTL is a hint for caches, never a permission. Every call
-signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
-
-**`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
-right after `initialize` no matter what. A feature the server does not list that answers "method not found" reads as a
-broken server, not an empty catalog. When `resources/read` refuses a missing item, it answers `-32002` in the
-handshake era, and `-32602` in the modern one, which dropped that code. The other cases where that method refuses are
-the same in either era. A missing or empty `uri` is `-32602`, and a read that fails inside the server is `-32603`.
-
-**`GET /mcp` is `405`.** The transport serves `POST` (one JSON-RPC request and answer); the GET SSE stream comes
-later. That is also why the server reports `tools.listChanged: false`: the notice would go on a stream this transport
-does not open. The surface does change per caller, but this server cannot say so.
-
-**A tool result carries the answer twice.** Every registered tool declares an `outputSchema`. So a `tools/call` that
-works returns the JSON both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second
-copy built again.
-
-So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
-writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
-server.
-
-**No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
-If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no
-session to close. **Every call signs in again** with its Bearer passport, so any replica can answer any call.
-
-The binder runs per call. So when someone revokes the passport, or lowers the rights of the human who gave it, the
-change applies on the next `tools/call`. When the server cannot *reach* a result on a credential, it answers `503`,
-never `401`. A 401 would tell a good client its good token is bad, and turn a short failure into a new consent from
-every user.
-
-**Counters limit each passport per window**, kept in Redis where every replica reads the same number. Which counter a
-call spends comes from what the call already declares, never from a list of tool names. A tool with the egress flag
-spends `egress`. A read-only tool spends `reads` per **record** served. Anything else spends `writes`, and every call
-that gets in also spends one of `calls`.
-
-`reads` and `writes` are **step-ups**. Margince refuses the call, and asks the human who gave the passport a question.
-It reads: "this agent has had N of its M records for this window; go on?". If that human approves, the window grows by
-one more share. Nobody else can answer it, not an admin and not the workspace owner. The limit of an agent is the
-rights of the human who gave it.
-
-`egress` and `calls` are **hard stops**: no approval removes them, and only the end of the window does. One more
-counter, `cost`, is only a warning. It refuses nothing, and says on the answer when this credential has used its share
-of the AI budget of the workspace.
-
-**How a client gets a `client_id`.** There are two ways, and a client that reads the priority order of the profile
-picks the first:
-
-- **A Client ID Metadata Document (CIMD)**, the newer way. The `client_id` is an `https` URL with a path, which leads
-  to a JSON document that states its own `client_id`, `client_name` and `redirect_uris`.
-  - When this server gets it, it **does not follow redirects**, since a redirect is a second URL the caller picked.
-  - The address is refused at connect time if it points to any address inside the deployment. The body is limited to
-    64 KiB, and the timeout is `5s`.
-  - The `client_id` in the document must be the same as the URL Margince read it from, **byte for byte**. There is no
-    clean-up step, because such a step is a second reading of one value.
-  - A document that passes becomes a normal `oauth_client` row with `created_via = 'cimd'`. So an admin turns it off,
-    deletes it and revokes it as they would a registered client.
-  - Margince gets it again when the cache headers of the client say it is old (no less than 5 minutes and no more than
-    24 hours).
-- **Dynamic client registration** (`POST /oauth/register`). The profile marks it as old, and Margince **keeps it for
-  the window it still supports**. So a client registered earlier is not cut off by a version it never asked for.
-  `client_id_metadata_document_supported: true` and `registration_endpoint` are both listed in the metadata of the
-  authorization server.
-
-Either way, the consent screen names the **host** the authorization goes back to. It says so again when that host is
-an address on this machine. A metadata document can prove what a client calls itself, and cannot prove which program
-holds a loopback port.
-
 ## Where to go next
 
 - What a human may do, which limits every agent: [rbac-matrix.md](rbac-matrix.md).
 - What the `agents` module owns and where it sits: [modules.md](modules.md).
+- The transport, limits and client sign-in: [mcp-protocol.md](mcp-protocol.md).
