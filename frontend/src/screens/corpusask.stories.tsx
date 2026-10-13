@@ -46,6 +46,7 @@ const SET: Corpus = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   coverage: {
     documents_total: 12,
     chunks_total: 1_180,

@@ -19538,6 +19538,7 @@ export interface paths {
         /**
          * Archive a corpus and everything filed in it.
          * @description Cascades in one transaction: every live document archives, their chunks are stamped, and any in-flight ingest self-cancels on its next state re-read.
+         *     The set that ships with Margince is refused: the next update would file it again as a new set.
          */
         delete: operations["archiveCorpus"];
         options?: never;
@@ -19564,7 +19565,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -19594,6 +19595,7 @@ export interface paths {
         /**
          * Delete a document, its chunks, its vectors and its stored file.
          * @description A hard delete, not an archive. The stored object goes with the row: an embedding of the text is that text in another shape, and a blob left behind would make the deletion decorative.
+         *     A page that ships with Margince is refused: the next update files it again, so deleting it would only hide it until then.
          */
         delete: operations["deleteCorpusDocument"];
         options?: never;
@@ -44942,6 +44944,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits. */
+            shipped: boolean;
             description?: string | null;
             /** @description What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label. */
             topic_statement: string;
@@ -44972,28 +44976,34 @@ export interface components {
             chunks_total: number;
             chunks_embedded: number;
             documents_total: number;
-            /**
-             * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-             *     searchable rather than shown a bare count.
-             *
-             *     - `no_embedding_model`: this installation binds no embedding model, so no passage
-             *       gets a vector and nothing is searchable. It is the same answer as
-             *       `settings_availability.embedding_reindex` being false on `/me`, read from the
-             *       same embed lane.
-             *     - `indexing`: a model is bound and work is still owed: a document is queued or
-             *       being read, a re-embed is running, or some passage has no vector under the
-             *       model bound now.
-             *     - `complete`: every live passage carries a vector under the model bound now.
-             * @enum {string}
-             */
-            embed_state: "no_embedding_model" | "indexing" | "complete";
+            embed_state: components["schemas"]["KnowledgeEmbedState"];
         };
+        /**
+         * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+         *     searchable rather than shown a bare count. A corpus and each of its documents answer
+         *     by one rule, over their own passages.
+         *
+         *     - `no_embedding_model`: this installation binds no embedding model, so no passage
+         *       gets a vector and nothing is searchable. It is the same answer as
+         *       `settings_availability.embedding_reindex` being false on `/me`, read from the
+         *       same embed lane.
+         *     - `indexing`: a model is bound and work is still owed: a document is queued or
+         *       being read, a re-embed is running, or some passage has no vector under the
+         *       model bound now.
+         *     - `complete`: every live passage carries a vector under the model bound now.
+         * @enum {string}
+         */
+        KnowledgeEmbedState: "no_embedding_model" | "indexing" | "complete";
         KnowledgeDocument: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             corpus_id: string;
             filename: string;
+            /** @description The heading a page Margince ships opens with, so a reader sees its name rather than its filename. Null for an uploaded document, which the filename names. */
+            title: string | null;
+            /** @description True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again. */
+            shipped: boolean;
             content_type: string;
             /** Format: int64 */
             byte_size: number;
@@ -45002,6 +45012,9 @@ export interface components {
             /** @description Why it failed, in words the uploader can act on. Null unless failed. */
             ingest_detail?: string | null;
             chunk_count?: number;
+            /** @description This document's passages that carry a vector, counted as the corpus coverage counts them, so a corpus's documents sum to its own figure. */
+            chunks_embedded: number;
+            embed_state: components["schemas"]["KnowledgeEmbedState"];
             /** Format: date-time */
             created_at: string;
         };
@@ -74341,6 +74354,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `corpus_shipped`: the set ships with Margince and cannot be archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     updateCorpus: {
@@ -74438,6 +74460,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `corpus_shipped`: the set ships with Margince, and only Margince files pages in it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationError"];
@@ -74491,6 +74522,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `document_shipped`: the document is a handbook page that ships with Margince and cannot be deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     askCorpus: {

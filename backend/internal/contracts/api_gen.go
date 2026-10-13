@@ -11026,27 +11026,6 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	}
 }
 
-// Defines values for KnowledgeCoverageEmbedState.
-const (
-	KnowledgeCoverageEmbedStateComplete         KnowledgeCoverageEmbedState = "complete"
-	KnowledgeCoverageEmbedStateIndexing         KnowledgeCoverageEmbedState = "indexing"
-	KnowledgeCoverageEmbedStateNoEmbeddingModel KnowledgeCoverageEmbedState = "no_embedding_model"
-)
-
-// Valid indicates whether the value is a known member of the KnowledgeCoverageEmbedState enum.
-func (e KnowledgeCoverageEmbedState) Valid() bool {
-	switch e {
-	case KnowledgeCoverageEmbedStateComplete:
-		return true
-	case KnowledgeCoverageEmbedStateIndexing:
-		return true
-	case KnowledgeCoverageEmbedStateNoEmbeddingModel:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for KnowledgeDocumentIngestStatus.
 const (
 	KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusDone    KnowledgeDocumentIngestStatus = "done"
@@ -11065,6 +11044,27 @@ func (e KnowledgeDocumentIngestStatus) Valid() bool {
 	case KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusQueued:
 		return true
 	case KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeEmbedState.
+const (
+	KnowledgeEmbedStateComplete         KnowledgeEmbedState = "complete"
+	KnowledgeEmbedStateIndexing         KnowledgeEmbedState = "indexing"
+	KnowledgeEmbedStateNoEmbeddingModel KnowledgeEmbedState = "no_embedding_model"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeEmbedState enum.
+func (e KnowledgeEmbedState) Valid() bool {
+	switch e {
+	case KnowledgeEmbedStateComplete:
+		return true
+	case KnowledgeEmbedStateIndexing:
+		return true
+	case KnowledgeEmbedStateNoEmbeddingModel:
 		return true
 	default:
 		return false
@@ -37709,6 +37709,9 @@ type KnowledgeCorpus struct {
 	// Reindexing A re-embed is in flight; every ask answers not_ready until it finishes.
 	Reindexing *bool `json:"reindexing,omitempty"`
 
+	// Shipped True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits.
+	Shipped bool `json:"shipped"`
+
 	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
 }
@@ -37725,7 +37728,8 @@ type KnowledgeCoverage struct {
 	DocumentsTotal int `json:"documents_total"`
 
 	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-	// searchable rather than shown a bare count.
+	// searchable rather than shown a bare count. A corpus and each of its documents answer
+	// by one rule, over their own passages.
 	//
 	// - `no_embedding_model`: this installation binds no embedding model, so no passage
 	//   gets a vector and nothing is searchable. It is the same answer as
@@ -37735,35 +37739,45 @@ type KnowledgeCoverage struct {
 	//   being read, a re-embed is running, or some passage has no vector under the
 	//   model bound now.
 	// - `complete`: every live passage carries a vector under the model bound now.
-	EmbedState KnowledgeCoverageEmbedState `json:"embed_state"`
+	EmbedState KnowledgeEmbedState `json:"embed_state"`
 }
-
-// KnowledgeCoverageEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-// searchable rather than shown a bare count.
-//
-//   - `no_embedding_model`: this installation binds no embedding model, so no passage
-//     gets a vector and nothing is searchable. It is the same answer as
-//     `settings_availability.embedding_reindex` being false on `/me`, read from the
-//     same embed lane.
-//   - `indexing`: a model is bound and work is still owed: a document is queued or
-//     being read, a re-embed is running, or some passage has no vector under the
-//     model bound now.
-//   - `complete`: every live passage carries a vector under the model bound now.
-type KnowledgeCoverageEmbedState string
 
 // KnowledgeDocument defines model for KnowledgeDocument.
 type KnowledgeDocument struct {
-	ByteSize    int64              `json:"byte_size"`
-	ChunkCount  *int               `json:"chunk_count,omitempty"`
-	ContentType string             `json:"content_type"`
-	CorpusId    openapi_types.UUID `json:"corpus_id"`
-	CreatedAt   time.Time          `json:"created_at"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
+	ByteSize   int64 `json:"byte_size"`
+	ChunkCount *int  `json:"chunk_count,omitempty"`
+
+	// ChunksEmbedded This document's passages that carry a vector, counted as the corpus coverage counts them, so a corpus's documents sum to its own figure.
+	ChunksEmbedded int                `json:"chunks_embedded"`
+	ContentType    string             `json:"content_type"`
+	CorpusId       openapi_types.UUID `json:"corpus_id"`
+	CreatedAt      time.Time          `json:"created_at"`
+
+	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+	// searchable rather than shown a bare count. A corpus and each of its documents answer
+	// by one rule, over their own passages.
+	//
+	// - `no_embedding_model`: this installation binds no embedding model, so no passage
+	//   gets a vector and nothing is searchable. It is the same answer as
+	//   `settings_availability.embedding_reindex` being false on `/me`, read from the
+	//   same embed lane.
+	// - `indexing`: a model is bound and work is still owed: a document is queued or
+	//   being read, a re-embed is running, or some passage has no vector under the
+	//   model bound now.
+	// - `complete`: every live passage carries a vector under the model bound now.
+	EmbedState KnowledgeEmbedState `json:"embed_state"`
+	Filename   string              `json:"filename"`
+	Id         openapi_types.UUID  `json:"id"`
 
 	// IngestDetail Why it failed, in words the uploader can act on. Null unless failed.
 	IngestDetail *string                       `json:"ingest_detail,omitempty"`
 	IngestStatus KnowledgeDocumentIngestStatus `json:"ingest_status"`
+
+	// Shipped True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again.
+	Shipped bool `json:"shipped"`
+
+	// Title The heading a page Margince ships opens with, so a reader sees its name rather than its filename. Null for an uploaded document, which the filename names.
+	Title *string `json:"title"`
 }
 
 // KnowledgeDocumentIngestStatus defines model for KnowledgeDocument.IngestStatus.
@@ -37773,6 +37787,20 @@ type KnowledgeDocumentIngestStatus string
 type KnowledgeDocumentList struct {
 	Items []KnowledgeDocument `json:"items"`
 }
+
+// KnowledgeEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+// searchable rather than shown a bare count. A corpus and each of its documents answer
+// by one rule, over their own passages.
+//
+//   - `no_embedding_model`: this installation binds no embedding model, so no passage
+//     gets a vector and nothing is searchable. It is the same answer as
+//     `settings_availability.embedding_reindex` being false on `/me`, read from the
+//     same embed lane.
+//   - `indexing`: a model is bound and work is still owed: a document is queued or
+//     being read, a re-embed is running, or some passage has no vector under the
+//     model bound now.
+//   - `complete`: every live passage carries a vector under the model bound now.
+type KnowledgeEmbedState string
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
 type Lead struct {
