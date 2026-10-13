@@ -69,7 +69,7 @@ const bundleReportFixture = {
 const REPORT = `GET /imports/${run.id}/report`;
 
 describe("the test run", () => {
-  it("shows counts per type and every problem, and Import anyway restages with drop_link", async () => {
+  it("shows counts per type and every problem, and Import anyway patches and revalidates the same run", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
@@ -82,16 +82,94 @@ describe("the test run", () => {
       `/v1/imports/${run.id}/problems.csv`,
     );
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain(
+        `POST /imports/${run.id}/validate`,
+      ),
+    );
+    const writes = sent.filter((s) => s.method !== "GET");
+    expect(writes.slice(-2)).toEqual([
+      {
+        method: "PATCH",
+        path: `PATCH /imports/${run.id}`,
+        body: { version: run.version, on_broken_link: "drop_link" },
+      },
+      {
+        method: "POST",
+        path: `POST /imports/${run.id}/validate`,
+        body: { version: run.version + 1 },
+      },
+    ]);
     await user.click(
       await screen.findByRole("button", { name: "Import anyway" }),
     );
-    const staged = sent.filter((s) => s.path === "POST /imports").at(-1);
-    expect(staged?.body).toMatchObject({ on_broken_link: "drop_link" });
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain(
         `POST /imports/${run.id}/approve`,
       ),
     );
+    expect(sent.filter((s) => s.path === "POST /imports")).toHaveLength(1);
+  });
+
+  it("approves the version of the run the reader read", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    await renderAtTestRun(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Import 3 rows" }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.path === `POST /imports/${run.id}/approve`)?.body,
+      ).toEqual({ version: run.version }),
+    );
+  });
+
+  it("returns to the map with the reason when a test run of Import anyway stops", async () => {
+    const user = userEvent.setup();
+    let tested = false;
+    const reason = "The file changed since it was uploaded.";
+    stubRoutes({
+      [REPORT]: () => jsonResponse(bundleReportFixture),
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse(
+          tested ? { ...run, status: "pending", error: reason } : run,
+        ),
+      [`POST /imports/${run.id}/validate`]: () => {
+        tested = true;
+        return jsonResponse({ status: 422, detail: reason }, 422);
+      },
+    });
+    await renderAtTestRun(user);
+    await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
+    expect(await screen.findByText("Test run did not start")).toBeVisible();
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Run test" })).toBeEnabled();
+  });
+
+  it("names the import that holds a busy source name, with a link to it", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports": () =>
+        jsonResponse(
+          {
+            status: 409,
+            code: "import_source_busy",
+            detail: "another import of this source name is still writing",
+            details: { run_id: "019ff-other" },
+          },
+          409,
+        ),
+    });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText(
+        "Another import of this source name is still writing. Wait for it to finish, then test again.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Open that import" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=019ff-other"));
   });
 
   it("orders the counts by the format and splits them into new, update and same", async () => {
@@ -183,16 +261,14 @@ describe("the test run", () => {
     expect(await screen.findByText(/K5 Conference/)).toBeVisible();
   });
 
-  it("asks nothing on leaving once a run is staged, even after a failed restage", async () => {
+  it("asks nothing on leaving once a run is staged, even after a failed retest", async () => {
     const user = userEvent.setup();
     let stages = 0;
     stubRoutes({
       [REPORT]: () => jsonResponse(bundleReportFixture),
-      "POST /imports": () => {
+      [`PATCH /imports/${run.id}`]: () => {
         stages += 1;
-        return stages === 1
-          ? jsonResponse(run, 202)
-          : jsonResponse({ title: "Unavailable" }, 503);
+        return jsonResponse({ title: "Unavailable" }, 503);
       },
     });
     globalThis.location.hash = "#/settings/import/run";
@@ -208,7 +284,7 @@ describe("the test run", () => {
     await user.click(await screen.findByRole("button", { name: /Next: map/ }));
     await user.click(screen.getByRole("button", { name: "Run test" }));
     await user.click(await screen.findByRole("checkbox", { name: /anyway/ }));
-    await waitFor(() => expect(stages).toBe(2));
+    await waitFor(() => expect(stages).toBe(1));
     const leaving = new Event("beforeunload", { cancelable: true });
     globalThis.dispatchEvent(leaving);
     expect(leaving.defaultPrevented).toBe(false);

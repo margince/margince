@@ -217,6 +217,56 @@ describe("one CSV through the run page", () => {
     expect(await screen.findByText("File could not be read")).toBeVisible();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
+
+  it("says to split a file with more rows than one test run reads", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports/sources": () =>
+        jsonResponse(
+          {
+            status: 422,
+            code: "validation_error",
+            detail: "The request is not valid.",
+            details: {
+              errors: [
+                {
+                  field: "file",
+                  code: "too_many_rows",
+                  message: "this upload has 15001 rows",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    expect(
+      await screen.findByText(
+        "This file has more rows than one test run can read. Split it into smaller files and import each one.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("refuses an upload answer that names no run", async () => {
+    const user = userEvent.setup();
+    const { run_id: _unnamed, ...unnamed } = profile;
+    stubRoutes({ "POST /imports/sources": () => jsonResponse(unnamed) });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    expect(await screen.findByText("File could not be read")).toBeVisible();
+  });
 });
 
 describe("who is offered the import", () => {
@@ -312,6 +362,42 @@ describe("a run named by the address", () => {
     expect(
       screen.queryByRole("button", { name: "Undo this import" }),
     ).toBeNull();
+  });
+
+  it("says a cancelled run was canceled and starts again from an upload", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "cancelled" }),
+    });
+    renderAtImport("r1");
+
+    expect(await screen.findByText("This import was canceled")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Upload a file" }));
+    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(globalThis.location.hash).not.toContain("run=");
+  });
+
+  it("says why a draft's last test stopped when this page no longer holds its file", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "pending",
+          error: "The test run stopped before it finished.",
+        }),
+    });
+    renderAtImport("r1");
+
+    expect(
+      await screen.findByText(
+        "Upload the file again to go on with this import",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText("The test run stopped before it finished."),
+    ).toBeVisible();
   });
 
   it("says so when the server will not answer for the run", async () => {

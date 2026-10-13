@@ -5813,7 +5813,7 @@ export const de = {
   "import.recent.files_other": "{count} Dateien",
   "import.recent.filesBy": "{files} · von {name}",
   "import.recent.undo": "Rückgängig",
-  "import.status.pending": "Ausstehend",
+  "import.status.pending": "Entwurf",
   "import.status.validating": "Wird geprüft",
   "import.status.awaiting_approval": "Nicht importiert",
   "import.status.running": "Wird importiert",
@@ -5822,6 +5822,15 @@ export const de = {
   "import.status.undoing": "Wird rückgängig gemacht",
   "import.status.undone": "Rückgängig gemacht",
   "import.status.cancelled": "Abgebrochen",
+  "import.closed.cancelled": "Dieser Import wurde abgebrochen",
+  "import.closed.draft":
+    "Lade die Datei erneut hoch, um mit diesem Import weiterzumachen",
+  "import.closed.upload": "Datei hochladen",
+  "import.sourceBusy":
+    "Ein anderer Import mit diesem Quellnamen schreibt noch. Warte, bis er fertig ist, und teste dann erneut.",
+  "import.sourceBusyOpen": "Diesen Import öffnen",
+  "import.upload.tooManyRows":
+    "Diese Datei hat mehr Zeilen, als ein Testlauf lesen kann. Teile sie in kleinere Dateien auf und importiere jede einzeln.",
   "import.undoConfirm.title": "Diesen Import rückgängig machen?",
   "import.undoConfirm.confirm": "Import rückgängig machen",
   "import.undoConfirm.order": "Rückgängig in umgekehrter Reihenfolge: {order}.",

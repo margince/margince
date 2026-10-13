@@ -120,7 +120,7 @@ export function ImportProgress({
             variant="primary"
             pending={wizard.approve.isPending}
             busyLabel={t("import.importing")}
-            onClick={() => wizard.approve.mutate(run.id)}
+            onClick={() => wizard.approve.mutate(run)}
           >
             {t("import.resume")}
           </Button>

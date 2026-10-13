@@ -107,6 +107,8 @@ export const run = {
   object: "lead",
   status: "awaiting_approval",
   checkpoint: 0,
+  version: 3,
+  source_released: false,
   source: "import_api",
   captured_by: "u-ada",
   created_at: "2026-08-13T10:00:00Z",
@@ -153,6 +155,16 @@ function runDefault(key: string): Response | undefined {
   if (read) return jsonResponse({ ...run, id: read[1] });
   if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
     return jsonResponse({ ...run, status: "complete" }, 202);
+  }
+  if (key.startsWith("PATCH /imports/")) {
+    return jsonResponse({
+      ...run,
+      status: "pending",
+      version: run.version + 1,
+    });
+  }
+  if (key.startsWith("POST /imports/") && key.endsWith("/validate")) {
+    return jsonResponse({ ...run, version: run.version + 1 });
   }
   if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
     return jsonResponse(dryRun);

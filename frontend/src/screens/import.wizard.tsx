@@ -5,26 +5,27 @@ import { useEffect, useId, useRef } from "react";
 import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
+import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
 import { StageLadder } from "../design-system/stageladder";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates } from "./common";
+import { QueryStates } from "./common";
 import { FilesStep, ImportDropzone } from "./import.files";
+import { ImportRefusal } from "./import.notices";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
 import {
   type ImportWizardState,
   takeHandedOverUpload,
   uploadObjectFor,
-  useImportFormat,
   useImportWizard,
-  useRecentImports,
   type WizardStep,
 } from "./importflow";
 import { MapStep } from "./importmapping";
-import type { ImportFormat } from "./importtypes";
+import { useImportFormat, useRecentImports } from "./importrun";
+import type { ImportFormat, ImportRun } from "./importtypes";
 import { settingsHref } from "./settingsrouting";
 
 const STEPS: readonly WizardStep[] = [
@@ -96,7 +97,7 @@ export function ImportWizard({
         label={t("import.step.label")}
         hint={
           <span id={hintId}>
-            {wizard.runId === null
+            {wizard.editable
               ? t("import.step.hint")
               : t("import.step.hintStaged")}
           </span>
@@ -104,7 +105,7 @@ export function ImportWizard({
         steps={STEPS.map((step, index) => {
           const back =
             index < here &&
-            wizard.runId === null &&
+            wizard.editable &&
             (step === "files" || step === "map");
           return {
             key: step,
@@ -147,7 +148,7 @@ function StepBody({
   format,
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
-  if (wizard.runId === null) {
+  if (wizard.editable) {
     switch (wizard.step) {
       case "files":
         return <FilesStep wizard={wizard} format={format} />;
@@ -160,6 +161,9 @@ function StepBody({
   const run = wizard.run.data;
   return (
     <QueryStates query={wizard.run} pendingLabel={t("common.loading")}>
+      {run && (run.status === "pending" || run.status === "cancelled") ? (
+        <ClosedRun wizard={wizard} run={run} />
+      ) : null}
       {run && wizard.step === "test" ? (
         <TestRunStep wizard={wizard} format={format} />
       ) : null}
@@ -170,6 +174,30 @@ function StepBody({
         <ImportResult wizard={wizard} format={format} run={run} />
       ) : null}
     </QueryStates>
+  );
+}
+
+// A draft whose file this page no longer holds cannot go on here. Nor can a
+// cancelled run. The reader is told why and starts from an upload.
+function ClosedRun({
+  wizard,
+  run,
+}: Readonly<{ wizard: ImportWizardState; run: ImportRun }>) {
+  const t = useT();
+  const cancelled = run.status === "cancelled";
+  return (
+    <Callout
+      tone={cancelled ? "info" : "warning"}
+      kind="standing"
+      title={t(cancelled ? "import.closed.cancelled" : "import.closed.draft")}
+      actions={
+        <Button variant="primary" onClick={wizard.reset}>
+          {t("import.closed.upload")}
+        </Button>
+      }
+    >
+      {cancelled ? undefined : run.error}
+    </Callout>
   );
 }
 
@@ -199,9 +227,7 @@ function UploadStep({
         </p>
       ) : null}
       {upload.error ? (
-        <Callout tone="danger" kind="outcome" title={t("import.uploadFailed")}>
-          {problemMessageOf(upload.error, t)}
-        </Callout>
+        <ImportRefusal title={t("import.uploadFailed")} error={upload.error} />
       ) : null}
     </div>
   );
