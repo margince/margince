@@ -144,7 +144,7 @@ const EXACT_DEFAULTS: Routes = {
   "GET /imports": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /users/names": () => jsonResponse({ data: [] }),
   "POST /imports/sources": () => jsonResponse(profile),
-  "POST /imports": () => jsonResponse(run, 202),
+  "POST /imports": () => jsonResponse({ ...run, status: "validating" }, 202),
 };
 
 const RUN_PATH = /^GET \/imports\/([^/]+)$/;
@@ -164,7 +164,10 @@ function runDefault(key: string): Response | undefined {
     });
   }
   if (key.startsWith("POST /imports/") && key.endsWith("/validate")) {
-    return jsonResponse({ ...run, version: run.version + 1 });
+    return jsonResponse(
+      { ...run, status: "validating", version: run.version + 1 },
+      202,
+    );
   }
   if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
     return jsonResponse(dryRun);

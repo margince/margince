@@ -111,6 +111,42 @@ describe("the test run", () => {
     expect(sent.filter((s) => s.path === "POST /imports")).toHaveLength(1);
   });
 
+  it("polls a validating run until its report arrives", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      let status = "validating";
+      const sent = stubRoutes({
+        [`GET /imports/${run.id}`]: () => jsonResponse({ ...run, status }),
+        [REPORT]: () => jsonResponse(bundleReportFixture),
+      });
+      await renderAtTestRun(user);
+      expect(await screen.findByText("Testing your file…")).toBeVisible();
+      expect(screen.queryByRole("button", { name: /Import \d/ })).toBeNull();
+      expect(sent.map((s) => s.path)).not.toContain(
+        `GET /imports/${run.id}/report`,
+      );
+      status = "awaiting_approval";
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(
+        await screen.findByRole("button", { name: "Import 4 rows" }),
+      ).toBeVisible();
+      expect(screen.queryByText("Testing your file…")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a reloaded validating run shows the testing state", async () => {
+    stubRoutes({
+      [`GET /imports/${run.id}`]: () =>
+        jsonResponse({ ...run, status: "validating" }),
+    });
+    renderAtImport(run.id);
+    expect(await screen.findByText("Testing your file…")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveAttribute("aria-busy", "true");
+  });
+
   it("approves the version of the run the reader read", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes();

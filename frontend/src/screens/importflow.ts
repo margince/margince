@@ -242,7 +242,7 @@ export function useImportWizard() {
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
   const status = run.data?.status;
-  const report = useImportReport(runId, status);
+  const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
   useLandedRecords([status]);
 

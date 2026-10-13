@@ -92,15 +92,17 @@ export function useUndoImport() {
 }
 
 // One run's report: the test run's prediction, then what the run did. Keyed by
-// the run's status, so each move of the run reads it again.
+// the run's status and version, so a retest never shows the report it replaced.
+// A test still being read has no report to ask for.
 export function useImportReport(
   id: string | null,
   status: ImportRun["status"] | undefined,
+  version: number | undefined,
 ) {
   return useQuery({
-    queryKey: [IMPORTS_KEY, "report", id, status],
+    queryKey: [IMPORTS_KEY, "report", id, status, version],
     queryFn:
-      id === null || status === undefined
+      id === null || status === undefined || status === "validating"
         ? skipToken
         : async () =>
             unwrap(

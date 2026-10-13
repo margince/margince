@@ -5973,6 +5973,7 @@ export const de = {
   "import.test.import_other": "{count} Zeilen importieren",
   "import.test.importAnyway": "Trotzdem importieren",
   "import.test.counts": "Zeilen je Datensatztyp",
+  "import.test.testing": "Deine Datei wird getestet …",
   "import.test.problems_one": "1 Problem",
   "import.test.problems_other": "{count} Probleme",
   "import.test.col.where": "Ort",

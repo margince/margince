@@ -5842,6 +5842,7 @@ export const vi = {
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway": "Vẫn nhập",
   "import.test.counts": "Số dòng theo loại hồ sơ",
+  "import.test.testing": "Đang kiểm tra tệp của bạn…",
   "import.test.problems_one": "1 vấn đề",
   "import.test.problems_other": "{count} vấn đề",
   "import.test.col.where": "Vị trí",

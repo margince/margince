@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Badge, Button, Checkbox } from "../design-system/atoms";
+import { Badge, Button, Checkbox, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
 import { QueryStates } from "../design-system/querystates";
@@ -80,6 +80,9 @@ export function TestRunStep({
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
   const { report, runId } = wizard;
+  if (wizard.run.data?.status === "validating") {
+    return <PendingBody visible label={t("import.test.testing")} />;
+  }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
       {report.data && runId ? (
