@@ -59,6 +59,12 @@ func grantsFor(parts []migration.PartMapping, tags tagGrants) []grantNeed {
 		needs = append(needs,
 			grantNeed{Object: part.Object, Action: principal.ActionCreate, Why: cannotCreateReason(part.Object)},
 			grantNeed{Object: part.Object, Action: principal.ActionUpdate, Why: edit})
+		if part.Object == migration.ObjectDeal {
+			needs = append(needs, grantNeed{
+				Object: pipelineObject, Action: principal.ActionRead,
+				Why: "You cannot read pipelines, so a deal row naming its stage is skipped",
+			})
+		}
 	}
 	if tags.applies {
 		needs = append(needs, grantNeed{

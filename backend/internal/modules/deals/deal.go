@@ -366,11 +366,28 @@ func (s *Store) rejectPastCloseDate(ctx context.Context, tx pgx.Tx, expectedClos
 	if err != nil {
 		return err
 	}
-	y, m, d := expectedClose.Date()
-	if time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today) {
+	if CloseDateIsPast(*expectedClose, today) {
 		return &PastCloseDateError{}
 	}
 	return nil
+}
+
+// CloseDateIsPast reports whether the day a close date names is before today,
+// UTC midnight as installationToday answers it. An import checks its rows with it.
+func CloseDateIsPast(closeDate, today time.Time) bool {
+	y, m, d := closeDate.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC).Before(today)
+}
+
+// InstallationToday is today in the installation's reporting zone, the day a
+// close date is held against.
+func (s *Store) InstallationToday(ctx context.Context) (time.Time, error) {
+	var today time.Time
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		today, err = s.installationToday(ctx, tx)
+		return err
+	})
+	return today, err
 }
 
 // installationToday reads "today" as the installation's reporting zone sees it

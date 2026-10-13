@@ -90,6 +90,8 @@ type csvWriters struct {
 	tagNames *tagResolver
 	// cols is the part's custom fields, read before any row transaction opens.
 	cols importColumns
+	// dealStages checks a deal part's stage and close date; read once per run.
+	dealStages dealStages
 	// columns is the part's mapping, file header → target.
 	columns map[string]string
 	// updated counts the rows this run rewrote. The engine's EnsureResult has

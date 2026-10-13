@@ -254,7 +254,11 @@ func (w *csvWriters) headerFor(target string) string {
 // checkedCells is checkRow for one of this part's rows, with a problem
 // rendered as the report's invalid_value issue on the file's column.
 func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration.SkippedRow) {
-	typed, problem := checkRow(w.object, textFields(row.Fields), w.cols.catalog)
+	fields := textFields(row.Fields)
+	typed, problem := checkRow(w.object, fields, w.cols.catalog)
+	if problem == nil && w.object == migration.ObjectDeal {
+		typed, problem = w.dealStages.checkCells(fields, typed)
+	}
 	if problem == nil {
 		return typed, nil
 	}
