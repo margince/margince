@@ -102,7 +102,10 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
-		{"FailStaleValidating", func() error { _, err := s.FailStaleValidating(ctx, time.Minute); return err }},
+		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
+		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
+		{"CancelIdleDrafts", func() error { _, err := s.CancelIdleDrafts(ctx, time.Minute); return err }},
+		{"ReleaseFinishedSources", func() error { _, err := s.ReleaseFinishedSources(ctx); return err }},
 		{"CreateDraftRun", func() error {
 			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
 			return err
@@ -666,9 +669,10 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
-		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
+		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
 		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
-		"Cancel": true, "Supersede": true,
+		"Cancel": true, "Supersede": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
+		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

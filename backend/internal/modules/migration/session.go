@@ -56,6 +56,7 @@ const (
 	moveResume    moveName = "resume"
 	moveCancel    moveName = "cancel"
 	moveSupersede moveName = "supersede"
+	moveAbandon   moveName = "abandon"
 )
 
 // sessionMove is one transition: the states it may start from and its end.
@@ -75,6 +76,8 @@ var sessionMoves = map[moveName]sessionMove{
 	moveResume:    {from: []string{StatusFailed}, to: StatusRunning},
 	moveCancel:    {from: []string{StatusPending, StatusAwaitingApproval}, to: StatusCancelled},
 	moveSupersede: {from: []string{StatusValidating, StatusAwaitingApproval}, to: StatusCancelled},
+	// moveAbandon closes a test run old code failed; the sweep selects only those.
+	moveAbandon: {from: []string{StatusFailed}, to: StatusCancelled},
 }
 
 // runValue is one column a move sets to a value. The column is always a

@@ -82,7 +82,7 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 	}
 }
 
-func TestTheSweepFailsATestRunItsRequestLeftValidating(t *testing.T) {
+func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
 	e, _ := setupImportAppHeld(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
@@ -98,7 +98,44 @@ func TestTheSweepFailsATestRunItsRequestLeftValidating(t *testing.T) {
 
 	backdateImportRun(t, e, run.ID)
 	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "failed" || polled.Error != migration.CauseValidationStopped {
-		t.Fatalf("after the sweep: %q %q, want failed with the test-run cause", polled.Status, polled.Error)
+	if polled := readRun(t, e, run.ID); polled.Status != "pending" || polled.Error != migration.CauseTestRunStopped {
+		t.Fatalf("after the sweep: %q %q, want a draft saying the test run stopped", polled.Status, polled.Error)
+	}
+}
+
+func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
+	e, runner := setupImportAppHeld(t)
+	runner.inline = true
+	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	approveAndRead(t, e, run.ID)
+	// A legacy finished run still holds its file, and the reaper long since
+	// retired the upload's intent because the run adopted the key.
+	if _, err := e.Owner.Exec(t.Context(), `
+		WITH held AS (UPDATE import_run SET source_released_at = NULL WHERE id = $1 RETURNING source_ref)
+		DELETE FROM stored_object_intent WHERE storage_key = (SELECT source_ref FROM held)`, run.ID); err != nil {
+		t.Fatalf("holding the finished run's source: %v", err)
+	}
+
+	sweepImportRuns(t, e)
+	var released bool
+	var intents int
+	if err := e.Owner.QueryRow(t.Context(), `
+		SELECT r.source_released_at IS NOT NULL AND r.profile IS NULL,
+		       (SELECT count(*) FROM stored_object_intent i WHERE i.storage_key = r.source_ref AND i.kind = 'import')
+		  FROM import_run r WHERE r.id = $1`, run.ID).Scan(&released, &intents); err != nil {
+		t.Fatalf("reading the run's release: %v", err)
+	}
+	if !released || intents != 1 {
+		t.Fatalf("after the sweep the run is released %v with %d reaper intent(s), want released with one", released, intents)
+	}
+	if polled := readRun(t, e, run.ID); polled.Status != "complete" {
+		t.Fatalf("releasing the source moved the run to %q, want it complete", polled.Status)
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+		t.Fatalf("undo of a released run → %d, want 202: undo reads the map, never the file", status)
+	}
+	if polled := readRun(t, e, run.ID); polled.Status != "undone" {
+		t.Fatalf("the undo of a released run ended %q, want undone", polled.Status)
 	}
 }
