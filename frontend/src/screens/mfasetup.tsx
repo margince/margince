@@ -6,13 +6,14 @@ import { useId, useMemo, useState } from "react";
 import { encode } from "uqr";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
+import { Button, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf, unwrap } from "./common";
+import { enteredCode, MfaCodeField } from "./mfacode";
 import "./mfacard.css";
 
 export type TotpEnrolment = components["schemas"]["TotpEnrolment"];
@@ -35,11 +36,6 @@ export function refusalCopy(refusal: CodeRefusal | null | undefined) {
   return refusal ? REFUSAL_COPY[refusal] : null;
 }
 
-/** Whitespace only: an authenticator groups its digits, and no code holds a space. */
-export function enteredCode(typed: string) {
-  return typed.replace(/\s/g, "");
-}
-
 export function mfaFailureMessage(
   error: unknown,
   t: ReturnType<typeof useT>,
@@ -47,39 +43,6 @@ export function mfaFailureMessage(
   return problemCodeOf(error) === "mfa_already_enrolled"
     ? t("mfa.alreadyOn")
     : problemMessageOf(error, t);
-}
-
-/** One field for an authenticator code or a recovery code, which is case-sensitive. */
-export function MfaCodeField({
-  label,
-  hint,
-  error,
-  value,
-  onChange,
-}: Readonly<{
-  label: string;
-  hint?: string;
-  error?: string;
-  value: string;
-  onChange: (value: string) => void;
-}>) {
-  return (
-    <Field label={label} hint={hint} error={error} required>
-      {(control) => (
-        <TextInput
-          {...control}
-          name="one-time-code"
-          autoComplete="one-time-code"
-          inputMode="text"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </Field>
-  );
 }
 
 function QrCode({ value, label }: Readonly<{ value: string; label: string }>) {

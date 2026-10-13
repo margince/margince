@@ -14,10 +14,9 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "./common";
 import { type MfaStatus, MY_MFA_KEY, useMyMfa } from "./mfa.queries";
+import { enteredCode, MfaCodeField } from "./mfacode";
 import {
   codeRefusalOf,
-  enteredCode,
-  MfaCodeField,
   MfaSetupModal,
   mfaFailureMessage,
   refusalCopy,

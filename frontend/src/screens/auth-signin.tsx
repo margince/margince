@@ -6,10 +6,11 @@ import { KeyRound } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { navigate } from "../app/router";
-import { Button, Field, TextInput } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AuthCardTitle, type AuthPhase } from "./auth-core";
+import { enteredCode, MfaCodeField } from "./mfacode";
 
 // One non-enumerating message for a refused credential, one for rate limiting,
 // and connectivity as connectivity (§9); never parsed from detail strings.
@@ -97,9 +98,7 @@ export function MfaForm({
     },
   });
 
-  // Whitespace only: an authenticator shows its digits in groups, and neither
-  // kind of code contains a space.
-  const entered = code.replace(/\s/g, "");
+  const entered = enteredCode(code);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (entered !== "" && !verify.isPending) {
@@ -113,23 +112,13 @@ export function MfaForm({
       <AuthCardTitle>{t("auth.mfaTitle")}</AuthCardTitle>
       <p>{t("auth.mfaSub")}</p>
       <div className="auth-fields">
-        <Field label={t("auth.mfaCode")} icon={<KeyRound aria-hidden />}>
-          {(control) => (
-            <TextInput
-              {...control}
-              ref={codeRef}
-              required
-              name="one-time-code"
-              autoComplete="one-time-code"
-              inputMode="text"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-            />
-          )}
-        </Field>
+        <MfaCodeField
+          ref={codeRef}
+          label={t("auth.mfaCode")}
+          icon={<KeyRound aria-hidden />}
+          value={code}
+          onChange={setCode}
+        />
       </div>
       {verify.isError && (
         <div className="auth-error" role="alert" tabIndex={-1} ref={errorRef}>
