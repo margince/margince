@@ -328,7 +328,7 @@ func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before
 				fmt.Sprintf("$%d", arg(readerAddresses)),
 				neverRelaxed,
 				olderThan(before, arg), bookedDiscover,
-				neverRelaxed, neverRelaxed), args...)
+				neverRelaxed, neverRelaxed), planEachBind(args)...)
 		if err != nil {
 			return err
 		}

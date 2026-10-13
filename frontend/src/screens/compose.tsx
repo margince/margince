@@ -15,6 +15,7 @@ import { INTL_LOCALE } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRichTextLabels } from "../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import { StaleThreadNotice } from "./compose.notices";
 import {
@@ -80,7 +81,6 @@ import { ConversationChoices, ThreadPane } from "./composethread";
 import { useVoiceDraft, type VoiceDraft } from "./composevoicedraft";
 import type { Transport } from "./contacttransports";
 import { useProjectRecord } from "./projectrecord";
-import { useRichTextLabels } from "./richtextlabels";
 import { SendMark, SendPermission } from "./sendpermission";
 import { SendRefusal } from "./sendrefusal";
 import { useVoiceProfile } from "./voice-profile";

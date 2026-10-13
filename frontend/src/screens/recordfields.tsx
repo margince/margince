@@ -21,6 +21,7 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
+import { sameEditValue } from "../lib/independentedit";
 import {
   ProblemError,
   problemExistingId,
@@ -35,7 +36,6 @@ import {
   usePublishedValues,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
-import { sameEditValue } from "./independentedit";
 import { groupValue, selectOptions } from "./recordfieldvalues";
 import { invalidateRecord } from "./recordwritekeys";
 

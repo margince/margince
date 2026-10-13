@@ -13,7 +13,7 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
-import { recordUnroutedSessionProbe } from "./unrouted-session";
+import { recordUnroutedSessionProbe } from "../testing/unrouted-session";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat
 // render gate, frontend/scripts/fe-uat.mjs): every screen component reads

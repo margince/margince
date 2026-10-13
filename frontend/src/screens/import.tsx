@@ -13,6 +13,7 @@ import { RecordBack } from "../design-system/recordview";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useMemberNames } from "../lib/membernames";
 import { problemMessageOf } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
@@ -29,7 +30,6 @@ import {
   wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
-import { useMemberNames } from "./membernames";
 import {
   IMPORT_RUN_SUBPAGE,
   IMPORT_TEMPLATE_SUBPAGE,

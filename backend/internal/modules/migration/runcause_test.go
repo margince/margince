@@ -18,8 +18,8 @@ func TestARunStopsWithAFixedSentenceAndNeverTheErrorText(t *testing.T) {
 		{errors.New(`ERROR: relation "contact" does not exist (SQLSTATE 42P01)`), CauseStopped},
 		{fmt.Errorf("importing contact c-1: %w", context.DeadlineExceeded), CauseOverBudget},
 	} {
-		if got := stopCause(tc.cause); got != tc.want {
-			t.Errorf("stopCause(%v) = %q, want %q", tc.cause, got, tc.want)
+		if got := StopCause(tc.cause); got != tc.want {
+			t.Errorf("StopCause(%v) = %q, want %q", tc.cause, got, tc.want)
 		}
 	}
 }

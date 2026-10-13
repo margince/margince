@@ -233,6 +233,10 @@ func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.Impor
 	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
 
+// errNoImportQueue refuses a commit on a role that cannot queue the worker's
+// job, which is where every commit now runs.
+var errNoImportQueue = fmt.Errorf("this role queues no import work, so it cannot commit an import: %w", apperrors.ErrConflict)
+
 // ready refuses the three verbs that need the source bytes when this role
 // stores no objects.
 //

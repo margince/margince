@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { openRowMenu } from "../testing/tablerow.testkit";
 import { BlockedDomainsCard } from "./blocked-domains";
 import {
   installFetchStub,
@@ -23,7 +24,6 @@ import {
   meRoute,
   type RouteMap,
 } from "./story-utils";
-import { openRowMenu } from "./tablerow.testkit";
 
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it

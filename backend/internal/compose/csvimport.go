@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"path"
 	"time"
@@ -60,15 +59,10 @@ type importHandlers struct {
 	// Zero refuses every upload, which is the honest reading of "nobody has
 	// said" for a bound.
 	uploadLimit int64
-	// detach runs a commit or undo after the request answers; nil runs it on
-	// its own goroutine. failRunning records a run whose work stopped; nil is
-	// the run store's FailRunning.
-	detach      func(task func())
-	failRunning func(ctx context.Context, id migration.RunID, cause string) error
-	// budget bounds a detached commit or undo; zero is importCommitTimeout.
-	budget time.Duration
 	// testRunBudget bounds a dry run; zero is importTestRunBudget.
 	testRunBudget time.Duration
+	// queue enqueues an attempt's job; nil is a role that queues no import work.
+	queue *importEnqueuer
 }
 
 // UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its
@@ -265,7 +259,7 @@ func (h importHandlers) GetImportRunReport(w http.ResponseWriter, r *http.Reques
 }
 
 // ApproveImportRun commits a validated run (IEM-WIRE-5). It answers with the
-// run as it stands once the commit has been handed off. The body is optional.
+// run as it stands once its commit is queued. The body is optional.
 func (h importHandlers) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var req crmcontracts.ApproveImportRunRequest
 	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
@@ -284,8 +278,8 @@ func (h importHandlers) ApproveImportRun(w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusAccepted, out)
 }
 
-// commitRun is the approval and the write, without the transport. A version
-// other than zero must be the run's.
+// commitRun is the approval and the queueing of its write, without the
+// transport. A version other than zero must be the run's.
 //
 // Shared with the tool surface for the reason the whole import seam is shared:
 // this is the call that writes a customer's estate, and two paths that both
@@ -309,6 +303,10 @@ func (h importHandlers) commitRun(
 	if err := refuseAuthorFromNonImporter(ctx, *run.Mapping); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
+	queue, ws, err := h.jobQueue(ctx)
+	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
 
 	// Built before the run is approved, so a run whose source or writers
 	// cannot be built is refused while it can still be approved again.
@@ -316,40 +314,15 @@ func (h importHandlers) commitRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, source)
-	if err != nil {
+	if _, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, source); err != nil {
 		return crmcontracts.ImportRun{}, importProblem(err)
 	}
-	if run.Status == migration.StatusFailed {
-		if err := writers.bindNamedCompanies(ctx, source); err != nil {
-			return crmcontracts.ImportRun{}, importProblem(err)
-		}
-	}
 
-	runs := migration.NewRunStore(h.db)
-	approved, err := h.startOrResume(ctx, runs, run, version)
+	approved, err := h.startOrResume(ctx, migration.NewRunStore(h.db), run, version, queue.commits(ws))
 	if err != nil {
 		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
-	// The tags the file names exist before any row that carries them lands,
-	// and only once the approval is accepted.
-	if err := writers.tags.createMissing(ctx); err != nil {
-		slog.ErrorContext(ctx, "import tags could not be created", "run", approved.ID, "err", err)
-		h.recordStop(ctx, approved.ID, importTagsFailedCause)
-		return crmcontracts.ImportRun{}, err
-	}
-
-	// The engine records a failure and its checkpoint on the run itself, so
-	// the caller reads the outcome from the run, not from this answer.
-	h.runDetached(ctx, approved.ID, "commit", func(commitCtx context.Context) error {
-		_, err := migration.NewEngine(runs, writers).Run(commitCtx, approved.ID, source)
-		return err
-	})
-	final, err := runs.GetStaged(ctx, approved.ID)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	return toContractImportRun(final), nil
+	return toContractImportRun(approved), nil
 }
 
 // startOrResume begins an approved run, or continues one that failed part-way.
@@ -359,12 +332,25 @@ func (h importHandlers) commitRun(
 // checkpoint, unless nobody ever approved the run. Every other state falls
 // through to Approve, which refuses anything but awaiting_approval.
 func (h importHandlers) startOrResume(
-	ctx context.Context, runs *migration.RunStore, run migration.Run, version int,
+	ctx context.Context, runs *migration.RunStore, run migration.Run, version int, enqueue migration.Enqueue,
 ) (migration.Run, error) {
 	if run.Status == migration.StatusFailed {
-		return runs.ResumeApproved(ctx, run.ID, version)
+		return runs.ResumeApproved(ctx, run.ID, version, enqueue)
 	}
-	return runs.Approve(ctx, run.ID, version)
+	return runs.Approve(ctx, run.ID, version, enqueue)
+}
+
+// jobQueue answers the queue an attempt's job goes on, and the workspace the
+// job names: the one this handler's database is bound to.
+func (h importHandlers) jobQueue(ctx context.Context) (*importEnqueuer, ids.UUID, error) {
+	if h.queue == nil {
+		return nil, ids.UUID{}, errNoImportQueue
+	}
+	ws, err := h.db.Workspace(ctx)
+	if err != nil {
+		return nil, ids.UUID{}, err
+	}
+	return h.queue, ws.UUID, nil
 }
 
 // staged is the read every id-bearing operation starts from: the store's own

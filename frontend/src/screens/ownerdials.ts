@@ -5,10 +5,10 @@ import { useUrlParams } from "../app/urlstate";
 import type { ListChip } from "../design-system/listsurface.dials";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
+import { useMemberNames } from "../lib/membernames";
 import { useMe } from "../lib/session";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
-import { useMemberNames } from "./membernames";
 
 // The owner and team dials every owner-scoped list offers: leads, contacts,
 // companies, deals and projects. A record is owned by one colleague, so the

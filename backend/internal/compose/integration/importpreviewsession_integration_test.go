@@ -17,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -103,9 +102,8 @@ func TestAFailedPreviewCancelsItsDraft(t *testing.T) {
 }
 
 func TestABusySourceAnswersTheOtherRunsID(t *testing.T) {
-	// A runner that never runs the commit keeps the first run writing.
-	holdTheCommit := compose.WithImportCommitRunner(func(func()) {})
-	d := newTwoDoorsWith(t, "preview-busy", []compose.Option{holdTheCommit}, "read", "write")
+	// The commit job is never worked, so the first run stays writing.
+	d := newTwoDoorsWith(t, "preview-busy", nil, "read", "write")
 	writing := previewCompanies(t, d, "Fair 2026")
 	d.tool(t, "commit_import", map[string]any{"run_id": writing.Run.RunID})
 

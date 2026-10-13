@@ -73,6 +73,7 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMemberNames } from "../lib/membernames";
 import { throwProblem, unwrap } from "../lib/problem";
 import { useMe, useViewerId } from "../lib/session";
 import {
@@ -160,7 +161,6 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";

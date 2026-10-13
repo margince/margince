@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,6 +36,14 @@ type Session struct {
 	ApprovedAt     *time.Time
 	SupersededBy   *RunID
 	SourceReleased bool
+	// JobAttempt is the attempt the run's current job was queued under; zero
+	// for a run only older code moved.
+	JobAttempt int
+	// Actor is who moved the run to the work it is queued for; the job acts as it.
+	Actor                *StoredActor
+	AttemptCorrelationID *ids.UUID
+	Phase                string
+	Progress             *Progress
 }
 
 // The wizard steps a draft can be reopened on.
@@ -97,7 +106,10 @@ type runChange struct {
 	version int
 	// approved admits the move only for a run someone approved.
 	approved bool
-	values   []runValue
+	// queue marks a move that queues work: it opens a new attempt, which
+	// fences off every older one, and stores who the job acts as.
+	queue  bool
+	values []runValue
 	// literals are fixed assignments such as "report = NULL".
 	literals      []string
 	before, after map[string]any
@@ -141,7 +153,7 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return &SupersededError{RunID: id, By: *state.supersededBy}
 	}
 	if !slices.Contains(move.from, state.status) {
-		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, state.status, move.to, apperrors.ErrConflict)
+		return refusedStart(id, state.status, move.to)
 	}
 	if err := c.admitsVersion(id, state); err != nil {
 		return err
@@ -153,6 +165,25 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return fmt.Errorf("import run %s no longer holds its uploaded file, so it cannot run; upload the file again: %w", id, apperrors.ErrConflict)
 	}
 	return nil
+}
+
+// nextStepWhenAlready is what a caller whose move the run has already made
+// should do instead; a repeated approve or validate is the common case.
+var nextStepWhenAlready = map[string]string{
+	StatusRunning:    "read it until it completes",
+	StatusValidating: "read it until its report is ready",
+	StatusCancelled:  "start a new import to bring the file in",
+}
+
+// refusedStart is the conflict for a move that may not start from status.
+func refusedStart(id RunID, status, to string) error {
+	if status != to {
+		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, status, to, apperrors.ErrConflict)
+	}
+	if next, ok := nextStepWhenAlready[status]; ok {
+		return fmt.Errorf("import run %s is already %s; %s: %w", id, status, next, apperrors.ErrConflict)
+	}
+	return fmt.Errorf("import run %s is already %s: %w", id, status, apperrors.ErrConflict)
 }
 
 // admitsVersion refuses a version other than zero that is not the run's.
@@ -183,6 +214,15 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 	}
 	for _, literal := range change.literals {
 		set.WriteString(", " + literal)
+	}
+	if change.queue {
+		actor, err := encodeActorOf(ctx)
+		if err != nil {
+			return err
+		}
+		set.WriteString(", " + openAttempt)
+		set.WriteString(storekit.SQLf(`, job_status = $%d, actor = $%d, attempt_correlation_id = $%d`,
+			arg(to), arg(actor), arg(ids.NewV7())))
 	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))
 	if err := execHoldingName(ctx, tx, id, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
@@ -226,7 +266,7 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (
 		}
 		moved = true
 		return stageTransition(ctx, tx, id, moveValidate, runChange{
-			version: version, literals: []string{"report = NULL", "error = NULL"},
+			version: version, queue: true, literals: []string{"report = NULL", "error = NULL"},
 		})
 	})
 	if err != nil {

@@ -12,6 +12,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { useT } from "../i18n";
+import { useMemberName } from "../lib/membernames";
 import { unwrap } from "../lib/problem";
 import { useViewerId } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
@@ -22,7 +23,6 @@ import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 import { rosterOwnerName, useRoster } from "./entityref";
-import { useMemberName } from "./membernames";
 import { MergeAction } from "./merge";
 import { ShareAction } from "./share";
 

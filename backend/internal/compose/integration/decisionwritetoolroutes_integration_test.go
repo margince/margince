@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // filedPair makes two contacts that share a phone, so the second file the pair,
@@ -154,7 +154,7 @@ type sharedPreviewReport struct {
 // A lead file previewed and then committed is the same run over either door: the
 // same report, and the same leads landed.
 func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
-	d := newTwoDoorsWith(t, "import-write-doors", []compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read", "write")
+	d := newTwoDoorsWith(t, "import-write-doors", nil, "read", "write")
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
 	csv := func(prefix string) string {
 		return "Email,Full Name\n" + prefix + "-one@imports.test," + prefix + " One\n" + prefix + "-two@imports.test," + prefix + " Two\n"
@@ -194,6 +194,7 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	d.restStatus(t, "POST", "/v1/imports/"+viaREST+"/approve", nil, http.StatusAccepted)
 	d.tool(t, "commit_import", map[string]any{"run_id": viaTool})
+	importjobtest.Drain(t, d.e)
 	if got := leadCount(t, d.e); got != 4 {
 		t.Errorf("the two commits landed %d leads, want the 4 in the two files", got)
 	}

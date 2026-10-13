@@ -52,13 +52,13 @@ func TestAResumeBesideAnActiveRunOfItsNameIsAConflictNamingIt(t *testing.T) {
 	stopped := seedFairRun(ctx, t, db, StatusFailed)
 	report := toReport(ctx, t, s, newDraft(ctx, t, s, fairName))
 
-	_, err := s.ResumeApproved(ctx, stopped, 0)
+	_, err := s.ResumeApproved(ctx, stopped, 0, queueNothing)
 	wantBusyNaming(t, "resuming beside a report of the name", err, report.ID)
 
-	if _, err := s.Approve(ctx, report.ID, report.Version); err != nil {
+	if _, err := s.Approve(ctx, report.ID, report.Version, queueNothing); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	_, err = s.ResumeApproved(ctx, stopped, 0)
+	_, err = s.ResumeApproved(ctx, stopped, 0, queueNothing)
 	wantBusyNaming(t, "resuming beside a commit of the name", err, report.ID)
 	if got := mustGetStaged(ctx, t, s, stopped); got.Status != StatusFailed {
 		t.Errorf("the refused run reads %s, want failed and still resumable", got.Status)
@@ -71,7 +71,7 @@ func TestAnUndoClosesTheUnwrittenRunsOfItsName(t *testing.T) {
 	done := seedFairRun(ctx, t, db, StatusComplete)
 	report := toReport(ctx, t, s, newDraft(ctx, t, s, fairName))
 
-	if err := s.ClaimUndo(ctx, done); err != nil {
+	if _, err := s.ClaimUndo(ctx, done, queueNothing); err != nil {
 		t.Fatalf("an undo beside a report of its name = %v, want it to take the name back", err)
 	}
 	got := mustGetStaged(ctx, t, s, report.ID)
@@ -87,7 +87,8 @@ func TestAnUndoBesideAWritingRunOfItsNameIsAConflictNamingIt(t *testing.T) {
 	done := seedFairRun(ctx, t, db, StatusComplete)
 	writing := seedFairRun(ctx, t, db, StatusRunning)
 
-	wantBusyNaming(t, "an undo beside a commit of its name", s.ClaimUndo(ctx, done), writing)
+	_, err := s.ClaimUndo(ctx, done, queueNothing)
+	wantBusyNaming(t, "an undo beside a commit of its name", err, writing)
 	if got := mustGetStaged(ctx, t, s, done); got.Status != StatusComplete {
 		t.Errorf("the refused undo left the run %s, want complete", got.Status)
 	}
@@ -102,7 +103,7 @@ func TestAReplacedRunAnswersWithTheRunThatReplacedIt(t *testing.T) {
 		t.Fatalf("QueueValidation: %v", err)
 	}
 
-	_, err := s.Approve(ctx, older.ID, older.Version)
+	_, err := s.Approve(ctx, older.ID, older.Version, queueNothing)
 	replaced, ok := errors.AsType[*SupersededError](err)
 	if !ok || replaced.By != newer.ID || !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("approving a replaced report = %v, want SupersededError naming %s", err, newer.ID)
@@ -152,7 +153,7 @@ func TestAStoppedCommitWithoutItsFileCannotResume(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("releasing the run's file: %v", err)
 	}
-	if _, err := s.ResumeApproved(ctx, released, 0); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ResumeApproved(ctx, released, 0, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("resuming a stopped commit whose file is released = %v, want a conflict: the commit would read nothing", err)
 	}
 	if got := mustGetStaged(ctx, t, s, released); got.Status != StatusFailed {
@@ -199,11 +200,12 @@ func TestAnApprovedRunKeepsNoProfile(t *testing.T) {
 	if len(report.Profile) == 0 {
 		t.Fatal("the report has no profile to drop; the test proves nothing")
 	}
-	if _, err := s.Approve(ctx, report.ID, report.Version); err != nil {
+	running, err := s.Approve(ctx, report.ID, report.Version, queueNothing)
+	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	if err := s.FailRunning(ctx, report.ID, CauseStopped); err != nil {
-		t.Fatalf("FailRunning: %v", err)
+	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, CauseStopped); err != nil {
+		t.Fatalf("FailLease: %v", err)
 	}
 	if got := mustGetStaged(ctx, t, s, report.ID); got.Profile != nil || got.SourceReleased {
 		t.Errorf("a stopped commit reads profile %s (released %t), want no profile and its file kept for a resume", got.Profile, got.SourceReleased)

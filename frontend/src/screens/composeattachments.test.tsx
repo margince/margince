@@ -8,7 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { ACCEPTED_ATTACHMENT_ATTR } from "./attachmentupload";
+import { ACCEPTED_ATTACHMENT_ATTR } from "../lib/attachmentupload";
 import { AttachAction, CarriageNotice } from "./composeattachments";
 
 afterEach(() => {

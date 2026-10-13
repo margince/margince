@@ -25,8 +25,7 @@ import (
 // field's column needs.
 func setupCustomFieldImportApp(t *testing.T) *apptest.AppEnv {
 	t.Helper()
-	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()), compose.WithSchemaPool(SchemaPool(t)),
-		compose.WithImportCommitRunner(compose.RunImportInline))
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()), compose.WithSchemaPool(SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	return e
 }

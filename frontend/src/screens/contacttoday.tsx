@@ -7,8 +7,8 @@ import { PanelBody } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
 import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useMemberNames } from "../lib/membernames";
 import { MayBeDoneVerbs } from "./contactmaybedone";
-import { useMemberNames } from "./membernames";
 import { MoveButton } from "./movebutton";
 import {
   basisAddsARecord,

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { requireVersion } from "../api/version";
-import { isVersionSkewOf } from "../lib/problem";
+import { isVersionSkewOf } from "./problem";
 
 type Values = Record<string, unknown>;
 type Versioned = { id: string; version?: number; masked_fields?: string[] };

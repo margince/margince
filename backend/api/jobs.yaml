@@ -186,6 +186,13 @@ queues:
     reason: >-
       A full batch per policy, each record its own multi-statement audited
       transaction — minutes of database-bound work per tenant.
+  import_write:
+    max_workers: 1
+    reason: >-
+      Commit and undo slices of an import. One per process: slices of two runs
+      interleave through the snooze, so one worker is fair to both, and the
+      run's advisory lock keeps two processes off one run. Each slice holds the
+      lock's connection plus one row transaction at a time.
 
 # Every DISPATCHER below takes timeout: 2m, and the reason is one reason rather
 # than twenty-three: a dispatcher runs one indexed scan and one insert-many (or
@@ -1376,24 +1383,73 @@ kinds:
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
 
+  import_commit:
+    role: worker
+    go_type: ImportCommitArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last flush
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: a failed row, an over-budget slice
+        and a lost fence are written to the run, or are a superseded attempt's
+        quiet exit; a River retry would rerun a slice whose run already says
+        what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an approved import's commit. The run row is the checkpoint,
+      so a slice ends by rows or time, snoozes, and the next one resumes at the
+      cursor.
+
+  import_undo:
+    role: worker
+    go_type: ImportUndoArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last page
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: an undo that stops stays undoing
+        with its cause and its cursor, and a lost fence is a superseded
+        attempt's quiet exit; a River retry would rerun a slice whose run
+        already says what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an import's undo, the commit's shape: it pages over the
+      rows the run created from its cursor, then snoozes for the next slice.
+
   import_run_sweep:
     role: worker
     go_type: ImportRunSweepArgs
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: 15m
+    cadence: 1m
     reason: >-
-      Settles every import run nothing else will move. A commit whose process
-      stopped is still `running`, and approve refuses a running run: past the
-      30-minute commit budget it is failed, so approve resumes it from its
-      checkpoint. A test run whose request ended without recording returns to
-      draft; a draft or report untouched for 7 days is cancelled; and every run
-      that will not read its uploaded file again releases it, so the
-      stored-object reaper deletes the bytes. Every 15 minutes, because the
-      commit budget is 30 minutes and a stuck run should not wait much longer
-      than that. Each rule selects its runs by status, so on an idle
-      installation it finds nothing.
+      Settles every import run nothing else will move. A commit or undo slice
+      whose process died stops heartbeating, and the sweep queues a new attempt
+      within a couple of minutes, so the cadence is one minute. A test run
+      whose request ended without recording returns to draft; a draft or report
+      untouched for 7 days is cancelled; and every run that will not read its
+      uploaded file again releases it, so the stored-object reaper deletes the
+      bytes. Each rule selects its runs by status over an index, so on an idle
+      installation a pass finds nothing.
 
   employment_import_sweep:
     role: worker

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -105,7 +106,22 @@ func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
 			if !errors.Is(err, apperrors.ErrConflict) || got != status {
 				t.Errorf("%s from %s = (%s, %v), want a conflict that leaves the run %s", name, status, got, err, status)
 			}
+			if err != nil && status == move.to && strings.Contains(err.Error(), "cannot become") {
+				t.Errorf("%s from %s = %q, want it to say the run is already %s, not that it cannot become so", name, status, err, status)
+			}
 		}
+	}
+}
+
+func TestARepeatedApproveSaysTheRunIsAlreadyRunning(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	id := seedRunIn(ctx, t, db, StatusRunning)
+	err := db.Tx(ctx, func(tx pgx.Tx) error { return stageTransition(ctx, tx, id, moveApprove, runChange{}) })
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("approving a running run = %v, want a conflict", err)
+	}
+	if want := "is already running; read it until it completes"; !strings.Contains(err.Error(), want) {
+		t.Errorf("approving a running run says %q, want it to contain %q", err, want)
 	}
 }
 
@@ -279,7 +295,7 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	writing := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
-	if _, err := s.Approve(ctx, writing.ID, writing.Version); err != nil {
+	if _, err := s.Approve(ctx, writing.ID, writing.Version, queueNothing); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	draft := newDraft(ctx, t, s, "Fair 2026")
@@ -305,20 +321,44 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("clearing the approval: %v", err)
 	}
-	if _, err := s.ResumeApproved(ctx, unapproved, 0); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ResumeApproved(ctx, unapproved, 0, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("resuming a failed run nobody approved = %v, want a conflict: it never reached a commit", err)
 	}
 
 	approved := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
-	if _, err := s.Approve(ctx, approved.ID, approved.Version); err != nil {
+	running, err := s.Approve(ctx, approved.ID, approved.Version, queueNothing)
+	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	if err := s.FailRunning(ctx, approved.ID, CauseStopped); err != nil {
-		t.Fatalf("FailRunning: %v", err)
+	if err := s.FailLease(ctx, Lease{Run: running.ID, Status: StatusRunning, Attempt: running.JobAttempt}, CauseStopped); err != nil {
+		t.Fatalf("FailLease: %v", err)
 	}
-	resumed, err := s.ResumeApproved(ctx, approved.ID, 0)
+	resumed, err := s.ResumeApproved(ctx, approved.ID, 0, queueNothing)
 	if err != nil || resumed.Status != StatusRunning || resumed.Error != "" || resumed.ApprovedAt == nil {
 		t.Errorf("resuming an approved failure = (%+v, %v), want running with its approval kept", resumed, err)
+	}
+}
+
+func TestAMoveWhoseJobCannotBeQueuedStaysWhereItWas(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	report := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
+	refused := errors.New("the queue refused the insert")
+	if _, err := s.Approve(ctx, report.ID, report.Version, func(context.Context, pgx.Tx, Run) error { return refused }); !errors.Is(err, refused) {
+		t.Fatalf("Approve with a refusing queue = %v, want the queue's refusal", err)
+	}
+	if got := mustGetStaged(ctx, t, s, report.ID); got.Status != StatusAwaitingApproval || got.JobAttempt != report.JobAttempt {
+		t.Fatalf("after a refused queue the run is %s at attempt %d, want %s at %d", got.Status, got.JobAttempt, StatusAwaitingApproval, report.JobAttempt)
+	}
+
+	var queued Run
+	approved, err := s.Approve(ctx, report.ID, report.Version, func(_ context.Context, _ pgx.Tx, run Run) error { queued = run; return nil })
+	if err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+	if queued.Status != StatusRunning || queued.JobAttempt != report.JobAttempt+1 || approved.JobAttempt != queued.JobAttempt {
+		t.Fatalf("the queue saw %s at attempt %d and Approve answered attempt %d; want running at %d both times",
+			queued.Status, queued.JobAttempt, approved.JobAttempt, report.JobAttempt+1)
 	}
 }
 

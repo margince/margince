@@ -35,12 +35,12 @@ import {
   useLocale,
   useT,
 } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
   uploadAttachment,
-} from "./attachmentupload";
+} from "../lib/attachmentupload";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { type CarriageViolation, carriageViolations } from "./carriage";
 import { useProviderCarriage } from "./channelproviders";
 import type { RelinkKind } from "./compose";

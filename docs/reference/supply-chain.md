@@ -7,10 +7,10 @@ this lane, all as Docker images pinned by hash: **syft** generates the SBOMs,
 **grant** gates their licenses, and **cosign** signs them.
 
 ```text
-git archive HEAD ─▶ syft ─▶ 3 SBOM docs ─▶ normalize ─▶ parity ──┬─▶ grant (license gate)
-                                                                 ├─▶ validate (per-format)
-                                                                 └─▶ cosign (main only,
-                                                                     needs parity + validate)
+git archive HEAD ─▶ syft ─▶ 3 SBOM docs ─▶ normalize ─▶ supplement ─▶ parity ─▶ census ──┬─▶ grant (license gate)
+                                                                                         ├─▶ validate (per-format)
+                                                                                         └─▶ cosign (main only,
+                                                                                             needs parity + validate)
 ```
 
 The SBOM lane covers the whole repository (`backend/`, `frontend/` and `extensions/`), so
@@ -108,7 +108,7 @@ are the cleaned bytes. Running both filters twice changes nothing. That also
 holds for a later syft that already writes relative names and no folder entries.
 
 The zero SHA-1 is the test because it is the only signal syft gives. Version
-1.50 labels every SPDX element `software_fileKind == "file"`, folders included,
+1.54 labels every SPDX element `software_fileKind == "file"`, folders included,
 so the kind field cannot tell a folder from a file. A real file always carries a SHA-256
 and SHA-512 that is not zero, next to its SHA-1.
 
@@ -140,26 +140,56 @@ The allow list, as set up:
 | Group | License names |
 |---|---|
 | Open licenses with few rules | `Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `0BSD`, `Zlib`, `BSL-1.0`, `CC0-1.0` |
-| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0` |
+| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0`, `PostgreSQL` |
 | Set by a maintainer | `CC-BY-4.0`, `Python-2.0`, `Unlicense` |
 | The own source license of Margince | `BUSL-1.1` |
 
-Two groups never reach the allow list check:
+These never reach the allow list check:
 
 - **Our own packages** are skipped by name and path (`ignore-packages`):
   `github.com/margince/margince/*` (our own Go modules) and
   `example.margince.dev/*` (the committed sample extensions). They carry no
   third-party license to gate.
-- **Local composite actions** under `.github/actions/` are skipped by name and
-  path too (`./.github/actions/*`). They are our own files and carry the
-  repository's own BUSL-1.1.
+- **Local composite actions** under `.github/actions/` and **local workflows**
+  under `.github/workflows/` are skipped by name and path too
+  (`./.github/actions/*`, `./.github/workflows/*`). They are our own files and
+  carry the repository's own BUSL-1.1.
   - They cannot be handled the way the pinned third-party actions are. A local
-    action gets no purl at all from syft, while `make sbom-supplement` keys its
-    map on purl. So the map cannot reach them.
-  - The entry uses a `*` pattern, so the next composite action is covered on the day
-    it is added.
+    action or workflow gets no purl at all from syft, while `make sbom-supplement`
+    keys its map on purl. So the map cannot reach them.
+  - Each entry uses a `*` pattern, so the next one is covered on the day it is
+    added.
+- **The code scan action** (`SonarSource/sonarqube-scan-action`) carries
+  `LGPL-3.0-only`. It runs only in CI and never ships with the product, so it is
+  skipped. The allow list stays the licenses the product may ship.
 
 All else must still resolve to a license that grant knows and allows.
+
+### Every package of the lock file is in the SBOM
+
+grant judges only the packages the SBOM lists. So a scan that reads part of a
+lock file gives a short list, and grant passes it. `pnpm-lock.yaml` is a stream
+of two YAML documents: pnpm with its own pinned binaries first, then the
+workspace. A scan that stops after the first document lists pnpm and none of the
+web app, and that SBOM passes every other check.
+
+`make sbom-census` holds the SBOM to each `pnpm-lock.yaml` committed at `HEAD`.
+It reads every document with `PyYAML`, in the pinned Python image, so it shares
+no code with syft. Each key under `packages:` is one package, `name@version`.
+The check fails when the CycloneDX document has no npm package for a key, and
+names each key it misses.
+
+A new file shape could make syft and this check miss the same packages. So the
+check also fails on a document that gives no package, or that does not say
+`lockfileVersion: '9.0'`, the shape both were checked against. `make sbom` runs
+the check after `sbom-parity`, so the license gate and a release run it too. It
+writes its result to stderr, which `make sbom-gate` shows.
+`make test-sbom-census` proves it fails on short lists, with the real `PyYAML`
+in its container.
+
+The packages a unit's own frontend asks for resolve in the generated workspace
+under `build/composition-frontend/workspace/`, not in `pnpm-lock.yaml`. So the
+SBOM does not list them, and this check does not see them.
 
 ## Format check
 
@@ -212,17 +242,19 @@ the `Makefile` are comments next to the hash; update tag and hash together.
 
 | Setting | Default | Notes |
 |---|---|---|
-| `SYFT_IMAGE` | `anchore/syft@sha256:1288ea4c…` (`v1.50.0`) | the scanner |
+| `SYFT_IMAGE` | `anchore/syft@sha256:0356562f…` (`v1.54.0`) | the scanner |
 | `GRANT_IMAGE` | `anchore/grant@sha256:17246361…` (`v0.6.8`) | the license gate |
 | `COSIGN_IMAGE` | `gcr.io/projectsigstore/cosign@sha256:c77247c9…` (`v2.4.3`) | signing with no key of its own |
 | `SYFT` / `GRANT` / `COSIGN` | `docker run --rm -v "$(CURDIR)":/src -w /src <image>` | set the whole command to use the tools on the host: `make sbom SYFT=syft GRANT=grant` |
 | `SBOM_VERSION` | tag, else `dev-<revision>` | see [Versioning](#versioning) |
 | `SBOM_DIR` | `sboms` | output folder |
 | `SBOM_SRC` | `.tmp/sbom-src` | the path of the clean export (created and removed per run) |
+| `SBOM_LOCKFILES` | empty | the lock files `sbom-census` reads; empty reads each `pnpm-lock.yaml` at `HEAD`, the tree `make sbom` scanned |
 | `COSIGN_HOME` | `.tmp/cosign-home` | the cosign `HOME` in the container |
 
-The host still needs Docker, `git`/`tar` (the clean export) and jq (cleaning and
-parity run on the host), plus network access to enrich licenses.
+The host still needs Docker, `git`/`tar` (the clean export) and jq (cleaning,
+parity and the census run on the host). It also needs network access, to enrich
+licenses and to install the pinned Python packages.
 
 cosign runs as the user who starts it, with a moved `HOME`. The cosign image
 defaults to uid 65532. That uid does not own the `sboms/` folder shared into the
@@ -273,8 +305,9 @@ right to mint an OIDC token is not granted there. Only the `sign` job asks for
 it, so generation code that a branch controls can never mint a signing token.
 
 **Job `sbom`** checks out with `persist-credentials: false` and `fetch-depth: 0`
-(`--exact-match` needs tags and history to resolve). It then runs `make sbom`, then
-`make sbom-check`. The license gate stays on this path because `sign` below needs
+(`--exact-match` needs tags and history to resolve). It then runs `make sbom-gate`:
+`make sbom`, then `make sbom-check`, and both again when grant refuses a package,
+up to three runs. The license gate stays on this path because `sign` below needs
 it to pass first. It publishes the `sboms` output from `sboms/`, with
 `if-no-files-found: error` and 90-day retention.
 
@@ -301,10 +334,11 @@ It is a separate job that never runs off `main`, for two reasons:
 
 | Target | What it does |
 |---|---|
-| `sbom` | Generate the three SBOMs of the source tree from a clean `git archive HEAD` export into `sboms/`, with license data (needs network). Then run `sbom-normalize` and `sbom-parity`. Signing is not part of it |
+| `sbom` | Generate the three SBOMs of the source tree from a clean `git archive HEAD` export into `sboms/`, with license data (needs network). Then run `sbom-normalize`, `sbom-supplement`, `sbom-parity`, `sbom-census` and `sbom-validate`. Signing is not part of it |
 | `sbom-normalize` | Make the three syft writers agree on one file set: strip the full scan-root prefix from CycloneDX, and drop the extra SPDX entries for folders and empty names. Running it twice changes nothing; it runs before any signature, so the signed bytes are the cleaned bytes |
 | `sbom-parity` | Check that all three SBOMs list the same set of files, relative to the repository; prints `OK: three SBOMs list the same <n> files` or fails with the diff |
-| `sbom-check` | The license gate: `grant check sboms/margince.cdx.json -c .grant.yaml`. Refuses a license that is not allowed, unknown or missing; our own packages, local composite actions included, are skipped by name and path |
+| `sbom-census` | Check that the CycloneDX document has an npm package for every key under `packages:` in each YAML document of each `pnpm-lock.yaml` at `HEAD`. Fails on a key it misses, and names it; fails on a document that gives no package or has another `lockfileVersion`. See [the license gate](#every-package-of-the-lock-file-is-in-the-sbom) |
+| `sbom-check` | The license gate: `grant check sboms/margince.cdx.json -c .grant.yaml`. Refuses a license that is not allowed, unknown or missing; our own packages, local composite actions and workflows, and the code scan action are skipped by name and path |
 | `sbom-sign` | cosign `sign-blob` per SBOM, with no key of its own → `*.cosign.bundle`. Needs an OIDC token. Depends on `sbom-parity`, not `sbom`, so it checks again and does not build again; generation never runs under the signing token |
 
 Each of these but `sbom` fails at once with

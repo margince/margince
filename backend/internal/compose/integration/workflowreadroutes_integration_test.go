@@ -70,7 +70,7 @@ type sharedApproval struct {
 // read_import_report, and its report on GET /imports/{id}/report and the
 // tool's report member.
 func TestImportRoutesAnswerAsTheirTools(t *testing.T) {
-	d := newTwoDoorsWith(t, "import-read-doors", []compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read")
+	d := newTwoDoorsWith(t, "import-read-doors", nil, "read")
 	run, _ := importContactFile(t, d.e, "Email,Full Name,Title\nada@doors.example,Ada Doors,Engineer\n")
 
 	tool := d.tool(t, "read_import_report", map[string]any{"run_id": run})

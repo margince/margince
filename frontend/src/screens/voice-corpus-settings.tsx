@@ -5,7 +5,7 @@ import { SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
-import { useFileDrop } from "./use-file-drop";
+import { useFileDrop } from "../lib/use-file-drop";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
 import { useVoiceIntake } from "./use-voice-intake";
 import { ACCEPTED_CORPUS_ATTR } from "./voice-corpus-file";

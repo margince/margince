@@ -12,8 +12,8 @@ import { PanelPlate } from "../design-system/panel";
 import { WriteRefused } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
+import { downloadBytes, filenameFromDisposition } from "../lib/download";
 import { throwProblem } from "../lib/problem";
-import { downloadBytes, filenameFromDisposition } from "./download";
 
 const SKILL_FILENAME = "margince-skill.zip";
 
