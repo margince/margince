@@ -186,3 +186,71 @@ describe("what a tool is called on screen", () => {
     expect(provenance).toEqual({ kind: "agent", agent: undefined });
   });
 });
+
+// An import runs as one administrator, so captured_by names that seat on every
+// row it wrote and the reader who ran it would be told they typed the file.
+describe("a row an import wrote", () => {
+  const VIEWER = "u-admin";
+
+  it("reads as imported, not typed by the administrator who ran it", () => {
+    expect(
+      provenanceOf(
+        `human:${VIEWER}`,
+        VIEWER,
+        undefined,
+        "mirror:csv:pipedrive-export:company:org-12",
+      ),
+    ).toEqual({ kind: "import", source: "pipedrive-export" });
+  });
+
+  it("names the upload and never the stamp that carries it", () => {
+    const provenance = provenanceOf(
+      `human:${VIEWER}`,
+      VIEWER,
+      null,
+      "mirror:csv:Q3 leads.v2:contact:a@b.example",
+    );
+
+    expect(provenance).toEqual({ kind: "import", source: "Q3 leads.v2" });
+    expect(JSON.stringify(provenance)).not.toContain("mirror:");
+  });
+
+  it("says only that it was imported when the upload has no name", () => {
+    expect(
+      provenanceOf(
+        `human:${VIEWER}`,
+        VIEWER,
+        undefined,
+        "mirror:csv:company:7",
+      ),
+    ).toEqual({ kind: "import", source: undefined });
+  });
+
+  it("names another importer's system by its first segment", () => {
+    expect(
+      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "mirror:hubspot"),
+    ).toEqual({ kind: "import", source: "hubspot" });
+  });
+
+  it("lets the source system's author speak first", () => {
+    const author = { display_name: "Mutaz Suleiman", via: "HubSpot" };
+
+    expect(
+      provenanceOf(
+        `human:${VIEWER}`,
+        VIEWER,
+        author,
+        "mirror:csv:pipedrive-export:company:1",
+      ),
+    ).toEqual({ kind: "human", self: true, userId: VIEWER, author });
+  });
+
+  it("leaves a typed row typed, whatever free text its source holds", () => {
+    expect(
+      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "manual"),
+    ).toEqual({ kind: "human", self: true, userId: VIEWER });
+    expect(
+      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "my-mirror:csv:x"),
+    ).toEqual({ kind: "human", self: true, userId: VIEWER });
+  });
+});

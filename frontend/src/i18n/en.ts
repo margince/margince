@@ -823,6 +823,8 @@ export const en = {
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
   "trust.sourceUnknown": "Source not recorded",
+  "trust.imported": "Imported",
+  "trust.importedFrom": "Imported from {source}",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to
   // a name, so the tag says the kind and stops rather than printing an

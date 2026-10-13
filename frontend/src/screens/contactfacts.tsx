@@ -106,6 +106,7 @@ export function ContactFacts({
                 contact.captured_by,
                 viewerId,
                 contact.author,
+                contact.source,
               )}
             />
           }

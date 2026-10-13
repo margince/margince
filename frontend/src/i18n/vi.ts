@@ -826,6 +826,8 @@ export const vi = {
   "trust.loggedInByVia": "{name} đã ghi nhận trong {via}",
   "trust.loggedInBy": "{name} đã ghi nhận",
   "trust.sourceUnknown": "Không ghi nhận nguồn",
+  "trust.imported": "Đã nhập vào",
+  "trust.importedFrom": "Nhập từ {source}",
   "trust.agentTag": "Do {agent} tự động làm",
   "trust.agentUnnamed": "Do trợ lý AI tự động làm",
   "trust.systemTag": "Tác vụ hệ thống: {job}",

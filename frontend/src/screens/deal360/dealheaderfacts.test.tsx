@@ -426,3 +426,22 @@ describe("the close date says how much it is worth believing", () => {
     expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
   });
 });
+
+describe("a deal an import wrote", () => {
+  it("an imported deal is labelled imported, not typed by you", () => {
+    show(
+      <DealIdentityFacts
+        deal={{
+          captured_by: "human:u-admin",
+          source: "mirror:csv:pipedrive-export:deal:d-4",
+        }}
+        stages={stages}
+        locale="en"
+      />,
+    );
+    expect(
+      screen.getByText("Imported from pipedrive-export"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Typed by/)).toBeNull();
+  });
+});

@@ -261,7 +261,7 @@ They are two facts, so they combine, and a panel that is both uses both.
 
 **`ProvenanceTag` is the rule at its smallest**: one `Badge` per provenance, and only its `agent`
 arm takes `tone="ai"`, with the Sparkles that tone draws. Every other kind is the default soft badge, told
-apart by its words. Those kinds are a connector, a system job, a human, a buyer, and an unknown
+apart by its words. Those kinds are a connector, a system job, a human, a buyer, an import, and an unknown
 source.
 A connector copies what a mailbox already held, and a system job runs a rule, so neither one is a
 model that decides. There is no provenance class to use; the tone is the claim.

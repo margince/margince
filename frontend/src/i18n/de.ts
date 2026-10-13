@@ -847,6 +847,8 @@ export const de = {
   "trust.loggedInByVia": "In {via} erfasst von {name}",
   "trust.loggedInBy": "Erfasst von {name}",
   "trust.sourceUnknown": "Quelle nicht erfasst",
+  "trust.imported": "Importiert",
+  "trust.importedFrom": "Importiert aus {source}",
   "trust.agentTag": "Automatisiert durch {agent}",
   "trust.agentUnnamed": "Automatisiert durch einen Agenten",
   "trust.systemTag": "Systemaufgabe: {job}",

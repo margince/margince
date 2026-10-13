@@ -38,7 +38,16 @@ export function provenanceOf(
   // seat on every row it wrote. That is true, and useless as a statement about
   // authorship. The author is the field that knows, and the tag prefers it.
   author?: SourceAuthor | null,
+  // The row's own `source` stamp. An import writes it inside the importer's
+  // namespace, and captured_by there names only the administrator who ran it.
+  stamp?: string | null,
 ): Provenance {
+  // An author already says where the row came from, and better. Without one,
+  // the administrator's seat would read "typed by you" over a migrated row.
+  const imported = author ? undefined : importProvenance(stamp);
+  if (imported) {
+    return imported;
+  }
   if (!capturedBy) {
     return { kind: "unknown" };
   }
@@ -130,4 +139,31 @@ const EXTENSION_MARKER = "ext";
 function connectorLabel(rest: string): string {
   const [head = "", ...tail] = rest.split(":");
   return head === EXTENSION_MARKER ? (tail[0] ?? "") : head;
+}
+
+/**
+ * The importer's reserved namespace. It mirrors the backend's
+ * `provenance.ReservedSourceSystemPrefix`; no client write path can spell it,
+ * so a `source` that starts with it was written by an import.
+ */
+const IMPORT_NAMESPACE = "mirror:";
+
+/** The objects an import stamps after its source name (`mirror:csv:<name>:<object>:<id>`). */
+const IMPORT_OBJECTS = new Set(["company", "contact", "lead"]);
+
+// `mirror:csv:<name>:<object>:<id>` names the upload; an unnamed upload omits the
+// name. A name that reads as an object is taken for the object, so that row says
+// only "Imported", which stays true.
+function importProvenance(
+  source: string | null | undefined,
+): Provenance | undefined {
+  if (!source?.startsWith(IMPORT_NAMESPACE)) {
+    return undefined;
+  }
+  const [system = "", ...tail] = source
+    .slice(IMPORT_NAMESPACE.length)
+    .split(":");
+  const name = system === "csv" ? tail[0] : system;
+  const named = name && !IMPORT_OBJECTS.has(name) ? name : undefined;
+  return { kind: "import", source: named };
 }

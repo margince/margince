@@ -54,6 +54,9 @@ export type Provenance =
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
   | { kind: "buyer" }
+  // A row an import wrote. `source` is the upload's or system's name when the
+  // stamp carries one, and never the stamp itself.
+  | { kind: "import"; source?: string }
   | { kind: "unknown" };
 
 // Who wrote an imported row where it came from, as the contract reports it.
@@ -108,6 +111,10 @@ export function provenanceLabel(
       return t("trust.connectorTag", { connector: provenance.connector });
     case "buyer":
       return t("trust.typedByBuyer");
+    case "import":
+      return provenance.source
+        ? t("trust.importedFrom", { source: provenance.source })
+        : t("trust.imported");
     case "unknown":
       return t("trust.sourceUnknown");
     case "human":

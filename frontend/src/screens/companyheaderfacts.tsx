@@ -80,6 +80,7 @@ export function CompanyIdentityFacts({
     company.captured_by,
     viewerId,
     company.author,
+    company.source,
   );
   // Named by id, the same read every author/owner tag resolves through,
   // asked for only when the provenance names a human at all.

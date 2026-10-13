@@ -159,6 +159,7 @@ export function activityTimeline(
         activity.captured_by,
         viewerUserId,
         activity.author,
+        activity.source,
       ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance
