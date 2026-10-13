@@ -349,6 +349,8 @@ describe("a create that filed more than one pair", () => {
     });
     await press(root, "Merge into the existing record");
     expect(labels(root)).toEqual([]);
-    expect(calls.filter((c) => c.tool === "resolve_duplicates")).toHaveLength(1);
+    expect(calls.filter((c) => c.tool === "resolve_duplicates")).toHaveLength(
+      1,
+    );
   });
 });
