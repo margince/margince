@@ -107,8 +107,8 @@ func StoredActorOf(p principal.Principal) StoredActor {
 	}
 }
 
-// storedActorOf encodes the acting principal for a move that queues work.
-func storedActorOf(ctx context.Context) ([]byte, error) {
+// encodeActorOf encodes the acting principal for a move that queues work.
+func encodeActorOf(ctx context.Context) ([]byte, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, fmt.Errorf("queueing import work needs an authenticated principal: %w", apperrors.ErrPermissionDenied)
@@ -237,7 +237,7 @@ func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
 				return err
 			}
 			_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,
-				map[string]any{"error": prior}, map[string]any{"error": cause})
+				map[string]any{errorColumn: prior}, map[string]any{errorColumn: cause})
 			return err
 		default:
 			return fmt.Errorf("import run %s: a %s attempt has no failed state: %w", l.Run, l.Status, apperrors.ErrConflict)

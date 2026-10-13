@@ -275,7 +275,7 @@ func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (co
 // before 0260 names no agent, and the rebuild refuses it rather than inventing one.
 func (s schedulerOf) storedActor() migration.StoredActor {
 	stored := migration.StoredActor{Type: principal.PrincipalHuman, UserID: s.UserID}
-	if s.Kind == "agent" {
+	if principal.PrincipalType(s.Kind) == principal.PrincipalAgent {
 		stored.Type = principal.PrincipalAgent
 		stored.ID = s.AgentActorID
 		stored.PassportID = s.AgentPassport

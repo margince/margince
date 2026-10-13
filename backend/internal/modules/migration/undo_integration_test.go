@@ -269,7 +269,7 @@ func TestUndoRefusesAnythingButComplete(t *testing.T) {
 
 // A second call while an undo is under way for the same run is a conflict,
 // not a second pass over the same rows. beginUndo's row lock covers only its
-// own transaction, so lockRunWrites's advisory lock, held for the whole call, is
+// own transaction, so acquireRunWrites's advisory lock, held for the whole call, is
 // what refuses it.
 func TestUndoRefusesAConcurrentSecondCallOnTheSameRun(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
@@ -277,9 +277,9 @@ func TestUndoRefusesAConcurrentSecondCallOnTheSameRun(t *testing.T) {
 	run := completeCSVRun(ctx, t, s)
 	landLead(ctx, t, s, run.ID, "row-1")
 
-	release, err := s.lockRunWrites(ctx, run.ID)
+	release, err := s.acquireRunWrites(ctx, run.ID)
 	if err != nil {
-		t.Fatalf("lockRunWrites: %v", err)
+		t.Fatalf("acquireRunWrites: %v", err)
 	}
 	defer release()
 

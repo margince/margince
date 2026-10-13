@@ -93,12 +93,12 @@ type mapRow struct {
 // archived; a row a human touched is kept and listed in `kept` (A93). A row
 // that fails lands in `errored` and never aborts the rows after it.
 //
-// lockRunWrites refuses a concurrent call; undoPageSize bounds memory and the report.
+// acquireRunWrites refuses a concurrent call; undoPageSize bounds memory and the report.
 func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoReport, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return UndoReport{}, err
 	}
-	release, err := s.lockRunWrites(ctx, id)
+	release, err := s.acquireRunWrites(ctx, id)
 	if err != nil {
 		return UndoReport{}, err
 	}
@@ -184,10 +184,10 @@ func (s *RunStore) LockRunWrites(ctx context.Context, id RunID) (func(), error) 
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
-	return s.lockRunWrites(ctx, id)
+	return s.acquireRunWrites(ctx, id)
 }
 
-func (s *RunStore) lockRunWrites(ctx context.Context, id RunID) (func(), error) {
+func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), error) {
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("import run %s: acquiring the write lock connection: %w", id, err)
@@ -235,7 +235,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var undoReportRaw []byte
 		// FOR UPDATE: two calls reaching beginUndo back to back do not both
-		// read `complete` and both start a fresh reversal. lockRunWrites refuses a
+		// read `complete` and both start a fresh reversal. acquireRunWrites refuses a
 		// concurrent second caller; this covers one retrying right after the
 		// first releases its lock.
 		var reportRaw []byte
@@ -284,7 +284,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 		if err != nil {
 			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
 		}
-		actor, err := storedActorOf(ctx)
+		actor, err := encodeActorOf(ctx)
 		if err != nil {
 			return err
 		}

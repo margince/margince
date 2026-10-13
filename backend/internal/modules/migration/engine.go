@@ -221,7 +221,10 @@ func (e *Engine) RunSlice(ctx context.Context, runID RunID, src Source, b Budget
 }
 
 func (e *Engine) walkSlice(ctx context.Context, runID RunID, src Source, b Budget) (*walk, bool, error) {
-	led := e.ledger()
+	var led ledger = flipLedger{runs: e.runs}
+	if e.lease != nil {
+		led = e.lease
+	}
 	run, err := led.open(ctx, runID)
 	if err != nil {
 		return nil, false, err

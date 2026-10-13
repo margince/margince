@@ -51,7 +51,7 @@ const (
 
 const (
 	// importWriteQueue keeps commit and undo slices apart from the jobs a
-	// person is waiting on. Each slice holds the run's lock connection plus one
+	// user is waiting on. Each slice holds the run's lock connection plus one
 	// row transaction at a time.
 	importWriteQueue = "import_write"
 	// One worker per process: slices of two runs interleave through the

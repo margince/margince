@@ -89,7 +89,7 @@ func (s *RunStore) ClaimUndo(ctx context.Context, id RunID) error {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	release, err := s.lockRunWrites(ctx, id)
+	release, err := s.acquireRunWrites(ctx, id)
 	if err != nil {
 		return err
 	}

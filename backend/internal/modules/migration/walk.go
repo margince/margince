@@ -41,20 +41,13 @@ type ledger interface {
 	fail(ctx context.Context, wk *walk, cause error) error
 }
 
-func (e *Engine) ledger() ledger {
-	if e.lease != nil {
-		return e.lease
-	}
-	return flipLedger{runs: e.runs}
-}
-
 // flipLedger keeps the flip's contract: the checkpoint advances after every
 // row, and the attempt's whole report is folded in when it ends.
 type flipLedger struct{ runs runRecords }
 
 func (f flipLedger) open(ctx context.Context, id RunID) (Run, error) { return f.runs.Get(ctx, id) }
 
-func (flipLedger) replayed(context.Context) (map[string]bool, error) { return nil, nil }
+func (flipLedger) replayed(context.Context) (map[string]bool, error) { return map[string]bool{}, nil }
 
 func (f flipLedger) landed(ctx context.Context, wk *walk) error {
 	return f.runs.advanceCheckpoint(ctx, wk.runID, wk.cursor)

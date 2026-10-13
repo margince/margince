@@ -6,7 +6,7 @@
 package integration
 
 // The import job acts as whoever queued the attempt, in that attempt's trace.
-// It acts under the authority that person or agent holds when the job runs.
+// It acts under the authority that member or agent holds when the job runs.
 
 import (
 	"context"

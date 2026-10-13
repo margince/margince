@@ -197,7 +197,7 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 		set.WriteString(", " + literal)
 	}
 	if change.queue {
-		actor, err := storedActorOf(ctx)
+		actor, err := encodeActorOf(ctx)
 		if err != nil {
 			return err
 		}
