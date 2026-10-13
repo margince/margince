@@ -190,10 +190,6 @@ export type EdgeOption = {
 // employment (→company) and deal_stakeholder (→deal); a company anchors employment
 // (→contact) and the three company↔company kinds (→counterparty company). Offering the
 // rest would only earn an endpoint-shape 422.
-function noKindFor(kind: string | undefined): never {
-  throw new Error(`no ${kind ?? "relationship"} kind for this scope`);
-}
-
 export function edgeOptions(
   scope: RelationshipScope,
 ): [EdgeOption, ...EdgeOption[]] {
@@ -228,6 +224,10 @@ export function edgeOptions(
       field: "counterparty_company_id",
     },
   ];
+}
+
+function noKindFor(kind: string | undefined): never {
+  throw new Error(`no ${kind ?? "relationship"} kind for this scope`);
 }
 
 // Typed carrier for the picked endpoint id — a computed-key spread would
@@ -290,10 +290,7 @@ export function AddRelationshipAction({
   // that edge alone. A contact's Deals tab is exactly that: the reader is there
   // to seat this contact on a deal, and a kind selector offering "employment"
   // beside it would ask them to answer a question the tab already answered.
-  //
-  // The scope is unchanged — it is still this contact — so the picker, the write
-  // and the invalidation are the ones the relationships tab already uses. What
-  // narrows is what this surface offers and what it calls it.
+  // The scope, picker, write and invalidation stay those of the relationships tab.
   only?: { kind: CreatableRelationshipKind; label: MessageKey };
 }>) {
   const t = useT();

@@ -17,10 +17,14 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { humanizeToken } from "./audit";
 import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
+import {
+  CAPABILITIES,
+  CAPABILITY_HINTS,
+  CAPABILITY_LABELS,
+} from "./dealroomcapability";
 import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
@@ -36,19 +40,6 @@ type DealRoom = components["schemas"]["DealRoom"];
 type Participant = components["schemas"]["DealRoomParticipant"];
 type Capability = components["schemas"]["DealRoomParticipantCapability"];
 type Issued = components["schemas"]["DealRoomInvitationIssued"];
-
-type KnownCapability = "view" | "comment";
-const CAPABILITIES: readonly KnownCapability[] = ["view", "comment"];
-
-const CAPABILITY_LABELS: Record<KnownCapability, MessageKey> = {
-  view: "access.cap.view",
-  comment: "access.cap.comment",
-};
-
-const CAPABILITY_HINTS: Record<KnownCapability, MessageKey> = {
-  view: "access.cap.viewHint",
-  comment: "access.cap.commentHint",
-};
 
 export function participantsKey(roomId: string) {
   return ["deal-room-participants", roomId] as const;
