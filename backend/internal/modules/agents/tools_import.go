@@ -270,23 +270,24 @@ const importRunRecordType = "import_run"
 // awaitingApproval is the one state a commit may start from.
 const awaitingApproval = "awaiting_approval"
 
-// refuseUncommittableRun holds a commit to a run that has actually been
-// dry-run.
-//
-// This is G — the dry run stays mandatory — expressed where it cannot be
-// skipped: a run only reaches awaiting_approval by producing a report, so
-// requiring that state IS requiring the report. The refusal says which state
-// the run is in, because "already running" and "already finished" are the two
-// a caller most needs told apart.
+// refuseUncommittableRun holds a commit to a run that has been dry-run, or to a
+// failed commit, which resumes at its checkpoint. A run reaches
+// awaiting_approval only by producing a report, and only an approved run was
+// ever committed, so the dry run stays mandatory. The refusal names the state:
+// "already running" and "already finished" are what a caller must tell apart.
 func refuseUncommittableRun(run crmcontracts.ImportRun) error {
-	if string(run.Status) == awaitingApproval {
+	status := string(run.Status)
+	if status == awaitingApproval || (status == failedCommit && run.ApprovedAt != nil) {
 		return nil
 	}
 	return &BadArgsError{Cause: fmt.Errorf(
-		"import run %s is %s, and a commit starts only from %s — "+
+		"import run %s is %s, and a commit starts only from %s or resumes a failed commit — "+
 			"an import commits what a dry run reported, so there is always a report first",
-		run.Id, string(run.Status), awaitingApproval)}
+		run.Id, status, awaitingApproval)}
 }
+
+// failedCommit is the state of a commit that stopped part-way.
+const failedCommit = "failed"
 
 // importRunArg reads the one argument every id-bearing import verb takes.
 func importRunArg(in json.RawMessage) (ids.UUID, error) {

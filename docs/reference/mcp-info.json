@@ -10,16 +10,16 @@
   "totals": {
     "tools": 66,
     "resources": 9,
-    "tool_catalog_bytes": 218919,
+    "tool_catalog_bytes": 218984,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 55619,
+    "approx_wire_tokens_total": 55636,
     "largest_tool_bytes": 9293,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
-      "description_bytes": 58480,
+      "description_bytes": 58545,
       "input_schema_bytes": 56606,
       "output_schema_bytes": 87636,
-      "description_plus_input_schema_bytes": 115086
+      "description_plus_input_schema_bytes": 115151
     }
   },
   "tools": {
@@ -2308,7 +2308,7 @@
           "readOnlyHint": false,
           "title": "Commit an import"
         },
-        "description": "Write a checked import into the workspace. The dry run is the check; this starts the write and answers at once with the run running. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's report until its state is complete or failed, then report what landed: the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope \"write\".)",
+        "description": "Write a checked import into the workspace. The dry run is the check; this starts the write and answers at once with the run running. Only from awaiting_approval, the state a run reaches by producing a dry-run report, so there is always a report first, or from a failed commit, which resumes at the row it stopped at. This cannot be undone from here — undoing an import needs the web app. A request to get a file in is not a review of it: unless the asker says they have already been through these rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's report until its state is complete or failed, then report what landed: the counts and the mapping the run used, each column by the field it went to. (Governance: runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {

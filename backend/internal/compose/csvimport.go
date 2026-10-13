@@ -116,8 +116,10 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// discardSource removes a stored import source. Keyed the same way it was
-// written, so a ref from another workspace names a key this one never wrote.
+// discardSource ends the draft a stored import source opened, which releases
+// the file to the reaper. A source no run holds is deleted at once. Keyed the
+// same way it was written, so a ref from another workspace names a key this
+// one never wrote.
 func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if h.blobs == nil {
 		return fmt.Errorf("this role stores no objects, so it holds no import source: %w", apperrors.ErrConflict)
@@ -131,18 +133,26 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if err := h.ownsSource(ctx, ref); err != nil {
 		return err
 	}
-	return h.blobs.Delete(ctx, ref)
+	runs := migration.NewRunStore(h.db)
+	run, err := runs.RunOfSource(ctx, ref)
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound):
+		return h.blobs.Delete(ctx, ref)
+	case err != nil:
+		return err
+	case run.SourceReleased:
+		return nil
+	}
+	_, err = runs.Cancel(ctx, run.ID)
+	return err
 }
 
-// profileAndStore is everything the upload does once it HAS the bytes. It reads
+// profileAndStore is everything the upload does once it has the bytes. It reads
 // the header and counts the rows, proposes a mapping, stores the file and opens
 // its run. fileName is empty for pasted text.
 //
-// It is separate from the transport because two doors arrive at this point with
-// bytes in hand. The REST one reads a multipart file. The tool surface takes
-// CSV as text, since an assistant holding a spreadsheet's contents cannot
-// perform a file upload — and asking it to invent a multipart body would be a
-// worse door than none.
+// Two doors share it. The REST one reads a multipart file; the tool surface
+// takes CSV as text, since an assistant cannot perform a file upload.
 func (h importHandlers) profileAndStore(
 	ctx context.Context, object, fileName string, body []byte,
 ) (crmcontracts.ImportSourceProfile, error) {

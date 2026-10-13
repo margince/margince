@@ -122,9 +122,8 @@ func (i importSeam) ProfileSource(
 	return i.door().profileAndStore(ctx, object, "", []byte(csv))
 }
 
-// DiscardSource removes a stored source no run will reference. Same grant as
-// storing it: a caller who may create an import run may drop the file they just
-// uploaded for one, and nobody else may reach into the store at all.
+// DiscardSource ends the draft a stored source opened, releasing its file.
+// Storing it took this grant, and nobody without it may reach into the store.
 func (i importSeam) DiscardSource(ctx context.Context, ref string) error {
 	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return err

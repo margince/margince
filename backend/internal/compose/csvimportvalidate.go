@@ -177,7 +177,7 @@ func (h importHandlers) sourceBusy(ctx context.Context, err error) error {
 		return err
 	}
 	refusal := &httperr.DetailedError{
-		Status: http.StatusConflict, Code: "import_source_busy",
+		Status: http.StatusConflict, Code: httperr.SourceBusyCode,
 		Detail: "another import of this source name is still writing; wait for it to finish, then test again",
 	}
 	if _, readErr := h.stagedFor(ctx, openapi_types.UUID(busy.RunID)); readErr == nil {
