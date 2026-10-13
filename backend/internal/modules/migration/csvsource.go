@@ -84,7 +84,18 @@ type CSVSource struct {
 	// before it — so this needs no lock, and giving it one would suggest a
 	// concurrency the rest of the type does not actually support.
 	skipped []SkippedLine
+
+	// observe hears where each page of Rows ended; nil hears nothing.
+	observe RowsRead
 }
+
+// RowsRead hears that a source has delivered its object's rows up to the
+// given position. An error it answers ends the read with that error.
+type RowsRead func(ctx context.Context, object string, delivered int) error
+
+// ObserveRows sets what hears each page of Rows end, so a reader can report
+// how far a walk of the file has come.
+func (s *CSVSource) ObserveRows(observe RowsRead) { s.observe = observe }
 
 // NewCSVSource binds one uploaded file to one object and one mapping.
 // sourceKeyColumn names the column that identifies a row for idempotent upsert
@@ -149,6 +160,11 @@ func (s *CSVSource) Rows(ctx context.Context, object string, offset, limit int) 
 		}
 		if s.cursor.delivered > offset {
 			out = append(out, row)
+		}
+	}
+	if s.observe != nil {
+		if err := s.observe(ctx, s.object, s.cursor.delivered); err != nil {
+			return nil, err
 		}
 	}
 	return out, nil

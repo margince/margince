@@ -8,7 +8,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,8 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ValidateImportRun tests a draft's saved choices on the same run, so "Import
-// anyway" is a save and a second test, never a second run.
+// ValidateImportRun queues the test of a draft's saved choices on the same run.
+// "Import anyway" is then a save and a second test, never a second run. A run
+// already being tested at that version is answered 200, as it stands.
 func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	ctx := r.Context()
 	if err := auth.Require(ctx, importRunGrant, principal.ActionUpdate); err != nil {
@@ -39,66 +39,54 @@ func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	tested, err := h.testRun(ctx, run, req.Version, requestOfRun(run))
+	queued, moved, err := h.testRun(ctx, run, req.Version, requestOfRun(run))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, tested)
+	status := http.StatusAccepted
+	if !moved {
+		status = http.StatusOK
+	}
+	httperr.WriteJSON(w, status, queued)
 }
 
-// testRun saves req's choices on run at version and tests them on that run.
-// Both doors arrive here, so the choices a report describes are the ones the
-// run keeps for its commit. A run another request is already testing at that
-// version is answered as it stands, which makes a double click start one test.
+// testRun saves req's choices on run at version and queues their test on that
+// run, in the transaction that moves it. Both doors arrive here, so the choices
+// a report describes are the ones the run keeps for its commit. The worker
+// reads the rows; the request checks only what the choices must satisfy. A run
+// already being tested at that version is answered unmoved, which makes a
+// double click start one test.
 func (h importHandlers) testRun(
 	ctx context.Context, run migration.Run, version int, req crmcontracts.CreateImportRunRequest,
-) (crmcontracts.ImportRun, error) {
+) (crmcontracts.ImportRun, bool, error) {
+	queue, ws, err := h.jobQueue(ctx)
+	if err != nil {
+		return crmcontracts.ImportRun{}, false, err
+	}
 	mapping, err := h.checkedMapping(ctx, req)
 	if err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, false, err
 	}
-	source, skipped, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
+	source, _, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
 	if err != nil {
-		return crmcontracts.ImportRun{}, importProblem(err)
+		return crmcontracts.ImportRun{}, false, importProblem(err)
 	}
 	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, false, err
 	}
 
 	runs := migration.NewRunStore(h.db)
 	saved, err := runs.UpdateDraft(ctx, run.ID, version, draftPatchOf(mapping))
 	if err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, false, err
 	}
-	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version, testsInRequest)
+	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version, queue.validates(ws))
 	if err != nil {
-		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
+		return crmcontracts.ImportRun{}, false, h.sessionRefusal(ctx, err)
 	}
-	if !moved {
-		return toContractImportRun(queued), nil
-	}
-	report, err := h.dryRun(ctx, runs, saved.ID, source, skipped, &mapping)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	if err := runs.AwaitApproval(ctx, saved.ID, report); err != nil {
-		// A run that cannot be parked for a human goes back to its draft
-		// rather than sitting in `validating`, which nothing else moves.
-		if _, replaced := errors.AsType[*migration.SupersededError](err); !replaced {
-			returnToDraft(ctx, runs, saved.ID, err)
-		}
-		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
-	}
-	staged, err := runs.GetStaged(ctx, saved.ID)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	return toContractImportRun(staged), nil
+	return toContractImportRun(queued), moved, nil
 }
-
-// testsInRequest queues no job: this request runs the test itself.
-func testsInRequest(context.Context, pgx.Tx, migration.Run) error { return nil }
 
 // checkedMapping holds a request to what a run's choices must satisfy before
 // a test reads a row. That is the object's fields, the grants and the tag.
@@ -176,13 +164,16 @@ func sentText(s string) *string {
 	return &s
 }
 
-// sessionRefusal answers a refusal that points at another run of the source
-// name: the one holding it, or the one that replaced this run. That run is
-// named only when the caller may read it.
+// sessionRefusal answers a refusal that points at another run. That is the run
+// holding the source name, the one that replaced this run, or the agent's own
+// test still going. It is named only when the caller may read it.
 func (h importHandlers) sessionRefusal(ctx context.Context, err error) error {
 	var other migration.RunID
 	refusal := &httperr.DetailedError{Status: http.StatusConflict}
-	if busy, ok := errors.AsType[*migration.SourceBusyError](err); ok {
+	if agent, ok := errors.AsType[*migration.AgentBusyError](err); ok {
+		other, refusal.Code = agent.RunID, httperr.AgentBusyCode
+		refusal.Detail = "this agent's test run of another import is still running; read that run until it has its report, then try again"
+	} else if busy, ok := errors.AsType[*migration.SourceBusyError](err); ok {
 		other, refusal.Code = busy.RunID, httperr.SourceBusyCode
 		refusal.Detail = "another import of this source name is in progress; let it finish or cancel it, then try again"
 	} else if replaced, ok := errors.AsType[*migration.SupersededError](err); ok {

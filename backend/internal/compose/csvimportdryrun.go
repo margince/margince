@@ -4,47 +4,18 @@
 package compose
 
 import (
-	"cmp"
 	"context"
-	"fmt"
-	"log/slog"
-	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 )
-
-// dryRun validates every part of a staged run inside the test-run budget. A
-// failure is recorded on the run before it is answered, so the run never stays
-// in `validating`.
-func (h importHandlers) dryRun(
-	ctx context.Context, runs *migration.RunStore, id migration.RunID, source migration.Source,
-	skipped func(object string) []migration.SkippedLine, mapping *migration.RunMapping,
-) (migration.Report, error) {
-	budget := cmp.Or(h.testRunBudget, importTestRunBudget)
-	testCtx, release := context.WithTimeout(ctx, budget)
-	defer release()
-	report, err := validateParts(testCtx, h.db, id, source, skipped, mapping)
-	if err == nil {
-		return report, nil
-	}
-	if testCtx.Err() != nil {
-		err = httperr.Validation("file", "test_run_too_long", fmt.Sprintf(
-			"the test run did not finish within %d seconds; split the file into smaller files and import each one",
-			int(budget.Seconds())))
-	} else {
-		err = importProblem(err)
-	}
-	returnToDraft(ctx, runs, id, err)
-	return migration.Report{}, err
-}
 
 // validateParts is the dry run proper. The writers read every row once for
 // owners and tags, so a file that breaks past its header fails here first.
+// progress hears the two passes that match rows against the estate.
 func validateParts(
 	ctx context.Context, db *database.DB, id migration.RunID, source migration.Source,
-	skipped func(object string) []migration.SkippedLine, mapping *migration.RunMapping,
+	skipped func(object string) []migration.SkippedLine, mapping *migration.RunMapping, progress *testRunProgress,
 ) (report migration.Report, err error) {
 	err = database.WithWorkspaceSnapshot(ctx, db.Pool(), func(ctx context.Context) error {
 		writers, err := newBundleWriters(ctx, db, id, mapping, source)
@@ -56,8 +27,14 @@ func validateParts(
 				return err
 			}
 		}
+		if err := progress.enter(ctx, migration.PhaseReading); err != nil {
+			return err
+		}
 		report, err = migration.NewEngine(migration.NewRunStore(db), writers).DryRun(ctx, source)
 		if err != nil {
+			return err
+		}
+		if err := progress.enter(ctx, migration.PhaseChecking); err != nil {
 			return err
 		}
 		report, err = predictEveryPart(ctx, source, skipped, writers, *mapping, report)
@@ -68,26 +45,4 @@ func validateParts(
 		return nil
 	})
 	return report, err
-}
-
-// returnToDraft ends a test run that stopped, keeping why on the draft so the
-// importer reads it beside the choices they can change. The test may have
-// stopped on the request's deadline, so the record cannot borrow that context.
-func returnToDraft(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
-	slog.ErrorContext(ctx, "import test run stopped", "run", id, "err", cause)
-	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), importStopFlushTimeout)
-	defer release()
-	if err := runs.ReturnToDraft(ctx, id, testStopCause(cause)); err != nil {
-		slog.ErrorContext(ctx, "returning a stopped import test run to its draft", "run", id, "err", err)
-	}
-}
-
-// testStopCause is what a draft says about its last test. A refusal the
-// importer can act on keeps its answer. Anything else may hold a driver
-// message, so it becomes a fixed sentence.
-func testStopCause(err error) string {
-	if fault, ok := httperr.Classify(err); ok && fault.Status < http.StatusInternalServerError {
-		return fault.Detail
-	}
-	return migration.CauseTestRunStopped
 }

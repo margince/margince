@@ -18967,12 +18967,14 @@ export interface paths {
         get: operations["listImportRuns"];
         put?: never;
         /**
-         * Create an import run from an uploaded source and a column mapping, and dry-run it.
+         * Create an import run from an uploaded source and a column mapping, and start its test run.
          * @description IEM-WIRE-3. Takes the connector, the `source_ref` from
-         *     `uploadImportSource`, and the mapping the human settled on, and runs the
-         *     validation pass — which writes **no** domain rows (AC-M5). The run
-         *     arrives at `awaiting_approval` carrying the report
-         *     `getImportRunReport` reads.
+         *     `uploadImportSource`, and the mapping the human settled on, and queues
+         *     the test run, which writes **no** domain rows (AC-M5). The call answers
+         *     at once with the run at `validating`. The worker then reads the file
+         *     and moves the run to `awaiting_approval` carrying the report
+         *     `getImportRunReport` reads, or back to `pending` with the reason in
+         *     `error` when the test stopped on the file or ran past its time.
          *
          *     An upload has one run. This call writes the mapping onto the draft the
          *     upload opened and tests it, so a second call on one `source_ref`
@@ -18983,9 +18985,11 @@ export interface paths {
          *     A test run of a `source_name` cancels every other run of that name that
          *     has not written (`superseded_by` names this run). A run of that name
          *     that is writing refuses it with 409 `import_source_busy`, whose
-         *     `details.run_id` names that run when the caller may read it. A test run
-         *     that stops on the file is refused 422, and the run returns to `pending`
-         *     with the reason in `error`.
+         *     `details.run_id` names that run when the caller may read it.
+         *
+         *     An agent tests one run at a time. Its second test run while the first
+         *     is still `validating` is a 409 `import_agent_busy`, whose
+         *     `details.run_id` names the run still being tested.
          *
          *     Permission-gated as a workspace-wide bulk mutation of the estate: a rep
          *     neither starts nor reads a migration run.
@@ -19111,13 +19115,14 @@ export interface paths {
         put?: never;
         /**
          * Test a draft import run against the estate.
-         * @description Runs the test of the run's saved choices, which writes no domain rows,
-         *     on the same run. "Import anyway" is `updateImportRun` with
+         * @description Queues the test of the run's saved choices, which writes no domain
+         *     rows, on the same run. "Import anyway" is `updateImportRun` with
          *     `on_broken_link: drop_link`, then this call. `version` must equal the
-         *     run's. The run answers at `awaiting_approval` with its report, or at
+         *     run's. The call answers 202 with the run at `validating`. The worker
+         *     then moves it to `awaiting_approval` with its report, or back to
          *     `pending` with the reason in `error` when the test stopped on the file
-         *     (also a 422). A second call for a run already being tested at that
-         *     `version` changes nothing.
+         *     or ran past its time. A second call for a run already being tested at
+         *     that `version` changes nothing and answers 200.
          *
          *     Supersede and `import_source_busy` work as they do for
          *     `createImportRun`.
@@ -19141,11 +19146,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cancel a draft or a report nobody will approve.
+         * Cancel a draft, a test run, or a report nobody will approve.
          * @description Moves a `pending` or `awaiting_approval` run to `cancelled` and
          *     releases its uploaded file. Neither state has written anything, so
-         *     nothing is left to undo. A run already `cancelled` is answered as it
-         *     stands. Any other state is a 409.
+         *     nothing is left to undo. A `validating` run stops its test and returns
+         *     to `pending` with its choices and file kept, so the answer is that
+         *     draft. A run already `cancelled` is answered as it stands. Any other
+         *     state is a 409.
          */
         post: operations["cancelImportRun"];
         delete?: never;
@@ -73777,7 +73784,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The run, validated and awaiting a human (dry run complete, zero rows written). */
+            /** @description The run at `validating`: its test run is queued, and zero rows are written. */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -73912,8 +73919,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The run after its test. */
+            /** @description The run already being tested at this `version`, unchanged. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            /** @description The run at `validating`, its test run queued. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -73939,7 +73955,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The cancelled run. */
+            /** @description The cancelled run, or the draft a stopped test run returned to. */
             200: {
                 headers: {
                     [name: string]: unknown;

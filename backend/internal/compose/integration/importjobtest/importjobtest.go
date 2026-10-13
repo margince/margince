@@ -3,7 +3,7 @@
 
 //go:build integration
 
-// Package importjobtest works the import jobs an approve or an undo queued. It
+// Package importjobtest works the import jobs a test, an approve or an undo queued. It
 // uses the workers the worker role registers, through River's test executor. The
 // River row moves as it would under a runner, so a dedupe and a snooze are real.
 //
@@ -38,7 +38,7 @@ const drainPasses = 100
 var queuedStates = []rivertype.JobState{rivertype.JobStateAvailable, rivertype.JobStateScheduled}
 
 // Kinds are the import kinds the harness works.
-var Kinds = []string{compose.ImportCommitArgs{}.Kind(), compose.ImportUndoArgs{}.Kind()}
+var Kinds = []string{compose.ImportValidateArgs{}.Kind(), compose.ImportCommitArgs{}.Kind(), compose.ImportUndoArgs{}.Kind()}
 
 // WorkQueued works every queued job of kind once, oldest first, with the
 // workers over the server's own object store, and answers how each ended.
@@ -60,7 +60,8 @@ func WorkQueuedBy(
 	return results
 }
 
-// Drain works import jobs until none is queued: every slice of every attempt.
+// Drain works import jobs until none is queued: every test run, and every
+// slice of every attempt.
 func Drain(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	for range drainPasses {
@@ -105,6 +106,8 @@ func work(
 	defer rollback(t, tx)
 	var result *rivertest.WorkResult
 	switch job.Kind {
+	case compose.ImportValidateArgs{}.Kind():
+		result, err = rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), workers.Validate).WorkJob(ctx, t, tx, job)
 	case compose.ImportCommitArgs{}.Kind():
 		result, err = rivertest.NewWorker(t, riverpgxv5.New(e.Pool), riverConfig(), workers.Commit).WorkJob(ctx, t, tx, job)
 	case compose.ImportUndoArgs{}.Kind():

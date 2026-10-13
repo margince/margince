@@ -75,5 +75,7 @@ func jobQueues() map[string]river.QueueConfig {
 		// Commit and undo slices of an import: one per process, because slices
 		// of two runs interleave through the snooze (importWriteQueue).
 		importWriteQueue: {MaxWorkers: importWriteMaxWorkers},
+		// A test run a user watches never queues behind a commit (importCheckQueue).
+		importCheckQueue: {MaxWorkers: importCheckMaxWorkers},
 	}
 }

@@ -100,7 +100,8 @@ func TestEachStaleTestRunRuleSettlesOnlyItsOwnRuns(t *testing.T) {
 
 func assertResumes(ctx context.Context, t *testing.T, db interface {
 	Tx(context.Context, func(pgx.Tx) error) error
-}, id RunID, want int) {
+}, id RunID, want int,
+) {
 	t.Helper()
 	var resumes int
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {

@@ -348,10 +348,10 @@ func createRunWithSourceKey(t *testing.T, e *apptest.AppEnv, object, sourceRef s
 ) (importRunDTO, int) {
 	t.Helper()
 	var run importRunDTO
-	status := e.Call(t, http.MethodPost, "/v1/imports", map[string]any{
+	status := testCall(t, e, "/v1/imports", map[string]any{
 		"connector": "csv", "object": object, "source_ref": sourceRef,
 		"mapping": mapping, "source_key": sourceKey,
-	}, nil, &run)
+	}, &run)
 	return run, status
 }
 

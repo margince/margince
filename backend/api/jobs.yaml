@@ -186,6 +186,13 @@ queues:
     reason: >-
       A full batch per policy, each record its own multi-statement audited
       transaction — minutes of database-bound work per tenant.
+  import_check:
+    max_workers: 2
+    reason: >-
+      A test run of an import that a user is watching. Its own pool, so a
+      long commit can never queue ahead of it. Two, one per open wizard tab.
+      Each holds its snapshot connection plus a short one for its progress
+      and heartbeat.
   import_write:
     max_workers: 1
     reason: >-
@@ -1383,6 +1390,29 @@ kinds:
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
 
+  import_validate:
+    role: worker
+    go_type: ImportValidateArgs
+    queue: import_check
+    timeout: 10m
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: a refusal, an over-budget stop and
+        a lost fence are written to the run, or are a superseded attempt's
+        quiet exit; a River retry would test again a run whose state already
+        says what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One test run of an import, read in one snapshot, so it is not sliced.
+      Ten minutes is far past what the row cap takes to test; past it the run
+      returns to its draft with an over-budget reason.
+
   import_commit:
     role: worker
     go_type: ImportCommitArgs
@@ -1443,9 +1473,9 @@ kinds:
     cadence: 1m
     reason: >-
       Settles every import run nothing else will move. A commit or undo slice
-      whose process died stops heartbeating, and the sweep queues a new attempt
-      within a couple of minutes, so the cadence is one minute. A test run
-      whose request ended without recording returns to draft; a draft or report
+      or test run whose process died stops heartbeating, and the sweep queues a
+      new attempt within a couple of minutes, so the cadence is one minute. A
+      test run old code started and never recorded returns to draft; a draft or report
       untouched for 7 days is cancelled; and every run that will not read its
       uploaded file again releases it, so the stored-object reaper deletes the
       bytes. Each rule selects its runs by status over an index, so on an idle

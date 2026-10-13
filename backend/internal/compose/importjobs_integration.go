@@ -18,8 +18,9 @@ import (
 // ImportJobWorkers are the import kinds' workers as River runs them, each
 // under the timeout its declaration gives.
 type ImportJobWorkers struct {
-	Commit river.Worker[ImportCommitArgs]
-	Undo   river.Worker[ImportUndoArgs]
+	Validate river.Worker[ImportValidateArgs]
+	Commit   river.Worker[ImportCommitArgs]
+	Undo     river.Worker[ImportUndoArgs]
 }
 
 // ImportJobWorkersForTest builds the import workers through addImportJobs, the
@@ -29,6 +30,9 @@ func ImportJobWorkersForTest(pool *pgxpool.Pool, cfg JobRunnerConfig) (ImportJob
 	reg := newJobRegistry()
 	addImportJobs(reg, pool, cfg, slog.New(slog.DiscardHandler))
 	var workers ImportJobWorkers
+	if err := governedInto(reg, &workers.Validate); err != nil {
+		return ImportJobWorkers{}, err
+	}
 	if err := governedInto(reg, &workers.Commit); err != nil {
 		return ImportJobWorkers{}, err
 	}

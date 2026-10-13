@@ -87,22 +87,6 @@ func (m RunMapping) PartList() []PartMapping {
 	return []PartMapping{{File: m.FileName, Object: m.Object, Fields: m.Fields, SourceKey: m.SourceKey}}
 }
 
-// AwaitApproval records what the dry run found and parks the run for a human.
-// Valid only from `validating`: a run that already moved on is not the one the
-// report describes.
-func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	encoded, err := json.Marshal(report)
-	if err != nil {
-		return fmt.Errorf("encoding the dry-run report: %w", err)
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveReport, runChange{values: []runValue{{"report", encoded}}})
-	})
-}
-
 // Approve moves a validated run to `running`. A version other than zero must
 // equal the run's, so the report approved is the one the approver read.
 //

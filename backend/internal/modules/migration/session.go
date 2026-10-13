@@ -307,19 +307,6 @@ func lockSourceName(ctx context.Context, tx pgx.Tx, id RunID) error {
 	return nil
 }
 
-// ReturnToDraft ends a test run that was refused, keeping why on the draft so
-// the importer sees it beside the choices they can change.
-func (s *RunStore) ReturnToDraft(ctx context.Context, id RunID, cause string) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveRefuse, runChange{
-			values: []runValue{{errorColumn, cause}}, literals: testRunEnded,
-		})
-	})
-}
-
 // Cancel ends a draft or a report that nobody will approve, and releases its
 // file. Neither has written anything, so nothing is left to undo. A run already
 // cancelled is answered as it stands, so a second click is no error. A test run

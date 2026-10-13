@@ -22,9 +22,11 @@ import (
 )
 
 // testRunEnded is what every move out of `validating` clears: no job is
-// queued, and the phase and progress describe a read that is over. A commit
-// seeds its counts from progress, so a test run's must never reach it.
-var testRunEnded = []string{"job_status = NULL", "phase = NULL", "phase_object = NULL", "progress = NULL"}
+// queued or claimed, and the phase and progress describe a read that is over.
+// A commit seeds its counts from progress, so a test run's must never reach it.
+var testRunEnded = []string{
+	"job_status = NULL", "claimed_attempt = NULL", "phase = NULL", "phase_object = NULL", "progress = NULL",
+}
 
 // fencedOff is testRunEnded for a move a human makes while a job may still
 // work. The attempt moves on, so that job's next fenced write misses.

@@ -6101,6 +6101,7 @@ export const de = {
     "Bereinigung gespeicherter Anfrageantworten",
   "jobs.kind.import_commit": "Import übernehmen",
   "jobs.kind.import_undo": "Import rückgängig machen",
+  "jobs.kind.import_validate": "Import-Testlauf",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",

@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "b0a693111854420fd319672634886f558210e7120ada3561f8e60b733e0cf6be"
+const JobContractHash = "9e813bf036a63a4a1a27fc0664c0a655016bbfd47b216e0764788f15b04e2548"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -561,6 +561,16 @@ var specs = map[string]Spec{
 		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: an undo that stops stays undoing with its cause and its cursor, and a lost fence is a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
 		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
 	},
+	"import_validate": {
+		Kind:      "import_validate",
+		GoType:    "ImportValidateArgs",
+		Role:      Worker,
+		Queue:     "import_check",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a refusal, an over-budget stop and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would test again a run whose state already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",
 		GoType:      "IntroExpiryArgs",
@@ -950,6 +960,7 @@ var queues = map[string]int{
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
+	"import_check":      2,
 	"import_write":      1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,

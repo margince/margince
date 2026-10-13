@@ -15,7 +15,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 func readImportRun(t *testing.T, e *apptest.AppEnv, id string) importRunDTO {
@@ -64,10 +66,10 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 	}
 
 	var retested importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+tested.ID+"/validate", AnyMap{
+	if status := testCall(t, e, "/v1/imports/"+tested.ID+"/validate", AnyMap{
 		"version": saved.Version,
-	}, nil, &retested); status != http.StatusOK || retested.Status != "awaiting_approval" || retested.OnBrokenLink != "drop_link" {
-		t.Fatalf("validate → %d %+v, want 200 awaiting approval with drop_link", status, retested)
+	}, &retested); status != http.StatusAccepted || retested.Status != "awaiting_approval" || retested.OnBrokenLink != "drop_link" {
+		t.Fatalf("validate → %d %+v, want 202, then awaiting approval with drop_link", status, retested)
 	}
 	if runs := importRuns(t, e); len(runs) != 1 || runs[0].ID != tested.ID {
 		t.Fatalf("runs = %+v, want only %s", runs, tested.ID)
@@ -106,13 +108,21 @@ func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 	start.Done()
 	done.Wait()
 
+	started := 0
 	for i, status := range statuses {
 		var answer importRunDTO
-		if status != http.StatusOK || json.Unmarshal(bodies[i], &answer) != nil || answer.ID != tested.ID ||
-			!slices.Contains([]string{"validating", "awaiting_approval"}, answer.Status) {
-			t.Errorf("click %d → %d %s, want 200 with the one run testing or tested", i, status, bodies[i])
+		if status == http.StatusAccepted {
+			started++
+		}
+		if !slices.Contains([]int{http.StatusOK, http.StatusAccepted}, status) || json.Unmarshal(bodies[i], &answer) != nil ||
+			answer.ID != tested.ID || answer.Status != "validating" {
+			t.Errorf("click %d → %d %s, want the one run at validating", i, status, bodies[i])
 		}
 	}
+	if queued := importjobtest.Queued(t, e, compose.ImportValidateArgs{}.Kind()); started != 1 || len(queued) != 1 {
+		t.Fatalf("%d clicks started a test and %d test jobs are queued, want one of each", started, len(queued))
+	}
+	importjobtest.Drain(t, e)
 	if run := readImportRun(t, e, tested.ID); run.Status != "awaiting_approval" || run.Version != tested.Version {
 		t.Fatalf("after the clicks the run = %+v, want awaiting approval at version %d", run, tested.Version)
 	}
@@ -135,9 +145,9 @@ func TestCancelReleasesTheSource(t *testing.T) {
 		again.Status != "cancelled" {
 		t.Fatalf("a second cancel → %d %+v, want 200 with the run as it stands", status, again)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
-	}, nil, nil); status != http.StatusConflict {
+	}, nil); status != http.StatusConflict {
 		t.Fatalf("testing a released upload → %d, want 409: its file is on its way out", status)
 	}
 }
@@ -148,10 +158,10 @@ func testFairRun(t *testing.T, e *apptest.AppEnv) importRunDTO {
 	t.Helper()
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	var run importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
+	if status := testCall(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef,
 		"mapping": profile.SuggestedMapping, "source_name": sourceName,
-	}, nil, &run); status != http.StatusAccepted || run.Status != "awaiting_approval" {
+	}, &run); status != http.StatusAccepted || run.Status != "awaiting_approval" {
 		t.Fatalf("testing %q → %d %+v, want 202 awaiting approval", sourceName, status, run)
 	}
 	return run

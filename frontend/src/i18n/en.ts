@@ -6240,6 +6240,7 @@ export const en = {
   "jobs.kind.idempotency_retention": "Request replay cleanup",
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
+  "jobs.kind.import_validate": "Import test run",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",
   "jobs.kind.list_evaluate": "Live list check",

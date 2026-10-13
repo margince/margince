@@ -60,11 +60,12 @@ func newDraft(ctx context.Context, t *testing.T, s *RunStore, sourceName string)
 // toReport takes a draft through its test run to a report awaiting approval.
 func toReport(ctx context.Context, t *testing.T, s *RunStore, run Run) Run {
 	t.Helper()
-	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing); err != nil {
+	queued, _, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing)
+	if err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
-	if err := s.AwaitApproval(ctx, run.ID, Report{Imported: 3}); err != nil {
-		t.Fatalf("AwaitApproval: %v", err)
+	if err := s.FinishValidation(ctx, Lease{Run: run.ID, Status: StatusValidating, Attempt: queued.JobAttempt}, Report{Imported: 3}); err != nil {
+		t.Fatalf("FinishValidation: %v", err)
 	}
 	return mustGetStaged(ctx, t, s, run.ID)
 }

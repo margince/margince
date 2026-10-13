@@ -19,7 +19,6 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -59,8 +58,6 @@ type importHandlers struct {
 	// Zero refuses every upload, which is the honest reading of "nobody has
 	// said" for a bound.
 	uploadLimit int64
-	// testRunBudget bounds a dry run; zero is importTestRunBudget.
-	testRunBudget time.Duration
 	// queue enqueues an attempt's job; nil is a role that queues no import work.
 	queue *importEnqueuer
 }
@@ -183,9 +180,8 @@ func (h importHandlers) profileAndStore(
 	return h.openDraft(ctx, out, migration.RunMapping{Object: object, Fields: suggested, FileName: fileName})
 }
 
-// CreateImportRun validates a mapped file against the estate and writes
-// nothing (IEM-WIRE-3, AC-M5). The run arrives at awaiting_approval carrying
-// the report a human reads.
+// CreateImportRun queues the test of a mapped file against the estate and
+// writes nothing (IEM-WIRE-3, AC-M5). The worker moves the run on to the report.
 //
 // Open to an agent: this call writes NO domain rows, by construction (AC-M5),
 // so the worst an ungranted-but-authenticated caller could do is produce a
@@ -233,7 +229,8 @@ func (h importHandlers) stageRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	return h.testRun(ctx, run, run.Version, req)
+	queued, _, err := h.testRun(ctx, run, run.Version, req)
+	return queued, err
 }
 
 // GetImportRun reports the lifecycle (IEM-WIRE-6): a failed run carries its
