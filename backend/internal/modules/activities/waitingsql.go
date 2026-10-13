@@ -43,6 +43,15 @@ func waitingContactRank(contact string) string {
 const filedUnderALiveContactSQL = `(NOT coalesce(bool_or(wl.contact_id IS NOT NULL), false)
 	     OR coalesce(bool_or(ownerContact.id IS NOT NULL AND ownerContact.archived_at IS NULL), false))`
 
+// withinWaitingHorizonSQL is whether message a is young enough for the queue.
+// Age retires every wait unless a human kept the request; old mail stays on the
+// timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
+// Cheap tests come first, so most rows never reach the settlement subqueries.
+func withinWaitingHorizonSQL(asOf, days string) string {
+	return `(a.occurred_at >= ` + asOf + ` - make_interval(days => ` + days + `)
+	     OR (` + heldRequestSQL() + ` AND ` + requestOpenSQL + `))`
+}
+
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
 // sales link, colleagues and the reader's set-asides. Requests survive replies and
 // closed deals until explicit resolution, and age only while a human holds them.
@@ -233,12 +242,7 @@ var waitingRepliesSQL = `
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid))))
-	   -- Age retires every wait, a classified request and mail on an open deal
-	   -- included, unless a human kept the request. Old mail stays on the
-	   -- record's timeline; the queue is for current work. requestOpenSQL, not
-	   -- requestUnsettledSQL: owedSQL below is the one relaxable not-sales gate.
-	   AND ((` + requestOpenSQL + ` AND ` + heldRequestSQL() + `)
-	     OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d))
+	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.
 	   --
 	   -- The rule that was missing: this read used to answer "somebody wrote and

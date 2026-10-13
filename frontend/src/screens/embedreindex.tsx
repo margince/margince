@@ -18,6 +18,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import { bandTone } from "./aiusage";
 import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
 import "./embedreindex.css";
+import { useNow } from "../format/now";
 import { available } from "./settingscapability";
 import { holds } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
@@ -96,6 +97,8 @@ function StatusHeader({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
+  // Ticks while a run is going, so a stalled run's age grows on screen.
+  const now = useNow(isRunning ? 1000 : 0);
   const tone = isRunning
     ? "accent"
     : data.reindex_needed
@@ -132,7 +135,7 @@ function StatusHeader({
         <span className="t-caption">
           {t("embedreindex.lastProgress", {
             duration: formatDuration(
-              Math.max(0, Date.now() - new Date(data.updated_at).getTime()),
+              Math.max(0, now - new Date(data.updated_at).getTime()),
               locale,
             ),
           })}

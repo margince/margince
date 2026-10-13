@@ -5,6 +5,7 @@ package deals
 
 import (
 	"net/http"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -100,6 +101,12 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	if billingModel != nil && *billingModel == string(crmcontracts.UpdateProductRequestBillingModelNotSpecified) {
 		billingModel, billingMonths = nil, nil
 	}
+	// Beside a named model, a null interval is the pair's other half. The
+	// classification writes it, so it is no clear of one column.
+	clears := httperr.ClearedFields(r)
+	if req.BillingModel != nil {
+		clears = slices.DeleteFunc(clears, func(field string) bool { return field == billingIntervalColumn })
+	}
 	in := UpdateProductInput{
 		Name:           req.Name,
 		SKU:            req.Sku,
@@ -109,7 +116,7 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 		Currency:       req.Currency,
 		DefaultTaxRate: req.DefaultTaxRate,
 		Active:         req.Active,
-		Clear:          httperr.ClearedFields(r),
+		Clear:          clears,
 		IfVersion:      ifVersion,
 
 		// A PATCH addresses the classification when it names either half.

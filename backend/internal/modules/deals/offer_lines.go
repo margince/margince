@@ -387,7 +387,7 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 		// named — including to null, which is how a line goes back to saying
 		// nothing about whether its price repeats.
 		set("billing_model", nil, in.BillingModel)
-		set("billing_interval_months", nil, in.BillingIntervalMonths)
+		set(billingIntervalColumn, nil, in.BillingIntervalMonths)
 	}
 	if in.IntervalCountSet {
 		set("interval_count", nil, in.IntervalCount)

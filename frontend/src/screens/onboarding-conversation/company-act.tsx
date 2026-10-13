@@ -96,6 +96,7 @@ export function CompanyAct({
   const { startRead, siteRead, proposal, prevSnapshot } = useCompanyRead({
     dispatch,
     machine,
+    activeReadId: state.activeReadId,
     setDraft,
     setSelectedFactKeys,
     answers: clarify.answers,

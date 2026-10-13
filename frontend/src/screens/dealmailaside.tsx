@@ -30,6 +30,7 @@ import { type Translator, useLocale, useT } from "../i18n";
 import { boardMail } from "./boarddeal";
 import { QueryStates, unwrap } from "./common";
 import "./dealmailaside.css";
+import { useNow } from "../format/now";
 
 type Activity = components["schemas"]["Activity"];
 type Deal = components["schemas"]["Deal"];
@@ -73,7 +74,7 @@ export function DealMailAside({
   const t = useT();
   const { locale } = useLocale();
   const query = useDealMail(dealId);
-  const now = Date.now();
+  const now = useNow(60_000);
   const when = (mail: Activity) => {
     const ago = formatElapsed(
       now - new Date(mail.occurred_at).getTime(),

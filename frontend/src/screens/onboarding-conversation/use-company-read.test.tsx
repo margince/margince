@@ -36,6 +36,7 @@ function renderRead() {
       useCompanyRead({
         dispatch: vi.fn(),
         machine,
+        activeReadId: null,
         setDraft: vi.fn(),
         setSelectedFactKeys: vi.fn(),
         answers: [],

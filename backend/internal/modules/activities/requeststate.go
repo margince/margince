@@ -53,11 +53,14 @@ const acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
 // heldRequestSQL is a request a human kept: an open reminder a human wrote,
 // whether they took the request or edited the reminder the system filed. Only
 // this outlives the waiting horizon; a classifier verdict does not.
+// An id list, not an EXISTS, so the scan reads it from an index. An EXISTS is
+// tested on every inbound message ever captured. The list holds 16 bytes per
+// open reminder a human wrote, far under any value size limit.
 func heldRequestSQL() string {
-	return `EXISTS (SELECT 1 FROM activity held
- WHERE held.archived_at IS NULL AND NOT held.is_done AND held.source_activity_id = a.id
+	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
+ WHERE held.archived_at IS NULL AND NOT held.is_done AND held.source_activity_id IS NOT NULL
  AND held.source_system = '` + EmailRequestTaskSource + `'
- AND ` + humanWroteReminderSQL("held") + `)`
+ AND ` + humanWroteReminderSQL("held") + `))`
 }
 
 // humanWroteReminderSQL is whether a human ever wrote the reminder under alias,

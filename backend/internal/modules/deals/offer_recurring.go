@@ -155,14 +155,14 @@ func validBillingShape(model *string, intervalMonths *int) error {
 	case *model == BillingOneTime:
 		if intervalMonths != nil {
 			return &BillingShapeError{
-				Field:  "billing_interval_months",
+				Field:  billingIntervalColumn,
 				Reason: "a one-off price has no billing interval, because there is nothing to repeat",
 			}
 		}
 	case *model == BillingRecurring:
 		if intervalMonths == nil {
 			return &BillingShapeError{
-				Field:  "billing_interval_months",
+				Field:  billingIntervalColumn,
 				Reason: "a recurring price needs the number of months one billing period spans",
 			}
 		}
