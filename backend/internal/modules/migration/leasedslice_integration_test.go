@@ -164,6 +164,38 @@ func TestASliceWhoseSetupOutlastsItsBudgetStillLandsARow(t *testing.T) {
 	}
 }
 
+// A run approved again after it failed is walked once more, and its report
+// counts that walk, as it counts the first.
+func TestEachAttemptOfARunCountsAsAWalk(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	whole := approvedRun(ctx, t, s)
+	if !slice(ctx, t, s, whole, newMapWriters(s, whole.Run), Budget{}) {
+		t.Fatal("an unbounded slice did not finish the run")
+	}
+
+	first := approvedRun(ctx, t, s)
+	w := newMapWriters(s, first.Run)
+	slice(ctx, t, s, first, w, Budget{Rows: 2})
+	if err := s.FailLease(ctx, first, CauseStopped); err != nil {
+		t.Fatalf("FailLease: %v", err)
+	}
+	resumed, err := s.ResumeApproved(ctx, first.Run, 0, queueNothing)
+	if err != nil {
+		t.Fatalf("ResumeApproved: %v", err)
+	}
+	second := Lease{Run: resumed.ID, Status: StatusRunning, Attempt: resumed.JobAttempt}
+	slice(ctx, t, s, second, w, Budget{Rows: 1})
+	if !slice(ctx, t, s, second, w, Budget{}) {
+		t.Fatal("the resumed attempt did not finish the run")
+	}
+
+	want := mustGetStaged(ctx, t, s, whole.Run).Report.Walks() + 1
+	if got := mustGetStaged(ctx, t, s, first.Run).Report.Walks(); got != want {
+		t.Errorf("the run walked by two attempts reports %d walks, want %d", got, want)
+	}
+}
+
 // createdOf is how many rows the run's progress counts as created; -1 for none.
 func createdOf(run Run) int {
 	if run.Progress == nil {

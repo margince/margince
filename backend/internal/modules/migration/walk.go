@@ -163,14 +163,12 @@ func (wk *walk) leg() Report {
 	return withPartial(wk.rep, *wk.cur)
 }
 
-// flush is the fenced write of the leg. A leg that starts the walk says so,
-// which counts the walk once in the stored report.
+// flush is the fenced write of the leg.
 func (wk *walk) flush() Flush {
-	leg := wk.leg()
-	if wk.legStart == 0 {
-		leg.Attempts = 1
+	return Flush{
+		Checkpoint: wk.cursor, Leg: wk.leg(), StartsWalk: wk.legStart == 0,
+		Progress: wk.progress(), Phase: wk.phase, Object: wk.object,
 	}
-	return Flush{Checkpoint: wk.cursor, Leg: leg, Progress: wk.progress(), Phase: wk.phase, Object: wk.object}
 }
 
 // startLeg begins the next leg after a flush landed.

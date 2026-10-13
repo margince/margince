@@ -207,9 +207,9 @@ func (r Report) mergedWith(next Report) Report {
 
 // withLeg folds one leg of a sliced commit into the stored report. Legs cover
 // disjoint stretches of one walk, so every count adds, edges included. A leg
-// that starts the walk (Attempts 1) counts the walk, and drops the edge count
-// the test run predicted, which the commit's own edges replace.
-func (r Report) withLeg(leg Report) Report {
+// that starts the walk drops the edge count the test run predicted, which the
+// commit's own edges replace. The caller counts the walks.
+func (r Report) withLeg(leg Report, startsWalk bool) Report {
 	out := Report{
 		Associations:        r.Associations + leg.Associations,
 		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), leg.AssociationsSkipped...),
@@ -217,8 +217,7 @@ func (r Report) withLeg(leg Report) Report {
 		Attempts:            r.Attempts,
 		Objects:             foldObjects(r.Objects, leg.Objects),
 	}
-	if leg.Attempts > 0 {
-		out.Attempts = r.Walks() + leg.Attempts
+	if startsWalk {
 		out.Associations = leg.Associations
 		out.AssociationsSkipped = append([]SkippedAssoc(nil), leg.AssociationsSkipped...)
 	}

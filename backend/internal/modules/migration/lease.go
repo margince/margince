@@ -58,6 +58,9 @@ type Lease struct {
 type Progress struct {
 	Objects []ObjectProgress `json:"objects"`
 	Counts  ProgressCounts   `json:"counts"`
+	// Attempt is the attempt that wrote it, so an attempt's first flush counts
+	// one more walk in the report.
+	Attempt int `json:"attempt,omitempty"`
 }
 
 // ObjectProgress is one object's rows, or the links, done of its total.
@@ -82,6 +85,9 @@ type ProgressCounts struct {
 type Flush struct {
 	Checkpoint int
 	Leg        Report
+	// StartsWalk marks the leg at the run's first row, whose edges replace
+	// the ones the test run predicted.
+	StartsWalk bool
 	Progress   Progress
 	Phase      string
 	Object     string
@@ -180,7 +186,9 @@ func (s *RunStore) Flush(ctx context.Context, l Lease, f Flush) error {
 
 func flushInTx(ctx context.Context, tx pgx.Tx, l Lease, f Flush) error {
 	var stored []byte
-	err := tx.QueryRow(ctx, `SELECT report FROM import_run`+fence+` FOR UPDATE`, l.args()...).Scan(&stored)
+	var writtenBy *int
+	err := tx.QueryRow(ctx, `SELECT report, (progress->>'attempt')::int FROM import_run`+fence+` FOR UPDATE`,
+		l.args()...).Scan(&stored, &writtenBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("import run %s attempt %d: %w", l.Run, l.Attempt, ErrSuperseded)
 	}
@@ -193,10 +201,15 @@ func flushInTx(ctx context.Context, tx pgx.Tx, l Lease, f Flush) error {
 			return fmt.Errorf("decoding import run %s's recorded report: %w", l.Run, err)
 		}
 	}
-	report, err := json.Marshal(base.withLeg(f.Leg))
+	folded := base.withLeg(f.Leg, f.StartsWalk)
+	if writtenBy == nil || *writtenBy != l.Attempt {
+		folded.Attempts = base.Walks() + 1
+	}
+	report, err := json.Marshal(folded)
 	if err != nil {
 		return fmt.Errorf("encoding import run %s's report: %w", l.Run, err)
 	}
+	f.Progress.Attempt = l.Attempt
 	progress, err := json.Marshal(f.Progress)
 	if err != nil {
 		return fmt.Errorf("encoding import run %s's progress: %w", l.Run, err)
