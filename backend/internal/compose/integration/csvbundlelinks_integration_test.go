@@ -338,6 +338,35 @@ func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
 	}
 }
 
+// A resumed commit checks the company a passed row named by id under the
+// principal resuming it. One the importer can no longer see is a broken link.
+func TestAResumedCommitDoesNotLinkACompanyTheCallerCanNoLongerSee(t *testing.T) {
+	e := setupImportApp(t)
+	e.DescribeCompany(t)
+	colleague := createdID(t, e, "/v1/users", AnyMap{
+		"email": "colleague@named-hidden.test", "display_name": "Colleague", "role": "rep",
+	})
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
+	ctx := e.DealWriterContext(t)
+	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE import_run SET status = 'failed', checkpoint = 1, approved_at = now() WHERE id = $1`, run.ID)
+		return err
+	}); err != nil {
+		t.Fatalf("failing the run after its company row: %v", err)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, named, colleague); err != nil {
+		t.Fatalf("making the named company private to the colleague: %v", err)
+	}
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if !hasIssue(committed, "broken_link", "CO-7") || committed.Disposition.Created != 0 {
+		t.Fatalf("committed = %+v, want CO-7 a broken link and the contact skipped", committed)
+	}
+}
+
 // A company row naming its record by id still binds its ref when the update is
 // refused for a domain another company holds. The contact links as predicted.
 func TestARefusedUpdateStillBindsTheCompanyItNamed(t *testing.T) {
