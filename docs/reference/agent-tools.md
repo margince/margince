@@ -36,7 +36,7 @@ The reasons behind the rules are in [authorization.md](../explanation/authorizat
 
 ### Tools a client lists
 
-Sorted by scope, so the read-only tools come first.
+Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fronts several actions: an argument says which action to run, and each action keeps the tool's tier and scope. Open the row to see them, for example `create_tag` under `change_tags`. [agent-surface.md](../explanation/agent-surface.md) says how this works.
 
 | Tool | Tier | Scope | Egress | For |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@ Sorted by scope, so the read-only tools come first.
 | `catch_me_up_on` | 🟢 | `read` | no | Catch me up on a record |
 | `check_availability` | 🟢 | `read` | no | Check calendar availability |
 | `compose_analytics_report` | 🟢 | `read` | no | Compose an analytics report |
-| `describe_vocabulary` | 🟢 | `read` | no | Describe what a tool accepts (actions below) |
+| `describe_vocabulary` | 🟢 | `read` | no | 🔀 Describe what a tool accepts <details><summary>actions</summary><code>describe_analytics_vocabulary</code><br><code>describe_query_vocabulary</code><br><code>describe_record_fields</code><br><code>describe_report_blocks</code><br><code>describe_report_vocabulary</code></details> |
 | `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
 | `list_documents` | 🟢 | `read` | no | List a record's documents |
 | `list_records` | 🟢 | `read` | no | List records |
@@ -52,16 +52,16 @@ Sorted by scope, so the read-only tools come first.
 | `query_workspace` | 🟢 | `read` | no | Query the workspace |
 | `read_approval` | 🟢 | `read` | no | Read one staged action in full |
 | `read_brief` | 🟢 | `read` | no | Read the morning brief |
-| `read_directory` | 🟢 | `read` | no | Read the workspace's colleagues, pipelines and channels (actions below) |
-| `read_forecast` | 🟢 | `read` | no | Read the forecast and how it moved (actions below) |
-| `read_import` | 🟢 | `read` | no | Read an import run or the import format (actions below) |
-| `read_input_checks` | 🟢 | `read` | no | Can the forecast's inputs be trusted (actions below) |
+| `read_directory` | 🟢 | `read` | no | 🔀 Read the workspace's colleagues, pipelines and channels <details><summary>actions</summary><code>list_channel_providers</code><br><code>list_colleagues</code><br><code>list_pipelines</code></details> |
+| `read_forecast` | 🟢 | `read` | no | 🔀 Read the forecast and how it moved <details><summary>actions</summary><code>forecast_movement</code><br><code>forecast_readings</code></details> |
+| `read_import` | 🟢 | `read` | no | 🔀 Read an import run or the import format <details><summary>actions</summary><code>describe_import_format</code><br><code>read_import_report</code></details> |
+| `read_input_checks` | 🟢 | `read` | no | 🔀 Can the forecast's inputs be trusted <details><summary>actions</summary><code>data_coverage</code><br><code>forecast_input_checks</code><br><code>list_input_checks</code></details> |
 | `read_lists` | 🟢 | `read` | no | Find and read lists |
-| `read_project` | 🟢 | `read` | no | Read a project or its handover (actions below) |
+| `read_project` | 🟢 | `read` | no | 🔀 Read a project or its handover <details><summary>actions</summary><code>prepare_handoff</code><br><code>read_project_360</code></details> |
 | `read_record` | 🟢 | `read` | no | Read a record |
-| `read_relationships` | 🟢 | `read` | no | Read who we know, and how well (actions below) |
+| `read_relationships` | 🟢 | `read` | no | 🔀 Read who we know, and how well <details><summary>actions</summary><code>company_coverage</code><br><code>intro_path_to</code><br><code>who_knows</code></details> |
 | `read_reporting` | 🟢 | `read` | no | Read sales reporting |
-| `read_tags` | 🟢 | `read` | no | Read tags (actions below) |
+| `read_tags` | 🟢 | `read` | no | 🔀 Read tags <details><summary>actions</summary><code>get_record_tags</code><br><code>get_tag</code><br><code>list_tags</code></details> |
 | `resolve_entities` | 🟢 | `read` | no | Resolve contacts and companies |
 | `review_commitments` | 🟢 | `read` | no | Review open commitments |
 | `run_analytics_query` | 🟢 | `read` | no | Run an analytics query |
@@ -71,213 +71,31 @@ Sorted by scope, so the read-only tools come first.
 | `search_report_evidence` | 🟢 | `read` | no | Search the evidence behind a saved run |
 | `whats_slipping_this_week` | 🟢 | `read` | no | What's slipping this week |
 | `whoami` | 🟢 | `read` | no | Who this passport acts for |
-| `draft_outbound` | 🟢 | `draft` | no | Draft an email or follow-ups (actions below) |
+| `draft_outbound` | 🟢 | `draft` | no | 🔀 Draft an email or follow-ups <details><summary>actions</summary><code>draft_email</code><br><code>draft_follow_ups_for</code></details> |
 | `advance_project_phase` | 🟢 | `write` | no | Move a project to a phase |
 | `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
 | `archive_record` | 🟢 | `write` | no | Archive a record |
 | `attach_document` | 🟢 | `write` | no | Attach a file to a record |
 | `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
-| `change_lead_state` | 🟢 | `write` | no | Change a lead's state (actions below) |
+| `change_lead_state` | 🟢 | `write` | no | 🔀 Change a lead's state <details><summary>actions</summary><code>demote_lead</code><br><code>disqualify_lead</code><br><code>promote_lead</code><br><code>qualify_lead</code></details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
-| `change_tags` | 🟢 | `write` | no | Change tags (actions below) |
+| `change_tags` | 🟢 | `write` | no | 🔀 Change tags <details><summary>actions</summary><code>apply_tag</code><br><code>create_tag</code><br><code>remove_tag</code><br><code>update_tag</code></details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
 | `create_task` | 🟢 | `write` | no | Create a task |
-| `decide_approvals` | 🟢 | `write` | no | Approve or reject staged actions (actions below) |
+| `decide_approvals` | 🟢 | `write` | no | 🔀 Approve or reject staged actions <details><summary>actions</summary><code>decide_approval_bundle</code><br><code>decide_approval</code></details> |
 | `log_activity` | 🟢 | `write` | no | Log an activity |
 | `merge_tags` | 🟡 | `write` | no | Fold one tag into another |
 | `preview_import` | 🟢 | `write` | no | Preview an import |
-| `progress_deal` | dynamic | `write` | no | Progress a deal with a note (actions below) |
-| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record |
+| `progress_deal` | dynamic | `write` | no | 🔀 Progress a deal with a note <details><summary>actions</summary><code>advance_deal</code></details> |
+| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record <details><summary>Replaces an old action</summary><code>relink_thread</code> refuses every call</details> |
 | `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
-| `resolve_duplicates` | 🟢 | `write` | no | Merge two records or dismiss a flagged pair (actions below) |
+| `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records or dismiss a flagged pair <details><summary>actions</summary><code>decide_duplicate</code><br><code>merge_records</code></details> |
 | `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
 | `book_meeting` | 🟢 | `send` | yes | Book a meeting |
 | `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
-| `send_outbound` | 🟢 | `send` | yes | Send a message (actions below) |
+| `send_outbound` | 🟢 | `send` | yes | 🔀 Send a message <details><summary>actions</summary><code>send_company_email</code><br><code>send_email</code><br><code>send_message</code></details> |
 | `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
-
-### Actions inside one tool
-
-Some tools front several related actions. A client sees one tool, such as `change_tags`, and an argument says which
-action to run, such as `create_tag`. Each action keeps its own tier and scope. Open a tool below to see its actions.
-To find an action such as `send_email`, look for the tool in the first table, or search this page.
-[agent-surface.md](../explanation/agent-surface.md) says how this works.
-
-<details>
-<summary><code>change_lead_state</code>: Change a lead's state</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `demote_lead` | 🟢 | `write` | no | |
-| `disqualify_lead` | 🟢 | `write` | no | |
-| `promote_lead` | 🟢 | `write` | no | |
-| `qualify_lead` | 🟢 | `write` | no | |
-
-</details>
-
-<details>
-<summary><code>change_tags</code>: Change tags</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `apply_tag` | 🟢 | `write` | no | |
-| `create_tag` | 🟢 | `write` | no | |
-| `remove_tag` | 🟢 | `write` | no | |
-| `update_tag` | 🟢 | `write` | no | |
-
-</details>
-
-<details>
-<summary><code>decide_approvals</code>: Approve or reject staged actions</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `decide_approval_bundle` | 🟢 | `write` | no | |
-| `decide_approval` | 🟢 | `write` | no | |
-
-</details>
-
-<details>
-<summary><code>describe_vocabulary</code>: Describe what a tool accepts</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `describe_analytics_vocabulary` | 🟢 | `read` | no | |
-| `describe_query_vocabulary` | 🟢 | `read` | no | |
-| `describe_record_fields` | 🟢 | `read` | no | |
-| `describe_report_blocks` | 🟢 | `read` | no | |
-| `describe_report_vocabulary` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>draft_outbound</code>: Draft an email or follow-ups</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `draft_email` | 🟢 | `draft` | no | |
-| `draft_follow_ups_for` | 🟢 | `draft` | no | |
-
-</details>
-
-<details>
-<summary><code>progress_deal</code>: Progress a deal with a note</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `advance_deal` | dynamic | `write` | no | `progress_deal`: staged approvals carry this name |
-
-</details>
-
-<details>
-<summary><code>read_directory</code>: Read the workspace's colleagues, pipelines and channels</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `list_channel_providers` | 🟢 | `read` | no | |
-| `list_colleagues` | 🟢 | `read` | no | |
-| `list_pipelines` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_forecast</code>: Read the forecast and how it moved</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `forecast_movement` | 🟢 | `read` | no | |
-| `forecast_readings` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_import</code>: Read an import run or the import format</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `describe_import_format` | 🟢 | `read` | no | |
-| `read_import_report` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_input_checks</code>: Can the forecast's inputs be trusted</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `data_coverage` | 🟢 | `read` | no | |
-| `forecast_input_checks` | 🟢 | `read` | no | |
-| `list_input_checks` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_project</code>: Read a project or its handover</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `prepare_handoff` | 🟢 | `read` | no | |
-| `read_project_360` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_relationships</code>: Read who we know, and how well</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `company_coverage` | 🟢 | `read` | no | |
-| `intro_path_to` | 🟢 | `read` | no | |
-| `who_knows` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>read_tags</code>: Read tags</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `get_record_tags` | 🟢 | `read` | no | |
-| `get_tag` | 🟢 | `read` | no | |
-| `list_tags` | 🟢 | `read` | no | |
-
-</details>
-
-<details>
-<summary><code>resolve_duplicates</code>: Merge two records or dismiss a flagged pair</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `decide_duplicate` | 🟢 | `write` | no | |
-| `merge_records` | 🟢 | `write` | no | |
-
-</details>
-
-<details>
-<summary><code>send_outbound</code>: Send a message</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `send_company_email` | 🟢 | `send` | yes | |
-| `send_email` | 🟢 | `send` | yes | |
-| `send_message` | 🟢 | `send` | yes | |
-
-</details>
-
-<details>
-<summary>No tool: this action refuses every call</summary>
-
-| Action | Tier | Scope | Egress | Note |
-|---|---|---|---|---|
-| `relink_thread` | dynamic | `write` | no | no tool: it refuses every call |
-
-</details>
-
-pany_email` | 🟢 | `send` | yes | `send_outbound` |
-| `send_email` | 🟢 | `send` | yes | `send_outbound` |
-| `send_message` | 🟢 | `send` | yes | `send_outbound` |
-| `relink_thread` | dynamic | `write` | no | no tool: it refuses every call |
 
 ## Rules for single tools
 
