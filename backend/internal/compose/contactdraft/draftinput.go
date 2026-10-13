@@ -41,6 +41,16 @@ func (in Input) GreetingNames() (string, string) {
 	return in.Recipient.FirstName, in.Recipient.LastName
 }
 
+// CoRecipientNames are the further readers' names, which a greeting may name
+// beside the recipient's.
+func (in Input) CoRecipientNames() []string {
+	names := make([]string, 0, len(in.AlsoTo))
+	for _, other := range in.AlsoTo {
+		names = append(names, other.Name)
+	}
+	return names
+}
+
 // Addresses is where the draft goes: the recipient's own, then each further
 // recipient's, skipping a contact with no address and an address twice.
 func (in Input) Addresses() []string {

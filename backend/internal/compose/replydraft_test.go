@@ -486,7 +486,7 @@ func TestAnUngreetedReplyIsServedWithTheFloorGreeting(t *testing.T) {
 // greeting brings exactly to it is served. Every lane that greets is held.
 func TestAGreetingThatCarriesTheBodyPastItsBoundIsRefused(t *testing.T) {
 	data := replyActivityData{Subject: "plan", Thread: "inbound_mail", Recipient: "Anna", Intent: "confirm the plan"}
-	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, data.Recipient, ""), "x")
+	line := strings.TrimSuffix(draftcheck.EnsureGreeting("x", data.Envelope, draftcheck.Grounds{FirstName: data.Recipient}), "x")
 	lanes := map[string]func(*replyBrainStub) (replyDraft, error){
 		"reply": func(brain *replyBrainStub) (replyDraft, error) {
 			draft, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), ids.NewV7(), data, draftvoice.Context{})

@@ -39,6 +39,9 @@ type Grounds struct {
 	// bare ("Greven,"), and may name nobody else. Both empty means a greeting
 	// may name nobody at all.
 	FirstName, LastName string
+	// CoRecipients are the further readers' names, which a greeting may name
+	// too. Any at all makes the floor greet the group.
+	CoRecipients []string
 }
 
 // IntentNamesMeeting reports whether the caller's intent says an encounter

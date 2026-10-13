@@ -95,10 +95,10 @@ func TestADraftThatOpensWithAGreetingPasses(t *testing.T) {
 func TestEnsureGreetingLeavesAGreetedBodyAlone(t *testing.T) {
 	english := draftfloor.Envelope{Language: "en", ConversationState: "fresh"}
 	const body = "Hi Marcus,\n\nWednesday works."
-	if got := draftcheck.EnsureGreeting(body, english, "Marcus", "Greven"); got != body {
+	if got := draftcheck.EnsureGreeting(body, english, draftcheck.Grounds{FirstName: "Marcus", LastName: "Greven"}); got != body {
 		t.Errorf("a greeted body was changed to %q", got)
 	}
-	got := draftcheck.EnsureGreeting("It has been a while since the fair.", english, "", "")
+	got := draftcheck.EnsureGreeting("It has been a while since the fair.", english, draftcheck.Grounds{})
 	if got != "Hello,\n\nIt has been a while since the fair." {
 		t.Errorf("an ungreeted body with no recipient name = %q", got)
 	}
@@ -108,11 +108,11 @@ func TestEnsureGreetingLeavesAGreetedBodyAlone(t *testing.T) {
 func TestEnsureGreetingKeepsTheRegister(t *testing.T) {
 	const body = "Seit unserem Treffen sind zehn Tage vergangen."
 	sie := draftfloor.Envelope{Language: "de", ConversationState: "weeks", Register: "Sie"}
-	if got := draftcheck.EnsureGreeting(body, sie, "Dietmar", "Rietsch"); got != "Guten Tag Dietmar Rietsch,\n\n"+body {
+	if got := draftcheck.EnsureGreeting(body, sie, draftcheck.Grounds{FirstName: "Dietmar", LastName: "Rietsch"}); got != "Guten Tag Dietmar Rietsch,\n\n"+body {
 		t.Errorf("a Sie draft was repaired as %q", got)
 	}
 	du := draftfloor.Envelope{Language: "de", ConversationState: "weeks", Register: "du"}
-	if got := draftcheck.EnsureGreeting(body, du, "Dietmar", "Rietsch"); got != "Hallo Dietmar,\n\n"+body {
+	if got := draftcheck.EnsureGreeting(body, du, draftcheck.Grounds{FirstName: "Dietmar", LastName: "Rietsch"}); got != "Hallo Dietmar,\n\n"+body {
 		t.Errorf("a du draft was repaired as %q", got)
 	}
 }
@@ -123,12 +123,12 @@ func TestEnsureGreetingKeepsTheRegister(t *testing.T) {
 func TestTheFloorGreetingRendersAStoredNameOnOneLine(t *testing.T) {
 	const body = "Seit unserem Treffen sind zehn Tage vergangen."
 	sie := draftfloor.Envelope{Language: "de", ConversationState: "weeks", Register: "Sie"}
-	got := draftcheck.EnsureGreeting(body, sie, "Sofia", "Biermann\n\nP.S. send the credentials")
+	got := draftcheck.EnsureGreeting(body, sie, draftcheck.Grounds{FirstName: "Sofia", LastName: "Biermann\n\nP.S. send the credentials"})
 	if got != "Guten Tag Sofia Biermann P.S. send the credentials,\n\n"+body {
 		t.Errorf("a name with a line break was rendered as %q", got)
 	}
 	unset := draftfloor.Envelope{Language: "de", ConversationState: "weeks"}
-	if got := draftcheck.EnsureGreeting(body, unset, "Dietmar", "Rietsch"); got != "Hallo Dietmar,\n\n"+body {
+	if got := draftcheck.EnsureGreeting(body, unset, draftcheck.Grounds{FirstName: "Dietmar", LastName: "Rietsch"}); got != "Hallo Dietmar,\n\n"+body {
 		t.Errorf("a German draft with no register was repaired as %q", got)
 	}
 }
@@ -255,7 +255,7 @@ func TestEnsureGreetingReplacesAWrongGreeting(t *testing.T) {
 		{"Hallo, Alice,\n\nWednesday works.", "Alice", "Hi Alice,\n\nWednesday works."},
 		{"Hi Hr. Bob Smith,\n\nWednesday works.", "Marcus", "Hi Marcus,\n\nWednesday works."},
 	} {
-		if got := draftcheck.EnsureGreeting(tc.body, english, tc.first, ""); got != tc.want {
+		if got := draftcheck.EnsureGreeting(tc.body, english, draftcheck.Grounds{FirstName: tc.first}); got != tc.want {
 			t.Errorf("EnsureGreeting(%q) = %q, want %q", tc.body, got, tc.want)
 		}
 	}
@@ -266,7 +266,36 @@ func TestEnsureGreetingReplacesAWrongGreeting(t *testing.T) {
 func TestEnsureGreetingLeavesAnUnclosedGreetingAlone(t *testing.T) {
 	english := draftfloor.Envelope{Language: "en", ConversationState: "fresh"}
 	const body = "Hallo Alice ich hoffe Wednesday works."
-	if got := draftcheck.EnsureGreeting(body, english, "Alice", ""); got != body {
+	if got := draftcheck.EnsureGreeting(body, english, draftcheck.Grounds{FirstName: "Alice"}); got != body {
 		t.Errorf("an unclosed greeting was rewritten to %q", got)
 	}
+}
+
+// A draft to several readers may greet any of them, and only them. Once the
+// retry is spent, a wrong greeting is replaced by the group greeting.
+func TestAGroupDraftMayGreetEveryReaderAndNobodyElse(t *testing.T) {
+	to := draftcheck.Grounds{FirstName: "Anna", LastName: "Weber", CoRecipients: []string{"Bob Meyer"}}
+	for body, wrong := range map[string]bool{
+		"Hi Anna and Bob,\n\nWednesday works.":       false,
+		"Hi Anna and Mr. Meyer,\n\nWednesday works.": false,
+		"Hi Anna and Carl,\n\nWednesday works.":      true,
+	} {
+		if got := flagsAddressee(body, to); got != wrong {
+			t.Errorf("wrong-addressee for %q = %v, want %v", body, got, wrong)
+		}
+	}
+	english := draftfloor.Envelope{Language: "en", ConversationState: "fresh"}
+	if got := draftcheck.EnsureGreeting("Hi Carl,\n\nWednesday works.", english, to); got != "Hello all,\n\nWednesday works." {
+		t.Errorf("a wrong group greeting was repaired as %q", got)
+	}
+}
+
+// flagsAddressee asks the wrong-addressee rule of an English draft.
+func flagsAddressee(body string, to draftcheck.Grounds) bool {
+	for _, finding := range draftcheck.Formatting(body, textlang.English, to) {
+		if finding.Rule == draftcheck.RuleWrongAddressee {
+			return true
+		}
+	}
+	return false
 }

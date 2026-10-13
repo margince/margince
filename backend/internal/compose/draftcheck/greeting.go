@@ -20,16 +20,15 @@ import (
 
 // EnsureGreeting adds the floor's greeting above a body that opens without one,
 // and puts it in place of a closed greeting the checks judge wrong.
-func EnsureGreeting(body string, envelope draftfloor.Envelope, firstName, lastName string) string {
-	firstName, lastName = draftfloor.NameLine(firstName), draftfloor.NameLine(lastName)
-	floor := envelope.Greeting(firstName, lastName)
+func EnsureGreeting(body string, envelope draftfloor.Envelope, to Grounds) string {
+	to.FirstName, to.LastName = draftfloor.NameLine(to.FirstName), draftfloor.NameLine(to.LastName)
+	floor := envelope.GreetingTo(to.FirstName, to.LastName, len(to.CoRecipients))
 	trimmed := norm.NFC.String(strings.TrimSpace(body))
-	if missingGreeting(trimmed, firstName, lastName) {
+	if missingGreeting(trimmed, to.FirstName, to.LastName) {
 		return floor + "\n\n" + trimmed
 	}
 	opening, ok := openingGreeting(trimmed)
-	if !ok || !opening.closed ||
-		(!opening.misaddressed(firstName, lastName) && !opening.foreign(envelope.Lang())) {
+	if !ok || !opening.closed || (!opening.misaddressed(to) && !opening.foreign(envelope.Lang())) {
 		return body
 	}
 	if message := strings.TrimSpace(trimmed[opening.end:]); message != "" {
@@ -50,10 +49,10 @@ func greetingFindings(body string, lang textlang.Lang, on Grounds) []Finding {
 		return nil
 	}
 	var findings []Finding
-	if opening.misaddressed(on.FirstName, on.LastName) {
+	if opening.misaddressed(on) {
 		why := "the greeting names somebody other than the recipient — greet them by the " +
 			"name the input gives for the recipient"
-		if strings.TrimSpace(on.FirstName+on.LastName) == "" {
+		if len(nameParts(on)) == 0 {
 			why = "the input gives no name for the recipient, so a name in the greeting is " +
 				"invented — open with a greeting that names nobody"
 		}
@@ -94,7 +93,7 @@ var addressForms = foldedSet(
 	"all", "team", "everyone", "everybody", "there", "folks", "colleagues", "customer",
 	"and", "or", "herr", "frau", "damen", "herren", "und", "zusammen", "alle",
 	"allerseits", "liebes", "kollegen", "kolleginnen",
-	"anh", "chị", "em", "ông", "bà", "cô", "chú", "bạn", "quý", "và", "mọi", "người",
+	"anh", "chị", "em", "ông", "bà", "cô", "chú", "bạn", "quý", "vị", "và", "mọi", "người",
 )
 
 // messageWords start the message, never a greeting: a pronoun addresses
@@ -207,12 +206,11 @@ func nameWords(word string) []string {
 	return names
 }
 
-// misaddressed reports a greeting that names somebody other than the
-// recipient, or names anybody at all when the record holds no name for them.
-// A greeted word passes as a recorded name part, or as a nickname that begins
-// one.
-func (g greeting) misaddressed(firstName, lastName string) bool {
-	recorded := nameParts(firstName + " " + lastName)
+// misaddressed reports a greeting that names somebody the draft does not go
+// to. With no name on record for any reader, every greeted name is one. A
+// greeted word passes as a recorded name part, or as a nickname that begins one.
+func (g greeting) misaddressed(to Grounds) bool {
+	recorded := nameParts(to)
 	for _, name := range g.names {
 		if !slices.ContainsFunc(recorded, func(part string) bool {
 			return part == name ||
@@ -231,11 +229,12 @@ func (g greeting) foreign(lang textlang.Lang) bool {
 	return known && !slices.Contains(g.langs, lang)
 }
 
-// nameParts are a recorded name's words, and the halves of each hyphenated
-// one, folded as a greeted word is.
-func nameParts(name string) []string {
+// nameParts are the words of every name the draft goes to, and the halves of
+// each hyphenated one, folded as a greeted word is.
+func nameParts(to Grounds) []string {
 	var parts []string
-	for word := range strings.FieldsSeq(name) {
+	names := strings.Join(append([]string{to.FirstName, to.LastName}, to.CoRecipients...), " ")
+	for word := range strings.FieldsSeq(names) {
 		word = foldName(word)
 		parts = append(parts, word)
 		if halves := strings.Split(word, "-"); len(halves) > 1 {
