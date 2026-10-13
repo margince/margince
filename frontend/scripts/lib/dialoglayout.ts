@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { classVariants } from "../../src/testing/classnames";
+import { classVariants, type Given } from "../../src/testing/classnames";
 import { rulesIn, withoutComments } from "../../src/testing/css";
 import {
   alternativesOf,
@@ -310,92 +310,14 @@ export const attrs = (n: ts.Node) => {
 };
 export const attr = (n: ts.Node, name: string) =>
   attrs(n).find((a) => a.name.getText() === name);
-// The object literals a spread can hand, through parentheses and conditions.
-const spreadArms = (x: ts.Expression): ts.ObjectLiteralExpression[] => {
-  if (ts.isParenthesizedExpression(x)) return spreadArms(x.expression);
-  if (ts.isObjectLiteralExpression(x)) return [x];
-  if (!ts.isConditionalExpression(x)) return [];
-  const [a, b] = [spreadArms(x.whenTrue), spreadArms(x.whenFalse)];
-  return a.length > 0 && b.length > 0 ? [...a, ...b] : [];
-};
-type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
-const memberKey = (m: Member) => {
-  const key = m.name;
-  if (!key || ts.isComputedPropertyName(key)) return undefined;
-  return ts.isJsxNamespacedName(key) ? key.getText() : key.text;
-};
-const initOf = (m: Member) => {
+export type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
+/** A member's value as written, a JSX attribute's expression unwrapped. */
+export const initOf = (m: Member) => {
   if (ts.isShorthandPropertyAssignment(m)) return m.name;
   if (ts.isPropertyAssignment(m)) return m.initializer;
   const init = ts.isJsxAttribute(m) ? m.initializer : undefined;
   return init && ts.isJsxExpression(init) ? init.expression : init;
 };
-type Reading = { values: ts.Expression[]; open: boolean } | "any";
-/** How a spread the caller can read hands a prop on: always, or maybe. */
-export type Forwarded = (spread: ts.Expression) => "set" | "maybe" | undefined;
-// What one member hands `name`; `open` when it may leave the prop unset.
-function memberReading(m: Member, name: string, fwd?: Forwarded): Reading {
-  if (ts.isJsxSpreadAttribute(m) || ts.isSpreadAssignment(m)) {
-    const how = fwd?.(m.expression);
-    if (how) return { values: [m.expression], open: how === "maybe" };
-    const arms = spreadArms(m.expression).map((o) =>
-      lastNamed(o.properties, name, fwd),
-    );
-    const read = arms.filter((r) => r !== "any");
-    if (arms.length === 0 || read.length < arms.length) return "any";
-    const values = read.flatMap((r) => r.values);
-    return { values, open: read.some((r) => r.open) };
-  }
-  const key = memberKey(m);
-  if (key === undefined) return "any";
-  if (key !== name) return { values: [], open: true };
-  const x = initOf(m);
-  return x ? { values: [x], open: false } : "any";
-}
-// The last member naming `name` wins, as JSX and object spreads apply in
-// source order.
-function lastNamed(
-  members: readonly Member[],
-  name: string,
-  fwd?: Forwarded,
-): Reading {
-  const values: ts.Expression[] = [];
-  for (const m of [...members].reverse()) {
-    const read = memberReading(m, name, fwd);
-    if (read === "any") return "any";
-    values.push(...read.values);
-    if (!read.open) return { values, open: false };
-  }
-  return { values, open: true };
-}
-/** Every value a call may hand prop `name`, `undefined` for a path that hands
- * none; "any" when a bare attribute or an unreadable spread hides the value.
- * A spread `fwd` reads stands as its own value. */
-export function handedTo(
-  e: ts.Node,
-  name: string,
-  fwd?: Forwarded,
-): (ts.Expression | undefined)[] | "any" {
-  const read = lastNamed(opening(e)?.attributes.properties ?? [], name, fwd);
-  if (read === "any") return "any";
-  return read.open ? [...read.values, undefined] : read.values;
-}
-type Named = (spread: ts.Expression) => readonly string[];
-function memberNames(m: Member, fwd: Named): readonly string[] {
-  if (!ts.isJsxSpreadAttribute(m) && !ts.isSpreadAssignment(m)) {
-    const key = memberKey(m);
-    return key === undefined ? [] : [key];
-  }
-  const arms = spreadArms(m.expression);
-  if (arms.length === 0) return fwd(m.expression);
-  return arms.flatMap((o) => o.properties.flatMap((p) => memberNames(p, fwd)));
-}
-/** The prop names a call writes: its attributes and the keys of the object
- * literals it spreads. `fwd` names what a spread it cannot read hands on. */
-export function namesHanded(e: ts.Node, fwd: Named = () => []): string[] {
-  const members = opening(e)?.attributes.properties ?? [];
-  return [...new Set(members.flatMap((m) => memberNames(m, fwd)))];
-}
 const below = new WeakMap<ts.Node, readonly ts.Node[]>();
 const elementsBelow = new WeakMap<ts.Node, readonly ts.Node[]>();
 export function descendants(root: ts.Node): readonly ts.Node[] {
@@ -422,19 +344,22 @@ export const enclosing = (n: ts.Node) => {
 /** The expressions an id-carrying attribute is written in, so two attributes
  * naming one id can be matched by their source text. */
 export function idParts(a: ts.JsxAttribute | undefined): string[] {
-  const init = a?.initializer;
-  const e = init && ts.isJsxExpression(init) ? init.expression : init;
+  const e = a && initOf(a);
   if (e && ts.isTemplateExpression(e)) {
     return e.templateSpans.map((span) => span.expression.getText());
   }
   return e ? [e.getText()] : [];
 }
+/** Each branch of the class list an element's `className` produces. */
+export const variantsOf = (n: ts.Node, given?: Given) =>
+  classVariants(
+    n.getSourceFile(),
+    attr(n, "className")?.initializer,
+    16,
+    given,
+  );
 /** Every class any branch of the element's `className` can carry. */
-export const classes = (n: ts.Node) => [
-  ...new Set(
-    classVariants(n.getSourceFile(), attr(n, "className")?.initializer).flat(),
-  ),
-];
+export const classes = (n: ts.Node) => [...new Set(variantsOf(n).flat())];
 export const within = (n: ts.Node, outer: ts.Node) =>
   n.getSourceFile() === outer.getSourceFile() &&
   outer.pos <= n.pos &&

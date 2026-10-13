@@ -7,8 +7,16 @@ import { join, relative } from "node:path";
 import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
 import {
+  FIELD_ROWS,
+  labelledIn,
+  NOT_ROWS,
+} from "../../scripts/lib/dialogfields";
+import {
+  defOf,
   descendants,
   dialogSet,
+  elementsIn,
+  keyOf,
   markupFiles,
   modalBoxes,
   ownersIn,
@@ -18,13 +26,11 @@ import {
   textCensus,
   type Values,
   weightOf,
+  whereOf,
 } from "../../scripts/lib/dialoglayout";
 import {
   dialogsIn,
-  FIELD_ROWS,
   hints,
-  labelledIn,
-  NOT_ROWS,
   rowsAcross,
   SCOPE_CAP,
 } from "../../scripts/lib/dialogrows";
@@ -108,8 +114,9 @@ const B2x = Boxed;
 const Plain = a ? "div" : "section";
 const WMm = memo(Wrapped);
 function Swap({ className }) { return className ? <div className={className}><p /><div className="m" /></div> : <Swap className="s" />; }
-function Loop() { return <Loop />; }
-function Alt({ k }) { return <div className={k}><Alt k={k === "a" ? "b" : "a"} /></div>; }
+function Loop() { return <div className="f"><div className="s"><p /><div className="m" /></div><Loop /></div>; }
+function Alt({ k }) { return <div className={k}><div className="s"><p /><div className="m" /></div><Alt k={k === "f" ? "g" : "f"} /></div>; }
+function Fwd(props) { return render(props); }
 function Labelled({ label }) { return <div className="s"><p>{label}</p></div>; }
 function fields() { return <><p /><Field /></>; }
 const held = <><p /><Field /></>;
@@ -210,6 +217,29 @@ describe("a dialog's field rows have an owner for the space between them", () =>
   );
 
   it(
+    "judges every component a dialog renders",
+    () => {
+      const { keys } = dialogSet();
+      const fields = new Set(
+        [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name)),
+      );
+      const shown = sources().flatMap((s) =>
+        dialogsIn(s, keys).flatMap((d) =>
+          elementsIn(d).flatMap((e) => defOf(e) ?? []),
+        ),
+      );
+      const skipped = (def: ts.Node) =>
+        keys.has(keyOf(def)) ||
+        fields.has(keyOf(def)) ||
+        tree().judged.has(def);
+      expect(
+        [...new Set(shown)].filter((d) => !skipped(d)).map(whereOf),
+      ).toEqual([]);
+    },
+    TREE_BUILD,
+  );
+
+  it(
     "would count short of the text with only Modal and ConfirmModal",
     () => {
       const cut = new Set([
@@ -252,23 +282,28 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /><S2 /><S3 /
     expect(plantedAcross("<B />", stack, scoped).verdicts).toBe("flush");
   });
 
-  it("refuses a guest fan-out past its scope cap", () => {
-    const levels = Math.ceil(Math.log2(SCOPE_CAP));
-    const level = (i: number) =>
-      `function L${i}() { return <><div className="a"><L${i + 1} /></div><div className="b"><L${i + 1} /></div></>; }`;
-    const chain = Array.from({ length: levels }, (_, i) => level(i));
-    const text = `${PRELUDE}\nconst A = () => ${inModal("<L0 />")};\n${chain.join("\n")}`;
-    const lineOf = (name: string) =>
-      text.split("\n").findIndex((l) => l.startsWith(`function ${name}(`)) + 1;
-    const source = parseSource(AT, text);
-    expect(() =>
-      rowsAcross([source], ownersIn([STACK]), keysOf(source)),
-    ).toThrow(
-      new RegExp(
-        `planted.tsx:${lineOf("L0")}: more than \\d+ guest scopes to judge in the components this one calls, last at design-system/planted.tsx:${lineOf("L13")}; call them`,
-      ),
-    );
-  });
+  it(
+    "refuses a guest fan-out past its scope cap",
+    () => {
+      const levels = Math.floor(Math.log2(SCOPE_CAP + 1)) + 1;
+      const level = (i: number) =>
+        `function L${i}() { return <><div className="a"><L${i + 1} /></div><div className="b"><L${i + 1} /></div></>; }`;
+      const chain = Array.from({ length: levels }, (_, i) => level(i));
+      const text = `${PRELUDE}\nconst A = () => <Modal intent="form"><L0 /></Modal>;\n${chain.join("\n")}`;
+      const lineOf = (name: string) =>
+        text.split("\n").findIndex((l) => l.startsWith(`function ${name}(`)) +
+        1;
+      const source = parseSource(AT, text);
+      expect(() =>
+        rowsAcross([source], ownersIn([STACK]), keysOf(source)),
+      ).toThrow(
+        new RegExp(
+          `planted.tsx:${lineOf("L0")}: more than \\d+ guest scopes to judge in the components this one calls, last at design-system/planted.tsx:${lineOf(`L${levels - 1}`)}; call them`,
+        ),
+      );
+    },
+    TREE_BUILD,
+  );
 
   it("judges a component once whatever text its calls hand it", () => {
     const scopes = (n: number) => {
@@ -334,6 +369,10 @@ export const Named = Pick;`,
     ${'`#{["a", "b"].join(" ")} c`'}              | ${[["a", "b", "c"]]}
   `("reads $expression as its branches", ({ expression, variants }) => {
     expect(classCall(expression)()).toEqual(variants);
+  });
+
+  it("reads a class read off an object as no class", () => {
+    expect(classCall("styles.stack")()).toEqual([[]]);
   });
 
   it("refuses a class list past its branch cap", () => {
@@ -482,10 +521,11 @@ export const Named = Pick;`,
     ${"reads an aliased dialog wrapper as a dialog"}                  | ${"<S2><p /><Field /></S2>"}                                                                                              | ${"flush"}                | ${""}
     ${"reads the children box of an aliased component"}               | ${inModal('<B2x><p /><div className="m" /></B2x>')}                                                                       | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"keeps the classes of an element a binding names"}              | ${inModal('<div className="s"><p /><Plain className="m" /></div>')}                                                       | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
-    ${"keeps the classes of a component it cannot read"}              | ${inModal('<div className="s"><p /><WMm className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"keeps the classes of a component it cannot read"}              | ${inModal('<div className="s"><p /><Fwd className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"keeps the classes of a memo it cannot read"}                   | ${inModal('<div className="s"><p /><WMm className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"judges a component again where it hands itself new props"}     | ${inModal("<Swap />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
-    ${"ends at a component that renders only itself"}                 | ${inModal("<Loop />")}                                                                                                    | ${"no rows"}              | ${""}
-    ${"ends at a component that renders itself with props it flips"}  | ${inModal('<Alt k="a" />')}                                                                                               | ${"no rows"}              | ${""}
+    ${"judges a component that renders only itself once"}             | ${inModal("<Loop />")}                                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
+    ${"judges a component that flips its own props and ends"}         | ${inModal('<Alt k="f" />')}                                                                                               | ${"doubled"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,

@@ -2,54 +2,52 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import ts from "typescript";
-import { classVariants, type Given } from "../../src/testing/classnames";
+import { isField, isPrimitiveField, keyIs } from "./dialogfields";
 import {
   attr,
-  attrs,
   boxProps,
-  callOf,
   capped,
   childrenHosts,
   childrenSlot,
   cross,
-  declarations,
-  definition,
   defOf,
   descendants,
-  domainOf,
   elementsIn,
-  enclosing,
   expanded,
-  type Forwarded,
   flowOf,
-  fnOf,
-  givenTo,
-  handedJsx,
-  handedTo,
+  initOf,
   isDialogTag,
   isZero,
-  jsxOf,
   keyOf,
-  literalsIn,
   modalBoxes,
-  namesHanded,
   type Owners,
   opening,
   type Placed,
   type Prop,
-  presetOf,
   primitiveKey,
-  propReadBy,
-  rendered,
-  returnedBy,
   rootsOf,
-  spreads,
   tag,
   upper,
   type Values,
+  variantsOf,
   whereOf,
   within,
 } from "./dialoglayout";
+import {
+  childOfJsx,
+  climb,
+  enclosingIn,
+  hostedAt,
+  NO_LINKS,
+  type Placement,
+  parentOf,
+  placementIn,
+  unplacedAt,
+  type View,
+  viewAt,
+  walk,
+} from "./dialogplacement";
+import { type Handed, handedAt, handedThrough } from "./dialogprops";
 
 // A dialog's rows sit one stack step apart: none flush, none doubled by its own
 // margin. Stacks and margins are read from the sheets in each box's context.
@@ -58,11 +56,6 @@ type Verdict = "spaced" | "flush" | "doubled" | "unplaced";
 type Row = { at: string; where: string; verdict: Verdict; by?: string };
 // The class lists of the boxes from an element's parent out to its dialog.
 type Chain = string[][];
-// What a call hands the props of the component it calls: by name, and as
-// the reader its body's class lists take.
-type Held = readonly (string | undefined)[] | undefined;
-type Props = (name: string) => Held;
-type Handed = { def: ts.Node; props: Props; given: Given; keyed: string[] };
 // A component on the way to a call, under the boxes and props it entered with.
 type Entry = { def: ts.Node; key: string };
 type Guest = {
@@ -72,319 +65,28 @@ type Guest = {
   handed: Handed;
   key: string;
 };
-// A component definition, mapped to the call that rendered it this time.
-type Links = Map<ts.Node, ts.Node>;
-type Slot = { roots: ts.Node[]; links: Links };
-// Rows rendered away from where they are written: a JSX variable or call
-// (`inline`), and JSX handed to a prop (`slots`), placed where it renders.
-type Placement = {
-  inline: Map<ts.Node, ts.Node[]>;
-  slots: Map<ts.Node, Slot[]>;
-  siteOf: Map<ts.Node, ts.Node>;
-  frameOf: Map<ts.Node, Links>;
-  unplaced: Map<ts.Node, ts.Node>;
-};
-type View = { placement: Placement; links: Links };
 type Keys = { keys: ReadonlySet<string>; modal: string };
 type Gate = Keys & { owners: Owners; outer: Chain[]; host?: Handed };
 
-export const FIELD_ROWS = new Map([
-  ["Field", "atoms"],
-  ["Checkbox", "atoms"],
-  ["Radio", "atoms"],
-  ["ChoiceList", "choicelist"],
-]);
-// Design-system controls that draw their own label and are not form rows.
-export const NOT_ROWS = new Map([
-  ["InlineText", "edits a value in place, its label hidden"],
-  ["ChipValueList", "picks a list filter's values"],
-]);
-const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
 const HEADING = primitiveKey("heading", "Heading");
-const NO_LINKS: Links = new Map();
 const DIALOG: Chain[] = [[["modal"]]];
 
-const keyIs = (n: ts.Node, key: string) => {
-  const def = defOf(n);
-  return !!def && keyOf(def) === key;
-};
-const childOfJsx = (n: ts.Node) =>
-  !!n.parent && (ts.isJsxElement(n.parent) || ts.isJsxFragment(n.parent));
-// A component that renders a dialog around its children; `role` alone marks a box.
+// A component that renders a dialog around its children.
 const wraps = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
   upper(n) && isDialogTag(n.getSourceFile(), tag(n), keys);
+// `role="dialog"` alone makes any element a dialog box.
 const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
   literal(n, "role") === "dialog" || wraps(g, n);
 export const dialogsIn = (source: ts.SourceFile, keys: ReadonlySet<string>) =>
   elementsIn(source).filter((n) => isDialog({ keys }, n));
-const variantsOf = (n: ts.Node, given?: Given) =>
-  classVariants(
-    n.getSourceFile(),
-    attr(n, "className")?.initializer,
-    16,
-    given,
-  );
-// What one expression hands a prop: its literals, or what the caller is handed
-// for the props the expression reads or spreads.
-function handedValue(
-  x: ts.Expression,
-  name: string,
-  def: ts.Node,
-  outer?: Handed,
-): Held {
-  const listed = literalsIn(x);
-  if (listed || !outer) return listed;
-  const preset = presetOf(def, name);
-  const reads = propReadBy(outer.def);
-  const forwarded = spreads(outer.def, x, name);
-  const read = forwarded ? name : reads(x);
-  if (read !== undefined) {
-    const values = outer.props(read);
-    const set = forwarded ? values?.filter((v) => v !== undefined) : values;
-    return set?.map((v) => v ?? preset);
-  }
-  if (!descendants(x).some((d) => reads(d) !== undefined)) return undefined;
-  return classVariants(x.getSourceFile(), x, 16, outer.given).map((v) =>
-    v.join(" "),
-  );
-}
-// `<Card inset />` hands `true`; a spread beside it could hand anything.
-const bare = (at: ts.Node, name: string) => {
-  const a = attr(at, name);
-  const all = opening(at)?.attributes.properties.length ?? 0;
-  return !!a && !a.initializer && attrs(at).length === all;
-};
-// What a call hands one prop: its literal branches, the caller's own value
-// where it hands one on, or the default for one left out.
-function handedThrough(
-  at: ts.Node,
-  def: ts.Node,
-  name: string,
-  outer?: Handed,
-): Held {
-  const forwarded: Forwarded | undefined =
-    outer &&
-    ((x) => {
-      if (!spreads(outer.def, x, name)) return undefined;
-      const values = outer.props(name);
-      return !values || values.includes(undefined) ? "maybe" : "set";
-    });
-  const handed = handedTo(at, name, forwarded);
-  if (handed === "any") return bare(at, name) ? ["true"] : undefined;
-  const each = handed.map((x) =>
-    x ? handedValue(x, name, def, outer) : [presetOf(def, name)],
-  );
-  if (each.some((v) => v === undefined)) return undefined;
-  return each.flatMap((v) => v ?? []);
-}
-const propAt = (at: ts.Node, def: ts.Node, name: string, outer?: Handed) => {
-  const domain = domainOf(def, name);
-  return (
-    handedThrough(at, def, name, outer) ?? (domain && [...domain, undefined])
-  );
-};
-const classReads = new WeakMap<ts.Node, string[]>();
-function classProps(def: ts.Node): string[] {
-  const known = classReads.get(def);
-  if (known) return known;
-  const reads = propReadBy(def);
-  const decides = (n: ts.Node) =>
-    ts.isJsxSpreadAttribute(n) ||
-    ts.isVariableDeclaration(n) ||
-    (ts.isJsxAttribute(n) &&
-      (n.name.getText() === "className" || upper(callOf(n))));
-  const names = new Set<string>();
-  for (const n of descendants(def)) {
-    const name = reads(n);
-    if (name === undefined) continue;
-    for (let p = n.parent; p && p !== def; p = p.parent) {
-      if (decides(p)) names.add(name);
-    }
-  }
-  const out = [...names].sort();
-  classReads.set(def, out);
-  return out;
-}
-const forwardsAll = (def: ts.Node) =>
-  descendants(def).some(
-    (n) => ts.isJsxSpreadAttribute(n) && spreads(def, n.expression),
-  );
-function handedAt(at: ts.Node, def: ts.Node, outer?: Handed): Handed {
-  const known = new Map<string, Held>();
-  const props: Props = (name) => {
-    if (!known.has(name)) known.set(name, propAt(at, def, name, outer));
-    return known.get(name);
-  };
-  const reads = propReadBy(def);
-  const given: Given = (n) => {
-    const name = reads(n);
-    return name === undefined ? undefined : props(name);
-  };
-  const handedOn = (x: ts.Expression) =>
-    outer && spreads(outer.def, x) ? outer.keyed : [];
-  // A body that spreads its props on may hand any of them to a class.
-  const written = forwardsAll(def) ? namesHanded(at, handedOn) : [];
-  const keyed = [...new Set([...classProps(def), ...written])].sort();
-  return { def, props, given, keyed };
-}
 const inForce = (g: Gate, n: ts.Node) =>
   g.host && within(n, g.host.def) ? g.host : undefined;
-// Only a label hidden in every render: `labelHidden={x}` shows it in one.
-const inPlace = (n: ts.Node) => {
-  const hidden = attr(n, "labelHidden");
-  const e = hidden?.initializer;
-  return (
-    !!hidden &&
-    (!e || (ts.isJsxExpression(e) && e.expression?.getText() === "true"))
-  );
-};
 function literal(n: ts.Node, name: string) {
-  const init = attr(n, name)?.initializer;
-  const e = init && ts.isJsxExpression(init) ? init.expression : init;
+  const a = attr(n, name);
+  const e = a && initOf(a);
   return e && ts.isStringLiteral(e) ? e.text : undefined;
 }
 
-// Where a component renders its prop `name`, following it through the
-// components that hand it on.
-function slotSite(
-  call: ts.Node,
-  name: string,
-  path: Links,
-  depth = 0,
-): { site: ts.Node; links: Links } | undefined {
-  const def = defOf(call);
-  if (!def || depth > 4) return undefined;
-  const links: Links = new Map(path).set(def, call);
-  const given = givenTo(def);
-  const site = descendants(def).find(
-    (x) =>
-      ((ts.isJsxExpression(x) && childOfJsx(x)) || ts.isReturnStatement(x)) &&
-      !!x.expression &&
-      rendered(x.expression).some((r) => given(r, name)),
-  );
-  if (site) return { site, links };
-  for (const a of descendants(def).filter(ts.isJsxAttribute)) {
-    const e = a.initializer;
-    if (!e || !ts.isJsxExpression(e) || !e.expression) continue;
-    if (!given(e.expression, name)) continue;
-    const found = slotSite(callOf(a), a.name.getText(), links, depth + 1);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function inlineRoots(source: ts.SourceFile, e: ts.Expression): ts.Node[] {
-  const callee = ts.isCallExpression(e) ? e.expression : undefined;
-  const named = ts.isIdentifier(e) ? e : callee;
-  const decl = named && declarations(source).get(named.getText());
-  if (!decl) return [];
-  if (callee) return returnedBy(fnOf(decl));
-  return ts.isVariableDeclaration(decl) ? jsxOf(decl.initializer) : [];
-}
-function placeInline(source: ts.SourceFile, p: Placement) {
-  for (const x of descendants(source)) {
-    if (!ts.isJsxExpression(x) || !x.expression || !childOfJsx(x)) continue;
-    const roots = inlineRoots(source, x.expression);
-    if (roots.length === 0) continue;
-    p.inline.set(x, roots);
-    for (const r of roots) if (!p.siteOf.has(r)) p.siteOf.set(r, x);
-  }
-}
-function placeSlots(source: ts.SourceFile, p: Placement) {
-  for (const a of descendants(source).filter(ts.isJsxAttribute)) {
-    const roots = handedJsx(a);
-    const call = callOf(a);
-    if (roots.length === 0 || !upper(call)) continue;
-    const found = slotSite(call, a.name.getText(), new Map());
-    if (!found) {
-      for (const r of roots) p.unplaced.set(r, call);
-      continue;
-    }
-    const slot = { roots, links: found.links };
-    p.slots.set(found.site, [...(p.slots.get(found.site) ?? []), slot]);
-    for (const r of roots) {
-      p.siteOf.set(r, found.site);
-      p.frameOf.set(r, found.links);
-    }
-  }
-}
-const placements = new WeakMap<ts.SourceFile, Placement>();
-function placementIn(source: ts.SourceFile): Placement {
-  const known = placements.get(source);
-  if (known) return known;
-  const p: Placement = {
-    inline: new Map(),
-    slots: new Map(),
-    siteOf: new Map(),
-    frameOf: new Map(),
-    unplaced: new Map(),
-  };
-  placeInline(source, p);
-  placeSlots(source, p);
-  placements.set(source, p);
-  return p;
-}
-
-// Ancestors as rendered, not as written. A slotted root climbs to its site
-// and a definition's root to its call, each under the frame that placed it.
-function* climb(v: View, n: ts.Node): Generator<{ at: ts.Node; v: View }> {
-  let view = v;
-  for (let p = n, steps = 0; ; steps++) {
-    const frame = view.placement.frameOf.get(p);
-    if (frame && frame !== view.links) view = { ...view, links: frame };
-    const next =
-      view.placement.siteOf.get(p) ?? view.links.get(p)?.parent ?? p.parent;
-    if (!next) return;
-    if (steps > 4096) throw new Error(`${whereOf(n)}: renders inside itself`);
-    p = next;
-    yield { at: p, v: view };
-  }
-}
-function parentOf(v: View, n: ts.Node) {
-  for (const step of climb(v, n)) if (ts.isJsxElement(step.at)) return step;
-  return undefined;
-}
-const enclosingIn = (v: View, n: ts.Node) => parentOf(v, n)?.at;
-const hostedAt = (v: View, n: ts.Node) => [
-  ...(v.placement.inline.get(n) ?? []),
-  ...(v.placement.slots.get(n) ?? [])
-    .filter((s) => s.links === v.links)
-    .flatMap((s) => s.roots),
-];
-// Everything under `root` as rendered, what an expression hosts included.
-function walk(v: View, root: ts.Node): ts.Node[] {
-  const out: ts.Node[] = [];
-  const seen = new Set<ts.Node>();
-  const visit = (n: ts.Node) => {
-    if (seen.has(n)) return;
-    seen.add(n);
-    out.push(n);
-    for (const r of hostedAt(v, n)) visit(r);
-    ts.forEachChild(n, visit);
-  };
-  ts.forEachChild(root, visit);
-  return out;
-}
-function viewAt(placement: Placement, n: ts.Node): View {
-  for (let p: ts.Node | undefined = n; p; p = p.parent) {
-    const links = placement.frameOf.get(p);
-    if (links) return { placement, links };
-  }
-  return { placement, links: NO_LINKS };
-}
-function unplacedAt(placement: Placement, n: ts.Node) {
-  for (let p: ts.Node | undefined = n; p; p = p.parent) {
-    if (placement.unplaced.has(p)) return true;
-  }
-  return false;
-}
-
-// A field whose label is hidden edits a value in place among its text,
-// rather than standing as a row of a form.
-const isPrimitiveField = (n: ts.Node) =>
-  rowKeys.some((k) => keyIs(n, k)) && !inPlace(n);
-const isField = (n: ts.Node, given?: Given) =>
-  isPrimitiveField(n) || variantsOf(n, given).flat().includes("form-row");
 // A component counts by the field rows it renders at its own root.
 function width(g: Gate, n: ts.Node) {
   if (isField(n, inForce(g, n)?.given)) return 1;
@@ -523,9 +225,9 @@ function boxesOf(
   const def = defOf(n);
   if (!def || hops === 0 || wraps(g, n)) return own;
   const roots = rootsOf(def);
-  // A binding that is no function (`const Line = inline ? "span" : "p"`) is
-  // read as the element it names.
-  if (roots.length === 0 && !ts.isFunctionLike(fnOf(def))) return own;
+  // With no root to read (`const Line = inline ? "span" : "p"`), the call's
+  // own classes stand for its box.
+  if (roots.length === 0) return own;
   const handed = handedAt(n, def, scope);
   return roots
     .flatMap((r) => boxesOf(g, r, hops - 1, handed))
@@ -743,6 +445,7 @@ export function rowsAcross(
   const base: Gate = { ...keys, owners, outer: DIALOG };
   const rows = new Map<string, Row>();
   const seen = new Set<string>();
+  const judged = new Set<ts.Node>();
   let dialogs = 0;
   let depth = 0;
   const queue: Guest[] = [];
@@ -761,33 +464,11 @@ export function rowsAcross(
       if (seen.has(key)) continue;
       seen.add(key);
       if (seen.size > SCOPE_CAP) throw fanOut(q);
+      judged.add(q.def);
       const g = { ...base, outer: q.outer, host: q.handed };
       take(rowsIn(g, q.def.getSourceFile(), q));
     }
   }
-  return { rows: [...rows.values()], dialogs, depth, scopes: seen.size };
+  const scopes = seen.size;
+  return { rows: [...rows.values()], dialogs, depth, scopes, judged };
 }
-
-// A root that is already a row counts as one where the component is used,
-// so it is not followed.
-function drawsLabel(def: ts.Node, hops = 2): boolean {
-  return rootsOf(def).some((r) => {
-    if (tag(r) === "label") return true;
-    const inside = elementsIn(r).filter((e) => enclosing(e) === r);
-    if (inside.some((e) => ["label", "legend"].includes(tag(e)))) return true;
-    const inner = defOf(r);
-    if (!inner || isField(r)) return false;
-    return hops > 0 && drawsLabel(inner, hops - 1);
-  });
-}
-const exported = (def: ts.Node) =>
-  (ts.isFunctionDeclaration(def) || ts.isVariableDeclaration(def)) &&
-  (ts.getCombinedModifierFlags(def) & ts.ModifierFlags.Export) !== 0;
-export const labelledIn = (source: ts.SourceFile) =>
-  [...declarations(source)]
-    .filter(([name, def]) => /^[A-Z]/.test(name) && exported(def))
-    .filter(([name]) => {
-      const drawn = definition(source, name);
-      return !!drawn && drawsLabel(drawn);
-    })
-    .map(([name]) => name);
