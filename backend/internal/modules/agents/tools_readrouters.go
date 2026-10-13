@@ -28,20 +28,21 @@ func (readInputChecks) routeTargets() map[string]string {
 	}
 }
 
-// readImport fronts the two reads of one import run.
+// readImport fronts the reads an import needs: one run, and the format its
+// files take.
 type readImport struct{ routed }
 
 func (readImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_import", Title: "Read an import run", Version: toolVersionV1,
+		Name: "read_import", Title: "Read an import run or the import format", Version: toolVersionV1,
 		Description: readImportCopy.render(),
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"description":"run is where it got to, report what it will do or did"}}}`),
+			"view":{"description":"report is one run's state and, once validated, what it will do or did; format is the files and columns an import takes"}}}`),
 	}
 }
 
 func (readImport) routeField() string { return "view" }
 
 func (readImport) routeTargets() map[string]string {
-	return map[string]string{"run": "read_import_run", "report": "read_import_report"}
+	return map[string]string{"report": "read_import_report", "format": "describe_import_format"}
 }

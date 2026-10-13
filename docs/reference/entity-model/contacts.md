@@ -490,6 +490,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_pkey`: `unique, btree (id)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`

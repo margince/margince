@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 66,
     "system_frame_tokens": 586,
-    "tokens": 26763,
+    "tokens": 27084,
     "median_tool_tokens": 346,
-    "mean_tool_tokens": 405
+    "mean_tool_tokens": 410
   },
   "agents": [
     {
@@ -91,6 +91,10 @@
       "tokens": 1020
     },
     {
+      "name": "preview_import",
+      "tokens": 986
+    },
+    {
       "name": "send_company_email",
       "tokens": 823
     },
@@ -117,10 +121,6 @@
     {
       "name": "read_lists",
       "tokens": 745
-    },
-    {
-      "name": "preview_import",
-      "tokens": 725
     },
     {
       "name": "create_record",
@@ -279,16 +279,16 @@
       "tokens": 264
     },
     {
+      "name": "commit_import",
+      "tokens": 263
+    },
+    {
       "name": "relink_activities",
       "tokens": 260
     },
     {
       "name": "company_coverage",
       "tokens": 246
-    },
-    {
-      "name": "commit_import",
-      "tokens": 239
     },
     {
       "name": "create_task",
@@ -327,6 +327,10 @@
       "tokens": 186
     },
     {
+      "name": "read_import",
+      "tokens": 185
+    },
+    {
       "name": "list_documents",
       "tokens": 180
     },
@@ -341,10 +345,6 @@
     {
       "name": "read_approval",
       "tokens": 154
-    },
-    {
-      "name": "read_import",
-      "tokens": 149
     },
     {
       "name": "whoami",

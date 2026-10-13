@@ -400,6 +400,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
+		addImportRunSweepJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addCapturePartSlimJobs(reg, pool, cfg, log),

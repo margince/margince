@@ -132,15 +132,38 @@ type recordingImports struct {
 	discarded *[]string
 	stageErr  error
 	sawLive   *bool
+	staged    *crmcontracts.CreateImportRunRequest
+	profile   crmcontracts.ImportSourceProfile
+	format    crmcontracts.ImportFormat
+	run       crmcontracts.ImportRun
+	report    *crmcontracts.ImportRunReport
 }
 
 func (r recordingImports) StageRun(
-	_ context.Context, _ crmcontracts.CreateImportRunRequest,
+	_ context.Context, req crmcontracts.CreateImportRunRequest,
 ) (crmcontracts.ImportRun, error) {
+	if r.staged != nil {
+		*r.staged = req
+	}
 	if r.stageErr != nil {
 		return crmcontracts.ImportRun{}, r.stageErr
 	}
 	return crmcontracts.ImportRun{}, nil
+}
+
+func (r recordingImports) ProfileFiles(context.Context, []ImportFile) (crmcontracts.ImportSourceProfile, error) {
+	if r.stored != nil {
+		*r.stored = true
+	}
+	return r.profile, nil
+}
+
+func (r recordingImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+	return r.format, nil
+}
+
+func (r recordingImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return r.run, r.report, nil
 }
 
 func (r recordingImports) DiscardSource(ctx context.Context, ref string) error {
@@ -162,9 +185,10 @@ func (r recordingImports) ProfileSource(
 	if r.stored != nil {
 		*r.stored = true
 	}
+	imported := crmcontracts.ImportObject(object)
 	profile := crmcontracts.ImportSourceProfile{
 		SourceRef:        "ws/import-source/stored",
-		Object:           crmcontracts.ImportObject(object),
+		Object:           &imported,
 		SuggestedMapping: r.suggested,
 		Targets:          r.targets,
 	}
@@ -223,8 +247,8 @@ func TestARunWhoseReportCannotBeReadStagesNoApproval(t *testing.T) {
 
 type reportlessImports struct{ stubImports }
 
-func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
-	return crmcontracts.ImportRunReport{}, errors.New("the report is gone")
+func (reportlessImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return crmcontracts.ImportRun{}, nil, errors.New("the report is gone")
 }
 
 // TestAProposalThatPlacesOnlySomeColumnsIsRefused is the shape a partial

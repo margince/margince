@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "3d23d2a0e6f61387a5fd23bd982332098b0c74d3625edeb9617f659275e088a5"
+const JobContractHash = "2bc2fb5712b5798fb30335b13cebbb17f2d68bdcc2453fa06c9b6a6bc60841fe"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -531,6 +531,16 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"import_run_sweep": {
+		Kind:      "import_run_sweep",
+		GoType:    "ImportRunSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
+		Fault:     FaultPolicy{NilAfterLogging: "the warn line is this pass's FINDING, not a failure: it counts the runs it moved to failed, which approve now resumes. A pass that could not read or move them returns that through jobs.Fault."},
 	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",

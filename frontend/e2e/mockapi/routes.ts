@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { formatFixture } from "../../src/screens/import.fixtures";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -44,6 +45,7 @@ const empty = reply(page([]));
 // above any prefix row that would also match it.
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
+  { method: "GET", path: "/imports/format", handle: reply(formatFixture) },
   { path: "/me/working-hours", handle: reply(session.workingHours) },
   {
     method: "GET",

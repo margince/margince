@@ -108,7 +108,6 @@ describe("a stored value", () => {
       "margince.table.widths.v2.*",
       "margince.agent.faults-seen",
       "margince.leads.segregationNoteDismissed",
-      "margince.import.run",
       "margince.first-run.platform-declined:*",
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
@@ -188,7 +187,7 @@ describe("forgetting a seat", () => {
       survivingNames("session").sort(),
     );
     expect(readStored(STORAGE_KEYS.theme)).toBe("kept");
-    expect(readStored(STORAGE_KEYS.importRun)).toBeNull();
+    expect(readStored(STORAGE_KEYS.faultsSeen)).toBeNull();
     expect(readStored(STORAGE_KEYS.buyerRoomSession)).toBeNull();
     // Named by its account, so the next reader cannot inherit it.
     expect(

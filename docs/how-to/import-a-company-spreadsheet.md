@@ -1,9 +1,10 @@
 <!-- prose:plain -->
-# Import a spreadsheet of companies over MCP or REST
+# Import a spreadsheet or a ZIP over MCP or REST
 
-This page is for a developer or an assistant that imports a CSV of companies through MCP or REST. A
-user who imports in the app reads the handbook: the [Settings](../handbook/settings.md) page covers
-**Data import**, its preview, correcting companies and running a file again. Undo is in
+This page is for a developer or an assistant that imports a CSV of companies, or a ZIP of CSV files,
+through MCP or REST. A user who imports in the app reads the handbook: the
+[Settings](../handbook/settings.md) page covers **Data import**, its test run and how to correct
+companies. Undo is in
 [What is kept, what is destroyed](../handbook/retention-exports-and-deletion.md).
 
 A run can **add** companies you do not have, and **correct** ones you do. Every run shows a preview
@@ -18,14 +19,16 @@ The steps are the same over MCP and REST:
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import` with `view: report`, and `commit_import`.
+`read_import` with `view: report`, and `commit_import`. `commit_import` answers at once while the run
+goes on, so read `read_import` with `view: report` again until `state` is `complete`.
 
-Over REST you upload the file first, so it is four calls:
+Over REST you upload the file first, so it is five calls:
 
 - `POST /v1/imports/sources`, with the file as `multipart`;
 - `POST /v1/imports`, which names the `source_ref` that the first call returns;
 - `GET /v1/imports/{id}/report`;
-- `POST /v1/imports/{id}/approve`.
+- `POST /v1/imports/{id}/approve`, which answers at once while the run goes on;
+- `GET /v1/imports/{id}`, read again until `status` is `complete`.
 
 **Only a human can upload or undo.** Both need a session where a human has signed in, and refuse an agent.
 So an assistant can preview and commit, but it cannot upload a file for you, or undo a run after it.
@@ -102,6 +105,45 @@ Where several companies share a name, it picks one, with no rule for which.
 Each of those does no harm when the result is a review. When the result decides a write, each one can write over the wrong company, and no
 call undoes that. An ID fails in none of these ways.
 
+## Importing a ZIP over REST
+
+A ZIP holds one CSV for each record type. The file name gives the type: `companies.csv`,
+`contacts.csv` or `leads.csv`. A run lands companies first, then contacts, then leads, so a contact can
+link to a company in the same ZIP.
+
+1. Read `GET /v1/imports/format`. It lists each file, its columns and what goes in each one, and the
+   order the files land in. `GET /v1/imports/template` returns the same as a ZIP to fill in.
+2. Upload the ZIP to `POST /v1/imports/sources`, with no `object`.
+3. Read `parts` in the answer: one profile per file, with a map for each type. `ignored` names the
+   files no type takes.
+4. Call `POST /v1/imports` with `parts`. Each part names its `file`, its `object` and its `mapping`.
+5. Read the report, then approve the run as for one CSV.
+
+A ZIP holds at most 20 files, and the upload limit applies to the ZIP. Two files of one type are
+refused.
+
+A contact's `company_ref` names its company by the company's `ref` in this upload or an earlier one, its
+domain, its name or its ID. `on_broken_link` decides a row whose link finds nothing: `skip_row` leaves
+the row out, and `drop_link` lands it without the link. Both are listed in the report.
+
+`source_name` files the run's records under one name, so the same export uploaded again updates them.
+The upload's answer holds one in `suggested_source_name`.
+
+`GET /v1/imports/{id}/problems.csv` returns the report's issues as a spreadsheet, one row per issue.
+The template and this spreadsheet need a session where a human has signed in, as the upload does. A
+passport may read the format.
+
+## Importing several files over MCP
+
+`preview_import` takes `files` in place of `object`, `csv` and `mapping`. Each file names its `name`, its
+`object`, its `csv` text and, if you want, its own `mapping`. The run takes one file per type, and the
+CSV text of all the files together is at most 1,000,000 bytes. `source_name` and `on_broken_link` work
+as they do over REST.
+
+`read_import` with `view: format` answers what `GET /v1/imports/format` answers. The answer to
+`preview_import` lists each file under `files`, with the map it settled on and the columns no field
+takes. `part` is the name the report uses for the file, which is its type's template name.
+
 ## Reading the report before you commit
 
 ```json
@@ -128,7 +170,9 @@ review queue picks up. No merge takes back a private fact once it is told.
 
 ## Committing
 
-Approve the run by its ID. The commit saves its place as it goes, and it is idempotent on the source key.
+Approve the run by its ID. The answer comes at once, with the run `running`, and the run goes on after it;
+read the run until its `status` is `complete`. The commit saves its place as it goes, and it is
+idempotent on the source key.
 A run that stops in the middle starts again from where it stopped. The report keeps its shape after the
 commit: the same fields then report what the run *did*.
 

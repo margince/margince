@@ -18910,7 +18910,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List this workspace's recent CSV import runs, newest first.
+         * @description The history the Data import page shows: each run with its file, its
+         *     source name, its parts and its state. Only `csv` runs are listed; the
+         *     flip's own runs carry no mapping this surface can describe.
+         *
+         *     Gated on reading `import_run`, the same grant that reads one run. A
+         *     `limit` outside 1..50 is clamped to the nearest bound, not refused.
+         */
+        get: operations["listImportRuns"];
         put?: never;
         /**
          * Create an import run from an uploaded source and a column mapping, and dry-run it.
@@ -18927,14 +18936,63 @@ export interface paths {
          *     here rather than at row 40,000: the mapping is validated against the set
          *     of targets `uploadImportSource` reported for this object.
          *
-         *     Custom fields are NOT in that set. An import lands its rows through the
-         *     stores' caller-opened transaction seams, which refuse custom fields by
-         *     design — reading the catalog is the second connection those seams exist
-         *     to avoid — so a `cf_` target would be accepted, reported as written, and
-         *     dropped. It is refused here instead, and it arrives when the seam can
-         *     carry it.
+         *     The object's active custom fields are in that set, each by its `cf_` key.
+         *     Their values are checked against the field's type and picklist options.
          */
         post: operations["createImportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Describe the files an import takes, column by column, for this workspace.
+         * @description The import format as data: the order the files land in, each file's
+         *     name and columns, and the rules that key a row. Each column carries a
+         *     guide (what goes in it, an example, and whether a new row needs it).
+         *     The workspace's active custom fields are columns too, by their `cf_`
+         *     key, with their label, type and, for a caller who may read custom
+         *     fields, their allowed values.
+         *
+         *     The template ZIP and the column guide on the screen are built from this
+         *     same answer. Gated on reading `import_run`; it creates nothing.
+         */
+        get: operations["getImportFormat"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the import template for this workspace.
+         * @description A ZIP holding one CSV per file of `getImportFormat`, each with its
+         *     header row only, and a README.txt that lists the import order, the key
+         *     rules, every picklist's allowed values, the size limit and each
+         *     column's guide. A header cell is the column's label when it has one,
+         *     else its name. In the installation's language. Gated on reading
+         *     `import_run`.
+         */
+        get: operations["downloadImportTemplate"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18988,6 +19046,31 @@ export interface paths {
          *     file half-ignored under a success message is worse than a refusal.
          */
         get: operations["getImportRunReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/problems.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Download the run's row problems as a CSV.
+         * @description The report's `issues` as a spreadsheet: `file,row,column,problem,value`,
+         *     one line per issue. A cell that a spreadsheet would read as a formula
+         *     is prefixed with an apostrophe. Same grants and the same not-found as
+         *     `getImportRunReport`.
+         */
+        get: operations["downloadImportProblems"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23036,7 +23119,19 @@ export interface components {
         ImportSourceProfile: {
             /** @description Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct. */
             source_ref: string;
-            object: components["schemas"]["ImportObject"];
+            object?: components["schemas"]["ImportObject"];
+            /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
+            file_name?: string;
+            /**
+             * @description The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+             *     every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+             *     single CSV, so a re-upload of one keeps the namespace it was first imported under.
+             */
+            suggested_source_name?: string;
+            /** @description One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level. */
+            parts?: components["schemas"]["ImportPartProfile"][];
+            /** @description The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one. */
+            ignored?: components["schemas"]["ImportIgnoredEntry"][];
             columns: components["schemas"]["ImportColumn"][];
             /** @description Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest. */
             rows_profiled: number;
@@ -23048,22 +23143,87 @@ export interface components {
              * @description The closed set a mapping may name — every field this object can receive THROUGH AN
              *     IMPORT, which is not every field it has.
              *
-             *     Custom fields are absent on purpose. An import writes through the stores'
-             *     caller-opened transaction seams, which refuse custom fields by design, so a `cf_`
-             *     target would be accepted, reported as written, and dropped. Naming one is refused by
-             *     `createImportRun` rather than silently ignored.
+             *     The object's active custom fields are targets, each by its `cf_` key. A column whose
+             *     header is a field's label or key is suggested onto it, and its values are checked
+             *     against the field's type and picklist options.
              */
             targets: string[];
         };
+        /** @description One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`. */
+        ImportPartProfile: {
+            /** @description The entry's path inside the ZIP. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            columns: components["schemas"]["ImportColumn"][];
+            rows_profiled: number;
+            /** @description One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call. */
+            suggested_mappings: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+        };
+        /** @description One ZIP entry no part was made from. */
+        ImportIgnoredEntry: {
+            /** @description The entry's path inside the ZIP. */
+            file: string;
+            /**
+             * @description `unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.
+             * @enum {string}
+             */
+            reason: "unknown_name" | "not_yet_importable";
+        };
+        /** @description One file of a ZIP run, with the type and mapping the human settled for it. */
+        ImportPartRequest: {
+            /** @description The entry's path inside the ZIP, as the profile's `parts[].file` spells it. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            /** @description `{source column → target field}` for this file, validated as the single-CSV `mapping` is. A column mapped to `ref` is the file's own row id, which other files' links name. */
+            mapping: {
+                [key: string]: string;
+            };
+            /** @description The column holding the row's stable id, as the single-CSV `source_key`. A column mapped to `ref` wins over it. */
+            source_key?: string;
+        };
+        /**
+         * @description What a run does with a contact row whose company link finds no single
+         *     company, in the upload or in the estate. `skip_row` leaves the row out
+         *     and reports it; `drop_link` lands the row without the link and reports
+         *     the dropped link. A ZIP run applies it to `company_ref` and
+         *     `company_name`; a row holding both is decided by its `company_ref`. A
+         *     single CSV applies it to `company_ref` only, and lands a row whose
+         *     `company_name` finds nothing, with the link reported as unresolved. A
+         *     lead's `company_name` is text, not a link, so it never skips a lead.
+         * @default skip_row
+         * @enum {string}
+         */
+        ImportOnBrokenLink: "skip_row" | "drop_link";
+        /**
+         * @description What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.
+         * @enum {string}
+         */
+        ImportProblemKind: "broken_link" | "dropped_link" | "invalid_value" | "unknown_owner" | "new_tag" | "duplicate" | "permission" | "unusable_row";
+        /**
+         * @description Exactly one of two shapes: `object` and `mapping` (and optionally
+         *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
+         *     `source_key`. Both or neither is refused.
+         */
         CreateImportRunRequest: {
             /**
              * @description The source kind. The Salesforce connector runs the same engine and arrives with its own ticket (IEM-AC-8).
              * @enum {string}
              */
             connector: "csv";
-            object: components["schemas"]["ImportObject"];
+            object?: components["schemas"]["ImportObject"];
             /** @description From `uploadImportSource`. */
             source_ref: string;
+            /** @description The files of a ZIP to import, one type per file. Two files naming one type are refused. */
+            parts?: components["schemas"]["ImportPartRequest"][];
+            /** @description The name this source is filed under, so a re-upload of the same export updates rather than duplicates. The profile's `suggested_source_name` is the proposal. */
+            source_name?: string;
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /** @description The uploaded file's name, echoed from the profile's `file_name`. Display only: nothing about the run is decided by it. */
+            file_name?: string;
             /**
              * @description `{source column → target field}`, as the human settled it. Validated against
              *     the object's live field catalog before the run is created.
@@ -23088,7 +23248,7 @@ export interface components {
              *     A row naming an id nothing answers to is reported as a skipped row saying so,
              *     never created quietly under a new id.
              */
-            mapping: {
+            mapping?: {
                 [key: string]: string;
             };
             /**
@@ -23216,14 +23376,73 @@ export interface components {
             unchanged: number;
             skipped: number;
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. */
+        /**
+         * @description The files an import takes, for this workspace. The template ZIP, the
+         *     column guide and the screen's file order are all read from it.
+         */
+        ImportFormat: {
+            /** @enum {string} */
+            version: "margince-import/1";
+            /** @description The order the files land in, so a link can name a record an earlier file made. */
+            order: components["schemas"]["ImportObject"][];
+            /** @description One file per object, in `order`. */
+            files: components["schemas"]["ImportFormatFile"][];
+            /** @description How a row is recognised on a second upload and how files link to each other, one sentence each. */
+            key_rules: string[];
+            /** @description The largest upload this installation accepts, in MB. */
+            size_limit_mb: number;
+        };
+        /** @description One file of the import and its columns. */
+        ImportFormatFile: {
+            /** @description The file name a ZIP entry needs for this object to be detected. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            columns: components["schemas"]["ImportFormatColumn"][];
+        };
+        /**
+         * @description One column and its guide. `name` is the mapping target a column is
+         *     mapped onto; `label` is what the screen shows, set for a custom field.
+         *     A header shows `label` when present, else `name`.
+         */
+        ImportFormatColumn: {
+            /** @description The mapping target: a core field, or a custom field's `cf_` key. */
+            name: string;
+            /** @description A custom field's label. Absent for a core column. */
+            label?: string;
+            /** @description What goes in the column. */
+            description: string;
+            /** @description An example value, or several separated by " · ". */
+            example: string;
+            /** @description Whether a row that creates a record needs this column filled. */
+            required_on_new_row: boolean;
+            /** @description Whether this is one of the workspace's custom fields. */
+            custom: boolean;
+            /** @description A custom field's type. Absent for a core column. */
+            type?: string;
+            /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
+            options?: string[];
+        };
+        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
-            /** @description The line in the uploaded file, counting the header as line 1. */
-            line: number;
+            /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
+            line?: number;
+            /** @description The ZIP entry the line is in. Absent for a single CSV. */
+            file?: string;
             /** @description The offending column, when one is to blame. */
             column?: string | null;
+            kind?: components["schemas"]["ImportProblemKind"];
+            /** @description The cell value at fault, when one is, so a screen can group the rows that share it. */
+            value?: string;
             /** @description What is wrong, in terms of the file the human uploaded — never a database or driver message. */
             reason: string;
+        };
+        /** @description One file's slice of a run's report. */
+        ImportPartReport: {
+            /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            rows_read: number;
+            disposition: components["schemas"]["ImportRunDisposition"];
         };
         /**
          * @description The same shape before and after approval: a dry run reports what the
@@ -23235,6 +23454,8 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             rows_read: number;
             disposition: components["schemas"]["ImportRunDisposition"];
+            /** @description The same counts per file, in import order. A single CSV reports one part. */
+            parts?: components["schemas"]["ImportPartReport"][];
             /** @description Row-level refusals, enumerated. A file half-ignored under a success message is worse than a refusal. */
             issues: components["schemas"]["ImportRowIssue"][];
             /** @description Which column identified a row for idempotency — the request's `source_key`, or the natural key chosen in its absence. Stated because the whole re-run guarantee rests on it. */
@@ -23305,7 +23526,19 @@ export interface components {
             id: string;
             /** @enum {string} */
             connector: "csv" | "salesforce";
-            object: components["schemas"]["ImportObject"];
+            object?: components["schemas"]["ImportObject"];
+            /** @description The uploaded file's name, as the run was created with it. Display only. */
+            file_name?: string;
+            /** @description The name the run's source is filed under. */
+            source_name?: string;
+            /** @description The files the run imports, in import order. A single CSV is one part. */
+            parts?: components["schemas"]["ImportRunPart"][];
+            /**
+             * Format: uuid
+             * @description The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.
+             */
+            readonly context_tag_id?: string;
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
@@ -23318,6 +23551,17 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ImportRunPart: {
+            /** @description The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`. */
+            file: string;
+            object: components["schemas"]["ImportObject"];
+            /** @description Rows the file holds, once a dry run has read it; 0 before. */
+            row_count: number;
+        };
+        ImportRunList: {
+            data: components["schemas"]["ImportRun"][];
+            page: components["schemas"]["PageInfo"];
         };
         /**
          * @description What a coaching notice is about. A closed vocabulary, because a notice addressed to a
@@ -72984,10 +73228,10 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import. UTF-8; the first row is the header.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
                      */
                     file: string;
-                    object: components["schemas"]["ImportObject"];
+                    object?: components["schemas"]["ImportObject"];
                 };
             };
         };
@@ -73020,6 +73264,42 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listImportRuns: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRunList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     createImportRun: {
         parameters: {
             query?: never;
@@ -73046,6 +73326,54 @@ export interface operations {
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getImportFormat: {
+        parameters: {
+            query?: {
+                /** @description The language of the guide text. The installation's language when absent. */
+                lang?: "en" | "de" | "vi";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportFormat"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    downloadImportTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The template as a downloadable ZIP attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getImportRun: {
@@ -73091,6 +73419,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportRunReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    downloadImportProblems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The problems as a downloadable CSV attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
                 };
             };
             401: components["responses"]["Unauthorized"];

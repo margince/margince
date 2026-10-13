@@ -321,11 +321,11 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
-| `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `update_record` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
@@ -350,25 +350,25 @@ Every run of every case requiring this tool passed, for the model named.
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
-| `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
+| `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `list_colleagues` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ### `gpt-5.6-sol@codex-cli`
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
-| `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `progress_deal` | 1.00 | 3 | `case45_move_the_deal_on` |
@@ -390,10 +390,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
+| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
 | `read_project_360` | 1.00 | 3 | `case41_close_the_project` |
 | `read_approval` | 1.00 | 3 | `case8_whats_waiting` |
-| `read_import` | 1.00 | 3 | `case10_finish_the_import` |
 
 ## 2. What is failing now
 

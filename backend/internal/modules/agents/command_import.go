@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
@@ -113,19 +114,19 @@ func (r importResolver) reportFor(
 		return "", crmcontracts.ImportRunReport{}, fmt.Errorf(
 			"no import seam is wired, so the approval for run %s could not say what it would do", cmd.RunID)
 	}
-	run, err := r.imports.ReadRun(ctx, cmd.RunID)
-	if err != nil {
-		return "", crmcontracts.ImportRunReport{}, err
-	}
-	if err := refuseUncommittableRun(run); err != nil {
-		return "", crmcontracts.ImportRunReport{}, err
-	}
-	report, err := r.imports.ReadReport(ctx, cmd.RunID)
+	run, report, err := r.imports.ReadReport(ctx, cmd.RunID)
 	if err != nil {
 		return "", crmcontracts.ImportRunReport{}, fmt.Errorf(
 			"reading the report of import run %s before asking for approval: %w", cmd.RunID, err)
 	}
-	return string(run.Object), report, nil
+	if err := refuseUncommittableRun(run); err != nil {
+		return "", crmcontracts.ImportRunReport{}, err
+	}
+	if report == nil {
+		return "", crmcontracts.ImportRunReport{}, fmt.Errorf(
+			"import run %s is awaiting approval with no report to show: %w", cmd.RunID, apperrors.ErrConflict)
+	}
+	return importObjectName(run.Object), *report, nil
 }
 
 // describeImport writes the sentence a human decides on.

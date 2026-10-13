@@ -75,7 +75,7 @@ func (h agentBundleHandlers) DownloadAgentSkillBundle(w http.ResponseWriter, r *
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	httperr.Download{ContentType: "application/zip", Filename: "margince-skill.zip", Size: int64(len(archive))}.WriteHeaders(w)
+	httperr.Download{ContentType: zipContentType, Filename: "margince-skill.zip", Size: int64(len(archive))}.WriteHeaders(w)
 	if _, err := w.Write(archive); err != nil { // #nosec G705 -- a ZIP attachment, never rendered as a page
 		h.log.WarnContext(r.Context(), "agent bundle: the client's download is truncated", "err", err)
 	}
