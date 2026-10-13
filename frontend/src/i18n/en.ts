@@ -1612,7 +1612,7 @@ export const en = {
   "offline.retry": "Retry",
 
   // The shell's connectivity banner and the failure a refused write shows
-  // (app/connectivitybanner.tsx, app/connectivity.ts).
+  // (app/connectivitybanner.tsx, lib/connectivity.ts).
   "connectivity.offline.title": "Device offline",
   "connectivity.offline.body":
     "Changes cannot be saved until the connection returns.",
@@ -5506,6 +5506,7 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
+  "analytics.retiredPipeline": "{name} (retired)",
   "analytics.forecastBanner":
     "Each tile shows the raw total and, below it, the probability-weighted total. Rounding is per deal, so it always matches Explain this number.",
   "analytics.company": "Company",

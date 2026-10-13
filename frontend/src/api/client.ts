@@ -5,8 +5,8 @@ import {
   connectivityNow,
   reportReached,
   reportUnreached,
-} from "../app/connectivity";
-import { readStored, STORAGE_KEYS } from "../app/storage";
+} from "../lib/connectivity";
+import { readStored, STORAGE_KEYS } from "../lib/storage";
 import { beginModelCall, endModelCall } from "./model-inflight";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated

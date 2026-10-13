@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { components } from "../api/schema";
-import { readStoredJson, STORAGE_KEYS, writeStored } from "./storage";
+import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];
 

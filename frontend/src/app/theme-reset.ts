@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { removeStored, STORAGE_KEYS } from "./storage";
+import { removeStored, STORAGE_KEYS } from "../lib/storage";
 import { setThemeChoice } from "./theme";
 
 /**

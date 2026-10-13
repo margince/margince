@@ -5,14 +5,14 @@ import {
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
-import { ProblemError, throwProblem } from "../screens/common";
-import { ENTITY_NAME_KEY } from "../screens/entityref";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
   watchConnectivity,
-} from "./connectivity";
+} from "../lib/connectivity";
+import { ProblemError, throwProblem } from "../screens/common";
+import { ENTITY_NAME_KEY } from "../screens/entityref";
 import {
   createQueryClient,
   liveInterval,

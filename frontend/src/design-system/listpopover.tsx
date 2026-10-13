@@ -10,9 +10,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFoldedViewport } from "../app/viewport";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useFoldedViewport } from "../lib/viewport";
 import { problemMessageOf } from "../screens/common";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { Button, type ButtonVariant, SearchField } from "./atoms";

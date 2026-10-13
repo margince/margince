@@ -69,6 +69,13 @@ in [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it). `che
 holds that these values come from tokens; nothing can tell you that the token you use means the wrong
 thing.
 
+## Imports flow down
+
+`src/lib/` holds shared code that draws nothing. `lib`, `api`, `i18n` and `format` sit at the bottom:
+they never import `app/` or `screens/`, and the Biome rule `noRestrictedImports` fails one that
+does. Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the
+PR changes nothing else.
+
 ## Text follows the writing guides
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
