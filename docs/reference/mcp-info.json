@@ -10,15 +10,15 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 177159,
+    "tool_catalog_bytes": 177184,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45179,
+    "approx_wire_tokens_total": 45186,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49588,
       "input_schema_bytes": 53866,
-      "output_schema_bytes": 59966,
+      "output_schema_bytes": 59991,
       "description_plus_input_schema_bytes": 103454
     }
   },
@@ -5679,6 +5679,9 @@
                     "type": "string"
                   },
                   "type": "object"
+                },
+                "next": {
+                  "type": "string"
                 },
                 "run": {
                   "properties": {

@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 173.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45179 |
+| Approx. wire tokens | 45186 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -6285,6 +6285,9 @@ requires passport scope "write".)
             "type": "string"
           },
           "type": "object"
+        },
+        "next": {
+          "type": "string"
         },
         "run": {
           "properties": {

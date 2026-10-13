@@ -30,6 +30,10 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	// The gate and the registry take the SAME meter pointer: one refuses on the
 	// bound, the other pays into it, and a surface where those were two
 	// counters would step an agent up against a number nothing was charging.
+	opts := []agents.RegistryOption{agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter)}
+	if s.previewWait != nil {
+		opts = append(opts, s.previewWait)
+	}
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
 		s.replyDrafter, s.send, companyEnricher{srv: s},
@@ -38,5 +42,5 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 		// model lane is bound to that instance, so a fresh service here would
 		// serve agents the deterministic floor while the contact page got prose.
 		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{lists: s.listsEnabled, firstDrafts: &s.firstDrafts, served: s},
-		agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter))
+		opts...)
 }

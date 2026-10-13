@@ -119,6 +119,8 @@ type ImportPreviewResult struct {
 	Columns  []string            `json:"columns,omitempty"`
 	Unmapped []string            `json:"unmapped,omitempty"`
 	Files    []ImportPreviewFile `json:"files,omitempty"`
+	// Next says how to reach the report when the test outlasted the wait.
+	Next string `json:"next,omitempty"`
 }
 
 // ImportPreviewFile is what the dry run decided about one file of a `files`

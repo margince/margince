@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -60,6 +61,9 @@ type importHandlers struct {
 	uploadLimit int64
 	// queue enqueues an attempt's job; nil is a role that queues no import work.
 	queue *importEnqueuer
+	// previewWait, when set, replaces how long preview_import waits for its
+	// test's report. Only the test harness sets it.
+	previewWait agents.RegistryOption
 }
 
 // UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its

@@ -86,7 +86,7 @@ type ImportFile struct {
 // skips one. A deployment with no object store still serves them, and refuses
 // the ones that need the source file, naming what is missing.
 func RegisterImportTools(r *Registry, imports Imports) {
-	r.Register(previewImport{imports: imports})
+	r.Register(previewImport{imports: imports, wait: r.importWait})
 	r.Register(readImportReport{imports: imports})
 	r.Register(describeImportFormat{imports: imports})
 	r.Register(commitImport{imports: imports, language: r.language})

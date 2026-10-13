@@ -77,7 +77,7 @@ func (t previewImport) previewFiles(ctx context.Context, args previewArgs) (json
 		// Kept for the reason the single-file path keeps it: the draft is testable again.
 		return nil, namingTheBusyRun(err)
 	}
-	return json.Marshal(ImportPreviewResult{Run: importRunResult(run), Files: previews})
+	return t.answered(ctx, run, ImportPreviewResult{Files: previews})
 }
 
 // importFilesFrom checks every file before anything is stored: a known type,

@@ -7613,6 +7613,9 @@
               "type": "string"
             }
           },
+          "next": {
+            "type": "string"
+          },
           "run": {
             "type": "object",
             "properties": {
