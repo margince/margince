@@ -214,7 +214,7 @@ func splitStagingNote(conflicts []string, id ids.ApprovalID, state stagedState) 
 	}
 	who := "once a human approves it"
 	if state.Releasable {
-		who = "once the user says yes, release it with decide_approval (or they approve it in the CRM)"
+		who = "once the user says yes, release it with decide_approvals (or they approve it in the CRM)"
 	}
 	return fmt.Sprintf(
 		"fields %s were last edited by a human and were NOT applied; staged as approval %s — %s, call update_record with exactly the replay arguments plus \"approval_id\": %q",

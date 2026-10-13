@@ -8,7 +8,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { ImportContextTag, ImportContextTagSummary } from "./import";
+import { ImportContextTag, ImportContextTagSummary } from "./import.contexttag";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The picker sits on the mapping step, which is off screen once a report

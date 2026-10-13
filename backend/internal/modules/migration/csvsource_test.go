@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -331,5 +332,67 @@ func TestCSVSourceKeepsTheCaseOfAKeyThatIsNotAnEmail(t *testing.T) {
 	}
 	if len(rows) != 2 {
 		t.Fatalf("delivered %d rows, want 2", len(rows))
+	}
+}
+
+// gets counts the reads of the stored file.
+type countingStore struct {
+	blobstore.Store
+	gets int
+}
+
+func (c *countingStore) Get(ctx context.Context, key string) (io.ReadCloser, blobstore.Object, error) {
+	c.gets++
+	return c.Store.Get(ctx, key)
+}
+
+// A whole walk page by page reads the stored file once. Each page that fetched
+// and parsed it again made a large file cost the square of its rows.
+func TestCSVSourceReadsTheStoredFileOnceForAWholeWalk(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("Email,First Name\n")
+	for i := range 1000 {
+		fmt.Fprintf(&b, "contact%04d@x.test,Name\n", i)
+	}
+	store := &countingStore{Store: seedCSV(t, b.String())}
+	mapping, sourceKey := leadMapping()
+	src := NewCSVSource(store, testCSVKey, ObjectLead, mapping, sourceKey)
+
+	delivered := 0
+	for offset := 0; ; offset += 200 {
+		rows, err := src.Rows(context.Background(), ObjectLead, offset, 200)
+		if err != nil {
+			t.Fatalf("Rows(%d): %v", offset, err)
+		}
+		delivered += len(rows)
+		if len(rows) < 200 {
+			break
+		}
+	}
+	if delivered != 1000 || store.gets != 1 {
+		t.Fatalf("delivered %d rows over %d reads of the store, want 1000 over 1", delivered, store.gets)
+	}
+}
+
+// A page that starts before the last one ended walks from the top. A resume and
+// a second pass then see the rows and duplicate-key skips the first pass saw.
+func TestCSVSourceServesAnEarlierOffsetAfterALaterOne(t *testing.T) {
+	body := "Email,First Name\na@x.test,A\nb@x.test,B\na@x.test,Again\nc@x.test,C\nd@x.test,D\n"
+	mapping, sourceKey := leadMapping()
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+	ctx := context.Background()
+
+	if _, err := src.Rows(ctx, ObjectLead, 0, 4); err != nil {
+		t.Fatalf("first pass: %v", err)
+	}
+	rows, err := src.Rows(ctx, ObjectLead, 1, 2)
+	if err != nil {
+		t.Fatalf("second pass: %v", err)
+	}
+	if len(rows) != 2 || rows[0].ExternalID != "b@x.test" || rows[1].ExternalID != "c@x.test" {
+		t.Fatalf("rows = %+v, want b then c: the duplicate on line 4 is never delivered", rows)
+	}
+	if skipped := src.Skipped(); len(skipped) != 1 || skipped[0].Line != 4 {
+		t.Fatalf("skipped = %+v, want line 4 once", skipped)
 	}
 }

@@ -73,7 +73,7 @@ describe("the field-conflict card", () => {
     await press(root, "Keep the current values");
     expect(calls).toEqual([
       {
-        tool: "decide_approval",
+        tool: "decide_approvals",
         args: { staged_action_id: APPROVAL, decision: "reject" },
       },
     ]);
@@ -85,7 +85,7 @@ describe("the field-conflict card", () => {
     await press(root, "Use the new values");
     expect(calls).toEqual([
       {
-        tool: "decide_approval",
+        tool: "decide_approvals",
         args: { staged_action_id: APPROVAL, decision: "approve" },
       },
       {
@@ -113,7 +113,7 @@ describe("the field-conflict card", () => {
       "The record changed since.",
     );
     await press(root, "Apply the new values");
-    expect(calls.filter((c) => c.tool === "decide_approval")).toHaveLength(1);
+    expect(calls.filter((c) => c.tool === "decide_approvals")).toHaveLength(1);
     expect(root.textContent).toContain("Updated with the new values.");
   });
 
@@ -128,7 +128,7 @@ describe("the field-conflict card", () => {
       "Keep the current values",
       "Use the new values",
     ]);
-    expect(calls.map((c) => c.tool)).toEqual(["decide_approval"]);
+    expect(calls.map((c) => c.tool)).toEqual(["decide_approvals"]);
   });
 
   it("asks the assistant in chat when the host will not run tools for a view", async () => {

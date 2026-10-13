@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 84 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 84 | 2818 | 1888 | 5292 | 16% | 17918 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 84 |  | 29825 |  |  | 91% |  |  |  |
+| `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 66 | 2901 | 1972 | 5459 | 16% | 17751 | 7 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 27034 |  |  | 82% |  |  |  |
 
 ### `morning_brief`
 
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5292 tokens on every step (2818 listing, 1888 step schema), leaving
-17918 of its budget and 27476 tokens of the
+Attaches 7 tools and pays 5459 tokens on every step (2901 listing, 1972 step schema), leaving
+17751 of its budget and 27309 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 292 tokens, mean 354, across 84 served tools.
+Median 346 tokens, mean 409, across 66 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -154,90 +154,72 @@ listing once. Read a row as what that tool costs a menu.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_report` | 1023 |  |
+| `run_report` | 1020 |  |
+| `preview_import` | 986 |  |
 | `send_company_email` | 823 |  |
 | `list_records` | 817 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
-| `compose_analytics_report` | 772 |  |
+| `log_activity` | 784 | 3 scenarios |
+| `compose_analytics_report` | 777 |  |
 | `send_email` | 754 |  |
-| `read_lists` | 744 |  |
-| `preview_import` | 725 |  |
-| `log_activity` | 701 | 3 scenarios |
-| `create_record` | 667 |  |
+| `read_lists` | 745 |  |
+| `create_record` | 672 |  |
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
 | `update_record` | 581 |  |
-| `forecast_readings` | 553 |  |
+| `forecast_readings` | 552 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
-| `run_analytics_query` | 506 |  |
-| `progress_deal` | 505 |  |
+| `progress_deal` | 513 |  |
+| `run_analytics_query` | 508 |  |
+| `change_lead_state` | 494 |  |
 | `resolve_entities` | 493 |  |
+| `change_tags` | 492 |  |
 | `search_records` | 456 |  |
-| `advance_deal` | 446 |  |
 | `forecast_movement` | 443 |  |
+| `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |
 | `review_commitments` | 401 |  |
 | `attach_document` | 397 |  |
+| `enrich` | 396 |  |
 | `prep_for_meeting` | 394 |  |
-| `enrich` | 390 |  |
 | `draft_email` | 385 |  |
-| `describe_report_vocabulary` | 349 |  |
 | `catch_me_up_on` | 348 | 2 scenarios |
-| `describe_record_fields` | 345 |  |
+| `describe_vocabulary` | 346 |  |
+| `read_input_checks` | 346 |  |
 | `book_meeting` | 344 |  |
 | `search_context` | 344 |  |
 | `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
-| `decide_approval` | 332 |  |
-| `forecast_input_checks` | 324 |  |
-| `demote_lead` | 317 |  |
-| `promote_lead` | 304 |  |
+| `read_tags` | 322 |  |
 | `relink_activity` | 303 |  |
 | `merge_records` | 293 |  |
 | `read_record` | 292 | 2 scenarios |
-| `archive_record` | 289 |  |
-| `describe_analytics_vocabulary` | 286 |  |
+| `archive_record` | 291 |  |
 | `draft_follow_ups_for` | 279 |  |
 | `whats_slipping_this_week` | 269 |  |
 | `list_approvals` | 268 |  |
 | `prepare_handoff` | 267 |  |
-| `describe_query_vocabulary` | 266 |  |
 | `invite_meeting` | 264 |  |
-| `relink_activities` | 259 |  |
+| `commit_import` | 263 |  |
+| `relink_activities` | 260 |  |
 | `company_coverage` | 246 |  |
-| `describe_report_blocks` | 245 |  |
-| `relink_thread` | 240 |  |
-| `commit_import` | 236 |  |
-| `decide_approval_bundle` | 235 |  |
-| `qualify_lead` | 229 |  |
-| `apply_tag` | 226 |  |
 | `create_task` | 221 |  |
 | `at_risk_relationships` | 209 |  |
-| `disqualify_lead` | 209 |  |
-| `list_input_checks` | 209 |  |
 | `read_brief` | 205 |  |
-| `update_tag` | 205 |  |
 | `decide_duplicate` | 203 |  |
 | `merge_tags` | 198 |  |
 | `who_knows` | 197 |  |
-| `data_coverage` | 195 |  |
 | `list_colleagues` | 193 |  |
-| `create_tag` | 191 |  |
-| `list_pipelines` | 191 |  |
 | `intro_path_to` | 187 |  |
+| `list_pipelines` | 186 |  |
+| `read_import` | 185 |  |
 | `list_documents` | 180 |  |
 | `list_channel_providers` | 174 |  |
-| `remove_tag` | 166 |  |
 | `read_project_360` | 156 |  |
 | `read_approval` | 154 |  |
-| `get_record_tags` | 144 |  |
 | `whoami` | 129 |  |
-| `list_tags` | 95 |  |
-| `get_tag` | 88 |  |
-| `read_import_report` | 77 |  |
-| `read_import_run` | 67 |  |
 
 ## Related
 

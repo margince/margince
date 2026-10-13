@@ -85,6 +85,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
 | `frontendpriceinput_test.go` | H3 | The frontend's price pattern accepts what the server's price parser and the contract pattern accept, so a value the form lets through is not refused for its shape. |
+| `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
 | `frontendprofilevocabulary_test.go` | H3 | The browser spells the company-profile vocabulary five more times, and every one of them fails silently when it falls short. |
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
@@ -538,7 +539,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `draftpersistenceparity_test.go` | H3 | Two drafting tools keep their drafts in different places by design, and each says so beside the other's name. |
 | `elapsedonespelling_test.go` | H1 | "How many days of silence" is spelled once. |
 | `employmentcurrency_test.go` | H1 | employment.IsCurrentSQL calls itself "the one spelling of 'this job is still theirs'", and every statement that asks whether an employment is current goes through it. |
-| `importtargetsclaim_test.go` | H3 | What the contract says an import can receive, against what it actually can. |
 | `langcopyonecensus_test.go` | H2 | One census reads every langcopy.Phrase table, and no owner walks its own. |
 | `livemember_test.go` | H1 | "Someone who still works here" is `status = 'active' AND archived\_at IS NULL` on app\_user, and two functions in two packages each called themselves the one spelling of it while the tree held about twenty copies. |
 | `marketingquestion_test.go` | H2 | The question a grant is bound to is the question the screen asks. |

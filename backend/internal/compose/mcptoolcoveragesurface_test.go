@@ -205,7 +205,7 @@ func TestTheCoveragePageCountsTheSurfaceItNames(t *testing.T) {
 		published[row.Name] = true
 	}
 	served := map[string]bool{}
-	for _, spec := range servedSurface(t).Specs() {
+	for _, spec := range offeredSpecs(t) {
 		served[spec.Name] = true
 	}
 

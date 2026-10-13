@@ -7,494 +7,98 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import {
-  readStored,
-  removeStored,
-  STORAGE_KEYS,
-  writeStored,
-} from "../app/storage";
+import type { Locale } from "../i18n";
 import { throwProblem, unwrap } from "./common";
+import { useAddressedRun } from "./importaddress";
+import { asProfile } from "./importprofile";
 import type {
+  ImportFormat,
   ImportObject,
   ImportProfile,
-  ImportReport,
   ImportRun,
 } from "./importtypes";
-import { DONT_IMPORT, isImportObject } from "./importtypes";
+import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
 
-// A mutation's answer, stamped with the flow generation it was asked in.
-type Generational<T> = Readonly<{ at: number; value: T }>;
+// Every read of the import surface sits under this key. One invalidation after
+// a write then refreshes the run, its report and the recent list together.
+const IMPORTS_KEY = "imports";
 
-// What one run and its report look like together — the pair every step of this
-// screen renders from.
-type RunAndReport = Readonly<{ run: ImportRun; report: ImportReport }>;
-
-// asProfile checks the ONE payload nothing else types. The upload is a
-// hand-rolled multipart fetch — the generated client cannot send a file part —
-// so its answer arrives as parsed JSON with no shape behind it. A cast here
-// would be a promise the code has no way to keep, so every member the screen
-// reads is checked and the value is rebuilt from the checked parts.
-function asProfile(payload: unknown): ImportProfile {
-  if (typeof payload !== "object" || payload === null) {
-    throw new Error(unreadableUpload);
-  }
-  // Read by name rather than destructured through a cast: the payload is
-  // genuinely unknown here, and asserting a shape onto it is the promise this
-  // function exists to avoid making.
-  const read = (name: string): unknown =>
-    name in payload ? Reflect.get(payload, name) : undefined;
-  const source_ref = read("source_ref");
-  const object = read("object");
-  const rows_profiled = read("rows_profiled");
-  const columns = read("columns");
-  const targets = read("targets");
-  const suggested_mapping = read("suggested_mapping");
-  if (
-    typeof source_ref !== "string" ||
-    typeof rows_profiled !== "number" ||
-    !Array.isArray(columns) ||
-    !Array.isArray(targets) ||
-    !isImportObject(object) ||
-    !isMapping(suggested_mapping)
-  ) {
-    throw new Error(unreadableUpload);
-  }
-  return {
-    source_ref,
-    object,
-    rows_profiled,
-    columns,
-    targets,
-    suggested_mapping,
-  };
-}
-
-const unreadableUpload =
-  "the upload answered something this screen cannot read";
-
-function isMapping(value: unknown): value is Record<string, string> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    Object.values(value).every((entry) => typeof entry === "string")
-  );
-}
-
-// emptyReport stands in when a run's report could not be read back. It states
-// the run's own status and nothing it does not know, rather than inventing
-// counts: the screen shows the run happened and what state it is in.
-function emptyReport(run: ImportRun): ImportReport {
-  return {
-    run_id: run.id,
-    status: run.status,
-    rows_read: 0,
-    disposition: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
-    issues: [],
-    source_key_used: "",
-  };
-}
-
-// Where the reader got to, kept outside React so a remount can find it again.
-//
-// localStorage rather than the URL, and the flow this exists for is why: "edit
-// the one row you don't want reversed, then undo the rest" leaves this screen
-// through the nav to the Leads list and comes BACK through the nav, so there is
-// no history entry to return to and no URL to carry. A run is also nobody
-// else's to open — it belongs to the seat that started it, and the server
-// answers 404 to anyone else — so a shareable link would promise something it
-// cannot deliver. The cost of the choice is that the reference is per browser,
-// not per tab: two tabs on this screen remember the same run.
-function readRememberedRun(): string | null {
-  return readStored(STORAGE_KEYS.importRun);
-}
-
-function rememberRun(id: string): void {
-  writeStored(STORAGE_KEYS.importRun, id);
-}
-
-function forgetRememberedRun(): void {
-  removeStored(STORAGE_KEYS.importRun);
-}
-
-// Which run states still have something for a reader to DO: `complete` can be
-// undone, `failed` resumed, `undoing` continued. Everything else is either
-// still moving under the server's own hand or already spent, and putting one of
-// those back on screen would offer a button whose press answers 409.
-function unfinished(status: ImportRun["status"]): boolean {
-  return status === "complete" || status === "failed" || status === "undoing";
-}
-
-// What re-reading a remembered run answered.
-//
-// Three outcomes rather than a pair, because "the server will not answer for
-// this id" and "the server could not be reached" must not be treated alike: the
-// first is a reference to forget, the second is one to keep and ask about again.
-type Recovered =
-  | Readonly<{ kind: "run"; value: RunAndReport }>
-  | Readonly<{ kind: "spent" }>
-  | Readonly<{ kind: "unreachable" }>;
-
-// A refusal that settles the question of whether this reader may see this run:
-// gone, never theirs (another company's or another seat's — existence is
-// hidden as a 404), or a grant they no longer hold.
-function refused(status: number): boolean {
-  return status === 403 || status === 404 || status === 410;
-}
-
-// recoverRun re-reads the run a previous visit left behind. The report is read
-// beside it and stood in for when that second read fails: the RUN is what the
-// affordances are derived from, and losing the whole recovery because a report
-// read failed would hide an undo that is still perfectly available.
-async function recoverRun(id: string): Promise<Recovered> {
-  const { data: run, response } = await api.GET("/imports/{id}", {
-    params: { path: { id } },
+// The files an import takes, their columns and their order, in the reader's
+// language. The template preview, the guide and every screen that orders
+// types read it, so none of them keeps a list of its own.
+export function useImportFormat(lang: Locale) {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "format", lang],
+    queryFn: async () =>
+      unwrap(await api.GET("/imports/format", { params: { query: { lang } } })),
+    staleTime: 60_000,
   });
-  if (!run) {
-    return refused(response.status)
-      ? { kind: "spent" }
-      : { kind: "unreachable" };
-  }
-  if (!unfinished(run.status)) {
-    return { kind: "spent" };
-  }
-  const { data: report } = await api.GET("/imports/{id}/report", {
-    params: { path: { id } },
-  });
-  return { kind: "run", value: { run, report: report ?? emptyReport(run) } };
 }
 
-// readRun reads a run and its report back from the server. Answers null when
-// even that fails: the caller is already handling one failure and must not lose
-// it behind a second.
-async function readRun(id: string): Promise<RunAndReport | null> {
-  const { data: run } = await api.GET("/imports/{id}", {
-    params: { path: { id } },
-  });
-  const { data: report } = await api.GET("/imports/{id}/report", {
-    params: { path: { id } },
-  });
-  if (!run || !report) {
-    return null;
-  }
-  return { run, report };
+// A run that is still moving under the server's hand. The commit and the undo
+// both run detached, so only a read tells the screen when they finish.
+function moving(status: ImportRun["status"] | undefined): boolean {
+  return status === "running" || status === "undoing";
 }
 
-// What one validation needs, handed to the mutation rather than closed over.
-type ValidateInput = Readonly<{
-  object: ImportObject;
-  profile: ImportProfile;
-  mapping: Record<string, string>;
-  /** The word every record this run CREATES is filed under, so a batch stays
-   *  findable as a batch. Empty when the run is filed under none. */
-  contextTagID: string;
-}>;
+const POLL_MS = 2000;
 
-// The import's state machine, kept out of the card so the card is markup.
-//
-// Three steps, each of which invalidates the ones after it: a profile from one
-// file beside a report from another is the one way this screen could lie about
-// what is being imported.
-export function useImportFlow(initialObject: ImportObject) {
+// The newest runs first, as the server lists them. Polled while one of them is
+// still moving, so the list shows the end of a run the reader walked away from.
+export function useRecentImports() {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "recent"],
+    queryFn: async () =>
+      unwrap(await api.GET("/imports", { params: { query: { limit: 20 } } }))
+        .data,
+    refetchInterval: (query) =>
+      query.state.data?.some((one) => moving(one.status)) ? POLL_MS : false,
+  });
+}
+
+// One run, read again every two seconds while it is moving.
+export function useImportRun(id: string | null) {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "run", id],
+    queryFn:
+      id === null
+        ? skipToken
+        : async () =>
+            unwrap(
+              await api.GET("/imports/{id}", { params: { path: { id } } }),
+            ),
+    refetchInterval: (query) =>
+      moving(query.state.data?.status) ? POLL_MS : false,
+  });
+}
+
+// Starts the reversal of one run. It answers at once with the run `undoing`;
+// the reads above follow it to `undone`.
+export function useUndoImport() {
   const queryClient = useQueryClient();
-  // Which flow a response belongs to. A dry run over a whole file is a real
-  // multi-second window, and the human can switch object or upload again inside
-  // it — so every mutation carries the generation it started in, and a reply
-  // from a generation that has been cleared is DROPPED. Without it, a validate
-  // that resolves after a restart puts its run and report back on a screen that
-  // now says something else, and the commit button would write the old file.
-  const generation = useRef(0);
-  const current = () => generation.current;
-
-  const [object, setObject] = useState<ImportObject>(initialObject);
-  const [profile, setProfile] = useState<ImportProfile | null>(null);
-  const [mapping, setMapping] = useState<Record<string, string>>({});
-  // The word this run's created records are filed under. Chosen once, before
-  // the dry run, because the commit honours what the dry run reported on.
-  const [contextTagID, setContextTagID] = useState("");
-  const [run, setRun] = useState<ImportRun | null>(null);
-  const [report, setReport] = useState<ImportReport | null>(null);
-  // Whether the run on screen was recovered rather than produced here. The card
-  // says so: an outcome a reader did not just cause, presented as if they had,
-  // reads as an import that ran by itself.
-  const [resumed, setResumed] = useState(false);
-
-  // The id left behind by an earlier visit, read ONCE at mount — this exists to
-  // recover a run the screen has lost, and a session already holding one has
-  // nothing to recover. From here it only ever goes to null, when the server
-  // will not answer for it.
-  const [remembered, setRemembered] = useState<string | null>(
-    readRememberedRun,
-  );
-
-  // noteRun is the screen's only memory of where the reader got to, so the
-  // stored reference and the affordance it stands for cannot disagree: a run
-  // with something left to do is remembered, and a spent one is forgotten in
-  // the same breath — undo must never be offered twice for the same run.
-  //
-  // It also ends the "picked up from earlier" notice: whatever the run was when
-  // the card found it, what is on screen now is the answer to a press the reader
-  // just made.
-  const noteRun = (next: ImportRun) => {
-    setResumed(false);
-    if (unfinished(next.status)) {
-      rememberRun(next.id);
-      return;
-    }
-    forgetRememberedRun();
-  };
-
-  // Asked once, at mount, and never refetched: this is a recovery of state the
-  // screen lost, not a live view of the run. `skipToken` rather than `enabled`
-  // so the id the request uses is the one the query is keyed on.
-  const recovery = useQuery({
-    queryKey: ["importRunRecovery", remembered],
-    queryFn: remembered === null ? skipToken : () => recoverRun(remembered),
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(
+        await api.POST("/imports/{id}/undo", { params: { path: { id } } }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
   });
+}
 
-  // The recovery is considered EXACTLY once, whatever it turns out to say.
-  //
-  // Once, because a reader who has already chosen a file by the time it lands
-  // is doing something newer than what it carries, and a recovery that stayed
-  // pending would put that stale run back the next time the card went quiet.
-  const [considered, setConsidered] = useState(false);
-  if (!considered && recovery.data) {
-    setConsidered(true);
-    if (recovery.data.kind === "spent") {
-      // Gone, never this reader's, or already undone. Asking again on every
-      // mount would be asking a question that has been answered.
-      setRemembered(null);
-      forgetRememberedRun();
-    }
-    if (recovery.data.kind === "run" && run === null && profile === null) {
-      setObject(recovery.data.value.run.object);
-      setRun(recovery.data.value.run);
-      setReport(recovery.data.value.report);
-      setResumed(true);
-    }
-  }
+// The file the hub's drop zone took, held for the run page to start with. A
+// File cannot ride an address, and the two are separate routes.
+let handedOver: File | null = null;
 
-  // clearAnswers drops everything the previous file answered and moves the
-  // generation on, so a reply still in flight cannot put any of it back.
-  const clearAnswers = () => {
-    generation.current += 1;
-    // The reader's newer choice outranks a recovery still in flight.
-    setConsidered(true);
-    validate.reset();
-    commit.reset();
-    undo.reset();
-    setProfile(null);
-    setMapping({});
-    setRun(null);
-    setReport(null);
-    setResumed(false);
-    // The reader has moved on to another file, so the run they left behind is
-    // no longer what this card is about. The run itself is untouched server-side
-    // — this drops the screen's pointer to it, which is what "start again" means
-    // here and what keeps the next mount from reopening a finished import.
-    forgetRememberedRun();
-  };
+export function handOverUpload(file: File): void {
+  handedOver = file;
+}
 
-  // restart is the human's own "start again": it clears the answers AND the
-  // upload's error, which clearAnswers deliberately leaves alone because the
-  // upload path calls it while its own mutation is starting.
-  const restart = () => {
-    clearAnswers();
-    upload.reset();
-  };
-
-  const upload = useMutation({
-    // Cleared as the upload STARTS, not when it succeeds: an upload that fails
-    // would otherwise leave the previous file's report and its armed commit
-    // button on screen beside the new file's error, and nothing on this card
-    // names which file a report belongs to.
-    onMutate: () => {
-      clearAnswers();
-    },
-    mutationFn: async (file: File): Promise<Generational<ImportProfile>> => {
-      const at = current();
-      // Multipart by hand: the generated client serializes JSON bodies, and
-      // this operation takes a file part.
-      const body = new FormData();
-      body.append("object", object);
-      body.append("file", file);
-      // contract-fetch:allow multipart — see the note above
-      const response = await fetch("/v1/imports/sources", {
-        method: "POST",
-        body,
-        credentials: "include",
-      });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
-      return { at, value: asProfile(payload) };
-    },
-    onSuccess: ({ at, value }) => {
-      if (at !== current()) {
-        return;
-      }
-      setProfile(value);
-      setMapping(value.suggested_mapping);
-      setRun(null);
-      setReport(null);
-    },
-  });
-
-  // The profile and the mapping arrive as the mutation's VARIABLE rather than
-  // through the closure: a mutationFn that reads state it closed over runs
-  // against whatever that state was when the function was made, which for a
-  // screen the human is still editing is the wrong file's mapping.
-  const validate = useMutation({
-    mutationFn: async (input: ValidateInput) => {
-      const at = current();
-      const data = unwrap(
-        await api.POST("/imports", {
-          body: {
-            connector: "csv",
-            object: input.object,
-            source_ref: input.profile.source_ref,
-            mapping: mappedOnly(input.mapping),
-            // Omitted rather than sent empty: the endpoint refuses a tag id that
-            // names no word, and "" is not a choice the reader made.
-            ...(input.contextTagID === ""
-              ? {}
-              : { context_tag_id: input.contextTagID }),
-          },
-        }),
-      );
-      const created = data;
-      const fetched = unwrap(
-        await api.GET("/imports/{id}/report", {
-          params: { path: { id: created.id } },
-        }),
-      );
-      return { at, value: { run: created, report: fetched } };
-    },
-    onSuccess: ({ at, value }) => {
-      if (at !== current()) {
-        return;
-      }
-      setRun(value.run);
-      setReport(value.report);
-    },
-  });
-
-  const commit = useMutation({
-    mutationFn: async (approving: ImportRun) => {
-      const at = current();
-      const { data, error } = await api.POST("/imports/{id}/approve", {
-        params: { path: { id: approving.id } },
-      });
-      if (error) {
-        // A commit that stops part-way answers with a problem, not with the
-        // run — but the RUN is where the truth is: the server recorded the
-        // failure and its checkpoint before answering. Reading it back is what
-        // turns "something went wrong" into the resumable state the contract
-        // promises (IEM-WIRE-6). Anything else is re-raised unchanged.
-        const stopped = await readRun(approving.id);
-        if (stopped && stopped.run.status === "failed") {
-          return { at, value: stopped };
-        }
-        throwProblem(error);
-      }
-      // The estate is ALREADY written by the time approve answers. So the run
-      // is what this returns, with or without its report: losing the whole
-      // outcome because a follow-up read failed would leave the screen offering
-      // an import that has in fact already happened, and the second press would
-      // answer 409 with no explanation.
-      const committed = data;
-      const { data: fetched } = await api.GET("/imports/{id}/report", {
-        params: { path: { id: committed.id } },
-      });
-      return {
-        at,
-        value: {
-          run: committed,
-          report: fetched ?? emptyReport(committed),
-        },
-      };
-    },
-    onSuccess: ({ at, value }) => {
-      if (at !== current()) {
-        return;
-      }
-      setRun(value.run);
-      setReport(value.report);
-      // A committed run is the one a reader most needs to find again: undoing it
-      // is the documented way back, and the row they want to keep is edited on
-      // another screen. So the reference outlives this mount.
-      noteRun(value.run);
-      // The import wrote leads, companies and their events. Every cached
-      // list is stale, not only the ones this card could name.
-      queryClient.invalidateQueries();
-    },
-  });
-
-  const undo = useMutation({
-    mutationFn: async (committed: ImportRun) => {
-      const at = current();
-      const { data, error } = await api.POST("/imports/{id}/undo", {
-        params: { path: { id: committed.id } },
-      });
-      if (error) {
-        // A reversal interrupted part-way is resumable on the same run
-        // (the same shape the commit's own checkpoint gives IEM-WIRE-6) —
-        // read it back rather than losing the run behind a bare error.
-        const stopped = await readRun(committed.id);
-        if (stopped && stopped.run.status === "undoing") {
-          return { at, value: stopped };
-        }
-        throwProblem(error);
-      }
-      const undone = data;
-      const { data: fetched } = await api.GET("/imports/{id}/report", {
-        params: { path: { id: undone.id } },
-      });
-      return {
-        at,
-        value: { run: undone, report: fetched ?? emptyReport(undone) },
-      };
-    },
-    onSuccess: ({ at, value }) => {
-      if (at !== current()) {
-        return;
-      }
-      setRun(value.run);
-      setReport(value.report);
-      // A reversal that finished spends the reference; one that stopped part-way
-      // keeps it, because continuing it is the whole point of `undoing`.
-      noteRun(value.run);
-      // Every reversed row is a lead or company archived. Every cached
-      // list is stale, not only the ones this card could name.
-      queryClient.invalidateQueries();
-    },
-  });
-
-  return {
-    object,
-    chooseObject: (next: ImportObject) => {
-      setObject(next);
-      restart();
-    },
-    profile,
-    mapping,
-    setTarget: (column: string, target: string) =>
-      setMapping((current) => ({ ...current, [column]: target })),
-    contextTagID,
-    chooseContextTag: setContextTagID,
-    run,
-    report,
-    resumed,
-    upload,
-    validate,
-    commit,
-    undo,
-    restart,
-  };
+export function takeHandedOverUpload(): File | null {
+  const file = handedOver;
+  handedOver = null;
+  return file;
 }
 
 // mappedOnly drops the columns the human left on "don't import": the wire
@@ -507,4 +111,370 @@ function mappedOnly(mapping: Record<string, string>): Record<string, string> {
     }
   }
   return out;
+}
+
+/** Where a reader is in the run flow; the first three come before any run. */
+export type WizardStep =
+  | "upload"
+  | "files"
+  | "map"
+  | "test"
+  | "import"
+  | "result";
+
+type Mapping = Readonly<Record<string, string>>;
+
+/** One file of an upload, as the Files and Map steps work on it. */
+export type WizardFile = Readonly<{
+  file: string;
+  rowsProfiled: number;
+  columns: ImportProfile["columns"];
+  /** The type the server detected, null where it detected none. */
+  detected: ImportObject | null;
+  /** One proposed mapping per type, so a changed type needs no second call. */
+  suggested: Readonly<Record<string, Mapping>>;
+}>;
+
+// A ZIP is its parts. A single CSV is one file whose only proposal is for the
+// type it was uploaded as.
+export function filesOf(profile: ImportProfile): WizardFile[] {
+  if (profile.parts) {
+    return profile.parts.map((part) => ({
+      file: part.file,
+      rowsProfiled: part.rows_profiled,
+      columns: part.columns,
+      detected: part.object ?? null,
+      suggested: part.suggested_mappings,
+    }));
+  }
+  return [
+    {
+      file: profile.file_name ?? "",
+      rowsProfiled: profile.rows_profiled,
+      columns: profile.columns,
+      detected: profile.object ?? null,
+      suggested: profile.object
+        ? { [profile.object]: profile.suggested_mapping }
+        : {},
+    },
+  ];
+}
+
+const ZIP_NAME = /\.zip$/i;
+
+// The type a single CSV is uploaded as: the format's file name for a type when
+// the file carries one, else the flow's default. A ZIP names its types itself.
+export function uploadObjectFor(
+  name: string,
+  format: ImportFormat | undefined,
+): ImportObject | undefined {
+  if (ZIP_NAME.test(name)) return undefined;
+  const lower = name.toLowerCase();
+  return (
+    format?.files.find((file) => file.file === lower)?.object ??
+    UNNAMED_IMPORT_OBJECT
+  );
+}
+
+// A ZIP starts with the source name the last ZIP run was filed under, else the
+// server's proposal. So a re-downloaded "crm (1).zip" updates what "crm.zip"
+// landed rather than starting a second namespace. A single CSV keeps
+// the server's empty proposal, so its re-upload stays where it was first filed.
+export function defaultSourceName(
+  profile: ImportProfile,
+  recent: readonly ImportRun[] | undefined,
+): string {
+  if (!profile.parts) return profile.suggested_source_name ?? "";
+  const last = recent?.find(
+    (one) => ZIP_NAME.test(one.file_name ?? "") && one.source_name,
+  );
+  return last?.source_name ?? profile.suggested_source_name ?? "";
+}
+
+type UploadInput = Readonly<{
+  file: File;
+  object: ImportObject | undefined;
+  /** The runs already made, read for the source name a ZIP starts with. */
+  recent: readonly ImportRun[] | undefined;
+  /** A type change of a single CSV, which keeps the name the reader set. */
+  retype: boolean;
+}>;
+
+async function postSource(input: UploadInput): Promise<ImportProfile> {
+  // Multipart by hand: the generated client serializes JSON bodies, and this
+  // operation takes a file part.
+  const body = new FormData();
+  if (input.object) body.append("object", input.object);
+  body.append("file", input.file);
+  // contract-fetch:allow multipart: see the note above
+  const response = await fetch("/v1/imports/sources", {
+    method: "POST",
+    body,
+    credentials: "include",
+  });
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throwProblem(payload);
+  }
+  return asProfile(payload);
+}
+
+type StageInput = Readonly<{
+  profile: ImportProfile;
+  objects: Readonly<Record<string, ImportObject | null>>;
+  mapping: Readonly<Record<string, Mapping>>;
+  sourceName: string;
+  onBrokenLink: "skip_row" | "drop_link";
+  contextTagID: string;
+}>;
+
+// The create request for the files the reader typed: parts for a ZIP, the
+// object and mapping for one CSV. Empty choices are left out, not sent empty.
+function stageBody(input: StageInput) {
+  const typed = filesOf(input.profile).flatMap((file) => {
+    const object = input.objects[file.file];
+    return object
+      ? [
+          {
+            file: file.file,
+            object,
+            mapping: mappedOnly(input.mapping[file.file] ?? {}),
+          },
+        ]
+      : [];
+  });
+  const single = input.profile.parts ? undefined : typed[0];
+  return {
+    connector: "csv" as const,
+    source_ref: input.profile.source_ref,
+    ...(single
+      ? { object: single.object, mapping: single.mapping }
+      : { parts: typed }),
+    ...(input.sourceName.trim() === ""
+      ? {}
+      : { source_name: input.sourceName.trim() }),
+    on_broken_link: input.onBrokenLink,
+    ...(input.profile.file_name ? { file_name: input.profile.file_name } : {}),
+    ...(input.contextTagID === ""
+      ? {}
+      : { context_tag_id: input.contextTagID }),
+  };
+}
+
+// One run's report: the test run's prediction, then what the run did. Keyed by
+// the run's status, so each move of the run reads it again.
+export function useImportReport(
+  id: string | null,
+  status: ImportRun["status"] | undefined,
+) {
+  return useQuery({
+    queryKey: [IMPORTS_KEY, "report", id, status],
+    queryFn:
+      id === null || status === undefined
+        ? skipToken
+        : async () =>
+            unwrap(
+              await api.GET("/imports/{id}/report", {
+                params: { path: { id } },
+              }),
+            ),
+  });
+}
+
+// Which step a run stands on. A staged run is tested; a moving or stopped one
+// is importing; the rest have a result. A run still being read is tested,
+// the step it was staged on.
+function stepOfRun(status: ImportRun["status"] | undefined): WizardStep {
+  switch (status) {
+    case "running":
+    case "failed":
+      return "import";
+    case "complete":
+    case "undoing":
+    case "undone":
+      return "result";
+    default:
+      return "test";
+  }
+}
+
+// The run flow: upload, check the files, map their columns, stage a test run,
+// import it and read the result. Every answer carries the generation it was
+// asked in, and an answer from a generation the reader has since left is
+// dropped. The run itself lives in the address, so a reader who leaves comes
+// back to it.
+export function useImportWizard() {
+  const queryClient = useQueryClient();
+  const generation = useRef(0);
+  const [phase, setPhase] = useState<"upload" | "files" | "map">("upload");
+  const [source, setSource] = useState<File | null>(null);
+  const [profile, setProfile] = useState<ImportProfile | null>(null);
+  const [objects, setObjects] = useState<
+    Readonly<Record<string, ImportObject | null>>
+  >({});
+  const [mapping, setMapping] = useState<Readonly<Record<string, Mapping>>>({});
+  const [sourceName, setSourceName] = useState("");
+  const [contextTagID, setContextTagID] = useState("");
+  const [anyway, setAnyway] = useState(false);
+  // Whether any run was staged from this upload. It outlives a failed restage,
+  // which leaves the earlier run on the server.
+  const [staged, setStaged] = useState(false);
+  const [runId, setRunId] = useAddressedRun();
+  const run = useImportRun(runId);
+  const status = run.data?.status;
+  const report = useImportReport(runId, status);
+  const undo = useUndoImport();
+  useLandedRecords([status]);
+
+  const upload = useMutation({
+    mutationFn: async (input: UploadInput) => {
+      const at = generation.current;
+      return { at, input, profile: await postSource(input) };
+    },
+    onSuccess: ({ at, input, profile: next }) => {
+      if (at !== generation.current) return;
+      const files = filesOf(next);
+      setSource(input.file);
+      setProfile(next);
+      setObjects(Object.fromEntries(files.map((f) => [f.file, f.detected])));
+      setMapping(
+        Object.fromEntries(
+          files.map((f) => [
+            f.file,
+            f.detected ? (f.suggested[f.detected] ?? {}) : {},
+          ]),
+        ),
+      );
+      if (!input.retype) setSourceName(defaultSourceName(next, input.recent));
+      setPhase("files");
+    },
+  });
+
+  const stage = useMutation({
+    mutationFn: async (input: StageInput) => {
+      const at = generation.current;
+      const run = unwrap(
+        await api.POST("/imports", { body: stageBody(input) }),
+      );
+      return { at, run };
+    },
+    onSuccess: ({ at, run }) => {
+      if (at !== generation.current) return;
+      setStaged(true);
+      setRunId(run.id);
+      queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
+    },
+  });
+
+  const approve = useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(
+        await api.POST("/imports/{id}/approve", { params: { path: { id } } }),
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] }),
+  });
+
+  const files = profile ? filesOf(profile) : [];
+  const step = runId === null ? phase : stepOfRun(status);
+  const stageInput = (
+    staged: ImportProfile,
+    dropLinks: boolean = anyway,
+  ): StageInput => ({
+    profile: staged,
+    objects,
+    mapping,
+    sourceName,
+    onBrokenLink: dropLinks ? "drop_link" : "skip_row",
+    contextTagID,
+  });
+
+  return {
+    step,
+    profile,
+    files,
+    objects,
+    // A ZIP part's type changes in place, and its mapping starts again from
+    // that type's proposal. A single CSV is profiled for one type, so a new
+    // type uploads the same file again.
+    setFileObject: (file: string, object: ImportObject | null) => {
+      if (profile && !profile.parts && source && object) {
+        upload.mutate({
+          file: source,
+          object,
+          recent: undefined,
+          retype: true,
+        });
+        return;
+      }
+      setObjects((current) => ({ ...current, [file]: object }));
+      const suggested = files.find((one) => one.file === file)?.suggested;
+      setMapping((current) => ({
+        ...current,
+        [file]: object ? (suggested?.[object] ?? {}) : {},
+      }));
+    },
+    mapping,
+    setColumnTarget: (file: string, column: string, target: string) =>
+      setMapping((current) => ({
+        ...current,
+        [file]: { ...current[file], [column]: target },
+      })),
+    sourceName,
+    setSourceName,
+    contextTagID,
+    setContextTagID,
+    runId,
+    run,
+    report,
+    upload,
+    stage,
+    staged,
+    approve,
+    undo,
+    stageInput,
+    anyway,
+    // Rows with broken links come in without the link, or stay out. The
+    // choice stages the run again, so the report approved is the one shown.
+    setAnyway: (next: boolean) => {
+      setAnyway(next);
+      if (profile) stage.mutate(stageInput(profile, next));
+    },
+    goTo: (next: "files" | "map") => setPhase(next),
+    reset: () => {
+      generation.current += 1;
+      upload.reset();
+      stage.reset();
+      approve.reset();
+      undo.reset();
+      setAnyway(false);
+      setStaged(false);
+      setPhase("upload");
+      setSource(null);
+      setProfile(null);
+      setObjects({});
+      setMapping({});
+      setSourceName("");
+      setContextTagID("");
+      setRunId(null);
+    },
+  };
+}
+
+export type ImportWizardState = ReturnType<typeof useImportWizard>;
+
+// A run that lands or reverses wrote records any cached list may hold. Every
+// read is asked again once the runs watched have all settled.
+export function useLandedRecords(
+  statuses: readonly (ImportRun["status"] | undefined)[],
+): void {
+  const queryClient = useQueryClient();
+  const now = statuses.some(moving);
+  const seen = useRef(now);
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = now;
+    if (before && !now) {
+      queryClient.invalidateQueries();
+    }
+  }, [now, queryClient]);
 }

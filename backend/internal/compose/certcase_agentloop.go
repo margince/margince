@@ -54,6 +54,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
@@ -135,7 +136,7 @@ func (c agentLoopCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		Grounding:    agentLoopSeedContext(f.Grounding),
 		LanguageRule: promptlang.Rule(string(textlang.English)),
 	}
-	specs := job.Narrow(agentLoopRegistry())
+	specs := job.Narrow(agentLoopOffered())
 	// A turn that took the right step differs from one that took the wrong step
 	// in that step alone, so the expectation is that token — plus, only where a
 	// scenario means it, the arguments the step had to be called with.
@@ -317,7 +318,13 @@ type agentLoopToolSurface struct{}
 
 func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() }
 
-func (agentLoopToolSurface) Offered(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
+func (agentLoopToolSurface) Offered(context.Context) []mcp.ToolSpec { return agentLoopOffered() }
+
+// agentLoopOffered is what Registry.Offered offers a passport holding every
+// scope: the registered surface without its Unlisted tools.
+func agentLoopOffered() []mcp.ToolSpec {
+	return slices.DeleteFunc(slices.Clone(agentLoopRegistry()), func(spec mcp.ToolSpec) bool { return spec.Unlisted })
+}
 
 func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 	return nil, &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()}

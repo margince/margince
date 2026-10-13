@@ -46,16 +46,19 @@ prompt: |
   means an account with a named exec sponsor.
 
 must_call:
-  - list_tags
-  - get_tag
+  - read_tags
   - merge_tags
-  - update_tag
+  - change_tags
+
+must_call_with:
+  - read_tags.mode=list
+  - read_tags.mode=get
+  - change_tags.action=update
 
 may_call:
   - list_records
   - query_workspace
   - read_record
-  - get_record_tags
   - search_records
   - list_approvals
   - read_approval

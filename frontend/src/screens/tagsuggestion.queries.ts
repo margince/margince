@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
@@ -84,15 +89,17 @@ export function useDecideTagSuggestion() {
 export function useContactEmployer(contactId: string | undefined) {
   return useQuery({
     queryKey: ["contact", contactId, "employer"],
-    enabled: contactId !== undefined,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}", {
-        params: { path: { id: contactId ?? "" } },
-      });
-      if (error) {
-        return throwProblem(error);
-      }
-      return data.employer ?? null;
-    },
+    queryFn:
+      contactId !== undefined
+        ? async () => {
+            const { data, error } = await api.GET("/contacts/{id}", {
+              params: { path: { id: contactId } },
+            });
+            if (error) {
+              return throwProblem(error);
+            }
+            return data.employer ?? null;
+          }
+        : skipToken,
   });
 }

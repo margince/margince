@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-import { ImportContextTag, ImportContextTagSummary } from "./import";
+import { ImportContextTag, ImportContextTagSummary } from "./import.contexttag";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The import wizard's two tag surfaces, catalogued apart from the wizard: the

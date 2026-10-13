@@ -58,6 +58,12 @@ func Megabytes(limit int64) string {
 	return fmt.Sprintf("%d.%d MB", tenths/10, tenths%10)
 }
 
+// WholeMegabytes is the ceiling in whole decimal MB, rounded down for the
+// reason Megabytes rounds down.
+func WholeMegabytes(limit int64) int64 {
+	return limit / bytesPerMB
+}
+
 // bytesPerMB is the decimal megabyte every upload ceiling is denominated in
 // (OPS-CFG-12).
 const bytesPerMB = 1_000_000

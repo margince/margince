@@ -266,58 +266,38 @@ func writeContactProfileField(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 }
 
 // fillEmptyLinkedinSlot carries a landed linkedin evidence row into the social
-// slot the rest of the product reads. contact_social is where the contact rail,
-// the provider identifier resolver and the SAR export look for a LinkedIn
-// handle — an evidence row alone leaves every one of them answering "none"
-// while the page's own research section displays the URL, and the provider
-// lookup then refuses the contact as having nothing to match on.
+// slot that the contact rail, provider resolver and SAR export read.
 //
-// Additive only, through the same writer the LinkedIn-match apply and the
-// bought-claim apply use: a handle already on the record is somebody's
-// statement and a machine fill is not grounds to replace it. A value that is
-// not a LinkedIn URL stays evidence-only — the social slot's contract is a
-// profile link, and the same host check gates the vCard import's slot.
+// Additive only: a handle already on the record is somebody's statement, and a
+// machine fill is no grounds to replace it. A non-LinkedIn value stays evidence.
 func fillEmptyLinkedinSlot(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, value string) error {
 	if !isLinkedinURL(value) {
 		return nil
 	}
-	// One stored spelling, through the same normalizer the exact-match dedupe
-	// key uses: the slot this fills is compared verbatim elsewhere, and a
-	// tracked, unschemed or trailing-slash variant of one profile would read
-	// as a different one. A value the normalizer refuses (a non-http scheme,
-	// an unparseable URL) is a skipped fill, not a fault — the evidence row
-	// keeps the verbatim claim either way.
+	// The slot is compared verbatim elsewhere, so it stores the dedupe key's
+	// spelling. The evidence row keeps the verbatim claim either way.
 	normalized, err := NormalizeLinkedInURL(value)
 	if err != nil {
 		//nolint:nilerr // a value the normalizer refuses is a skipped fill, not a fault
 		return nil
 	}
 	value = normalized
-	// The row probe, restated here rather than inherited: every caller funnels
-	// through writeContactProfileField, whose entry points each probe the row,
-	// but this write reaches contact_social and the contact row itself, and the
-	// slot fill must not become writable from a future caller that forgot. A
-	// subject the principal cannot write is a skipped fill, not a fault — the
-	// evidence row landed under the caller's own gate.
+	// Probed here, not inherited, so a future caller cannot reach the slot
+	// ungated. An unwritable subject skips the fill; the evidence row stands.
 	if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil
 		}
 		return err
 	}
-	_, landed, err := insertSocialHandle(ctx, tx, contactID.UUID, socialLinkedIn, value)
+	_, landed, err := insertSocialHandle(ctx, tx, contactID.UUID, SocialLinkedIn, value)
 	if err != nil || !landed {
 		return err
 	}
-	// The slot is part of the contact aggregate: the bump invalidates If-Match
-	// tokens held by browsers that never saw it, for touchContact's reason.
 	if err := touchContact(ctx, tx, contactID.UUID); err != nil {
 		return err
 	}
-	// And the fill says so on its own. The caller's audit row attests to the
-	// EVIDENCE write and reads the same whether this slot was empty or already
-	// held somebody's statement, so without a row of its own the one mutation
-	// that changed what the rail, the provider resolver and the SAR export
-	// answer would leave no trace naming it.
+	// The caller's audit row covers the evidence write only, so the fill
+	// records its own.
 	return auditLinkedInHandleGained(ctx, tx, contactID.UUID)
 }

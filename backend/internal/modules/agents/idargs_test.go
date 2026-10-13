@@ -359,6 +359,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	})
 	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })
 	RegisterApprovalTools(r, seamProbeInbox{})
+	RegisterRouters(r)
 	return NewDispatcher(r, bindAuthenticated, "margince-crm", "test").
 		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
@@ -466,6 +467,9 @@ func TestAMalformedIDIsRefusedAsTheCallersMistakeOnEveryTool(t *testing.T) {
 	// registry.tools IS the universe — walking it rather than a name list is
 	// what makes a newly registered tool inherit the obligation.
 	for name, tool := range s.registry.tools {
+		if _, isRouter := tool.(router); isRouter {
+			continue // its ids are checked by the targets, each walked here
+		}
 		allProps, _ := uuidProps(t, name, tool.Spec().InputSchema)
 		for _, prop := range allProps {
 			probed++

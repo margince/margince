@@ -393,13 +393,13 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 		"and report what you DID alongside what is waiting."
 }
 
-// stagedReleasePath says who answers a staged call, and offers decide_approval
-// only to a credential that can use it: a relay offered where the engine would
-// refuse is a dead end the caller finds out about one call later.
+// stagedReleasePath says who answers a staged call. It offers decide_approvals
+// only to a credential that can use it. A relay the engine would refuse is a
+// dead end the caller finds out about one call later.
 func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 	if staged.ReleasableByCaller {
 		return "This change can be undone, so once the user says yes you can release it yourself with " +
-			"decide_approval (list_approvals is the same queue), or they can release it in the CRM."
+			"decide_approvals (list_approvals is the same queue), or they can release it in the CRM."
 	}
 	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
 }

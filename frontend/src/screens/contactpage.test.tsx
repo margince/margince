@@ -782,7 +782,7 @@ describe("logging an activity", () => {
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "Send the renewal quote",
     );
-    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({
@@ -893,7 +893,7 @@ describe("logging an activity", () => {
       within(dialog).getByRole("textbox", { name: "Subject" }),
       "Chase the signed order",
     );
-    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add task" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({

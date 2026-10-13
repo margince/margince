@@ -84,22 +84,27 @@ func (s *Store) activeCustomColumns(ctx context.Context, object string, action p
 	return CustomColumns{cols: cols}, nil
 }
 
-// ErrCustomFieldsNeedTheStoresOwnTransaction refuses custom-field values on a
-// caller-opened create.
-//
-// The catalog those values are matched against is read in a transaction of its
-// own, so a caller-opened write cannot obtain it without taking the second
-// connection this whole seam exists to avoid — and a write that dropped the
-// values silently would be worse than one that refuses: the record would come
-// back created, missing what the caller sent, with nothing saying why. The
-// store-opened entry point beside it carries custom fields exactly as before.
-var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
-	"contacts: a caller-opened create cannot carry custom fields — the store-opened entry point reads the catalog before it opens its transaction")
+// ActiveCreateColumns is the caller-side half of the caller-opened creates
+// (CreateCompanyTx, CreateContactTx, CreateLeadTx). It takes <object>:create,
+// the grant the create it feeds takes, so the refusal comes before the read.
+func (s *Store) ActiveCreateColumns(ctx context.Context, object string) (CustomColumns, error) {
+	return s.activeCustomColumns(ctx, object, principal.ActionCreate)
+}
 
-// refuseCustomFields is the guard every caller-opened create runs first.
-func refuseCustomFields(fields map[string]any) error {
-	if len(fields) == 0 {
-		return nil
+// ErrCustomFieldsNeedTheStoresOwnTransaction refuses custom-field values on a
+// caller-opened create whose caller read no catalog.
+//
+// The catalog is read in a transaction of its own, so only the caller can read
+// it, before it opens the write. A create that dropped the values instead would
+// come back created and missing what the caller sent, with nothing saying why.
+var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
+	"contacts: a caller-opened create carrying custom fields needs the active columns its caller read before opening the transaction")
+
+// refuseUncataloguedCustomFields is the guard every caller-opened create runs
+// before it writes.
+func refuseUncataloguedCustomFields(fields map[string]any, cols CustomColumns) error {
+	if len(fields) > 0 && len(cols.cols) == 0 {
+		return ErrCustomFieldsNeedTheStoresOwnTransaction
 	}
-	return ErrCustomFieldsNeedTheStoresOwnTransaction
+	return nil
 }

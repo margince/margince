@@ -188,10 +188,8 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      contactNameColumn,
-		identifier: storekit.Identifier{
-			Table: "contact_email", FK: contactFK, Column: emailColumn,
-		},
-		Membership: in.Membership,
+		identifier:      storekit.ContactEmails,
+		Membership:      in.Membership,
 	}
 }
 
