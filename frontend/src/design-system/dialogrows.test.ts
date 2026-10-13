@@ -10,10 +10,10 @@ import {
   attr,
   boxProps,
   callOf,
-  capped,
   childrenHosts,
   childrenSlot,
   classes,
+  contextOf,
   cross,
   declarations,
   defOf,
@@ -57,7 +57,11 @@ import {
   within,
 } from "../../scripts/lib/dialoglayout";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
-import { classVariants, type Given } from "../testing/classnames";
+import {
+  classVariants,
+  declarationOf,
+  type Given,
+} from "../testing/classnames";
 
 // A dialog's rows sit one stack step apart: none flush, none doubled by its own
 // margin. Stacks and margins are read from the sheets in each box's context.
@@ -186,13 +190,10 @@ function placeInline(source: ts.SourceFile, p: Placement) {
     if (!ts.isJsxExpression(x) || !x.expression || !childOfJsx(x)) continue;
     const e = x.expression;
     const callee = ts.isCallExpression(e) ? e.expression : undefined;
-    const named = ts.isIdentifier(e) ? e : callee;
-    const decl = named && declarations(source).get(named.getText());
-    const value =
-      decl && ts.isIdentifier(e) && ts.isVariableDeclaration(decl)
-        ? jsxOf(decl.initializer)
-        : [];
-    const roots = callee && decl ? returnedBy(fnOf(decl)) : value;
+    const named = callee ?? e;
+    const decl = ts.isIdentifier(named) ? declarationOf(named) : undefined;
+    const body = decl && fnOf(decl);
+    const roots = !body ? [] : callee ? returnedBy(body) : jsxOf(body);
     if (roots.length === 0) continue;
     p.inline.set(x, roots);
     for (const r of roots) if (!p.siteOf.has(r)) p.siteOf.set(r, x);
@@ -354,17 +355,10 @@ function ancestry(g: Gate, v: View, n: ts.Node): Chain[] {
   let chains: Chain[] = [[]];
   for (let s = parentOf(v, n); s; s = parentOf(s.v, s.at)) {
     const p = s.at;
-    const boxes = boxesAt(g, p);
-    chains = capped(
-      chains.flatMap((c) => boxes.map((b) => [...c, ...b])),
-      p,
-    );
+    chains = cross(chains, contextOf(g.owners, boxesAt(g, p)), p);
     if (isDialog(g, p)) return chains;
   }
-  return capped(
-    chains.flatMap((c) => g.outer.map((o) => [...c, ...o])),
-    n,
-  );
+  return cross(chains, g.outer, n);
 }
 
 const subset = (need: Set<string>, cls: string[]) =>
@@ -679,8 +673,8 @@ import { Stack } from "./stack";`;
 const HELPERS = `function Rows() { return <><Field /><Field /></>; }
 function Body() { return <div><p /><Field /></div>; }
 function Inline() { return <Field labelHidden />; }
+function Bare() { const cite = () => <Field className="m" />; return cite(); }
 function Cited() { const cite = () => <i className="m" />; return <p>{cite()}</p>; }
-function Bare() { const cite = () => <i className="m" />; return cite(); }
 function Refusals() { return <div className="m" />; }
 function Wrapped() { return <div className="s"><p /><div className="m" /></div>; }
 function Nest() { return <div className="s"><p /><div className="m"><Nest /></div></div>; }
@@ -724,6 +718,8 @@ const DRAWER_BLOCK = `${STACK} .modal-drawer .s { display: block }`;
 const HOSTED = inModal('<div className="f"><Wrapped /></div>');
 const HOSTED_STACK = `.f ${STACK} ${MARGIN}`;
 const HOSTED_MARGIN = `${STACK} .f ${MARGIN}`;
+const UNSELECTED = 'cx(a && "q1", b && "q2", c && "q3", d && "q4")';
+const BRANCHED = `<div className={${UNSELECTED}}><div className={cx("o", ${UNSELECTED})}>`;
 type RowCase = { jsx: string; verdict: string; sheet: string };
 
 // Three files, so a guest's guest is two files away from its dialog.
@@ -937,6 +933,7 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"lets a later two-class rule beat that zero"}             | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .modal .s > * { margin-block: 0 } .modal .m { margin-top: var(--space-2) }`}
     ${"reads a gap shorthand after its longhand"}               | ${'<Modal intent="form"><div className="s"><Field /><Field /></div></Modal>'}                                             | ${"spaced spaced"}        | ${".s { display: flex; flex-direction: column; row-gap: 0; gap: var(--space-3) }"}
     ${"reads a context's ancestors in order"}                   | ${'<Modal intent="form"><div className="o"><div className="b"><p /><Field /></div></div></Modal>'}                        | ${"flush"}                | ${".o .modal .b { display: flex; flex-direction: column; gap: var(--space-3) }"}
+    ${"reads only the ancestor classes some rule selects"}      | ${inModal(`${BRANCHED}${PARAGRAPH_STACK}</div></div>`)}                                                                   | ${"spaced"}               | ${`.o ${STACK}`}
     ${"weighs :last-child above a later bare class"}            | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} .m:last-child { margin-top: var(--space-2) } .m { margin-top: 0 }`}
     ${"weighs :is() by its heaviest argument"}                  | ${MARGINED_STACK}                                                                                                         | ${"spaced doubled"}       | ${`${STACK} :is(.s, .q .r) > * { margin-block: 0 } .s .m { margin-top: var(--space-2) }`}
     ${"reads a component that wraps Modal as a dialog"}         | ${"<Sheet><p /><Field /></Sheet>"}                                                                                        | ${"flush"}                | ${""}
