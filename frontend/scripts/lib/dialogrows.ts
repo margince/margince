@@ -32,12 +32,14 @@ import {
   keyOf,
   literalsIn,
   modalBoxes,
+  namesHanded,
   type Owners,
   opening,
   type Placed,
   type Prop,
   presetOf,
   primitiveKey,
+  propReadBy,
   rendered,
   returnedBy,
   rootsOf,
@@ -122,10 +124,6 @@ const variantsOf = (n: ts.Node, given?: Given) =>
     16,
     given,
   );
-const propRead = (reads: ReturnType<typeof givenTo>, n: ts.Node) => {
-  if (!reads(n)) return undefined;
-  return ts.isPropertyAccessExpression(n) ? n.name.text : n.getText();
-};
 // What one expression hands a prop: its literals, or what the caller is handed
 // for the props the expression reads or spreads.
 function handedValue(
@@ -137,15 +135,15 @@ function handedValue(
   const listed = literalsIn(x);
   if (listed || !outer) return listed;
   const preset = presetOf(def, name);
-  const reads = givenTo(outer.def);
+  const reads = propReadBy(outer.def);
   const forwarded = spreads(outer.def, x, name);
-  const read = forwarded ? name : propRead(reads, x);
+  const read = forwarded ? name : reads(x);
   if (read !== undefined) {
     const values = outer.props(read);
     const set = forwarded ? values?.filter((v) => v !== undefined) : values;
     return set?.map((v) => v ?? preset);
   }
-  if (!descendants(x).some((d) => reads(d))) return undefined;
+  if (!descendants(x).some((d) => reads(d) !== undefined)) return undefined;
   return classVariants(x.getSourceFile(), x, 16, outer.given).map((v) =>
     v.join(" "),
   );
@@ -158,9 +156,12 @@ const bare = (at: ts.Node, name: string) => {
 };
 // What a call hands one prop: its literal branches, the caller's own value
 // where it hands one on, or the default for one left out.
-function propAt(at: ts.Node, def: ts.Node, name: string, outer?: Handed): Held {
-  const domain = domainOf(def, name);
-  const any = domain && [...domain, undefined];
+function handedThrough(
+  at: ts.Node,
+  def: ts.Node,
+  name: string,
+  outer?: Handed,
+): Held {
   const forwarded: Forwarded | undefined =
     outer &&
     ((x) => {
@@ -169,19 +170,24 @@ function propAt(at: ts.Node, def: ts.Node, name: string, outer?: Handed): Held {
       return !values || values.includes(undefined) ? "maybe" : "set";
     });
   const handed = handedTo(at, name, forwarded);
-  if (handed === "any") return bare(at, name) ? ["true"] : any;
+  if (handed === "any") return bare(at, name) ? ["true"] : undefined;
   const each = handed.map((x) =>
     x ? handedValue(x, name, def, outer) : [presetOf(def, name)],
   );
-  return each.some((v) => v === undefined) ? any : each.flatMap((v) => v ?? []);
+  if (each.some((v) => v === undefined)) return undefined;
+  return each.flatMap((v) => v ?? []);
 }
+const propAt = (at: ts.Node, def: ts.Node, name: string, outer?: Handed) => {
+  const domain = domainOf(def, name);
+  return (
+    handedThrough(at, def, name, outer) ?? (domain && [...domain, undefined])
+  );
+};
 const classReads = new WeakMap<ts.Node, string[]>();
-// The props a body reads where a class is decided. That is a className, what
-// it hands a call, or a local it may build a class list from.
 function classProps(def: ts.Node): string[] {
   const known = classReads.get(def);
   if (known) return known;
-  const reads = givenTo(def);
+  const reads = propReadBy(def);
   const decides = (n: ts.Node) =>
     ts.isJsxSpreadAttribute(n) ||
     ts.isVariableDeclaration(n) ||
@@ -189,7 +195,7 @@ function classProps(def: ts.Node): string[] {
       (n.name.getText() === "className" || upper(callOf(n))));
   const names = new Set<string>();
   for (const n of descendants(def)) {
-    const name = propRead(reads, n);
+    const name = reads(n);
     if (name === undefined) continue;
     for (let p = n.parent; p && p !== def; p = p.parent) {
       if (decides(p)) names.add(name);
@@ -209,15 +215,15 @@ function handedAt(at: ts.Node, def: ts.Node, outer?: Handed): Handed {
     if (!known.has(name)) known.set(name, propAt(at, def, name, outer));
     return known.get(name);
   };
-  const reads = givenTo(def);
+  const reads = propReadBy(def);
   const given: Given = (n) => {
-    const name = propRead(reads, n);
+    const name = reads(n);
     return name === undefined ? undefined : props(name);
   };
+  const handedOn = (x: ts.Expression) =>
+    outer && spreads(outer.def, x) ? outer.keyed : [];
   // A body that spreads its props on may hand any of them to a class.
-  const written = forwardsAll(def)
-    ? attrs(at).map((a) => a.name.getText())
-    : [];
+  const written = forwardsAll(def) ? namesHanded(at, handedOn) : [];
   const keyed = [...new Set([...classProps(def), ...written])].sort();
   return { def, props, given, keyed };
 }
@@ -388,42 +394,33 @@ function width(g: Gate, n: ts.Node) {
   return rootsOf(def).filter((r) => isField(r, given)).length;
 }
 
-// What a prop on `e` can be: its literal branches, what the caller hands
-// when `e` forwards a prop of its own, and otherwise any value.
-function valuesOf(e: ts.Node, name: string, callers: ts.Node[]): Values {
-  const handed = handedTo(e, name);
-  const each = handed === "any" ? [] : handed.map((x) => valueAt(x, callers));
-  return handed === "any" || each.includes("any") ? "any" : each.flat();
-}
-function valueAt(x: ts.Expression | undefined, callers: ts.Node[]): Values {
-  const listed = x ? literalsIn(x) : [undefined];
-  if (listed) return listed;
-  const [caller, ...rest] = callers;
-  const def = caller && defOf(caller);
-  if (!x || !def || !givenTo(def)(x)) return "any";
-  const handed = ts.isPropertyAccessExpression(x) ? x.name.text : x.getText();
-  const outer = valuesOf(caller, handed, rest);
-  const preset = presetOf(def, handed);
-  return outer === "any" ? outer : outer.map((v) => v ?? preset);
-}
+const valuesOf = (e: ts.Node, name: string, outer?: Handed): Values => {
+  const def = defOf(e);
+  return (def && handedThrough(e, def, name, outer)) ?? "any";
+};
 // The box classes a dialog element draws. Modal's are those of each value its
 // props can take; a wrapper's, those of the dialog it renders around them.
-function dialogBoxes(g: Gate, e: ts.Node, callers: ts.Node[]): string[][] {
+function dialogBoxes(
+  g: Gate,
+  e: ts.Node,
+  outer?: Handed,
+  depth = 0,
+): string[][] {
   if (keyIs(e, g.modal)) {
     const given = boxProps().map((p): [string, Values] => [
       p,
-      valuesOf(e, p, callers),
+      valuesOf(e, p, outer),
     ]);
     return modalBoxes(new Map(given));
   }
   const def = defOf(e);
   const inner = def && childrenHosts(def).find((h) => isDialog(g, h));
-  if (!inner || callers.length > 4) {
+  if (!def || !inner || depth > 4) {
     throw new Error(
       `${whereOf(e)}: no Modal found around this dialog's children; render the wrapper's Modal around {children}`,
     );
   }
-  return dialogBoxes(g, inner, [e, ...callers]);
+  return dialogBoxes(g, inner, handedAt(e, def, outer), depth + 1);
 }
 // A component's classes land on the root holding its children; a dialog's
 // box stands outside that root unless it is that root.
@@ -435,7 +432,7 @@ function boxesAt(g: Gate, p: ts.Node): Chain[] {
   const inner = slot && handed ? variantsOf(slot, handed.given) : [[]];
   const own = cross(variantsOf(p, inForce(g, p)?.given), inner, p);
   if (!wraps(g, p)) return own.map((cls) => [cls]);
-  const boxes = dialogBoxes(g, p, []);
+  const boxes = dialogBoxes(g, p, inForce(g, p));
   if (modal) return cross(own, boxes, p).map((cls) => [cls]);
   return own.flatMap((cls) => boxes.map((box) => [cls, box]));
 }
@@ -526,8 +523,8 @@ function boxesOf(
   const def = defOf(n);
   if (!def || hops === 0 || wraps(g, n)) return own;
   const roots = rootsOf(def);
-  // A binding that is no function (`const Line = inline ? "span" : "p"`,
-  // `memo(X)`) is read as the element itself.
+  // A binding that is no function (`const Line = inline ? "span" : "p"`) is
+  // read as the element it names.
   if (roots.length === 0 && !ts.isFunctionLike(fnOf(def))) return own;
   const handed = handedAt(n, def, scope);
   return roots
@@ -730,7 +727,7 @@ function rowsIn(g: Gate, source: ts.SourceFile, hosted?: Guest) {
   return { dialogs, rows, guests };
 }
 
-// About 4x the scopes the tree builds: a fan-out fails before it is slow.
+// Well above the tree's own count: a fan-out fails before it is slow.
 export const SCOPE_CAP = 15_000;
 const fanOut = (q: Guest) =>
   new Error(

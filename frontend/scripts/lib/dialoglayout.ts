@@ -380,6 +380,22 @@ export function handedTo(
   if (read === "any") return "any";
   return read.open ? [...read.values, undefined] : read.values;
 }
+type Named = (spread: ts.Expression) => readonly string[];
+function memberNames(m: Member, fwd: Named): readonly string[] {
+  if (!ts.isJsxSpreadAttribute(m) && !ts.isSpreadAssignment(m)) {
+    const key = memberKey(m);
+    return key === undefined ? [] : [key];
+  }
+  const arms = spreadArms(m.expression);
+  if (arms.length === 0) return fwd(m.expression);
+  return arms.flatMap((o) => o.properties.flatMap((p) => memberNames(p, fwd)));
+}
+/** The prop names a call writes: its attributes and the keys of the object
+ * literals it spreads. `fwd` names what a spread it cannot read hands on. */
+export function namesHanded(e: ts.Node, fwd: Named = () => []): string[] {
+  const members = opening(e)?.attributes.properties ?? [];
+  return [...new Set(members.flatMap((m) => memberNames(m, fwd)))];
+}
 const below = new WeakMap<ts.Node, readonly ts.Node[]>();
 const elementsBelow = new WeakMap<ts.Node, readonly ts.Node[]>();
 export function descendants(root: ts.Node): readonly ts.Node[] {
@@ -531,27 +547,35 @@ const propsOf = (def: ts.Node) => {
   const fn = fnOf(def);
   return ts.isFunctionLike(fn) ? fn.parameters[0]?.name : undefined;
 };
-/** The props a component destructures, and `children` always. */
-export function propNames(def: ts.Node): Set<string> {
+// A destructured prop by the name a call hands it: `{ tone: t }` is `tone`.
+const propKey = (b: ts.BindingElement) => (b.propertyName ?? b.name).getText();
+const readers = new WeakMap<ts.Node, (e: ts.Node) => string | undefined>();
+/** The prop of `def` an expression reads: a destructured binding by its local
+ * name, `children` always, or `props.x`. */
+export function propReadBy(def: ts.Node) {
+  const known = readers.get(def);
+  if (known) return known;
   const first = propsOf(def);
-  const names = new Set(["children"]);
+  const locals = new Map([["children", "children"]]);
   if (first && ts.isObjectBindingPattern(first)) {
-    for (const b of first.elements) names.add(b.name.getText());
+    for (const b of first.elements) locals.set(b.name.getText(), propKey(b));
   }
-  return names;
-}
-// The names a component is handed: its destructured props, or `props.x`.
-export function givenTo(def: ts.Node) {
-  const first = propsOf(def);
-  const names = propNames(def);
   const props = first && ts.isIdentifier(first) ? first.text : undefined;
-  return (e: ts.Node, name?: string) =>
-    (ts.isIdentifier(e) &&
-      names.has(e.text) &&
-      (name === undefined || e.text === name)) ||
-    (ts.isPropertyAccessExpression(e) &&
-      e.expression.getText() === props &&
-      (name === undefined || e.name.text === name));
+  const read = (e: ts.Node) => {
+    if (ts.isIdentifier(e)) return locals.get(e.text);
+    if (!ts.isPropertyAccessExpression(e)) return undefined;
+    return e.expression.getText() === props ? e.name.text : undefined;
+  };
+  readers.set(def, read);
+  return read;
+}
+// Whether an expression reads a prop `def` is handed, or that prop `name`.
+export function givenTo(def: ts.Node) {
+  const read = propReadBy(def);
+  return (e: ts.Node, name?: string) => {
+    const prop = read(e);
+    return prop !== undefined && (name === undefined || prop === name);
+  };
 }
 /** Whether spreading `x` hands on what `def` is handed as `name`: its props
  * object, or the rest it destructures `name` into. */
@@ -562,15 +586,13 @@ export function spreads(def: ts.Node, x: ts.Node, name?: string): boolean {
   if (!ts.isObjectBindingPattern(first)) return false;
   const rest = first.elements.find((b) => !!b.dotDotDotToken);
   if (!rest || rest.name.getText() !== x.text) return false;
-  return !first.elements.some(
-    (b) => b !== rest && (b.propertyName ?? b.name).getText() === name,
-  );
+  return !first.elements.some((b) => b !== rest && propKey(b) === name);
 }
 /** The literal a component's destructured prop defaults to. */
 export function presetOf(def: ts.Node, name: string): string | undefined {
   const first = propsOf(def);
   if (!first || !ts.isObjectBindingPattern(first)) return undefined;
-  const b = first.elements.find((e) => e.name.getText() === name);
+  const b = first.elements.find((e) => propKey(e) === name);
   return b?.initializer && ts.isStringLiteral(b.initializer)
     ? b.initializer.text
     : undefined;
@@ -816,7 +838,7 @@ const aliases = (text: string, names: Set<string>) => [
   ...[...text.matchAll(/\b(\w+) as (\w+)\b/g)]
     .filter((m) => names.has(m[1]))
     .map((m) => m[2]),
-  ...[...text.matchAll(/\bconst\s+(\w+)\s*=\s*(\w+)\s*;/g)]
+  ...[...text.matchAll(/\bconst\s+(\w+)\s*(?::[^=]*)?=\s*(\w+)\s*;/g)]
     .filter((m) => names.has(m[2]))
     .map((m) => m[1]),
 ];
