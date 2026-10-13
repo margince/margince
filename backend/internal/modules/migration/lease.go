@@ -34,10 +34,9 @@ var ErrSuperseded = errors.New("the import run moved on to another attempt")
 // ended. It fits inside the worker's cancel window, so the flush lands first.
 const StopFlushTimeout = 2 * time.Second
 
-// The phases a run reports while a job works it; import_run_phase_check holds the same list.
+// The phases a commit or undo reports. import_run_phase_check also holds those
+// of the test run, which reports none yet.
 const (
-	PhaseReading      = "reading"
-	PhaseChecking     = "checking"
 	PhaseCreatingTags = "creating_tags"
 	PhaseImporting    = "importing"
 	PhaseLinking      = "linking"
@@ -157,13 +156,14 @@ func (s *RunStore) Claim(ctx context.Context, l Lease) (Run, error) {
 	return run, nil
 }
 
-// Heartbeat says the attempt is alive, for a job that writes no flush for a while.
-func (s *RunStore) Heartbeat(ctx context.Context, l Lease) error {
+// Yield hands the attempt back to its queue between two slices. The run then
+// reads queued, so a wait behind other runs never reads as a dead process.
+func (s *RunStore) Yield(ctx context.Context, l Lease) error {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return execFenced(ctx, tx, l, `heartbeat_at = now()`)
+		return execFenced(ctx, tx, l, `claimed_attempt = NULL, updated_at = now()`)
 	})
 }
 

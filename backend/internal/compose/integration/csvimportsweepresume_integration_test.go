@@ -163,6 +163,32 @@ func TestAStaleClaimedRunIsRequeuedAsANewAttempt(t *testing.T) {
 	}
 }
 
+// A run whose slice snoozed waits its turn behind other runs. However old its
+// heartbeat, the stale rule never resumes it, and its own job finishes it.
+func TestASnoozedRunIsNeverStaleHoweverOldItsHeartbeat(t *testing.T) {
+	e := setupImportApp(t)
+	commit := compose.ImportCommitArgs{}.Kind()
+	run := testedLeadRun(t, e, leadFile(501))
+	approveQueued(t, e, run.ID)
+	if worked := importjobtest.WorkQueued(t, e, commit); len(worked) != 1 {
+		t.Fatalf("the first slice worked %d jobs, want one", len(worked))
+	}
+	snoozed := readLease(t, e, run.ID)
+	if _, err := e.Owner.Exec(t.Context(),
+		`UPDATE import_run SET heartbeat_at = now() - interval '1 hour' WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("ageing the heartbeat: %v", err)
+	}
+
+	sweepImportRuns(t, e)
+	if got := readLease(t, e, run.ID); got != snoozed {
+		t.Fatalf("the sweep moved the snoozed run to %+v, want it as the slice left it, %+v", got, snoozed)
+	}
+	importjobtest.Drain(t, e)
+	if polled := readRun(t, e, run.ID); polled.Status != "complete" || storedLeads(t, e) != 501 {
+		t.Fatalf("the snoozed job ended the run %q with %d leads, want complete with 501", polled.Status, storedLeads(t, e))
+	}
+}
+
 func TestADeadRiverRowDoesNotBlockTheRequeue(t *testing.T) {
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()

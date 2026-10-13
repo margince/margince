@@ -173,6 +173,9 @@ func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
 	if polled := readRun(t, e, run.ID); polled.Status != "running" || polled.Checkpoint != 500 {
 		t.Fatalf("after one slice the run is %q at %d, want running at 500", polled.Status, polled.Checkpoint)
 	}
+	if _, claimed := runLease(t, e, run.ID); claimed != nil {
+		t.Fatalf("a snoozed slice left the run claimed by attempt %d, want it queued for the next slice", *claimed)
+	}
 	second := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
 	if len(second) != 1 || second[0].Job.ID != first[0].Job.ID || second[0].EventKind != river.EventKindJobCompleted {
 		t.Fatalf("the second slice was %+v, want job %d again, completed", second, first[0].Job.ID)

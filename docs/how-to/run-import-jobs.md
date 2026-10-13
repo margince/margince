@@ -85,7 +85,7 @@ A run that stays `running` or `undoing` is read in the `import_run` table. These
 | Column | Reads as |
 |---|---|
 | `job_attempt` | The attempt the run's current job was queued under |
-| `claimed_attempt` | The attempt that last claimed the run. Less than `job_attempt`, or empty, means no worker has started this attempt. |
+| `claimed_attempt` | The attempt whose slice works the run now. Empty, or less than `job_attempt`, means the job waits in the queue, before its first slice or between two. |
 | `heartbeat_at` | The last time a slice wrote. It moves at least every 2 seconds while rows are written. |
 | `progress_at` | The last time the checkpoint moved |
 | `phase` | `creating_tags`, `importing`, `linking`, `undoing` or `finishing` |
@@ -93,12 +93,13 @@ A run that stays `running` or `undoing` is read in the `import_run` table. These
 
 Then read the answer from the table:
 
-- `claimed_attempt` is behind `job_attempt`, and `updated_at` is under 2 minutes old. The job waits
-  in the queue. Check that a worker with the `import_write` queue is running, and that it is a new
-  release.
+- `claimed_attempt` is empty or behind `job_attempt`. The job waits in the queue, behind the slices
+  of other runs. A silent heartbeat means nothing here. If no slice starts, check that a worker with
+  the `import_write` queue is running, and that it is a new release.
 - `heartbeat_at` moves. The run is working. A large file takes many slices. Compare `checkpoint`
   to its length.
-- `heartbeat_at` is older than 2 minutes and does not change. The process is gone. The sweep
+- `claimed_attempt` equals `job_attempt`, and `heartbeat_at` is older than 2 minutes and does not
+  change. The process is gone. The sweep
   starts a new attempt within the bound above, and `resume_count` goes up by one.
 - `heartbeat_at` is old, and a new attempt starts and snoozes without progress. Another session
   holds the run's advisory lock. Look in `pg_locks` for a session that holds it and has no client.

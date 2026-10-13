@@ -112,7 +112,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},
-		{"Heartbeat", func() error { return s.Heartbeat(ctx, lease) }},
+		{"Yield", func() error { return s.Yield(ctx, lease) }},
 		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
 		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
 		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
@@ -693,7 +693,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
 		"ResumeStaleAttempts": true, "RequeueLostJobs": true,
-		"Claim": true, "Heartbeat": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
+		"Claim": true, "Yield": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

@@ -126,8 +126,8 @@ func TestAStaleAttemptWritesNothing(t *testing.T) {
 	if err := s.Flush(ctx, stale, Flush{Checkpoint: 3, Leg: Report{Imported: 3}}); !errors.Is(err, ErrSuperseded) {
 		t.Errorf("a stale flush = %v, want ErrSuperseded", err)
 	}
-	if err := s.Heartbeat(ctx, stale); !errors.Is(err, ErrSuperseded) {
-		t.Errorf("a stale heartbeat = %v, want ErrSuperseded", err)
+	if err := s.Yield(ctx, stale); !errors.Is(err, ErrSuperseded) {
+		t.Errorf("a stale yield = %v, want ErrSuperseded", err)
 	}
 	w := newMapWriters(s, current.Run)
 	if _, err := NewLeasedEngine(s, stale, w).RunSlice(ctx, current.Run, twoObjectSource(), Budget{}); !errors.Is(err, ErrSuperseded) {

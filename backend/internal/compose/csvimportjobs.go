@@ -214,9 +214,24 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	}
 	done, err := work(actorCtx, importSlice{db: db, runs: runs, lease: lease, run: run, budget: importSliceBudgetOn(s.now)})
 	if err == nil && !done {
-		return importSliceResult{end: importSliceContinues}, nil
+		return s.yield(system, runs, lease)
 	}
 	return s.settle(ctx, system, runs, lease, err)
+}
+
+// yield hands the attempt back to its queue before the job snoozes, on a
+// context of its own: a stopping worker's has ended.
+func (s importSlicer) yield(system context.Context, runs *migration.RunStore, lease migration.Lease) (importSliceResult, error) {
+	yieldCtx, cancel := context.WithTimeout(context.WithoutCancel(system), importStopFlushTimeout)
+	defer cancel()
+	err := runs.Yield(yieldCtx, lease)
+	switch {
+	case errors.Is(err, migration.ErrSuperseded):
+		return importSliceResult{}, nil
+	case err != nil:
+		return importSliceResult{}, err
+	}
+	return importSliceResult{end: importSliceContinues}, nil
 }
 
 // actAs reads the run and binds the principal that queued its attempt. The
@@ -252,7 +267,7 @@ func (s importSlicer) settle(
 	case err == nil, errors.Is(err, migration.ErrSuperseded):
 		return importSliceResult{}, nil
 	case errors.Is(ctx.Err(), context.Canceled):
-		return importSliceResult{end: importSliceContinues}, nil
+		return s.yield(system, runs, lease)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		return importSliceResult{stopped: err}, s.stop(system, runs, lease, migration.CauseOverBudget)
 	}

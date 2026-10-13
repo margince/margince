@@ -31,7 +31,7 @@ const (
 	// engine flushes its own leg under the same bound.
 	importStopFlushTimeout = migration.StopFlushTimeout
 	// importStaleAfter is when a claimed run's silence means its process died.
-	// A snoozed slice waiting behind another run is never that quiet.
+	// A snoozed run is not claimed, so a wait behind other runs never counts.
 	importStaleAfter = 2 * importSliceTimeout
 	// importQueuedReinsertAfter is when a queued run whose job never started is
 	// queued again under the same attempt.

@@ -24,9 +24,10 @@ func TestASliceEndsBeforeItsJobTimesOut(t *testing.T) {
 		t.Fatalf("a slice of %v plus its stop flush of %v does not end inside its %v timeout",
 			importSliceBudget, importStopFlushTimeout, importSliceTimeout)
 	}
-	if importStaleAfter <= importSliceTimeout+importLockWait {
-		t.Fatalf("a run is stale after %v, but one slice plus a lock wait is %v: a live slice would read as dead",
-			importStaleAfter, importSliceTimeout+importLockWait)
+	// Only a claimed run can go stale, and a slice is claimed for at most its timeout.
+	if importStaleAfter <= importSliceTimeout {
+		t.Fatalf("a run is stale after %v, but one slice runs for %v: a live slice would read as dead",
+			importStaleAfter, importSliceTimeout)
 	}
 }
 
