@@ -27693,8 +27693,8 @@ paths:
         Writes the choices the body names onto a `pending` run, or onto an
         `awaiting_approval` run, which a changed choice returns to `pending`
         with its report cleared. A field left out is left as it is, and a body
-        that changes nothing writes nothing and keeps the `version`. Every write
-        bumps `version`.
+        that changes nothing writes nothing and keeps the `version`. A changed
+        choice bumps `version`; a changed `draft_step` alone does not.
 
         `version` must equal the run's, so a write made on an older read is a
         409 rather than an overwrite. A body changing only `draft_step` on an

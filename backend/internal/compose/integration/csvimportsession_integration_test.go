@@ -9,7 +9,10 @@ package integration
 // on it. A second test and "Import anyway" never open another.
 
 import (
+	"encoding/json"
 	"net/http"
+	"slices"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -82,6 +85,39 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 	}
 	if done := readImportRun(t, e, tested.ID); done.Status != "complete" || !done.Released {
 		t.Fatalf("the committed run = %+v, want complete with its file released", done)
+	}
+}
+
+func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	tested, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	const clicks = 6
+	statuses, bodies := make([]int, clicks), make([]json.RawMessage, clicks)
+	var start, done sync.WaitGroup
+	start.Add(1)
+	for i := range clicks {
+		done.Go(func() {
+			start.Wait()
+			statuses[i] = e.Call(t, http.MethodPost, "/v1/imports/"+tested.ID+"/validate",
+				AnyMap{"version": tested.Version}, nil, &bodies[i])
+		})
+	}
+	start.Done()
+	done.Wait()
+
+	for i, status := range statuses {
+		var answer importRunDTO
+		if status != http.StatusOK || json.Unmarshal(bodies[i], &answer) != nil || answer.ID != tested.ID ||
+			!slices.Contains([]string{"validating", "awaiting_approval"}, answer.Status) {
+			t.Errorf("click %d → %d %s, want 200 with the one run testing or tested", i, status, bodies[i])
+		}
+	}
+	if run := readImportRun(t, e, tested.ID); run.Status != "awaiting_approval" || run.Version != tested.Version {
+		t.Fatalf("after the clicks the run = %+v, want awaiting approval at version %d", run, tested.Version)
+	}
+	if runs := importRuns(t, e); len(runs) != 1 {
+		t.Fatalf("runs = %+v, want only the upload's", runs)
 	}
 }
 

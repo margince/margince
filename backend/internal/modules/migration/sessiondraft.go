@@ -134,28 +134,14 @@ func (s *RunStore) UpdateDraft(ctx context.Context, id RunID, version int, patch
 		if err != nil {
 			return err
 		}
-		change := runChange{version: version}
-		if err := change.admits(id, moveRedraft, state); err != nil {
-			return err
-		}
 		var mapping RunMapping
 		if err := json.Unmarshal(state.mapping, &mapping); err != nil {
 			return fmt.Errorf("reading the mapping of import run %s: %w", id, err)
 		}
-		change.before, change.after = map[string]any{}, map[string]any{}
+		change := runChange{version: version, before: map[string]any{}, after: map[string]any{}}
 		patched := patch.applyTo(mapping, change.before, change.after)
-		choiceChanged := len(change.after) > 0
-		if patch.DraftStep != nil && *patch.DraftStep != state.draftStep {
-			if state.status == StatusAwaitingApproval && !choiceChanged {
-				return fmt.Errorf("import run %s holds a report; only a changed choice returns it to draft: %w", id, apperrors.ErrConflict)
-			}
-			change.before["draft_step"], change.after["draft_step"] = state.draftStep, *patch.DraftStep
-			change.values = append(change.values, runValue{"draft_step", *patch.DraftStep})
-		}
-		if len(change.after) > 0 {
-			if err := redraft(ctx, tx, id, patched, change); err != nil {
-				return err
-			}
+		if err := writeDraft(ctx, tx, id, state, patch.DraftStep, patched, change); err != nil {
+			return err
 		}
 		run, err = readStaged(ctx, tx, id)
 		return err
@@ -164,6 +150,37 @@ func (s *RunStore) UpdateDraft(ctx context.Context, id RunID, version int, patch
 		return Run{}, err
 	}
 	return run, nil
+}
+
+// writeDraft writes what a patch changed on the locked run. A changed choice
+// spends a version and drops the report; a step alone is where the importer
+// stands, not a choice, so it spends neither.
+func writeDraft(
+	ctx context.Context, tx pgx.Tx, id RunID, state sessionState, step *string, patched RunMapping, change runChange,
+) error {
+	choiceChanged := len(change.after) > 0
+	stepChanged := step != nil && *step != state.draftStep
+	if !choiceChanged && !stepChanged && state.status == StatusValidating {
+		// The test under way is of these very choices, so repeating them is no conflict.
+		return change.admitsVersion(id, state)
+	}
+	if err := change.admits(id, moveRedraft, state); err != nil {
+		return err
+	}
+	if stepChanged {
+		if state.status == StatusAwaitingApproval && !choiceChanged {
+			return fmt.Errorf("import run %s holds a report; only a changed choice returns it to draft: %w", id, apperrors.ErrConflict)
+		}
+		change.before["draft_step"], change.after["draft_step"] = state.draftStep, *step
+		change.values = append(change.values, runValue{"draft_step", *step})
+	}
+	switch {
+	case choiceChanged:
+		return redraft(ctx, tx, id, patched, change)
+	case stepChanged:
+		return stageTransition(ctx, tx, id, moveRedraft, change)
+	}
+	return nil
 }
 
 // redraft writes a patched mapping through the transition table, bumping the

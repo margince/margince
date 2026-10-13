@@ -104,7 +104,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
-		{"QueueValidation", func() error { _, err := s.QueueValidation(ctx, runID, 1); return err }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
 		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		// The grant is taken before the borrowed transaction is touched; a nil tx proves it.

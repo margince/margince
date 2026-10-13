@@ -48,14 +48,11 @@ func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request
 
 // testRun saves req's choices on run at version and tests them on that run.
 // Both doors arrive here, so the choices a report describes are the ones the
-// run keeps for its commit. A run already testing that version is answered as
-// it stands, which makes a double click start one test.
+// run keeps for its commit. A run another request is already testing at that
+// version is answered as it stands, which makes a double click start one test.
 func (h importHandlers) testRun(
 	ctx context.Context, run migration.Run, version int, req crmcontracts.CreateImportRunRequest,
 ) (crmcontracts.ImportRun, error) {
-	if run.Status == migration.StatusValidating && run.Version == version {
-		return toContractImportRun(run), nil
-	}
 	mapping, err := h.checkedMapping(ctx, req)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
@@ -73,8 +70,12 @@ func (h importHandlers) testRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	if _, err := runs.QueueValidation(ctx, saved.ID, saved.Version); err != nil {
+	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version)
+	if err != nil {
 		return crmcontracts.ImportRun{}, h.sourceBusy(ctx, err)
+	}
+	if !moved {
+		return toContractImportRun(queued), nil
 	}
 	report, err := h.dryRun(ctx, runs, saved.ID, source, skipped, &mapping)
 	if err != nil {

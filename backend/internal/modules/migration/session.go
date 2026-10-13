@@ -134,11 +134,19 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 	if !slices.Contains(move.from, state.status) {
 		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, state.status, move.to, apperrors.ErrConflict)
 	}
-	if c.version != 0 && c.version != state.version {
-		return fmt.Errorf("import run %s is at version %d, not %d: %w", id, state.version, c.version, ErrVersionMismatch)
+	if err := c.admitsVersion(id, state); err != nil {
+		return err
 	}
 	if c.approved && !state.approved {
 		return fmt.Errorf("import run %s was never approved, so it cannot resume: %w", id, apperrors.ErrConflict)
+	}
+	return nil
+}
+
+// admitsVersion refuses a version other than zero that is not the run's.
+func (c runChange) admitsVersion(id RunID, state sessionState) error {
+	if c.version != 0 && c.version != state.version {
+		return fmt.Errorf("import run %s is at version %d, not %d: %w", id, state.version, c.version, ErrVersionMismatch)
 	}
 	return nil
 }
@@ -179,13 +187,18 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 }
 
 // QueueValidation moves a draft or a report to `validating`: the test run of
-// version, after superseding every unwritten run of the same source name. A
-// second call for a run already validating that version changes nothing.
-func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (Run, error) {
+// version, after superseding every unwritten run of the same source name. It
+// answers whether it moved the run. A run already validating that version is
+// left as it stands, so a second request starts no second test.
+func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (Run, bool, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return Run{}, err
+		return Run{}, false, err
 	}
+	moved := false
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := lockSourceName(ctx, tx, id); err != nil {
+			return err
+		}
 		state, err := lockSession(ctx, tx, id)
 		if err != nil {
 			return err
@@ -199,14 +212,29 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (
 		if err := supersedeName(ctx, tx, id, state.sourceName); err != nil {
 			return err
 		}
+		moved = true
 		return stageTransition(ctx, tx, id, moveValidate, runChange{
 			version: version, literals: []string{"report = NULL", "error = NULL"},
 		})
 	})
 	if err != nil {
-		return Run{}, err
+		return Run{}, false, err
 	}
-	return s.GetStaged(ctx, id)
+	run, err := s.GetStaged(ctx, id)
+	return run, moved, err
+}
+
+// lockSourceName holds the run's source name until the transaction ends. Two
+// test runs of one name are then decided in turn, and the later supersedes the
+// earlier. It is taken before any row lock, so it cannot deadlock. A rename bumps the version, so admits refuses a stale name read here.
+func lockSourceName(ctx context.Context, tx pgx.Tx, id RunID) error {
+	_, err := tx.Exec(ctx, `
+		SELECT pg_advisory_xact_lock(hashtextextended('import_run_source_name:' || source_name, 0))
+		  FROM import_run WHERE id = $1 AND source_name <> ''`, id)
+	if err != nil {
+		return fmt.Errorf("locking the source name of import run %s: %w", id, err)
+	}
+	return nil
 }
 
 // ReturnToDraft ends a test run that was refused, keeping why on the draft so
