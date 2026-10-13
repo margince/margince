@@ -9141,7 +9141,7 @@ components:
         winner_id: {type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.'}
     ImportObject:
       type: string
-      enum: [company, lead, contact]
+      enum: [company, lead, contact, deal]
       description: |-
         What the file's rows are, and therefore what the run creates.
     ImportPartRequest:

@@ -119,9 +119,9 @@ func TestReverseOneRowSplitsKeptReversedAndUnreachable(t *testing.T) {
 }
 
 func TestAnUndoReversesTheTypesALaterImportLandedFirst(t *testing.T) {
-	want := []string{ObjectLead, ObjectContact, ObjectCompany}
+	want := []string{ObjectDeal, ObjectLead, ObjectContact, ObjectCompany}
 	if got := reverseImportOrder(); !slices.Equal(got, want) {
-		t.Fatalf("undo order = %v, want %v: a company archived first leaves its contacts naming an archived record", got, want)
+		t.Fatalf("undo order = %v, want %v: a contact archived first leaves its deals naming an archived record", got, want)
 	}
 	if ImportOrder[0] != ObjectCompany {
 		t.Fatalf("reversing changed ImportOrder itself: %v", ImportOrder)

@@ -71,6 +71,11 @@ var csvTargets = map[string][]string{
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
 	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	// A stage change is an advance (dealUpdateFrom); the lost reason is written once.
+	migration.ObjectDeal: {
+		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,
+		csvTargetCompanyRef, dealTargetContactRef, csvTargetOwner, csvTargetTags, descriptionField, dealTargetLostReason,
+	},
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -126,6 +131,8 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectLead:    fieldEmail,
 	migration.ObjectCompany: fieldDisplayName,
 	migration.ObjectContact: fieldEmail,
+	// Two deals may share a name, so a deal is known only by its ref.
+	migration.ObjectDeal: csvTargetRef,
 }
 
 // importTargets is the closed set a mapping may name for one object: its core
@@ -183,7 +190,7 @@ func linksEmployer(object string) bool {
 // report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
 	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
-		field == csvTargetCompanyRef || field == csvTargetTags
+		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -235,6 +242,9 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 // value compared as changed — which, on the update path, rewrote the whole
 // address on every re-import of an unchanged file.
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
+	if column, renamed := dealStoredColumns[field]; renamed {
+		return current[column]
+	}
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
 		// These targets may name a child collection, not a column. A flat

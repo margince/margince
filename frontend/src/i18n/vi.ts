@@ -5640,6 +5640,7 @@ export const vi = {
   "import.object.lead": "Lead",
   "import.object.company": "Công ty",
   "import.object.contact": "Liên hệ",
+  "import.object.deal": "Deal",
   "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",

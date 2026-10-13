@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 213.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 55619 |
+| Approx. wire tokens | 55624 |
 | Largest tool | `prep_for_meeting` (9.1 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -8515,8 +8515,8 @@ runs immediately; requires passport scope "read".)
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
 checks every row against the workspace and reports what importing it would do. Writes nothing.
-`object` is company, contact or lead. Use `contact` for a file the business already knows — a
-migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
+`object` is company, contact, lead or deal. Use `contact` for a file the business already knows —
+a migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
 nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
 here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
 email is already held, which is always refused, because an email is a real key. A company's Website
@@ -8567,7 +8567,8 @@ immediately; requires passport scope "write".)
             "enum": [
               "company",
               "lead",
-              "contact"
+              "contact",
+              "deal"
             ],
             "type": "string"
           }
@@ -8579,7 +8580,7 @@ immediately; requires passport scope "write".)
         ],
         "type": "object"
       },
-      "maxItems": 3,
+      "maxItems": 4,
       "minItems": 1,
       "type": "array"
     },
@@ -8599,7 +8600,8 @@ immediately; requires passport scope "write".)
       "enum": [
         "company",
         "lead",
-        "contact"
+        "contact",
+        "deal"
       ],
       "type": "string"
     },

@@ -11,7 +11,7 @@ var previewImportCopy = toolCopy{
 	Purpose: "Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each " +
 		"column is, and this checks every row against the workspace and reports what importing " +
 		"it would do.",
-	Limits: "Writes nothing. `object` is company, contact or lead. Use `contact` for a file " +
+	Limits: "Writes nothing. `object` is company, contact, lead or deal. Use `contact` for a file " +
 		"the business already knows — a migration off another CRM, a corrected export coming back. " +
 		"Use `lead` for a machine-sourced list nobody has worked yet; those land unworked and a " +
 		"human promotes them. A row naming a record already here is counted in `duplicates`, and " +

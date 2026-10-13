@@ -5763,6 +5763,7 @@ export const de = {
   "import.object.lead": "Interessenten",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
+  "import.object.deal": "Deals",
   "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",

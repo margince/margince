@@ -2143,7 +2143,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 986,
+      "tokens": 991,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",

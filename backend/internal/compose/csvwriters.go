@@ -297,6 +297,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 		return w.createCompany(ctx, row, typed)
 	case migration.ObjectContact:
 		return w.createContact(ctx, row, typed)
+	case migration.ObjectDeal:
+		return migration.EnsureResult{Skipped: true, SkipReason: dealWriterPendingReason}, nil
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -462,12 +464,6 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 	}
 	return migration.EnsureResult{Created: true}, nil
 }
-
-// domainClaimedReason is what the report says for such a row. It names the
-// row's own value and nothing about the incumbent — not which company holds the
-// domain, nor whether the caller could have seen it.
-const domainClaimedReason = "this domain is already held by another company in the CRM, " +
-	"so the row cannot create a second company under it"
 
 // land commits one native record, its identity-map row and its tags in one
 // transaction, then caches the binding. It caches after the commit: a rolled

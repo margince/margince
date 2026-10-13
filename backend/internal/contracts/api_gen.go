@@ -10328,6 +10328,7 @@ func (e ImportIgnoredEntryReason) Valid() bool {
 const (
 	ImportObjectCompany ImportObject = "company"
 	ImportObjectContact ImportObject = "contact"
+	ImportObjectDeal    ImportObject = "deal"
 	ImportObjectLead    ImportObject = "lead"
 )
 
@@ -10337,6 +10338,8 @@ func (e ImportObject) Valid() bool {
 	case ImportObjectCompany:
 		return true
 	case ImportObjectContact:
+		return true
+	case ImportObjectDeal:
 		return true
 	case ImportObjectLead:
 		return true
@@ -32681,6 +32684,10 @@ type CreateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36199,6 +36206,10 @@ type ImportFormatFile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36238,6 +36249,10 @@ type ImportIgnoredEntryReason string
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
+//
+// `deal` creates deals, after the companies and contacts of the same
+// upload. A deal row needs a `ref`, and names its pipeline and stage by
+// name.
 //
 // `lead` and `contact` are two answers to one question about a file of
 // humans, and the caller picks the one that matches where the file came
@@ -36313,6 +36328,10 @@ type ImportPartProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36353,6 +36372,10 @@ type ImportPartReport struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36389,6 +36412,10 @@ type ImportPartRequest struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -36464,6 +36491,10 @@ type ImportRun struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
@@ -36578,6 +36609,10 @@ type ImportRunPart struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36674,6 +36709,10 @@ type ImportSourceProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
+	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
 	// from.
@@ -36747,6 +36786,10 @@ type ImportUndoReport struct {
 		//
 		// `company` creates companies.
 		//
+		// `deal` creates deals, after the companies and contacts of the same
+		// upload. A deal row needs a `ref`, and names its pipeline and stage by
+		// name.
+		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
 		// from.
@@ -36781,6 +36824,10 @@ type ImportUndoReport struct {
 		// Object What the file's rows are, and therefore what the run creates.
 		//
 		// `company` creates companies.
+		//
+		// `deal` creates deals, after the companies and contacts of the same
+		// upload. A deal row needs a `ref`, and names its pipeline and stage by
+		// name.
 		//
 		// `lead` and `contact` are two answers to one question about a file of
 		// humans, and the caller picks the one that matches where the file came
@@ -53465,12 +53512,16 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `deal` creates deals, after the companies and contacts of the same
+	// upload. A deal row needs a `ref`, and names its pipeline and stage by
+	// name.
 	//
 	// `lead` and `contact` are two answers to one question about a file of
 	// humans, and the caller picks the one that matches where the file came
