@@ -84,7 +84,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7(), OriginCreated)
 		}},
 		{"BindingsOf", func() error {
 			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")

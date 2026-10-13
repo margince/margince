@@ -90,8 +90,8 @@ func TestTheOriginDownMigrationDropsBoundRowsAndKeepsCreatedOnes(t *testing.T) {
 	if _, err := dbmigrate.Down(ctx, conn, rewound, 2); err != nil {
 		t.Fatalf("down: %v", err)
 	}
-	// Code without the column reads every row as a creation and would archive a
-	// bound record on undo, so a bound row must not survive the down.
+	// Code without the column reads every row as a creation. Its undo would
+	// archive a bound record, so no bound row may survive the down.
 	rows, err := conn.Query(ctx, `
 		SELECT external_id FROM import_record_map WHERE source_system = 'import:csv:origin' ORDER BY external_id`)
 	if err != nil {
