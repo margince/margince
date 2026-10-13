@@ -247,14 +247,14 @@ func TestPastTheResumeLimitTheRunFails(t *testing.T) {
 				t.Fatalf("pass %d left the undo %q %q, want undoing with %q", pass+1, polled.Status, polled.Error, migration.CauseUndoStale)
 			}
 			if got := readLease(t, e, run.ID); got.attempt != stale.attempt || got.resumes != 3 {
-				t.Fatalf("pass %d moved the undo to attempt %d with %d resumes; a stopped undo waits for a person",
+				t.Fatalf("pass %d moved the undo to attempt %d with %d resumes; a stopped undo waits for a human",
 					pass+1, got.attempt, got.resumes)
 			}
 		}
 		var rewritten bool
 		if err := e.Owner.QueryRow(t.Context(), `SELECT updated_at > now() - interval '1 minute' FROM import_run WHERE id = $1`,
 			run.ID).Scan(&rewritten); err != nil || rewritten {
-			t.Fatalf("the second pass wrote the stopped undo again (%v): it must leave it to a person", err)
+			t.Fatalf("the second pass wrote the stopped undo again (%v): it must leave it to a human", err)
 		}
 		if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("undo again → %d, want 202", status)

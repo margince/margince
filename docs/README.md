@@ -110,7 +110,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
-- [run-import-jobs.md](how-to/run-import-jobs.md): deploy the import worker, and read an import that
+- [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
   has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
   cloud model provider.
