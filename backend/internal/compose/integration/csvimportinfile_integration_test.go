@@ -261,8 +261,8 @@ func TestColleaguesOnOneDomainAreNotLookAlikes(t *testing.T) {
 	assertPreviewIsTheCommit(t, preview, final, dispositionOf(6, 0, 0, 0))
 }
 
-// The estate's look-alike makes the second row a duplicate, but the commit
-// refuses it for the domain the first row took before it asks about names.
+// The estate's look-alike makes the second row a duplicate. The commit refuses
+// it first for the domain the first row took.
 func TestADuplicateSkipStillMeetsTheDomainAnEarlierRowTakes(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies", map[string]any{

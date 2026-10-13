@@ -442,38 +442,6 @@ func (w *csvWriters) createLead(ctx context.Context, row migration.Row, typed ma
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// createCompany lands one row as a company, its identity-map row in the same
-// transaction.
-//
-//nolint:dupl // createContact has the same shape over a different store call and a different held key; one generic seam would hide which rule judged a row.
-func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
-		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
-			return ids.UUID{}, err
-		}
-		company, err := w.contacts.CreateCompanyTx(ctx, tx, in, w.cols.store)
-		if err != nil {
-			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
-		}
-		return ids.UUID(company.Id), nil
-	})
-	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-		// A domain names ONE company across the estate, so a row claiming one
-		// another company already holds is refused by the store — the same shape
-		// a contact's claimed email has. One bad row is a skip with a reason, not
-		// a failed run: the rest of the file still lands.
-		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
-	}
-	if linkedInClaimed(err) {
-		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
-	}
-	if err != nil {
-		return migration.EnsureResult{}, err
-	}
-	return migration.EnsureResult{Created: true}, nil
-}
-
 // domainClaimedReason is what the report says for such a row. It names the
 // row's own value and nothing about the incumbent — not which company holds the
 // domain, nor whether the caller could have seen it.

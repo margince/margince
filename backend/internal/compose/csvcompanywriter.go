@@ -3,7 +3,8 @@
 
 package compose
 
-// The company object's own claimed-key checks, and the LinkedIn one a lead shares.
+// The company object's create, its claimed-key checks, and the LinkedIn one a
+// lead shares.
 //
 // A domain names ONE company across the estate, the same way an email names one
 // contact, so the preview has to answer the same question the contact path does:
@@ -21,7 +22,39 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// createCompany lands one row as a company, its identity-map row in the same
+// transaction.
+//
+//nolint:dupl // createContact has the same shape over a different store call and a different held key; one generic seam would hide which rule judged a row.
+func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
+	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
+		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
+			return ids.UUID{}, err
+		}
+		company, err := w.contacts.CreateCompanyTx(ctx, tx, in, w.cols.store)
+		if err != nil {
+			return ids.UUID{}, fmt.Errorf("import: creating company %s: %w", row.ExternalID, err)
+		}
+		return ids.UUID(company.Id), nil
+	})
+	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
+		// A domain names one company across the estate, as an address names one
+		// contact. A row claiming a held one is a skip with a reason, not a
+		// failed run, so the rest of the file still lands.
+		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+	}
+	if linkedInClaimed(err) {
+		return migration.EnsureResult{Skipped: true, SkipReason: linkedInClaimedReason}, nil
+	}
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	return migration.EnsureResult{Created: true}, nil
+}
 
 // companyDomainAlreadyHeld answers whether the estate already holds this row's
 // domain, WITHOUT regard to which company holds it.

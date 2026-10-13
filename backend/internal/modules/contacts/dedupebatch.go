@@ -6,9 +6,9 @@ package contacts
 // The ladder's answer about records a batch will create but has not written.
 // A batch writer lands its rows one at a time, so its commit meets each earlier
 // row as an incumbent. A dry run writes nothing and carries those rows itself.
-// A member is a rival only when the ladder would both admit and score it: the
-// per-row scorers run in Go, and the query's admission predicate runs in
-// Postgres over the members the scorer kept.
+// A member is a rival only when the ladder would both admit and score it. The
+// scorers run in Go. The query's admission predicate then runs in Postgres,
+// over the members the scorer kept.
 
 import (
 	"context"
@@ -118,10 +118,10 @@ func (b *ContactBatch) Add(c ContactCandidate) {
 	}
 }
 
-// BestRival is the confidence the fuzzy tier of DedupeContact would give the
-// best earlier member it admits, had that member been written, or 0 when none
-// clears the threshold. An address two rows share is the exact tier's
-// question, which the batch asks first.
+// BestRival is the fuzzy tier's confidence in the best earlier member it
+// admits, had that member been written. It is 0 when none clears the
+// threshold. An address two rows share is the exact tier's question, which the
+// batch asks first.
 func (b *ContactBatch) BestRival(ctx context.Context, tx pgx.Tx, c ContactCandidate) (float64, error) {
 	names, confidences := b.scoredRivals(c)
 	if len(names) == 0 {

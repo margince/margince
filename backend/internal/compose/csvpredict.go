@@ -116,11 +116,10 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // this importer landed.
 //
 // Two questions, in this order and the order matters. First, createPathRefusal:
-// a row naming no record, or a unique key (address, domain, LinkedIn URL) the
-// estate already holds. The store refuses a held key whoever holds it, so this
-// is not a disclosure decision: the outcome is identical for an incumbent the
-// caller can see and one they cannot, which stops the answer being an
-// existence oracle.
+// a row naming no record, or a unique key the estate already holds. The store
+// refuses a held key whoever holds it, so this is not a disclosure decision.
+// The outcome is the same whether or not the caller can see the incumbent,
+// which stops the answer being an existence oracle.
 //
 // Second, whether the estate holds a record this row would duplicate. The CRM
 // may hold it from mail, by hand or from a seed, none of which the identity map
