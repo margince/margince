@@ -15,7 +15,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf } from "./common";
+import { postMultipart } from "./multipart";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -52,20 +53,9 @@ function useImportVCards() {
     // belongs to the committed render, so what it hands over cannot be older
     // than the control that carried it.
     mutationFn: async (file: File): Promise<VCardReport> => {
-      // Sent as multipart by hand rather than through the typed client, which
-      // serializes JSON bodies and cannot carry a file part.
-      const body = new FormData();
-      body.append("file", file);
-      // contract-fetch:allow multipart — see the note above
-      const response = await fetch("/v1/contacts/vcard-import", {
-        method: "POST",
-        body,
-        credentials: "include",
+      const payload = await postMultipart("/v1/contacts/vcard-import", {
+        file,
       });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
       // A 200 whose body is not a report is a transport fault, not an import
       // of nothing. Rendering it would say "that file held no cards" about a
       // file whose cards may well have been written.

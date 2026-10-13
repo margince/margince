@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { Locale } from "../i18n";
-import { throwProblem, unwrap } from "./common";
+import { unwrap } from "./common";
 import { useAddressedRun } from "./importaddress";
 import { asProfile } from "./importprofile";
 import type {
@@ -20,6 +20,7 @@ import type {
   ImportRun,
 } from "./importtypes";
 import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
+import { postMultipart } from "./multipart";
 
 // Every read of the import surface sits under this key. One invalidation after
 // a write then refreshes the run, its report and the recent list together.
@@ -201,21 +202,10 @@ type UploadInput = Readonly<{
 }>;
 
 async function postSource(input: UploadInput): Promise<ImportProfile> {
-  // Multipart by hand: the generated client serializes JSON bodies, and this
-  // operation takes a file part.
-  const body = new FormData();
-  if (input.object) body.append("object", input.object);
-  body.append("file", input.file);
-  // contract-fetch:allow multipart: see the note above
-  const response = await fetch("/v1/imports/sources", {
-    method: "POST",
-    body,
-    credentials: "include",
+  const payload = await postMultipart("/v1/imports/sources", {
+    ...(input.object ? { object: input.object } : {}),
+    file: input.file,
   });
-  const payload = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throwProblem(payload);
-  }
   return asProfile(payload);
 }
 
