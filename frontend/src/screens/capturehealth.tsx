@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -23,6 +22,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 

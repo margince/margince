@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useRoute } from "../app/router";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRoute } from "../lib/router";
 
 // What the connections card says about a consent round trip that has just come
 // back. Its own file for the reason it was its own function first: the outcome

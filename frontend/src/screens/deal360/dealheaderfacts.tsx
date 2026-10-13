@@ -11,8 +11,6 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
-import { useInstallationSettings } from "../../app/uploadlimit";
 import { Popover } from "../../design-system/popover";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
@@ -23,7 +21,9 @@ import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useMemberName } from "../../lib/membernames";
+import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import {
   LostReasonFact,
   type WonWithoutContract,

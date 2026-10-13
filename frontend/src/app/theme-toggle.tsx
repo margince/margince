@@ -4,7 +4,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useT } from "../i18n";
 import "./theme-toggle.css";
-import { toggleTheme, useTheme } from "./theme";
+import { toggleTheme, useTheme } from "../lib/theme";
 
 /**
  * The light/dark control, wherever a surface has room for it.

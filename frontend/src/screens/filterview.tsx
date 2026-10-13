@@ -7,7 +7,6 @@
 
 import { Pencil } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { navigateReplacing } from "../app/router";
 import { useGuardedLeave } from "../app/unsaved";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
@@ -15,6 +14,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
+import { navigateReplacing } from "../lib/router";
 import { useFilterVocabulary } from "./filterdata";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {

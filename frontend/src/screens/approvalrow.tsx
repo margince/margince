@@ -5,9 +5,6 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../api/client";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { recordRoute } from "../app/entity";
-import { navigate } from "../app/router";
 import { Button, Card } from "../design-system/atoms";
 import {
   DecisionCard,
@@ -23,12 +20,15 @@ import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { recordRoute } from "../lib/entity";
 import {
   isAlreadyDecided,
   isVersionSkew,
   ProblemError,
   unwrap,
 } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useViewerId } from "../lib/session";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {

@@ -12,11 +12,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useCanWrite } from "../../app/capability";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { ReceiptList } from "./receipts";
 
 type Graph = components["schemas"]["ContactGraph"];

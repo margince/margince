@@ -27,6 +27,8 @@ import {
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { Route } from "../lib/router";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   AGENT_EDGE_STILL,
   clearAgentEdge,
@@ -34,8 +36,6 @@ import {
 } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
 import { VOCABULARY } from "./agentrail-copy";
-import { type GrantSpec, meFixture } from "./mefixture";
-import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
 
 // The agent section at the foot of the workspace rail draws what the API said.

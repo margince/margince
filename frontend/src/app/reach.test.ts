@@ -12,8 +12,8 @@ import {
   parseSource,
   resolveRelative,
 } from "../../scripts/lib/source-tree";
+import { SCREENS, type Screen } from "../lib/router";
 import { NAV } from "./nav";
-import { SCREENS, type Screen } from "./router";
 
 // A capability nobody can navigate to is, from a user's seat, indistinguishable
 // from one that was never built.

@@ -10,8 +10,8 @@ import {
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 

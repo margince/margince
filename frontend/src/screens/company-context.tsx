@@ -9,8 +9,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { usePublishSelection } from "../app/attention";
-import { useCanUpsert, useHoldsAdminRole } from "../app/capability";
-import { navigate } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import {
   Badge,
@@ -47,7 +45,9 @@ import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanUpsert, useHoldsAdminRole } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { coldFieldLabel } from "./coldfieldlabels";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";

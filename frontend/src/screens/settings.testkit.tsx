@@ -6,10 +6,10 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, vi } from "vitest";
-import type { RbacObject } from "../app/capability";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { SettingsRail } from "../app/shell";
 import { LocaleProvider, translate } from "../i18n";
+import type { RbacObject } from "../lib/capability";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 

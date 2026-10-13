@@ -3,7 +3,6 @@ import { Copy, Link2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -19,6 +18,7 @@ import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { humanizeToken } from "./audit";
 import { IssuedNotice } from "./dealroomaccess.notices";
 import {

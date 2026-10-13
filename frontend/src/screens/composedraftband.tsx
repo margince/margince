@@ -1,7 +1,6 @@
 import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -10,6 +9,7 @@ import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { identifierNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import { VoiceDegradedNotice } from "./compose.notices";
 import { DraftReasons } from "./composedraftcontext";
 import { useOpenEmail } from "./openemail";

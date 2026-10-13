@@ -30,9 +30,9 @@ import {
   Webhook,
   Wrench,
 } from "lucide-react";
-import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
-import type { Route } from "../app/router";
+import { unitsForSecretScope } from "../lib/extensions";
+import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,

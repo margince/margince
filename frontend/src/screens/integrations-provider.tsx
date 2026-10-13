@@ -8,7 +8,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -29,6 +28,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { BuyableRefused } from "./integrations-provider.notices";

@@ -4,7 +4,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useMemo, useState } from "react";
 import { api } from "../api/client";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -29,6 +28,7 @@ import { formatDate } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { useMemberName } from "../lib/membernames";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";

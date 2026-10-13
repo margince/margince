@@ -9,7 +9,7 @@
 // chosen edge points at.
 
 import { api } from "../api/client";
-import type { EntityKind } from "../app/entity";
+import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 
 export type Candidate = { id: string; name: string };

@@ -30,7 +30,7 @@ import (
 // fragment is the right default; the containment is single use plus the TTL.
 //
 // The shape is the app's own hash route rather than a bare `#token=` because
-// `parseHash` (frontend app/router.tsx) reads the first hash segment as the screen
+// `parseHash` (frontend lib/router.tsx) reads the first hash segment as the screen
 // name and strips a hash-local query: `#/reset-password?token=…` parses, while
 // `#token=…` would make the token itself the screen name.
 //

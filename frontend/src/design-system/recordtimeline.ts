@@ -5,10 +5,10 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
+import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { timelineBaseKey } from "../screens/activitykeys";
 import type { ISODate } from "./dateinput";
 

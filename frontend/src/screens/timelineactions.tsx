@@ -14,12 +14,12 @@
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { entityTimelineKeys } from "./activitykeys";
 import {
   AUDIENCE_CHOICES,

@@ -6,8 +6,6 @@ import {
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
 import {
   Button,
   EmptyState,
@@ -34,6 +32,8 @@ import { Select } from "../design-system/select";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { isOption } from "../lib/options";
 import {
   ProblemError,
   problemFieldErrorsOf,

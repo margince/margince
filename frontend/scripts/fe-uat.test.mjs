@@ -46,7 +46,7 @@ describe("needsStory", () => {
   // Only a renderable module can have a story, so the gate asks nothing of a
   // plain module or a declaration file.
   it("asks nothing of a file no story could render", () => {
-    expect(needsStory("frontend/src/app/router.ts")).toBe(false);
+    expect(needsStory("frontend/src/lib/router.ts")).toBe(false);
     expect(needsStory("frontend/src/api/schema.d.ts")).toBe(false);
   });
 });

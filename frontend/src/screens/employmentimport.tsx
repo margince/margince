@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
@@ -13,6 +12,7 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
 import "../design-system/querystates.css";

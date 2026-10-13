@@ -3,15 +3,15 @@ import { DoorOpen, UserX } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { QueryStates } from "../design-system/querystates";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { RoomStateBadge, STATE_LABELS } from "./dealroom";
 import { participantsKey } from "./dealroomaccess";
 

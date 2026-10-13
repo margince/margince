@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useRecordZone } from "../app/recordzone";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Disclosure, StatCard } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -21,6 +19,8 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
+import { useUrlParams } from "../lib/urlstate";
 import { openAnalyticsSection } from "./analytics.address";
 import {
   anyUnrecorded,

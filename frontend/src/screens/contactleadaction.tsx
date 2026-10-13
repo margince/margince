@@ -4,17 +4,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { useOwnToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
   unwrap,
 } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
 

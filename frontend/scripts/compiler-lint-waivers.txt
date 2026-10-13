@@ -13,7 +13,7 @@
 1 react-hooks/set-state-in-effect src/app/ai-activity.ts
 1 react-hooks/set-state-in-effect src/app/askfromaddress.tsx
 1 react-hooks/set-state-in-effect src/app/palette.tsx
-2 react-hooks/set-state-in-effect src/app/scrollmemory.ts
+2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
 1 react-hooks/set-state-in-effect src/app/shell.tsx
 1 react-hooks/set-state-in-effect src/app/unsaved.tsx
 1 react-hooks/set-state-in-effect src/lib/viewport.ts

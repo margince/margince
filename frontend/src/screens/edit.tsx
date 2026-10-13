@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PenLine } from "lucide-react";
 import { useState } from "react";
-import type { Route } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
@@ -11,6 +10,7 @@ import {
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
+import type { Route } from "../lib/router";
 import { derivedRecordKeys } from "./activitykeys";
 import {
   type CreateField,

@@ -22,13 +22,13 @@
 // true, which is that nothing is flagged for this reader.
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import {
   calendarDaysBetween,
   formatDayMonth,
   formatNumber,
 } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
 type Activity = components["schemas"]["Activity"];

@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { recordNamesIn } from "../company360";
 import { activityHeadline, CompanyRecentList } from "../companyrecent";
 import "./glance.css";

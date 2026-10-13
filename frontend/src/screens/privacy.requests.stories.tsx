@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { GrantSpec } from "../app/mefixture";
 import { Panel } from "../design-system/panel";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   type DataSubjectRequest,
   DsrDetail,

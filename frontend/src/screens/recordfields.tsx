@@ -10,9 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { EntityKind } from "../app/entity";
 import { useDetailsFieldTarget } from "../app/pageaside";
-import type { Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
@@ -21,12 +19,14 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
+import type { Route } from "../lib/router";
 import { derivedRecordKeys } from "./activitykeys";
 import {
   type CreateField,

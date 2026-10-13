@@ -13,9 +13,9 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { GrantSpec } from "../testing/mefixture";
 import { openRowMenu } from "../testing/tablerow.testkit";
 import { BlockedDomainsCard } from "./blocked-domains";
 import {

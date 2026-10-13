@@ -75,8 +75,8 @@ export default defineConfig({
   // The release this bundle was built from, compiled IN.
   //
   // It has to be in the bundle rather than read at run time, because the reader
-  // of this value is a browser: the SPA compares its own release against the one
-  // the api reports and refuses to render when they differ (src/app/release.ts).
+  // of this value is a browser. The SPA compares its own release against the one
+  // the api reports and refuses to render when they differ (src/lib/release.ts).
   // A customer pulls each role image by tag, two tag pulls are two requests, and
   // a publish landing between them serves a web tier and an api from different
   // releases — a set the registry cannot refuse at the pull.

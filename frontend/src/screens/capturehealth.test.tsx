@@ -7,7 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { tableRowCells } from "../testing/tablerow.testkit";
 import { CaptureHealthCard, sweepWarning } from "./capturehealth";
 import { jsonResponse, render } from "./settings.testkit";

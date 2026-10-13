@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCan } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import { openAnalyticsSection, type Section } from "./analytics.address";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";

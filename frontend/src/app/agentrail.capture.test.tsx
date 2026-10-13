@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AGENT_EDGE_STILL, currentAgentEdge } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // A mailbox import is the one long run the AI-activity feed cannot carry, so
 // the rail reads it off the connections list instead (capture-progress.ts).

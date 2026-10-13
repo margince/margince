@@ -1,4 +1,4 @@
-import type { Screen } from "../src/app/router";
+import type { Screen } from "../src/lib/router";
 
 /**
  * Every record page in the product, once, with the id the seed fixture mocks.

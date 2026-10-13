@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import { MeetingOutcome } from "./worklist.meetingoutcome";
 // The line the verbs stand on belongs to the ROW rather than to the screen, so

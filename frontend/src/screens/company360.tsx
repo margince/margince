@@ -3,8 +3,6 @@ import { Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Badge, Button, Skeleton, StatCard } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -33,6 +31,8 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import type { CompanyTab } from "./companytab";
 import { dealsFilteredBy } from "./dealsaddress";
 import { useFinanceSummary } from "./financesummary";

@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
-import {
-  type InstallOutcome,
-  type InstallState,
-  useInstallState,
-} from "../app/pwa";
 import { Button } from "../design-system/atoms";
 import { Panel } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { logUnexpectedError } from "../lib/problem";
+import {
+  type InstallOutcome,
+  type InstallState,
+  useInstallState,
+} from "../lib/pwa";
 
 export function ThisDevicePanel() {
   return <InstallPanel install={useInstallState()} />;

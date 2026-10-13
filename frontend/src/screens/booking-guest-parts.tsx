@@ -4,7 +4,6 @@
 import { CalendarCheck, Clock, MapPin, Video } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Button,
   Checkbox,
@@ -23,6 +22,7 @@ import {
 } from "../format/format";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { useLocale, useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { BookingZone } from "./booking-common";
 import type { GuestSlot } from "./booking-guest-month";
 import {

@@ -3,8 +3,6 @@
 
 import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
 import {
   Badge,
   Button,
@@ -44,6 +42,8 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Locale } from "../i18n/locale";
+import { useCanWrite } from "../lib/capability";
+import { isOption } from "../lib/options";
 import { problemMessageOf } from "../lib/problem";
 import {
   type DiscoveredLeadSource,

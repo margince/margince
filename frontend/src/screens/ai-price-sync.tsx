@@ -4,7 +4,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -13,6 +12,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { throwProblem, unwrap } from "../lib/problem";
 import { providerName } from "./ai-provider-names";
 import {

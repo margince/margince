@@ -6,7 +6,6 @@ import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -25,6 +24,7 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { VOICE_MIN_WORDS } from "./voice-intake-core";
 
 type VoiceCorpusSource = components["schemas"]["VoiceCorpusSource"];

@@ -33,7 +33,7 @@ func TestVanillaFrontendRegistryMatchesTheCommittedStub(t *testing.T) {
 }
 
 // The empty registry is a value the SPA reads, not merely a file that exists:
-// `extensions` has to be an empty ARRAY, because app/extensions.ts calls .find
+// `extensions` has to be an empty ARRAY, because lib/extensions.ts calls .find
 // on it unconditionally and a `null`, `{}` or `as const` tuple would crash the
 // vanilla lane at its first unit route.
 func TestVanillaFrontendRegistryIsAnEmptyArray(t *testing.T) {
@@ -78,7 +78,7 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 		`        operationId: "betaPing",`,
 		// A verb declaring no object emits the empty string rather than
 		// omitting the field: the descriptor type has no optional member, and
-		// app/extensions.ts reads it unconditionally to decide whether the
+		// lib/extensions.ts reads it unconditionally to decide whether the
 		// screen has a capability gate at all.
 		`        rbacObject: "",`,
 	} {

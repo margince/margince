@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { IMPORT_ID } from "../app/nav";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Callout } from "../design-system/callout";
@@ -17,6 +16,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { postMultipart } from "../lib/multipart";
 import { problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];

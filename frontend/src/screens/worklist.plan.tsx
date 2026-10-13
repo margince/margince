@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { TeamPlanReview } from "./brief.teamplan";
 import { useSetCommitmentState } from "./weeklyplan.queries";

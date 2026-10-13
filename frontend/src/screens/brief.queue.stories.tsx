@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { announceAddressChanged } from "../app/router";
 import { en } from "../i18n/en";
+import { announceAddressChanged } from "../lib/router";
 import {
   leadRow,
   meetingRow,

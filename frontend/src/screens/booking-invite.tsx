@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Breadcrumb } from "../design-system/breadcrumb";
 import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
@@ -12,6 +11,7 @@ import { IconAction } from "../design-system/iconaction";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,

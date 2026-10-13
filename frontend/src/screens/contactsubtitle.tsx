@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { navigate } from "../app/router";
+import { navigate } from "../lib/router";
 import { BoughtMark, BoughtText, boughtFields } from "./boughtmarks";
 import type { Contact360 } from "./contact360";
 import { currentEmployer } from "./employmentcurrency";

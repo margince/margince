@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { useActivity } from "../screens/activityread";
 import { Button } from "./atoms";
 import { SourceEmailPanel } from "./sourceemailpanel";

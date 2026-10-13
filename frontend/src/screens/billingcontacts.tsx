@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import { BillingContactModal } from "./billingcontactmodal";
 import { useBillingContactActions } from "./billingcontacts.queries";
 

@@ -123,7 +123,7 @@ measures the real default.
    (checked by a walk of the TS AST).
 5. No emoji in source strings: Lucide only. The 🟢/🟡 autonomy meanings render through the `.dot`
    token component.
-6. One service worker ships, and only `src/app/pwa.ts` registers it. From Cache Storage it answers only
+6. One service worker ships, and only `src/lib/pwa.ts` registers it. From Cache Storage it answers only
    two things. One is the offline page, for a page load the network could not make. The other is that
    page's own script ([pwa.md](../docs/explanation/pwa.md)).
 7. WCAG 2.2 AA (axe) in the `e2e` lane. The budget for how fast it feels is not here.

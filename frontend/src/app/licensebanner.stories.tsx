@@ -8,8 +8,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../screens/story-utils";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { LicenseBanner } from "./licensebanner";
-import { type GrantSpec, meFixture } from "./mefixture";
 
 type LicenseState = components["schemas"]["LicenseEntitlement"]["state"];
 

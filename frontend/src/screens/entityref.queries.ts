@@ -7,8 +7,8 @@
 
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { EntityKind } from "../app/entity";
 import { leadIdentityName } from "../format/leadname";
+import type { EntityKind } from "../lib/entity";
 import { throwProblem } from "../lib/problem";
 
 /**

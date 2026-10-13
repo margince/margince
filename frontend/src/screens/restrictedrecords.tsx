@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -22,6 +21,7 @@ import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { humanizeToken } from "./audit";

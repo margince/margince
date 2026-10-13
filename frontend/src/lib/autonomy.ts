@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "../lib/problem";
+import { unwrap } from "./problem";
 
 export type TierName = "auto_execute" | "confirmation_required" | "dynamic";
 export type VerbTierMap = Record<string, TierName>;

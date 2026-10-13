@@ -4,7 +4,6 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { isISODate } from "../design-system/dateinput";
 import {
@@ -22,6 +21,7 @@ import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { throwProblem, unwrap } from "../lib/problem";
+import { useInstallationSettings } from "../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { metricLabel, type ReportingMetricID } from "./reporting.model";
 import { useReportingPipelines } from "./reporting.queries";

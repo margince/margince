@@ -10,10 +10,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { LeadScreen } from "./leads";
 
 // The lead page writes from BOTH of its columns through one mutation, and the

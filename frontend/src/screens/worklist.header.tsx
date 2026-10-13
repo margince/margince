@@ -11,12 +11,12 @@
 // the reverse, is a link somebody pastes that opens the wrong day.
 
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
-import { routeHash } from "../app/router";
-import { hashWithParams } from "../app/urlstate";
 import { SegmentedControl } from "../design-system/atoms";
 import { FilterPills } from "../design-system/filterpills";
 import { formatNumber } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { routeHash } from "../lib/router";
+import { hashWithParams } from "../lib/urlstate";
 import { completenessText, pillCount } from "./worklist.copy";
 import { OwnerPicker } from "./worklist.manager";
 import type {

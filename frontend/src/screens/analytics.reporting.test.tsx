@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { AnalyticsScreen } from "./analytics";
 import { render } from "./analytics.testkit";
 import { ReportingForecastGraphs } from "./reporting.forecast";

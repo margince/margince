@@ -10,7 +10,7 @@ import {
   waitFor,
   within,
 } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
   jsonResponse,

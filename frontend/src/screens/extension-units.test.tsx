@@ -14,17 +14,17 @@ import { ExtensionUnitsCard } from "./extension-units";
 // through the card purely so a test could pass one, would put a seam in
 // production code that only tests use.
 //
-// app/extensions.ts is mocked rather than @composition/extensions, because the
+// lib/extensions.ts is mocked rather than @composition/extensions, because the
 // alias resolves to the committed empty stub whose emptiness is itself pinned
-// (extensions.test.ts); mocking the module under it would make this suite pass
+// (extensions.test.ts). Mocking the module under it would make this suite pass
 // while the real filter was never called.
 const { unitsForSecretScope } = vi.hoisted(() => ({
   unitsForSecretScope:
     vi.fn<(scope: "user" | "workspace") => readonly ExtensionDescriptor[]>(),
 }));
 
-vi.mock("../app/extensions", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../app/extensions")>()),
+vi.mock("../lib/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/extensions")>()),
   unitsForSecretScope,
 }));
 

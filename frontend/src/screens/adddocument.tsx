@@ -9,8 +9,6 @@ import {
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { formatUploadLimit, useMaxUploadBytes } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
@@ -30,7 +28,9 @@ import {
   type AttachmentParent,
   uploadAttachment,
 } from "../lib/attachmentupload";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
+import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
 import {
   DEAL_MATCH_LIMIT,
   DEAL_PAGE_FRESH_MS,

@@ -10,7 +10,6 @@ import { api } from "../api/client";
 import { subscribableEventTypeValues } from "../api/public-events";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -34,6 +33,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import {
   problemCode,
   problemMessageOf,

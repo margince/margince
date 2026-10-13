@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import {

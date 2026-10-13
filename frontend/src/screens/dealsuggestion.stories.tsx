@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
 import { Panel, PanelBody } from "../design-system/panel";
+import { meFixture } from "../testing/mefixture";
 import {
   AcceptSuggestionDialog,
   CompanySuggestions,

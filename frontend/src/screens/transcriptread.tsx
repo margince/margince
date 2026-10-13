@@ -7,7 +7,6 @@ import {
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Badge,
   Button,
@@ -22,6 +21,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import "./transcriptread.css";
 
 type Activity = components["schemas"]["Activity"];

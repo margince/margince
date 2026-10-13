@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { HandledForYouPanel } from "./worklist.handled";
 

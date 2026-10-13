@@ -3,7 +3,6 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Popover } from "../design-system/popover";
 import { provenanceOf } from "../design-system/provenanceof";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
@@ -11,6 +10,7 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { useMemberName } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
 import { useViewerId } from "../lib/session";
 import {
   CompanyOwnerControl,

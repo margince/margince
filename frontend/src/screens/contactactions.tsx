@@ -4,11 +4,11 @@
 import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { WorkAsLeadAction } from "./contactleadaction";

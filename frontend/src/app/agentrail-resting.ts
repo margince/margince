@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { formatNumber } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { Screen } from "../lib/router";
 import { IDLE_ORDER, type IdleKind, TIPS } from "./agentrail-copy";
 import { aroundTheName, plain, type SpokenLine } from "./ai-activity-speak";
 import { paletteHotkeyCaps } from "./palette";
-import type { Screen } from "./router";
 
 // What the agent section says while it is at rest, and how long each thing gets
 // to say it.

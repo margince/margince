@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { tableRowCells } from "../testing/tablerow.testkit";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 // The settings harness, rather than a fourth copy of the same twenty lines:

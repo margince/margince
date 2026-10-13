@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useCan, useCanWrite } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
 import { AiFeaturesWithheldPanel, useAiStatus } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { useAiHealth } from "./ai-health";

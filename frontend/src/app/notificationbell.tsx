@@ -12,7 +12,9 @@ import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
+import { recordRoute } from "../lib/entity";
 import { problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import { approvalHref } from "../screens/approvaldrawer";
 import {
   NOTIFICATIONS_KEY,
@@ -22,10 +24,8 @@ import {
 } from "../screens/notifications.queries";
 import { useNoticeRead } from "../screens/taskactions";
 import { worklistKey } from "../screens/worklist.queries";
-import { recordRoute } from "./entity";
 import { noticeHeadline } from "./noticeheadline";
 import { usePopoverDismiss } from "./popover";
-import { routeHash } from "./router";
 import "./notificationbell.css";
 
 // The notification centre, as the chrome carries it: a count somebody sees

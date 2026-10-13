@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -9,6 +8,7 @@ import { QueryGate } from "../design-system/querystates";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import { useProviderHealth } from "./ai-provider-health";

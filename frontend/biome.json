@@ -114,7 +114,8 @@
                       "**/app",
                       "**/app/**",
                       "**/screens",
-                      "**/screens/**"
+                      "**/screens/**",
+                      "!@composition/**"
                     ],
                     "message": "A base layer (lib, api, i18n, format) is imported by the screens and the shell, so it never imports them back. Move the shared code down into lib/ instead."
                   }

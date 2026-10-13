@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import type { UrlParams } from "../app/urlstate";
+import type { UrlParams } from "../lib/urlstate";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,

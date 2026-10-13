@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { useToast } from "../design-system/toast";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
@@ -16,6 +15,7 @@ import {
   problemMessageOf,
   throwProblem,
 } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { entityTimelineKeys } from "./activitykeys";
 import {
   asksWhy,

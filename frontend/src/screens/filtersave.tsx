@@ -7,13 +7,13 @@
 // by the same engine that previewed it.
 
 import { useState } from "react";
-import type { Route } from "../app/router";
 import { Field, Textarea, TextInput } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
+import type { Route } from "../lib/router";
 import {
   type ObjectTab,
   RESOURCE_OF,

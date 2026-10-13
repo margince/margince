@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -16,7 +14,9 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { ContractForm } from "./contractform";
 import {
   ContractCancelModal,

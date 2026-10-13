@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useUrlParams } from "../app/urlstate";
 import type { ListChip } from "../design-system/listsurface.dials";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { useMemberNames } from "../lib/membernames";
 import { useMe } from "../lib/session";
+import { useUrlParams } from "../lib/urlstate";
 import { useAssignableUserOptions } from "./assigneepicker";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
 

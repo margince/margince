@@ -17,9 +17,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useCanWrite } from "../../app/capability";
-import { navigate } from "../../app/router";
-
 import {
   Button,
   EmptyState,
@@ -33,7 +30,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 import { FINISHED_STATES, refusalFor, useDealRoom } from "../dealroom";
 import {
   buyerLink,

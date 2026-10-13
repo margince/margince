@@ -14,7 +14,7 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // rendering a surface that reads as unbuilt.
 //
 // Four members are also spelled as a named constant elsewhere, because the
-// module that owns the route owns the name: `ext` is app/extensions.ts's
+// module that owns the route owns the name. `ext` is lib/extensions.ts's
 // EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
 // screens/auth.tsx's RESET_ROUTE, and `scheduled` is
 // screens/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
@@ -91,9 +91,9 @@ export type Route = {
 
 const SCREEN_NAMES: ReadonlySet<string> = new Set(SCREENS);
 
-// A type predicate, not a cast: the runtime test and the compile-time claim are
-// the same expression, so there is no way for them to drift (the shape
-// app/extensions.ts uses for unit RBAC objects).
+// A type predicate, not a cast. The runtime test and the compile-time claim are
+// the same expression, so they cannot drift. lib/extensions.ts uses this shape
+// for unit RBAC objects.
 export function isScreen(value: string): value is Screen {
   return SCREEN_NAMES.has(value);
 }
@@ -278,14 +278,13 @@ export function navigate(route: Route, dials?: UrlParams): void {
  * one key that exists for getting out of things.
  *
  * `history.replaceState` and not `location.replace`, which is the obvious
- * spelling and the wrong one: `location.replace` DISCARDS the entry's state
- * object. app/scrollmemory.ts stamps the entry's identity in there, so a
- * redirect — or any of the several screens that normalise their own address on
- * arrival — wiped the name of the place the reader was standing in, and the
- * offset remembered under it could never be found again. Carrying the current
+ * spelling and the wrong one: `location.replace` discards the entry's state
+ * object. lib/scrollmemory.ts stamps the entry's identity in there. A redirect,
+ * or a screen that normalises its own address on arrival, would wipe that name,
+ * and the offset saved under it would be lost. Carrying the current
  * state through keeps the entry the same entry.
  *
- * It fires no `hashchange`, so the store has to be told; app/urlstate.ts's
+ * It fires no `hashchange`, so the store has to be told; lib/urlstate.ts's
  * `replaceParams` is the same write for the QUERY half and says the same thing.
  */
 export function navigateReplacing(route: Route, dials?: UrlParams): void {
@@ -445,7 +444,7 @@ function subscribe(onChange: () => void): () => void {
 /**
  * Tell the address store the hash moved, for a move this app made itself.
  *
- * Only app/urlstate.ts needs it: it writes the address directly, so nothing has
+ * Only lib/urlstate.ts needs it: it writes the address directly, so nothing has
  * dispatched anything yet. A second announcement when the browser's own
  * `hashchange` lands costs nothing — the snapshot is a string, and an unchanged
  * one re-renders nobody.
@@ -457,9 +456,9 @@ export function announceAddressChanged(): void {
 /**
  * The whole address, as a value that changes when the reader navigates.
  *
- * Exported because an address has two halves with two owners. The PATH names
- * what is on screen and is this module's; the QUERY names which VIEW of it —
- * how a list is narrowed, ordered and paged — and belongs to app/urlstate.ts.
+ * Exported because an address has two halves with two owners. The path names
+ * what is on screen and is this module's. The query names which view of it (how
+ * a list is narrowed, ordered and paged) and belongs to lib/urlstate.ts.
  * Both must re-render on the same event, and a second subscription to
  * `hashchange` would be a second answer to where the reader is.
  */
@@ -470,9 +469,9 @@ export function useHash(): string {
   // late by exactly the gate this exists for: it runs after that gate has
   // rendered, and the gate is what stops the screen mounting to scrub it at all.
   //
-  // It lives HERE rather than in useRoute because the query half has its own
-  // reader now (app/urlstate.ts), and a scrub that only one of the two
-  // performed would depend on which of them a screen happened to call first.
+  // It lives here rather than in useRoute because the query half has its own
+  // reader (lib/urlstate.ts). A scrub done by only one of the two would depend
+  // on which of them a screen called first.
   useState(takeFromHash);
   return useSyncExternalStore(
     subscribe,

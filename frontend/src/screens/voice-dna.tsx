@@ -3,7 +3,6 @@ import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
@@ -17,6 +16,7 @@ import {
 import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import { useVoiceProfile } from "./voice-profile";

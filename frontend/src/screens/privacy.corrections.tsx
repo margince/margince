@@ -10,7 +10,6 @@ import { useState } from "react";
 
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -26,6 +25,7 @@ import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { correctableFieldLabel } from "./confirmfields";
 import { EntityRef } from "./entityref";

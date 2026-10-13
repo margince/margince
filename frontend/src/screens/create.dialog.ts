@@ -3,7 +3,7 @@
 
 import { useIsFetching } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import type { Screen } from "../app/router";
+import type { Screen } from "../lib/router";
 import { CF_OBJECTS, type CfObject } from "./customfields.logic";
 
 // Past this a catalog read that has not answered stops holding the dialog.

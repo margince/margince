@@ -3,7 +3,6 @@
 
 import { ChevronRight } from "lucide-react";
 import { useId, useState } from "react";
-import { useCan, useCanWrite, useHoldsAdminRole } from "../app/capability";
 import {
   Badge,
   Button,
@@ -22,6 +21,7 @@ import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCan, useCanWrite, useHoldsAdminRole } from "../lib/capability";
 import { useMe } from "../lib/session";
 import { useExtensions } from "./extensions.queries";
 import {

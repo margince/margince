@@ -8,10 +8,10 @@
 // list, so a mail is the same reference on both.
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 
 type Receipt = components["schemas"]["ContactGraphReceipt"];
 

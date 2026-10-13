@@ -67,7 +67,7 @@ per the obligation deferred from `backend/pkg/extension/extension.go:40`. Rows a
 under RLS like core tables.
 
 **`api/`**: the RBAC object proves the contract chain ran. `useCan` types on `RbacObject`
-(`frontend/src/app/capability.ts:23`). That type accepts any `ext_` string, so a missing overlay merge,
+(`frontend/src/lib/capability.ts:23`). That type accepts any `ext_` string, so a missing overlay merge,
 a misspelled `x-rbac-object` or a fragment that never loaded is not a type error: the screen builds,
 and the gate denies as if the user held no grant. The reason is ownership. `RbacObject` is a core node,
 and a unit may extend only nodes it created, which keeps an installation's contract reproducible. A

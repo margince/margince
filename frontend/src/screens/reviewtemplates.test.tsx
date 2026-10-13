@@ -5,8 +5,8 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
-import { meFixture } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
+import { meFixture } from "../testing/mefixture";
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { jsonResponse, render } from "./settings.testkit";

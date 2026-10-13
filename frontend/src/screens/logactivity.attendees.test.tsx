@@ -11,9 +11,9 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { MAX_MEETING_NAMES, MeetingAttendeeFields } from "./meetingattendees";
 

@@ -3,8 +3,6 @@
 
 import { useId, useState } from "react";
 import { PageAsideToggle } from "../app/pageaside";
-import { navigate } from "../app/router";
-import { useUrlParams } from "../app/urlstate";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
@@ -14,7 +12,9 @@ import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
+import { useUrlParams } from "../lib/urlstate";
 import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";

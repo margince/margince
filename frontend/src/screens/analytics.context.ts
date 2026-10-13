@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { replaceDial, useUrlParams } from "../app/urlstate";
 import { unwrap } from "../lib/problem";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
 export type AnalyticsScope = components["schemas"]["AnalyticsScope"];

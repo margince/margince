@@ -1,9 +1,9 @@
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { ContactLink } from "../design-system/contactlink";
 import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWriteRecord } from "../lib/capability";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { ADDRESS_FIELDS, addressFrom } from "./companyform";
 import { BoughtAttributes } from "./contactboughtattributes";

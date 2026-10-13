@@ -11,12 +11,12 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
 import {

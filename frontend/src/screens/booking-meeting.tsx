@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { backStaysInApp, navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -17,6 +16,7 @@ import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "../lib/problem";
+import { backStaysInApp, navigate } from "../lib/router";
 import { BookingFooter } from "./booking-common";
 import {
   DeliveryCard,

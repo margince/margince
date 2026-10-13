@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId, useRef } from "react";
-import { routeHash } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
@@ -12,6 +11,7 @@ import { QueryStates } from "../design-system/querystates";
 import { RecordBack } from "../design-system/recordview";
 import { StageLadder } from "../design-system/stageladder";
 import { useLocale, useT } from "../i18n";
+import { routeHash } from "../lib/router";
 import { FilesStep, ImportDropzone } from "./import.files";
 import { ImportRefusal } from "./import.notices";
 import { ImportProgress, ImportResult } from "./import.result";

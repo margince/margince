@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { RbacAction, RbacObject } from "../app/capability";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { translate } from "../i18n";
+import type { RbacAction, RbacObject } from "../lib/capability";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   available,
   type CapabilityExpression,

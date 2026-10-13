@@ -1,8 +1,6 @@
 import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
 import { Badge, Button, type ButtonVariant } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
@@ -24,6 +22,8 @@ import {
 } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import { useActivity } from "./activityread";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";

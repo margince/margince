@@ -4,11 +4,11 @@ import type { Dispatch } from "react";
 import { useEffect, useReducer, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useHoldsAdminRole } from "../../app/capability";
-import { navigate, navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
+import { useHoldsAdminRole } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
+import { navigate, navigateReplacing, useRoute } from "../../lib/router";
 import {
   type useCompany,
   useInstallationDescribed,

@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { GroupedTimelineList } from "../design-system/composed";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -10,6 +9,7 @@ import {
 import { SurfaceState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { MeetingBriefAction } from "./contactmeetings";
 import { timelineState } from "./contacttimelinestate";
 import { RecordHistoryTab } from "./history";

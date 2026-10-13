@@ -3,7 +3,6 @@
 
 import { type FormEvent, useState } from "react";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -28,6 +27,7 @@ import { Switch } from "../design-system/switch";
 import { INTL_LOCALE } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { vocabMenuColumn } from "./leadvocab.rows";
 import {

@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowRight } from "lucide-react";
-import { navigate } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { PanelBody, PanelGroupHead, PanelRow } from "../design-system/panel";
@@ -10,6 +9,7 @@ import { QueryGate } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { navigate } from "../lib/router";
 import { type MorningDigest, useMorningDigest } from "./brief.queries";
 import { errorClassKey, isUnhealthy } from "./connector-status";
 import { EntityRef } from "./entityref";

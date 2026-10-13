@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { CreateAction, type CreateField } from "./create";
 import { currencyBeside } from "./dealcurrency";

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { emptyPage, jsonResponse, type RouteMap } from "./story-utils";
 
 type Contact = components["schemas"]["Contact"];

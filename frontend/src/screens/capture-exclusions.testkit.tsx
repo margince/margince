@@ -16,10 +16,10 @@ import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { openRowMenu } from "../testing/tablerow.testkit";
 
 // The two scopes this card draws are two different permissions, and that is the
