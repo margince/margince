@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
 import type { Locale } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import type { ImportRun } from "./importtypes";
 
 // Every read of the import surface sits under this key. One invalidation after
