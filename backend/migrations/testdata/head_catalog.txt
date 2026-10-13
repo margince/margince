@@ -6855,7 +6855,9 @@ public.tag.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.tag.version bigint NOT NULL gen=- def=1
 public.tag_interest_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.tag_interest_read.activity_id uuid NOT NULL gen=- def=-
+public.tag_interest_read.content_digest text NOT NULL gen=- def=-
 public.tag_interest_read.read_at timestamp with time zone NOT NULL gen=- def=now()
+public.tag_interest_read.tag_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.tag_interest_read.tag_interest_read_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.tag_interest_read.tag_interest_read_pkey PRIMARY KEY (activity_id)
 public.tag_interest_read.vocabulary_digest text NOT NULL gen=- def=-

@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -276,10 +277,161 @@ func TestOnlyTheOfflineStandInFallsBackToPhrases(t *testing.T) {
 	e.tag(t, "Product X", "product x pricing", true)
 	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	e.note(e.Admin(), t, "note", "Asked about Product X pricing.", dana, clocktest.Now(t).Add(-time.Hour))
-	offline := fmt.Errorf("%w: canned text", ai.ErrUnconfiguredModel)
 
+	if pass := e.mustSuggest(t, &tagBrainStub{}); pass.Raised != 0 {
+		t.Fatalf("a bound model that found nothing raised %d; the phrase pass must not stand in for it", pass.Raised)
+	}
+	e.WsExec(t, `DELETE FROM tag_interest_read`)
+	offline := fmt.Errorf("%w: canned text", ai.ErrUnconfiguredModel)
 	pass, err := e.suggest(t, &tagBrainStub{reply: func([]string) (string, error) { return "", offline }})
 	if err != nil || pass.Raised != 1 {
 		t.Fatalf("with only the offline stand-in the pass raised %d (err %v), want the phrase match", pass.Raised, err)
+	}
+}
+
+func TestAnItemEditedAfterItWasReadIsReadAgain(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	meeting := e.note(e.Admin(), t, "meeting", "Agenda to follow.", dana, clocktest.Now(t).Add(-time.Hour))
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
+	if pass := e.mustSuggest(t, brain); pass.Raised != 0 {
+		t.Fatalf("the empty meeting raised %d", pass.Raised)
+	}
+
+	e.WsExec(t, `UPDATE activity SET body = 'They close the month in Excel and want out.' WHERE id = $1`, meeting)
+	if pass := e.mustSuggest(t, brain); pass.Raised != 1 {
+		t.Fatalf("the edited meeting raised %d, want 1", pass.Raised)
+	}
+	if asked := brain.askedAbout(); len(asked) != 2 {
+		t.Fatalf("the model was asked about %v, want the meeting before and after its edit", asked)
+	}
+}
+
+func TestAnAnswerRefusedByAnOpenSuggestionIsRaisedOnceThatOneIsGone(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	first := e.note(e.Admin(), t, "note", "Excel at month-end.", dana, clocktest.Now(t).Add(-2*time.Hour))
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
+	e.mustSuggest(t, brain)
+	second := e.note(e.Admin(), t, "note", "Excel again, still painful.", dana, clocktest.Now(t).Add(-time.Hour))
+	if pass := e.mustSuggest(t, brain); pass.Raised != 0 {
+		t.Fatalf("the second answer raised %d beside the open suggestion, want 0", pass.Raised)
+	}
+	calls := len(brain.prompts)
+
+	e.WsExec(t, `INSERT INTO activity_retention_evidence
+		       (activity_id, basis, qualified_at, decided_by_name, reason)
+		VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'litigation hold')`, first)
+	e.WsExec(t, `UPDATE activity
+		   SET restricted_at = now(), archived_at = now(), restricted_reason = 'litigation hold',
+		       restricted_until = now() + interval '1 year',
+		       retention_class = 'commercial_correspondence', retention_class_at = now()
+		 WHERE id = $1`, first)
+	pass := e.mustSuggest(t, brain)
+	if pass.Superseded != 1 || pass.Raised != 1 || len(brain.prompts) != calls {
+		t.Fatalf("pass = %+v after %d new calls, want the old one retired and the stored answer raised without asking",
+			pass, len(brain.prompts)-calls)
+	}
+	open, err := e.tags.OpenTagSuggestions(e.rep(e.Rep1, e.Team1), 10)
+	if err != nil || len(open) != 1 {
+		t.Fatalf("open = %d (err %v), want 1", len(open), err)
+	}
+	cited, err := e.tags.GetTagSuggestion(e.rep(e.Rep1, e.Team1), open[0].ID)
+	if err != nil || len(cited.Evidence) != 1 || cited.Evidence[0].ActivityID != second {
+		t.Fatalf("the suggestion cites %+v (err %v), want the second note", cited.Evidence, err)
+	}
+}
+
+func TestARefiledItemIsSuggestedOnItsNewRecordWithoutAskingAgain(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	bea := e.SeedContact(t, "Bea Buyer", &e.Rep1)
+	note := e.note(e.Admin(), t, "note", "Excel at month-end.", dana, clocktest.Now(t).Add(-time.Hour))
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
+	e.mustSuggest(t, brain)
+
+	e.WsExec(t, `UPDATE activity_link SET contact_id = $2 WHERE activity_id = $1 AND contact_id = $3`, note, bea, dana)
+	if pass := e.mustSuggest(t, brain); pass.Raised != 1 || len(brain.prompts) != 1 {
+		t.Fatalf("after the refile the pass raised %d with %d calls, want 1 raised and no new call", pass.Raised, len(brain.prompts))
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion WHERE contact_id = $1 AND state = 'open'`, bea); n != 1 {
+		t.Fatalf("%d open suggestions on the new record, want 1", n)
+	}
+}
+
+func TestAnswersPastThePassBudgetAreRaisedOnLaterPasses(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	support := e.tag(t, "Premium support", "wants a named contact when something breaks", true)
+	// Each item answers for both tags on its own record: two pairs an item.
+	items := tagSuggestItemCap/2 + 10
+	e.WsExec(t, `WITH pairs AS (SELECT uuidv7() AS contact, uuidv7() AS activity FROM generate_series(1, $1::int)),
+		  c AS (INSERT INTO contact (id, full_name, source, captured_by) SELECT contact, 'Buyer', 'seed', 'system' FROM pairs),
+		  a AS (INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
+		        SELECT activity, 'note', 'Call', 'Excel, and a named contact please.', $2, 'seed', 'system' FROM pairs)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id) SELECT activity, 'contact', contact FROM pairs`,
+		items, clocktest.Now(t).Add(-time.Hour))
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration, "named contact": support}}
+
+	if pass := e.mustSuggest(t, brain); pass.Raised != tagScoutSuggestionCap {
+		t.Fatalf("the first pass raised %d, want the budget of %d", pass.Raised, tagScoutSuggestionCap)
+	}
+	calls := len(brain.prompts)
+	if pass := e.mustSuggest(t, brain); pass.Raised != 2*items-tagScoutSuggestionCap || len(brain.prompts) != calls {
+		t.Fatalf("the next pass raised %d with %d new calls, want the %d left over and no call",
+			pass.Raised, len(brain.prompts)-calls, 2*items-tagScoutSuggestionCap)
+	}
+}
+
+func TestAnItemNotEveryReaderMayReadIsNeverAskedBesideAnother(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	rep1 := e.rep(e.Rep1, e.Team1)
+	at := clocktest.Now(t).Add(-time.Hour)
+	private := e.note(rep1, t, "email", "Excel, privately.", dana, at)
+	if _, err := e.Activities.SetAudience(rep1, ids.From[ids.ActivityKind](private),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the mail to its owner: %v", err)
+	}
+	e.note(e.Admin(), t, "note", "Thanks for lunch.", dana, at)
+	e.note(e.Admin(), t, "note", "Agenda attached.", dana, at)
+	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
+
+	e.mustSuggest(t, brain)
+	for _, req := range brain.prompts {
+		spans := fencedSpans(req.System, req.Messages[0].Content)
+		for _, span := range spans {
+			if span.id == private.String() && len(spans) != 1 {
+				t.Fatalf("the owner-only mail was asked about beside %d other items", len(spans)-1)
+			}
+		}
+	}
+	if asked := len(brain.askedAbout()); asked != 3 {
+		t.Fatalf("the model was asked about %d items, want all 3", asked)
+	}
+}
+
+func TestADeclinedItemIsStoredWithNoTagAndItsSiblingRaises(t *testing.T) {
+	e := setupTagScout(t)
+	migration := e.tag(t, "Ledger migration", "move bookkeeping off spreadsheets", true)
+	dana := e.SeedContact(t, "Dana Buyer", &e.Rep1)
+	bea := e.SeedContact(t, "Bea Buyer", &e.Rep1)
+	at := clocktest.Now(t).Add(-time.Hour)
+	hostile := e.note(e.Admin(), t, "note", "Excel "+hostileMarker, dana, at)
+	e.note(e.Admin(), t, "note", "Excel at month-end.", bea, at)
+	brain := &withholdingWhere{inner: &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}}
+
+	if pass := e.mustSuggest(t, brain); pass.Raised != 1 {
+		t.Fatalf("the pass raised %d, want the sibling's suggestion alone", pass.Raised)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM tag_interest_read WHERE activity_id = $1 AND tag_ids = '{}'`, hostile); n != 1 {
+		t.Fatalf("the declined item has %d tagless ledger rows, want 1", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM tag_suggestion WHERE contact_id = $1`, dana); n != 0 {
+		t.Fatalf("the declined item raised %d suggestions, want 0", n)
 	}
 }

@@ -305,12 +305,14 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## tag_interest_read
 
-3 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+5 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
+| `content_digest` | `text` | yes |  |
 | `read_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `tag_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `vocabulary_digest` | `text` | yes |  |
 
 **Points at**

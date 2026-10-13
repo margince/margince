@@ -19,7 +19,7 @@ fixture:
       subject: 'Quarterly review with Hafenberg'
       body: |
         They want the month-end close out of Excel before the audit, and
-        after last month's outage they asked for one named person they can
+        after last month's outage they asked for one named contact they can
         call instead of the general queue.
     - kind: email
       subject: 'Ticket 4411'
@@ -35,7 +35,7 @@ fixture:
       subject: 'Call with Kranich'
       body: |
         Their controller keeps the books in a shared workbook and wants a
-        proper system before they hire two more people. Asked for a proposal.
+        proper system before they hire two more accountants. Asked for a proposal.
 expect:
   outcome: accepted
   answer: [[ledger_migration, premium_support], [premium_support], [], [ledger_migration]]

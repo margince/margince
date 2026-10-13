@@ -165,14 +165,11 @@ func (c *tagSuggestCase) Run(ctx context.Context, completer aitasks.Completer) (
 // Evaluate parses and validates the reply as the pass does, and only then asks
 // whether each item carries the tags the scenario expects.
 func (c *tagSuggestCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	var payload tagSuggestPayload
-	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: fmt.Sprintf("unparseable model output: %v", err)}
+	answers, err := parseTagSuggestReply(trace.Output, c.tags, c.items)
+	if err != nil {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
-	if msg := validateTagSuggestPayload(payload, c.tags, c.items); msg != "" {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
-	}
-	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
+	if disagreements := c.disagreements(answers); len(disagreements) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -180,9 +177,9 @@ func (c *tagSuggestCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 
 // disagreements names every item whose tags differ from the expectation, by
 // position and fixture key.
-func (c *tagSuggestCase) disagreements(payload tagSuggestPayload) []string {
+func (c *tagSuggestCase) disagreements(answers []tagSuggestAnswer) []string {
 	answered := map[string][]string{}
-	for _, a := range payload.Items {
+	for _, a := range answers {
 		answered[a.ID] = a.Tags
 	}
 	var out []string

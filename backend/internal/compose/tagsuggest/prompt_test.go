@@ -14,10 +14,7 @@ import (
 )
 
 func TestTheRulesetIsAPropertyOfTheCodeNotOfTheProcess(t *testing.T) {
-	again := ai.PromptDigest(func(fence promptfence.Fence) string {
-		return SystemFor(fence) + "\n" + Prompt(fence, []collections.SuggestibleTag{rulesetTag}, []Item{rulesetItem})
-	})
-	if again != Ruleset {
+	if again := ai.PromptDigest(rulesetPrompt); again != Ruleset {
 		t.Fatalf("recomputing the ruleset gives %q, want %q: every restart would re-read every item", again, Ruleset)
 	}
 }

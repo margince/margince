@@ -94,9 +94,12 @@ var (
 // Ruleset names the rules an item was read under. The system prompt and the
 // user turn are one builder. PromptDigest canonicalises the marker only in a
 // string that declares it, and a user turn digested alone moves per process.
-var Ruleset = ai.PromptDigest(func(fence promptfence.Fence) string {
+var Ruleset = ai.PromptDigest(rulesetPrompt)
+
+// rulesetPrompt renders the fixed sample as the model reads it.
+func rulesetPrompt(fence promptfence.Fence) string {
 	return SystemFor(fence) + "\n" + Prompt(fence, []collections.SuggestibleTag{rulesetTag}, []Item{rulesetItem})
-})
+}
 
 // VocabularyDigest names the suggestible tags an item is read against and the
 // rules it is read under. An item read under one digest is read again under

@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,9 +26,9 @@ import (
 const (
 	// tagScoutWindow is how far back evidence counts.
 	tagScoutWindow = 30 * 24 * time.Hour
-	// tagScoutSuggestionCap bounds how many suggestions one pass raises; a
-	// suggestion raised leaves the candidate set, so the next pass reaches the
-	// rest.
+	// tagScoutSuggestionCap bounds the tag and record pairs one pass
+	// considers, on either path. Both raise from what is stored, so a pair past
+	// it is reached by the next pass.
 	tagScoutSuggestionCap = 200
 	// tagScoutItemCap bounds the activities one suggestion cites.
 	tagScoutItemCap = 5
@@ -119,7 +120,7 @@ func tagScoutCitable(a string) string {
 // tagScoutSQL is the pass's one read. It pairs each suggestible tag's phrases
 // with the captured activities in the window that mention them.
 func tagScoutSQL(since, now time.Time) (string, []any) {
-	args := []any{since, now, tagScoutItemCap}
+	args := []any{since, now}
 	query := `
 	WITH phrases AS (
 	  SELECT DISTINCT t.id AS tag_id, lower(btrim(phrase)) AS phrase
@@ -133,14 +134,15 @@ func tagScoutSQL(since, now time.Time) (string, []any) {
 	    JOIN phrases p ON position(p.phrase IN lower(coalesce(a.subject, '') || ' ' || coalesce(a.body, ''))) > 0
 	   WHERE ` + tagScoutCitable("a") + `
 	     AND a.occurred_at > $1 AND a.occurred_at <= $2
-	), ` + tagScoutRankedSQL("$3")
+	), ` + tagScoutRankedSQL()
 	return query, args
 }
 
 // tagScoutRankedSQL closes a query whose ev CTE pairs tags with cited
 // activities. It keeps records the tag may be proposed on and evidence newer
-// than the last decision, at most rankCap per tag and record, newest first.
-func tagScoutRankedSQL(rankCap string) string {
+// than the last decision, at most tagScoutItemCap per tag and record, newest
+// first.
+func tagScoutRankedSQL() string {
 	candidate := func(entityType string) string {
 		return `(ev.entity_type = '` + entityType + `' AND ` +
 			collections.SuggestableTagClause(entityType, "ev.tag_id", "ev.record") +
@@ -154,6 +156,6 @@ func tagScoutRankedSQL(rankCap string) string {
 	   WHERE ` + candidate("contact") + ` OR ` + candidate("company") + `
 	)
 	SELECT tag_id, entity_type, record, activity_id, occurred_at
-	  FROM ranked WHERE rank <= ` + rankCap + `
+	  FROM ranked WHERE rank <= ` + strconv.Itoa(tagScoutItemCap) + `
 	 ORDER BY tag_id, entity_type, record, occurred_at DESC, activity_id`
 }

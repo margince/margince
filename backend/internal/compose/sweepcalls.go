@@ -3,9 +3,8 @@
 
 package compose
 
-// What the three batched sweeps — capture labels, owed verdicts, request
-// settlement — share about paying for model calls: one bound on the calls a pass
-// makes, and one answer to "did the models decline this message".
+// What the batched sweeps share about paying for model calls. One bound on the
+// calls a pass makes, and one answer to "did the models decline this message".
 
 import (
 	"errors"

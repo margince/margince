@@ -48,30 +48,54 @@ func SuggestibleTagsTx(ctx context.Context, tx pgx.Tx) ([]SuggestibleTag, error)
 	return tags, nil
 }
 
-// TagInterestUnreadClause says the activity has not been read under the
-// vocabulary digest. activity and digest are SQL expressions.
-func TagInterestUnreadClause(activity, digest string) string {
+// TagInterestUnreadClause says the activity has no answer read under both
+// digests: the vocabulary, and the content the prompt shows. activity,
+// vocabulary and content are SQL expressions.
+func TagInterestUnreadClause(activity, vocabulary, content string) string {
 	return `NOT EXISTS (SELECT 1 FROM tag_interest_read tir
-	  WHERE tir.activity_id = ` + activity + ` AND tir.vocabulary_digest = ` + digest + `)`
+	  WHERE tir.activity_id = ` + activity + ` AND tir.vocabulary_digest = ` + vocabulary + `
+	    AND tir.content_digest = ` + content + `)`
 }
 
-// MarkTagInterestReadTx records that the model read each activity under the
-// digest. An activity deleted or restricted since it was read is skipped, and
-// read again when it is available. System-only.
-func MarkTagInterestReadTx(ctx context.Context, tx pgx.Tx, digest string, activities []ids.UUID) error {
+// TagInterestAnswerSQL selects one tag_id row per tag the model found in the
+// activity, for an answer read under both digests and no other. activity,
+// vocabulary and content are SQL expressions.
+func TagInterestAnswerSQL(activity, vocabulary, content string) string {
+	return `SELECT unnest(tia.tag_ids) AS tag_id FROM tag_interest_read tia
+	  WHERE tia.activity_id = ` + activity + ` AND tia.vocabulary_digest = ` + vocabulary + `
+	    AND tia.content_digest = ` + content
+}
+
+// TagInterestAnswer is the model's answer for one activity: the tags it shows
+// interest in, possibly none, and the digest of the text that was read.
+type TagInterestAnswer struct {
+	ActivityID    ids.UUID
+	ContentDigest string
+	TagIDs        []ids.UUID
+}
+
+// RecordTagInterestAnswersTx stores each answer under the vocabulary digest,
+// replacing an older one. An activity deleted or restricted since it was read
+// is skipped, and read again when it is available. System-only.
+func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary string, answers []TagInterestAnswer) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	if len(activities) == 0 {
-		return nil
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO tag_interest_read (activity_id, vocabulary_digest)
-		SELECT a.id, $2::text FROM activity a WHERE a.id = ANY($1::uuid[]) AND `+auth.ActivityAvailableClause("a")+`
-		ON CONFLICT (activity_id) DO UPDATE
-		   SET vocabulary_digest = EXCLUDED.vocabulary_digest, read_at = now()`,
-		activities, digest); err != nil {
-		return fmt.Errorf("collections: recording what the tag suggestion model read: %w", err)
+	for _, answer := range answers {
+		tags := answer.TagIDs
+		if tags == nil {
+			tags = []ids.UUID{}
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO tag_interest_read (activity_id, vocabulary_digest, content_digest, tag_ids)
+			SELECT a.id, $2::text, $3::text, $4::uuid[] FROM activity a
+			 WHERE a.id = $1 AND `+auth.ActivityAvailableClause("a")+`
+			ON CONFLICT (activity_id) DO UPDATE
+			   SET vocabulary_digest = EXCLUDED.vocabulary_digest, content_digest = EXCLUDED.content_digest,
+			       tag_ids = EXCLUDED.tag_ids, read_at = now()`,
+			answer.ActivityID, vocabulary, answer.ContentDigest, tags); err != nil {
+			return fmt.Errorf("collections: recording what the tag suggestion model read: %w", err)
+		}
 	}
 	return nil
 }

@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 299 |
-| Columns | 3563 |
+| Columns | 3565 |
 | Foreign keys | 500 |
 | Owning areas | 36 |
 
@@ -390,7 +390,7 @@ erDiagram
 | [`suggestion_dismissal`](compose.md#suggestion_dismissal) | compose | 4 | 0 |
 | [`system_log`](platform.md#system_log) | platform | 8 | 0 |
 | [`tag`](collections.md#tag) | collections | 10 | 3 |
-| [`tag_interest_read`](collections.md#tag_interest_read) | collections | 3 | 0 |
+| [`tag_interest_read`](collections.md#tag_interest_read) | collections | 5 | 0 |
 | [`tag_suggestion`](collections.md#tag_suggestion) | collections | 12 | 1 |
 | [`tag_suggestion_evidence`](collections.md#tag_suggestion_evidence) | collections | 4 | 0 |
 | [`taggable`](collections.md#taggable) | collections | 8 | 0 |
