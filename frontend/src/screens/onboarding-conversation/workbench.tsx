@@ -116,19 +116,6 @@ function useSetupRuntime(): AiRunSummary | undefined {
   return read.data?.ai_runtime;
 }
 
-/**
- * Whether the stage appearing right now is the FIRST one of this setup.
- *
- * Each act mounts its own shell, so the entrance animation replayed on every act
- * change: the rail, the brand line, the orb and the runtime chip — the parts that
- * are meant to be the stable frame — faded and rose again each time the reader
- * moved forward. The shell cannot remember this itself, because it is exactly
- * what unmounts; the scope sits above the act switch, which does not.
- * What is shared is a small store, not a boolean: the answer has to flip when a
- * SHELL appears, and the company act opens on the full-screen gate, so anything
- * keyed on the scope's own mount would already have flipped before the first
- * workbench ever rendered.
- */
 type ShownStore = Readonly<{ seen: () => boolean; markSeen: () => void }>;
 
 function shownStore(): ShownStore {
@@ -141,6 +128,18 @@ function shownStore(): ShownStore {
   };
 }
 
+/**
+ * Whether the stage appearing right now is the FIRST one of this setup.
+ *
+ * Each act mounts its own shell, so the entrance animation replayed on every act
+ * change: the rail, the brand line, the orb and the runtime chip — the parts that
+ * are meant to be the stable frame — faded and rose again each time the reader
+ * moved forward. The shell cannot remember this itself, because it is exactly
+ * what unmounts; the scope sits above the act switch, which does not.
+ * What is shared is a store, not a boolean, because the answer flips when a
+ * shell appears. The company act opens on the full-screen gate, so a flag set
+ * at the scope's own mount would flip before the first workbench rendered.
+ */
 const WorkbenchShown = createContext<ShownStore>(shownStore());
 
 export function WorkbenchEntranceScope({
