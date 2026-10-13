@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -27,8 +28,8 @@ const (
 	StatusAwaitingApproval = "awaiting_approval"
 )
 
-// A saved session adds a draft before the test run and an end for a run that
-// stopped before it wrote anything: cancelled, superseded or left idle.
+// A saved session adds a draft before the test run. It also adds an end for a
+// run that stopped before it wrote: cancelled, superseded or left idle.
 const (
 	StatusPending   = "pending"
 	StatusCancelled = "cancelled"
@@ -112,13 +113,24 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 	}
 
 	var run Run
+	id := RunID(ids.NewV7())
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		// A new test run replaces the unwritten runs of its name and of its upload,
+		// which each hold one active run.
+		if err := supersedeName(ctx, tx, id, in.Mapping.SourceName); err != nil {
+			return err
+		}
+		if err := supersedeWhere(ctx, tx, id, "source_ref", in.SourceRef); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO import_run (id, connector, status, mapping, source_ref, source, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			RETURNING id, connector, status, source_ref, checkpoint, created_at, updated_at`,
-			in.Connector, StatusValidating, mapping, in.SourceRef, in.Source, capturedBy)
-		if err := scanRun(row, &run); err != nil {
+			id, in.Connector, StatusValidating, mapping, in.SourceRef, in.Source, capturedBy)
+		if err := scanRun(row, &run); storekit.IsUniqueViolation(err) {
+			return fmt.Errorf("the upload is held by an import run that has written: %w", apperrors.ErrConflict)
+		} else if err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", ImportRunObject, run.ID, nil, map[string]any{
@@ -152,7 +164,9 @@ func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) e
 	if err != nil {
 		return fmt.Errorf("encoding the dry-run report: %w", err)
 	}
-	return s.stageTransition(ctx, id, StatusValidating, StatusAwaitingApproval, encoded)
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return stageTransition(ctx, tx, id, moveReport, runChange{values: []runValue{{"report", encoded}}})
+	})
 }
 
 // Approve moves a validated run to `running`.
@@ -165,7 +179,18 @@ func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
-	if err := s.stageTransition(ctx, id, StatusAwaitingApproval, StatusRunning, nil); err != nil {
+	approver, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return Run{}, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		return stageTransition(ctx, tx, id, moveApprove, runChange{
+			values:   []runValue{{"approved_by", approver}},
+			literals: []string{"approved_at = now()"},
+			after:    map[string]any{"approved_by": approver},
+		})
+	})
+	if err != nil {
 		return Run{}, err
 	}
 	return s.GetStaged(ctx, id)
@@ -174,41 +199,20 @@ func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
 // ResumeApproved continues a run that failed part-way, from its checkpoint.
 //
 // This is what IEM-WIRE-6 means by a resumable failure being "a resumable
-// state, not a dead end": without it an interrupted import can only be
-// abandoned and re-uploaded, because approve refuses anything but
-// awaiting_approval and nothing else drives the engine.
+// state, not a dead end". Without it an interrupted import can only be
+// abandoned and re-uploaded. Only an approved run resumes: a failed run
+// nobody approved never reached a commit.
 func (s *RunStore) ResumeApproved(ctx context.Context, id RunID) (Run, error) {
-	if err := s.Resume(ctx, id); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
+		return Run{}, err
+	}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		return stageTransition(ctx, tx, id, moveResume, runChange{approved: true, literals: []string{"error = NULL"}})
+	})
+	if err != nil {
 		return Run{}, err
 	}
 	return s.GetStaged(ctx, id)
-}
-
-// stageTransition moves a run between two named states, refusing when it is not
-// in the state the caller believed. One statement decides both the move and the
-// refusal, so a concurrent approval cannot slip between a check and a write.
-func (s *RunStore) stageTransition(ctx context.Context, id RunID, from, to string, report []byte) error {
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run
-			   SET status = $3,
-			       report = COALESCE($4::jsonb, report),
-			       updated_at = now()
-			 WHERE id = $1 AND status = $2`, id, from, to, report)
-		if err != nil {
-			return fmt.Errorf("moving import run %s to %s: %w", id, to, err)
-		}
-		if tag.RowsAffected() == 0 {
-			// Zero rows means either "no such run here" or "not in that
-			// state", and the two owe different answers. Deciding it from a
-			// read the CALLER happened to do first would make this a guard
-			// only its current callers keep, so it is decided here.
-			return s.explainMiss(ctx, tx, id, from, to)
-		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: from}, map[string]any{auditFieldStatus: to})
-		return err
-	})
 }
 
 // FailValidation records a dry run that could not finish, with a fixed cause.
@@ -261,14 +265,23 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		run, err = scanStaged(tx.QueryRow(ctx, `
-			SELECT `+stagedColumns+`
-			-- Scoped as well as keyed, exactly as Get is: a run id from another
-			-- workspace owes the existence-hiding not-found, not its status,
-			-- its mapping and its report.
-			  FROM import_run WHERE id = $1`, id))
+		run, err = readStaged(ctx, tx, id, true)
 		return err
 	})
+	if err != nil {
+		return Run{}, err
+	}
+	return run, nil
+}
+
+// readStaged is GetStaged on the caller's transaction. The profile is read
+// only when asked for: a list never carries it.
+func readStaged(ctx context.Context, tx pgx.Tx, id RunID, withProfile bool) (Run, error) {
+	columns := stagedColumns
+	if withProfile {
+		columns += `, profile`
+	}
+	run, err := scanStaged(tx.QueryRow(ctx, `SELECT `+columns+` FROM import_run WHERE id = $1`, id), withProfile)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 	}
@@ -307,7 +320,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 		}
 		defer rows.Close()
 		for rows.Next() {
-			run, err := scanStaged(rows)
+			run, err := scanStaged(rows, false)
 			if err != nil {
 				return err
 			}
@@ -332,9 +345,11 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 
 // stagedColumns is what scanStaged reads, in its order.
 const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at, updated_at,
-			mapping, report, undo_report, error, captured_by`
+			mapping, report, undo_report, error, captured_by,
+			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
+			source_released_at IS NOT NULL`
 
-func scanStaged(row pgx.Row) (Run, error) {
+func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 	var (
 		run        Run
 		mapping    []byte
@@ -342,8 +357,13 @@ func scanStaged(row pgx.Row) (Run, error) {
 		undoReport []byte
 		runErr     *string
 	)
-	if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
-		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy); err != nil {
+	dest := []any{&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
+		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
+		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased}
+	if withProfile {
+		dest = append(dest, &run.Profile)
+	}
+	if err := row.Scan(dest...); err != nil {
 		return Run{}, err
 	}
 	if runErr != nil {
@@ -378,7 +398,8 @@ func scanStaged(row pgx.Row) (Run, error) {
 	return run, nil
 }
 
-// UnreferencedImportKeys answers which of these keys no import run's source names.
+// UnreferencedImportKeys answers which of these keys no unreleased import run's
+// source names: a run releases its file once no later step reads it.
 //
 // Answered here because import_run is this module's table. An abandoned profile
 // legitimately has no run: the key is handed to the client, and only a submitted
@@ -395,7 +416,8 @@ func (s *RunStore) UnreferencedImportKeys(ctx context.Context, keys []string) ([
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT k FROM unnest($1::text[]) AS k
-			 WHERE NOT EXISTS (SELECT 1 FROM import_run r WHERE r.source_ref = k)`, keys)
+			 WHERE NOT EXISTS (
+			       SELECT 1 FROM import_run r WHERE r.source_ref = k AND r.source_released_at IS NULL)`, keys)
 		if err != nil {
 			return fmt.Errorf("check which import source keys are unreferenced: %w", err)
 		}

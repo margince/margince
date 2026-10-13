@@ -63,6 +63,8 @@ type Run struct {
 	CapturedBy string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// Session is read only by the staged reads; the flip's runs carry none.
+	Session
 }
 
 // RunStore owns the import_run table; every status transition rides the

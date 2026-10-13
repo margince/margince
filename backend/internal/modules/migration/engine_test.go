@@ -103,6 +103,16 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
 		{"FailStaleValidating", func() error { _, err := s.FailStaleValidating(ctx, time.Minute); return err }},
+		{"CreateDraftRun", func() error {
+			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
+			return err
+		}},
+		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
+		{"QueueValidation", func() error { _, err := s.QueueValidation(ctx, runID, 1); return err }},
+		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
+		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
+		// The grant is taken before the borrowed transaction is touched; a nil tx proves it.
+		{"Supersede", func() error { return s.Supersede(ctx, nil, runID, "Fair") }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -657,6 +667,8 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
+		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
+		"Cancel": true, "Supersede": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {
