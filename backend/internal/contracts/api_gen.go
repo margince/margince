@@ -16261,23 +16261,133 @@ func (e TeamExceptionKind) Valid() bool {
 	}
 }
 
+// Defines values for TeamWeeklyCoverageAbsent.
+const (
+	TeamWeeklyCoverageAbsentInsufficientBasis   TeamWeeklyCoverageAbsent = "insufficient_basis"
+	TeamWeeklyCoverageAbsentInsufficientHistory TeamWeeklyCoverageAbsent = "insufficient_history"
+	TeamWeeklyCoverageAbsentNotAuthorized       TeamWeeklyCoverageAbsent = "not_authorized"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageAbsent enum.
+func (e TeamWeeklyCoverageAbsent) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageAbsentInsufficientBasis:
+		return true
+	case TeamWeeklyCoverageAbsentInsufficientHistory:
+		return true
+	case TeamWeeklyCoverageAbsentNotAuthorized:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoverageBasis.
+const (
+	TeamWeeklyCoverageBasisHistoricalMedian TeamWeeklyCoverageBasis = "historical_median"
+	TeamWeeklyCoverageBasisManagerCall      TeamWeeklyCoverageBasis = "manager_call"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageBasis enum.
+func (e TeamWeeklyCoverageBasis) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageBasisHistoricalMedian:
+		return true
+	case TeamWeeklyCoverageBasisManagerCall:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoveragePeriodKind.
+const (
+	TeamWeeklyCoveragePeriodKindMonth   TeamWeeklyCoveragePeriodKind = "month"
+	TeamWeeklyCoveragePeriodKindQuarter TeamWeeklyCoveragePeriodKind = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoveragePeriodKind enum.
+func (e TeamWeeklyCoveragePeriodKind) Valid() bool {
+	switch e {
+	case TeamWeeklyCoveragePeriodKindMonth:
+		return true
+	case TeamWeeklyCoveragePeriodKindQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyPatternKind.
+const (
+	TeamWeeklyPatternKindCloseDatesProvisional   TeamWeeklyPatternKind = "close_dates_provisional"
+	TeamWeeklyPatternKindCommitmentsMissed       TeamWeeklyPatternKind = "commitments_missed"
+	TeamWeeklyPatternKindDealsAtRisk             TeamWeeklyPatternKind = "deals_at_risk"
+	TeamWeeklyPatternKindForecastDowngrades      TeamWeeklyPatternKind = "forecast_downgrades"
+	TeamWeeklyPatternKindHelpRequested           TeamWeeklyPatternKind = "help_requested"
+	TeamWeeklyPatternKindLeadsBreached           TeamWeeklyPatternKind = "leads_breached"
+	TeamWeeklyPatternKindMeetingsWithoutNextStep TeamWeeklyPatternKind = "meetings_without_next_step"
+	TeamWeeklyPatternKindNoNextStepCoverage      TeamWeeklyPatternKind = "no_next_step_coverage"
+	TeamWeeklyPatternKindQuietWeek               TeamWeeklyPatternKind = "quiet_week"
+	TeamWeeklyPatternKindStageRegressions        TeamWeeklyPatternKind = "stage_regressions"
+	TeamWeeklyPatternKindStrongWeek              TeamWeeklyPatternKind = "strong_week"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyPatternKind enum.
+func (e TeamWeeklyPatternKind) Valid() bool {
+	switch e {
+	case TeamWeeklyPatternKindCloseDatesProvisional:
+		return true
+	case TeamWeeklyPatternKindCommitmentsMissed:
+		return true
+	case TeamWeeklyPatternKindDealsAtRisk:
+		return true
+	case TeamWeeklyPatternKindForecastDowngrades:
+		return true
+	case TeamWeeklyPatternKindHelpRequested:
+		return true
+	case TeamWeeklyPatternKindLeadsBreached:
+		return true
+	case TeamWeeklyPatternKindMeetingsWithoutNextStep:
+		return true
+	case TeamWeeklyPatternKindNoNextStepCoverage:
+		return true
+	case TeamWeeklyPatternKindQuietWeek:
+		return true
+	case TeamWeeklyPatternKindStageRegressions:
+		return true
+	case TeamWeeklyPatternKindStrongWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamWeeklyRepFocusKind.
 const (
+	TeamWeeklyRepFocusKindCloseDatesProvisional   TeamWeeklyRepFocusKind = "close_dates_provisional"
 	TeamWeeklyRepFocusKindCommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
 	TeamWeeklyRepFocusKindDealsAtRisk             TeamWeeklyRepFocusKind = "deals_at_risk"
+	TeamWeeklyRepFocusKindForecastDowngrades      TeamWeeklyRepFocusKind = "forecast_downgrades"
 	TeamWeeklyRepFocusKindHelpRequested           TeamWeeklyRepFocusKind = "help_requested"
 	TeamWeeklyRepFocusKindLeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
 	TeamWeeklyRepFocusKindMeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
+	TeamWeeklyRepFocusKindNoNextStepCoverage      TeamWeeklyRepFocusKind = "no_next_step_coverage"
 	TeamWeeklyRepFocusKindQuietWeek               TeamWeeklyRepFocusKind = "quiet_week"
+	TeamWeeklyRepFocusKindStageRegressions        TeamWeeklyRepFocusKind = "stage_regressions"
 	TeamWeeklyRepFocusKindStrongWeek              TeamWeeklyRepFocusKind = "strong_week"
 )
 
 // Valid indicates whether the value is a known member of the TeamWeeklyRepFocusKind enum.
 func (e TeamWeeklyRepFocusKind) Valid() bool {
 	switch e {
+	case TeamWeeklyRepFocusKindCloseDatesProvisional:
+		return true
 	case TeamWeeklyRepFocusKindCommitmentsMissed:
 		return true
 	case TeamWeeklyRepFocusKindDealsAtRisk:
+		return true
+	case TeamWeeklyRepFocusKindForecastDowngrades:
 		return true
 	case TeamWeeklyRepFocusKindHelpRequested:
 		return true
@@ -16285,7 +16395,11 @@ func (e TeamWeeklyRepFocusKind) Valid() bool {
 		return true
 	case TeamWeeklyRepFocusKindMeetingsWithoutNextStep:
 		return true
+	case TeamWeeklyRepFocusKindNoNextStepCoverage:
+		return true
 	case TeamWeeklyRepFocusKindQuietWeek:
+		return true
+	case TeamWeeklyRepFocusKindStageRegressions:
 		return true
 	case TeamWeeklyRepFocusKindStrongWeek:
 		return true
@@ -46100,7 +46214,89 @@ type TeamWeeklyCounts struct {
 	RepsCounted int `json:"reps_counted"`
 }
 
-// TeamWeeklyRep One member's week as their lead reads it, with the one thing to raise.
+// TeamWeeklyCoverage Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+// coverage at risk against the named basis, never as a target: the product has none.
+// Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+type TeamWeeklyCoverage struct {
+	// Absent Why there is no answer. `not_authorized` is a standing call the member who closed the
+	// week could not read, which is not the same as no call.
+	Absent                  *TeamWeeklyCoverageAbsent    `json:"absent,omitempty"`
+	BaseCurrency            string                       `json:"base_currency"`
+	Basis                   *TeamWeeklyCoverageBasis     `json:"basis,omitempty"`
+	CoverageBp              *int64                       `json:"coverage_bp,omitempty"`
+	CurrentOpenMinor        *int64                       `json:"current_open_minor,omitempty"`
+	NeededOpenMinor         *int64                       `json:"needed_open_minor,omitempty"`
+	PeriodKind              TeamWeeklyCoveragePeriodKind `json:"period_kind"`
+	ReferenceLandingMinor   *int64                       `json:"reference_landing_minor,omitempty"`
+	RemainingToSupportMinor *int64                       `json:"remaining_to_support_minor,omitempty"`
+
+	// ReplanRecommended True when coverage is at risk against a named basis: under 8000 basis points of what
+	// the basis needs. Never true without a basis.
+	ReplanRecommended bool `json:"replan_recommended"`
+}
+
+// TeamWeeklyCoverageAbsent Why there is no answer. `not_authorized` is a standing call the member who closed the
+// week could not read, which is not the same as no call.
+type TeamWeeklyCoverageAbsent string
+
+// TeamWeeklyCoverageBasis defines model for TeamWeeklyCoverage.Basis.
+type TeamWeeklyCoverageBasis string
+
+// TeamWeeklyCoveragePeriodKind defines model for TeamWeeklyCoverage.PeriodKind.
+type TeamWeeklyCoveragePeriodKind string
+
+// TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
+// attributed to the owner at the time of each move. "Converted" is a later move to a won
+// stage or to a later stage, compared by the stage order as it was configured when the
+// week was assembled.
+type TeamWeeklyFunnelDeviation struct {
+	// DeviationBp The rep's conversion rate less the team's, in basis points.
+	DeviationBp int `json:"deviation_bp"`
+
+	// NextStageName The stage after this one when the week was assembled; absent for the last.
+	NextStageName *string            `json:"next_stage_name,omitempty"`
+	PipelineId    openapi_types.UUID `json:"pipeline_id"`
+	PipelineName  string             `json:"pipeline_name"`
+	RepConverted  int                `json:"rep_converted"`
+	RepEntered    int                `json:"rep_entered"`
+	StageId       openapi_types.UUID `json:"stage_id"`
+	StageName     string             `json:"stage_name"`
+	TeamConverted int                `json:"team_converted"`
+	TeamEntered   int                `json:"team_entered"`
+}
+
+// TeamWeeklyMember defines model for TeamWeeklyMember.
+type TeamWeeklyMember struct {
+	// DisplayName What they were called that week.
+	DisplayName string `json:"display_name"`
+
+	// Measured Whether this member's own week was read into the counts.
+	Measured bool               `json:"measured"`
+	UserId   openapi_types.UUID `json:"user_id"`
+}
+
+// TeamWeeklyPattern defines model for TeamWeeklyPattern.
+type TeamWeeklyPattern struct {
+	Kind TeamWeeklyPatternKind `json:"kind"`
+
+	// Label The pattern in words, composed from the stored figures.
+	Label string `json:"label"`
+}
+
+// TeamWeeklyPatternKind defines model for TeamWeeklyPattern.Kind.
+type TeamWeeklyPatternKind string
+
+// TeamWeeklyQuality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+// snapshot frozen before it was measured, which is not zero.
+type TeamWeeklyQuality struct {
+	// AutoChangeReversals Changes an agent, a connector or the system made that a member of the team undid
+	// inside the week.
+	AutoChangeReversals *int `json:"auto_change_reversals,omitempty"`
+	ProposalsAccepted   *int `json:"proposals_accepted,omitempty"`
+	ProposalsRejected   *int `json:"proposals_rejected,omitempty"`
+}
+
+// TeamWeeklyRep One member's week as their lead reads it, with what to raise.
 type TeamWeeklyRep struct {
 	CommitmentsDue  int `json:"commitments_due"`
 	CommitmentsKept int `json:"commitments_kept"`
@@ -46110,26 +46306,42 @@ type TeamWeeklyRep struct {
 	DisplayName string `json:"display_name"`
 
 	// FocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-	// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-	// outranks any metric, because walking past a request to raise a number is the
-	// fastest way to teach them not to ask.
+	// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+	// them: a rep who ASKED for help outranks any metric, because walking past a request
+	// to raise a number is the fastest way to teach them not to ask.
+	//
+	// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+	// replaced it still carry it.
 	FocusKind TeamWeeklyRepFocusKind `json:"focus_kind"`
 
 	// FocusLabel The focus in words, composed from the stored figures — never model-written, so it
 	// cannot say something the snapshot does not hold.
 	FocusLabel string `json:"focus_label"`
 
+	// Funnel Up to three stages where this rep's conversion differs most from the team's, over
+	// the 13 weeks before the week closed. Stages with fewer than five entries on either
+	// side are left out. Empty when no stage qualified or the snapshot predates it.
+	Funnel *[]TeamWeeklyFunnelDeviation `json:"funnel,omitempty"`
+
 	// HelpRequested Commitments they asked for help on.
-	HelpRequested int                `json:"help_requested"`
-	LeadsBreached int                `json:"leads_breached"`
-	MeetingsHeld  int                `json:"meetings_held"`
-	UserId        openapi_types.UUID `json:"user_id"`
+	HelpRequested int `json:"help_requested"`
+	LeadsBreached int `json:"leads_breached"`
+	MeetingsHeld  int `json:"meetings_held"`
+
+	// Patterns Every rule that fired for this rep, in the order a lead raises them. The first is
+	// the focus. A snapshot frozen before the list existed reads its focus as the one
+	// pattern.
+	Patterns []TeamWeeklyPattern `json:"patterns"`
+	UserId   openapi_types.UUID  `json:"user_id"`
 }
 
 // TeamWeeklyRepFocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-// outranks any metric, because walking past a request to raise a number is the
-// fastest way to teach them not to ask.
+// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+// them: a rep who ASKED for help outranks any metric, because walking past a request
+// to raise a number is the fastest way to teach them not to ask.
+//
+// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+// replaced it still carry it.
 type TeamWeeklyRepFocusKind string
 
 // TeamWeeklyReview One team's week, as it was measured when the week closed.
@@ -46148,12 +46360,26 @@ type TeamWeeklyReview struct {
 	// worth discussing is a two-item meeting, and padding it to a layout's number would
 	// be inventing an item. Empty exactly when `reps` is — a team whose week could not be
 	// read has no agenda, which a client says rather than drawing an empty list.
-	Agenda         []openapi_types.UUID `json:"agenda"`
-	AsOf           time.Time            `json:"as_of"`
-	Counts         TeamWeeklyCounts     `json:"counts"`
-	GeneratedAt    time.Time            `json:"generated_at"`
-	Id             openapi_types.UUID   `json:"id"`
-	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+	Agenda []openapi_types.UUID `json:"agenda"`
+	AsOf   time.Time            `json:"as_of"`
+	Counts TeamWeeklyCounts     `json:"counts"`
+
+	// Coverage The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+	// composed or the team's book was refused.
+	Coverage *[]TeamWeeklyCoverage `json:"coverage,omitempty"`
+
+	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
+	// the team's members own now, under the reader's own deal scope. Absent when the read
+	// did not ask.
+	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt    time.Time          `json:"generated_at"`
+	Id             openapi_types.UUID `json:"id"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Members Every live member of the team that week, including those whose own week could not be
+	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+	// kept.
+	Members *[]TeamWeeklyMember `json:"members,omitempty"`
 
 	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
 	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
@@ -46176,6 +46402,14 @@ type TeamWeeklyReview struct {
 	// missing a rep.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 
+	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+	// snapshot frozen before it was measured, which is not zero.
+	Quality *TeamWeeklyQuality `json:"quality,omitempty"`
+
+	// ReplanRecommended True when any horizon in `coverage` recommends a replan: coverage at risk against a
+	// named basis.
+	ReplanRecommended *bool `json:"replan_recommended,omitempty"`
+
 	// Reps Who was on the team that week — the frozen membership, which a join against the
 	// live team could never answer. Ordered by name, because that is what a membership
 	// list is read as; the order a MEETING takes them in is `agenda`.
@@ -46183,12 +46417,29 @@ type TeamWeeklyReview struct {
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
 	// week was counted.
-	RepsUnread *int               `json:"reps_unread,omitempty"`
-	TeamId     openapi_types.UUID `json:"team_id"`
+	RepsUnread *int `json:"reps_unread,omitempty"`
+
+	// StaleDeals LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+	// period, quietest first. Together with `exceptions` at most 25 items, findings first.
+	StaleDeals *[]TeamWeeklyStaleDeal `json:"stale_deals,omitempty"`
+
+	// Summary A short paragraph composed from the frozen figures by fixed rules, never by a model.
+	// Absent on a snapshot frozen before it existed or a week nobody was counted in.
+	Summary *string            `json:"summary,omitempty"`
+	TeamId  openapi_types.UUID `json:"team_id"`
 
 	// TeamName What the team was called that week. Frozen, so a team renamed in June does not
 	// relabel March's snapshot.
 	TeamName string `json:"team_name"`
+}
+
+// TeamWeeklyStaleDeal defines model for TeamWeeklyStaleDeal.
+type TeamWeeklyStaleDeal struct {
+	DaysQuiet      int                `json:"days_quiet"`
+	DealId         openapi_types.UUID `json:"deal_id"`
+	DealName       string             `json:"deal_name"`
+	LastActivityAt time.Time          `json:"last_activity_at"`
+	OwnerId        openapi_types.UUID `json:"owner_id"`
 }
 
 // TechnicalEnrichLane What one public source last did.

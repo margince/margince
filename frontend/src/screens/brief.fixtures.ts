@@ -5,6 +5,11 @@ import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 import type { components } from "../api/schema";
 import type { Deal, MorningBrief, MorningDigest } from "./brief.queries";
 import { jsonResponse } from "./story-utils";
+import {
+  teamWeekFigures,
+  tobiasFunnel,
+  tobiasPatterns,
+} from "./teamweekly.fixtures";
 
 // The fixtures every Brief story is built from — the whole page in
 // `brief.stories.tsx`, its parts one at a time in `brief.parts.stories.tsx`. They
@@ -569,6 +574,9 @@ export const teamWeek: TeamWeeklyReview = {
       help_requested: 0,
       focus_kind: "strong_week",
       focus_label: "Fastest first response on the team",
+      patterns: [
+        { kind: "strong_week", label: "Fastest first response on the team" },
+      ],
     },
     {
       user_id: "u-tobias",
@@ -581,6 +589,8 @@ export const teamWeek: TeamWeeklyReview = {
       help_requested: 1,
       focus_kind: "help_requested",
       focus_label: "Asked for help on the Hansa renewal",
+      patterns: tobiasPatterns,
+      funnel: tobiasFunnel,
     },
     {
       user_id: "u-mira",
@@ -593,12 +603,19 @@ export const teamWeek: TeamWeeklyReview = {
       help_requested: 0,
       focus_kind: "meetings_without_next_step",
       focus_label: "Three meetings closed without a next step",
+      patterns: [
+        {
+          kind: "meetings_without_next_step",
+          label: "Three meetings closed without a next step",
+        },
+      ],
     },
   ],
   // Who is talked about first: the contact who asked for help, then the one
   // whose meetings ended open, then the week that went well.
   agenda: ["u-tobias", "u-mira", "u-lena"],
   outlook: weeklyOutlook,
+  ...teamWeekFigures,
 };
 
 export type Worklist = components["schemas"]["Worklist"];

@@ -50,6 +50,8 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 			HelpRequested:   rep.HelpRequested,
 			FocusKind:       crmcontracts.TeamWeeklyRepFocusKind(rep.FocusKind),
 			FocusLabel:      rep.FocusLabel,
+			Patterns:        patternsToWire(rep.Patterns),
+			Funnel:          funnelToWire(rep.Funnel),
 		})
 	}
 	c := review.Counts
@@ -77,6 +79,7 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		// before the agenda existed answers one anyway.
 		Agenda: agendaToWire(agendaOrder(review.Reps)),
 	}
+	addTeamWeekToWire(&out, review)
 	// Rendered by the SAME function the rep's outlook uses, so the two panels
 	// cannot disagree about how a landing is put on the wire.
 	if len(review.Outlook) > 0 {

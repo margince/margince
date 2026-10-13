@@ -32,6 +32,12 @@ import {
 } from "./brief.numeric";
 import { BriefTeamSelect, weekTeams } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
+import {
+  TeamAttentionPanel,
+  TeamCoveragePanel,
+  TeamQuality,
+  TeamSummary,
+} from "./brief.teamweeklyattention";
 import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
@@ -113,7 +119,11 @@ export function TeamWeeklySection({
       )}
       <Coverage review={review} />
       <Headline review={review} />
+      <TeamSummary review={review} />
       {measured && <AgendaPanel review={review} />}
+      {/* Live by design, so it does not wait on the frozen week having
+          counted anybody. */}
+      <TeamAttentionPanel review={review} />
       {measured && (
         <Disclosure summary={t("brief.week.supporting")}>
           <Panel
@@ -128,7 +138,9 @@ export function TeamWeeklySection({
             </PanelBody>
             <Movement review={review} />
           </Panel>
+          <TeamQuality review={review} />
           <TeamOutlook review={review} />
+          <TeamCoveragePanel review={review} />
         </Disclosure>
       )}
     </section>

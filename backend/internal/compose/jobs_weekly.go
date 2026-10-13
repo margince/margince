@@ -48,5 +48,6 @@ func newWeeklyEngine(pool *pgxpool.Pool) *weekly.Engine {
 	return weekly.NewEngine(pool, newTeammatesSeam(pool)).
 		WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
 		WithNumeric(weeklyNumericEvaluator{}).
-		WithForecast(NewWeeklyForecast(newForecastStoreFor(pool)))
+		WithForecast(NewWeeklyForecast(newForecastStoreFor(pool))).
+		WithAttention(WeeklyAttention{})
 }

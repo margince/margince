@@ -132,17 +132,34 @@ A team's week in Margince is on **Home → Weekly** with the scope set to
 meetings with a recorded next step, commitments kept, won and lost, and how many members were
 counted.
 
-**Monday agenda** has one line per teammate, the most urgent first. Each line gives the reason it is
-there:
+A short summary opens the page. Margince writes it from the week's figures by fixed rules.
+
+**Monday agenda** has one line per teammate, the most urgent first. Each line names every reason
+to talk about their week, the most urgent first:
 - **Help requested**: they asked for help
 - **Response targets missed**
 - **Plan commitments missed**
-- **Deal recovery**: deals at risk
+- **Forecast downgraded** and **Deals moved back**
+- **Close dates provisional**: more than 3 in 10 open deals
+- **Next steps missing**: fewer than half of the open deals have one
 - **Strong week**: worth copying
 - **Follow-up evidence missing**: meetings with no next step
 - **No priority identified**: a quiet week
 
+The two rules about open deals need at least 3 of them. Under a line, a stage can show where that
+teammate converts differently from the team over the last 13 weeks. A stage needs at least 5 entries
+on each side.
+
 **Copy agenda** copies it in one press.
+
+Under the agenda:
+- **Needs attention now** lists open checks on the team's deals and deals with no activity for 60
+  days. It is read when you open the page, not frozen with the week.
+- **Record quality** counts proposals accepted and rejected, and automatic changes the team took
+  back.
+- **Deal value coverage** covers the month and the quarter. It says whether coverage holds or is at
+  risk against the call, or against what past periods closed. Below 80%, it says to plan again.
+  Without a call or enough past periods it says why there is no figure.
 
 The page carries two notes about missing data:
 
