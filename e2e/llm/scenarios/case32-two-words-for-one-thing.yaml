@@ -63,7 +63,7 @@ may_call:
   - list_approvals
   - read_approval
   - whoami
-  - list_colleagues
+  - read_directory
 
 # NOTHING IS PINNED WITH must_call_with, deliberately. Every argument these four
 # tools take on this errand is a uuid the fixture mints at seed time, and the

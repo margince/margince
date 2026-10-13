@@ -136,3 +136,22 @@ var readInputChecksCopy = toolCopy{
 		"source carries a date; any other state means nothing was read from it. In exceptions, " +
 		"`affected_minor` absent means the money at stake cannot be said, not that nothing is.",
 }
+
+var readForecastCopy = toolCopy{
+	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
+		"readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and " +
+		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
+		"the forecast changed between two snapshots, as named causes that sum to the whole " +
+		"difference.",
+	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline " +
+		"whose close date somebody confirmed. `coverage_note` says what the totals leave out; " +
+		"quote it with any total. movement needs `from` then `to`, both from ONE readings answer's " +
+		"`snapshots`; none listed means nothing was frozen yet, and two reads subtracted is not " +
+		"this answer. In movement, `definition` means the snapshots used different rules and " +
+		"`model` a re-scored probability: neither is sales movement.",
+	Instead: "run_report and query_workspace also produce numbers, and neither is the forecast. " +
+		"For a board-pack section, run_analytics_query with save, then compose_analytics_report; " +
+		"read_input_checks says whether the inputs were read.",
+	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
+		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
+}

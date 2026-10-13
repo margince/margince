@@ -44,7 +44,7 @@ prompt: |
   close it out.
 
 must_call:
-  - read_project_360
+  - read_context
   - advance_project_phase
 may_call:
   - list_records
@@ -52,7 +52,6 @@ may_call:
   - read_record
   - review_commitments
   - catch_me_up_on
-  - prepare_handoff
   - query_workspace
 
 # The tool name alone would pass on a call that moved the project BACK to
@@ -60,6 +59,7 @@ may_call:
 # the right record, with prose about closing beside it. The phase is the whole
 # act, so the phase is pinned.
 must_call_with:
+  - read_context.for=project
   - advance_project_phase.to_phase=closed
 
 must_mention:

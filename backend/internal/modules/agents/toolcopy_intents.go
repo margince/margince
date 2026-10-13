@@ -13,7 +13,7 @@ var catchMeUpOnCopy = toolCopy{
 		"evidence each part rests on.",
 	Limits: "Built around ONE record you name; everything it reports carries a source, and what " +
 		"cannot be evidenced is absent rather than inferred.",
-	Instead: "prep_for_meeting when a meeting is about to happen, read_record for the record's " +
+	Instead: "read_context when a meeting is about to happen, read_record for the record's " +
 		"own stored fields, search_records when you do not yet know which record you mean.",
 	Retain: "Each item carries the record_type and record_id a follow-up call acts on. " +
 		"occurred_at is when an item happened, in UTC — prefer it over a date the prose recalls, " +
@@ -49,7 +49,7 @@ var whatsSlippingCopy = toolCopy{
 	Instead: "Use run_report for the pipeline as a whole (totals, counts, breakdowns), and " +
 		"at_risk_relationships when the question is who a deal rests on rather than whether it " +
 		"is moving.",
-	Retain: "Keep each deal_id if you intend to act; draft_follow_ups_for works over this same " +
+	Retain: "Keep each deal_id if you intend to act; draft_outbound (kind: follow_ups) works over this same " +
 		"ranked set at the default quiet_days without you re-deriving it.",
 }
 
@@ -144,9 +144,9 @@ var atRiskRelationshipsCopy = toolCopy{
 		"deals these are. It is about the shape of the relationships around a deal, not about " +
 		"the deal's own momentum.",
 	Instead: "Use whats_slipping_this_week when the question is about deals losing momentum, and " +
-		"company_coverage when the question is about one deal rather than the whole book.",
+		"read_relationships (view: coverage) when the question is about one deal rather than the whole book.",
 	Retain: "Each finding names its deal_id and the contacts it is about; those are what " +
-		"intro_path_to and who_knows take next.",
+		"read_relationships takes next.",
 }
 
 // The prebuilt reports exist so a common question costs one call. That is only
@@ -202,4 +202,36 @@ var readBriefCopy = toolCopy{
 		"currently says.",
 	Retain: "Each item names a deal_id and its evidence_ids; read those to cite what the ranking " +
 		"rested on rather than restating the item's own summary.",
+}
+
+var readRelationshipsCopy = toolCopy{
+	Purpose: "Read the relationships this workspace has recorded. knows: the colleagues who " +
+		"know one contact, warmest first. intro: a warm route into a company — who we know " +
+		"there and which colleague could introduce us. coverage: which roles at a deal's company " +
+		"we have a relationship with, and where the deal rests on a single contact.",
+	Limits: "Only interactions somebody recorded count, so an unlogged relationship is absent, and " +
+		"never spoken is no relationship rather than a score of zero. A company nobody here has " +
+		"spoken to has no warm path, and saying so is the answer. coverage says nothing about " +
+		"whether the deal will close.",
+	Instead: "at_risk_relationships finds the thin relationships across every open deal at once.",
+	Retain: "Keep the user_id of each colleague and the contact ids a path names. In coverage, " +
+		"say WHO fills an uncovered seat by `contact_name`; a seat with no name is one this " +
+		"caller may not read, so report the gap and do not guess.",
+}
+
+var readContextCopy = toolCopy{
+	Purpose: "Assemble what someone reads before acting, with the evidence each part rests on. " +
+		"meeting: given a meeting, its written brief; given any other record, the recent picture " +
+		"plus the open items to raise. handoff: what a project's delivery side needs from sales — " +
+		"owner, client contacts, what was sold, by when, what is promised — with a named gap for " +
+		"each the records do not answer. project: one project's whole page, each section cut at 25 " +
+		"rows.",
+	Limits: "Built around ONE record you name; what cannot be evidenced is absent rather than " +
+		"inferred, and a gap means the field is empty as far as the caller can see. It changes " +
+		"nothing — preparing a handover is not performing one.",
+	Instead: "catch_me_up_on when there is no meeting or handover, only what has been happening; " +
+		"check_availability to find a time.",
+	Retain: "prepared_for names the record a meeting prep was built around, and its focus list " +
+		"the open items by record_id. Keep the project_id and each gap's source field. occurred_at " +
+		"is in UTC — prefer it over a date the prose recalls.",
 }

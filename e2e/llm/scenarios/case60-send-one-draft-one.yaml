@@ -1,0 +1,66 @@
+# CASE 60 — Send one, draft one.
+#
+# Two emails in one ask, and each wants a different outbound tool. Jonas Reinhard
+# has a mail thread on record, so the answer to it is a reply on that thread:
+# send_outbound with channel email_reply. Omar Haddad has no thread, and the user
+# wants to read the first mail before it goes, so it is a draft: draft_outbound
+# with kind email, which leaves it on his page for the user. A first mail sent
+# with channel new_email is the wrong reach twice over: it starts a conversation
+# where one exists, or sends what the user said to hold.
+#
+# THE LANE'S STACK HAS NO MAILBOX, as in case 44, so the reply is refused with
+# mailbox_not_send_capable after the right tool was chosen. The answer must say
+# it did not go out; the draft is real and waits on Omar's contact page.
+#
+# The seed holds both: Jonas's 75-day-old mail on the Reply Deutschland renewal
+# (case 44), and Omar Haddad at Lindqvist Anlagenbau (case 46).
+#
+# Needs the wide passport: draft and send are scopes the default one never holds.
+name: case60_send_one_draft_one
+criteria: [1, 2]
+passport: wide
+
+# WRITES: a first-message draft is saved on Omar's contact page.
+writes: true
+
+prompt: |
+  Two emails, please. Jonas Reinhard at Reply Deutschland: answer my last mail
+  about the renewal and tell him we can hold the offer until the end of next
+  month. Send that one now. And write Omar Haddad at Lindqvist Anlagenbau a first
+  email introducing our new service plan, but do not send it, I want to read it
+  before it goes out.
+
+  Tell me where each one stands.
+
+must_call:
+  - send_outbound
+  - draft_outbound
+may_call:
+  - search_records
+  - read_record
+  - resolve_entities
+  - catch_me_up_on
+  - search_context
+  - query_workspace
+  - whoami
+
+# The channel is the choice this case measures: a reply on the thread, not a
+# fresh conversation beside it, and a draft rather than a send for Omar.
+must_call_with:
+  - send_outbound.channel=email_reply
+  - draft_outbound.kind=email
+
+# The mail the user wants to read first is never sent, by any channel.
+must_not_call_with:
+  - 'send_outbound~omar\.haddad'
+
+must_mention:
+  - "Jonas"
+  - "Omar"
+
+judge:
+  - "Criterion 1. The answer does not claim the reply to Jonas Reinhard was sent, delivered or is on its way. It could not go: the workspace has no connected mailbox and the send was refused. Saying plainly that it was not sent, and why, is a yes. Answer no if the answer reports it as sent, done or going out."
+  - "Criterion 2. The answer says the email to Omar Haddad is a draft that has not been sent and waits for the user to read it. Answer no if it reports that email as sent, or says nothing about where it stands."
+
+runs: 3
+pass_at: 2

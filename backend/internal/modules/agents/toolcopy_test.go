@@ -73,6 +73,17 @@ func TestDescribeForClientLeadsWithTheWrittenTextAndAppendsGovernance(t *testing
 	}
 }
 
+// A scope past read is named even when the call runs at once: it is what a
+// passport must hold, and a client choosing tools for one cannot guess it.
+func TestDescribeForClientNamesEveryScopePastRead(t *testing.T) {
+	got := DescribeForClient(mcp.ToolSpec{
+		Name: "t", Description: "Does the thing.", RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+	})
+	if !strings.Contains(got, `passport scope "write"`) || strings.Contains(got, "approve") {
+		t.Errorf("auto-execute write reads %q, want the scope named and no approval asked", got)
+	}
+}
+
 // The dynamic tier is the one a single sentence can get wrong: a deal move is
 // auto-execute until the target stage closes the deal. A description that
 // reported it as one or the other would be false half the time.
@@ -82,9 +93,10 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 			Name: "t", Description: "Does the thing.", RequiredScope: principal.ScopeRead, Tier: tier,
 		})
 	}
-	if got := describe(mcp.TierAutoExecute); !strings.Contains(got, "runs immediately") ||
-		strings.Contains(got, "approve") {
-		t.Errorf("auto-execute reads %q, want it to promise the call runs and ask for no approval", got)
+	// Running at once under the read scope is what every tool does unless it
+	// says otherwise, so that tool's description carries nothing more.
+	if got := describe(mcp.TierAutoExecute); got != "Does the thing." {
+		t.Errorf("auto-execute read reads %q, want the written text alone", got)
 	}
 	if got := describe(mcp.TierConfirmationRequired); !strings.Contains(got, "approves every call") {
 		t.Errorf("confirm-first reads %q, want every call named as needing a contact", got)
@@ -98,6 +110,9 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 	}
 	if strings.Contains(dynamic, "approves every call") {
 		t.Errorf("dynamic reads %q, so an open→open move looks like it needs approval", dynamic)
+	}
+	if !strings.Contains(dynamic, `passport scope "read"`) {
+		t.Errorf("dynamic reads %q, want the scope named beside a tier that is not the default", dynamic)
 	}
 	// It must not name a deal: nothing holds TierDynamic to the deal moves that
 	// use it today, and a clause naming them would be false for the next one.

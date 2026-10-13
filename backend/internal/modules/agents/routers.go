@@ -10,4 +10,10 @@ func RegisterRouters(r *Registry) {
 	r.Register(changeLeadState{})
 	r.Register(describeVocabulary{})
 	r.Register(readInputChecks{})
+	r.Register(readForecast{})
+	r.Register(readDirectory{})
+	r.Register(readRelationships{})
+	r.Register(readContext{})
+	r.Register(draftOutbound{})
+	r.Register(resolveDuplicates{})
 }

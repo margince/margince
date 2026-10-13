@@ -88,11 +88,11 @@ const clientToolCeiling = 100
 // handed a file can only save its text as a note; the user gives up two more
 // slots and keeps 16 of the client's 100 for other servers.
 //
-// Routers (modules/agents/router.go) offer 23 look-alike tools as seven, and
+// Routers (modules/agents/router.go) offer 43 look-alike tools as fifteen, and
 // progress_deal and relink_activities supersede advance_deal and relink_thread,
-// which brings it to 66. The ceiling only comes down; raising it needs an
+// which brings it to 54. The ceiling only comes down; raising it needs an
 // explicit maintainer decision.
-const publishedToolCeiling = 66
+const publishedToolCeiling = 54
 
 type mcpInfoFile struct {
 	Totals struct {

@@ -64,7 +64,7 @@ may_call:
   - list_records
   - query_workspace
   - whoami
-  - list_colleagues
+  - read_directory
 
 must_mention:
   # Criterion 1, MECHANICAL: the retired word, which only get_record_tags could

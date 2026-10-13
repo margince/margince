@@ -41,9 +41,8 @@ prompt: |
   Uckermark Automation GmbH,Prenzlau,201-500,DE
 
 must_call:
-  - preview_import
+  - run_import
   - read_import
-  - commit_import
 may_call:
   # Confirming the companies are really there afterwards is a reasonable thing
   # to do and a different way to answer the same question; neither is the test.
@@ -52,7 +51,7 @@ may_call:
   - read_record
   - query_workspace
 
-# THE OBJECT IS THE PLAN. preview_import takes company, contact or lead, and
+# THE OBJECT IS THE PLAN. run_import's preview takes company, contact or lead, and
 # the three are not interchangeable: a lead lands unworked and waits for a human
 # to promote it, which is the right answer for a machine-scraped list and the
 # wrong one for a file two colleagues have already been through line by line. The
@@ -63,7 +62,9 @@ may_call:
 # there is nothing a scenario file could compare it to.
 must_call_with:
   - read_import.view=report
-  - preview_import.object=company
+  - run_import.step=preview
+  - run_import.step=commit
+  - run_import.object=company
 
 must_mention:
   # Criterion 1: the number that landed, which is the file's four rows. All four

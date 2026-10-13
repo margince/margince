@@ -31,14 +31,13 @@ prompt: |
 must_call:
   - progress_deal
 may_call:
-  - list_pipelines
+  - read_directory
   - search_records
   - read_record
   - list_records
   - resolve_entities
   - query_workspace
-  - forecast_readings
-  - forecast_movement
+  - read_forecast
   - read_input_checks
 
 must_mention:

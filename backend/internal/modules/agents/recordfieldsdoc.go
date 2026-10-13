@@ -194,7 +194,7 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "pipeline_id") {
 		return nil
 	}
-	return []string{"A deal's `pipeline_id` and `stage_id` come from list_pipelines — nothing else on " +
+	return []string{"A deal's `pipeline_id` and `stage_id` come from " + pipelinesSource + " — nothing else on " +
 		"this surface yields them, and neither is defaultable."}
 }
 
@@ -346,8 +346,8 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "assignee_id") {
 		return nil
 	}
-	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues " +
-		"answers those, whoami answers your own. A contact id is a contact and is refused."}
+	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (of: " +
+		"colleagues) answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 
 // transcriptNote says the one value that turns a body into a transcript.

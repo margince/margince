@@ -222,7 +222,7 @@ func (t companyCoverageTool) Spec() mcp.ToolSpec {
 		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
 		Description:   companyCoverageCopy.render(),
 		Instead:       companyCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
 			"deal_id":{"type":"string","format":"uuid","description":"The deal to assess"}},
@@ -283,7 +283,7 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
 		Description:   introPathToCopy.render(),
 		Instead:       introPathToCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listIntroPaths",
 		InputSchema: schema(`{"type":"object","properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},

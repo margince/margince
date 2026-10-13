@@ -76,3 +76,25 @@ var readImportCopy = toolCopy{
 	Limits: "The report's counts are what the user weighs before committing. After a commit, read " +
 		"report again until the state is complete or failed.",
 }
+
+var runImportCopy = toolCopy{
+	Purpose: "Bring a spreadsheet in. preview: send the CSV as text with a `mapping` naming each " +
+		"column; every row is checked against the workspace and the answer is what importing " +
+		"would do, writing nothing. commit: write a previewed run by run_id; it answers at once " +
+		"with the run running.",
+	Limits: "`object` is company, contact or lead: `contact` for a file the business already " +
+		"knows, such as a migration off another CRM; `lead` for a machine-sourced list nobody " +
+		"has worked. A row matching a record already here counts in `duplicates` and is created " +
+		"unless on_duplicate is skip; a contact whose email is held is always refused. Map a " +
+		"Website or Domain column to `domain`; to link contacts to employers, map the company " +
+		"column to `company_name` and import companies FIRST; to CORRECT companies, map a " +
+		"column to `id`. Linked files go together in `files`, one per type: `ref` is a row's " +
+		"key, and `company_ref` names another file's ref. commit cannot be undone from here. A " +
+		"request to get a file in is not a review of it: unless the asker says they have been " +
+		"through the rows, show the counts and mapping and wait for their go-ahead.",
+	Instead: "create_record for one record you already know; read_import (view: format) lists " +
+		"each file's columns.",
+	Retain: "Keep the run_id, and report the counts and the mapping the preview settled on: a " +
+		"column placed by a name the user did not write is a decision they did not make. After " +
+		"commit, read read_import's report until its state is complete or failed.",
+}

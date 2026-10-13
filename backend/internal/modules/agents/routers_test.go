@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package agents
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+func scopedCtx(scope principal.Scope) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
+		PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(scope),
+	})
+}
+
+// Each target refuses a stray argument itself, which proves the call reached
+// it with the route field gone and the rest intact.
+func TestFieldRoutersRouteEveryChoice(t *testing.T) {
+	r := fullRegistry(t)
+	for _, tc := range []struct {
+		router string
+		scope  principal.Scope
+		field  string
+		table  map[string]string
+	}{
+		{"read_forecast", principal.ScopeRead, "view", (readForecast{}).routeTargets()},
+		{"read_directory", principal.ScopeRead, "of", (readDirectory{}).routeTargets()},
+		{"read_relationships", principal.ScopeRead, "view", (readRelationships{}).routeTargets()},
+		{"read_context", principal.ScopeRead, "for", (readContext{}).routeTargets()},
+		{"send_outbound", principal.ScopeSend, "channel", (sendOutbound{}).routeTargets()},
+		{"draft_outbound", principal.ScopeDraft, "kind", (draftOutbound{}).routeTargets()},
+		{"run_import", principal.ScopeWrite, "step", (runImport{}).routeTargets()},
+	} {
+		for choice, target := range tc.table {
+			served, err := r.InvokeServed(scopedCtx(tc.scope), tc.router,
+				json.RawMessage(`{"`+tc.field+`":"`+choice+`","stray":1}`))
+			if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != target {
+				t.Errorf("%s %s: served %q with %v, want %s's own refusal", tc.router, choice, served.Tool, err, target)
+			}
+		}
+	}
+}
+
+func TestChoosingRoutersPickTheTargetByTheArgumentsNamed(t *testing.T) {
+	r := fullRegistry(t)
+	for _, tc := range []struct {
+		router, args, target string
+		scope                principal.Scope
+	}{
+		{"resolve_duplicates", `{"candidate_id":"not-a-uuid","decision":"not_the_same"}`, "decide_duplicate", principal.ScopeWrite},
+		{"resolve_duplicates", `{"record_type":"contact","source_id":"not-a-uuid","target_id":"not-a-uuid"}`, "merge_records", principal.ScopeWrite},
+		{"resolve_duplicates", `{"candidate_id":null,"source_id":"not-a-uuid","target_id":"not-a-uuid","record_type":"contact"}`, "merge_records", principal.ScopeWrite},
+	} {
+		served, err := r.InvokeServed(scopedCtx(tc.scope), tc.router, json.RawMessage(tc.args))
+		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != tc.target {
+			t.Errorf("%s %s: served %q with %v, want %s's own refusal", tc.router, tc.args, served.Tool, err, tc.target)
+		}
+	}
+	for _, args := range []string{
+		`{"decision":"not_the_same"}`,
+		`{"candidate_id":"a","source_id":"b","target_id":"c","record_type":"contact"}`,
+	} {
+		served, err := r.InvokeServed(scopedCtx(principal.ScopeWrite), "resolve_duplicates", json.RawMessage(args))
+		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != "resolve_duplicates" {
+			t.Errorf("%s: served %q with %v, want the router's own refusal", args, served.Tool, err)
+		}
+	}
+}

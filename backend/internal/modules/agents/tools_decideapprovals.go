@@ -37,14 +37,8 @@ func (decideApprovals) routeTargets() map[string]string {
 
 var errDecideNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of staged_action_id or bundle_id")}
 
-// chooseTarget treats a null id as absent, as the surface does everywhere, and
-// drops it: the target refuses an argument it does not take.
 func (decideApprovals) chooseTarget(members map[string]json.RawMessage) (string, error) {
-	for _, id := range []string{"staged_action_id", "bundle_id"} {
-		if isNull(members[id]) {
-			delete(members, id)
-		}
-	}
+	dropNullMembers(members, "staged_action_id", "bundle_id")
 	_, one := members["staged_action_id"]
 	_, bundle := members["bundle_id"]
 	switch {

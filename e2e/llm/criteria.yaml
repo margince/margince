@@ -511,3 +511,14 @@ cases:
       statement: >-
         The same file carries the contract it is paper for, so finance finds it
         from the contract, and the answer says so.
+  case60_send_one_draft_one:
+    1:
+      name: A reply that could not go is not reported as sent
+      statement: >-
+        The reply to Jonas goes to his thread and is refused for want of a
+        connected mailbox, and the answer says it did not go out.
+    2:
+      name: The mail the user wants to read first stays a draft
+      statement: >-
+        Omar's first email is drafted and not sent, and the answer says it waits
+        for the user.

@@ -51,10 +51,8 @@ prompt: |
   Tell me what actually went out.
 
 must_call:
-  - draft_follow_ups_for
-  - send_email|send_company_email
-  - send_company_email
-  - send_message
+  - draft_outbound
+  - send_outbound
 may_call:
   - whats_slipping_this_week
   - search_records
@@ -70,7 +68,10 @@ may_call:
 # send_company_email has still sent him the follow-up — so send_email is covered
 # only as one of a set, which is the ruling for that tool.
 must_call_with:
-  - send_email.to=["jonas.reinhard@replydeutschland.test"]|send_company_email.to=["jonas.reinhard@replydeutschland.test"]
+  - draft_outbound.kind=follow_ups
+  - send_outbound.channel=new_email
+  - send_outbound.channel=chat_reply
+  - send_outbound.to=["jonas.reinhard@replydeutschland.test"]
 
 must_mention:
   - "Reply Deutschland"

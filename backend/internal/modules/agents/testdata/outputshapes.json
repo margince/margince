@@ -3972,6 +3972,7 @@
       "warnings"
     ]
   },
+  "draft_outbound": null,
   "enrich": {
     "type": "object",
     "properties": {
@@ -8687,6 +8688,9 @@
       "warnings"
     ]
   },
+  "read_context": null,
+  "read_directory": null,
+  "read_forecast": null,
   "read_import": null,
   "read_import_report": {
     "type": "object",
@@ -9855,6 +9859,7 @@
       "warnings"
     ]
   },
+  "read_relationships": null,
   "read_reporting": {
     "type": "object",
     "properties": {
@@ -10345,6 +10350,7 @@
       "warnings"
     ]
   },
+  "resolve_duplicates": null,
   "resolve_entities": {
     "type": "object",
     "properties": {
@@ -10780,6 +10786,7 @@
       "warnings"
     ]
   },
+  "run_import": null,
   "run_report": {
     "type": "object",
     "properties": {
@@ -11783,6 +11790,7 @@
       "warnings"
     ]
   },
+  "send_outbound": null,
   "update_record": {
     "type": "object",
     "properties": {

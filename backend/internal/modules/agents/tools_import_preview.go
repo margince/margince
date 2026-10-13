@@ -33,7 +33,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 		Name: "preview_import", Title: "Preview an import", Version: toolVersionV1,
 		Description:   previewImportCopy.render(),
 		Instead:       previewImportCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "createImportRun",
 		InputSchema: schema(`{"type":"object","properties":{
 			"object":{"type":"string","enum":["` + importObjectCompany + `","` + importObjectLead + `","` + importObjectContact + `"]},
