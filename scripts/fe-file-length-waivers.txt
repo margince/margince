@@ -74,7 +74,6 @@
 615 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
-601 frontend/src/screens/worklist.dispositions.tsx
 651 frontend/src/format/format.ts
 734 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
