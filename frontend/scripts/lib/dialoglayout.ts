@@ -70,6 +70,7 @@ export type Owners = {
   top: Set<string>;
   placed: Map<string, Placed[]>;
   loose: Set<string>;
+  context: Set<string>;
 };
 
 export const isZero = (v: string) =>
@@ -264,9 +265,12 @@ const TRAITS: readonly ("gap" | "band" | "top" | "loose" | "row")[] = [
   "row",
 ];
 
-function index(placed: Map<string, Placed[]>, rule: Placed) {
+function index(owners: Owners, rule: Placed) {
   for (const name of rule.subject.size > 0 ? rule.subject : ["*"]) {
-    placed.set(name, [...(placed.get(name) ?? []), rule]);
+    owners.placed.set(name, [...(owners.placed.get(name) ?? []), rule]);
+  }
+  for (const need of rule.context) {
+    for (const c of need) owners.context.add(c);
   }
 }
 
@@ -278,11 +282,12 @@ export function ownersIn(sheets: readonly string[]): Owners {
     top: new Set(),
     placed: new Map(),
     loose: new Set(),
+    context: new Set(),
   };
   const held = sheets.flatMap((sheet) => rulesIn(unconditional(sheet)));
   for (const [order, { selector, body }] of held.entries()) {
     for (const rule of placedOf(selector, body, order)) {
-      index(owners.placed, rule);
+      index(owners, rule);
     }
   }
   for (const { selector, body } of held) {
@@ -980,17 +985,25 @@ export const whereOf = (n: ts.Node) => {
   const { line } = file.getLineAndCharacterOfPosition(n.getStart());
   return `${relative(srcDir, file.fileName)}:${line + 1}`;
 };
-export function capped<T>(all: T[], at: ts.Node): T[] {
+function capped<T>(all: T[], at: ts.Node): T[] {
   if (all.length <= CAP) return all;
   throw new Error(
     `${whereOf(at)}: more than ${CAP} class combinations to judge; name the branches so fewer combine`,
   );
 }
-export const cross = (a: string[][], b: string[][], at: ts.Node) =>
+export const cross = <T>(a: T[][], b: T[][], at: ts.Node) =>
   capped(
     a.flatMap((x) => b.map((y) => [...x, ...y])),
     at,
   );
+/** Ancestor chains cut to the classes some rule needs on an ancestor, each
+ * chain once: a class no context names cannot change which rule applies. */
+export function contextOf(owners: Owners, chains: string[][][]) {
+  const cut = chains.map((chain) =>
+    chain.map((box) => box.filter((c) => owners.context.has(c))),
+  );
+  return [...new Map(cut.map((c) => [JSON.stringify(c), c])).values()];
+}
 const escaped = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // A pattern class (`ds-gap-*`) reads as each class it can be, one at a time.
 export function expanded(
