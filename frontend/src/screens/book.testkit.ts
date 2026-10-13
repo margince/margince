@@ -1,7 +1,11 @@
 import type { components } from "../api/schema";
 
+export const firstBookingSlot = {
+  start: "2026-10-05T09:00:00Z",
+  end: "2026-10-05T09:30:00Z",
+};
 export const bookingSlots = [
-  { start: "2026-10-05T09:00:00Z", end: "2026-10-05T09:30:00Z" },
+  firstBookingSlot,
   { start: "2026-10-05T11:00:00Z", end: "2026-10-05T11:30:00Z" },
 ];
 export const bookingProfile: components["schemas"]["SchedulingProfile"] = {
@@ -23,7 +27,7 @@ export const bookingInvitation: components["schemas"]["MeetingInvitation"] = {
   id: "0198f011-aaaa-7000-8000-000000000001",
   version: 1,
   status: "pending",
-  ...bookingSlots[0],
+  ...firstBookingSlot,
   subject: "Project discovery",
   location: "Video call",
 };

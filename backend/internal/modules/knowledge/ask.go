@@ -303,7 +303,7 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 	state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered
 	// The embed state is the screen's answer and the ask's, read once: anything
 	// short of complete, counted at the LIVE identity, retrieves nothing whole.
-	if corpus.Coverage.EmbedState != crmcontracts.KnowledgeCoverageEmbedStateComplete ||
+	if corpus.Coverage.EmbedState != crmcontracts.KnowledgeEmbedStateComplete ||
 		done == 0 || corpus.Coverage.ChunksTotal == 0 {
 		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotReady
 	}

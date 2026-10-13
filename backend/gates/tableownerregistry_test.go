@@ -286,23 +286,25 @@ var tableOwners = map[string]string{
 	// INSERT of the shipped defaults is not a store.
 	"retention_policy": "internal/modules/privacy",
 	// capture
-	"raw_capture":                  "internal/modules/capture",
-	"capture_connection":           "internal/modules/capture",
-	"capture_sync_state":           "internal/modules/capture",
-	"capture_backfill":             "internal/modules/capture",
-	"capture_backfill_creation":    "internal/modules/capture",
-	"workspace_email_domain":       "internal/modules/capture",
-	"capture_sender_override":      "internal/modules/capture",
-	"capture_exclusion":            "internal/modules/capture",
-	"capture_owner_identity":       "internal/modules/capture",
-	"capture_alias_sighting":       "internal/modules/capture",
-	"capture_import":               "internal/modules/capture",
-	"capture_thread_verdict":       "internal/modules/capture",
-	"capture_counterparty_hold":    "internal/modules/capture",
-	"capture_digest":               "internal/modules/capture",
-	"capture_auto_enrich_state":    "internal/modules/capture",
-	"capture_pending_counterparty": "internal/modules/capture",
-	"capture_auto_enrich_budget":   "internal/modules/capture",
+	"raw_capture":                      "internal/modules/capture",
+	"capture_connection":               "internal/modules/capture",
+	"capture_sync_state":               "internal/modules/capture",
+	"capture_backfill":                 "internal/modules/capture",
+	"capture_backfill_creation":        "internal/modules/capture",
+	"workspace_email_domain":           "internal/modules/capture",
+	"capture_sender_override":          "internal/modules/capture",
+	"capture_exclusion":                "internal/modules/capture",
+	"capture_owner_identity":           "internal/modules/capture",
+	"capture_alias_sighting":           "internal/modules/capture",
+	"capture_alias_refused":            "internal/modules/capture",
+	"capture_owner_identity_withdrawn": "internal/modules/capture",
+	"capture_import":                   "internal/modules/capture",
+	"capture_thread_verdict":           "internal/modules/capture",
+	"capture_counterparty_hold":        "internal/modules/capture",
+	"capture_digest":                   "internal/modules/capture",
+	"capture_auto_enrich_state":        "internal/modules/capture",
+	"capture_pending_counterparty":     "internal/modules/capture",
+	"capture_auto_enrich_budget":       "internal/modules/capture",
 	// What the QC-only test_mailbox connector has sent and whether its own
 	// Sync has echoed it back yet — internal bookkeeping, not audited;
 	// rows are retained rather than swept.
@@ -462,13 +464,17 @@ var tableOwners = map[string]string{
 	// a weekly row on brief_run would become "the latest brief" to the reader
 	// that decides the next morning's overnight window, and weekly content on
 	// brief_item would be cascaded away by deleting a deal.
-	"weekly_review":              "internal/compose/weekly",
-	"team_weekly_review":         "internal/compose/weekly",
-	"team_weekly_review_outlook": "internal/compose/weekly",
-	"team_weekly_review_rep":     "internal/compose/weekly",
-	"assurance_run_finding":      "internal/modules/assurance",
-	"assurance_run":              "internal/modules/assurance",
-	"assurance_source_coverage":  "internal/modules/assurance",
+	"weekly_review":                  "internal/compose/weekly",
+	"team_weekly_review":             "internal/compose/weekly",
+	"team_weekly_review_coverage":    "internal/compose/weekly",
+	"team_weekly_review_member":      "internal/compose/weekly",
+	"team_weekly_review_outlook":     "internal/compose/weekly",
+	"team_weekly_review_rep":         "internal/compose/weekly",
+	"team_weekly_review_rep_funnel":  "internal/compose/weekly",
+	"team_weekly_review_rep_pattern": "internal/compose/weekly",
+	"assurance_run_finding":          "internal/modules/assurance",
+	"assurance_run":                  "internal/modules/assurance",
+	"assurance_source_coverage":      "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to
 	// that pass's task. They belong to assurance because a cycle is a window
 	// over its own findings; the TASK is an ordinary activity the caller mints

@@ -18,6 +18,7 @@ function mailbox(
   return {
     id: "018f3a1b-0000-7000-8000-0000000000c1",
     provider: "gmail",
+    can_backfill: true,
     status: "connected",
     scopes: [],
     account_label: "ada@acme.test",

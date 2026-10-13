@@ -11023,27 +11023,6 @@ func (e KnowledgeAnswerOutcome) Valid() bool {
 	}
 }
 
-// Defines values for KnowledgeCoverageEmbedState.
-const (
-	KnowledgeCoverageEmbedStateComplete         KnowledgeCoverageEmbedState = "complete"
-	KnowledgeCoverageEmbedStateIndexing         KnowledgeCoverageEmbedState = "indexing"
-	KnowledgeCoverageEmbedStateNoEmbeddingModel KnowledgeCoverageEmbedState = "no_embedding_model"
-)
-
-// Valid indicates whether the value is a known member of the KnowledgeCoverageEmbedState enum.
-func (e KnowledgeCoverageEmbedState) Valid() bool {
-	switch e {
-	case KnowledgeCoverageEmbedStateComplete:
-		return true
-	case KnowledgeCoverageEmbedStateIndexing:
-		return true
-	case KnowledgeCoverageEmbedStateNoEmbeddingModel:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for KnowledgeDocumentIngestStatus.
 const (
 	KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusDone    KnowledgeDocumentIngestStatus = "done"
@@ -11062,6 +11041,27 @@ func (e KnowledgeDocumentIngestStatus) Valid() bool {
 	case KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusQueued:
 		return true
 	case KnowledgeDocumentIngestStatusKnowledgeDocumentIngestStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeEmbedState.
+const (
+	KnowledgeEmbedStateComplete         KnowledgeEmbedState = "complete"
+	KnowledgeEmbedStateIndexing         KnowledgeEmbedState = "indexing"
+	KnowledgeEmbedStateNoEmbeddingModel KnowledgeEmbedState = "no_embedding_model"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeEmbedState enum.
+func (e KnowledgeEmbedState) Valid() bool {
+	switch e {
+	case KnowledgeEmbedStateComplete:
+		return true
+	case KnowledgeEmbedStateIndexing:
+		return true
+	case KnowledgeEmbedStateNoEmbeddingModel:
 		return true
 	default:
 		return false
@@ -16261,23 +16261,133 @@ func (e TeamExceptionKind) Valid() bool {
 	}
 }
 
+// Defines values for TeamWeeklyCoverageAbsent.
+const (
+	TeamWeeklyCoverageAbsentInsufficientBasis   TeamWeeklyCoverageAbsent = "insufficient_basis"
+	TeamWeeklyCoverageAbsentInsufficientHistory TeamWeeklyCoverageAbsent = "insufficient_history"
+	TeamWeeklyCoverageAbsentNotAuthorized       TeamWeeklyCoverageAbsent = "not_authorized"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageAbsent enum.
+func (e TeamWeeklyCoverageAbsent) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageAbsentInsufficientBasis:
+		return true
+	case TeamWeeklyCoverageAbsentInsufficientHistory:
+		return true
+	case TeamWeeklyCoverageAbsentNotAuthorized:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoverageBasis.
+const (
+	TeamWeeklyCoverageBasisHistoricalMedian TeamWeeklyCoverageBasis = "historical_median"
+	TeamWeeklyCoverageBasisManagerCall      TeamWeeklyCoverageBasis = "manager_call"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoverageBasis enum.
+func (e TeamWeeklyCoverageBasis) Valid() bool {
+	switch e {
+	case TeamWeeklyCoverageBasisHistoricalMedian:
+		return true
+	case TeamWeeklyCoverageBasisManagerCall:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyCoveragePeriodKind.
+const (
+	TeamWeeklyCoveragePeriodKindMonth   TeamWeeklyCoveragePeriodKind = "month"
+	TeamWeeklyCoveragePeriodKindQuarter TeamWeeklyCoveragePeriodKind = "quarter"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyCoveragePeriodKind enum.
+func (e TeamWeeklyCoveragePeriodKind) Valid() bool {
+	switch e {
+	case TeamWeeklyCoveragePeriodKindMonth:
+		return true
+	case TeamWeeklyCoveragePeriodKindQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TeamWeeklyPatternKind.
+const (
+	TeamWeeklyPatternKindCloseDatesProvisional   TeamWeeklyPatternKind = "close_dates_provisional"
+	TeamWeeklyPatternKindCommitmentsMissed       TeamWeeklyPatternKind = "commitments_missed"
+	TeamWeeklyPatternKindDealsAtRisk             TeamWeeklyPatternKind = "deals_at_risk"
+	TeamWeeklyPatternKindForecastDowngrades      TeamWeeklyPatternKind = "forecast_downgrades"
+	TeamWeeklyPatternKindHelpRequested           TeamWeeklyPatternKind = "help_requested"
+	TeamWeeklyPatternKindLeadsBreached           TeamWeeklyPatternKind = "leads_breached"
+	TeamWeeklyPatternKindMeetingsWithoutNextStep TeamWeeklyPatternKind = "meetings_without_next_step"
+	TeamWeeklyPatternKindNoNextStepCoverage      TeamWeeklyPatternKind = "no_next_step_coverage"
+	TeamWeeklyPatternKindQuietWeek               TeamWeeklyPatternKind = "quiet_week"
+	TeamWeeklyPatternKindStageRegressions        TeamWeeklyPatternKind = "stage_regressions"
+	TeamWeeklyPatternKindStrongWeek              TeamWeeklyPatternKind = "strong_week"
+)
+
+// Valid indicates whether the value is a known member of the TeamWeeklyPatternKind enum.
+func (e TeamWeeklyPatternKind) Valid() bool {
+	switch e {
+	case TeamWeeklyPatternKindCloseDatesProvisional:
+		return true
+	case TeamWeeklyPatternKindCommitmentsMissed:
+		return true
+	case TeamWeeklyPatternKindDealsAtRisk:
+		return true
+	case TeamWeeklyPatternKindForecastDowngrades:
+		return true
+	case TeamWeeklyPatternKindHelpRequested:
+		return true
+	case TeamWeeklyPatternKindLeadsBreached:
+		return true
+	case TeamWeeklyPatternKindMeetingsWithoutNextStep:
+		return true
+	case TeamWeeklyPatternKindNoNextStepCoverage:
+		return true
+	case TeamWeeklyPatternKindQuietWeek:
+		return true
+	case TeamWeeklyPatternKindStageRegressions:
+		return true
+	case TeamWeeklyPatternKindStrongWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamWeeklyRepFocusKind.
 const (
+	TeamWeeklyRepFocusKindCloseDatesProvisional   TeamWeeklyRepFocusKind = "close_dates_provisional"
 	TeamWeeklyRepFocusKindCommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
 	TeamWeeklyRepFocusKindDealsAtRisk             TeamWeeklyRepFocusKind = "deals_at_risk"
+	TeamWeeklyRepFocusKindForecastDowngrades      TeamWeeklyRepFocusKind = "forecast_downgrades"
 	TeamWeeklyRepFocusKindHelpRequested           TeamWeeklyRepFocusKind = "help_requested"
 	TeamWeeklyRepFocusKindLeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
 	TeamWeeklyRepFocusKindMeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
+	TeamWeeklyRepFocusKindNoNextStepCoverage      TeamWeeklyRepFocusKind = "no_next_step_coverage"
 	TeamWeeklyRepFocusKindQuietWeek               TeamWeeklyRepFocusKind = "quiet_week"
+	TeamWeeklyRepFocusKindStageRegressions        TeamWeeklyRepFocusKind = "stage_regressions"
 	TeamWeeklyRepFocusKindStrongWeek              TeamWeeklyRepFocusKind = "strong_week"
 )
 
 // Valid indicates whether the value is a known member of the TeamWeeklyRepFocusKind enum.
 func (e TeamWeeklyRepFocusKind) Valid() bool {
 	switch e {
+	case TeamWeeklyRepFocusKindCloseDatesProvisional:
+		return true
 	case TeamWeeklyRepFocusKindCommitmentsMissed:
 		return true
 	case TeamWeeklyRepFocusKindDealsAtRisk:
+		return true
+	case TeamWeeklyRepFocusKindForecastDowngrades:
 		return true
 	case TeamWeeklyRepFocusKindHelpRequested:
 		return true
@@ -16285,7 +16395,11 @@ func (e TeamWeeklyRepFocusKind) Valid() bool {
 		return true
 	case TeamWeeklyRepFocusKindMeetingsWithoutNextStep:
 		return true
+	case TeamWeeklyRepFocusKindNoNextStepCoverage:
+		return true
 	case TeamWeeklyRepFocusKindQuietWeek:
+		return true
+	case TeamWeeklyRepFocusKindStageRegressions:
 		return true
 	case TeamWeeklyRepFocusKindStrongWeek:
 		return true
@@ -26902,6 +27016,11 @@ type CaptureConnection struct {
 	// Backfill Summary of the connection's backfill run; state `none` when never run.
 	Backfill *BackfillStatus `json:"backfill,omitempty"`
 
+	// CanBackfill Whether this provider's connector can import older mail at all. False means
+	// `POST /connectors/{provider}/backfill` and its estimate refuse with `422
+	// connector_unsupported`, so a client offers no import rather than one that fails.
+	CanBackfill bool `json:"can_backfill"`
+
 	// ContextTag The one existing word every record this connector creates is filed under, so
 	// "which records came in from this source" has an answer. Absent when the operator
 	// chose none, which is the honest default rather than a guess.
@@ -27083,8 +27202,12 @@ type CaptureCounterpartyHoldListResponse struct {
 
 // CaptureExclusion defines model for CaptureExclusion.
 type CaptureExclusion struct {
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// CreatedByName The display name of the member who added the rule. Null when no member added it (a
+	// system or connector rule) and when that member has been deactivated.
+	CreatedByName *string            `json:"created_by_name"`
+	Id            openapi_types.UUID `json:"id"`
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
@@ -27314,6 +27437,14 @@ type CapturePurgeOutcome struct {
 type CaptureSenderDecision struct {
 	Address string `json:"address"`
 
+	// ContactId The contact `record_exists` found, so a client can open it. Absent whenever
+	// `record_exists` is false.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// ContactName That contact's name (its `full_name`), so a client can show it without fetching the
+	// contact. Present exactly when `contact_id` is.
+	ContactName *string `json:"contact_name,omitempty"`
+
 	// Decision What YOU decided instead, absent when you have not.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
@@ -27327,6 +27458,13 @@ type CaptureSenderDecision struct {
 	// transactional, spam, personal, advisor — or absent when it has not answered yet.
 	Kind *string `json:"kind,omitempty"`
 
+	// LastSeenAt When the newest of those messages was sent or received. Absent when there are none.
+	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
+
+	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
+	// or received. Archived mail is not counted.
+	MessageCount int `json:"message_count"`
+
 	// Overruled Whether your own decision is what governs this sender.
 	Overruled bool `json:"overruled"`
 
@@ -27334,7 +27472,9 @@ type CaptureSenderDecision struct {
 	// rather than showing only the answer that now stands.
 	OverruledKind *string `json:"overruled_kind,omitempty"`
 
-	// RecordExists Whether a contact actually exists for this address.
+	// RecordExists Whether a live contact you may see holds this address. It follows the same visibility
+	// rule as opening the contact: a seat without contact read gets false, and a contact
+	// shared with you counts.
 	RecordExists bool `json:"record_exists"`
 
 	// Status The ledger's own lifecycle for this sender.
@@ -35935,6 +36075,15 @@ type HeldThread struct {
 	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
+	// shows up to five. Absent when `participants` is.
+	ParticipantCount *int `json:"participant_count,omitempty"`
+
+	// Participants Up to five addresses outside the workspace on the message that opened the thread, so you
+	// can tell who a held thread is with. Colleagues are left out. Present exactly when
+	// `activity_id` is: a message you may not read, or one that was erased, names nobody.
+	Participants *[]HeldThreadParticipant `json:"participants,omitempty"`
+
 	// Pending No verdict has landed yet. Stated as its own field rather than left to a client
 	// comparing `status`, because it decides the order these arrive in and a reader that
 	// derived it differently would sort them differently.
@@ -35960,6 +36109,16 @@ type HeldThreadListResponse struct {
 
 	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
+}
+
+// HeldThreadParticipant One address outside the workspace on a held thread's opening message.
+type HeldThreadParticipant struct {
+	// Address The folded address the message named.
+	Address string `json:"address"`
+
+	// ContactId The contact this address belongs to, where you may see it. Absent when there is none
+	// and when it is not yours to see.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 }
 
 // HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
@@ -37661,6 +37820,9 @@ type KnowledgeCorpus struct {
 	// Reindexing A re-embed is in flight; every ask answers not_ready until it finishes.
 	Reindexing *bool `json:"reindexing,omitempty"`
 
+	// Shipped True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits.
+	Shipped bool `json:"shipped"`
+
 	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
 }
@@ -37677,7 +37839,8 @@ type KnowledgeCoverage struct {
 	DocumentsTotal int `json:"documents_total"`
 
 	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-	// searchable rather than shown a bare count.
+	// searchable rather than shown a bare count. A corpus and each of its documents answer
+	// by one rule, over their own passages.
 	//
 	// - `no_embedding_model`: this installation binds no embedding model, so no passage
 	//   gets a vector and nothing is searchable. It is the same answer as
@@ -37687,35 +37850,45 @@ type KnowledgeCoverage struct {
 	//   being read, a re-embed is running, or some passage has no vector under the
 	//   model bound now.
 	// - `complete`: every live passage carries a vector under the model bound now.
-	EmbedState KnowledgeCoverageEmbedState `json:"embed_state"`
+	EmbedState KnowledgeEmbedState `json:"embed_state"`
 }
-
-// KnowledgeCoverageEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-// searchable rather than shown a bare count.
-//
-//   - `no_embedding_model`: this installation binds no embedding model, so no passage
-//     gets a vector and nothing is searchable. It is the same answer as
-//     `settings_availability.embedding_reindex` being false on `/me`, read from the
-//     same embed lane.
-//   - `indexing`: a model is bound and work is still owed: a document is queued or
-//     being read, a re-embed is running, or some passage has no vector under the
-//     model bound now.
-//   - `complete`: every live passage carries a vector under the model bound now.
-type KnowledgeCoverageEmbedState string
 
 // KnowledgeDocument defines model for KnowledgeDocument.
 type KnowledgeDocument struct {
-	ByteSize    int64              `json:"byte_size"`
-	ChunkCount  *int               `json:"chunk_count,omitempty"`
-	ContentType string             `json:"content_type"`
-	CorpusId    openapi_types.UUID `json:"corpus_id"`
-	CreatedAt   time.Time          `json:"created_at"`
-	Filename    string             `json:"filename"`
-	Id          openapi_types.UUID `json:"id"`
+	ByteSize   int64 `json:"byte_size"`
+	ChunkCount *int  `json:"chunk_count,omitempty"`
+
+	// ChunksEmbedded This document's passages that carry a vector, counted as the corpus coverage counts them, so a corpus's documents sum to its own figure.
+	ChunksEmbedded int                `json:"chunks_embedded"`
+	ContentType    string             `json:"content_type"`
+	CorpusId       openapi_types.UUID `json:"corpus_id"`
+	CreatedAt      time.Time          `json:"created_at"`
+
+	// EmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+	// searchable rather than shown a bare count. A corpus and each of its documents answer
+	// by one rule, over their own passages.
+	//
+	// - `no_embedding_model`: this installation binds no embedding model, so no passage
+	//   gets a vector and nothing is searchable. It is the same answer as
+	//   `settings_availability.embedding_reindex` being false on `/me`, read from the
+	//   same embed lane.
+	// - `indexing`: a model is bound and work is still owed: a document is queued or
+	//   being read, a re-embed is running, or some passage has no vector under the
+	//   model bound now.
+	// - `complete`: every live passage carries a vector under the model bound now.
+	EmbedState KnowledgeEmbedState `json:"embed_state"`
+	Filename   string              `json:"filename"`
+	Id         openapi_types.UUID  `json:"id"`
 
 	// IngestDetail Why it failed, in words the uploader can act on. Null unless failed.
 	IngestDetail *string                       `json:"ingest_detail,omitempty"`
 	IngestStatus KnowledgeDocumentIngestStatus `json:"ingest_status"`
+
+	// Shipped True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again.
+	Shipped bool `json:"shipped"`
+
+	// Title The heading a page Margince ships opens with, so a reader sees its name rather than its filename. Null for an uploaded document, which the filename names.
+	Title *string `json:"title"`
 }
 
 // KnowledgeDocumentIngestStatus defines model for KnowledgeDocument.IngestStatus.
@@ -37725,6 +37898,20 @@ type KnowledgeDocumentIngestStatus string
 type KnowledgeDocumentList struct {
 	Items []KnowledgeDocument `json:"items"`
 }
+
+// KnowledgeEmbedState Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+// searchable rather than shown a bare count. A corpus and each of its documents answer
+// by one rule, over their own passages.
+//
+//   - `no_embedding_model`: this installation binds no embedding model, so no passage
+//     gets a vector and nothing is searchable. It is the same answer as
+//     `settings_availability.embedding_reindex` being false on `/me`, read from the
+//     same embed lane.
+//   - `indexing`: a model is bound and work is still owed: a document is queued or
+//     being read, a re-embed is running, or some passage has no vector under the
+//     model bound now.
+//   - `complete`: every live passage carries a vector under the model bound now.
+type KnowledgeEmbedState string
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table. NO company FK.
 type Lead struct {
@@ -40950,6 +41137,11 @@ type PrivacyInformationPage struct {
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
 	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
 	Kind       PrivacyInformationPageKind `json:"kind"`
+
+	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
+	// product seeds in its reader's language by its key, and shows the published name of any
+	// other.
+	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -46022,7 +46214,89 @@ type TeamWeeklyCounts struct {
 	RepsCounted int `json:"reps_counted"`
 }
 
-// TeamWeeklyRep One member's week as their lead reads it, with the one thing to raise.
+// TeamWeeklyCoverage Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+// coverage at risk against the named basis, never as a target: the product has none.
+// Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+type TeamWeeklyCoverage struct {
+	// Absent Why there is no answer. `not_authorized` is a standing call the member who closed the
+	// week could not read, which is not the same as no call.
+	Absent                  *TeamWeeklyCoverageAbsent    `json:"absent,omitempty"`
+	BaseCurrency            string                       `json:"base_currency"`
+	Basis                   *TeamWeeklyCoverageBasis     `json:"basis,omitempty"`
+	CoverageBp              *int64                       `json:"coverage_bp,omitempty"`
+	CurrentOpenMinor        *int64                       `json:"current_open_minor,omitempty"`
+	NeededOpenMinor         *int64                       `json:"needed_open_minor,omitempty"`
+	PeriodKind              TeamWeeklyCoveragePeriodKind `json:"period_kind"`
+	ReferenceLandingMinor   *int64                       `json:"reference_landing_minor,omitempty"`
+	RemainingToSupportMinor *int64                       `json:"remaining_to_support_minor,omitempty"`
+
+	// ReplanRecommended True when coverage is at risk against a named basis: under 8000 basis points of what
+	// the basis needs. Never true without a basis.
+	ReplanRecommended bool `json:"replan_recommended"`
+}
+
+// TeamWeeklyCoverageAbsent Why there is no answer. `not_authorized` is a standing call the member who closed the
+// week could not read, which is not the same as no call.
+type TeamWeeklyCoverageAbsent string
+
+// TeamWeeklyCoverageBasis defines model for TeamWeeklyCoverage.Basis.
+type TeamWeeklyCoverageBasis string
+
+// TeamWeeklyCoveragePeriodKind defines model for TeamWeeklyCoverage.PeriodKind.
+type TeamWeeklyCoveragePeriodKind string
+
+// TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
+// attributed to the owner at the time of each move. "Converted" is a later move to a won
+// stage or to a later stage, compared by the stage order as it was configured when the
+// week was assembled.
+type TeamWeeklyFunnelDeviation struct {
+	// DeviationBp The rep's conversion rate less the team's, in basis points.
+	DeviationBp int `json:"deviation_bp"`
+
+	// NextStageName The stage after this one when the week was assembled; absent for the last.
+	NextStageName *string            `json:"next_stage_name,omitempty"`
+	PipelineId    openapi_types.UUID `json:"pipeline_id"`
+	PipelineName  string             `json:"pipeline_name"`
+	RepConverted  int                `json:"rep_converted"`
+	RepEntered    int                `json:"rep_entered"`
+	StageId       openapi_types.UUID `json:"stage_id"`
+	StageName     string             `json:"stage_name"`
+	TeamConverted int                `json:"team_converted"`
+	TeamEntered   int                `json:"team_entered"`
+}
+
+// TeamWeeklyMember defines model for TeamWeeklyMember.
+type TeamWeeklyMember struct {
+	// DisplayName What they were called that week.
+	DisplayName string `json:"display_name"`
+
+	// Measured Whether this member's own week was read into the counts.
+	Measured bool               `json:"measured"`
+	UserId   openapi_types.UUID `json:"user_id"`
+}
+
+// TeamWeeklyPattern defines model for TeamWeeklyPattern.
+type TeamWeeklyPattern struct {
+	Kind TeamWeeklyPatternKind `json:"kind"`
+
+	// Label The pattern in words, composed from the stored figures.
+	Label string `json:"label"`
+}
+
+// TeamWeeklyPatternKind defines model for TeamWeeklyPattern.Kind.
+type TeamWeeklyPatternKind string
+
+// TeamWeeklyQuality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+// snapshot frozen before it was measured, which is not zero.
+type TeamWeeklyQuality struct {
+	// AutoChangeReversals Changes an agent, a connector or the system made that a member of the team undid
+	// inside the week.
+	AutoChangeReversals *int `json:"auto_change_reversals,omitempty"`
+	ProposalsAccepted   *int `json:"proposals_accepted,omitempty"`
+	ProposalsRejected   *int `json:"proposals_rejected,omitempty"`
+}
+
+// TeamWeeklyRep One member's week as their lead reads it, with what to raise.
 type TeamWeeklyRep struct {
 	CommitmentsDue  int `json:"commitments_due"`
 	CommitmentsKept int `json:"commitments_kept"`
@@ -46032,26 +46306,42 @@ type TeamWeeklyRep struct {
 	DisplayName string `json:"display_name"`
 
 	// FocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-	// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-	// outranks any metric, because walking past a request to raise a number is the
-	// fastest way to teach them not to ask.
+	// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+	// them: a rep who ASKED for help outranks any metric, because walking past a request
+	// to raise a number is the fastest way to teach them not to ask.
+	//
+	// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+	// replaced it still carry it.
 	FocusKind TeamWeeklyRepFocusKind `json:"focus_kind"`
 
 	// FocusLabel The focus in words, composed from the stored figures — never model-written, so it
 	// cannot say something the snapshot does not hold.
 	FocusLabel string `json:"focus_label"`
 
+	// Funnel Up to three stages where this rep's conversion differs most from the team's, over
+	// the 13 weeks before the week closed. Stages with fewer than five entries on either
+	// side are left out. Empty when no stage qualified or the snapshot predates it.
+	Funnel *[]TeamWeeklyFunnelDeviation `json:"funnel,omitempty"`
+
 	// HelpRequested Commitments they asked for help on.
-	HelpRequested int                `json:"help_requested"`
-	LeadsBreached int                `json:"leads_breached"`
-	MeetingsHeld  int                `json:"meetings_held"`
-	UserId        openapi_types.UUID `json:"user_id"`
+	HelpRequested int `json:"help_requested"`
+	LeadsBreached int `json:"leads_breached"`
+	MeetingsHeld  int `json:"meetings_held"`
+
+	// Patterns Every rule that fired for this rep, in the order a lead raises them. The first is
+	// the focus. A snapshot frozen before the list existed reads its focus as the one
+	// pattern.
+	Patterns []TeamWeeklyPattern `json:"patterns"`
+	UserId   openapi_types.UUID  `json:"user_id"`
 }
 
 // TeamWeeklyRepFocusKind Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-// celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-// outranks any metric, because walking past a request to raise a number is the
-// fastest way to teach them not to ask.
+// celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+// them: a rep who ASKED for help outranks any metric, because walking past a request
+// to raise a number is the fastest way to teach them not to ask.
+//
+// `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+// replaced it still carry it.
 type TeamWeeklyRepFocusKind string
 
 // TeamWeeklyReview One team's week, as it was measured when the week closed.
@@ -46070,12 +46360,26 @@ type TeamWeeklyReview struct {
 	// worth discussing is a two-item meeting, and padding it to a layout's number would
 	// be inventing an item. Empty exactly when `reps` is — a team whose week could not be
 	// read has no agenda, which a client says rather than drawing an empty list.
-	Agenda         []openapi_types.UUID `json:"agenda"`
-	AsOf           time.Time            `json:"as_of"`
-	Counts         TeamWeeklyCounts     `json:"counts"`
-	GeneratedAt    time.Time            `json:"generated_at"`
-	Id             openapi_types.UUID   `json:"id"`
-	LocalWeekStart openapi_types.Date   `json:"local_week_start"`
+	Agenda []openapi_types.UUID `json:"agenda"`
+	AsOf   time.Time            `json:"as_of"`
+	Counts TeamWeeklyCounts     `json:"counts"`
+
+	// Coverage The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+	// composed or the team's book was refused.
+	Coverage *[]TeamWeeklyCoverage `json:"coverage,omitempty"`
+
+	// Exceptions LIVE, computed on every read and never frozen: the open input-check findings on deals
+	// the team's members own now, under the reader's own deal scope. Absent when the read
+	// did not ask.
+	Exceptions     *[]InputCheck      `json:"exceptions,omitempty"`
+	GeneratedAt    time.Time          `json:"generated_at"`
+	Id             openapi_types.UUID `json:"id"`
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// Members Every live member of the team that week, including those whose own week could not be
+	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+	// kept.
+	Members *[]TeamWeeklyMember `json:"members,omitempty"`
 
 	// NumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
 	NumericSummary *WeeklyNumericSummary `json:"numeric_summary,omitempty"`
@@ -46098,6 +46402,14 @@ type TeamWeeklyReview struct {
 	// missing a rep.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
 
+	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+	// snapshot frozen before it was measured, which is not zero.
+	Quality *TeamWeeklyQuality `json:"quality,omitempty"`
+
+	// ReplanRecommended True when any horizon in `coverage` recommends a replan: coverage at risk against a
+	// named basis.
+	ReplanRecommended *bool `json:"replan_recommended,omitempty"`
+
 	// Reps Who was on the team that week — the frozen membership, which a join against the
 	// live team could never answer. Ordered by name, because that is what a membership
 	// list is read as; the order a MEETING takes them in is `agenda`.
@@ -46105,12 +46417,29 @@ type TeamWeeklyReview struct {
 
 	// RepsUnread Members whose week could not be read at all. Zero is the claim that every member's
 	// week was counted.
-	RepsUnread *int               `json:"reps_unread,omitempty"`
-	TeamId     openapi_types.UUID `json:"team_id"`
+	RepsUnread *int `json:"reps_unread,omitempty"`
+
+	// StaleDeals LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+	// period, quietest first. Together with `exceptions` at most 25 items, findings first.
+	StaleDeals *[]TeamWeeklyStaleDeal `json:"stale_deals,omitempty"`
+
+	// Summary A short paragraph composed from the frozen figures by fixed rules, never by a model.
+	// Absent on a snapshot frozen before it existed or a week nobody was counted in.
+	Summary *string            `json:"summary,omitempty"`
+	TeamId  openapi_types.UUID `json:"team_id"`
 
 	// TeamName What the team was called that week. Frozen, so a team renamed in June does not
 	// relabel March's snapshot.
 	TeamName string `json:"team_name"`
+}
+
+// TeamWeeklyStaleDeal defines model for TeamWeeklyStaleDeal.
+type TeamWeeklyStaleDeal struct {
+	DaysQuiet      int                `json:"days_quiet"`
+	DealId         openapi_types.UUID `json:"deal_id"`
+	DealName       string             `json:"deal_name"`
+	LastActivityAt time.Time          `json:"last_activity_at"`
+	OwnerId        openapi_types.UUID `json:"owner_id"`
 }
 
 // TechnicalEnrichLane What one public source last did.
@@ -68440,6 +68769,9 @@ type ServerInterface interface {
 	// Withdraw one of your own addresses.
 	// (DELETE /capture/owner-identities/{id})
 	DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back one of your own addresses you just withdrew.
+	// (POST /capture/owner-identities/{id}/restore)
+	RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
 	// Every decision this product made about your senders.
 	// (GET /capture/senders)
 	ListCaptureSenders(w http.ResponseWriter, r *http.Request)
@@ -71494,6 +71826,12 @@ func (_ Unimplemented) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http
 // Withdraw one of your own addresses.
 // (DELETE /capture/owner-identities/{id})
 func (_ Unimplemented) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back one of your own addresses you just withdrew.
+// (POST /capture/owner-identities/{id}/restore)
+func (_ Unimplemented) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83012,6 +83350,38 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureOwnerIdentity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreCaptureOwnerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCaptureOwnerIdentity(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111050,6 +111420,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/owner-identities/{id}", wrapper.DeleteCaptureOwnerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/owner-identities/{id}/restore", wrapper.RestoreCaptureOwnerIdentity)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/senders", wrapper.ListCaptureSenders)

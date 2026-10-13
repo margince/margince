@@ -518,7 +518,7 @@ const EXTENSION_MARKER = "ext";
  * from this one, so there is no nicer label to look up here yet.
  */
 function connectorLabel(rest: string): string {
-  const [head, ...tail] = rest.split(":");
+  const [head = "", ...tail] = rest.split(":");
   return head === EXTENSION_MARKER ? (tail[0] ?? "") : head;
 }
 
@@ -689,9 +689,7 @@ export function problemFieldErrorsOf(error: unknown): FieldProblem[] {
 // A 409 naming the If-Match precondition failure: the record changed under the
 // caller since the form opened, which problemExistingId's duplicate is not.
 export function isVersionSkew(problem: unknown): boolean {
-  if (!problem || typeof problem !== "object") return false;
-  const record = problem as Record<string, unknown>;
-  return record.code === "version_skew";
+  return problemCode(problem) === "version_skew";
 }
 
 // The same question, read off a query/mutation FAILURE rather than a raw body,
@@ -710,9 +708,7 @@ export function isVersionSkewOf(error: unknown): boolean {
 // didn't change, the DECISION already happened, so the honest response is
 // to drop the stale pending row rather than offer a re-stage retry.
 export function isAlreadyDecided(problem: unknown): boolean {
-  if (!problem || typeof problem !== "object") return false;
-  const record = problem as Record<string, unknown>;
-  return record.code === "already_decided";
+  return problemCode(problem) === "already_decided";
 }
 
 // A 409 whose code names the consent suppression gate: the send's recipients
@@ -721,9 +717,7 @@ export function isAlreadyDecided(problem: unknown): boolean {
 // validation (422) so the composer can point the user at the consent surface
 // rather than showing a raw server detail.
 export function isConsentNotGranted(problem: unknown): boolean {
-  if (!problem || typeof problem !== "object") return false;
-  const record = problem as Record<string, unknown>;
-  return record.code === "consent_not_granted";
+  return problemCode(problem) === "consent_not_granted";
 }
 
 // The cold-start / enrichment field vocabulary (compose/enrichextract.go)

@@ -51,6 +51,9 @@ email:
 - `from_address` is the sender every recipient sees. Use an address of the
   company that runs this installation. That company is the data controller, and
   a privacy notice must come from the controller.
+- When a privacy notice or a confirm link cannot be delivered, the report of
+  that goes back to `from_address`. Margince reads the report only when a user
+  has connected that mailbox under Settings → Integrations.
 - `password` takes the reference form, `${env:NAME}` or `${file:/path}`, and never
   the value itself. Leave it out for a relay that needs no login. The first start
   that reads it seals it into the keyvault, and later starts read it from there.

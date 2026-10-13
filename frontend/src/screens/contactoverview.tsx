@@ -67,7 +67,7 @@ export function ContactOverview({
       {commitments && (
         <ContactCommitmentsCard
           view={view}
-          firstName={view.contact.full_name.split(" ")[0]}
+          firstName={view.contact.full_name.split(" ")[0] ?? ""}
           includeTasks={false}
         />
       )}
@@ -88,7 +88,7 @@ export function ContactOverview({
       {hasMatters(view) && (
         <ContactMattersCard
           view={view}
-          firstName={view.contact.full_name.split(" ")[0]}
+          firstName={view.contact.full_name.split(" ")[0] ?? ""}
         />
       )}
     </div>

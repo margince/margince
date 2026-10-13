@@ -206,7 +206,7 @@ function FactCategoryBlock({
           // what changed, which is the value. A reader scanning four
           // Locations is not asked to read the word "Location" four times.
           label={
-            index === 0 || shown[index - 1].field !== fact.field
+            index === 0 || shown[index - 1]?.field !== fact.field
               ? t(factFieldLabelKey(fact.field))
               : undefined
           }
@@ -251,7 +251,7 @@ function AddFactForm({
 
   const add = useMutation({
     mutationFn: async (stated: { field: string; value: string }) => {
-      const [category, name] = stated.field.split(":");
+      const [category, name = ""] = stated.field.split(":");
       unwrap(
         await api.POST("/companies/{id}/facts", {
           params: { path: { id: companyId } },

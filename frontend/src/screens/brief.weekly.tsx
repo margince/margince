@@ -68,6 +68,7 @@ export function WeeklySection() {
     setParams(new Map([...params, ["week", next]]));
   const review = useWeeklyReview(week);
   const index = useWeeklyReviewIndex();
+  const [latestWeek] = index.data ?? [];
 
   return (
     <section id="brief-weekly">
@@ -111,21 +112,23 @@ export function WeeklySection() {
                 </span>
               </>
             )}
-            {index.data && index.data.length > 1 && (
-              <Select
-                aria-label={t("brief.weekly.pickWeek")}
-                value={week ?? index.data[0]}
-                onChange={(next) => setWeek(next)}
-                options={index.data.map((start) => ({
-                  value: start,
-                  label: formatDate(
-                    middayInstant(start, recordZone),
-                    locale,
-                    recordZone,
-                  ),
-                }))}
-              />
-            )}
+            {index.data &&
+              index.data.length > 1 &&
+              latestWeek !== undefined && (
+                <Select
+                  aria-label={t("brief.weekly.pickWeek")}
+                  value={week ?? latestWeek}
+                  onChange={(next) => setWeek(next)}
+                  options={index.data.map((start) => ({
+                    value: start,
+                    label: formatDate(
+                      middayInstant(start, recordZone),
+                      locale,
+                      recordZone,
+                    ),
+                  }))}
+                />
+              )}
           </span>
         }
       >

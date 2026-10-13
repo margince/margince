@@ -57,6 +57,26 @@ var ErrWindowNarrowing = errors.New("capture: the backfill window can only widen
 // backward from a date (not a Backfiller).
 var ErrBackfillUnsupported = errors.New("capture: this provider does not support backfill")
 
+// supportsBackfill reports whether a connector can import older mail. The
+// connection list offers an import on it and the backfill paths refuse on it.
+//
+//nolint:ireturn // Backfiller is the connector port's own seam; each provider is a different struct behind it.
+func supportsBackfill(c connector.Connector) (connector.Backfiller, bool) {
+	bf, ok := c.(connector.Backfiller)
+	return bf, ok
+}
+
+// canBackfill answers false for a connector this role did not compile in: it
+// cannot page anything here either.
+func (r *Registry) canBackfill(provider string) bool {
+	c, err := r.connector(provider)
+	if err != nil {
+		return false
+	}
+	_, ok := supportsBackfill(c)
+	return ok
+}
+
 // BackfillRun is the CAP-DDL-4 row — the single-row activation read.
 type BackfillRun struct {
 	ID           ids.UUID
@@ -137,7 +157,7 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 	if err != nil {
 		return BackfillPreview{}, err
 	}
-	bf, ok := c.(connector.Backfiller)
+	bf, ok := supportsBackfill(c)
 	if !ok {
 		return BackfillPreview{}, ErrBackfillUnsupported
 	}

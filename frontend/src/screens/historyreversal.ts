@@ -85,6 +85,9 @@ export function historyRows(
   const rows: HistoryRow[] = [];
   for (let i = 0; i < entries.length; i += 1) {
     const entry = entries[i];
+    if (entry === undefined) {
+      continue;
+    }
     const undid = entry.undid_audit_log_id;
     if (!undid) {
       rows.push({ kind: "single", entry, atIso: entry.occurred_at });

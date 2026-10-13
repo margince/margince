@@ -176,7 +176,8 @@ function AccessBody({
   const plural = usePlural();
   const { locale } = useLocale();
   const count = (n: number) => ({ count: formatNumber(n, locale) });
-  const answer = pages[0];
+  const [answer] = pages;
+  if (answer === undefined) return null;
   const rows = pages.flatMap((page) => page.data);
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");

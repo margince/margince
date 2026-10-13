@@ -346,7 +346,9 @@ const MEMBER_COLUMNS: DataTableColumn<DemoMember>[] = [
   },
 ];
 
-function MembersPanel() {
+function MembersPanel({
+  columns = MEMBER_COLUMNS,
+}: Readonly<{ columns?: DataTableColumn<DemoMember>[] }>) {
   return (
     <Panel title="Members">
       <PanelBody>
@@ -356,7 +358,7 @@ function MembersPanel() {
         fold
         bleed
         label="Members"
-        columns={MEMBER_COLUMNS}
+        columns={columns}
         rows={DEMO_MEMBERS}
         rowKey={(member) => member.id}
       />
@@ -388,6 +390,7 @@ export const FoldedRecordsPhone: Story = {
     await expect(head?.height).toBeLessThanOrEqual(1);
     for (const row of canvasElement.querySelectorAll("tbody tr")) {
       const [title] = cellBox(row, '[data-fold="title"]');
+      if (title === undefined) throw new Error("a folded row drew no title");
       for (const end of cellBox(row, '[data-fold="end"]')) {
         await expect(end.top).toBeLessThan(title.bottom);
         await expect(end.left).toBeGreaterThanOrEqual(title.right);
@@ -399,7 +402,7 @@ export const FoldedRecordsPhone: Story = {
       for (const [index, rest] of rests.entries()) {
         const before = rests[index - 1];
         if (before && rest.top >= before.bottom) {
-          await expect(rest.left).toBe(rests[0].left);
+          await expect(rest.left).toBe(rests[0]?.left);
         }
       }
     }
@@ -414,6 +417,7 @@ export const FoldedRecordsWide: Story = {
     const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
     await expect(head?.height).toBeGreaterThan(1);
     const [row] = canvasElement.querySelectorAll("tbody tr");
+    if (row === undefined) throw new Error("the members table drew no row");
     const tops = cellBox(row, "td").map((cell) => Math.round(cell.top));
     await expect(new Set(tops).size).toBe(1);
     const heading = canvasElement.querySelector("th");
@@ -423,6 +427,54 @@ export const FoldedRecordsWide: Story = {
     }
     const inset = Number.parseFloat(getComputedStyle(heading).paddingLeft);
     await expect(name.left).toBe(heading.getBoundingClientRect().left + inset);
+  },
+};
+
+// `fold: "only"`: the address under a name is a line of its own once the row
+// folds. Unfolded it has no heading and no cell, so it takes no width.
+const WITH_REACH: DataTableColumn<DemoMember>[] = [
+  ...MEMBER_COLUMNS,
+  {
+    key: "reach",
+    header: "Reached through",
+    fold: "only",
+    render: (member) => `Reached through ${member.email}`,
+  },
+];
+
+export const FoldOnlyLineWide: Story = {
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    const headings = [...canvasElement.querySelectorAll("th")].filter(
+      (heading) => heading.getBoundingClientRect().width > 0,
+    );
+    await expect(headings.map((heading) => heading.textContent)).not.toContain(
+      "Reached through",
+    );
+    for (const cell of canvasElement.querySelectorAll(".datatable-fold-only")) {
+      await expect(cell.getBoundingClientRect().width).toBe(0);
+    }
+  },
+};
+
+export const FoldOnlyLinePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <MembersPanel columns={WITH_REACH} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Ana Weber" });
+    for (const row of canvasElement.querySelectorAll("tbody tr")) {
+      const [line] = cellBox(row, '[data-fold="only"]');
+      const others = cellBox(row, 'td:not([data-fold="only"])');
+      if (!line) throw new Error("the row draws no fold-only line");
+      for (const other of others) {
+        const beside = other.top < line.bottom && other.bottom > line.top;
+        await expect(beside).toBe(false);
+      }
+    }
   },
 };
 
@@ -514,8 +566,11 @@ export const PinnedFirstColumn: Story = {
     box.scrollLeft = box.scrollWidth;
     await waitFor(() => expect(box.scrollLeft).toBeGreaterThan(0));
     const edge = box.getBoundingClientRect().left;
-    const [row] = box.querySelectorAll("tbody tr");
-    const [first, second] = row.querySelectorAll("td");
+    const [first, second] =
+      box.querySelector("tbody tr")?.querySelectorAll("td") ?? [];
+    if (first === undefined || second === undefined) {
+      throw new Error("the pinned table drew no first row");
+    }
     await expect(Math.round(first.getBoundingClientRect().left)).toBe(
       Math.round(edge),
     );

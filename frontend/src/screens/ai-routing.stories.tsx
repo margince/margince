@@ -334,9 +334,9 @@ export const EditingATier: Story = {
   render: story(BOUND),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      (await canvas.findAllByRole("button", { name: /^edit\b/i }))[0],
-    );
+    const [edit] = await canvas.findAllByRole("button", { name: /^edit\b/i });
+    if (!edit) throw new Error("no lane offers an edit");
+    await userEvent.click(edit);
   },
 };
 

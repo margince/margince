@@ -23,10 +23,14 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // sealingVault stands where compose's keyvault-backed one stands. It keeps the
@@ -213,4 +217,46 @@ func lastIndex(s, sub string) int {
 		}
 	}
 	return -1
+}
+
+// ackJurisdiction is a code no shipped pack holds, so registering its rules
+// here cannot collide with a compiled-in pack.
+const ackJurisdiction jurisdiction.Code = "qz"
+
+// TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine presses the
+// unsubscribe link a marketing send carries, under a pack that owes an
+// acknowledgement. The press writes a withdrawal and no suppression, and the
+// engine must still admit the acknowledgement it owes.
+func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) {
+	l := setupConfirmLane(t)
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: ackJurisdiction, Version: 1, OptOutAcknowledgement: true,
+	})
+	store := l.store.WithInstallationCountry(consent.InstallationCountryFunc(
+		func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return ackJurisdiction, nil }))
+	if _, err := l.e.Pool.Exec(context.Background(), `
+		INSERT INTO consent_purpose (key, label, class)
+		VALUES ('newsletter', 'Newsletter', 'marketing')
+		ON CONFLICT (key) DO NOTHING`); err != nil {
+		t.Fatalf("seeding the newsletter: %v", err)
+	}
+
+	withdrawn, err := store.PublicWithdrawAll(l.ctx, ids.From[ids.ContactKind](l.contact), []string{"newsletter"})
+	if err != nil {
+		t.Fatalf("the press failed: %v", err)
+	}
+	if len(withdrawn) != 1 {
+		t.Fatalf("the press withdrew %v, want the newsletter", withdrawn)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM communication_suppression`); n != 0 {
+		t.Fatalf("%d suppressions, want none: this test is about a press that writes only a withdrawal", n)
+	}
+	if n := l.e.WsCount(t, `
+		SELECT count(*) FROM comms_outbound
+		 WHERE sender_kind = 'controller' AND template_key = 'optout_acknowledgement'`); n != 1 {
+		t.Errorf("%d acknowledgement deliveries, want 1: the engine refused what the decree owes", n)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM river_job`); n != 1 {
+		t.Errorf("%d dispatch jobs, want 1", n)
+	}
 }

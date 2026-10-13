@@ -76,6 +76,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendfilterfieldlabels_test.go` | H3 | Every core filter field the engine can name has a word on the builder screen. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the same timestamp, or a card ages differently from the list that filed the deal stalled. |
+| `frontendjobkinds_test.go` | H3 | System health names every declared job kind in words, with the kind under it. |
 | `frontendjoblabels_test.go` | H3 | History names the system pass behind a change by its words, never by its key. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendlinkedinhosts_test.go` | H3 | Which hosts count as LinkedIn is decided on both sides of the wire, and the two answers are different sizes by design. |
@@ -164,6 +165,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `statedreasonbound_test.go` | H2 | The written reason on a decision that narrows what the installation keeps is bounded by one number. |
 | `summarytiermarks_test.go` | H2 | A 🟢 or 🟡 in an operation's summary is a claim about that operation's autonomy tier, and it has to be the tier the operation actually declares. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they must have the same shape. |
+| `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |

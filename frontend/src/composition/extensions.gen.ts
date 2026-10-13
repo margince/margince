@@ -33,6 +33,11 @@ export type ExtensionVerbDescriptor = {
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
+  /**
+   * The unit's copy key for its own name, or "" when its copy carries none
+   * in every locale. A screen shows what it resolves to, else the unit name.
+   */
+  readonly title: `ext${string}.title` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares

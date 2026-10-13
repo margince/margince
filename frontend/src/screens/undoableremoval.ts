@@ -15,19 +15,26 @@ export type MutationOutcome<V> = Readonly<{
 }>;
 
 /**
- * The toasts of a removal that runs at once: what it says, the Undo that hands
- * its handle to `restore`, and a refusal of either as a sticky danger toast.
+ * The toasts of a removal that runs at once: what it says, and the Undo that
+ * hands its handle to `restore`. A refusal of either is a sticky danger toast;
+ * `restoreRefused` words a refused Undo where the server's detail would not.
  */
 export function useUndoableRemoval<Handle>(
-  words: Readonly<{ removed: string; restored: string }>,
+  words: Readonly<{
+    removed: string;
+    restored: string;
+    restoreRefused?: (error: Error) => string;
+  }>,
 ) {
   const t = useT();
   const toast = useToast();
-  const refused = (error: Error) =>
-    toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
+  const refuse = (message: string) =>
+    toast.show(message, { tone: "danger", sticky: true });
+  const refused = (error: Error) => refuse(problemMessageOf(error, t));
   return {
     restored: {
-      onError: refused,
+      onError: (error: Error) =>
+        refuse(words.restoreRefused?.(error) ?? problemMessageOf(error, t)),
       onSuccess: () => toast.show(words.restored),
     } satisfies MutationOutcome<Handle>,
     removed: (
@@ -47,7 +54,7 @@ export function useUndoableRemoval<Handle>(
 }
 
 /** The first live control in the row after `control`'s, else the row before. */
-export function neighbourVerb(control: Element | null): HTMLElement | null {
+function neighbourVerb(control: Element | null): HTMLElement | null {
   const row = control?.closest(".settingrow");
   const sibling = row?.nextElementSibling ?? row?.previousElementSibling;
   return sibling?.querySelector<HTMLElement>("button:not(:disabled)") ?? null;

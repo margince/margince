@@ -71,9 +71,10 @@ const VERDICT_TONE: Record<string, StandingTone> = {
 // must show, and colouring it green would report an unreadable word as good
 // news in the loudest element on the page.
 function verdictTone(standing: string): StandingTone {
-  return Object.hasOwn(VERDICT_TONE, standing)
+  const tone = Object.hasOwn(VERDICT_TONE, standing)
     ? VERDICT_TONE[standing]
-    : "unknown";
+    : undefined;
+  return tone ?? "unknown";
 }
 
 // The card's read, shared. Deal360 draws the briefing from it and the email

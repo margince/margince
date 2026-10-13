@@ -28,7 +28,7 @@ type Attachment = components["schemas"]["Attachment"];
 
 const page = { has_more: false, next_cursor: null };
 
-const documents: Attachment[] = [
+const documents: [Attachment, Attachment, Attachment] = [
   {
     id: "d-1",
     filename: "Rahmenvertrag.pdf",

@@ -20,12 +20,14 @@ const MINE = {
   scope: "user",
   kind: "address",
   value: "coach@personal.example",
+  created_by_name: "Lena Vogt",
 };
 const EVERYONE = {
   id: "ex-2",
   scope: "workspace",
   kind: "domain",
   value: "recruiting.example",
+  created_by_name: null,
 };
 // A provider's own token, shown once in the code face, and an address long
 // enough to wrap.
@@ -34,12 +36,14 @@ const FOLDER = {
   scope: "user",
   kind: "container",
   value: "gmail:CATEGORY_PROMOTIONS",
+  created_by_name: "Lena Vogt",
 };
 const LONG = {
   id: "ex-4",
   scope: "user",
   kind: "address",
   value: "a.very.long.personal.address.for.wrapping@family-domain.example",
+  created_by_name: "Maximilian Oberhuber-Schwarzenberg",
 };
 
 function story(

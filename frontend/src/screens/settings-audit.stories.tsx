@@ -158,6 +158,7 @@ const openFirst = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const [toggle] = await canvas.findAllByRole("button", {
     name: /^Show change detail: /,
   });
+  if (!toggle) throw new Error("the audit log shows no change detail toggle");
   await userEvent.click(toggle);
 };
 
@@ -178,7 +179,7 @@ export const Expanded: Story = {
 };
 
 export const CreatedExpanded: Story = {
-  render: story(page([ENTRIES[1]])),
+  render: story(page(ENTRIES.slice(1, 2))),
   play: openFirst,
 };
 

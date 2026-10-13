@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  formatBytes,
   formatDate,
   formatDateTime,
   formatDayMonth,
@@ -397,5 +398,20 @@ describe("when a booked meeting happens", () => {
     expect(() => formatTimeRange(start, end, "en", "Etc/GMT-1")).toThrow(
       /IANA/,
     );
+  });
+});
+
+describe("a stored file's size", () => {
+  it("inflects the byte unit with its count", () => {
+    expect(formatBytes(1, "en")).toBe("1 byte");
+    expect(formatBytes(98, "en")).toBe("98 bytes");
+    expect(formatBytes(98, "de")).toBe("98 Byte");
+    expect(formatBytes(98, "vi")).toBe("98 byte");
+  });
+
+  it("steps to kilobytes at a thousand, not before", () => {
+    expect(formatBytes(999, "en")).toBe("999 bytes");
+    expect(formatBytes(1000, "en")).toBe("1 kB");
+    expect(formatBytes(21_400, "de")).toBe("21,4 kB");
   });
 });

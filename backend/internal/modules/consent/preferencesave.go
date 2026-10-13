@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -275,7 +276,20 @@ func (s *Store) PublicWithdrawAll(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, purposeKeys)
-		return err
+		if err != nil {
+			return err
+		}
+		// The press for one purpose is the unsubscribe link every marketing
+		// send carries, so it owes the same acknowledgement as the unnamed one.
+		// Only a marketing purpose is a refusal of advertising.
+		marketing, err := withdrawableMarketingPurposeKeysTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		refused := slices.DeleteFunc(slices.Clone(changed), func(key string) bool {
+			return !slices.Contains(marketing, key)
+		})
+		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, refused)
 	})
 	if err != nil {
 		return nil, err

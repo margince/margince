@@ -75,11 +75,12 @@ export function groupValue(
         t,
       });
     })
-    .map((value, index) =>
-      maskedFields.includes(fields[index].key)
-        ? `${fieldLabel(fields[index], t)}: ${t("record.notShown")}`
-        : value,
-    )
+    .map((value, index) => {
+      const field = fields[index];
+      return field && maskedFields.includes(field.key)
+        ? `${fieldLabel(field, t)}: ${t("record.notShown")}`
+        : value;
+    })
     .filter(Boolean)
     .join(" · ");
 }

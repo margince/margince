@@ -38,18 +38,12 @@ import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
 
-// The agent section at the foot of the workspace rail reads every one of its
-// facts off the wire (approvals, connectors, AI posture, licence entitlement,
-// the served model, the month's spend, the account's own suggestions) —
-// nothing left standing in for a read that has not answered.
-// Every case here proves the section draws exactly what the API said, and
-// never a number nobody computed.
+// The agent section at the foot of the workspace rail draws what the API said.
+// It never shows a number nobody computed, or a read that has not answered.
 //
-// The state derivation is load-bearing enough to earn cases of its own: red is
-// for the tool not being reachable at all (no model bound, or a source it
-// cannot get to), amber is for a run that stalled or settled degraded, and a
-// transient tool failure colours nothing — that precision is the whole point of
-// moving off the eight-state vocabulary.
+// Red is a tool that cannot be reached: no model bound, or a source it cannot
+// get to. Amber is a run that stalled or settled degraded. A transient tool
+// failure colours nothing.
 
 type Connector = components["schemas"]["CaptureConnection"];
 type Candidate = components["schemas"]["DedupeCandidate"];
@@ -70,6 +64,7 @@ const emptyPage = { has_more: false, next_cursor: null };
 const CONNECTED: Connector = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
 };

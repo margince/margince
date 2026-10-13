@@ -102,6 +102,11 @@ type DealBlock struct {
 	// its counts are the current-state figures they always were — and folding
 	// that to 0 would claim those old weeks were fully reconstructed.
 	Unreconstructible *int
+
+	// Open deals whose close date was still provisional when the week ended.
+	// Nil on a scorecard frozen before it was counted: zero would claim a
+	// measurement that was never taken.
+	CloseDateProvisional *int
 }
 
 // multiThreadWindow is how far back a deal's second contact may be and still
@@ -403,7 +408,7 @@ func scoreDeals(
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,
 			&block.CloseDateSound, &block.ForecastUp, &block.ForecastDown,
-			&block.Unreconstructible)
+			&block.Unreconstructible, &block.CloseDateProvisional)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's deals: %w", err)
 	}

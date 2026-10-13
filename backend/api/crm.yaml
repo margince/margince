@@ -15079,12 +15079,56 @@ paths:
         next message on; nothing already dropped comes back. A colleague's identity answers
         not-found rather than forbidden — the two are the same answer to somebody who may not know
         it exists.
+
+        `POST /capture/owner-identities/{id}/restore` puts it back for ten minutes. After that the
+        withdrawn address is deleted, so a private address is kept no longer than an undo needs.
+
+        Withdrawing an address the product learned (`source: delivered_to`) also stops it being
+        learned again from later mail, and that outlasts the ten minutes.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       responses:
         '204': { description: Withdrawn. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /capture/owner-identities/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Capture]
+      operationId: restoreCaptureOwnerIdentity
+      summary: Put back one of your own addresses you just withdrew.
+      description: |
+        Undoes one `deleteCaptureOwnerIdentity`, named by the id it withdrew. No body. The address
+        comes back as it was: the same id, `source` and `created_at`, not the restorer and now. It
+        then does what declaring it does: open questions about the address close, and mail between
+        your own addresses is dropped again from the next message on.
+
+        Only your own withdrawal, and only for ten minutes: after that the withdrawn address is
+        deleted and this answers `404`, as it does for somebody else's and for one already restored.
+
+        `409 removal_moved_on` when the same address was declared and withdrawn again after this
+        withdrawal; put back the newer one instead. `409 identity_declared_again` when the address
+        is declared again now, so it is already yours.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The identity, back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The address cannot be put back: it was declared and withdrawn again since
+            (`removal_moved_on`), or it is declared again now (`identity_declared_again`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /capture/email-domains/{domain}:
     parameters:
@@ -28313,11 +28357,20 @@ paths:
       description: >-
         Cascades in one transaction: every live document archives, their chunks are
         stamped, and any in-flight ingest self-cancels on its next state re-read.
+
+        The set that ships with Margince is refused: the next update would file it
+        again as a new set.
       responses:
         '204': { description: Archived. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            `corpus_shipped`: the set ships with Margince and cannot be archived.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -28333,7 +28386,8 @@ paths:
         text/csv, application/json. Anything else is refused naming what is accepted;
         there is no parser in this product, and a PDF arriving as an empty corpus is
         worse than a PDF refused. Ingest is asynchronous: the document lands `queued`
-        and its progress is read back from this path's GET.
+        and its progress is read back from this path's GET. The set that ships with
+        Margince takes no uploads: only Margince files pages in it.
       requestBody:
         required: true
         content:
@@ -28352,6 +28406,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            `corpus_shipped`: the set ships with Margince, and only Margince files
+            pages in it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '415': { $ref: '#/components/responses/UnsupportedMediaType' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -28413,11 +28474,21 @@ paths:
         A hard delete, not an archive. The stored object goes with the row: an
         embedding of the text is that text in another shape, and a blob left behind
         would make the deletion decorative.
+
+        A page that ships with Margince is refused: the next update files it again,
+        so deleting it would only hide it until then.
       responses:
         '204': { description: Deleted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            `document_shipped`: the document is a handbook page that ships with
+            Margince and cannot be deleted.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /knowledge/corpora/{id}/ask:
     parameters:
@@ -31063,10 +31134,16 @@ components:
         A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
         credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
         server-side by `credential_ref`.
-      required: [id, provider, status, scopes]
+      required: [id, provider, status, scopes, can_backfill]
       properties:
         id: { type: string, format: uuid }
         provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], description: The mail/calendar provider (A51 email+calendar parity). }
+        can_backfill:
+          type: boolean
+          description: |
+            Whether this provider's connector can import older mail at all. False means
+            `POST /connectors/{provider}/backfill` and its estimate refuse with `422
+            connector_unsupported`, so a client offers no import rather than one that fails.
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
         status: { type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
@@ -31282,11 +31359,38 @@ components:
           type: string
           format: date-time
           description: When that message arrived. Absent for the same reason `subject` can be.
+        participants:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/HeldThreadParticipant' }
+          description: |
+            Up to five addresses outside the workspace on the message that opened the thread, so you
+            can tell who a held thread is with. Colleagues are left out. Present exactly when
+            `activity_id` is: a message you may not read, or one that was erased, names nobody.
+        participant_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many addresses outside the workspace that message names, of which `participants`
+            shows up to five. Absent when `participants` is.
         attempts:
           type: integer
           description: |
             How many times a verdict has been asked for. This is the outage signal: a pending row
             whose attempts stop climbing is a model that stopped answering.
+
+    HeldThreadParticipant:
+      type: object
+      description: One address outside the workspace on a held thread's opening message.
+      required: [address]
+      properties:
+        address: { type: string, description: The folded address the message named. }
+        contact_id:
+          type: string
+          format: uuid
+          description: |
+            The contact this address belongs to, where you may see it. Absent when there is none
+            and when it is not yours to see.
 
     CaptureAwaitingContactListResponse:
       type: object
@@ -31324,7 +31428,7 @@ components:
     CaptureSenderDecision:
       type: object
       description: One sender your mailbox produced, and what became of them.
-      required: [address, overruled, record_exists]
+      required: [address, overruled, record_exists, message_count]
       properties:
         address: { type: string }
         kind:
@@ -31349,7 +31453,31 @@ components:
           description: Whether your own decision is what governs this sender.
         record_exists:
           type: boolean
-          description: Whether a contact actually exists for this address.
+          description: |
+            Whether a live contact you may see holds this address. It follows the same visibility
+            rule as opening the contact: a seat without contact read gets false, and a contact
+            shared with you counts.
+        contact_id:
+          type: string
+          format: uuid
+          description: |
+            The contact `record_exists` found, so a client can open it. Absent whenever
+            `record_exists` is false.
+        contact_name:
+          type: string
+          description: |
+            That contact's name (its `full_name`), so a client can show it without fetching the
+            contact. Present exactly when `contact_id` is.
+        message_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many messages stored from your mailbox have this address as their counterparty, sent
+            or received. Archived mail is not counted.
+        last_seen_at:
+          type: string
+          format: date-time
+          description: When the newest of those messages was sent or received. Absent when there are none.
         deletes_at:
           type: string
           format: date-time
@@ -31819,7 +31947,7 @@ components:
 
     CaptureExclusion:
       type: object
-      required: [id, scope, kind, value, created_at]
+      required: [id, scope, kind, value, created_at, created_by_name]
       properties:
         id: { type: string, format: uuid }
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
@@ -31830,6 +31958,11 @@ components:
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
             `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
         created_at: { type: string, format: date-time }
+        created_by_name:
+          type: [string, 'null']
+          description: |
+            The display name of the member who added the rule. Null when no member added it (a
+            system or connector rule) and when that member has been deactivated.
     CaptureExclusionScope:
       type: string
       enum: [workspace, user]
@@ -53745,6 +53878,13 @@ components:
           type: array
           description: 'What the installation uses this contact''s data for, by published name.'
           items: { type: string }
+        purpose_keys:
+          type: array
+          description: |
+            The key of each entry in `purposes`, at the same index. A page names a purpose the
+            product seeds in its reader's language by its key, and shows the published name of any
+            other.
+          items: { type: string }
         rights:
           type: array
           description: |
@@ -55490,6 +55630,43 @@ components:
             same as a team that landed on nothing — a reader says "no forecast" rather than
             drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
             from age out under retention.
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyMember' }
+          description: |
+            Every live member of the team that week, including those whose own week could not be
+            read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+            kept.
+        quality: { $ref: '#/components/schemas/TeamWeeklyQuality' }
+        coverage:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyCoverage' }
+          description: |
+            The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+            composed or the team's book was refused.
+        replan_recommended:
+          type: boolean
+          description: |
+            True when any horizon in `coverage` recommends a replan: coverage at risk against a
+            named basis.
+        summary:
+          type: string
+          description: |
+            A short paragraph composed from the frozen figures by fixed rules, never by a model.
+            Absent on a snapshot frozen before it existed or a week nobody was counted in.
+        exceptions:
+          type: array
+          items: { $ref: '#/components/schemas/InputCheck' }
+          description: |
+            LIVE, computed on every read and never frozen: the open input-check findings on deals
+            the team's members own now, under the reader's own deal scope. Absent when the read
+            did not ask.
+        stale_deals:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyStaleDeal' }
+          description: |
+            LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+            period, quietest first. Together with `exceptions` at most 25 items, findings first.
         agenda:
           type: array
           items: { type: string, format: uuid }
@@ -55541,9 +55718,10 @@ components:
     TeamWeeklyRep:
       type: object
       additionalProperties: false
-      description: One member's week as their lead reads it, with the one thing to raise.
+      description: One member's week as their lead reads it, with what to raise.
       required: [user_id, display_name, deals_won, leads_breached, meetings_held,
-                 commitments_due, commitments_kept, help_requested, focus_kind, focus_label]
+                 commitments_due, commitments_kept, help_requested, focus_kind, focus_label,
+                 patterns]
       properties:
         user_id: { type: string, format: uuid }
         display_name:
@@ -55558,17 +55736,140 @@ components:
         focus_kind:
           type: string
           enum: [help_requested, leads_breached, commitments_missed,
-                 deals_at_risk, meetings_without_next_step, strong_week, quiet_week]
+                 deals_at_risk, forecast_downgrades, stage_regressions, close_dates_provisional,
+                 no_next_step_coverage, strong_week, meetings_without_next_step, quiet_week]
           description: |
             Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-            celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-            outranks any metric, because walking past a request to raise a number is the
-            fastest way to teach them not to ask.
+            celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+            them: a rep who ASKED for help outranks any metric, because walking past a request
+            to raise a number is the fastest way to teach them not to ask.
+
+            `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+            replaced it still carry it.
         focus_label:
           type: string
           description: |
             The focus in words, composed from the stored figures — never model-written, so it
             cannot say something the snapshot does not hold.
+        patterns:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/TeamWeeklyPattern' }
+          description: |
+            Every rule that fired for this rep, in the order a lead raises them. The first is
+            the focus. A snapshot frozen before the list existed reads its focus as the one
+            pattern.
+        funnel:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/TeamWeeklyFunnelDeviation' }
+          description: |
+            Up to three stages where this rep's conversion differs most from the team's, over
+            the 13 weeks before the week closed. Stages with fewer than five entries on either
+            side are left out. Empty when no stage qualified or the snapshot predates it.
+    TeamWeeklyPattern:
+      type: object
+      additionalProperties: false
+      required: [kind, label]
+      properties:
+        kind:
+          type: string
+          enum: [help_requested, leads_breached, commitments_missed,
+                 deals_at_risk, forecast_downgrades, stage_regressions, close_dates_provisional,
+                 no_next_step_coverage, strong_week, meetings_without_next_step, quiet_week]
+        label:
+          type: string
+          description: The pattern in words, composed from the stored figures.
+    TeamWeeklyFunnelDeviation:
+      type: object
+      additionalProperties: false
+      description: |
+        One stage where the rep converts differently from the team. Entries and conversions are
+        attributed to the owner at the time of each move. "Converted" is a later move to a won
+        stage or to a later stage, compared by the stage order as it was configured when the
+        week was assembled.
+      required: [pipeline_id, pipeline_name, stage_id, stage_name, rep_entered, rep_converted,
+                 team_entered, team_converted, deviation_bp]
+      properties:
+        pipeline_id: { type: string, format: uuid }
+        pipeline_name: { type: string }
+        stage_id: { type: string, format: uuid }
+        stage_name: { type: string }
+        next_stage_name:
+          type: string
+          description: The stage after this one when the week was assembled; absent for the last.
+        rep_entered: { type: integer, minimum: 0 }
+        rep_converted: { type: integer, minimum: 0 }
+        team_entered: { type: integer, minimum: 0 }
+        team_converted: { type: integer, minimum: 0 }
+        deviation_bp:
+          type: integer
+          minimum: -10000
+          maximum: 10000
+          description: The rep's conversion rate less the team's, in basis points.
+    TeamWeeklyMember:
+      type: object
+      additionalProperties: false
+      required: [user_id, display_name, measured]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string, description: 'What they were called that week.' }
+        measured:
+          type: boolean
+          description: Whether this member's own week was read into the counts.
+    TeamWeeklyQuality:
+      type: object
+      additionalProperties: false
+      description: |
+        How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+        snapshot frozen before it was measured, which is not zero.
+      properties:
+        proposals_accepted: { type: integer, minimum: 0 }
+        proposals_rejected: { type: integer, minimum: 0 }
+        auto_change_reversals:
+          type: integer
+          minimum: 0
+          description: |
+            Changes an agent, a connector or the system made that a member of the team undid
+            inside the week.
+    TeamWeeklyCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+        coverage at risk against the named basis, never as a target: the product has none.
+        Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+      required: [period_kind, base_currency, replan_recommended]
+      properties:
+        period_kind: { type: string, enum: [month, quarter] }
+        basis: { type: string, enum: [manager_call, historical_median] }
+        absent:
+          type: string
+          enum: [insufficient_basis, insufficient_history, not_authorized]
+          description: |
+            Why there is no answer. `not_authorized` is a standing call the member who closed the
+            week could not read, which is not the same as no call.
+        reference_landing_minor: { type: integer, format: int64 }
+        remaining_to_support_minor: { type: integer, format: int64 }
+        needed_open_minor: { type: integer, format: int64 }
+        current_open_minor: { type: integer, format: int64 }
+        coverage_bp: { type: integer, format: int64 }
+        base_currency: { type: string }
+        replan_recommended:
+          type: boolean
+          description: |
+            True when coverage is at risk against a named basis: under 8000 basis points of what
+            the basis needs. Never true without a basis.
+    TeamWeeklyStaleDeal:
+      type: object
+      additionalProperties: false
+      required: [deal_id, deal_name, owner_id, last_activity_at, days_quiet]
+      properties:
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        owner_id: { type: string, format: uuid }
+        last_activity_at: { type: string, format: date-time }
+        days_quiet: { type: integer, minimum: 0 }
 
     WeeklyReviewLearnings:
       type: object
@@ -59336,10 +59637,16 @@ components:
             absent as true.
     KnowledgeCorpus:
       type: object
-      required: [id, name, topic_statement, min_similarity, default_ask, coverage, created_at]
+      required: [id, name, topic_statement, min_similarity, default_ask, shipped, coverage, created_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string, maxLength: 200 }
+        shipped:
+          type: boolean
+          description: >-
+            True for the handbook set that ships with Margince. It cannot be archived
+            and takes no uploads. Its name, topic, floor and default can still be edited,
+            and an update keeps those edits.
         description: { type: [string, 'null'], maxLength: 2000 }
         topic_statement:
           type: string
@@ -59402,29 +59709,43 @@ components:
         chunks_total: { type: integer }
         chunks_embedded: { type: integer }
         documents_total: { type: integer }
-        embed_state:
-          type: string
-          enum: [no_embedding_model, indexing, complete]
-          description: |
-            Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-            searchable rather than shown a bare count.
+        embed_state: { $ref: '#/components/schemas/KnowledgeEmbedState' }
 
-            - `no_embedding_model`: this installation binds no embedding model, so no passage
-              gets a vector and nothing is searchable. It is the same answer as
-              `settings_availability.embedding_reindex` being false on `/me`, read from the
-              same embed lane.
-            - `indexing`: a model is bound and work is still owed: a document is queued or
-              being read, a re-embed is running, or some passage has no vector under the
-              model bound now.
-            - `complete`: every live passage carries a vector under the model bound now.
+    KnowledgeEmbedState:
+      type: string
+      enum: [no_embedding_model, indexing, complete]
+      description: |
+        Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+        searchable rather than shown a bare count. A corpus and each of its documents answer
+        by one rule, over their own passages.
+
+        - `no_embedding_model`: this installation binds no embedding model, so no passage
+          gets a vector and nothing is searchable. It is the same answer as
+          `settings_availability.embedding_reindex` being false on `/me`, read from the
+          same embed lane.
+        - `indexing`: a model is bound and work is still owed: a document is queued or
+          being read, a re-embed is running, or some passage has no vector under the
+          model bound now.
+        - `complete`: every live passage carries a vector under the model bound now.
 
     KnowledgeDocument:
       type: object
-      required: [id, corpus_id, filename, content_type, byte_size, ingest_status, created_at]
+      required: [id, corpus_id, filename, title, shipped, content_type, byte_size, ingest_status, chunks_embedded, embed_state, created_at]
       properties:
         id: { type: string, format: uuid }
         corpus_id: { type: string, format: uuid }
         filename: { type: string }
+        title:
+          type: [string, 'null']
+          description: >-
+            The heading a page Margince ships opens with, so a reader sees its name
+            rather than its filename. Null for an uploaded document, which the
+            filename names.
+        shipped:
+          type: boolean
+          description: >-
+            True for a handbook page that ships with Margince. It cannot be deleted:
+            the next update files it again.
         content_type: { type: string }
         byte_size: { type: integer, format: int64 }
         ingest_status:
@@ -59439,6 +59760,12 @@ components:
           type: [string, 'null']
           description: Why it failed, in words the uploader can act on. Null unless failed.
         chunk_count: { type: integer }
+        chunks_embedded:
+          type: integer
+          description: >-
+            This document's passages that carry a vector, counted as the corpus
+            coverage counts them, so a corpus's documents sum to its own figure.
+        embed_state: { $ref: '#/components/schemas/KnowledgeEmbedState' }
         created_at: { type: string, format: date-time }
 
     KnowledgeAnswerCorpus:

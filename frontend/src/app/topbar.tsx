@@ -14,12 +14,7 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
-import {
-  OFF_RAIL_TITLE_KEYS,
-  resolveTitle,
-  sectionHead,
-  useRouteSubject,
-} from "./pagemeta";
+import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import { type Route, routeHash } from "./router";
 import "./topbar.css";
@@ -85,7 +80,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
     // cannot disagree about what this page is.
     return [
       {
-        label: t(OFF_RAIL_TITLE_KEYS.settings),
+        label: resolveTitle(SETTINGS_SCREEN, undefined, t),
         href: routeHash({ screen: SETTINGS_SCREEN }),
       },
       { label: subject },

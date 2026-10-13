@@ -1172,8 +1172,11 @@ function useActiveView(
   const [pickedId, setPickedId] = useState<string | null>(null);
   const matched = views.findIndex((spec) => matchesView(spec, query));
   const pinned = views.findIndex((spec) => spec.id === pickedId);
+  const pinnedView = views[pinned];
   const view =
-    pinned >= 0 && matchesView(views[pinned], query) ? pinned : matched;
+    pinnedView !== undefined && matchesView(pinnedView, query)
+      ? pinned
+      : matched;
   // The press reports an index into the rail just rendered, which is where the
   // id it names comes from. A press on nothing (the surface's own "clear
   // everything" reports index 0 against an empty rail) unpins rather than

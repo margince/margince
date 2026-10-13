@@ -35,7 +35,7 @@ const TONES: readonly SelectOption[] = [
   { value: "", label: "No colour" },
   ...TAG_TONES.map((tone) => ({
     value: tone,
-    label: tone[0].toUpperCase() + tone.slice(1),
+    label: tone.charAt(0).toUpperCase() + tone.slice(1),
     adornment: (
       <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
     ),

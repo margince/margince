@@ -153,7 +153,9 @@ function instantInZone(
   minute: number,
   second: number,
 ): number {
-  const [year, month, day] = dateOnly.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
+    .split("-")
+    .map(Number);
   const wallClockMs = Date.UTC(year, month - 1, day, hour, minute, second);
   let utcMs = wallClockMs;
   for (let pass = 0; pass < 2; pass += 1) {
@@ -238,7 +240,9 @@ export function startOfDayInZone(
   zone: string,
   daysLater = 0,
 ): string {
-  const [year, month, day] = dateOnly.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
+    .split("-")
+    .map(Number);
   const shifted = new Date(Date.UTC(year, month - 1, day + daysLater))
     .toISOString()
     .slice(0, 10);

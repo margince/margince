@@ -27,14 +27,14 @@ import {
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { QueryGate, throwProblem, unwrap, WriteRefused } from "./common";
 import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  WriteRefused,
-} from "./common";
-import { DocumentList, INGEST_POLL_MS, SETS_KEY } from "./knowledge.documents";
+  DocumentList,
+  INGEST_POLL_MS,
+  NOT_SEARCHABLE,
+  SETS_KEY,
+  shippedRefusal,
+} from "./knowledge.documents";
 import { ReindexingNotice } from "./knowledge.notices";
 import "./knowledge.css";
 
@@ -54,7 +54,6 @@ import "./knowledge.css";
 // posture: read is the ask, and every role that reads records holds it.
 
 type Corpus = components["schemas"]["KnowledgeCorpus"];
-type EmbedState = Corpus["coverage"]["embed_state"];
 
 function useDocumentSets(enabled: boolean) {
   return useQuery({
@@ -108,23 +107,9 @@ function useArchiveDocumentSet(onArchived: () => void) {
   });
 }
 
-// Why a set's passages are not all searchable, in the reader's words. A set
-// being re-read says so in its own notice, so it takes no second badge here.
-const NOT_SEARCHABLE: Record<
-  Exclude<EmbedState, "complete">,
-  Readonly<{ label: MessageKey; reason: MessageKey; tone: "warning" | "info" }>
-> = {
-  no_embedding_model: {
-    label: "knowledge.notSearchable",
-    reason: "knowledge.reason.noEmbeddingModel",
-    tone: "warning",
-  },
-  indexing: {
-    label: "knowledge.indexing",
-    reason: "knowledge.reason.indexing",
-    tone: "info",
-  },
-};
+const ARCHIVE_SHIPPED = new Map<string, MessageKey>([
+  ["corpus_shipped", "knowledge.archiveShipped"],
+]);
 
 export function KnowledgeCard() {
   const t = useT();
@@ -180,6 +165,7 @@ function Passages({ set }: Readonly<{ set: Corpus }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const { coverage } = set;
+  // A set being re-read says so in its own notice, so it takes no second badge.
   const state =
     coverage.embed_state === "complete" || set.reindexing
       ? null
@@ -242,7 +228,8 @@ function DocumentSet({
         <span className="knowledge-set-passages">
           <Passages set={set} />
         </span>
-        {canManage && (
+        {/* A shipped set is filed again by the next update, so archiving it undoes nothing. */}
+        {canManage && !set.shipped && (
           <span className="knowledge-set-menu cell-actions">
             <OverflowMenu label={t("table.rowActions", { name: set.name })}>
               <Button
@@ -284,6 +271,8 @@ function DocumentSet({
           <DocumentList
             corpusId={set.id}
             setName={set.name}
+            setState={set.coverage.embed_state}
+            shipped={set.shipped}
             canManage={canManage}
             afterDelete={() =>
               document.getElementById(toggleId)?.querySelector("button") ?? null
@@ -298,7 +287,11 @@ function DocumentSet({
         title={t("knowledge.archiveConfirm.title", { name: set.name })}
         confirmLabel={t("knowledge.archive")}
         pending={archive.isPending}
-        error={archive.isError ? problemMessageOf(archive.error, t) : null}
+        error={
+          archive.isError
+            ? shippedRefusal(archive.error, t, ARCHIVE_SHIPPED)
+            : null
+        }
         onClose={() => setConfirming(false)}
         returnFocusTo={() => (archived.current ? afterArchive() : null)}
         onConfirm={() =>

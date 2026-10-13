@@ -541,6 +541,67 @@ expect_merge "a merge with no pull request is titled for what it found" \
 	"no pull request naming it" \
 	"abc1234 landed on main with no pull request naming it, so no review and no required check ever applied to it"
 
+# --- the vendor live check ------------------------------------------------------
+#
+# `not-checked` is the case that must not pass for green: it may open the no-key
+# issue, once, and must never close the failure issue.
+readonly SURFE_FAILED="Surfe live check failed: GET /v1/credits"
+readonly SURFE_NO_KEY="Surfe live check has no key"
+surfe_open="$(printf '40\t%s\n41\t%s\n' "$SURFE_FAILED" "$SURFE_NO_KEY")"
+
+expect_actions "surfe/drift files the failure issue" \
+	"create $SURFE_FAILED" "" \
+	VENDOR_LIVE_RESULT=failure VENDOR_LIVE_OUTCOME=drift VENDOR_LIVE_DETAIL=missing=totalEmail
+expect_actions "surfe/a repeat drift comments on the open issue" \
+	"comment 40" "$surfe_open" \
+	VENDOR_LIVE_RESULT=failure VENDOR_LIVE_OUTCOME=drift VENDOR_LIVE_DETAIL=status=404
+expect_actions "surfe/ok after a failure closes it and the no-key issue" \
+	"close 40,close 41" "$surfe_open" \
+	VENDOR_LIVE_RESULT=success VENDOR_LIVE_OUTCOME=ok
+expect_actions "surfe/not-checked opens the no-key issue" \
+	"create $SURFE_NO_KEY" "" \
+	VENDOR_LIVE_RESULT=success VENDOR_LIVE_OUTCOME=not-checked
+expect_actions "surfe/not-checked with the no-key issue open does nothing, and never closes the failure" \
+	"" "$surfe_open" \
+	VENDOR_LIVE_RESULT=success VENDOR_LIVE_OUTCOME=not-checked
+expect_actions "surfe/a failed job with no verdict files the failure issue" \
+	"create $SURFE_FAILED" "" \
+	VENDOR_LIVE_RESULT=failure
+expect_actions "surfe/a skipped job neither files nor closes" \
+	"" "$surfe_open" \
+	VENDOR_LIVE_RESULT=skipped
+
+# expect_surfe_body <name> <must-contain> <must-not-contain> <env assignment>...
+#
+# What reaches the public tracker: the labels, and a body built from the fields.
+# A key-shaped detail is planted, and must not reach `gh` at all.
+expect_surfe_body() {
+	local name="$1" want="$2" never="$3"
+	shift 3
+	export BODY_LOG="$stub_dir/body" LABEL_LOG="$stub_dir/labels"
+	: >"$BODY_LOG"
+	: >"$LABEL_LOG"
+	expect_actions "$name" "create $SURFE_FAILED" "" "$@"
+	local body labels
+	body="$(cat "$BODY_LOG")"
+	labels="$(paste -sd, - <"$LABEL_LOG")"
+	if [[ "$body" != *"$want"* ]] || [[ "$body" == *"$never"* ]] || [[ "$labels" != "priority: high,area: capture" ]]; then
+		echo "FAIL: $name — body or labels wrong"
+		echo "  labels want 'priority: high,area: capture' got '$labels'"
+		echo "  body must contain '$want' and not '$never'"
+		failures=$((failures + 1))
+	fi
+	unset BODY_LOG LABEL_LOG
+}
+
+expect_surfe_body "surfe/refused names the secret to renew" "renew the
+\`SURFE_LIVE_KEY\`" "no-verdict" \
+	VENDOR_LIVE_RESULT=failure VENDOR_LIVE_OUTCOME=refused VENDOR_LIVE_DETAIL=status=401
+expect_surfe_body "surfe/a planted key in the detail never reaches gh" "unrecognised" "sk-live-PLANTED" \
+	VENDOR_LIVE_RESULT=failure VENDOR_LIVE_OUTCOME=drift "VENDOR_LIVE_DETAIL=status=401 sk-live-PLANTED"
+expect_surfe_body "surfe/no verdict says so" "\`no-verdict\`" "unrecognised" \
+	VENDOR_LIVE_RESULT=failure
+
 # --- the census -----------------------------------------------------------------
 #
 # Derived from the reporter, not from a list here. Every MAIN_*_RESULT arm it

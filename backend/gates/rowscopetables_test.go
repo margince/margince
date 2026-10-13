@@ -70,6 +70,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	// share arm, so it bounds a reference at least as tightly.
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
+	"VisibleSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
 	"LinkTargetVisibleClause": {table: anyTable},
@@ -522,5 +523,10 @@ const (
 	// 118: privacy.contactsMatchingSuppression's second walk, over every live
 	// contact_channel_identity. It is unscoped for the reason given at 106: a
 	// chat-only subject has no address, and the list names their account.
-	modulesTierUnscopedCeiling = 118
+	//
+	// 119: activities.CompanyReachedActivities is a SQL fragment, not a read:
+	// the timeline predicate's arms as a set that starts from the accounts. Its
+	// one caller, company360.LastTouchFor, bounds the company with ScopeClauseFor
+	// and the activity with ActivityDiscoverClause around it.
+	modulesTierUnscopedCeiling = 119
 )

@@ -157,14 +157,14 @@ function locateCollapsed(
   let i = 0;
   while (i < raw.length) {
     const from = i;
-    if (SERVER_SPACE_CHAR.test(raw[i])) {
-      while (i < raw.length && SERVER_SPACE_CHAR.test(raw[i])) i++;
+    if (SERVER_SPACE_CHAR.test(raw.charAt(i))) {
+      while (i < raw.length && SERVER_SPACE_CHAR.test(raw.charAt(i))) i++;
       // A leading or trailing run collapses to nothing, which is what trimming
       // means; only a run BETWEEN two words becomes the single space.
       if (collapsed.length === 0 || i === raw.length) continue;
       collapsed.push(" ");
     } else {
-      collapsed.push(raw[i]);
+      collapsed.push(raw.charAt(i));
       i++;
     }
     starts.push(from);
@@ -172,7 +172,10 @@ function locateCollapsed(
   }
   const at = collapsed.join("").indexOf(needle);
   if (at < 0) return null;
-  return { start: starts[at], end: ends[at + needle.length - 1] };
+  const start = starts[at];
+  const end = ends[at + needle.length - 1];
+  if (start === undefined || end === undefined) return null;
+  return { start, end };
 }
 
 /**

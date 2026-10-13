@@ -101,15 +101,11 @@ export function isScreen(value: string): value is Screen {
 export function parseHash(hash: string): Route {
   // A hash may carry a query of its own ("#/onboarding?utm=x"); the query is
   // not part of the route and must never leak into a screen name.
-  const parts = hash
-    .replace(/^#\/?/, "")
-    .split("?")[0]
-    .split("/")
-    .filter(Boolean);
-  if (parts.length === 0) {
+  const [path = ""] = hash.replace(/^#\/?/, "").split("?");
+  const [screen, id, id2, id3] = path.split("/").filter(Boolean);
+  if (screen === undefined) {
     return { screen: "home" };
   }
-  const [screen, id, id2, id3] = parts;
   // The day's surface moved from `today` to `worklist`, and a rep's bookmark
   // outlives the rename. Answering the old address with the page that replaced
   // it costs one line; answering it with Not Found teaches them the product

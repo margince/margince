@@ -106,10 +106,11 @@ export const DecidingOne: Story = {
     // Every waiting row carries the verb, so the press names WHICH one: the
     // correction, because the pair of answers it opens is the subject here and
     // the removal's read differently. A bare role lookup finds two and rejects.
-    const decide = await canvas.findAllByRole("button", {
+    const [decide] = await canvas.findAllByRole("button", {
       name: /^Decide on request from/,
     });
-    await userEvent.click(decide[0]);
+    if (!decide) throw new Error("no waiting request offers a decision");
+    await userEvent.click(decide);
   },
 };
 

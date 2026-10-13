@@ -9825,8 +9825,47 @@ export interface paths {
          *     next message on; nothing already dropped comes back. A colleague's identity answers
          *     not-found rather than forbidden — the two are the same answer to somebody who may not know
          *     it exists.
+         *
+         *     `POST /capture/owner-identities/{id}/restore` puts it back for ten minutes. After that the
+         *     withdrawn address is deleted, so a private address is kept no longer than an undo needs.
+         *
+         *     Withdrawing an address the product learned (`source: delivered_to`) also stops it being
+         *     learned again from later mail, and that outlasts the ten minutes.
          */
         delete: operations["deleteCaptureOwnerIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/capture/owner-identities/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put back one of your own addresses you just withdrew.
+         * @description Undoes one `deleteCaptureOwnerIdentity`, named by the id it withdrew. No body. The address
+         *     comes back as it was: the same id, `source` and `created_at`, not the restorer and now. It
+         *     then does what declaring it does: open questions about the address close, and mail between
+         *     your own addresses is dropped again from the next message on.
+         *
+         *     Only your own withdrawal, and only for ten minutes: after that the withdrawn address is
+         *     deleted and this answers `404`, as it does for somebody else's and for one already restored.
+         *
+         *     `409 removal_moved_on` when the same address was declared and withdrawn again after this
+         *     withdrawal; put back the newer one instead. `409 identity_declared_again` when the address
+         *     is declared again now, so it is already yours.
+         */
+        post: operations["restoreCaptureOwnerIdentity"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -19499,6 +19538,7 @@ export interface paths {
         /**
          * Archive a corpus and everything filed in it.
          * @description Cascades in one transaction: every live document archives, their chunks are stamped, and any in-flight ingest self-cancels on its next state re-read.
+         *     The set that ships with Margince is refused: the next update would file it again as a new set.
          */
         delete: operations["archiveCorpus"];
         options?: never;
@@ -19525,7 +19565,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -19555,6 +19595,7 @@ export interface paths {
         /**
          * Delete a document, its chunks, its vectors and its stored file.
          * @description A hard delete, not an archive. The stored object goes with the row: an embedding of the text is that text in another shape, and a blob left behind would make the deletion decorative.
+         *     A page that ships with Margince is refused: the next update files it again, so deleting it would only hide it until then.
          */
         delete: operations["deleteCorpusDocument"];
         options?: never;
@@ -21258,6 +21299,12 @@ export interface components {
              * @enum {string}
              */
             provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
+            /**
+             * @description Whether this provider's connector can import older mail at all. False means
+             *     `POST /connectors/{provider}/backfill` and its estimate refuse with `422
+             *     connector_unsupported`, so a client offers no import rather than one that fails.
+             */
+            can_backfill: boolean;
             /** @description Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one. */
             account_label?: string | null;
             /**
@@ -21473,10 +21520,32 @@ export interface components {
              */
             occurred_at?: string;
             /**
+             * @description Up to five addresses outside the workspace on the message that opened the thread, so you
+             *     can tell who a held thread is with. Colleagues are left out. Present exactly when
+             *     `activity_id` is: a message you may not read, or one that was erased, names nobody.
+             */
+            participants?: components["schemas"]["HeldThreadParticipant"][];
+            /**
+             * @description How many addresses outside the workspace that message names, of which `participants`
+             *     shows up to five. Absent when `participants` is.
+             */
+            participant_count?: number;
+            /**
              * @description How many times a verdict has been asked for. This is the outage signal: a pending row
              *     whose attempts stop climbing is a model that stopped answering.
              */
             attempts: number;
+        };
+        /** @description One address outside the workspace on a held thread's opening message. */
+        HeldThreadParticipant: {
+            /** @description The folded address the message named. */
+            address: string;
+            /**
+             * Format: uuid
+             * @description The contact this address belongs to, where you may see it. Absent when there is none
+             *     and when it is not yours to see.
+             */
+            contact_id?: string;
         };
         CaptureAwaitingContactListResponse: {
             data: components["schemas"]["CaptureAwaitingContact"][];
@@ -21520,8 +21589,33 @@ export interface components {
             overruled_kind?: string;
             /** @description Whether your own decision is what governs this sender. */
             overruled: boolean;
-            /** @description Whether a contact actually exists for this address. */
+            /**
+             * @description Whether a live contact you may see holds this address. It follows the same visibility
+             *     rule as opening the contact: a seat without contact read gets false, and a contact
+             *     shared with you counts.
+             */
             record_exists: boolean;
+            /**
+             * Format: uuid
+             * @description The contact `record_exists` found, so a client can open it. Absent whenever
+             *     `record_exists` is false.
+             */
+            contact_id?: string;
+            /**
+             * @description That contact's name (its `full_name`), so a client can show it without fetching the
+             *     contact. Present exactly when `contact_id` is.
+             */
+            contact_name?: string;
+            /**
+             * @description How many messages stored from your mailbox have this address as their counterparty, sent
+             *     or received. Archived mail is not counted.
+             */
+            message_count: number;
+            /**
+             * Format: date-time
+             * @description When the newest of those messages was sent or received. Absent when there are none.
+             */
+            last_seen_at?: string;
             /**
              * Format: date-time
              * @description When this sender's oldest message is destroyed. Present only for a `personal` verdict
@@ -21916,6 +22010,11 @@ export interface components {
             value: string;
             /** Format: date-time */
             created_at: string;
+            /**
+             * @description The display name of the member who added the rule. Null when no member added it (a
+             *     system or connector rule) and when that member has been deactivated.
+             */
+            created_by_name: string | null;
         };
         /**
          * @description Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -39641,6 +39740,12 @@ export interface components {
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
+             * @description The key of each entry in `purposes`, at the same index. A page names a purpose the
+             *     product seeds in its reader's language by its key, and shows the published name of any
+             *     other.
+             */
+            purpose_keys?: string[];
+            /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
@@ -41419,6 +41524,39 @@ export interface components {
              */
             outlook?: components["schemas"]["WeeklyReviewOutlook"][];
             /**
+             * @description Every live member of the team that week, including those whose own week could not be
+             *     read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+             *     kept.
+             */
+            members?: components["schemas"]["TeamWeeklyMember"][];
+            quality?: components["schemas"]["TeamWeeklyQuality"];
+            /**
+             * @description The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+             *     composed or the team's book was refused.
+             */
+            coverage?: components["schemas"]["TeamWeeklyCoverage"][];
+            /**
+             * @description True when any horizon in `coverage` recommends a replan: coverage at risk against a
+             *     named basis.
+             */
+            replan_recommended?: boolean;
+            /**
+             * @description A short paragraph composed from the frozen figures by fixed rules, never by a model.
+             *     Absent on a snapshot frozen before it existed or a week nobody was counted in.
+             */
+            summary?: string;
+            /**
+             * @description LIVE, computed on every read and never frozen: the open input-check findings on deals
+             *     the team's members own now, under the reader's own deal scope. Absent when the read
+             *     did not ask.
+             */
+            exceptions?: components["schemas"]["InputCheck"][];
+            /**
+             * @description LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+             *     period, quietest first. Together with `exceptions` at most 25 items, findings first.
+             */
+            stale_deals?: components["schemas"]["TeamWeeklyStaleDeal"][];
+            /**
              * @description The Monday agenda: every id in `reps`, permuted into the order a lead should raise
              *     them. Derived on read from the same focus ranking that picked each rep's
              *     `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting
@@ -41460,7 +41598,7 @@ export interface components {
             commitments_due: number;
             commitments_kept: number;
         };
-        /** @description One member's week as their lead reads it, with the one thing to raise. */
+        /** @description One member's week as their lead reads it, with what to raise. */
         TeamWeeklyRep: {
             /** Format: uuid */
             user_id: string;
@@ -41475,17 +41613,124 @@ export interface components {
             help_requested: number;
             /**
              * @description Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-             *     celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-             *     outranks any metric, because walking past a request to raise a number is the
-             *     fastest way to teach them not to ask.
+             *     celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+             *     them: a rep who ASKED for help outranks any metric, because walking past a request
+             *     to raise a number is the fastest way to teach them not to ask.
+             *
+             *     `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+             *     replaced it still carry it.
              * @enum {string}
              */
-            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "meetings_without_next_step" | "strong_week" | "quiet_week";
+            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
             /**
              * @description The focus in words, composed from the stored figures — never model-written, so it
              *     cannot say something the snapshot does not hold.
              */
             focus_label: string;
+            /**
+             * @description Every rule that fired for this rep, in the order a lead raises them. The first is
+             *     the focus. A snapshot frozen before the list existed reads its focus as the one
+             *     pattern.
+             */
+            patterns: components["schemas"]["TeamWeeklyPattern"][];
+            /**
+             * @description Up to three stages where this rep's conversion differs most from the team's, over
+             *     the 13 weeks before the week closed. Stages with fewer than five entries on either
+             *     side are left out. Empty when no stage qualified or the snapshot predates it.
+             */
+            funnel?: components["schemas"]["TeamWeeklyFunnelDeviation"][];
+        };
+        TeamWeeklyPattern: {
+            /** @enum {string} */
+            kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
+            /** @description The pattern in words, composed from the stored figures. */
+            label: string;
+        };
+        /**
+         * @description One stage where the rep converts differently from the team. Entries and conversions are
+         *     attributed to the owner at the time of each move. "Converted" is a later move to a won
+         *     stage or to a later stage, compared by the stage order as it was configured when the
+         *     week was assembled.
+         */
+        TeamWeeklyFunnelDeviation: {
+            /** Format: uuid */
+            pipeline_id: string;
+            pipeline_name: string;
+            /** Format: uuid */
+            stage_id: string;
+            stage_name: string;
+            /** @description The stage after this one when the week was assembled; absent for the last. */
+            next_stage_name?: string;
+            rep_entered: number;
+            rep_converted: number;
+            team_entered: number;
+            team_converted: number;
+            /** @description The rep's conversion rate less the team's, in basis points. */
+            deviation_bp: number;
+        };
+        TeamWeeklyMember: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description What they were called that week. */
+            display_name: string;
+            /** @description Whether this member's own week was read into the counts. */
+            measured: boolean;
+        };
+        /**
+         * @description How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+         *     snapshot frozen before it was measured, which is not zero.
+         */
+        TeamWeeklyQuality: {
+            proposals_accepted?: number;
+            proposals_rejected?: number;
+            /**
+             * @description Changes an agent, a connector or the system made that a member of the team undid
+             *     inside the week.
+             */
+            auto_change_reversals?: number;
+        };
+        /**
+         * @description Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+         *     coverage at risk against the named basis, never as a target: the product has none.
+         *     Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+         */
+        TeamWeeklyCoverage: {
+            /** @enum {string} */
+            period_kind: "month" | "quarter";
+            /** @enum {string} */
+            basis?: "manager_call" | "historical_median";
+            /**
+             * @description Why there is no answer. `not_authorized` is a standing call the member who closed the
+             *     week could not read, which is not the same as no call.
+             * @enum {string}
+             */
+            absent?: "insufficient_basis" | "insufficient_history" | "not_authorized";
+            /** Format: int64 */
+            reference_landing_minor?: number;
+            /** Format: int64 */
+            remaining_to_support_minor?: number;
+            /** Format: int64 */
+            needed_open_minor?: number;
+            /** Format: int64 */
+            current_open_minor?: number;
+            /** Format: int64 */
+            coverage_bp?: number;
+            base_currency: string;
+            /**
+             * @description True when coverage is at risk against a named basis: under 8000 basis points of what
+             *     the basis needs. Never true without a basis.
+             */
+            replan_recommended: boolean;
+        };
+        TeamWeeklyStaleDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: date-time */
+            last_activity_at: string;
+            days_quiet: number;
         };
         /** @description A week's lessons and whether anybody looked for them. */
         WeeklyReviewLearnings: {
@@ -44845,6 +45090,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits. */
+            shipped: boolean;
             description?: string | null;
             /** @description What this corpus covers, in the workspace's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label. */
             topic_statement: string;
@@ -44875,28 +45122,34 @@ export interface components {
             chunks_total: number;
             chunks_embedded: number;
             documents_total: number;
-            /**
-             * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
-             *     searchable rather than shown a bare count.
-             *
-             *     - `no_embedding_model`: this installation binds no embedding model, so no passage
-             *       gets a vector and nothing is searchable. It is the same answer as
-             *       `settings_availability.embedding_reindex` being false on `/me`, read from the
-             *       same embed lane.
-             *     - `indexing`: a model is bound and work is still owed: a document is queued or
-             *       being read, a re-embed is running, or some passage has no vector under the
-             *       model bound now.
-             *     - `complete`: every live passage carries a vector under the model bound now.
-             * @enum {string}
-             */
-            embed_state: "no_embedding_model" | "indexing" | "complete";
+            embed_state: components["schemas"]["KnowledgeEmbedState"];
         };
+        /**
+         * @description Why `chunks_embedded` stands where it does, so a reader is told why passages are not
+         *     searchable rather than shown a bare count. A corpus and each of its documents answer
+         *     by one rule, over their own passages.
+         *
+         *     - `no_embedding_model`: this installation binds no embedding model, so no passage
+         *       gets a vector and nothing is searchable. It is the same answer as
+         *       `settings_availability.embedding_reindex` being false on `/me`, read from the
+         *       same embed lane.
+         *     - `indexing`: a model is bound and work is still owed: a document is queued or
+         *       being read, a re-embed is running, or some passage has no vector under the
+         *       model bound now.
+         *     - `complete`: every live passage carries a vector under the model bound now.
+         * @enum {string}
+         */
+        KnowledgeEmbedState: "no_embedding_model" | "indexing" | "complete";
         KnowledgeDocument: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             corpus_id: string;
             filename: string;
+            /** @description The heading a page Margince ships opens with, so a reader sees its name rather than its filename. Null for an uploaded document, which the filename names. */
+            title: string | null;
+            /** @description True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again. */
+            shipped: boolean;
             content_type: string;
             /** Format: int64 */
             byte_size: number;
@@ -44905,6 +45158,9 @@ export interface components {
             /** @description Why it failed, in words the uploader can act on. Null unless failed. */
             ingest_detail?: string | null;
             chunk_count?: number;
+            /** @description This document's passages that carry a vector, counted as the corpus coverage counts them, so a corpus's documents sum to its own figure. */
+            chunks_embedded: number;
+            embed_state: components["schemas"]["KnowledgeEmbedState"];
             /** Format: date-time */
             created_at: string;
         };
@@ -61331,6 +61587,41 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    restoreCaptureOwnerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The identity, back. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureOwnerIdentity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The address cannot be put back: it was declared and withdrawn again since (`removal_moved_on`), or it is declared again now (`identity_declared_again`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     deleteWorkspaceEmailDomain: {
         parameters: {
             query?: never;
@@ -74209,6 +74500,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `corpus_shipped`: the set ships with Margince and cannot be archived. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     updateCorpus: {
@@ -74306,6 +74606,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `corpus_shipped`: the set ships with Margince, and only Margince files pages in it. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationError"];
@@ -74359,6 +74668,15 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            /** @description `document_shipped`: the document is a handbook page that ships with Margince and cannot be deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     askCorpus: {

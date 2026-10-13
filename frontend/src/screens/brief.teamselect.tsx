@@ -49,7 +49,7 @@ export function BriefTeamSelect({
   const chosen = options.some((option) => option.value === asked)
     ? asked
     : !asked && options.length === 1
-      ? options[0].value
+      ? options[0]?.value
       : undefined;
   return (
     <SurfaceState

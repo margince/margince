@@ -123,7 +123,7 @@ export function OfferTemplatesAdmin() {
     return unwrap(
       await api.POST("/offer-templates", {
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           locale: values.locale || "de-DE",
           is_default: values.is_default === "true",
           layout: {
