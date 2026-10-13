@@ -54,7 +54,7 @@ func (w *importCommitWorker) Work(ctx context.Context, job *river.Job[ImportComm
 // every slice re-checks the owner and tag grants, then walks from the cursor.
 func (w *importCommitWorker) commit(ctx context.Context, slice importSlice) (bool, error) {
 	if w.blobs == nil {
-		return false, importRunStop{cause: migration.CauseStorageUnavailable, err: errNoObjectStore}
+		return false, migration.RunStop{Cause: migration.CauseStorageUnavailable, Err: errNoObjectStore}
 	}
 	run := slice.run
 	if run.Mapping == nil {
@@ -95,7 +95,7 @@ func createImportTags(ctx context.Context, slice importSlice, tags *tagResolver)
 		if errors.Is(err, migration.ErrSuperseded) {
 			return err
 		}
-		return importRunStop{cause: importTagsFailedCause, err: err}
+		return migration.RunStop{Cause: importTagsFailedCause, Err: err}
 	}
 	return flushPhase(ctx, slice, migration.PhaseImporting)
 }

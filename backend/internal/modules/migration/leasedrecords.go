@@ -123,6 +123,6 @@ func (r *leasedRecords) fail(ctx context.Context, wk *walk, cause error) error {
 		if err := flushInTx(ctx, tx, r.lease, wk.flush()); err != nil {
 			return err
 		}
-		return failLeaseInTx(ctx, tx, r.lease, stopCause(cause))
+		return failLeaseInTx(ctx, tx, r.lease, StopCause(cause))
 	})
 }

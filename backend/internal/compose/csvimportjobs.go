@@ -143,15 +143,6 @@ type importSliceResult struct {
 	stopped error
 }
 
-// importRunStop stops an attempt with a cause the run row carries.
-type importRunStop struct {
-	cause string
-	err   error
-}
-
-func (s importRunStop) Error() string { return s.err.Error() }
-func (s importRunStop) Unwrap() error { return s.err }
-
 // importSlice is one claimed slice, handed to the part commit and undo differ in.
 type importSlice struct {
 	db     *database.DB
@@ -271,21 +262,7 @@ func (s importSlicer) settle(
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
 		return importSliceResult{stopped: err}, s.stop(system, runs, lease, migration.CauseOverBudget)
 	}
-	return importSliceResult{stopped: err}, s.stop(system, runs, lease, importStopCause(err))
-}
-
-// importStopCause is the sentence the run carries for the error that stopped
-// it. The error itself can hold a driver message, so it goes to the log only.
-func importStopCause(err error) string {
-	var stop importRunStop
-	switch {
-	case errors.As(err, &stop):
-		return stop.cause
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return migration.CausePermission
-	default:
-		return migration.CauseStopped
-	}
+	return importSliceResult{stopped: err}, s.stop(system, runs, lease, migration.StopCause(err))
 }
 
 // stop writes why the attempt stopped, on a context of its own: the slice's may

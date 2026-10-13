@@ -11,22 +11,30 @@ package migration
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// refusingWriters lands rows in the identity map and fails on one of them.
+// refusingWriters lands rows in the identity map and fails on one of them,
+// with refusal, or errRowRefused when that is nil.
 type refusingWriters struct {
 	*mapWriters
-	refuse string
+	refuse  string
+	refusal error
 }
 
 var errRowRefused = errors.New("the row could not be written")
 
 func (w *refusingWriters) Ensure(ctx context.Context, object string, row Row) (EnsureResult, error) {
 	if row.ExternalID == w.refuse {
+		if w.refusal != nil {
+			return EnsureResult{}, w.refusal
+		}
 		return EnsureResult{}, errRowRefused
 	}
 	return w.mapWriters.Ensure(ctx, object, row)
@@ -91,6 +99,35 @@ func TestARowThatFailsFailsTheLeasedRunWithWhatLandedBeforeIt(t *testing.T) {
 	if got.Checkpoint != 1 || createdOf(got) != 1 {
 		t.Errorf("the failed run reads checkpoint %d with %d created, want the one row before the failure kept",
 			got.Checkpoint, createdOf(got))
+	}
+}
+
+// A run the walk stopped carries the sentence for its cause, and never the
+// error's own text, which can hold SQL.
+func TestARunTheWalkStoppedCarriesTheSentenceForItsCause(t *testing.T) {
+	for name, tc := range map[string]struct {
+		refusal error
+		want    string
+	}{
+		"a grant the approver lost": {fmt.Errorf("creating company: %w", apperrors.ErrPermissionDenied), CausePermission},
+		"a named stop":              {RunStop{Cause: CauseStorageUnavailable, Err: errRowRefused}, CauseStorageUnavailable},
+		"anything else":             {errors.New(`ERROR: relation "contact" does not exist (SQLSTATE 42P01)`), CauseStopped},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+			s := NewRunStore(db)
+			l := approvedRun(ctx, t, s)
+			if _, err := s.Claim(ctx, l); err != nil {
+				t.Fatalf("Claim: %v", err)
+			}
+			w := &refusingWriters{mapWriters: newMapWriters(s, l.Run), refuse: "company-2", refusal: tc.refusal}
+			if _, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, twoObjectSource(), Budget{}); !errors.Is(err, tc.refusal) {
+				t.Fatalf("the slice = %v, want the row's error", err)
+			}
+			if got := mustGetStaged(ctx, t, s, l.Run); got.Status != StatusFailed || got.Error != tc.want {
+				t.Errorf("the run reads %s with %q, want failed with %q", got.Status, got.Error, tc.want)
+			}
+		})
 	}
 }
 

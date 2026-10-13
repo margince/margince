@@ -251,6 +251,9 @@ func TestAShutdownFlushesAndSnoozesWithoutFailing(t *testing.T) {
 	if stopped.Checkpoint == rows {
 		t.Fatal("the commit finished before the shutdown, so the stop was never tested")
 	}
+	if _, claimed := runLease(t, e, run.ID); claimed != nil {
+		t.Fatalf("the stopped slice left the run claimed by attempt %d, want it queued", *claimed)
+	}
 	var state rivertype.JobState
 	if err := e.Owner.QueryRow(t.Context(), `SELECT state FROM river_job WHERE kind = $1 AND args->>'run_id' = $2`,
 		compose.ImportCommitArgs{}.Kind(), run.ID).Scan(&state); err != nil {

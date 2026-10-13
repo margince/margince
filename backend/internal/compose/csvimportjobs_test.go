@@ -85,25 +85,18 @@ func TestEachImportAttemptIsItsOwnJob(t *testing.T) {
 	}
 }
 
-// The branches of settle that write nothing. The ones that record a cause need
-// a run row, so they are tested against a database.
+// The branches of settle that write nothing. The ones that record a cause or
+// hand the attempt back to its queue need a run row, so a database tests them.
 func TestASliceThatWritesNothingSettlesWithoutAFailure(t *testing.T) {
 	t.Parallel()
 	slicer := importSlicer{}
-	stopped, cancel := context.WithCancel(context.Background())
-	cancel()
-	for name, tc := range map[string]struct {
-		ctx  context.Context
-		err  error
-		want importSliceEnd
-	}{
-		"done":                   {context.Background(), nil, importSliceSettled},
-		"a newer attempt":        {context.Background(), fmt.Errorf("flush: %w", migration.ErrSuperseded), importSliceSettled},
-		"a worker shutting down": {stopped, fmt.Errorf("slice: %w", context.Canceled), importSliceContinues},
+	for name, err := range map[string]error{
+		"done":            nil,
+		"a newer attempt": fmt.Errorf("flush: %w", migration.ErrSuperseded),
 	} {
-		result, err := slicer.settle(tc.ctx, tc.ctx, nil, migration.Lease{}, tc.err)
-		if err != nil || result != (importSliceResult{end: tc.want}) {
-			t.Errorf("%s: settle = %+v, %v; want %v with no stop, nil", name, result, err, tc.want)
+		result, err := slicer.settle(context.Background(), context.Background(), nil, migration.Lease{}, err)
+		if err != nil || result != (importSliceResult{}) {
+			t.Errorf("%s: settle = %+v, %v; want settled with no stop, nil", name, result, err)
 		}
 	}
 }
@@ -115,11 +108,11 @@ func TestAStoppedRunCarriesASentenceNeverItsError(t *testing.T) {
 		want string
 	}{
 		"a lost grant":      {fmt.Errorf("claim: %w", apperrors.ErrPermissionDenied), migration.CausePermission},
-		"a named stop":      {importRunStop{cause: importTagsFailedCause, err: errors.New("tag store: duplicate key")}, importTagsFailedCause},
+		"a named stop":      {migration.RunStop{Cause: importTagsFailedCause, Err: errors.New("tag store: duplicate key")}, importTagsFailedCause},
 		"anything else":     {errors.New("pq: relation import_record_map does not exist"), migration.CauseStopped},
-		"a wrapped refusal": {fmt.Errorf("slice: %w", importRunStop{cause: migration.CauseStorageUnavailable, err: errNoObjectStore}), migration.CauseStorageUnavailable},
+		"a wrapped refusal": {fmt.Errorf("slice: %w", migration.RunStop{Cause: migration.CauseStorageUnavailable, Err: errNoObjectStore}), migration.CauseStorageUnavailable},
 	} {
-		if got := importStopCause(tc.err); got != tc.want {
+		if got := migration.StopCause(tc.err); got != tc.want {
 			t.Errorf("%s: cause = %q, want %q", name, got, tc.want)
 		}
 	}
@@ -128,7 +121,7 @@ func TestAStoppedRunCarriesASentenceNeverItsError(t *testing.T) {
 func TestACommitOnAWorkerWithNoObjectStoreStopsWithThatCause(t *testing.T) {
 	t.Parallel()
 	_, err := (&importCommitWorker{}).commit(context.Background(), importSlice{})
-	if got := importStopCause(err); got != migration.CauseStorageUnavailable {
+	if got := migration.StopCause(err); got != migration.CauseStorageUnavailable {
 		t.Fatalf("cause = %q (err %v), want %q", got, err, migration.CauseStorageUnavailable)
 	}
 }

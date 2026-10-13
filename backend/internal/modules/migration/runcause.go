@@ -6,6 +6,8 @@ package migration
 import (
 	"context"
 	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The sentences a stopped run carries. The error that stopped it can hold a
@@ -38,9 +40,27 @@ const (
 	CauseDraftExpired = "this import was left unfinished too long, so it was closed and its file deleted"
 )
 
-func stopCause(cause error) string {
-	if errors.Is(cause, context.DeadlineExceeded) {
+// RunStop stops an attempt with the sentence its run carries.
+type RunStop struct {
+	Cause string
+	Err   error
+}
+
+func (s RunStop) Error() string { return s.Err.Error() }
+func (s RunStop) Unwrap() error { return s.Err }
+
+// StopCause is the one sentence a run carries for the error that stopped it,
+// whichever of the walk or its job records the stop.
+func StopCause(err error) string {
+	var stop RunStop
+	switch {
+	case errors.As(err, &stop):
+		return stop.Cause
+	case errors.Is(err, context.DeadlineExceeded):
 		return CauseOverBudget
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return CausePermission
+	default:
+		return CauseStopped
 	}
-	return CauseStopped
 }
