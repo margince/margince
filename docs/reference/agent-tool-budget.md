@@ -45,7 +45,7 @@ listing budget above; whether each attached tool is one its goal needs is a revi
 judgement. An MCP client connecting from outside is served the whole catalog by
 `tools/list`, but that is its own agent's window rather than a run of this engine.
 
-Before any tool is listed the frame itself costs **586 tokens**: the output contract,
+Before any tool is listed the frame itself costs **597 tokens**: the output contract,
 the rules and the prompt fence. It is shown here because moving a rule from each
 tool's schema into the frame costs one sentence per run instead of one per tool.
 It is part of every agent's per-step figure below, so a frame that grows a paragraph
@@ -55,8 +55,8 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 56 | 1917 | 1315 | 3819 | 11% | 19391 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 56 | 2915 | 1985 | 5486 | 16% | 17724 | 5 | 6 |
+| `morning_brief` | 5 | 5 of 56 | 1917 | 1315 | 3830 | 11% | 19380 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 56 | 2915 | 1985 | 5497 | 16% | 17713 | 5 | 6 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 56 |  | 24778 |  |  | 75% |  |  |  |
 
 ### `morning_brief`
@@ -73,8 +73,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 3819 tokens on every step (1917 listing, 1315 step schema), leaving
-19391 of its budget and 28949 tokens of the
+Attaches 5 tools and pays 3830 tokens on every step (1917 listing, 1315 step schema), leaving
+19380 of its budget and 28938 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5486 tokens on every step (2915 listing, 1985 step schema), leaving
-17724 of its budget and 27282 tokens of the
+Attaches 7 tools and pays 5497 tokens on every step (2915 listing, 1985 step schema), leaving
+17713 of its budget and 27271 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`

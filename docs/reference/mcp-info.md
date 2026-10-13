@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 56 |
 | Resources | 9 |
-| Tool catalog | 172.2 KB |
+| Tool catalog | 173.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 44986 |
+| Approx. wire tokens | 45179 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -30,10 +30,10 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 58.6 KB | 33% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.4 KB | 28% | Yes, every step |
-| Input schemas | 51.8 KB | 30% | Yes, every step |
+| Descriptions (incl. governance clause) | 48.4 KB | 27% | Yes, every step |
+| Input schemas | 52.6 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **100.3 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **101.0 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -60,11 +60,11 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.4 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.1 KB |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.5 KB |
+| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 3.2 KB |
+| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.6 KB |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 6.0 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 3.0 KB |
-| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.2 KB |
+| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 2.3 KB |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`change_tags`](#change_tags) | Change tags |  |  | 2.2 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
@@ -84,7 +84,7 @@ descriptions and input schemas are what each step pays for.
 | [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 2.0 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 9.0 KB |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 5.8 KB |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.5 KB |
+| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 3.6 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.2 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 2.4 KB |
 | [`read_brief`](#read_brief) | Read the morning brief | yes |  | 3.1 KB |
@@ -100,7 +100,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_tags`](#read_tags) | Read tags | yes |  | 1.4 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.3 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.5 KB |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 1.8 KB |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 1.9 KB |
 | [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 3.5 KB |
 | [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 3.3 KB |
 | [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 3.3 KB |
@@ -308,7 +308,7 @@ the retry that carries the approval has answered. (Runs immediately; requires pa
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -466,7 +466,7 @@ is a correction rather than an addition. (Runs immediately; requires passport sc
   "additionalProperties": false,
   "properties": {
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -647,7 +647,7 @@ has answered. (Runs immediately; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1044,7 +1044,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     }
@@ -1231,7 +1231,7 @@ meeting. Keep the recorded activity id. Do not describe a record-only booking as
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -1434,7 +1434,7 @@ passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2104,7 +2104,7 @@ until the retry carrying it has answered. (Runs immediately; requires passport s
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2239,7 +2239,7 @@ and its new version from the answer. (Runs immediately; requires passport scope 
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2467,7 +2467,7 @@ passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -2720,7 +2720,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3175,7 +3175,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "object"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3422,7 +3422,7 @@ reminder, no deal move; unlinked, it sits on no timeline. log_activity is for wh
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3617,7 +3617,7 @@ where both ids come from. If the proposal is your OWN refused call, approving do
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3721,7 +3721,7 @@ requires passport scope "draft".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3826,7 +3826,7 @@ requires passport scope "enrich".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -3969,7 +3969,7 @@ scope "send".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -4899,7 +4899,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -5104,7 +5104,7 @@ TARGET is the word that survives; read both with read_tags first. Needs the tag.
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -6179,7 +6179,7 @@ requires passport scope "write".)
       "type": "array"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -6439,7 +6439,7 @@ decided per call from its arguments; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -8480,7 +8480,7 @@ passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -8645,7 +8645,7 @@ call from its arguments; requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -8805,7 +8805,7 @@ requires passport scope "write".)
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -10647,7 +10647,7 @@ the new conversation's activity_id. (Runs immediately; requires passport scope "
       "type": "object"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
@@ -10762,7 +10762,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
       "type": "string"
     },
     "idempotency_key": {
-      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
