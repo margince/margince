@@ -190,6 +190,10 @@ export type EdgeOption = {
 // employment (→company) and deal_stakeholder (→deal); a company anchors employment
 // (→contact) and the three company↔company kinds (→counterparty company). Offering the
 // rest would only earn an endpoint-shape 422.
+function noKindFor(kind: string | undefined): never {
+  throw new Error(`no ${kind ?? "relationship"} kind for this scope`);
+}
+
 export function edgeOptions(
   scope: RelationshipScope,
 ): [EdgeOption, ...EdgeOption[]] {
@@ -299,7 +303,7 @@ export function AddRelationshipAction({
   const options = only
     ? all.filter((option) => option.kind === only.kind)
     : all;
-  const defaultOption = options[0] ?? all[0];
+  const defaultOption = options[0] ?? noKindFor(only?.kind);
   const scopeWords = scopeCopy(scope);
   const copy = only
     ? { ...scopeWords, add: only.label, singleKind: true }

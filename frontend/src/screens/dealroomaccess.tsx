@@ -18,6 +18,7 @@ import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { humanizeToken } from "./audit";
 import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
 import "./dealroomaccess.css";
@@ -213,7 +214,9 @@ function ParticipantRow({
           <span className="t-caption"> · {participant.email}</span>
         </p>
         <p className="t-caption">
-          {capability && t(CAPABILITY_LABELS[capability])}
+          {capability
+            ? t(CAPABILITY_LABELS[capability])
+            : humanizeToken(participant.capability)}
           {" · "}
           {revoked
             ? t("access.state.revoked")

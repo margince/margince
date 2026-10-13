@@ -187,7 +187,8 @@ export const OneRowEdited: Story = {
     await askInWords(canvas);
     await canvas.findByText("Keep all");
     const [value] = canvas.getAllByLabelText("Value");
-    if (value) await userEvent.type(value, " and Austria");
+    if (!value) throw new Error("the proposal has no value field");
+    await userEvent.type(value, " and Austria");
   },
 };
 

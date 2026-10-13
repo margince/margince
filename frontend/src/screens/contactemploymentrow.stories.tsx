@@ -102,7 +102,8 @@ export const VerbsOpen: Story = {
     const [first] = await canvas.findAllByRole("button", {
       name: "More actions",
     });
-    if (first) await userEvent.click(first);
+    if (!first) throw new Error("no row offers more actions");
+    await userEvent.click(first);
   },
 };
 

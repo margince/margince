@@ -151,7 +151,8 @@ export const UnpricedReceipt: Story = {
     const canvas = within(canvasElement);
     const receipts = await canvas.findAllByRole("button", { name: "Evidence" });
     const [receipt] = receipts;
-    if (receipt) await userEvent.click(receipt);
+    if (!receipt) throw new Error("no rate shows its evidence");
+    await userEvent.click(receipt);
   },
 };
 
