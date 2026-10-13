@@ -3,14 +3,14 @@
 
 /**
  * The corpus, layout reading, tag resolution and dialog set that
- * dialogtitle.test.ts and dialogrows.test.ts share.
+ * dialogtitle.test.ts and the dialog-row gate (dialogrows.ts) share.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { classVariants } from "../../src/testing/classnames";
+import { classVariants, type Given } from "../../src/testing/classnames";
 import { rulesIn, withoutComments } from "../../src/testing/css";
 import {
   alternativesOf,
@@ -310,66 +310,14 @@ export const attrs = (n: ts.Node) => {
 };
 export const attr = (n: ts.Node, name: string) =>
   attrs(n).find((a) => a.name.getText() === name);
-// The object literals a spread can hand, through parentheses and conditions.
-const spreadArms = (x: ts.Expression): ts.ObjectLiteralExpression[] => {
-  if (ts.isParenthesizedExpression(x)) return spreadArms(x.expression);
-  if (ts.isObjectLiteralExpression(x)) return [x];
-  if (!ts.isConditionalExpression(x)) return [];
-  const [a, b] = [spreadArms(x.whenTrue), spreadArms(x.whenFalse)];
-  return a.length > 0 && b.length > 0 ? [...a, ...b] : [];
-};
-type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
-const memberKey = (m: Member) => {
-  const key = m.name;
-  if (!key || ts.isComputedPropertyName(key)) return undefined;
-  return ts.isJsxNamespacedName(key) ? key.getText() : key.text;
-};
-const initOf = (m: Member) => {
+export type Member = ts.JsxAttributeLike | ts.ObjectLiteralElementLike;
+/** A member's value as written, a JSX attribute's expression unwrapped. */
+export const initOf = (m: Member) => {
   if (ts.isShorthandPropertyAssignment(m)) return m.name;
   if (ts.isPropertyAssignment(m)) return m.initializer;
   const init = ts.isJsxAttribute(m) ? m.initializer : undefined;
   return init && ts.isJsxExpression(init) ? init.expression : init;
 };
-type Reading = { values: ts.Expression[]; open: boolean } | "any";
-// What one member hands `name`; `open` when it may leave the prop unset.
-function memberReading(m: Member, name: string): Reading {
-  if (ts.isJsxSpreadAttribute(m) || ts.isSpreadAssignment(m)) {
-    const arms = spreadArms(m.expression).map((o) =>
-      lastNamed(o.properties, name),
-    );
-    const read = arms.filter((r) => r !== "any");
-    if (arms.length === 0 || read.length < arms.length) return "any";
-    const values = read.flatMap((r) => r.values);
-    return { values, open: read.some((r) => r.open) };
-  }
-  const key = memberKey(m);
-  if (key === undefined) return "any";
-  if (key !== name) return { values: [], open: true };
-  const x = initOf(m);
-  return x ? { values: [x], open: false } : "any";
-}
-// The last member naming `name` wins, as JSX and object spreads apply in
-// source order.
-function lastNamed(members: readonly Member[], name: string): Reading {
-  const values: ts.Expression[] = [];
-  for (const m of [...members].reverse()) {
-    const read = memberReading(m, name);
-    if (read === "any") return "any";
-    values.push(...read.values);
-    if (!read.open) return { values, open: false };
-  }
-  return { values, open: true };
-}
-/** Every value a call may hand prop `name`, `undefined` for a path that hands
- * none; "any" when a bare attribute or an unreadable spread hides the value. */
-export function handedTo(
-  e: ts.Node,
-  name: string,
-): (ts.Expression | undefined)[] | "any" {
-  const read = lastNamed(opening(e)?.attributes.properties ?? [], name);
-  if (read === "any") return "any";
-  return read.open ? [...read.values, undefined] : read.values;
-}
 const below = new WeakMap<ts.Node, readonly ts.Node[]>();
 const elementsBelow = new WeakMap<ts.Node, readonly ts.Node[]>();
 export function descendants(root: ts.Node): readonly ts.Node[] {
@@ -396,19 +344,22 @@ export const enclosing = (n: ts.Node) => {
 /** The expressions an id-carrying attribute is written in, so two attributes
  * naming one id can be matched by their source text. */
 export function idParts(a: ts.JsxAttribute | undefined): string[] {
-  const init = a?.initializer;
-  const e = init && ts.isJsxExpression(init) ? init.expression : init;
+  const e = a && initOf(a);
   if (e && ts.isTemplateExpression(e)) {
     return e.templateSpans.map((span) => span.expression.getText());
   }
   return e ? [e.getText()] : [];
 }
+/** Each branch of the class list an element's `className` produces. */
+export const variantsOf = (n: ts.Node, given?: Given) =>
+  classVariants(
+    n.getSourceFile(),
+    attr(n, "className")?.initializer,
+    16,
+    given,
+  );
 /** Every class any branch of the element's `className` can carry. */
-export const classes = (n: ts.Node) => [
-  ...new Set(
-    classVariants(n.getSourceFile(), attr(n, "className")?.initializer).flat(),
-  ),
-];
+export const classes = (n: ts.Node) => [...new Set(variantsOf(n).flat())];
 export const within = (n: ts.Node, outer: ts.Node) =>
   n.getSourceFile() === outer.getSourceFile() &&
   outer.pos <= n.pos &&
@@ -466,7 +417,8 @@ function moduleFor(from: string, spec: string): string | null {
   const file = target && join(frontendDir, target);
   return file && existsSync(file) ? file : null;
 }
-// Where a component tag is defined, through imports, re-exports and renames.
+// Where a component tag is defined, through imports, re-exports, renames and
+// `const B = A`.
 const defined = new WeakMap<ts.SourceFile, Map<string, ts.Node | undefined>>();
 export function definition(
   source: ts.SourceFile,
@@ -484,6 +436,10 @@ function follow(
 ): ts.Node | undefined {
   const local = declarations(source).get(name);
   const link = bindings(source).get(name);
+  const to = local && ts.isVariableDeclaration(local) && local.initializer;
+  if (to && ts.isIdentifier(to) && hops > 0) {
+    return follow(source, to.text, hops - 1);
+  }
   if (local || hops === 0 || !link) return local;
   const renamed = link.spec === "" && link.name !== name;
   if (link.spec === "" && !renamed) return undefined;
@@ -516,33 +472,66 @@ const propsOf = (def: ts.Node) => {
   const fn = fnOf(def);
   return ts.isFunctionLike(fn) ? fn.parameters[0]?.name : undefined;
 };
-/** The props a component destructures, and `children` always. */
-export function propNames(def: ts.Node): Set<string> {
+// A destructured prop by the name a call hands it: `{ tone: t }` is `tone`.
+const propKey = (b: ts.BindingElement) => (b.propertyName ?? b.name).getText();
+// The name a member or attribute is spelled with, not a value read:
+// `cfg.intent`, `{ intent: x }`, `intent="…"`, a method or field.
+const spelled = (e: ts.Identifier) => {
+  const p = e.parent;
+  return (
+    (ts.isPropertyAccessExpression(p) ||
+      ts.isPropertyAssignment(p) ||
+      ts.isJsxAttribute(p) ||
+      ts.isMethodDeclaration(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isPropertySignature(p)) &&
+    p.name === e
+  );
+};
+const readers = new WeakMap<ts.Node, (e: ts.Node) => string | undefined>();
+/** The prop of `def` an expression reads: a destructured binding by its local
+ * name, `children` always, or `props.x`. */
+export function propReadBy(def: ts.Node) {
+  const known = readers.get(def);
+  if (known) return known;
   const first = propsOf(def);
-  const names = new Set(["children"]);
+  const locals = new Map([["children", "children"]]);
   if (first && ts.isObjectBindingPattern(first)) {
-    for (const b of first.elements) names.add(b.name.getText());
+    for (const b of first.elements) locals.set(b.name.getText(), propKey(b));
   }
-  return names;
-}
-// The names a component is handed: its destructured props, or `props.x`.
-export function givenTo(def: ts.Node) {
-  const first = propsOf(def);
-  const names = propNames(def);
   const props = first && ts.isIdentifier(first) ? first.text : undefined;
-  return (e: ts.Node, name?: string) =>
-    (ts.isIdentifier(e) &&
-      names.has(e.text) &&
-      (name === undefined || e.text === name)) ||
-    (ts.isPropertyAccessExpression(e) &&
-      e.expression.getText() === props &&
-      (name === undefined || e.name.text === name));
+  const read = (e: ts.Node) => {
+    if (ts.isIdentifier(e)) return spelled(e) ? undefined : locals.get(e.text);
+    if (!ts.isPropertyAccessExpression(e)) return undefined;
+    return e.expression.getText() === props ? e.name.text : undefined;
+  };
+  readers.set(def, read);
+  return read;
+}
+// Whether an expression reads a prop `def` is handed, or that prop `name`.
+export function givenTo(def: ts.Node) {
+  const read = propReadBy(def);
+  return (e: ts.Node, name?: string) => {
+    const prop = read(e);
+    return prop !== undefined && (name === undefined || prop === name);
+  };
+}
+/** Whether spreading `x` hands on what `def` is handed as `name`: its props
+ * object, or the rest it destructures `name` into. */
+export function spreads(def: ts.Node, x: ts.Node, name?: string): boolean {
+  const first = propsOf(def);
+  if (!first || !ts.isIdentifier(x)) return false;
+  if (ts.isIdentifier(first)) return first.text === x.text;
+  if (!ts.isObjectBindingPattern(first)) return false;
+  const rest = first.elements.find((b) => !!b.dotDotDotToken);
+  if (!rest || rest.name.getText() !== x.text) return false;
+  return !first.elements.some((b) => b !== rest && propKey(b) === name);
 }
 /** The literal a component's destructured prop defaults to. */
 export function presetOf(def: ts.Node, name: string): string | undefined {
   const first = propsOf(def);
   if (!first || !ts.isObjectBindingPattern(first)) return undefined;
-  const b = first.elements.find((e) => e.name.getText() === name);
+  const b = first.elements.find((e) => propKey(e) === name);
   return b?.initializer && ts.isStringLiteral(b.initializer)
     ? b.initializer.text
     : undefined;
@@ -784,10 +773,14 @@ const wrapsChildren = (text: string, name: string) =>
   [...text.matchAll(new RegExp(`<${name}\\b[\\s\\S]*?</${name}>`, "g"))].some(
     (m) => /\{\s*(?:props\.)?children\s*\}/.test(m[0]),
   );
-const aliases = (text: string, names: Set<string>) =>
-  [...text.matchAll(/\b(\w+) as (\w+)\b/g)]
+const aliases = (text: string, names: Set<string>) => [
+  ...[...text.matchAll(/\b(\w+) as (\w+)\b/g)]
     .filter((m) => names.has(m[1]))
-    .map((m) => m[2]);
+    .map((m) => m[2]),
+  ...[...text.matchAll(/\bconst\s+(\w+)\s*(?::[^=]*)?=\s*(\w+)\s*;/g)]
+    .filter((m) => names.has(m[2]))
+    .map((m) => m[1]),
+];
 // A name a file can spell as a tag: one it declares, imports or renames to.
 const spells = (text: string, name: string) =>
   new RegExp(

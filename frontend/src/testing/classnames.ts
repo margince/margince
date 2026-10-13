@@ -68,10 +68,10 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
   return out;
 }
 
-/** The values a name the expression reads can hold, where the caller knows
- * them: a component's props as one call site hands them. */
+/** The values a prop the expression reads (`size`, `props.size`) can hold,
+ * where the caller knows them: a component's props as one call hands them. */
 export type Given = (
-  name: string,
+  read: ts.Expression,
 ) => readonly (string | undefined)[] | undefined;
 
 /** One class list per branch; a token with an unread part comes back as a
@@ -107,8 +107,10 @@ function readerFor(
   given?: Given,
 ) {
   const bound = bindingsIn(source);
-  const handed = (n: ts.Node) =>
-    ts.isIdentifier(n) && !bound.has(n.text) ? given?.(n.text) : undefined;
+  const handed = (n: ts.Node) => {
+    if (ts.isIdentifier(n)) return bound.has(n.text) ? undefined : given?.(n);
+    return ts.isPropertyAccessExpression(n) ? given?.(n) : undefined;
+  };
   // Which way a test can go: both, unless it names a handed value.
   const ways = (test: ts.Expression) => {
     const values = handed(test);
@@ -130,14 +132,14 @@ function readerFor(
       [unit],
     );
   const followed = <T>(
-    n: ts.Identifier,
+    n: ts.Identifier | ts.PropertyAccessExpression,
     read: (e: ts.Node) => T[],
     none: T[],
     value: (v: string) => T,
   ) => {
     const values = handed(n);
     if (values) return values.map((v) => value(v ?? ""));
-    const initializer = bound.get(n.text);
+    const initializer = ts.isIdentifier(n) ? bound.get(n.text) : undefined;
     if (!initializer || following.has(initializer)) return none;
     following.add(initializer);
     const out = read(initializer);
@@ -155,7 +157,9 @@ function readerFor(
       ]);
       return product([[n.head.text], ...spans], (a, b) => a + b, "");
     }
-    if (ts.isIdentifier(n)) return followed(n, texts, [CUT], (v) => v);
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, texts, [CUT], (v) => v);
+    }
     if (ts.isConditionalExpression(n)) return chosen(n).flatMap(texts);
     if (ts.isParenthesizedExpression(n)) return texts(n.expression);
     return ts.isBinaryExpression(n) ? binaryTexts(n) : listTexts(n);
@@ -202,7 +206,9 @@ function readerFor(
     if (ts.isTemplateExpression(n)) {
       return texts(n).map((t) => tokensOf(t, true));
     }
-    if (ts.isIdentifier(n)) return followed(n, lists, [[]], words);
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, lists, [[]], words);
+    }
     return ts.isBinaryExpression(n) ? binary(n) : compound(n);
   };
   const compound = (n: ts.Node): string[][] => {

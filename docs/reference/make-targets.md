@@ -223,6 +223,7 @@ The time is not spread evenly. On a quiet laptop the frontend's core legs measur
 | Target | What it does |
 |---|---|
 | `vuln` | govulncheck over all packages. Not part of `check`: it answers against a database that changes daily, so it runs on each PR in `ci.yml` and daily against `main` in `scheduled.yml`. Only the daily run can find a vulnerability disclosed after a merge |
+| `vendor-live` | `GET /v1/credits` on Surfe, through the production adapter (`-tags vendorlive`, `TestSurfeLiveCreditRead`). Needs the network and `MARGINCE_SURFE_LIVE_KEY`, and fails without the key, never skips. Prints one `VENDOR_LIVE` line with a status code or field names, never the response body. Runs daily in `scheduled.yml` |
 | `hooks` (root) | Point git at `.githooks/` (`core.hooksPath`), arming the diff-scoped pre-push craft gate and the store-path/jurisdiction script gates. Run once after cloning; `make install` does it for you. The backend's own `make -C backend hooks` is a different target that installs `scripts/pre-commit` (gofmt + license header). It does not set `core.hooksPath`, so alone it leaves the strict pre-push gate disarmed |
 | `check-gates` | The meta-gate lane: the waiver census, the obligations derived from the migrations and the contract, and the walk-scope proofs. A dev-loop convenience and not a `check-backend` prerequisite, since `make -C backend check` already runs these tests uncached |
 | `tools` / `tools-go` | Install every gate binary at its pinned version (fresh-machine bootstrap) |

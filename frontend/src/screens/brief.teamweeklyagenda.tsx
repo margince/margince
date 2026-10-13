@@ -5,7 +5,7 @@ import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatNumber } from "../format/format";
+import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { TeamPlanReview } from "./brief.teamplan";
@@ -31,9 +31,13 @@ const CELEBRATED: ReadonlySet<TeamWeeklyFocusKind> = new Set([
   "quiet_week",
 ]);
 
-const FOCUS_LABEL: Readonly<Record<TeamWeeklyFocusKind, MessageKey>> = {
+export const FOCUS_LABEL: Readonly<Record<TeamWeeklyFocusKind, MessageKey>> = {
   help_requested: "teamweekly.focus.help_requested",
   deals_at_risk: "teamweekly.focus.deals_at_risk",
+  forecast_downgrades: "teamweekly.focus.forecast_downgrades",
+  stage_regressions: "teamweekly.focus.stage_regressions",
+  close_dates_provisional: "teamweekly.focus.close_dates_provisional",
+  no_next_step_coverage: "teamweekly.focus.no_next_step_coverage",
   leads_breached: "teamweekly.focus.leads_breached",
   commitments_missed: "teamweekly.focus.commitments_missed",
   meetings_without_next_step: "teamweekly.focus.meetings_without_next_step",
@@ -74,8 +78,13 @@ export function agendaText(
   rows: readonly TeamWeeklyRep[],
   heading: string,
 ): string {
-  const items = rows.map(
-    (rep, index) => `${index + 1}. ${rep.display_name} — ${rep.focus_label}`,
+  // The patterns after the first ride the same line, so the copied agenda
+  // holds every finding the screen shows.
+  const items = rows.map((rep, index) =>
+    [
+      `${index + 1}. ${rep.display_name} — ${rep.focus_label}`,
+      ...(rep.patterns ?? []).slice(1).map((pattern) => pattern.label),
+    ].join("; "),
   );
   return [heading, ...items].join("\n");
 }
@@ -192,10 +201,45 @@ export function AgendaPanel({
                   model-written, so it cannot say what the snapshot does not
                   hold. */}
               <span>{rep.focus_label}</span>
+              {(rep.patterns ?? []).slice(1).map((pattern) => (
+                <Badge key={pattern.kind}>{t(FOCUS_LABEL[pattern.kind])}</Badge>
+              ))}
             </span>
+            <FunnelLines rep={rep} />
           </div>
         </PanelRow>
       ))}
     </Panel>
+  );
+}
+
+/** Where this rep's stages convert differently from the team's. */
+function FunnelLines({ rep }: Readonly<{ rep: TeamWeeklyRep }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const funnel = rep.funnel ?? [];
+  if (funnel.length === 0) {
+    return null;
+  }
+  const rate = (part: number, whole: number) =>
+    formatPercent(whole === 0 ? 0 : part / whole, locale);
+  return (
+    <ul className="teamweekly-agenda-funnel">
+      {funnel.map((row) => {
+        const values = {
+          stage: row.stage_name,
+          next: row.next_stage_name ?? "",
+          rep: rate(row.rep_converted, row.rep_entered),
+          team: rate(row.team_converted, row.team_entered),
+        };
+        return (
+          <li key={row.stage_id}>
+            {row.next_stage_name
+              ? t("teamweekly.funnel.line", values)
+              : t("teamweekly.funnel.lineLast", values)}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

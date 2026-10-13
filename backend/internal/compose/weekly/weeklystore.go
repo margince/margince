@@ -193,6 +193,9 @@ type Engine struct {
 	// written, because a retrospective of what a rep did is worth having on an
 	// installation that forecasts nothing.
 	forecast ForecastWeek
+	// attention answers what needs the manager now. Nil leaves the team read
+	// without its live lists rather than refusing it.
+	attention TeamAttention
 }
 
 // TeamMembers answers whether the caller belongs to a named team.
@@ -235,12 +238,11 @@ type ForecastWeek interface {
 	CloseWeek(ctx context.Context, tx pgx.Tx, weekStart, weekEnd time.Time) (
 		[]Outlook, []Movement, []Driver, error)
 
-	// CloseTeamWeek is the same over a TEAM's book. Not the sum of its
-	// members': a deal owned by nobody on the team is in neither, and one the
-	// team works but a member owns is in both, so adding six personal outlooks
-	// would answer a question nobody asked.
+	// CloseTeamWeek is the same over a team's book, which is not the sum of
+	// its members' books. It also answers the month's and the quarter's
+	// coverage from the same readings.
 	CloseTeamWeek(ctx context.Context, tx pgx.Tx, teamID ids.UUID, weekStart, weekEnd time.Time) (
-		[]Outlook, []Movement, []Driver, error)
+		TeamClose, error)
 }
 
 // NewEngine binds the engine to the installation pool and to the membership
@@ -271,6 +273,12 @@ func (e *Engine) WithPlan(plan WeekPlan) *Engine {
 // was landing. Absent, the review carries no outlook and the panel says so.
 func (e *Engine) WithForecast(forecast ForecastWeek) *Engine {
 	e.forecast = forecast
+	return e
+}
+
+// WithAttention binds the live exceptions the team read carries.
+func (e *Engine) WithAttention(attention TeamAttention) *Engine {
+	e.attention = attention
 	return e
 }
 

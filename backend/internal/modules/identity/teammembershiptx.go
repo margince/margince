@@ -47,6 +47,23 @@ func CallerLeadsLiveTeamTx(ctx context.Context, tx pgx.Tx, team ids.UUID) (bool,
 	return member, err
 }
 
+// LiveTeamMembersAmongTx answers which of candidates are live members of a live
+// team now, under the same rule as CallerLeadsLiveTeamTx.
+func LiveTeamMembersAmongTx(ctx context.Context, tx pgx.Tx, team ids.UUID, candidates []ids.UUID) ([]ids.UUID, error) {
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `SELECT m.user_id FROM team_membership m
+ JOIN team t ON t.id=m.team_id AND t.archived_at IS NULL
+ JOIN app_user u ON u.id=m.user_id AND `+LiveMemberSQL("u")+`
+ WHERE m.team_id=$1 AND m.user_id = ANY($2)
+ ORDER BY m.user_id`, team, candidates)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
 func teamMembershipHuman(ctx context.Context) (ids.UUID, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ids.Nil, err

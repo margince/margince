@@ -41696,6 +41696,39 @@ export interface components {
              */
             outlook?: components["schemas"]["WeeklyReviewOutlook"][];
             /**
+             * @description Every live member of the team that week, including those whose own week could not be
+             *     read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+             *     kept.
+             */
+            members?: components["schemas"]["TeamWeeklyMember"][];
+            quality?: components["schemas"]["TeamWeeklyQuality"];
+            /**
+             * @description The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+             *     composed or the team's book was refused.
+             */
+            coverage?: components["schemas"]["TeamWeeklyCoverage"][];
+            /**
+             * @description True when any horizon in `coverage` recommends a replan: coverage at risk against a
+             *     named basis.
+             */
+            replan_recommended?: boolean;
+            /**
+             * @description A short paragraph composed from the frozen figures by fixed rules, never by a model.
+             *     Absent on a snapshot frozen before it existed or a week nobody was counted in.
+             */
+            summary?: string;
+            /**
+             * @description LIVE, computed on every read and never frozen: the open input-check findings on deals
+             *     the team's members own now, under the reader's own deal scope. Absent when the read
+             *     did not ask.
+             */
+            exceptions?: components["schemas"]["InputCheck"][];
+            /**
+             * @description LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+             *     period, quietest first. Together with `exceptions` at most 25 items, findings first.
+             */
+            stale_deals?: components["schemas"]["TeamWeeklyStaleDeal"][];
+            /**
              * @description The Monday agenda: every id in `reps`, permuted into the order a lead should raise
              *     them. Derived on read from the same focus ranking that picked each rep's
              *     `focus_kind` — a rep who ASKED for help first, a quiet week last — so the meeting
@@ -41737,7 +41770,7 @@ export interface components {
             commitments_due: number;
             commitments_kept: number;
         };
-        /** @description One member's week as their lead reads it, with the one thing to raise. */
+        /** @description One member's week as their lead reads it, with what to raise. */
         TeamWeeklyRep: {
             /** Format: uuid */
             user_id: string;
@@ -41752,17 +41785,124 @@ export interface components {
             help_requested: number;
             /**
              * @description Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-             *     celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-             *     outranks any metric, because walking past a request to raise a number is the
-             *     fastest way to teach them not to ask.
+             *     celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+             *     them: a rep who ASKED for help outranks any metric, because walking past a request
+             *     to raise a number is the fastest way to teach them not to ask.
+             *
+             *     `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+             *     replaced it still carry it.
              * @enum {string}
              */
-            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "meetings_without_next_step" | "strong_week" | "quiet_week";
+            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
             /**
              * @description The focus in words, composed from the stored figures — never model-written, so it
              *     cannot say something the snapshot does not hold.
              */
             focus_label: string;
+            /**
+             * @description Every rule that fired for this rep, in the order a lead raises them. The first is
+             *     the focus. A snapshot frozen before the list existed reads its focus as the one
+             *     pattern.
+             */
+            patterns: components["schemas"]["TeamWeeklyPattern"][];
+            /**
+             * @description Up to three stages where this rep's conversion differs most from the team's, over
+             *     the 13 weeks before the week closed. Stages with fewer than five entries on either
+             *     side are left out. Empty when no stage qualified or the snapshot predates it.
+             */
+            funnel?: components["schemas"]["TeamWeeklyFunnelDeviation"][];
+        };
+        TeamWeeklyPattern: {
+            /** @enum {string} */
+            kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "forecast_downgrades" | "stage_regressions" | "close_dates_provisional" | "no_next_step_coverage" | "strong_week" | "meetings_without_next_step" | "quiet_week";
+            /** @description The pattern in words, composed from the stored figures. */
+            label: string;
+        };
+        /**
+         * @description One stage where the rep converts differently from the team. Entries and conversions are
+         *     attributed to the owner at the time of each move. "Converted" is a later move to a won
+         *     stage or to a later stage, compared by the stage order as it was configured when the
+         *     week was assembled.
+         */
+        TeamWeeklyFunnelDeviation: {
+            /** Format: uuid */
+            pipeline_id: string;
+            pipeline_name: string;
+            /** Format: uuid */
+            stage_id: string;
+            stage_name: string;
+            /** @description The stage after this one when the week was assembled; absent for the last. */
+            next_stage_name?: string;
+            rep_entered: number;
+            rep_converted: number;
+            team_entered: number;
+            team_converted: number;
+            /** @description The rep's conversion rate less the team's, in basis points. */
+            deviation_bp: number;
+        };
+        TeamWeeklyMember: {
+            /** Format: uuid */
+            user_id: string;
+            /** @description What they were called that week. */
+            display_name: string;
+            /** @description Whether this member's own week was read into the counts. */
+            measured: boolean;
+        };
+        /**
+         * @description How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+         *     snapshot frozen before it was measured, which is not zero.
+         */
+        TeamWeeklyQuality: {
+            proposals_accepted?: number;
+            proposals_rejected?: number;
+            /**
+             * @description Changes an agent, a connector or the system made that a member of the team undid
+             *     inside the week.
+             */
+            auto_change_reversals?: number;
+        };
+        /**
+         * @description Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+         *     coverage at risk against the named basis, never as a target: the product has none.
+         *     Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+         */
+        TeamWeeklyCoverage: {
+            /** @enum {string} */
+            period_kind: "month" | "quarter";
+            /** @enum {string} */
+            basis?: "manager_call" | "historical_median";
+            /**
+             * @description Why there is no answer. `not_authorized` is a standing call the member who closed the
+             *     week could not read, which is not the same as no call.
+             * @enum {string}
+             */
+            absent?: "insufficient_basis" | "insufficient_history" | "not_authorized";
+            /** Format: int64 */
+            reference_landing_minor?: number;
+            /** Format: int64 */
+            remaining_to_support_minor?: number;
+            /** Format: int64 */
+            needed_open_minor?: number;
+            /** Format: int64 */
+            current_open_minor?: number;
+            /** Format: int64 */
+            coverage_bp?: number;
+            base_currency: string;
+            /**
+             * @description True when coverage is at risk against a named basis: under 8000 basis points of what
+             *     the basis needs. Never true without a basis.
+             */
+            replan_recommended: boolean;
+        };
+        TeamWeeklyStaleDeal: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: date-time */
+            last_activity_at: string;
+            days_quiet: number;
         };
         /** @description A week's lessons and whether anybody looked for them. */
         WeeklyReviewLearnings: {
