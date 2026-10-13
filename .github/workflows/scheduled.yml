@@ -789,7 +789,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     name: every story renders (main)
     runs-on: ubuntu-latest
-    # 4,092 stories took 22 minutes on four local workers; a runner is slower.
+    # Every story takes about half an hour on four local workers, plus builds; a runner is slower.
     timeout-minutes: 90
     permissions:
       contents: read

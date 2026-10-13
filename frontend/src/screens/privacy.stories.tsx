@@ -126,7 +126,7 @@ const SEATS: RouteMap = {
     }),
 };
 
-// The deadline the open form shows, later than the earlier day a play picks.
+// After 2026-08-01, the day the erasure play picks: a pick past this is refused.
 const DEADLINE: RouteMap = {
   "GET /data-subject-requests/deadline": () =>
     jsonResponse({ due_at: "2026-08-15T14:00:00Z", rule: "gdpr" }),

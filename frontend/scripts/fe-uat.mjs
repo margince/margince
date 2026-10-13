@@ -32,7 +32,13 @@ import {
   readStoryIndex,
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
-import { needsStory, scopeFor, storiesInScope } from "./lib/uat-scope.mjs";
+import {
+  needsStory,
+  scopeFor,
+  storiesInScope,
+  uatVerdict,
+  unresolvedStoryFiles,
+} from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
   renewingBroken,
@@ -107,7 +113,7 @@ function git(args) {
   return r.stdout.toString().trim();
 }
 
-// 1. Changed files on this branch vs origin/main; none in the all-stories scope.
+// 1. Changed files on this branch vs origin/main.
 let base = null;
 if (scope === "diff") {
   try {
@@ -338,8 +344,12 @@ async function renderPhase(page) {
   );
 }
 
+const wantedStoryFiles =
+  scope === "all"
+    ? census.files.filter(isStoryFile).map((abs) => relative(repoRoot, abs))
+    : [...storyFiles];
 const wantImportPaths = new Set(
-  [...storyFiles].map((p) => `./${p.replace(/^frontend\//, "")}`),
+  wantedStoryFiles.map((p) => `./${p.replace(/^frontend\//, "")}`),
 );
 
 async function captureStory(page, port, story) {
@@ -481,8 +491,7 @@ if (scope === "all" || storyFiles.size > 0) {
   );
   // A changed/added story file the fresh build did not register (bad glob, no
   // exported stories, malformed meta) must FAIL — never silently drop it.
-  const resolvedPaths = new Set(inScope.map((e) => e.importPath));
-  unresolved = [...wantImportPaths].filter((p) => !resolvedPaths.has(p));
+  unresolved = unresolvedStoryFiles(wantImportPaths, inScope);
 
   workers = workersFor(requested, inScope.length);
   const scopeLine =
@@ -526,13 +535,13 @@ if (scope === "all" || storyFiles.size > 0) {
   }
 }
 
-// An all-stories run that captured nothing read a broken index, not a clean tree.
-const emptyCensus = scope === "all" && results.length === 0;
-const pass =
-  !emptyCensus &&
-  results.every((r) => r.pass) &&
-  unresolved.length === 0 &&
-  (allowMissing || missing.length === 0);
+const { pass, emptyCensus } = uatVerdict({
+  scope,
+  results,
+  unresolved,
+  missing,
+  allowMissing,
+});
 writeManifest({ workers, stories: results, missing, unresolved, pass });
 
 const took = `${results.length} story(ies) in ${captureSeconds.toFixed(1)}s on ${workers} worker(s)`;
@@ -548,7 +557,7 @@ if (!pass) {
     );
   if (unresolved.length)
     console.error(
-      `fe-uat FAIL — changed story files the build did not register: [${unresolved.join(", ")}]`,
+      `fe-uat FAIL — story files the build did not register: [${unresolved.join(", ")}]`,
     );
   if (!allowMissing && missing.length) {
     const comps = missing.map((m) => m.component).join(", ");

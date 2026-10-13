@@ -29,7 +29,7 @@ const meta: Meta<typeof BriefFeed> = {
   parameters: { layout: "padded" },
   decorators: [
     (Story) => {
-      // A task row's hand-off excludes the reader `/me` names; it reads no grant.
+      // The reassign picker reads /me only to drop the reader; it checks no grant.
       installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
       return (
         <StoryProviders>

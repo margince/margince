@@ -428,7 +428,8 @@ as that change's fault. The run's \`fe-uat-failures\` artifact holds the manifes
 names each failing story and its errors, and the capture of each one.
 
 No manifest in the artifact means the lane failed before it rendered: the install,
-the Chromium download or the Storybook build. The step log names which.
+the app build, the Chromium download or the Storybook build. The step log names
+which.
 
 Reproduce locally with \`make fe-uat ARGS=--all-stories\`."\
     || unreported=1

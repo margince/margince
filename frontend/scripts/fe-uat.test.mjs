@@ -4,10 +4,11 @@
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
 import {
-  ALL_STORIES_FLAG,
   needsStory,
   scopeFor,
   storiesInScope,
+  uatVerdict,
+  unresolvedStoryFiles,
 } from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
@@ -54,7 +55,7 @@ describe("scopeFor", () => {
   it("renders what the diff reaches unless asked for every story", () => {
     expect(scopeFor(["node", "fe-uat.mjs"])).toBe("diff");
     expect(scopeFor(["node", "fe-uat.mjs", "--allow-missing"])).toBe("diff");
-    expect(scopeFor(["node", "fe-uat.mjs", ALL_STORIES_FLAG])).toBe("all");
+    expect(scopeFor(["node", "fe-uat.mjs", "--all-stories"])).toBe("all");
   });
 });
 
@@ -80,11 +81,93 @@ describe("storiesInScope", () => {
       ids(storiesInScope(index, "diff", new Set(["./src/a.stories.tsx"]))),
     ).toEqual(["a--one", "a--two"]);
   });
+});
 
-  it("takes nothing from a docs page the diff reached", () => {
-    expect(storiesInScope(index, "diff", new Set(["./src/intro.mdx"]))).toEqual(
-      [],
-    );
+describe("unresolvedStoryFiles", () => {
+  const stories = [
+    { id: "a--one", type: "story", importPath: "./src/a.stories.tsx" },
+  ];
+
+  it("reports a story file on disk the build registered no story from", () => {
+    expect(
+      unresolvedStoryFiles(
+        new Set(["./src/a.stories.tsx", "./src/dropped.stories.tsx"]),
+        stories,
+      ),
+    ).toEqual(["./src/dropped.stories.tsx"]);
+  });
+
+  it("reports nothing when every story file registered", () => {
+    expect(
+      unresolvedStoryFiles(new Set(["./src/a.stories.tsx"]), stories),
+    ).toEqual([]);
+  });
+});
+
+describe("uatVerdict", () => {
+  const clean = {
+    results: [{ id: "a--one", pass: true }],
+    unresolved: [],
+    missing: [],
+    allowMissing: false,
+  };
+
+  it("fails an all-stories run that captured nothing", () => {
+    expect(uatVerdict({ ...clean, scope: "all", results: [] })).toEqual({
+      pass: false,
+      emptyCensus: true,
+    });
+  });
+
+  it("passes a diff run that captured nothing and misses nothing", () => {
+    expect(uatVerdict({ ...clean, scope: "diff", results: [] })).toEqual({
+      pass: true,
+      emptyCensus: false,
+    });
+  });
+
+  it.each(["all", "diff"])(
+    "fails an unregistered story file in the %s scope",
+    (scope) => {
+      expect(
+        uatVerdict({ ...clean, scope, unresolved: ["./src/x.stories.tsx"] })
+          .pass,
+      ).toBe(false);
+    },
+  );
+
+  it("fails a story that did not render clean", () => {
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "all",
+        results: [{ id: "a--one", pass: false }],
+      }).pass,
+    ).toBe(false);
+  });
+
+  it("lets allowMissing excuse a missing story and nothing else", () => {
+    const missing = [{ component: "frontend/src/x.tsx" }];
+    expect(uatVerdict({ ...clean, scope: "diff", missing }).pass).toBe(false);
+    expect(
+      uatVerdict({ ...clean, scope: "diff", missing, allowMissing: true }).pass,
+    ).toBe(true);
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "diff",
+        allowMissing: true,
+        unresolved: ["./src/x.stories.tsx"],
+      }).pass,
+    ).toBe(false);
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "diff",
+        allowMissing: true,
+        results: [{ id: "a--one", pass: false }],
+      }).pass,
+    ).toBe(false);
   });
 });
 
