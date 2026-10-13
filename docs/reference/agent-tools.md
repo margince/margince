@@ -1,8 +1,11 @@
 <!-- prose:plain -->
 # Agent tools
 
-What an agent may call in Margince, what each call is allowed to do, and what it costs. Several pages cover it; start
-with the question you have.
+An agent in Margince acts for the person who gave it a passport. It can call a tool only if the passport allows that
+kind of action, and it never does more than that person could do alone. Some tools run at once; others wait until a
+human approves. This page lists every tool, says which is which, and explains the rules behind the table.
+
+## Which page do you need?
 
 | Your question | Page |
 |---|---|
@@ -17,100 +20,34 @@ with the question you have.
 The rules for agents are in [authorization.md](../explanation/authorization.md) and
 [agent-surface.md](../explanation/agent-surface.md).
 
-## How to read this page
+## The three words in every row
 
-The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The running server has the last word**,
-and what a live server shows can differ from the table:
+| Word | Meaning |
+|---|---|
+| **Tier** | 🟢 runs at once. 🟡 is refused until a human gives the staged approval. **dynamic** is decided on each call, from what the call points at, and may only raise the tier. 🟢 / 🟡 means the tier turns on the record type the call names. |
+| **Scope** | The kind of action the passport must allow: `read`, `draft`, `write`, `send` or `enrich`. [What each scope buys](#what-each-scope-buys) says more. |
+| **Egress** | Whether the tool reaches outside the workspace. `tools/list` publishes it as `openWorldHint`. |
 
-- **`tools/list` is filtered by scope for each caller.** The dispatcher drops each tool whose `RequiredScope` the
-  passport does not hold (`invocableByCaller` in `backend/internal/modules/agents/dispatch.go`). So an agent made with
-  `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
-  list never shows what the gate will refuse.
-
-  It answers **only for scope**. Each call checks the seat limit and object RBAC of the human who gave the
-  passport. They can still refuse a tool the list showed.
-- **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
-  extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
-  declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A
-  `human-only` operation stays open to REST and the UI, refuses an Agent (or Buyer) principal, and never shows in
-  `tools/list`.
-
-  A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
-  from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
-  a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and every operation of
-  `extensions/openchannel` is `human-only`. On a plain install, the catalog below is all an agent can reach.
-
-**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
-and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
-[how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md); the credential: [mint-a-passport.md](../how-to/mint-a-passport.md).
-
-## The catalog
-
-A client lists the tools in the first table. The verbs in the second are reachable only through one of those tools,
-which picks its target from an argument ([agent-surface.md](../explanation/agent-surface.md)). Each table below gives the tier, the scope and
-whether the tool leaves the workspace.
 `TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and rows against the contract, both ways, and
 `TestEveryDeclaredToolVerbIsRegistered` and `TestEveryRegisteredToolIsDeclared` hold the verbs, both ways.
 
-- **Tier**: 🟢 runs at once. 🟡 is refused until a human gives the staged approval. **dynamic** is decided on each call,
-  from what the call points at. It may only *raise* the tier.
-  - The deal pair reads the meaning of the target stage (`open` → 🟢, `won`/`lost` → 🟡).
-  - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
-    to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
-    cannot pin a version, so a named set always waits.
-  - `relink_thread` is not offered and refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
-  - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
-    The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
-    also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
-  - A member takes a filing under a project back with *Undo filing*, a `human-only` decision whose written reason is
-    never the reason of the credential. So a credential may give the approval for a project relink only while that
-    undo could still apply.
-  - It may not when the activity is limited, archived, under a legal hold or covered by an open request to erase. Nor
-    when Margince keeps it for another reason: a `won` deal, a sent offer, a pin by the data controller. A member gives
-    the approval for such a relink in the CRM.
-  - The mark **🟢 / 🟡** means the tier turns on the record type the call names. It is 🟡 for `custom_field` and
-    `webhook_subscription`, which the contract declares confirm-first, and 🟢 for the other record types.
-- A verb that changes something real is 🟢 when a passport can spend it. The passport carries the seat, grants and row
-  scope of the human who gave it. So a verb it can spend is one its holder could spend alone. The tier with the last
-  word is `agentPolicies` in `compose/agentpolicy_gen.go`, generated from `crm.yaml`.
-- **Scope**: the passport cap that `Gate.Admit` asks for before `Handle` runs.
-- **Egress**: the `Egress` flag of the spec, true when the tool reaches outside the workspace. `tools/list` publishes
-  it as `openWorldHint`.
+## The catalog
 
 ### Tools a client lists
 
+Sorted by scope, so the read-only tools come first.
+
 | Tool | Tier | Scope | Egress | For |
 |---|---|---|---|---|
-| `advance_project_phase` | 🟢 | `write` | no | Move a project to a phase |
-| `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
-| `archive_record` | 🟢 | `write` | no | Archive a record |
 | `at_risk_relationships` | 🟢 | `read` | no | Relationships going cold |
-| `attach_document` | 🟢 | `write` | no | Attach a file to a record |
-| `book_meeting` | 🟢 | `send` | yes | Book a meeting |
-| `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
 | `catch_me_up_on` | 🟢 | `read` | no | Catch me up on a record |
-| `change_lead_state` | 🟢 | `write` | no | Change a lead's state |
-| `change_lists` | 🟢 | `write` | no | Make and change lists |
-| `change_tags` | 🟢 | `write` | no | Change tags |
 | `check_availability` | 🟢 | `read` | no | Check calendar availability |
-| `commit_import` | 🟢 | `write` | no | Commit an import |
 | `compose_analytics_report` | 🟢 | `read` | no | Compose an analytics report |
-| `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
-| `create_task` | 🟢 | `write` | no | Create a task |
-| `decide_approvals` | 🟢 | `write` | no | Approve or reject staged actions |
 | `describe_vocabulary` | 🟢 | `read` | no | Describe what a tool accepts |
-| `draft_outbound` | 🟢 | `draft` | no | Draft an email or follow-ups |
-| `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
-| `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
 | `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
 | `list_documents` | 🟢 | `read` | no | List a record's documents |
 | `list_records` | 🟢 | `read` | no | List records |
-| `log_activity` | 🟢 | `write` | no | Log an activity |
-| `merge_tags` | 🟡 | `write` | no | Fold one tag into another |
 | `prep_for_meeting` | 🟢 | `read` | no | Prepare for a meeting |
-| `preview_import` | 🟢 | `write` | no | Preview an import |
-| `progress_deal` | dynamic | `write` | no | Progress a deal with a note |
 | `query_workspace` | 🟢 | `read` | no | Query the workspace |
 | `read_approval` | 🟢 | `read` | no | Read one staged action in full |
 | `read_brief` | 🟢 | `read` | no | Read the morning brief |
@@ -124,9 +61,6 @@ whether the tool leaves the workspace.
 | `read_relationships` | 🟢 | `read` | no | Read who we know, and how well |
 | `read_reporting` | 🟢 | `read` | no | Read sales reporting |
 | `read_tags` | 🟢 | `read` | no | Read tags |
-| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record |
-| `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
-| `resolve_duplicates` | 🟢 | `write` | no | Merge two records or dismiss a flagged pair |
 | `resolve_entities` | 🟢 | `read` | no | Resolve contacts and companies |
 | `review_commitments` | 🟢 | `read` | no | Review open commitments |
 | `run_analytics_query` | 🟢 | `read` | no | Run an analytics query |
@@ -134,16 +68,42 @@ whether the tool leaves the workspace.
 | `search_context` | 🟢 | `read` | no | Search for relevant material |
 | `search_records` | 🟢 | `read` | no | Search records |
 | `search_report_evidence` | 🟢 | `read` | no | Search the evidence behind a saved run |
-| `send_outbound` | 🟢 | `send` | yes | Send a message |
-| `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
 | `whats_slipping_this_week` | 🟢 | `read` | no | What's slipping this week |
 | `whoami` | 🟢 | `read` | no | Who this passport acts for |
+| `draft_outbound` | 🟢 | `draft` | no | Draft an email or follow-ups |
+| `advance_project_phase` | 🟢 | `write` | no | Move a project to a phase |
+| `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
+| `archive_record` | 🟢 | `write` | no | Archive a record |
+| `attach_document` | 🟢 | `write` | no | Attach a file to a record |
+| `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
+| `change_lead_state` | 🟢 | `write` | no | Change a lead's state |
+| `change_lists` | 🟢 | `write` | no | Make and change lists |
+| `change_tags` | 🟢 | `write` | no | Change tags |
+| `commit_import` | 🟢 | `write` | no | Commit an import |
+| `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
+| `create_task` | 🟢 | `write` | no | Create a task |
+| `decide_approvals` | 🟢 | `write` | no | Approve or reject staged actions |
+| `log_activity` | 🟢 | `write` | no | Log an activity |
+| `merge_tags` | 🟡 | `write` | no | Fold one tag into another |
+| `preview_import` | 🟢 | `write` | no | Preview an import |
+| `progress_deal` | dynamic | `write` | no | Progress a deal with a note |
+| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record |
+| `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
+| `resolve_duplicates` | 🟢 | `write` | no | Merge two records or dismiss a flagged pair |
+| `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
+| `book_meeting` | 🟢 | `send` | yes | Book a meeting |
+| `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
+| `send_outbound` | 🟢 | `send` | yes | Send a message |
+| `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
 
-### Verbs reached through a router tool
+### Actions chosen inside a tool
 
-A call names the router and the argument that picks the verb. The verb keeps its own tier and scope.
+Some listed tools front several related actions. A client sees one tool, such as `change_tags`, and an argument says
+which action to run, such as `create_tag`. Each action keeps its own tier and scope, which are in the table. Find the
+action you want, then call the tool in the last column. [agent-surface.md](../explanation/agent-surface.md) says how
+this works.
 
-| Tool | Tier | Scope | Egress | Reached through |
+| Action | Tier | Scope | Egress | Call this tool |
 |---|---|---|---|---|
 | `demote_lead` | 🟢 | `write` | no | `change_lead_state` |
 | `disqualify_lead` | 🟢 | `write` | no | `change_lead_state` |
@@ -153,8 +113,8 @@ A call names the router and the argument that picks the verb. The verb keeps its
 | `create_tag` | 🟢 | `write` | no | `change_tags` |
 | `remove_tag` | 🟢 | `write` | no | `change_tags` |
 | `update_tag` | 🟢 | `write` | no | `change_tags` |
-| `decide_approval` | 🟢 | `write` | no | `decide_approvals` |
 | `decide_approval_bundle` | 🟢 | `write` | no | `decide_approvals` |
+| `decide_approval` | 🟢 | `write` | no | `decide_approvals` |
 | `describe_analytics_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
 | `describe_query_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
 | `describe_record_fields` | 🟢 | `read` | no | `describe_vocabulary` |
@@ -162,6 +122,7 @@ A call names the router and the argument that picks the verb. The verb keeps its
 | `describe_report_vocabulary` | 🟢 | `read` | no | `describe_vocabulary` |
 | `draft_email` | 🟢 | `draft` | no | `draft_outbound` |
 | `draft_follow_ups_for` | 🟢 | `draft` | no | `draft_outbound` |
+| `advance_deal` | dynamic | `write` | no | `progress_deal`: staged approvals carry this name |
 | `list_channel_providers` | 🟢 | `read` | no | `read_directory` |
 | `list_colleagues` | 🟢 | `read` | no | `read_directory` |
 | `list_pipelines` | 🟢 | `read` | no | `read_directory` |
@@ -185,13 +146,11 @@ A call names the router and the argument that picks the verb. The verb keeps its
 | `send_company_email` | 🟢 | `send` | yes | `send_outbound` |
 | `send_email` | 🟢 | `send` | yes | `send_outbound` |
 | `send_message` | 🟢 | `send` | yes | `send_outbound` |
+| `relink_thread` | dynamic | `write` | no | no tool: it refuses every call |
 
-### Contract verbs with no tool of their own
+## Rules for single tools
 
-| Tool | Tier | Scope | Egress | Reached through |
-|---|---|---|---|---|
-| `advance_deal` | dynamic | `write` | no | `progress_deal`, whose staged approvals carry this name |
-| `relink_thread` | dynamic | `write` | no | nothing: it is refused on every call |
+Rules that hold for one tool or one family of tools.
 
 - **`update_record` is 🟢, with a 🟡 part.** The patch works per field. The fields no human wrote last apply at once.
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
@@ -214,6 +173,27 @@ A call names the router and the argument that picks the verb. The verb keeps its
   - An `ambiguous` answer stays `ambiguous` when only one other match is still there. So what the caller cannot see
     never decides a question.
   - Margince reports the filtering once per call, without a count.
+
+### Tier rules for deals, relinks and mixed rows
+
+- The deal pair reads the meaning of the target stage (`open` → 🟢, `won`/`lost` → 🟡).
+- The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
+  to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
+  cannot pin a version, so a named set always waits.
+- `relink_thread` is not offered and refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
+- A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
+  The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
+  also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
+- A member takes a filing under a project back with *Undo filing*, a `human-only` decision whose written reason is
+  never the reason of the credential. So a credential may give the approval for a project relink only while that
+  undo could still apply.
+- It may not when the activity is limited, archived, under a legal hold or covered by an open request to erase. Nor
+  when Margince keeps it for another reason: a `won` deal, a sent offer, a pin by the data controller. A member gives
+  the approval for such a relink in the CRM.
+- **Mixed rows.** The mark 🟢 / 🟡 means the tier turns on the record type the call names. It is 🟡 for `custom_field` and
+  `webhook_subscription`, which the contract declares confirm-first, and 🟢 for the other record types.
+- **Why a spendable verb is 🟢.** A verb that changes something real is 🟢 when a passport can spend it. The passport carries the seat, grants and row scope
+  of the human who gave it, so a verb it can spend is one its holder could spend alone. The tier with the last word is `agentPolicies` in `compose/agentpolicy_gen.go`, generated from `crm.yaml`.
 
 ## What each scope buys
 
@@ -254,29 +234,6 @@ An intent tool built over many operations, such as `catch_me_up_on` or `progress
 route runs the tool through the registry (`served_by: registry`), so the verb is declared like any other. Its
 `OpenAPIOp` names that route.
 
-## The hints are derived
-
-`tools/list` publishes two hints, and no human sets either by hand:
-
-- **`readOnlyHint` comes from the scope**: `ToolSpec.ReadOnly()` is `RequiredScope == ScopeRead`. A copy written by
-  hand could disagree with the scope the gate holds, and the hint is the half a client would trust. `draft` is not
-  read-only. One scope covers both a tool that writes nothing and a tool that stores a draft activity. So the scope
-  cannot answer the question, and the safe answer is the only right one.
-- **`openWorldHint` is the `Egress` flag**, the same bool the catalog above reports, read off the same spec.
-
-`destructiveHint` and `idempotentHint` are not set. The protocol defaults (destructive, not idempotent) are already
-the safe reading. Only a value that promises more would need a call per tool, with nothing to hold it true.
-These gates keep the catalog and the contract from drifting:
-
-| Gate | Where | What it holds |
-|---|---|---|
-| `TestTheContractScopeMatchesTheRegisteredToolScope` | `backend/internal/compose/agentscopeparity_test.go` | One verb, one cap, both wires: a passport refused a verb on REST cannot spend it over MCP. |
-| `TestEveryToolRouteDeclaresAGrantableScope` | same file | No contract route asks for a cap no passport can hold. |
-| `TestNoWritingToolIsAdvertisedAsReadOnly` | `backend/internal/modules/agents/conformance_test.go` | The derived hint stays true across the whole registered set. |
-| `TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap` | `backend/internal/modules/agents/scope_fitness_test.go` | An egress tool cannot use a cap that is not outbound. |
-
-Both scans read the generated policy table, so a verb added to the contract later is covered with no list to edit.
-
 ## When a tool refuses
 
 A tool failure is **not** a JSON-RPC error. It comes back as a normal `tools/call` result with `isError: true` and one
@@ -302,6 +259,56 @@ turns on what the answer means. It may be "you may never", "a human must say yes
 - **Details from inside never leave the server.** Driver errors, hosts and wrapped error text go to the server log;
   the agent sees the own words of the sentinel. Text sent back from the arguments of the caller is limited and
   escaped. So a new line in a tool name cannot forge a line in the run transcript that later prompts read.
+
+## Where this page can differ from a live server
+
+The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The running server has the last word**, and what a live server shows can differ from the tables:
+
+- **`tools/list` is filtered by scope for each caller.** The dispatcher drops each tool whose `RequiredScope` the
+  passport does not hold (`invocableByCaller` in `backend/internal/modules/agents/dispatch.go`). So an agent made with
+  `["read"]` sees the read tools and nothing else. The filter copies the scope check of the admission gate, so the
+  list never shows what the gate will refuse.
+
+  It answers **only for scope**. Each call checks the seat limit and object RBAC of the human who gave the
+  passport. They can still refuse a tool the list showed.
+- **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
+  extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
+  declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A
+  `human-only` operation stays open to REST and the UI, refuses an Agent (or Buyer) principal, and never shows in
+  `tools/list`.
+
+  A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
+  from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
+  a trust line, and that limits what the handler of a unit can do.
+- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and every operation of
+  `extensions/openchannel` is `human-only`. On a plain install, the catalog below is all an agent can reach.
+
+**Where it is served:** `cmd/api` serves the tool surface at `/mcp` over Streamable HTTP, on the origin of `/oauth/*`
+and the discovery documents. There is no stdio transport and no `cmd/mcp` binary. To connect a client:
+[how-to/connect-an-mcp-client.md](../how-to/connect-an-mcp-client.md); the credential: [mint-a-passport.md](../how-to/mint-a-passport.md).
+
+### The hints are derived
+
+`tools/list` publishes two hints, and no human sets either by hand:
+
+- **`readOnlyHint` comes from the scope**: `ToolSpec.ReadOnly()` is `RequiredScope == ScopeRead`. A copy written by
+  hand could disagree with the scope the gate holds, and the hint is the half a client would trust. `draft` is not
+  read-only. One scope covers both a tool that writes nothing and a tool that stores a draft activity. So the scope
+  cannot answer the question, and the safe answer is the only right one.
+- **`openWorldHint` is the `Egress` flag**, the same bool the catalog above reports, read off the same spec.
+
+`destructiveHint` and `idempotentHint` are not set. The protocol defaults (destructive, not idempotent) are already
+the safe reading. Only a value that promises more would need a call per tool, with nothing to hold it true.
+These gates keep the catalog and the contract from drifting:
+
+| Gate | Where | What it holds |
+|---|---|---|
+| `TestTheContractScopeMatchesTheRegisteredToolScope` | `backend/internal/compose/agentscopeparity_test.go` | One verb, one cap, both wires: a passport refused a verb on REST cannot spend it over MCP. |
+| `TestEveryToolRouteDeclaresAGrantableScope` | same file | No contract route asks for a cap no passport can hold. |
+| `TestNoWritingToolIsAdvertisedAsReadOnly` | `backend/internal/modules/agents/conformance_test.go` | The derived hint stays true across the whole registered set. |
+| `TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap` | `backend/internal/modules/agents/scope_fitness_test.go` | An egress tool cannot use a cap that is not outbound. |
+
+Both scans read the generated policy table, so a verb added to the contract later is covered with no list to edit.
 
 ## Where to go next
 

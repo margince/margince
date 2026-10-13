@@ -49,9 +49,9 @@ var catalogRow = regexp.MustCompile("^\\|\\s*`([a-z0-9_]+)`\\s*\\|\\s*([^|]+?)\\
 // of the same row shape — the passport scopes, keyed by scope name — and a scan
 // that took every matching row read `enrich` as tier "1", which is that table's
 // route count. Rows are therefore read only between this header and the blank
-// line that ends its table. The catalog is three tables, and each opens with
-// these columns, so the match is a prefix: the last column differs.
-const catalogHeader = "| Tool | Tier | Scope | Egress |"
+// line that ends its table. The catalog is two tables, and each opens with
+// these columns; only the first and last column names differ.
+var catalogHeader = regexp.MustCompile(`^\| (Tool|Action) \| Tier \| Scope \| Egress \|`)
 
 // The marks the page uses, and what each means in the contract's own
 // vocabulary. Spelled here rather than inferred, because the mapping IS the
@@ -92,7 +92,7 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 	documented := map[string]string{}
 	inTable := false
 	for _, line := range strings.Split(string(page), "\n") {
-		if strings.HasPrefix(strings.TrimSpace(line), catalogHeader) {
+		if catalogHeader.MatchString(strings.TrimSpace(line)) {
 			inTable = true
 			continue
 		}
