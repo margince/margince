@@ -8,7 +8,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,5 +92,19 @@ func (w *csvWriters) preloadBindings(ctx context.Context) error {
 		return err
 	}
 	w.bindings = bindings
+	return nil
+}
+
+// bind records the ref of a row that named an existing record by id, so a later
+// slice or a later import finds it. Undo never archives a bound record. It
+// binds even when the update is then refused. The row still names a live
+// company the caller can see, which the dry run counted as linkable.
+func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) error {
+	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id, migration.OriginBound)
+	}); err != nil {
+		return err
+	}
+	w.links.markLanded(w.object, row.ExternalID, id)
 	return nil
 }
