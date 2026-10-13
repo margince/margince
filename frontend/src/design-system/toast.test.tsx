@@ -125,6 +125,7 @@ const undo = (onAct = () => {}): ToastOptions => ({
 const open = (onAct = () => {}): ToastOptions => ({
   action: { kind: "open", label: "Show all", onAct },
 });
+const refused: ToastOptions = { tone: "danger", sticky: true };
 
 // The clock is driven in every test, not only the ones that watch a message go:
 // what this suite measures is a deadline, and `userEvent` waits on timers of its
@@ -393,6 +394,118 @@ describe("a confirmation carrying a verb", () => {
     show();
     await acting.click(press("show"));
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
+  });
+});
+
+describe("a refusal", () => {
+  it("holds the region while a report waits behind it", async () => {
+    const acting = steppedClock();
+    show({ message: "Not saved.", options: refused, second: "Saved." });
+    await acting.click(press("show"));
+    await acting.click(press("show second"));
+    expect(screen.getByRole("status")).toHaveTextContent("Not saved.");
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+  });
+
+  it("holds the region while an undo waits, whose Undo still runs after", async () => {
+    const acted = vi.fn();
+    const acting = steppedClock();
+    show({
+      message: "Not hidden.",
+      options: refused,
+      second: "Hidden from this deal",
+      secondOptions: undo(acted),
+    });
+    await acting.click(press("show"));
+    await acting.click(press("show second"));
+    expect(screen.getByRole("status")).toHaveTextContent("Not hidden.");
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    await acting.click(press("Close"));
+    await acting.click(press("Undo"));
+    expect(acted).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("takes the place of an undo, which comes back after with its full life", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Hidden from this deal", undo());
+    });
+    wait(6000);
+    act(() => {
+      toast().show("Not hidden.", refused);
+    });
+    wait(30_000);
+    expect(screen.getByRole("status")).toHaveTextContent("Not hidden.");
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden from this deal",
+    );
+    wait(7900);
+    expect(press("Undo")).toBeInTheDocument();
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("takes the place of a verb that leads somewhere", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Moved to Jana.", open());
+      toast().show("Not moved.", refused);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Not moved.");
+    act(() => toast().dismiss());
+    expect(press("Show all")).toBeInTheDocument();
+  });
+
+  it("keeps a second refusal waiting behind the first", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Not saved.", refused);
+      toast().show("Not sent.", refused);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Not saved.");
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
+  });
+
+  it("goes ahead of an undo waiting behind an earlier refusal", async () => {
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("Hidden from this deal", undo());
+      toast().show("Not saved.", refused);
+      toast().show("Not sent.", refused);
+    });
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Not sent.");
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden from this deal",
+    );
+  });
+
+  it("lets a newer undo replace the one waiting behind it", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const acting = steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First hidden", undo(first));
+      toast().show("Not hidden.", refused);
+      toast().show("Second hidden", undo(second));
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Not hidden.");
+    await acting.click(press("Close"));
+    expect(screen.getByRole("status")).toHaveTextContent("Second hidden");
+    await acting.click(press("Undo"));
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
 
@@ -775,6 +888,25 @@ describe("a replacement under the reader's hand", () => {
       toast().show("Second done", undo());
     });
     expect(press("Close")).toHaveFocus();
+  });
+
+  it("moves focus into a refusal that takes an undo's place, and not back out", () => {
+    steppedClock();
+    const toast = controlled();
+    act(() => {
+      toast().show("First done", undo());
+      toast().show("Second done", undo());
+    });
+    act(() => press("Close").focus());
+    act(() => {
+      toast().show("Not saved.", refused);
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("Not saved.");
+    expect(press("Close")).toHaveFocus();
+    act(() => toast().dismiss());
+    expect(screen.getByRole("status")).toHaveTextContent("Second done");
+    expect(press("Close")).not.toHaveFocus();
+    expect(press("Undo")).not.toHaveFocus();
   });
 
   it("holds a replacement that arrives under a resting pointer", async () => {

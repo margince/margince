@@ -100,9 +100,8 @@ type ToastMessage = Readonly<{
 
 export type ToastOptions = Readonly<{
   /**
-   * Keep it until something dismisses it. Worth asking for only where the
-   * message is a REFUSAL: a reader who has been told a write did not land
-   * should not have that sentence taken away from them seconds later.
+   * Keep it until something dismisses it. With `tone: "danger"` it is a REFUSAL,
+   * which holds the region: a reader told a write failed must get to read it.
    */
   sticky?: boolean;
   /**
@@ -149,12 +148,12 @@ const NO_REGION: Toast = { show: () => 0, dismiss: () => {} };
 /**
  * The queue, and the one rule that shapes it.
  *
- * A confirmation carrying a verb is not interchangeable with one that only
- * reports: an undo is the reader's only route back from something they may not
- * have meant. So while a message with an action is on screen, anything else
- * arriving QUEUES BEHIND IT. The one exception is a newer undo, which takes the
- * older undo's place: a reader pressing Done on three tasks wants the latest
- * Undo, not three identical toasts to close. Otherwise the newest message wins.
+ * A message carrying a verb, or a refusal (`danger` and sticky), holds the
+ * region, and anything else arriving QUEUES BEHIND IT: an undo is the reader's
+ * only way back, and a refusal says a write did not land. A refusal arriving
+ * goes ahead of all but the refusals already waiting. A newer undo takes
+ * the older undo's place wherever it waits: three Done presses want the latest
+ * Undo, not three toasts to close. Otherwise the newest message wins.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [queue, setQueue] = useState<readonly ToastMessage[]>([]);
@@ -198,15 +197,26 @@ function enqueue(
   arriving: ToastMessage,
 ): readonly ToastMessage[] {
   const isUndo = (message: ToastMessage) => message.action?.kind === "undo";
+  const isRefusal = (message: ToastMessage) =>
+    message.tone === "danger" && message.sticky;
   const replacing = { ...arriving, replacedShown: waiting.length > 0 };
   if (isUndo(arriving) && waiting.some(isUndo)) {
     return waiting.map((message, at) =>
       isUndo(message) ? (at === 0 ? replacing : arriving) : message,
     );
   }
-  const shown = waiting[0];
-  if (shown === undefined || shown.action === null) {
-    return [replacing, ...waiting.slice(1)];
+  const [shown, ...behind] = waiting;
+  if (shown === undefined || (shown.action === null && !isRefusal(shown))) {
+    return [replacing, ...behind];
+  }
+  const from = waiting.findIndex((message) => !isRefusal(message));
+  if (isRefusal(arriving) && from !== -1) {
+    // Each returns when the reader closes a refusal, and takes no focus then.
+    const back = waiting
+      .slice(from)
+      .map((message) => ({ ...message, replacedShown: false }));
+    const placed = from === 0 ? replacing : arriving;
+    return [...waiting.slice(0, from), placed, ...back];
   }
   return [...waiting, arriving];
 }
@@ -397,15 +407,8 @@ export function ToastRegion() {
     setFocusInside(region.contains(document.activeElement));
   }, [shownId, replacedShown, region]);
 
-  // Escape belongs to the REGION, and it is attached to the node rather than
-  // written as a JSX handler on a static element.
-  //
-  // It was on the two buttons, which was wrong for a reason a caller found
-  // before a reader did: the MESSAGE can carry focusable content of its own —
-  // the lead-qualified confirmation puts a link to the new contact in its body
-  // — and a reader who tabbed to that link was inside a toast whose documented
-  // way out did nothing. What "focus is inside it" means is the region, so the
-  // region is what listens.
+  // Escape belongs to the REGION, not its buttons: the message body can carry a
+  // link of its own, and a reader focused there needs the same way out.
   useEffect(() => {
     if (region === null) {
       return;
@@ -429,9 +432,7 @@ export function ToastRegion() {
     }
     const life = shown.action === null ? TOAST_MS : ACTION_TOAST_MS;
     const timer = setTimeout(() => dismiss(shown.id), life);
-    // The cleanup one of the three hand-copied toasts was missing. A timer
-    // belongs to the tree that started it: left running, it fires a state update
-    // into a component that is no longer mounted.
+    // Left running, it would fire a state update into an unmounted tree.
     return () => clearTimeout(timer);
     // `shown` identity changes per message, which is what re-arms the deadline —
     // so a second confirmation gets its own full life rather than inheriting
