@@ -33,12 +33,12 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
-To snooze a Worklist item in Margince, press **Snooze** on its row. It comes back tomorrow ("Back on
-your list tomorrow.").
+To snooze a Worklist item in Margince, open the **Remove from list** menu on its row and choose
+**Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
-2. On the row, press **Snooze** for one day. Or open the arrow beside it (**Snooze duration**) for
-   more choices.
-3. Choose **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
+2. On the row, open the **Remove from list** menu, the button with three dots.
+3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they
+   reply**.
 4. The note that follows offers **Undo**.
 
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also
@@ -54,13 +54,14 @@ stays the same. You hold at most 50 pins: a newer one takes the place of your ol
 "Item was not pinned. Retry." Also called: star, flag, keep on top.
 
 ### How do I remove something from my worklist?
-To take an item off your Worklist in Margince, open **Remove from list** on its row and choose
-**Done**, **Not mine** or **Not a customer**.
+To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not
+a customer**, open the **Remove from list** menu.
 1. Open **Home** → **Show Worklist** and find the row.
-2. Open **Remove from list**.
-3. Choose **Done** if you handled it another way, such as by phone.
-4. Or choose **Not mine** if someone else should answer, or **Not a customer**.
-5. Press **Undo** in the note if you picked wrong.
+2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in the
+   **Remove from list** menu.
+3. Or open **Remove from list** and choose **Not mine** if someone else should answer, or **Not a
+   customer**.
+4. Press **Undo** in the note if you picked wrong.
 
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run

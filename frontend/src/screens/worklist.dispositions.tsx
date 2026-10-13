@@ -14,10 +14,8 @@
 // disappearance needs its way back offered at the moment of the disappearance.
 // Finding it again afterwards means knowing which judgement you made.
 
-import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useRef, useState } from "react";
 import { Button, OverflowMenu } from "../design-system/atoms";
-import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -310,14 +308,12 @@ function PutDownMenu({
         />
       ))}
       {/* The LONGER SPANS, as lines of their own rather than behind a second
-          control. Above the fold they live in the caret half of the snooze
-          control, which keeps the common case one press; a popover inside a
-          menu is a second layer over a surface already floating, and a keyboard
-          reader would open two things to say "next week".
-          The verb above still sends the default day, so the fast path is
-          unchanged and these are the answers it cannot give. Each carries its
-          own sentence — "Snooze for 3 days" — because a bare "3 days" standing
-          beside "Snooze" is a fragment whose subject a reader has to guess. */}
+          control: a popover inside a menu is a second layer over a surface
+          already floating, and a keyboard reader would open two things to say
+          "next week". The verb above still sends the default day. Each line
+          carries its own sentence — "Snooze for 3 days" — because a bare
+          "3 days" beside "Snooze" is a fragment whose subject a reader has to
+          guess. */}
       {offered.includes("snooze") &&
         SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS).map((days) => (
           <Button
@@ -352,17 +348,12 @@ function PutDownMenu({
   );
 }
 
-// The set-aside verbs, drawn where there is width for them.
+// The set-aside verbs: Done beside the work, the rest in one menu.
 //
-// Below the fold they are GONE rather than smaller, for the width arithmetic in
-// design-system/swiperow.tsx's header. PutDownByThumb carries every JUDGEMENT
-// there, on the row itself.
-//
-// The snooze SPANS travel with them, as lines in that menu. They were lost for
-// one release: the gesture sends the default day, so a rep who knew a customer
-// was away all week pressed the same button every morning — the state the spans
-// were added to end. A menu line costs no height where a fourth 44px control
-// did, which is what made room for them without the band coming back.
+// Done is the one judgement that finishes the row, so it stays a button. The
+// others only move the row off the list; drawn as buttons, they wrap the row's
+// verbs onto a second line. Below the fold Done joins the menu, and
+// PutDownByThumb carries every judgement on the row itself.
 
 export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const folded = useFoldedViewport();
@@ -379,50 +370,30 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const shared = useContext(PutDownContext);
   const own = usePutDown(item);
   const { offered, put, writing, t, locale } = shared ?? own;
-  if (offered.length === 0) {
-    return null;
-  }
-  // Below the fold the band goes and the menu stands in its place: one tab stop
-  // rather than four 44px controls, so the judgements stay reachable by key
-  // without the height that put the row over its ceiling.
-  if (folded) {
-    return (
-      <PutDownMenu
-        offered={offered}
-        put={put}
-        writing={writing}
-        t={t}
-        locale={locale}
-      />
-    );
-  }
+  const finishes = !folded && offered.includes("handled");
+  const moves = finishes
+    ? offered.filter((disposition) => disposition !== "handled")
+    : offered;
   // A FRAGMENT, not a box. These verbs stand in the row's own one line of
-  // verbs, and a wrapper of their own would be a group inside it — spaced by
-  // its own rule, wrapping on its own terms, and holding the snooze apart from
-  // the "Open" it reads beside.
+  // verbs, and a wrapper of their own would be a group inside it.
   return (
     <>
-      {offered.map((disposition) =>
-        // The snooze is the one judgement with a SECOND answer behind it: the
-        // press means tomorrow and the caret means "not tomorrow". One control
-        // in two halves rather than two controls, because a caret standing on
-        // its own beside the verb reads as a verb of its own.
-        disposition === "snooze" ? (
-          <SnoozeSplit
-            key={disposition}
-            writing={writing}
-            onSnooze={() => put("snooze")}
-            onPick={(until) => put("snooze", until)}
-          />
-        ) : (
-          <DispositionButton
-            key={disposition}
-            disposition={disposition}
-            writing={writing}
-            onPress={() => put(disposition)}
-            t={t}
-          />
-        ),
+      {moves.length > 0 && (
+        <PutDownMenu
+          offered={moves}
+          put={put}
+          writing={writing}
+          t={t}
+          locale={locale}
+        />
+      )}
+      {finishes && (
+        <DispositionButton
+          disposition="handled"
+          writing={writing}
+          onPress={() => put("handled")}
+          t={t}
+        />
       )}
     </>
   );
@@ -457,106 +428,6 @@ export function swipeActions(
     };
   };
   return { start: side("start"), end: side("end") };
-}
-
-/**
- * Putting a row down, and for how long — ONE control in two halves.
- *
- * The press is the common case and costs nothing it did not cost before: a rep
- * reaching for "not today" most often means tomorrow, and charging every one of
- * them a duration to buy the rare case is the trade this refuses. The caret is
- * the rare case, and it is the same physical control rather than a second one
- * standing beside the verb — the split's hairline seam is what says "another
- * way of doing THIS" where a gap would have said "another verb".
- *
- * The same `.actions-split` the compose dialog's send menu is built from, and
- * the same `Popover variant` its caret uses; the panel's chrome is the
- * popover's own.
- *
- * The lines inside are SENTENCES — "Snooze for 3 days" — in the folded menu's
- * own spelling, because a bare "3 days" standing under a caret is a fragment
- * whose subject the reader has to reconstruct from the button they pressed.
- * They read as lines of a list rather than as a stack of pills: what the reader
- * is doing here is choosing among four answers to one question.
- */
-function SnoozeSplit({
-  writing,
-  onSnooze,
-  onPick,
-}: Readonly<{
-  writing: PutDownAnswer | undefined;
-  onSnooze: () => void;
-  onPick: (until: SnoozeSpan | SnoozeEvent) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <span className="actions-split">
-      <Button
-        variant="ghost"
-        // The default day is an answer of its own, so it is `pending` when the
-        // press was this half's and `disabled` when it was one of the lines' —
-        // the two send the same span and are still two presses, and only the
-        // one the reader made may claim to be mid-write.
-        {...writeState(writing, { disposition: "snooze" })}
-        onClick={onSnooze}
-      >
-        {t("worklist.disposition.verb.snooze")}
-      </Button>
-      <Popover
-        variant="ghost"
-        // Refused while ANY answer on this row is being written, its own lines
-        // included: the caret starts no write, so it is the sibling case rather
-        // than the pressed one, and a chooser opened over an in-flight write
-        // reveals four lines that all refuse the press. A panel already open
-        // when the write starts stays open, because the line the reader pressed
-        // is inside it holding their focus — `Popover.disabled` blocks the
-        // opening and never the closing.
-        disabled={writing !== undefined}
-        label={
-          <>
-            <ChevronDown aria-hidden="true" />
-            {/* The caret's whole name, and the one the verb beside it cannot
-                carry: a glyph announces as nothing. */}
-            <span className="sr-only">
-              {t("worklist.disposition.snoozeFor")}
-            </span>
-          </>
-        }
-      >
-        <div className="worklist-snooze-spans">
-          {SNOOZE_SPANS.map((days) => (
-            <Button
-              key={days}
-              variant="ghost"
-              {...writeState(writing, { disposition: "snooze", until: days })}
-              onClick={() => onPick(days)}
-            >
-              {translatePlural(
-                locale,
-                "worklist.disposition.snoozeForDays",
-                days,
-                { value: formatNumber(days, locale) },
-              )}
-            </Button>
-          ))}
-          {/* The event answers, after the spans: a rep opening this most often
-              still means a duration, and what these add is the case a duration
-              cannot state. */}
-          {SNOOZE_EVENTS.map((event) => (
-            <Button
-              key={event}
-              variant="ghost"
-              {...writeState(writing, { disposition: "snooze", until: event })}
-              onClick={() => onPick(event)}
-            >
-              {t(`worklist.disposition.snoozeUntil.${event}` as const)}
-            </Button>
-          ))}
-        </div>
-      </Popover>
-    </span>
-  );
 }
 
 // What the confirmation says a press did.

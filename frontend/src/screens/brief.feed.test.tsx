@@ -214,18 +214,21 @@ it("ends the row in hand's one line with the agent's move, every option beside i
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The put-downs lead from the far edge, in the open; the way in follows;
-  // the move the product worked out closes the line, in the agent's chrome.
-  expect(line.at(0)?.closest(".worklist-row-putdowns")).not.toBeNull();
+  // The way into what the row is about opens the line. The set-asides are one
+  // menu with Done beside it, and the agent's move closes the line.
+  expect(line.at(0)).toBe(
+    lead.getByRole("button", { name: en["brief.focus.context"] }),
+  );
+  const menu = lead.getByRole("button", {
+    name: en["worklist.disposition.menu"],
+  });
+  expect(line.at(line.indexOf(menu) + 1)).toBe(
+    lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
+  );
   expect(
-    lead
-      .getByRole("button", { name: en["worklist.disposition.verb.not_mine"] })
-      .closest(".worklist-row-putdowns"),
-  ).not.toBeNull();
-  expect(
-    lead
-      .getByRole("button", { name: en["brief.focus.context"] })
-      .closest(".worklist-row-putdowns"),
+    lead.queryByRole("button", {
+      name: en["worklist.disposition.verb.not_mine"],
+    }),
   ).toBeNull();
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],

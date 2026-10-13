@@ -185,10 +185,18 @@ const FORWARD: [number, number] = [0, 90];
 const BACK: [number, number] = [90, 0];
 
 describe("putting a row down below the fold", () => {
-  it("draws the verbs as buttons where there is width for them", () => {
+  // Where there is width, Done is a button and the rest are lines of the menu,
+  // and no gesture wraps the row.
+  it("draws the verbs as controls where there is width for them", () => {
     atWidth(false);
     draw(EVERY_JUDGEMENT);
 
+    expect(
+      screen.getByRole("button", { name: verb("handled") }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+    );
     for (const disposition of EVERY_JUDGEMENT) {
       expect(
         screen.getByRole("button", { name: verb(disposition) }),

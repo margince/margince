@@ -72,15 +72,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const MENU = en["worklist.disposition.menu"];
+
 describe("Done on a waiting row", () => {
-  it("leads the judgements and sends handled", async () => {
+  // Done finishes the row, so it stays beside the work. The judgements that
+  // only move the row off the list are lines of the menu.
+  it("stands beside the menu of the others and sends handled", async () => {
     const user = userEvent.setup();
     const fetch = draw();
 
     const done = screen.getByRole("button", {
       name: en["worklist.disposition.verb.handled"],
     });
-    expect(screen.getAllByRole("button")[0]).toBe(done);
+    expect(
+      screen
+        .getAllByRole("button")
+        .map(
+          (button) => button.textContent || button.getAttribute("aria-label"),
+        ),
+    ).toEqual([MENU, en["worklist.disposition.verb.handled"]]);
 
     await user.click(done);
 
@@ -109,6 +119,7 @@ describe("Not mine on a colleague's row", () => {
     const user = userEvent.setup();
     draw();
 
+    await user.click(screen.getByRole("button", { name: MENU }));
     await user.click(
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.not_mine"],
@@ -124,7 +135,12 @@ describe("Not mine on a colleague's row", () => {
   it("explains itself to a reader who reaches it by keyboard", async () => {
     const user = userEvent.setup();
     draw();
-    const notMine = screen.getByRole("button", {
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: MENU }),
+    );
+    await user.keyboard("{Enter}");
+    const notMine = await screen.findByRole("button", {
       name: en["worklist.disposition.verb.not_mine"],
     });
 

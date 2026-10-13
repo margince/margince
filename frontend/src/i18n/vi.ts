@@ -12066,7 +12066,6 @@ export const vi = {
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
-  "worklist.disposition.snoozeFor": "Thời gian tạm hoãn",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.handled": "Xong",
   "worklist.disposition.verb.not_mine": "Không phải việc của tôi",

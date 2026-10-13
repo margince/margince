@@ -11,10 +11,10 @@ import { BatchVerb, PinVerb, RowVerbs } from "./worklist.rowverbs";
 /**
  * The verbs of the row IN HAND on the Brief, across the card's floor.
  *
- * The same options every row carries, in the order one row being ANSWERED
- * needs them: the set-asides lead from one edge, because declining steps away
- * from the work; the ways into it follow; and the move the product prepared
- * closes the line at the other edge, where the lane's answer stands.
+ * The same options every row carries, on one right-aligned line. The ways into
+ * the record come first, then the reader's marks beside the menu of set-asides,
+ * then Done. The prepared move closes the line, so the answer is at one x on
+ * every row.
  *
  * The ORDER is all this shape is. What the frame around the row already
  * supplies is `framed`'s to withhold and `allowPin`'s to offer — the Brief's
@@ -51,9 +51,6 @@ export function TriageActs({
 }>) {
   return (
     <div className="worklist-row-acts">
-      <span className="worklist-row-putdowns">
-        <DispositionVerbs item={item} />
-      </span>
       {context}
       {item.batch && onReview ? (
         <BatchVerb onReview={onReview} />
@@ -76,6 +73,9 @@ export function TriageActs({
       {item.source === "task" && !item.batch && (
         <ReassignControl item={item} owner={owner} />
       )}
+      {/* The menu beside the two glyphs above, so the three square controls
+          stand together, and Done after it, next to the move. */}
+      <DispositionVerbs item={item} />
       {equals}
       {!item.batch && (
         <RowVerbs

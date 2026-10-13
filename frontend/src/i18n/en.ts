@@ -12444,7 +12444,6 @@ export const en = {
   "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
-  "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",

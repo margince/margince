@@ -9,7 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { DispositionVerbs } from "./worklist.dispositions";
+import {
+  DispositionVerbs,
+  SNOOZE_DAYS,
+  SNOOZE_SPANS,
+} from "./worklist.dispositions";
 import type { WorklistItem } from "./worklist.queries";
 
 // How long a row is put down for.
@@ -35,8 +39,14 @@ function row(): WorklistItem {
     title: "Anna Weber is waiting",
     because: [],
     actions: [],
-    dispositions: ["snooze", "not_mine"],
+    dispositions: ["handled", "snooze", "not_mine"],
   };
+}
+
+// The snooze and its spans are lines in the row's one menu of set-asides.
+const MENU = en["worklist.disposition.menu"];
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: MENU }));
 }
 
 // The body each write carried, in order.
@@ -96,12 +106,9 @@ function draw(respond: () => Promise<Response> = settled) {
 
 // What the panel's line for a span is CALLED.
 //
-// A whole sentence — "Snooze for 3 days" — and not the bare span it used to be.
-// The lines sit behind a caret now rather than under a labelled "Snooze duration"
-// trigger, so a reader who opens the panel from the keyboard hears the line and
-// nothing else: "3 days" alone is a fragment whose verb they have to remember
-// pressing. Read from the catalogue rather than retyped, because a test naming
-// its own copy proves only that it was named.
+// A whole sentence, "Snooze for 3 days": a keyboard reader hears the line and
+// nothing else. Read from the catalogue, because a test naming its own copy
+// proves only that it was named.
 function spanLine(days: number): string {
   const template =
     days === 1
@@ -138,6 +145,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw();
 
+    await openMenu(user);
     await user.click(
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.snooze"],
@@ -150,16 +158,16 @@ describe("how long a row is put down for", () => {
 
   // The case the change is for: a week, in one press instead of seven.
   //
-  // EVERY declared span, not a sample. The list is the product decision, so a
-  // test covering two of three would let the middle one be deleted or wired to
-  // the wrong number with nothing failing.
-  it.each([1, 3, 7])(
+  // Every declared span but the default day, which is the plain Snooze line
+  // above. Read from the list the menu draws, so a span added there is a span
+  // tested here.
+  it.each(SNOOZE_SPANS.filter((days) => days !== SNOOZE_DAYS))(
     "sends the %i-day span the reader picked",
     async (days) => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const fetch = draw();
 
-      await user.click(screen.getByRole("button", { name: "Snooze duration" }));
+      await openMenu(user);
       await user.click(
         await screen.findByRole("button", { name: spanLine(days) }),
       );
@@ -182,7 +190,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw();
 
-    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
+    await openMenu(user);
     await user.click(
       await screen.findByRole("button", {
         name: en["worklist.disposition.snoozeUntil.reply"],
@@ -206,6 +214,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw();
 
+    await openMenu(user);
     await user.click(
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.snooze"],
@@ -218,7 +227,7 @@ describe("how long a row is put down for", () => {
 
   // The spans are offered only where the verb is. A duration picker beside a
   // row the server never offered a snooze on is a control that 404s.
-  it("offers no spans on a row the server does not let a reader snooze", () => {
+  it("offers no spans on a row the server does not let a reader snooze", async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -240,9 +249,13 @@ describe("how long a row is put down for", () => {
       </QueryClientProvider>,
     );
 
+    await userEvent.setup().click(screen.getByRole("button", { name: MENU }));
     expect(
-      screen.queryByRole("button", { name: "Snooze duration" }),
-    ).toBeNull();
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.not_mine"],
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: spanLine(3) })).toBeNull();
   });
 
   // What the confirmation SAYS a press did.
@@ -255,7 +268,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw();
 
-    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
+    await openMenu(user);
     await user.click(await screen.findByRole("button", { name: spanLine(7) }));
 
     expect(
@@ -270,6 +283,7 @@ describe("how long a row is put down for", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw();
 
+    await openMenu(user);
     await user.click(
       screen.getByRole("button", {
         name: en["worklist.disposition.verb.snooze"],
@@ -277,19 +291,6 @@ describe("how long a row is put down for", () => {
     );
 
     expect(await screen.findByText("Back on your list tomorrow.")).toBeTruthy();
-  });
-
-  // Singular reads as singular. "1 days" is a different kind of wrong from a
-  // missing feature — it is the product looking unfinished on every press.
-  it("says one day, not one days", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    draw();
-
-    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
-
-    expect(
-      await screen.findByRole("button", { name: spanLine(1) }),
-    ).toBeTruthy();
   });
 });
 
@@ -304,6 +305,7 @@ describe("how long a row is put down for", () => {
 // nobody standing on it, and spelling both as `pending` claims a write from
 // every control on the row.
 describe("while one answer is being written", () => {
+  const DONE = en["worklist.disposition.verb.handled"];
   const SNOOZE = en["worklist.disposition.verb.snooze"];
   const NOT_MINE = en["worklist.disposition.verb.not_mine"];
 
@@ -311,18 +313,18 @@ describe("while one answer is being written", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw(neverSettles);
 
-    const snooze = screen.getByRole("button", { name: SNOOZE });
-    await user.click(snooze);
+    const done = screen.getByRole("button", { name: DONE });
+    await user.click(done);
 
     // Focus is the point. `disabled` would have moved it to <body>, so the
     // button turning a mark and announcing itself busy would be announcing it
     // to a reader who is no longer there.
-    expect(document.activeElement).toBe(snooze);
-    expect(snooze.hasAttribute("disabled")).toBe(false);
-    expect(snooze.getAttribute("aria-disabled")).toBe("true");
-    expect(snooze.getAttribute("aria-busy")).toBe("true");
+    expect(document.activeElement).toBe(done);
+    expect(done.hasAttribute("disabled")).toBe(false);
+    expect(done.getAttribute("aria-disabled")).toBe("true");
+    expect(done.getAttribute("aria-busy")).toBe("true");
 
-    await user.click(snooze);
+    await user.click(done);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -330,30 +332,38 @@ describe("while one answer is being written", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const fetch = draw(neverSettles);
 
-    await user.click(screen.getByRole("button", { name: NOT_MINE }));
+    await user.click(screen.getByRole("button", { name: DONE }));
+    await openMenu(user);
 
     const snooze = screen.getByRole("button", { name: SNOOZE });
     // Disabled, and NOT busy: it started nothing, and a mark turning on it
     // would claim a snooze nobody sent.
     expect(snooze.hasAttribute("disabled")).toBe(true);
     expect(snooze.hasAttribute("aria-busy")).toBe(false);
+    expect(
+      screen.getByRole("button", { name: NOT_MINE }).hasAttribute("disabled"),
+    ).toBe(true);
     await user.click(snooze);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("marks the span the reader chose, not the half beside it", async () => {
+  it("marks the span the reader chose, not the line beside it", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     draw(neverSettles);
 
-    await user.click(screen.getByRole("button", { name: "Snooze duration" }));
-    const week = await screen.findByRole("button", { name: spanLine(7) });
-    await user.click(week);
+    await openMenu(user);
+    await user.click(await screen.findByRole("button", { name: spanLine(7) }));
+    // Choosing closes the menu and hands focus back to it, as every menu does.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: MENU }),
+      ),
+    );
 
-    // The line stays where the reader left it: the chooser is not closed under
-    // them and the control they pressed is still the focused one.
-    expect(document.activeElement).toBe(week);
+    await openMenu(user);
+    const week = screen.getByRole("button", { name: spanLine(7) });
     expect(week.getAttribute("aria-busy")).toBe("true");
-    // The default half sends the same judgement and is still a different
+    // The plain Snooze sends the same judgement and is still a different
     // press, so it stands down rather than claiming the write.
     const snooze = screen.getByRole("button", { name: SNOOZE });
     expect(snooze.hasAttribute("disabled")).toBe(true);

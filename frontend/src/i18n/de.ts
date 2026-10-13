@@ -12317,7 +12317,6 @@ export const de = {
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
-  "worklist.disposition.snoozeFor": "Dauer der Zurückstellung",
   "worklist.disposition.snoozeUntil.reply": "Bis zur Antwort",
   "worklist.disposition.verb.handled": "Erledigt",
   "worklist.disposition.verb.not_mine": "Nicht zuständig",

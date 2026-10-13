@@ -43,8 +43,8 @@ function oneRow(item: WorklistItem) {
 }
 
 // A buyer waiting on an answer: the lane with the most verbs on it. The reply is
-// the answer, the record link and three judgements are the quieter half, and the
-// pin and the hand-off are glyphs.
+// the answer, the record link, Done and the menu of set-asides are the quieter
+// half, and the pin is a glyph.
 function waitingRow(): WorklistItem {
   return row({
     id: "01a05500-0000-7000-8000-0000000000a1",
@@ -54,7 +54,7 @@ function waitingRow(): WorklistItem {
     consequence: "buyer_waits",
     title: "Re: pricing for the retrofit",
     actions: ["open", "reply"],
-    dispositions: ["snooze", "not_mine"],
+    dispositions: ["handled", "snooze", "not_mine"],
     subject: {
       type: "deal",
       id: "01a05500-0000-7000-8000-00000000bbbb",
@@ -90,39 +90,23 @@ describe("a row's verbs are one line with the lane's answer last", () => {
     expect(verbsInOrder().at(-1)).toBe(reply);
   });
 
-  // THE WHOLE LINE, in order, and every verb on it named — not a sample. The
-  // order IS the layout here: the ways to PUT THE ROW DOWN lead from the
-  // opening edge, because declining steps away from the work before any of it
-  // is done; the ways into it follow, the reader's own GLYPH among them; and
-  // the answer is the tail. A test naming two of six would let a third be
-  // promoted past the call to action, or let the glyph slide out to the end of
-  // the line, with nothing failing.
-  //
-  // THE SAME ORDER THE BRIEF'S CARD READS IN, and that is the point: the queue
-  // is a list of rows a reader answers one at a time, which is the act the card
-  // is shaped for. Drawn in two orders, a rep who opened the same row on two
-  // surfaces looked for its answer at two different places.
-  //
-  // The pin is among the WORDS on purpose: a lone 32px glyph closing a line has
-  // no label to read as a verb, so it reads as a stray mark.
-  it("leads with the set-asides, glyph among the words", async () => {
+  // The whole line in order, every verb named, because the order is the
+  // layout. A test naming two of five would let a verb pass the answer with
+  // nothing failing. The Brief's card reads in the same order, so a row's
+  // answer is at one place on both surfaces.
+  it("draws the way in, the glyphs with the menu, Done, then the answer", async () => {
     oneRow(waitingRow());
 
     const reply = await screen.findByRole("button", {
       name: en["compose.reply"],
     });
     const inOrder = [
-      screen.getByRole("button", {
-        name: en["worklist.disposition.verb.snooze"],
-      }),
-      screen.getByRole("button", {
-        name: en["worklist.disposition.snoozeFor"],
-      }),
-      screen.getByRole("button", {
-        name: en["worklist.disposition.verb.not_mine"],
-      }),
       screen.getByRole("link", { name: en["worklist.verb.open"] }),
       screen.getByRole("button", { name: en["worklist.verb.pin"] }),
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
       reply,
     ];
 
@@ -132,10 +116,9 @@ describe("a row's verbs are one line with the lane's answer last", () => {
   // The hand-off, on the one lane that carries one. Separate from the case above
   // because it is a task's verb and a waiting message has no assignee to move.
   //
-  // It is a glyph too, so it stands beside the pin and for the same reason:
-  // the two controls with no word on them stay together among the labelled
-  // ones, where a reader meets a name beside them.
-  it("draws the hand-off beside the pin, among the words", async () => {
+  // It is a glyph too, so it stands between the pin and the menu. The square
+  // controls stay together, with a labelled verb on either side.
+  it("draws the hand-off between the pin and the menu", async () => {
     oneRow(
       row({
         id: "task-1",
@@ -149,19 +132,12 @@ describe("a row's verbs are one line with the lane's answer last", () => {
       name: en["worklist.manager.reassign"],
     });
     const drawn = verbsInOrder();
-    expect(drawn.indexOf(reassign)).toBeGreaterThan(
-      drawn.indexOf(
-        screen.getByRole("button", { name: en["worklist.verb.pin"] }),
-      ),
+    const at = drawn.indexOf(reassign);
+    expect(drawn[at - 1]).toBe(
+      screen.getByRole("button", { name: en["worklist.verb.pin"] }),
     );
-    // After the set-asides, which now lead the line: the two glyphs stay
-    // together among the labelled verbs and neither opens nor closes it.
-    expect(drawn.indexOf(reassign)).toBeGreaterThan(
-      drawn.indexOf(
-        screen.getByRole("button", {
-          name: en["worklist.disposition.verb.not_mine"],
-        }),
-      ),
+    expect(drawn[at + 1]).toBe(
+      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
     );
   });
 
