@@ -63,6 +63,13 @@
       "question": "Which lead sources created the most won revenue?",
       "tool": "run_analytics_query",
       "expects": "Won revenue by the source the deal carries, in base currency. The lost cohort is the discriminator: win-loss already excludes open deals, so an engine ignoring the status filter would count losses as revenue."
+    },
+    {
+      "id": "M11",
+      "persona": "team manager",
+      "question": "Why are we losing, and how many deals support each recorded reason?",
+      "tool": "run_analytics_query",
+      "expects": "One row per reason somebody WROTE on the deal, counted. The won cohort is the discriminator: a won deal carries no reason, so an engine that skipped the status filter reports a bucket of wins under no reason at all and reads as the commonest cause of loss."
     }
   ]
 }
