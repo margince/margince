@@ -30,6 +30,17 @@ describe("moving modules", () => {
     ]);
   });
 
+  it("puts a file moved onto a directory inside it", () => {
+    const planned = planMoves(
+      [["/fe/src/app/storage.ts", "/fe/src/lib"]],
+      () => [],
+      (path) => path === "/fe/src/lib",
+    );
+    expect(planned.get("/fe/src/app/storage.ts")).toBe(
+      "/fe/src/lib/storage.ts",
+    );
+  });
+
   it("refuses two files moving to one place", () => {
     expect(() =>
       planMoves(
@@ -49,6 +60,7 @@ describe("moving modules", () => {
       'export type { Key } from "../app/storage";',
       'const lazy = () => import("../app/storage");',
       'vi.mock("../app/storage", () => ({}));',
+      'type K = typeof import("../app/storage");',
     ].join("\n");
     expect(rewriteImports("/fe/src/api/client.ts", text, moves, exists)).toBe(
       [
@@ -56,6 +68,7 @@ describe("moving modules", () => {
         'export type { Key } from "../lib/storage";',
         'const lazy = () => import("../lib/storage");',
         'vi.mock("../lib/storage", () => ({}));',
+        'type K = typeof import("../lib/storage");',
       ].join("\n"),
     );
   });

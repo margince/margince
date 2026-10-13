@@ -8,7 +8,15 @@
 // such as a gate or a waiver list. Only a reader can say if that text follows.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, relative, resolve, sep } from "node:path";
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import {
@@ -34,7 +42,8 @@ const SPECIFIER_CALLS = new Set([
 export type MoveMap = ReadonlyMap<string, string>;
 
 // planMoves expands each pair into file moves. A directory pair keeps the
-// layout under it, and a file pair moves that one file.
+// layout under it, and a file pair moves that one file. A file moved onto an
+// existing directory lands inside it, as `git mv` puts it.
 export function planMoves(
   pairs: readonly (readonly [string, string])[],
   filesIn: (dir: string) => readonly string[],
@@ -44,7 +53,11 @@ export function planMoves(
   for (const [from, to] of pairs) {
     const files = isDirectory(from) ? filesIn(from) : [from];
     for (const file of files) {
-      const target = isDirectory(from) ? join(to, relative(from, file)) : to;
+      const target = isDirectory(from)
+        ? join(to, relative(from, file))
+        : isDirectory(to)
+          ? join(to, basename(file))
+          : to;
       if (moves.has(file)) throw new Error(`${file} is moved twice`);
       moves.set(file, target);
     }
@@ -65,6 +78,14 @@ export function specifierNodes(source: ts.SourceFile): ts.StringLiteralLike[] {
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
       found.push(node.moduleSpecifier);
+    }
+    // `typeof import("x")` in a type is an ImportTypeNode, not a call.
+    if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      ts.isStringLiteral(node.argument.literal)
+    ) {
+      found.push(node.argument.literal);
     }
     if (ts.isCallExpression(node)) {
       const [first] = node.arguments;
@@ -169,7 +190,8 @@ function main(argv: readonly string[]) {
     if (!existsSync(from)) throw new Error(`${from} does not exist`);
     return [from, to] as const;
   });
-  const isDirectory = (path: string) => statSync(path).isDirectory();
+  const isDirectory = (path: string) =>
+    existsSync(path) && statSync(path).isDirectory();
   const moves = planMoves(pairs, (dir) => filesMatching(dir, /./), isDirectory);
   const isFile = (path: string) => existsSync(path) && statSync(path).isFile();
 
