@@ -99,6 +99,24 @@ func TestATestRunAnswersBeforeAnyRowIsRead(t *testing.T) {
 	}
 }
 
+// A second test of the version being tested answers from the run, before the
+// request opens the file: a double click costs no read of the object store.
+func TestASecondTestOfTheVersionBeingTestedReadsNoFile(t *testing.T) {
+	e, store := setupImportAppWithStore(t)
+	queued := queueLeadTest(t, e, prospectCSV)
+	var sourceRef string
+	if err := e.Owner.QueryRow(t.Context(), `SELECT source_ref FROM import_run WHERE id = $1`, queued.ID).Scan(&sourceRef); err != nil {
+		t.Fatalf("reading the run's source: %v", err)
+	}
+	if err := store.Delete(t.Context(), sourceRef); err != nil {
+		t.Fatalf("removing the uploaded file: %v", err)
+	}
+	var again importRunDTO
+	if status := e.Call(t, http.MethodPost, "/v1/imports/"+queued.ID+"/validate", AnyMap{"version": queued.Version}, nil, &again); status != http.StatusOK || again.Status != "validating" {
+		t.Fatalf("a second test of the same version with its file gone → %d %q, want 200 validating from the run alone", status, again.Status)
+	}
+}
+
 // jobNames answers whether a test job's args name the run at attempt.
 func jobNames(t *testing.T, job *rivertype.JobRow, id string, attempt int) bool {
 	t.Helper()
