@@ -196,3 +196,30 @@ func TestPreviewWaitEndsBeforeTheCallsDeadline(t *testing.T) {
 		t.Fatalf("previewWait %s plus one read %s reaches /mcp's deadline %s", previewWait, previewPoll, mcpCallDeadline)
 	}
 }
+
+// A preview refused because this agent's other test still runs keeps nothing:
+// the caller is told to come back, so a kept draft would only hold its upload.
+func TestAPreviewRefusedForAnotherTestDiscardsItsDraft(t *testing.T) {
+	holder := ids.NewV7().String()
+	for code, wantDiscarded := range map[string]bool{httperr.AgentBusyCode: true, httperr.SourceBusyCode: false} {
+		for name, call := range map[string]string{
+			"one file":   `{"object":"company","csv":"name\nAcme\n","mapping":{"name":"display_name"}}`,
+			"many files": `{"files":[{"name":"accounts.csv","object":"company","csv":"ref,name\nC1,Acme\n"}]}`,
+		} {
+			t.Run(code+"/"+name, func(t *testing.T) {
+				var discarded []string
+				profile := twoPartProfile()
+				profile.SourceRef = "ws/import-source/stored"
+				busy := &httperr.DetailedError{Status: 409, Code: code, Details: map[string]any{"run_id": holder}}
+				imports := recordingImports{discarded: &discarded, stageErr: busy, profile: profile}
+				_, err := previewImport{imports: imports}.Handle(t.Context(), json.RawMessage(call))
+				if err == nil || !strings.Contains(err.Error(), holder) {
+					t.Fatalf("err = %v, want the refusal naming run %s", err, holder)
+				}
+				if got := len(discarded) == 1 && discarded[0] == profile.SourceRef; got != wantDiscarded {
+					t.Fatalf("discarded = %v, want the draft discarded: %t", discarded, wantDiscarded)
+				}
+			})
+		}
+	}
+}

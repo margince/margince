@@ -74,8 +74,7 @@ func (t previewImport) previewFiles(ctx context.Context, args previewArgs) (json
 	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// Kept for the reason the single-file path keeps it: the draft is testable again.
-		return nil, namingTheBusyRun(err)
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
 	return t.answered(ctx, run, ImportPreviewResult{Files: previews})
 }

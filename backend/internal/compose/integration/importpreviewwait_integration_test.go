@@ -119,6 +119,14 @@ func TestASecondPreviewByOneAgentAnswersItsRun(t *testing.T) {
 	if !strings.Contains(refusal, "can succeed later") {
 		t.Errorf("the refusal = %q, want it to say the same call can succeed once that test ends", refusal)
 	}
+	var kept int
+	if err := d.e.Owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM import_run WHERE id <> $1 AND status <> 'cancelled'`, first.Run.RunID).Scan(&kept); err != nil {
+		t.Fatalf("counting the drafts beside run %s: %v", first.Run.RunID, err)
+	}
+	if kept != 0 {
+		t.Errorf("%d drafts outlived the refused preview, want its draft cancelled", kept)
+	}
 }
 
 func TestCommitImportResumesAFailedCommit(t *testing.T) {

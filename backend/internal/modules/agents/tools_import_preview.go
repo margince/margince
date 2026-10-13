@@ -119,10 +119,7 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// Kept: a refused test leaves its draft pending with the reason, and
-		// createImportRun on the same source_ref tests it again.
-		// The sweep cancels a draft nobody returns to.
-		return nil, namingTheBusyRun(err)
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
 	return t.answered(ctx, run, ImportPreviewResult{
 		Mapping:  mapping,
@@ -160,6 +157,18 @@ var busyRunCopy = map[string]string{
 	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
 		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
 		"then preview again",
+}
+
+// stagingRefused answers a refused StageRun. A refusal for this agent's other
+// test discards the draft, since the caller is told to preview again and a
+// looping caller would leave one upload per call. Any other refused draft is
+// kept: createImportRun on its source_ref tests it again, and the sweep
+// cancels one nobody returns to.
+func stagingRefused(ctx context.Context, imports Imports, ref string, err error) error {
+	if busy, ok := errors.AsType[*httperr.DetailedError](err); ok && busy.Code == httperr.AgentBusyCode {
+		err = discarding(ctx, imports, ref, err)
+	}
+	return namingTheBusyRun(err)
 }
 
 // namingTheBusyRun points a busy refusal at the run it names, when the caller
