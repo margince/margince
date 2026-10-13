@@ -3,7 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
-import { needsStory } from "./lib/uat-scope.mjs";
+import {
+  ALL_STORIES_FLAG,
+  needsStory,
+  scopeFor,
+  storiesInScope,
+} from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
   renewingBroken,
@@ -42,6 +47,44 @@ describe("needsStory", () => {
   it("asks nothing of a file no story could render", () => {
     expect(needsStory("frontend/src/app/router.ts")).toBe(false);
     expect(needsStory("frontend/src/api/schema.d.ts")).toBe(false);
+  });
+});
+
+describe("scopeFor", () => {
+  it("renders what the diff reaches unless asked for every story", () => {
+    expect(scopeFor(["node", "fe-uat.mjs"])).toBe("diff");
+    expect(scopeFor(["node", "fe-uat.mjs", "--allow-missing"])).toBe("diff");
+    expect(scopeFor(["node", "fe-uat.mjs", ALL_STORIES_FLAG])).toBe("all");
+  });
+});
+
+describe("storiesInScope", () => {
+  const index = [
+    { id: "a--one", type: "story", importPath: "./src/a.stories.tsx" },
+    { id: "a--two", type: "story", importPath: "./src/a.stories.tsx" },
+    { id: "b--one", type: "story", importPath: "./src/b.stories.tsx" },
+    { id: "intro--docs", type: "docs", importPath: "./src/intro.mdx" },
+  ];
+  const ids = (entries) => entries.map((entry) => entry.id);
+
+  it("takes every story the build registered, and no docs page", () => {
+    expect(ids(storiesInScope(index, "all", new Set()))).toEqual([
+      "a--one",
+      "a--two",
+      "b--one",
+    ]);
+  });
+
+  it("takes only the story files the diff reached", () => {
+    expect(
+      ids(storiesInScope(index, "diff", new Set(["./src/a.stories.tsx"]))),
+    ).toEqual(["a--one", "a--two"]);
+  });
+
+  it("takes nothing from a docs page the diff reached", () => {
+    expect(storiesInScope(index, "diff", new Set(["./src/intro.mdx"]))).toEqual(
+      [],
+    );
   });
 });
 

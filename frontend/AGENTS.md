@@ -147,6 +147,8 @@ What the gates cover, and what they do not:
   changed component with no story, and on a changed story the build does not register. Two things
   limit it. It is a lane that need not pass, and `ARGS="--allow-missing"` turns the missing-story
   failure off. So nothing stops a component from shipping without a story.
+- `make fe-uat ARGS="--all-stories"` renders every story the build registers, whatever the diff.
+  `scheduled.yml` runs it on `main` daily and files an issue when a story fails there.
 
 That second gap is the rule you keep by hand. When a change adds or changes a component in
 `src/design-system/` or a screen surface:

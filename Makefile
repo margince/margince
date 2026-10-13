@@ -875,7 +875,8 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
-## Optional: ARGS="--allow-missing".
+## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
+## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \

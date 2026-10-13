@@ -31,6 +31,10 @@ not reach the calls that cost money.
 The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which is
 not a pass. The job is not required, so a vendor that is down blocks no merge.
 
+`scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
+`make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
+some change reaches it.
+
 **The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
 holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
 the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue

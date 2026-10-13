@@ -5,8 +5,9 @@
 // register — and writes a machine-readable manifest a UAT runner can consume.
 // Built for this repo's plain frontend/.
 //
-// Usage: node frontend/scripts/fe-uat.mjs [--allow-missing]
+// Usage: node frontend/scripts/fe-uat.mjs [--allow-missing | --all-stories]
 //   --allow-missing  do not fail when a changed component has no story yet
+//   --all-stories    render every story the build registers, whatever the diff
 //   FE_UAT_WORKERS   pages capturing at once (default: half the cores, max 4)
 import { spawnSync } from "node:child_process";
 import {
@@ -31,7 +32,7 @@ import {
   readStoryIndex,
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
-import { needsStory } from "./lib/uat-scope.mjs";
+import { needsStory, scopeFor, storiesInScope } from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
   renewingBroken,
@@ -43,6 +44,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
 const outDir = join(repoRoot, ".tmp/fe-uat");
 const allowMissing = process.argv.includes("--allow-missing");
+const scope = scopeFor(process.argv);
 
 let requested;
 try {
@@ -105,15 +107,17 @@ function git(args) {
   return r.stdout.toString().trim();
 }
 
-// 1. Changed files on this branch vs origin/main.
-let base;
-try {
-  base = git("merge-base origin/main HEAD");
-} catch {
-  console.error(
-    "fe-uat: cannot compute merge-base with origin/main (shallow/detached?) — fall back to full-stack UAT",
-  );
-  process.exit(2);
+// 1. Changed files on this branch vs origin/main; none in the all-stories scope.
+let base = null;
+if (scope === "diff") {
+  try {
+    base = git("merge-base origin/main HEAD");
+  } catch {
+    console.error(
+      "fe-uat: cannot compute merge-base with origin/main (shallow/detached?) — fall back to full-stack UAT",
+    );
+    process.exit(2);
+  }
 }
 const head = git("rev-parse HEAD");
 // --diff-filter=d drops DELETED paths. A story file this branch removed cannot
@@ -121,9 +125,12 @@ const head = git("rev-parse HEAD");
 // and then fails as "a changed story the build did not register", which is the
 // gate reporting its own bookkeeping as a defect. The sibling spacing gate
 // filters the same way.
-const changed = git(`diff --name-only --diff-filter=d ${base}..HEAD`)
-  .split("\n")
-  .filter(Boolean);
+const changed =
+  base === null
+    ? []
+    : git(`diff --name-only --diff-filter=d ${base}..HEAD`)
+        .split("\n")
+        .filter(Boolean);
 
 // 2. Story-coverage map: for every source file, the story files that import it.
 //    A component is covered by ANY story that renders it — coverage is not tied
@@ -436,7 +443,7 @@ function captureThrew(story, error) {
 function writeManifest(fields) {
   mkdirSync(outDir, { recursive: true });
   const fanOutMap = Object.fromEntries(fanOutByReach);
-  const manifest = { base, head, fanOut: fanOutMap, ...fields };
+  const manifest = { scope, base, head, fanOut: fanOutMap, ...fields };
   writeFileSync(
     join(outDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -444,7 +451,7 @@ function writeManifest(fields) {
 }
 
 // Empty scope (no component/story touched) → nothing to render; pass.
-if (storyFiles.size === 0 && missing.length === 0) {
+if (scope === "diff" && storyFiles.size === 0 && missing.length === 0) {
   writeManifest({
     workers: 0,
     stories: [],
@@ -462,13 +469,15 @@ let results = [];
 let unresolved = [];
 let workers = 0;
 let captureSeconds = 0;
-if (storyFiles.size > 0) {
+if (scope === "all" || storyFiles.size > 0) {
   // Force a FRESH build so we render the current diff — a cached build would
   // show the previous source and green-light a broken change.
   buildStaticStorybook(repoRoot, staticDir, { force: true });
 
-  const inScope = readStoryIndex(staticDir).filter(
-    (e) => e.type === "story" && wantImportPaths.has(e.importPath),
+  const inScope = storiesInScope(
+    readStoryIndex(staticDir),
+    scope,
+    wantImportPaths,
   );
   // A changed/added story file the fresh build did not register (bad glob, no
   // exported stories, malformed meta) must FAIL — never silently drop it.
@@ -476,9 +485,11 @@ if (storyFiles.size > 0) {
   unresolved = [...wantImportPaths].filter((p) => !resolvedPaths.has(p));
 
   workers = workersFor(requested, inScope.length);
-  console.log(
-    `fe-uat scope: ${fanOut.size} changed module(s) → ${storyFiles.size} story file(s), ${inScope.length} stories, ${workers} worker(s). Fan-out: every story file that directly imports a changed module, or sits beside it, is rendered.`,
-  );
+  const scopeLine =
+    scope === "all"
+      ? `fe-uat scope: every story the build registers, ${inScope.length} stories, ${workers} worker(s).`
+      : `fe-uat scope: ${fanOut.size} changed module(s) → ${storyFiles.size} story file(s), ${inScope.length} stories, ${workers} worker(s). Fan-out: every story file that directly imports a changed module, or sits beside it, is rendered.`;
+  console.log(scopeLine);
   for (const [module, stories] of fanOutByReach) {
     console.log(
       `  ${module.replace(/^frontend\//, "")} → ${stories.length} story file(s)`,
@@ -515,7 +526,10 @@ if (storyFiles.size > 0) {
   }
 }
 
+// An all-stories run that captured nothing read a broken index, not a clean tree.
+const emptyCensus = scope === "all" && results.length === 0;
 const pass =
+  !emptyCensus &&
   results.every((r) => r.pass) &&
   unresolved.length === 0 &&
   (allowMissing || missing.length === 0);
@@ -523,6 +537,10 @@ writeManifest({ workers, stories: results, missing, unresolved, pass });
 
 const took = `${results.length} story(ies) in ${captureSeconds.toFixed(1)}s on ${workers} worker(s)`;
 if (!pass) {
+  if (emptyCensus)
+    console.error(
+      "fe-uat FAIL — the build registered no story to render (storybook-static/index.json)",
+    );
   const failed = results.filter((r) => !r.pass).map((r) => r.id);
   if (failed.length)
     console.error(

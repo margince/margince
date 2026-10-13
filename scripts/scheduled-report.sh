@@ -418,6 +418,24 @@ elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the backend suite's verdict depends on the calendar"
 fi
 
+if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
+  report "a story does not render clean on main" "priority: normal,area: ci-tests,bug" \
+"\`make fe-uat ARGS=--all-stories\` failed on the scheduled run of \`main\`: $RUN_URL
+
+On a branch, \`make fe-uat\` renders only the stories the diff reaches, so a story
+that fails on \`main\` stays hidden until some change reaches it, and then reads
+as that change's fault. The run's \`fe-uat-failures\` artifact holds the manifest, which
+names each failing story and its errors, and the capture of each one.
+
+No manifest in the artifact means the lane failed before it rendered: the install,
+the Chromium download or the Storybook build. The step log names which.
+
+Reproduce locally with \`make fe-uat ARGS=--all-stories\`."\
+    || unreported=1
+elif [[ "${STORIES_RESULT:-}" = "success" ]]; then
+  resolve "a story does not render clean on main"
+fi
+
 if [[ "${TREND_RESULT:-}" = "failure" ]]; then
   report "the weekly slop trend could not run" "priority: low,area: ci-tests,bug" \
 "\`make slop-trend\` failed on the scheduled run: $RUN_URL

@@ -27,3 +27,18 @@ export function needsStory(file) {
   if (TEST_ONLY_NAME.test(file)) return false;
   return !TESTING_DIRECTORY.test(file);
 }
+
+// Which stories the gate renders: those the diff reaches, or with
+// ALL_STORIES_FLAG every story the build registered.
+export const ALL_STORIES_FLAG = "--all-stories";
+
+export function scopeFor(argv) {
+  return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
+}
+
+// Index entries of type "docs" are prose pages, never a story to capture.
+export function storiesInScope(entries, scope, importPaths) {
+  const stories = entries.filter((entry) => entry.type === "story");
+  if (scope === "all") return stories;
+  return stories.filter((entry) => importPaths.has(entry.importPath));
+}
