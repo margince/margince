@@ -32,8 +32,28 @@ describe("a name in a className reads the binding in its own scope", () => {
     expect(on(code, "span")).toEqual(["avatar", "avatar-mesh"]);
   });
 
-  it("keeps a component's reading when a later one declares its name", () => {
-    expect(on(`${BUTTON}\n${AVATAR}`, "button")).toEqual(on(BUTTON, "button"));
+  it("reads each component's own list whichever declares the name first", () => {
+    const code = `${AVATAR}\n${BUTTON}`;
+    expect(on(code, "button")).toEqual(["btn", "btn-wide"]);
+    expect(on(code, "span")).toEqual(["avatar", "avatar-mesh"]);
+  });
+
+  it("reads nothing through a name a nearer class or enum shadows", () => {
+    const code = `const Foo = "outer";
+    const Tone = "outer";
+    function C() {
+      class Foo {}
+      enum Tone { A }
+      return <><i className={Foo} /><b className={Tone} /></>;
+    }`;
+    expect(on(code, "i")).toEqual([]);
+    expect(on(code, "b")).toEqual([]);
+  });
+
+  it("reads a function expression's own name as that function", () => {
+    const code = `const f = "outer";
+    const g = function f() { return <i className={f} />; };`;
+    expect(on(code, "i")).toEqual([]);
   });
 
   it("reads an inner block's binding over the outer one it shadows", () => {

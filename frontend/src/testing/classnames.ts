@@ -33,10 +33,8 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
       add([...new Set(names)].join(" "), node);
       return;
     }
-    // A local binding is followed: `const classes = [...].join(" ")` then
-    // `className={classes}` is how a component with conditional classes is
-    // written. Stopping at the identifier would hide an orphan in one. An
-    // initializer is not re-entered while read, so a self-reference ends.
+    // Stopping at a bound name would hide an orphan in it; an initializer is
+    // not re-entered while read, so a self-reference ends.
     if (ts.isIdentifier(node)) {
       const initializer = boundTo(node);
       if (initializer && !following.has(initializer)) {
@@ -283,26 +281,53 @@ function boundTo(name: ts.Identifier): ts.Expression | undefined {
 type Declared =
   | ts.VariableDeclaration
   | ts.ParameterDeclaration
-  | ts.FunctionDeclaration;
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ClassDeclaration
+  | ts.EnumDeclaration;
 
-/** The variable or function an identifier reads in its own scope. Nothing
- * when its nearest binding is a parameter or a destructured name. */
+/** The variable or function an identifier reads in its own scope. Nothing when
+ * its nearest binding is a parameter, a destructured name, a class or an enum. */
 export function declarationOf(
   name: ts.Identifier,
-): ts.VariableDeclaration | ts.FunctionDeclaration | undefined {
+):
+  | ts.VariableDeclaration
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | undefined {
   for (let scope = name.parent; scope; scope = scope.parent) {
-    const found = declaredIn(scope).find(
-      (d) => d.name && bindsName(d.name, name.text),
-    );
+    const found = bindingsOf(scope).get(name.text);
     if (!found) continue;
-    const plain = found.name && ts.isIdentifier(found.name);
-    return plain && !ts.isParameter(found) ? found : undefined;
+    if (ts.isVariableDeclaration(found)) {
+      return ts.isIdentifier(found.name) ? found : undefined;
+    }
+    const fn =
+      ts.isFunctionDeclaration(found) || ts.isFunctionExpression(found);
+    return fn ? found : undefined;
   }
   return undefined;
 }
 
+const scopes = new WeakMap<ts.Node, Map<string, Declared>>();
+function bindingsOf(scope: ts.Node): Map<string, Declared> {
+  const known = scopes.get(scope);
+  if (known) return known;
+  const out = new Map<string, Declared>();
+  for (const declared of declaredIn(scope)) {
+    for (const name of declared.name ? namesOf(declared.name) : []) {
+      if (!out.has(name)) out.set(name, declared);
+    }
+  }
+  scopes.set(scope, out);
+  return out;
+}
+
+// Parameters first: one sharing a function expression's name shadows it.
 function declaredIn(scope: ts.Node): readonly Declared[] {
-  if (ts.isFunctionLike(scope)) return scope.parameters;
+  if (ts.isFunctionLike(scope)) {
+    const named = ts.isFunctionExpression(scope) && scope.name ? [scope] : [];
+    return [...scope.parameters, ...named];
+  }
   if (ts.isBlock(scope) || ts.isSourceFile(scope) || ts.isModuleBlock(scope)) {
     return scope.statements.flatMap(declaredBy);
   }
@@ -324,12 +349,16 @@ function declaredBy(statement: ts.Statement): readonly Declared[] {
   if (ts.isVariableStatement(statement)) {
     return statement.declarationList.declarations;
   }
-  return ts.isFunctionDeclaration(statement) ? [statement] : [];
+  const named =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement);
+  return named ? [statement] : [];
 }
 
-function bindsName(binding: ts.BindingName, text: string): boolean {
-  if (ts.isIdentifier(binding)) return binding.text === text;
-  return binding.elements.some(
-    (e) => ts.isBindingElement(e) && bindsName(e.name, text),
+function namesOf(binding: ts.BindingName): string[] {
+  if (ts.isIdentifier(binding)) return [binding.text];
+  return binding.elements.flatMap((e) =>
+    ts.isBindingElement(e) ? namesOf(e.name) : [],
   );
 }

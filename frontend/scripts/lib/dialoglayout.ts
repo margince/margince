@@ -985,7 +985,7 @@ export const whereOf = (n: ts.Node) => {
   const { line } = file.getLineAndCharacterOfPosition(n.getStart());
   return `${relative(srcDir, file.fileName)}:${line + 1}`;
 };
-export function capped<T>(all: T[], at: ts.Node): T[] {
+function capped<T>(all: T[], at: ts.Node): T[] {
   if (all.length <= CAP) return all;
   throw new Error(
     `${whereOf(at)}: more than ${CAP} class combinations to judge; name the branches so fewer combine`,
