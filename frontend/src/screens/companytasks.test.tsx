@@ -312,6 +312,9 @@ describe("CompanyScreen — the Tasks tab", () => {
     const overview = await screen.findByRole("button", { name: "Overview" });
     expect(overview.getAttribute("aria-pressed")).toBe("true");
     expect(screen.queryByRole("button", { name: /^Tasks/ })).toBeNull();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/companies/o-1/overview"),
+    );
     expect(screen.queryByText(openTask.subject)).toBeNull();
   });
 

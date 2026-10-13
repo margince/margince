@@ -132,6 +132,9 @@ describe("CompanyScreen — an archived account", () => {
         name: en["tab.overview"],
       });
       expect(overview.getAttribute("aria-pressed")).toBe("true");
+      await waitFor(() =>
+        expect(window.location.hash).toBe("#/companies/o-1/overview"),
+      );
     });
   }
 
@@ -176,6 +179,15 @@ describe("CompanyScreen — an archived account", () => {
 
     expect(await screen.findByText("From the list")).toBeTruthy();
     expect(screen.queryByText(en["record.chronologyLoading"])).toBeNull();
+  });
+
+  it("asks for no 360 once the row is known archived", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["company", "o-1"], archived);
+    const asked = mountArchived({ client });
+
+    expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
+    expect(asked).not.toContain("/companies/o-1/360");
   });
 
   it("reads no contracts on its documents tab", async () => {

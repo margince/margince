@@ -94,7 +94,12 @@ import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyRail, SignalsSection } from "./companyrail";
 import { wholeCount } from "./companyrailshared";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
-import { COMPANY_TABS, type CompanyTab } from "./companytab";
+import {
+  COMPANY_TABS,
+  type CompanyTab,
+  REFUSED_WHEN_ARCHIVED,
+  useShownCompanyTab,
+} from "./companytab";
 import { TechnicalProfilePanel } from "./companytechnical";
 import { hasWorkInFlight } from "./companywork";
 import { ComposeModal } from "./compose";
@@ -617,13 +622,6 @@ function companyTabCounts(
   return counts;
 }
 
-const REFUSED_WHEN_ARCHIVED: readonly CompanyTab[] = [
-  "contacts",
-  "deals",
-  "tasks",
-  "finance",
-];
-
 function companyTabsFor(
   company: Company,
   tab: CompanyTab,
@@ -644,8 +642,7 @@ function companyTabsFor(
   if (!hasFinance(company.lifecycle) && tab !== "finance") {
     drop.add("finance");
   }
-  // The server refuses an archived account's roster, deals, tasks and money, so
-  // these tabs would open onto nothing too.
+  // An archived account's refused tabs would open onto nothing too.
   if (company.archived_at) {
     for (const refused of REFUSED_WHEN_ARCHIVED) drop.add(refused);
   }
@@ -751,11 +748,7 @@ function CompanyRecord({
   t: ReturnType<typeof useT>;
 }>) {
   const archived = Boolean(company.archived_at);
-  // A link to a tab an archived account cannot answer opens its Overview.
-  const tab =
-    archived && REFUSED_WHEN_ARCHIVED.includes(addressed)
-      ? "overview"
-      : addressed;
+  const tab = useShownCompanyTab(company.id, archived, addressed);
   const assembled = archived ? undefined : view.data;
   const visibleTabs = companyTabsFor(company, tab);
   // The strip stands whatever it holds: the details switch rides at its end,

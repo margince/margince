@@ -4,7 +4,7 @@ import {
   type QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { RecordShell } from "../app/testing/recordshell.testkit";
@@ -37,6 +37,19 @@ function mount(routes: RouteMap, client: QueryClient = createQueryClient()) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+// A row answer the spec releases itself, so it can look at the page between
+// the 360's answer and the row's.
+function heldRow(): {
+  answer: () => Promise<Response>;
+  release: (body: unknown) => void;
+} {
+  let release: (body: unknown) => void = () => undefined;
+  const held = new Promise<Response>((settle) => {
+    release = (body) => settle(jsonResponse(body));
+  });
+  return { answer: () => held, release: (body) => release(body) };
 }
 
 function liveRoutes(): RouteMap {
@@ -105,5 +118,49 @@ describe("the contact page's row read", () => {
 
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
+  });
+
+  it("keeps the page while a refused 360 waits on the row being re-read", async () => {
+    const client = createQueryClient();
+    const routes = liveRoutes();
+    mount(routes, client);
+    expect(
+      await screen.findByRole("button", { name: en["tab.overview"] }),
+    ).toBeTruthy();
+
+    const row = heldRow();
+    routes["GET /contacts/p-1"] = row.answer;
+    routes["GET /contacts/p-1/360"] = refusedRead;
+    installFetchStub(routes);
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    await waitFor(() =>
+      expect(client.getQueryState(["contact360", "p-1"])?.status).toBe("error"),
+    );
+    expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
+    act(() => row.release(archivedContact));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+  });
+
+  it("draws nothing from a 360 that answers before the row says archived", async () => {
+    const client = createQueryClient();
+    const row = heldRow();
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = row.answer;
+    mount(routes, client);
+
+    await waitFor(() =>
+      expect(client.getQueryState(["contact360", "p-1"])?.status).toBe(
+        "success",
+      ),
+    );
+    expect(
+      screen.queryByRole("button", { name: en["tab.overview"] }),
+    ).toBeNull();
+    act(() => row.release(archivedContact));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
   });
 });

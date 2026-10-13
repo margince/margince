@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { en } from "../i18n/en";
 import { WorkAsLeadAction } from "./contactleadaction";
 import {
   installFetchStub,
@@ -55,7 +56,7 @@ export const RefusedOnArchived: Story = {
       <StoryProviders>
         <WorkAsLeadAction contactId="p-1" reasonId="contact-archived" />
         <p id="contact-archived" className="t-caption">
-          This contact is archived and takes no changes.
+          {en["contact.rail.archivedReadOnly"]}
         </p>
       </StoryProviders>
     );

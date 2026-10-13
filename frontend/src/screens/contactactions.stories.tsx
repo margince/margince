@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { ContactActions } from "./contactactions";
 import {
   installFetchStub,
@@ -205,7 +206,7 @@ export const Archived: Story = {
           refusedReasonId="contact-archived"
         />
         <p id="contact-archived" className="t-caption">
-          This contact is archived and takes no changes.
+          {en["contact.rail.archivedReadOnly"]}
         </p>
       </StoryProviders>
     );

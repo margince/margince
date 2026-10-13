@@ -70,7 +70,13 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toContain(reason.id);
     };
-    refused(screen.getByRole("button", { name: en["contact.action.write"] }));
+    for (const verb of [
+      en["contact.action.write"],
+      en["contact.action.call"],
+      en["contact.action.meetings"],
+    ]) {
+      refused(screen.getByRole("button", { name: verb }));
+    }
     await user.click(
       screen.getByRole("button", { name: en["record.moreActions"] }),
     );
@@ -83,13 +89,17 @@ describe("the contact page on an archived row", () => {
     }
   });
 
-  it("offers no address to write to, because the archived row carries none", async () => {
-    mount(archivedContactRoutes());
+  it("shows an archived row's address as text, with nothing to press", async () => {
+    const routes = archivedContactRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({
+        ...archivedContact,
+        emails: [liveView.contact.emails?.[0]],
+      });
+    mount(routes);
 
-    await screen.findByText(en["contact.rail.archivedReadOnly"]);
-    const facts = document.querySelector(".record-facts");
-    expect(facts?.textContent).toContain(en["contact.page.owner"]);
-    expect(facts?.textContent).not.toContain(en["history.field.email"]);
+    const address = await screen.findByText("dana@brandt.example");
+    expect(address.closest("a, button")).toBeNull();
   });
 
   it("says the contact could not be opened when the row read fails", async () => {

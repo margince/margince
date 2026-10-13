@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { listsMe, MEMBER_ID, shortlist } from "./lists.fixtures";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -29,7 +30,7 @@ function offered(reasonId?: string) {
       />
       {reasonId && (
         <p id={reasonId} className="t-caption">
-          This company is archived and takes no changes.
+          {en["record.archivedReadOnly"]}
         </p>
       )}
     </StoryProviders>
