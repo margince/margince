@@ -23,10 +23,10 @@ The steps are the same over MCP and REST:
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
 `read_import` with `view: report`, and `commit_import`. `preview_import` waits up to 20 seconds for
-the test, and a test that ends inside the wait answers `state: awaiting_approval` with the `report`,
-so the second call is not needed. If the test takes longer, it answers `state: validating` with a
+the test. A test that ends inside the wait answers `state: awaiting_approval` with the `report`, so
+the second call is not needed. If the test takes longer, it answers `state: validating` with a
 `next` line; read `read_import` again until `state` is no longer `validating`. A test that refuses
-the file answers the refusal, and the run goes back to `pending`. A test a person stopped answers
+the file answers the refusal, and the run goes back to `pending`. A test that a user stopped answers
 `pending`, and one a newer preview replaced answers `cancelled`; both carry a `next` line.
 
 One assistant tests one run at a time. A second `preview_import` while its first test still runs is
