@@ -150,8 +150,7 @@ export function CompanyTable({
         },
       ]}
       rows={rows}
-      // A company with deals in two currencies is two rows now, so the
-      // company id alone no longer identifies one.
+      // One company is a row per currency, so the key carries both.
       rowKey={(row) =>
         row.company_id != null
           ? `${String(row.company_id)}:${rowCurrency(row) ?? ""}`
