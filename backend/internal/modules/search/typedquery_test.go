@@ -110,8 +110,9 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	// The same split, in the same order, as Search performs.
 	head, tail := splitTypedQuery("acme ein")
 	headPos, tailPos := arg(head), arg(tail)
+	identifierPos := bindIdentifier("acme ein", arg)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, identifierPos, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -128,6 +129,24 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	}
 }
 
+// A branch with no identifier table binds no identifier parameter, because an
+// unused bound parameter fails the whole statement.
+func TestABranchWithNoIdentifierBindsNone(t *testing.T) {
+	t.Parallel()
+	var bound []any
+	arg := func(v any) int { bound = append(bound, v); return len(bound) }
+	headPos, tailPos := arg(""), arg("anna@example.com")
+
+	branches, err := admittedBranchSQL(teamReaderFor("deal"), []string{"deal"}, headPos, tailPos, true,
+		bindIdentifier("anna@example.com", arg), arg)
+	if err != nil {
+		t.Fatalf("building the branch SQL: %v", err)
+	}
+	if len(branches) != 1 || len(bound) != 2 {
+		t.Fatalf("got %d branch(es) and %d bound parameter(s), want 1 and 2", len(branches), len(bound))
+	}
+}
+
 // The reader-facing half of the same rule, and the reason it matters: the query
 // Search hands Postgres has to name every parameter Search bound. This asserts
 // the SQL text itself carries both halves of the split — the finished words and
@@ -140,7 +159,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	headPos, tailPos := arg("acme"), arg("ein")
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, bindIdentifier("acme ein", arg), arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -178,7 +197,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	}
 	headPos := arg(head)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, bindIdentifier(head, arg), arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -236,7 +255,7 @@ func TestTheActivityFragmentKeepsItsStemming(t *testing.T) {
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	headPos, tailPos := arg(""), arg("study")
 
-	branches, err := admittedBranchSQL(ctx, []string{"activity"}, headPos, tailPos, true, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"activity"}, headPos, tailPos, true, bindIdentifier("study", arg), arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}

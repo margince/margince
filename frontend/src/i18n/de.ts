@@ -422,6 +422,7 @@ export const de = {
   "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
   "scheduling.calendar": "Kalender für Einladungen",
   "scheduling.bookContact": "Termin buchen",
+  "scheduling.bookPickContact": "Kontakte dieses Unternehmens durchsuchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
 
   "scheduling.chooseProvider": "Kalenderanbieter auswählen",
@@ -911,6 +912,7 @@ export const de = {
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
   "systemJob.list_checker": "Prüfung der Live-Listen",
   "systemJob.mail_draft_retention": "Bereinigung von E-Mail-Entwürfen",
+  "systemJob.waiting_horizon_refresh": "Aktualisierung des Wartehorizonts",
   "systemJob.meeting_delivery": "Kalenderzustellung",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",
@@ -1402,6 +1404,8 @@ export const de = {
   "merge.pickTarget": "Beizubehaltenden Datensatz auswählen",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
+  "merge.confirmDetail":
+    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
   "merge.submit": "Zusammenführen",
 
   "tab.overview": "Übersicht",
@@ -1551,6 +1555,16 @@ export const de = {
     "Dieser Platz hat nur Lesezugriff, daher wurde die Anfrage abgelehnt. Lass den Platz von einem Admin hochstufen.",
   "common.versionSkew":
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
+  "common.duplicate.email":
+    "Ein anderer Kontakt oder Lead hat diese E-Mail-Adresse schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.domain":
+    "Ein anderes Unternehmen hat diese Domain schon, deshalb wurde sie hier nicht gespeichert.",
+  "common.duplicate.linkedinUrl":
+    "Ein anderer Lead hat dieses LinkedIn-Profil schon, deshalb wurde es hier nicht gespeichert.",
+  "common.duplicate.contactLead":
+    "Für diesen Kontakt gibt es schon einen aktiven Lead, deshalb wurde kein zweiter angelegt.",
+  "common.duplicate.slotTaken":
+    "Dieser Termin ist nicht mehr frei. Wähle eine andere Zeit.",
   "common.retry": "Erneut versuchen",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
@@ -4354,6 +4368,8 @@ export const de = {
   "field.unset": "Nicht festgelegt",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
+  "field.editEmails": "E-Mail-Adressen bearbeiten",
+  "field.editPhones": "Telefonnummern bearbeiten",
   "field.addDomain": "Domain hinzufügen",
 
   "field.addRegisterVat": "USt-ID hinzufügen",
@@ -4597,10 +4613,16 @@ export const de = {
   "log.transcriptUploadFailed":
     "Die Datei wurde nicht gelesen. Füge stattdessen den Text ein.",
   "log.attendee": "Teilnehmende",
+  "log.otherAttendees": "Weitere Teilnehmende",
+  "log.removeAttendee": "{name} entfernen",
+  "log.colleagues": "Teammitglieder, die dabei waren",
+  "log.addColleague": "Teammitglied hinzufügen",
   "log.subject": "Betreff",
   "log.body": "Details",
   "log.dueAt": "Fälligkeitsdatum",
   "log.date": "Datum",
+  "log.dateHint":
+    "Der Tag, an dem es stattfand; für einen späteren Tag lege eine Aufgabe an.",
   "log.assignee": "Zugewiesen an",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
@@ -6454,22 +6476,36 @@ export const de = {
   "stage.removeTitle": "Diese Phase entfernen?",
   "stage.removeBody":
     "„{name}“ wird aus der Pipeline entfernt, spätere Phasen rücken auf. Frühere Phasenwechsel bleiben lesbar. Verschiebe die Deals dieser Phase, bevor du sie entfernst.",
-  "stage.openGroup": "Offene Phasen",
-  "stage.closingGroup": "Abschlussphasen",
-  "stage.closingNote":
-    "Jeder Deal endet in einer davon, deshalb bleiben sie nach den offenen Phasen.",
   "stage.closingMissing":
     "Noch keine Phase für gewonnene oder verlorene Deals. Lege eine neue Phase dieses Typs an.",
   "stage.orderHint":
     "Ziehe eine Phase am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
-  "stage.handle": "{name} verschieben, Phase {position} von {total}",
-  "stage.moved": "{name} ist jetzt Phase {position} von {total}",
+  "stage.handle": "{name} verschieben, Schritt {position} von {total}",
+  "stage.moved": "{name} ist jetzt Schritt {position} von {total}",
   "stage.lowerThanAbove": "Niedriger als {name} ({reading}) darüber",
   "stage.oddsOf": "Gewinnwahrscheinlichkeit von {name}",
   "stage.noneOpen": "Noch keine offenen Phasen",
   "stage.noneOpenNote":
     "Lege die erste Phase eines Deals an, vor den Abschlussphasen.",
   "stage.added": "Phase hinzugefügt",
+  "stage.group": "Phasen",
+  "stage.orderHeader": "Reihenfolge",
+  "stage.colStep": "Schritt",
+  "stage.colStage": "Phase",
+  "stage.fixedLast": "Bleibt am Ende",
+  "stage.endsDeal": "Beendet den Deal",
+  "stage.criteriaRequired_one": "{count} erforderlich",
+  "stage.criteriaRequired_other": "{count} erforderlich",
+  "stage.criteriaOptional_one": "{count} optional",
+  "stage.criteriaOptional_other": "{count} optional",
+  "stage.criteriaNone": "Keine",
+  "stage.criteriaCount_one": "{count} Kriterium",
+  "stage.criteriaCount_other": "{count} Kriterien",
+  "stage.criteriaNoneFolded": "Keine Kriterien",
+  "stage.criteriaDetail": "Kriteriendetails",
+  "stage.criteriaFor": "Austrittskriterien für {name}",
+  "stage.occupied_one": "{count} Deal ist in dieser Phase",
+  "stage.occupied_other": "{count} Deals sind in dieser Phase",
   "stage.criteria.title": "Austrittskriterien",
   "stage.criteria.sub":
     "Was zutreffen muss, bevor ein Deal diese Phase verlässt.",
@@ -6481,8 +6517,6 @@ export const de = {
   "stage.criteria.unreadable":
     "Lade die Seite neu, bevor du sie änderst; die Liste ist möglicherweise unvollständig.",
   "stage.criteria.none": "Noch keine Austrittskriterien.",
-  "stage.criteria.terminal":
-    "Eine Phase vom Typ „Gewonnen“ oder „Verloren“ ist endgültig und hat daher keine Austrittskriterien.",
   "stage.criteria.add": "Kriterium hinzufügen",
   "stage.criteria.key": "Schlüssel",
   "stage.criteria.keyHint":
@@ -6492,7 +6526,8 @@ export const de = {
   "stage.criteria.required": "Erforderlich",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hinweis",
-  "stage.criteria.edit": "Kriterium bearbeiten",
+  "stage.criteria.editOf": "{name} bearbeiten",
+  "stage.criteria.removeOf": "{name} entfernen",
   "stage.criteria.remove": "Entfernen",
   "stage.criteria.removeTitle": "Dieses Kriterium entfernen?",
   "stage.criteria.removeBody":
@@ -10425,7 +10460,7 @@ export const de = {
     "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
   "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
   "captureExclusions.containersPartialBody":
-    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Gib seinen Namen unten ein, oder schließe Absender per Adresse oder Domain aus.",
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Schließe seine Absender stattdessen per Adresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":

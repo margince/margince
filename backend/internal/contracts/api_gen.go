@@ -32180,7 +32180,10 @@ type CreateAcquisitionSourceRequest struct {
 // CreateActivityRequest defines model for CreateActivityRequest.
 type CreateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
-	Body       *string             `json:"body,omitempty"`
+
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
+	Body            *string               `json:"body,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
@@ -44945,16 +44948,28 @@ type SourceAuthor struct {
 
 // Stage A pipeline stage. Mirrors the `stage` table.
 type Stage struct {
-	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
-	CreatedAt  *time.Time         `json:"created_at,omitempty"`
-	Id         openapi_types.UUID `json:"id"`
-	Name       string             `json:"name"`
-	PipelineId openapi_types.UUID `json:"pipeline_id"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// DealCount Live deals on this stage that the caller may see. Absent when the caller may not read deals, because a zero would claim the stage is empty. `archiveStage` refuses with `stage_occupied` on every live deal, counted whether or not the caller may see it, so a zero here does not promise the removal succeeds.
+	DealCount *int `json:"deal_count,omitempty"`
+
+	// ExitCriteria The stage's live exit criteria, split by whether each blocks a deal leaving.
+	ExitCriteria *StageExitCriteriaCounts `json:"exit_criteria,omitempty"`
+	Id           openapi_types.UUID       `json:"id"`
+	Name         string                   `json:"name"`
+	PipelineId   openapi_types.UUID       `json:"pipeline_id"`
 
 	// Position Unique within the pipeline.
 	Position  int           `json:"position"`
 	Semantic  StageSemantic `json:"semantic"`
 	UpdatedAt *time.Time    `json:"updated_at,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
 
 	// WinProbability won=100, lost=0, open=0..100.
 	WinProbability int `json:"win_probability"`
@@ -45071,6 +45086,15 @@ type StageEvidenceListResponse struct {
 
 // StageEvidenceSource What kind of record the observation was read from.
 type StageEvidenceSource string
+
+// StageExitCriteriaCounts The stage's live exit criteria, split by whether each blocks a deal leaving.
+type StageExitCriteriaCounts struct {
+	// Optional Criteria gathered and shown that never block.
+	Optional int `json:"optional"`
+
+	// Required Criteria a deal must meet to leave the stage.
+	Required int `json:"required"`
+}
 
 // StageExitCriterion One thing that must be true of a deal before it leaves a stage. Mirrors the
 // `stage_exit_criterion` table. Configuration, not observation: whether a
@@ -55181,6 +55205,13 @@ type UpdateStageParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // ListStageExitCriteriaParams defines parameters for ListStageExitCriteria.
@@ -105830,6 +105861,25 @@ func (siw *ServerInterfaceWrapper) UpdateStage(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
 
 	}
 

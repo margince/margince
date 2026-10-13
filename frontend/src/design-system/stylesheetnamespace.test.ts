@@ -41,7 +41,6 @@ const namespaces = [
   { prefix: "leadsignals-", home: "screens/leadsignals.css" },
   { prefix: "library-", home: "screens/library.css" },
   { prefix: "listquery-", home: "screens/listquery.css" },
-  { prefix: "mergeaction-", home: "screens/merge.css" },
   { prefix: "oauthconsent-", home: "screens/oauthconsent.css" },
   { prefix: "offers-", home: "screens/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },

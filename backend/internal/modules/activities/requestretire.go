@@ -21,7 +21,7 @@ const agedReminderBatch = 64
 // completing: an aged request is not an answered one. heldRequestSQL is the
 // other side of the same rule: a reminder a human wrote keeps its request.
 func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Time) error {
-	horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
+	horizon, err := s.waitingHorizonFor(ctx, tx)
 	if err != nil {
 		return err
 	}

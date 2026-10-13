@@ -420,6 +420,7 @@ export const vi = {
   "scheduling.proposalUpdate": "Tạo đề xuất cập nhật",
   "scheduling.calendar": "Lịch sự kiện",
   "scheduling.bookContact": "Đặt lịch họp",
+  "scheduling.bookPickContact": "Tìm liên hệ của công ty này",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
 
   "scheduling.chooseProvider": "Chọn nhà cung cấp lịch",
@@ -888,6 +889,7 @@ export const vi = {
   "systemJob.linkedin_rematch": "Đối chiếu dữ liệu nhập từ LinkedIn",
   "systemJob.list_checker": "Kiểm tra danh sách động",
   "systemJob.mail_draft_retention": "Dọn dẹp thư nháp",
+  "systemJob.waiting_horizon_refresh": "Cập nhật tầm theo dõi chờ phản hồi",
   "systemJob.meeting_delivery": "Gửi lời mời trên lịch",
   "systemJob.merge": "Gộp hồ sơ",
   "systemJob.notice_case_open": "Tiếp nhận yêu cầu về quyền riêng tư",
@@ -1373,6 +1375,8 @@ export const vi = {
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
     "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+  "merge.confirmDetail":
+    "Gộp {source} vào {target} ({detail})? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
   "merge.submit": "Gộp",
 
   "tab.overview": "Tổng quan",
@@ -1518,6 +1522,16 @@ export const vi = {
     "Tài khoản này chỉ có quyền xem. Liên hệ quản trị viên để nâng cấp tài khoản.",
   "common.versionSkew":
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
+  "common.duplicate.email":
+    "Một liên hệ hoặc lead khác đã có địa chỉ email này, nên email chưa được lưu ở đây.",
+  "common.duplicate.domain":
+    "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
+  "common.duplicate.linkedinUrl":
+    "Một lead khác đã có hồ sơ LinkedIn này, nên hồ sơ chưa được lưu ở đây.",
+  "common.duplicate.contactLead":
+    "Liên hệ này đã có một lead đang mở, nên không tạo thêm lead thứ hai.",
+  "common.duplicate.slotTaken":
+    "Khung giờ này không còn trống. Chọn một thời gian khác.",
   "common.retry": "Thử lại",
   "common.empty": "Chưa có gì ở đây.",
   "common.saving": "Đang lưu…",
@@ -4278,6 +4292,8 @@ export const vi = {
   "field.unset": "Chưa có",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
+  "field.editEmails": "Sửa danh sách email",
+  "field.editPhones": "Sửa danh sách số điện thoại",
   "field.addDomain": "Thêm tên miền",
 
   "field.addRegisterVat": "Thêm mã số thuế",
@@ -4513,10 +4529,16 @@ export const vi = {
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",
   "log.transcriptUploadFailed": "Không thể đọc tệp. Dán trực tiếp văn bản vào.",
   "log.attendee": "Người tham dự",
+  "log.otherAttendees": "Người tham dự khác",
+  "log.removeAttendee": "Xóa {name}",
+  "log.colleagues": "Đồng nghiệp đã tham dự",
+  "log.addColleague": "Thêm đồng nghiệp",
   "log.subject": "Tiêu đề",
   "log.body": "Chi tiết",
   "log.dueAt": "Ngày đến hạn",
   "log.date": "Ngày",
+  "log.dateHint":
+    "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",
   "log.assignee": "Giao cho",
   "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
@@ -6321,22 +6343,36 @@ export const vi = {
   "stage.removeTitle": "Gỡ giai đoạn này?",
   "stage.removeBody":
     "“{name}” sẽ rời khỏi pipeline và các giai đoạn sau dồn lên. Lịch sử chuyển giai đoạn vẫn đọc được. Chuyển các deal của giai đoạn này đi trước khi gỡ.",
-  "stage.openGroup": "Giai đoạn đang mở",
-  "stage.closingGroup": "Giai đoạn kết thúc",
-  "stage.closingNote":
-    "Mọi deal kết thúc ở một trong các giai đoạn này, nên các giai đoạn này luôn nằm sau các giai đoạn đang mở.",
   "stage.closingMissing":
     "Chưa có giai đoạn thắng hoặc thua. Thêm một giai đoạn mới thuộc loại đó.",
   "stage.orderHint":
     "Kéo giai đoạn bằng tay nắm, hoặc đặt tiêu điểm vào tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
-  "stage.handle": "Di chuyển {name}, vị trí {position} trên {total}",
-  "stage.moved": "{name} giờ ở vị trí {position} trên {total}",
+  "stage.handle": "Di chuyển {name}, bước {position} trên {total}",
+  "stage.moved": "{name} giờ ở bước {position} trên {total}",
   "stage.lowerThanAbove": "Thấp hơn {name} ({reading}) ở trên",
   "stage.oddsOf": "Xác suất thắng của {name}",
   "stage.noneOpen": "Chưa có giai đoạn đang mở",
   "stage.noneOpenNote":
     "Thêm giai đoạn đầu tiên của deal. Giai đoạn này đứng trước các giai đoạn kết thúc.",
   "stage.added": "Đã thêm giai đoạn",
+  "stage.group": "Giai đoạn",
+  "stage.orderHeader": "Thứ tự",
+  "stage.colStep": "Bước",
+  "stage.colStage": "Giai đoạn",
+  "stage.fixedLast": "Luôn ở cuối",
+  "stage.endsDeal": "Kết thúc deal",
+  "stage.criteriaRequired_one": "{count} bắt buộc",
+  "stage.criteriaRequired_other": "{count} bắt buộc",
+  "stage.criteriaOptional_one": "{count} không bắt buộc",
+  "stage.criteriaOptional_other": "{count} không bắt buộc",
+  "stage.criteriaNone": "Không có",
+  "stage.criteriaCount_one": "{count} tiêu chí",
+  "stage.criteriaCount_other": "{count} tiêu chí",
+  "stage.criteriaNoneFolded": "Không có tiêu chí",
+  "stage.criteriaDetail": "Chi tiết tiêu chí",
+  "stage.criteriaFor": "Tiêu chí rời giai đoạn của {name}",
+  "stage.occupied_one": "{count} deal đang ở giai đoạn này",
+  "stage.occupied_other": "{count} deal đang ở giai đoạn này",
   "stage.criteria.title": "Tiêu chí rời giai đoạn",
   "stage.criteria.sub":
     "Điều kiện phải đáp ứng trước khi deal rời giai đoạn này.",
@@ -6347,8 +6383,6 @@ export const vi = {
   "stage.criteria.unreadable":
     "Tải lại trước khi thay đổi; danh sách có thể chưa đầy đủ.",
   "stage.criteria.none": "Chưa có tiêu chí rời giai đoạn nào.",
-  "stage.criteria.terminal":
-    "Giai đoạn thắng hoặc thua là giai đoạn cuối, nên không có tiêu chí rời giai đoạn.",
   "stage.criteria.add": "Thêm tiêu chí",
   "stage.criteria.key": "Khóa",
   "stage.criteria.keyHint":
@@ -6358,7 +6392,8 @@ export const vi = {
   "stage.criteria.required": "Bắt buộc",
   "stage.criteria.optional": "Không bắt buộc",
   "stage.criteria.hint": "Gợi ý",
-  "stage.criteria.edit": "Sửa tiêu chí",
+  "stage.criteria.editOf": "Sửa {name}",
+  "stage.criteria.removeOf": "Gỡ {name}",
   "stage.criteria.remove": "Gỡ",
   "stage.criteria.removeTitle": "Gỡ tiêu chí này?",
   "stage.criteria.removeBody":
@@ -10213,7 +10248,7 @@ export const vi = {
     "Hộp thư này không trả về thư mục nào. Kết nối hộp thư có thư mục, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.containersPartial": "Danh sách thư mục chưa đầy đủ",
   "captureExclusions.containersPartialBody":
-    "Hộp thư có nhiều thư mục hơn số lượng danh sách này đọc được, nên thư mục cần tìm có thể không có ở đây. Nhập tên thư mục bên dưới, hoặc loại trừ theo địa chỉ hay tên miền.",
+    "Danh sách này không tải được hết thư mục trong hộp thư, nên thư mục cần tìm có thể không xuất hiện ở đây. Thay vào đó, hãy loại trừ theo địa chỉ hoặc tên miền.",
   "captureExclusions.containersUnreadable": "Không thể đọc thư mục",
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",

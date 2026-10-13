@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 
@@ -38,14 +38,15 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const { locale } = useLocale();
   const tag = useQuery({
     queryKey: ["tag", tagID],
-    enabled: Boolean(tagID),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/tags/{id}", {
-          params: { path: { id: tagID as string } },
-        }),
-      );
-    },
+    queryFn: tagID
+      ? async () => {
+          return unwrap(
+            await api.GET("/tags/{id}", {
+              params: { path: { id: tagID } },
+            }),
+          );
+        }
+      : skipToken,
   });
 
   if (!tagID || tag.isPending) {

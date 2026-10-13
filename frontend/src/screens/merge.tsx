@@ -2,14 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { navigate, type Route } from "../app/router";
-import { Button, Modal, SearchField } from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
-import { useT } from "../i18n";
-import "./candidatepicker.css";
+import { Button, Modal } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import "./merge.css";
+import { Heading } from "../design-system/heading";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
+import { useT } from "../i18n";
 import "./common.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
@@ -19,10 +21,6 @@ import "./common.css";
 // + If-Match precondition, survivor Contact/Company back), so this stays
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
-
-const SEARCH_DEBOUNCE_MS = 250;
-
-type MergeCandidate = { id: string; name: string };
 
 export function MergeAction<Survivor extends { id: string }>({
   label,
@@ -38,9 +36,9 @@ export function MergeAction<Survivor extends { id: string }>({
   label: string;
   sourceId: string;
   sourceName: string;
-  // Excludes sourceId from its result — the source row is never a valid
-  // merge target for itself.
-  searchTargets: (q: string) => Promise<MergeCandidate[]>;
+  // May return the source row; it is dropped here, because a record is never
+  // a merge target for itself.
+  searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
   // POSTs the merge; the screen attaches ifMatch(sourceVersion) itself, so
   // this stays agnostic of the source record's shape. Returns the surviving
   // record.
@@ -60,46 +58,12 @@ export function MergeAction<Survivor extends { id: string }>({
   const queryClient = useQueryClient();
   const headingId = useId();
   const [open, setOpen] = useState(false);
-  const [term, setTerm] = useState("");
-  const [candidates, setCandidates] = useState<MergeCandidate[]>([]);
-  const [target, setTarget] = useState<MergeCandidate | null>(null);
-  // The caught failure itself, not a sentence about it: the effect below
-  // runs debounced and must not depend on the translator, which is a new
-  // function every render. It is turned into copy where it is rendered.
-  const [searchFailure, setSearchFailure] = useState<unknown>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const query = term.trim();
-    if (!query) {
-      setCandidates([]);
-      setSearchFailure(null);
-      return;
-    }
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const results = await searchTargets(query);
-        if (!cancelled) {
-          setCandidates(
-            results.filter((candidate) => candidate.id !== sourceId),
-          );
-          setSearchFailure(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setCandidates([]);
-          setSearchFailure(error);
-        }
-      }
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [open, term, sourceId, searchTargets]);
+  const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
+  const searchOthers = useCallback(
+    async (q: string) =>
+      (await searchTargets(q)).filter((candidate) => candidate.id !== sourceId),
+    [searchTargets, sourceId],
+  );
 
   const mutation = useMutation({
     mutationFn: (targetId: string) => merge(targetId),
@@ -114,10 +78,7 @@ export function MergeAction<Survivor extends { id: string }>({
 
   const close = () => {
     setOpen(false);
-    setTerm("");
-    setCandidates([]);
     setTarget(null);
-    setSearchFailure(null);
     mutation.reset();
   };
 
@@ -136,34 +97,25 @@ export function MergeAction<Survivor extends { id: string }>({
         </Heading>
         <div className="form-stack">
           <p>{t("merge.pickTarget")}</p>
-          <SearchField
-            placeholder={t("merge.searchPlaceholder")}
-            aria-label={t("merge.searchPlaceholder")}
-            value={term}
-            onChange={(event) => {
-              setTerm(event.target.value);
-              setTarget(null);
-            }}
+          <RecordPicker
+            label={t("merge.searchPlaceholder")}
+            searchTargets={searchOthers}
+            onPick={setTarget}
+            selected={target}
+            disabled={mutation.isPending}
           />
-          <ErrorLine error={searchFailure} />
-          {candidates.length > 0 && (
-            <ul className="mergeaction-candidates">
-              {candidates.map((candidate) => (
-                <li key={candidate.id}>
-                  <Button
-                    className="candidate-option"
-                    aria-pressed={target?.id === candidate.id}
-                    onClick={() => setTarget(candidate)}
-                  >
-                    {candidate.name}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
           {target && (
             <p>
-              {t("merge.confirm", { source: sourceName, target: target.name })}
+              {target.detail
+                ? t("merge.confirmDetail", {
+                    source: sourceName,
+                    target: target.name,
+                    detail: target.detail,
+                  })
+                : t("merge.confirm", {
+                    source: sourceName,
+                    target: target.name,
+                  })}
             </p>
           )}
           <ErrorLine error={mutation.error} />
@@ -190,5 +142,3 @@ export function MergeAction<Survivor extends { id: string }>({
     </>
   );
 }
-
-export type { MergeCandidate };

@@ -414,6 +414,7 @@ export const en = {
   "scheduling.proposalUpdate": "Create updated proposal",
   "scheduling.calendar": "Event calendar",
   "scheduling.bookContact": "Book a meeting",
+  "scheduling.bookPickContact": "Search this company’s contacts",
   "scheduling.setupCalendar": "Choose your booking calendar",
 
   "scheduling.chooseProvider": "Choose a calendar provider",
@@ -891,6 +892,7 @@ export const en = {
   "systemJob.linkedin_rematch": "LinkedIn import matching",
   "systemJob.list_checker": "Live list check",
   "systemJob.mail_draft_retention": "Mail draft cleanup",
+  "systemJob.waiting_horizon_refresh": "Waiting horizon refresh",
   "systemJob.meeting_delivery": "Calendar delivery",
   "systemJob.merge": "Record merge",
   "systemJob.notice_case_open": "Privacy request intake",
@@ -1395,6 +1397,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
+  // The picked record's detail line, so two look-alike names stay apart here too.
+  "merge.confirmDetail":
+    "Merge {source} into {target} ({detail})? This archives {source}.",
   "merge.submit": "Merge",
 
   "tab.overview": "Overview",
@@ -1557,6 +1562,16 @@ export const en = {
     "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
   "common.versionSkew":
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
+  "common.duplicate.email":
+    "Another contact or lead already has this email address, so it was not saved here.",
+  "common.duplicate.domain":
+    "Another company already has this domain, so it was not saved here.",
+  "common.duplicate.linkedinUrl":
+    "Another lead already has this LinkedIn profile, so it was not saved here.",
+  "common.duplicate.contactLead":
+    "This contact already has a live lead, so no second one was created.",
+  "common.duplicate.slotTaken":
+    "This time is no longer available. Choose another time.",
   "common.retry": "Retry",
   "common.empty": "Nothing here yet.",
   "common.saving": "Saving…",
@@ -4458,6 +4473,8 @@ export const en = {
   "field.unset": "Not set",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
+  "field.editEmails": "Edit emails",
+  "field.editPhones": "Edit phone numbers",
   "field.addDomain": "Add domain",
 
   "field.addRegisterVat": "Add VAT ID",
@@ -4688,6 +4705,10 @@ export const en = {
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
   "log.attendee": "Attendees",
+  "log.otherAttendees": "Other attendees",
+  "log.removeAttendee": "Remove {name}",
+  "log.colleagues": "Colleagues who attended",
+  "log.addColleague": "Add a colleague",
   "log.subject": "Subject",
   "log.body": "Details",
   "log.transcriptLabel": "Transcript",
@@ -4700,6 +4721,7 @@ export const en = {
     "File could not be read. Paste the text instead.",
   "log.dueAt": "Due date",
   "log.date": "Date",
+  "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
@@ -6597,10 +6619,6 @@ export const en = {
   "stage.removeTitle": "Remove this stage?",
   "stage.removeBody":
     "“{name}” leaves the pipeline and later stages move up. Past stage changes stay readable. Move its deals before removing it.",
-  "stage.openGroup": "Open stages",
-  "stage.closingGroup": "Closing stages",
-  "stage.closingNote":
-    "Every deal ends in one of these, so they stay after the open stages.",
   "stage.closingMissing":
     "No won or lost stage yet. Add one as a new stage of that type.",
   "stage.orderHint":
@@ -6613,6 +6631,24 @@ export const en = {
   "stage.noneOpenNote":
     "Add the first step a deal takes. It goes before the closing stages.",
   "stage.added": "Stage added",
+  "stage.group": "Stages",
+  "stage.orderHeader": "Order",
+  "stage.colStep": "Step",
+  "stage.colStage": "Stage",
+  "stage.fixedLast": "Stays last",
+  "stage.endsDeal": "Ends the deal",
+  "stage.criteriaRequired_one": "{count} required",
+  "stage.criteriaRequired_other": "{count} required",
+  "stage.criteriaOptional_one": "{count} optional",
+  "stage.criteriaOptional_other": "{count} optional",
+  "stage.criteriaNone": "None",
+  "stage.criteriaCount_one": "{count} criterion",
+  "stage.criteriaCount_other": "{count} criteria",
+  "stage.criteriaNoneFolded": "No criteria",
+  "stage.criteriaDetail": "Criteria details",
+  "stage.criteriaFor": "Exit criteria for {name}",
+  "stage.occupied_one": "{count} deal is in this stage",
+  "stage.occupied_other": "{count} deals are in this stage",
   "stage.criteria.title": "Exit criteria",
   "stage.criteria.sub": "What must be true before a deal leaves this stage.",
   "stage.criteria.buyerCalloutTitle": "Evidence must come from the buyer",
@@ -6622,8 +6658,6 @@ export const en = {
   "stage.criteria.unreadable":
     "Reload before changing them; the list may be incomplete.",
   "stage.criteria.none": "No exit criteria yet.",
-  "stage.criteria.terminal":
-    "A won or lost stage is final, so it has no exit criteria.",
   "stage.criteria.add": "Add criterion",
   "stage.criteria.key": "Key",
   "stage.criteria.keyHint":
@@ -6633,7 +6667,8 @@ export const en = {
   "stage.criteria.required": "Required",
   "stage.criteria.optional": "Optional",
   "stage.criteria.hint": "Hint",
-  "stage.criteria.edit": "Edit criterion",
+  "stage.criteria.editOf": "Edit {name}",
+  "stage.criteria.removeOf": "Remove {name}",
   "stage.criteria.remove": "Remove",
   "stage.criteria.removeTitle": "Remove this criterion?",
   "stage.criteria.removeBody":
@@ -10546,7 +10581,7 @@ export const en = {
     "This mailbox reported no folders. Connect a mailbox that has them, or keep senders out by address or domain instead.",
   "captureExclusions.containersPartial": "This folder list stopped short",
   "captureExclusions.containersPartialBody":
-    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. Type its name below instead, or keep senders out by address or domain.",
+    "Your mailbox has more folders than this list could read, so one you are looking for may be missing. To keep its mail out, add a rule for its senders' address or domain instead.",
   "captureExclusions.containersUnreadable": "Your folders could not be read",
   "captureExclusions.containersUnreadableBody":
     "The mail provider did not answer, so this list may be missing folders. Try again in a moment, or keep senders out by address or domain instead.",

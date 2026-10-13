@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 66,
     "system_frame_tokens": 586,
-    "tokens": 26680,
+    "tokens": 26763,
     "median_tool_tokens": 346,
-    "mean_tool_tokens": 403
+    "mean_tool_tokens": 405
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 66,
-      "tokens": 5292,
-      "listing_tokens": 2818,
-      "step_schema_tokens": 1888,
+      "tokens": 5459,
+      "listing_tokens": 2901,
+      "step_schema_tokens": 1972,
       "percent_of_ceiling": 16,
-      "headroom_tokens": 17918,
+      "headroom_tokens": 17751,
       "dangling_cross_references": [
         "at_risk_relationships → intro_path_to",
         "at_risk_relationships → who_knows",
@@ -103,6 +103,10 @@
       "tokens": 809
     },
     {
+      "name": "log_activity",
+      "tokens": 784
+    },
+    {
       "name": "compose_analytics_report",
       "tokens": 777
     },
@@ -117,10 +121,6 @@
     {
       "name": "preview_import",
       "tokens": 725
-    },
-    {
-      "name": "log_activity",
-      "tokens": 701
     },
     {
       "name": "create_record",

@@ -143,11 +143,10 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 	var out HiddenBacklog
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		reader := readerOrNobody(ctx)
-		// The queue's own horizon, measured once and handed to every relaxation
-		// below. Measured per count instead, the guardrail could report a
-		// difference between two scans that came from two different cutoffs
-		// rather than from the rule it was relaxing.
-		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
+		// The queue's own horizon, read once and handed to every relaxation
+		// below. Read per count, two scans could differ by cutoff rather
+		// than by the rule being relaxed.
+		measured, err := s.waitingHorizonFor(ctx, tx)
 		if err != nil {
 			return err
 		}

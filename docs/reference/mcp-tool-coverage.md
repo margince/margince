@@ -366,9 +366,9 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `send_company_email` | 1.00 | 3 | `case44_chase_what_is_slipping` |
+| `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `compose_analytics_report` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `preview_import` | 1.00 | 6 | `case10_finish_the_import`, `case3_spreadsheet` |
-| `log_activity` | 1.00 | 6 | `case1_log_it`, `case42_can_i_answer_on_whatsapp` |
 | `send_message` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `read_reporting` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `progress_deal` | 1.00 | 3 | `case45_move_the_deal_on` |

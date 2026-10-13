@@ -244,7 +244,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		//
 		// The rest of the partial index's predicate rides along, so the index
 		// and this query ask the same question and the planner can use it.
-		horizon, err := s.waitingHorizonFor(ctx, tx, asOf)
+		horizon, err := s.waitingHorizonFor(ctx, tx)
 		if err != nil {
 			return err
 		}

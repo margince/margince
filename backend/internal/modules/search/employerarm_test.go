@@ -21,7 +21,8 @@ func TestARefusedEmployerArmBindsNothing(t *testing.T) {
 			}
 		}
 		var bound []any
-		arm, err := employerArmSQL(teamReaderFor(objects...), 1, 2, true, func(v any) int { bound = append(bound, v); return len(bound) })
+		arg := func(v any) int { bound = append(bound, v); return len(bound) }
+		arm, err := employerArmSQL(teamReaderFor(objects...), 1, 2, true, bindIdentifier("acme", arg), arg)
 		if err != nil {
 			t.Fatalf("without %s: %v", missing, err)
 		}
@@ -36,8 +37,9 @@ func TestARefusedEmployerArmBindsNothing(t *testing.T) {
 func TestAnAdmittedEmployerArmUsesWhatItBinds(t *testing.T) {
 	t.Parallel()
 	bound := []any{"", "acme"}
+	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	arm, err := employerArmSQL(teamReaderFor(entityContact, entityCompany, objectRelationship), 1, 2, true,
-		func(v any) int { bound = append(bound, v); return len(bound) })
+		bindIdentifier("acme", arg), arg)
 	if err != nil {
 		t.Fatal(err)
 	}

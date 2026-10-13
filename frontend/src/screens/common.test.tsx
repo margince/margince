@@ -113,6 +113,23 @@ describe("CreateAction dedupe link", () => {
 });
 
 describe("problemMessage", () => {
+  // httperr.Duplicate sends one fixed API sentence for every key it guards,
+  // which names neither the field nor the record that holds it.
+  it("names what a duplicate refusal collided with, not the API's sentence", () => {
+    const message = problemMessage(
+      {
+        status: 409,
+        code: "duplicate_email",
+        detail: "a live record with this key already exists",
+        details: { existing_id: "01ABC" },
+      },
+      t,
+    );
+    expect(message).toBe(
+      "Another contact or lead already has this email address, so it was not saved here.",
+    );
+  });
+
   // The sentinel string is what an object-RBAC denial and a read-share denial
   // both arrive with, and it names neither the authority the reader holds nor
   // what would widen it. Catalog copy replaces it.
