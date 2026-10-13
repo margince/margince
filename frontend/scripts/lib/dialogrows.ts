@@ -5,6 +5,7 @@ import ts from "typescript";
 import { classVariants, type Given } from "../../src/testing/classnames";
 import {
   attr,
+  attrs,
   boxProps,
   callOf,
   capped,
@@ -12,13 +13,14 @@ import {
   childrenSlot,
   cross,
   declarations,
-  defOf as definedAt,
   definition,
+  defOf,
   descendants,
   domainOf,
   elementsIn,
   enclosing,
   expanded,
+  type Forwarded,
   flowOf,
   fnOf,
   givenTo,
@@ -36,10 +38,10 @@ import {
   type Prop,
   presetOf,
   primitiveKey,
-  propNames,
   rendered,
   returnedBy,
   rootsOf,
+  spreads,
   tag,
   upper,
   type Values,
@@ -54,14 +56,19 @@ type Verdict = "spaced" | "flush" | "doubled" | "unplaced";
 type Row = { at: string; where: string; verdict: Verdict; by?: string };
 // The class lists of the boxes from an element's parent out to its dialog.
 type Chain = string[][];
-// A component on the way to a call, and the boxes it was entered under.
-type Entry = { def: ts.Node; outer: string };
-// `via`: the components on the way to the call, so a recursion ends.
+// What a call hands the props of the component it calls: by name, and as
+// the reader its body's class lists take.
+type Held = readonly (string | undefined)[] | undefined;
+type Props = (name: string) => Held;
+type Handed = { def: ts.Node; props: Props; given: Given; keyed: string[] };
+// A component on the way to a call, under the boxes and props it entered with.
+type Entry = { def: ts.Node; key: string };
 type Guest = {
   def: ts.Node;
   outer: Chain[];
   via: readonly Entry[];
-  given: Given;
+  handed: Handed;
+  key: string;
 };
 // A component definition, mapped to the call that rendered it this time.
 type Links = Map<ts.Node, ts.Node>;
@@ -77,9 +84,7 @@ type Placement = {
 };
 type View = { placement: Placement; links: Links };
 type Keys = { keys: ReadonlySet<string>; modal: string };
-// A guest's body, and what its call hands the props written in it.
-type Host = { body: ts.Node; given: Given };
-type Gate = Keys & { owners: Owners; outer: Chain[]; host?: Host };
+type Gate = Keys & { owners: Owners; outer: Chain[]; host?: Handed };
 
 export const FIELD_ROWS = new Map([
   ["Field", "atoms"],
@@ -97,17 +102,6 @@ const HEADING = primitiveKey("heading", "Heading");
 const NO_LINKS: Links = new Map();
 const DIALOG: Chain[] = [[["modal"]]];
 
-// `const W2 = Wrapped` renders what `Wrapped` renders.
-function aliased(written: ts.Node | undefined): ts.Node | undefined {
-  let def = written;
-  for (let hops = 0; def && hops < 6; hops++) {
-    const to = ts.isVariableDeclaration(def) ? def.initializer : undefined;
-    if (!to || !ts.isIdentifier(to)) return def;
-    def = definition(def.getSourceFile(), to.text);
-  }
-  return def;
-}
-const defOf = (n: ts.Node) => aliased(definedAt(n));
 const keyIs = (n: ts.Node, key: string) => {
   const def = defOf(n);
   return !!def && keyOf(def) === key;
@@ -121,8 +115,6 @@ const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
   literal(n, "role") === "dialog" || wraps(g, n);
 export const dialogsIn = (source: ts.SourceFile, keys: ReadonlySet<string>) =>
   elementsIn(source).filter((n) => isDialog({ keys }, n));
-// A call and the component it calls, whose props the call hands values.
-type Call = { at: ts.Node; def: ts.Node };
 const variantsOf = (n: ts.Node, given?: Given) =>
   classVariants(
     n.getSourceFile(),
@@ -130,26 +122,107 @@ const variantsOf = (n: ts.Node, given?: Given) =>
     16,
     given,
   );
-// What a component's props hold at one call: their literal branches, what
-// `outer` holds for a prop handed on, or the default for one left out.
-function givenAt({ at, def }: Call, outer?: Given): Given {
-  const names = propNames(def);
-  return (name) => {
-    if (!names.has(name)) return undefined;
-    const a = attr(at, name);
-    if (!a) return [presetOf(def, name)];
-    const init = a.initializer;
-    const x = init && ts.isJsxExpression(init) ? init.expression : init;
-    if (!x) return ["true"];
-    const domain = domainOf(def, name);
-    const handed = ts.isIdentifier(x) ? outer?.(x.text) : undefined;
-    return literalsIn(x) ?? handed ?? (domain && [...domain, undefined]);
+const propRead = (reads: ReturnType<typeof givenTo>, n: ts.Node) => {
+  if (!reads(n)) return undefined;
+  return ts.isPropertyAccessExpression(n) ? n.name.text : n.getText();
+};
+// What one expression hands a prop: its literals, or what the caller is handed
+// for the props the expression reads or spreads.
+function handedValue(
+  x: ts.Expression,
+  name: string,
+  def: ts.Node,
+  outer?: Handed,
+): Held {
+  const listed = literalsIn(x);
+  if (listed || !outer) return listed;
+  const preset = presetOf(def, name);
+  const reads = givenTo(outer.def);
+  const forwarded = spreads(outer.def, x, name);
+  const read = forwarded ? name : propRead(reads, x);
+  if (read !== undefined) {
+    const values = outer.props(read);
+    const set = forwarded ? values?.filter((v) => v !== undefined) : values;
+    return set?.map((v) => v ?? preset);
+  }
+  if (!descendants(x).some((d) => reads(d))) return undefined;
+  return classVariants(x.getSourceFile(), x, 16, outer.given).map((v) =>
+    v.join(" "),
+  );
+}
+// `<Card inset />` hands `true`; a spread beside it could hand anything.
+const bare = (at: ts.Node, name: string) => {
+  const a = attr(at, name);
+  const all = opening(at)?.attributes.properties.length ?? 0;
+  return !!a && !a.initializer && attrs(at).length === all;
+};
+// What a call hands one prop: its literal branches, the caller's own value
+// where it hands one on, or the default for one left out.
+function propAt(at: ts.Node, def: ts.Node, name: string, outer?: Handed): Held {
+  const domain = domainOf(def, name);
+  const any = domain && [...domain, undefined];
+  const forwarded: Forwarded | undefined =
+    outer &&
+    ((x) => {
+      if (!spreads(outer.def, x, name)) return undefined;
+      const values = outer.props(name);
+      return !values || values.includes(undefined) ? "maybe" : "set";
+    });
+  const handed = handedTo(at, name, forwarded);
+  if (handed === "any") return bare(at, name) ? ["true"] : any;
+  const each = handed.map((x) =>
+    x ? handedValue(x, name, def, outer) : [presetOf(def, name)],
+  );
+  return each.some((v) => v === undefined) ? any : each.flatMap((v) => v ?? []);
+}
+const classReads = new WeakMap<ts.Node, string[]>();
+// The props a body reads where a class is decided. That is a className, what
+// it hands a call, or a local it may build a class list from.
+function classProps(def: ts.Node): string[] {
+  const known = classReads.get(def);
+  if (known) return known;
+  const reads = givenTo(def);
+  const decides = (n: ts.Node) =>
+    ts.isJsxSpreadAttribute(n) ||
+    ts.isVariableDeclaration(n) ||
+    (ts.isJsxAttribute(n) &&
+      (n.name.getText() === "className" || upper(callOf(n))));
+  const names = new Set<string>();
+  for (const n of descendants(def)) {
+    const name = propRead(reads, n);
+    if (name === undefined) continue;
+    for (let p = n.parent; p && p !== def; p = p.parent) {
+      if (decides(p)) names.add(name);
+    }
+  }
+  const out = [...names].sort();
+  classReads.set(def, out);
+  return out;
+}
+const forwardsAll = (def: ts.Node) =>
+  descendants(def).some(
+    (n) => ts.isJsxSpreadAttribute(n) && spreads(def, n.expression),
+  );
+function handedAt(at: ts.Node, def: ts.Node, outer?: Handed): Handed {
+  const known = new Map<string, Held>();
+  const props: Props = (name) => {
+    if (!known.has(name)) known.set(name, propAt(at, def, name, outer));
+    return known.get(name);
   };
+  const reads = givenTo(def);
+  const given: Given = (n) => {
+    const name = propRead(reads, n);
+    return name === undefined ? undefined : props(name);
+  };
+  // A body that spreads its props on may hand any of them to a class.
+  const written = forwardsAll(def)
+    ? attrs(at).map((a) => a.name.getText())
+    : [];
+  const keyed = [...new Set([...classProps(def), ...written])].sort();
+  return { def, props, given, keyed };
 }
 const inForce = (g: Gate, n: ts.Node) =>
-  g.host && within(n, g.host.body) ? g.host.given : undefined;
-const handedAt = (g: Gate, at: ts.Node, def: ts.Node) =>
-  givenAt({ at, def }, inForce(g, at));
+  g.host && within(n, g.host.def) ? g.host : undefined;
 // Only a label hidden in every render: `labelHidden={x}` shows it in one.
 const inPlace = (n: ts.Node) => {
   const hidden = attr(n, "labelHidden");
@@ -308,10 +381,10 @@ const isField = (n: ts.Node, given?: Given) =>
   isPrimitiveField(n) || variantsOf(n, given).flat().includes("form-row");
 // A component counts by the field rows it renders at its own root.
 function width(g: Gate, n: ts.Node) {
-  if (isField(n, inForce(g, n))) return 1;
+  if (isField(n, inForce(g, n)?.given)) return 1;
   const def = defOf(n);
   if (!def || wraps(g, n)) return 0;
-  const given = handedAt(g, n, def);
+  const { given } = handedAt(n, def, inForce(g, n));
   return rootsOf(def).filter((r) => isField(r, given)).length;
 }
 
@@ -358,8 +431,9 @@ function boxesAt(g: Gate, p: ts.Node): Chain[] {
   const modal = keyIs(p, g.modal);
   const slot = upper(p) && !modal ? childrenSlot(p) : undefined;
   const def = defOf(p);
-  const inner = slot && def ? variantsOf(slot, handedAt(g, p, def)) : [[]];
-  const own = cross(variantsOf(p, inForce(g, p)), inner, p);
+  const handed = slot && def && handedAt(p, def, inForce(g, p));
+  const inner = slot && handed ? variantsOf(slot, handed.given) : [[]];
+  const own = cross(variantsOf(p, inForce(g, p)?.given), inner, p);
   if (!wraps(g, p)) return own.map((cls) => [cls]);
   const boxes = dialogBoxes(g, p, []);
   if (modal) return cross(own, boxes, p).map((cls) => [cls]);
@@ -444,13 +518,19 @@ function boxesOf(
   g: Gate,
   n: ts.Node,
   hops = 3,
-  given = inForce(g, n),
+  scope = inForce(g, n),
 ): string[][] {
-  const own = variantsOf(n, given).flatMap((v) => expanded(g.owners, v, n));
+  const own = variantsOf(n, scope?.given).flatMap((v) =>
+    expanded(g.owners, v, n),
+  );
   const def = defOf(n);
   if (!def || hops === 0 || wraps(g, n)) return own;
-  const handed = givenAt({ at: n, def }, given);
-  return rootsOf(def)
+  const roots = rootsOf(def);
+  // A binding that is no function (`const Line = inline ? "span" : "p"`,
+  // `memo(X)`) is read as the element itself.
+  if (roots.length === 0 && !ts.isFunctionLike(fnOf(def))) return own;
+  const handed = handedAt(n, def, scope);
+  return roots
     .flatMap((r) => boxesOf(g, r, hops - 1, handed))
     .flatMap((cls) => own.map((o) => [...cls, ...o]));
 }
@@ -497,7 +577,7 @@ function marginedAnywhere(g: Gate, n: ts.Node) {
 const has = (g: Gate, n: ts.Node | undefined, set: Set<string>) =>
   !!n &&
   opening(n) !== undefined &&
-  variantsOf(n, inForce(g, n)).every((v) => v.some((c) => set.has(c)));
+  variantsOf(n, inForce(g, n)?.given).every((v) => v.some((c) => set.has(c)));
 const ternaries = new WeakMap<ts.SourceFile, ts.ConditionalExpression[]>();
 function exclusive(a: ts.Node, b: ts.Node) {
   const file = a.getSourceFile();
@@ -571,11 +651,11 @@ function addPlaced(g: Gate, placement: Placement, inside: Set<ts.Node>) {
     }
   }
 }
-// A component renders inside itself again only under new boxes, and only once.
-// So a recursion is judged one level down, then ends.
-const enters = (via: readonly Entry[], def: ts.Node, outer: string) => {
+// The gate follows a component into itself once more, and only under boxes or
+// props it was not entered with. So a recursion is judged one level down.
+const enters = (via: readonly Entry[], def: ts.Node, key: string) => {
   const before = via.filter((e) => e.def === def);
-  return before.length < 2 && before.every((e) => e.outer !== outer);
+  return before.length < 2 && before.every((e) => e.key !== key);
 };
 function guestsIn(
   g: Gate,
@@ -584,7 +664,7 @@ function guestsIn(
   hosted?: Guest,
 ) {
   const via = hosted
-    ? [...hosted.via, { def: hosted.def, outer: JSON.stringify(hosted.outer) }]
+    ? [...hosted.via, { def: hosted.def, key: hosted.key }]
     : [];
   const guests: Guest[] = [];
   for (const n of inside) {
@@ -593,8 +673,11 @@ function guestsIn(
     // An unplaced prop is not known to render inside the boxes `g.outer` names.
     const at = unplacedAt(placement, n) ? { ...g, outer: DIALOG } : g;
     const outer = ancestry(at, viewAt(placement, n), n);
-    if (!enters(via, def, JSON.stringify(outer))) continue;
-    guests.push({ def, outer, via, given: handedAt(g, n, def) });
+    const handed = handedAt(n, def, inForce(g, n));
+    const values = handed.keyed.map((p) => [p, handed.props(p) ?? null]);
+    const key = JSON.stringify([outer, values]);
+    if (!enters(via, def, key)) continue;
+    guests.push({ def, outer, via, handed, key });
   }
   return guests;
 }
@@ -647,12 +730,11 @@ function rowsIn(g: Gate, source: ts.SourceFile, hosted?: Guest) {
   return { dialogs, rows, guests };
 }
 
-// A component called under two boxes, whose callee is too, doubles the scopes
-// at each level.
-export const SCOPE_CAP = 13_000;
-const fanOut = (def: ts.Node) =>
+// About 4x the scopes the tree builds: a fan-out fails before it is slow.
+export const SCOPE_CAP = 15_000;
+const fanOut = (q: Guest) =>
   new Error(
-    `${whereOf(def)}: more than ${SCOPE_CAP} guest scopes to judge; call this component under fewer distinct boxes, or raise SCOPE_CAP in scripts/lib/dialogrows.ts once the tree's own count has grown`,
+    `${whereOf(q.via[0]?.def ?? q.def)}: more than ${SCOPE_CAP} guest scopes to judge in the components this one calls, last at ${whereOf(q.def)}; call them under fewer distinct boxes or props, or raise SCOPE_CAP in scripts/lib/dialogrows.ts once the tree's own count has grown`,
   );
 // A component a dialog renders is judged as part of that dialog under each
 // chain of boxes it is called in. So is what it renders in turn.
@@ -678,16 +760,15 @@ export function rowsAcross(
   }
   for (; queue.length > 0; depth++) {
     for (const q of queue.splice(0)) {
-      const handed = [...propNames(q.def)].map((p) => q.given(p) ?? null);
-      const key = `${keyOf(q.def)}#${JSON.stringify([q.outer, handed])}`;
+      const key = `${keyOf(q.def)}#${q.key}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (seen.size > SCOPE_CAP) throw fanOut(q.def);
-      const host = { body: q.def, given: q.given };
-      take(rowsIn({ ...base, outer: q.outer, host }, q.def.getSourceFile(), q));
+      if (seen.size > SCOPE_CAP) throw fanOut(q);
+      const g = { ...base, outer: q.outer, host: q.handed };
+      take(rowsIn(g, q.def.getSourceFile(), q));
     }
   }
-  return { rows: [...rows.values()], dialogs, depth };
+  return { rows: [...rows.values()], dialogs, depth, scopes: seen.size };
 }
 
 // A root that is already a row counts as one where the component is used,
@@ -708,8 +789,8 @@ const exported = (def: ts.Node) =>
 export const labelledIn = (source: ts.SourceFile) =>
   [...declarations(source)]
     .filter(([name, def]) => /^[A-Z]/.test(name) && exported(def))
-    .filter(([, def]) => {
-      const drawn = aliased(def);
+    .filter(([name]) => {
+      const drawn = definition(source, name);
       return !!drawn && drawsLabel(drawn);
     })
     .map(([name]) => name);

@@ -3,7 +3,7 @@
 
 /**
  * The corpus, layout reading, tag resolution and dialog set that
- * dialogtitle.test.ts and dialogrows.test.ts share.
+ * dialogtitle.test.ts and the dialog-row gate (dialogrows.ts) share.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -331,11 +331,15 @@ const initOf = (m: Member) => {
   return init && ts.isJsxExpression(init) ? init.expression : init;
 };
 type Reading = { values: ts.Expression[]; open: boolean } | "any";
+/** How a spread the caller can read hands a prop on: always, or maybe. */
+export type Forwarded = (spread: ts.Expression) => "set" | "maybe" | undefined;
 // What one member hands `name`; `open` when it may leave the prop unset.
-function memberReading(m: Member, name: string): Reading {
+function memberReading(m: Member, name: string, fwd?: Forwarded): Reading {
   if (ts.isJsxSpreadAttribute(m) || ts.isSpreadAssignment(m)) {
+    const how = fwd?.(m.expression);
+    if (how) return { values: [m.expression], open: how === "maybe" };
     const arms = spreadArms(m.expression).map((o) =>
-      lastNamed(o.properties, name),
+      lastNamed(o.properties, name, fwd),
     );
     const read = arms.filter((r) => r !== "any");
     if (arms.length === 0 || read.length < arms.length) return "any";
@@ -350,10 +354,14 @@ function memberReading(m: Member, name: string): Reading {
 }
 // The last member naming `name` wins, as JSX and object spreads apply in
 // source order.
-function lastNamed(members: readonly Member[], name: string): Reading {
+function lastNamed(
+  members: readonly Member[],
+  name: string,
+  fwd?: Forwarded,
+): Reading {
   const values: ts.Expression[] = [];
   for (const m of [...members].reverse()) {
-    const read = memberReading(m, name);
+    const read = memberReading(m, name, fwd);
     if (read === "any") return "any";
     values.push(...read.values);
     if (!read.open) return { values, open: false };
@@ -361,12 +369,14 @@ function lastNamed(members: readonly Member[], name: string): Reading {
   return { values, open: true };
 }
 /** Every value a call may hand prop `name`, `undefined` for a path that hands
- * none; "any" when a bare attribute or an unreadable spread hides the value. */
+ * none; "any" when a bare attribute or an unreadable spread hides the value.
+ * A spread `fwd` reads stands as its own value. */
 export function handedTo(
   e: ts.Node,
   name: string,
+  fwd?: Forwarded,
 ): (ts.Expression | undefined)[] | "any" {
-  const read = lastNamed(opening(e)?.attributes.properties ?? [], name);
+  const read = lastNamed(opening(e)?.attributes.properties ?? [], name, fwd);
   if (read === "any") return "any";
   return read.open ? [...read.values, undefined] : read.values;
 }
@@ -466,7 +476,8 @@ function moduleFor(from: string, spec: string): string | null {
   const file = target && join(frontendDir, target);
   return file && existsSync(file) ? file : null;
 }
-// Where a component tag is defined, through imports, re-exports and renames.
+// Where a component tag is defined, through imports, re-exports, renames and
+// `const B = A`.
 const defined = new WeakMap<ts.SourceFile, Map<string, ts.Node | undefined>>();
 export function definition(
   source: ts.SourceFile,
@@ -484,6 +495,10 @@ function follow(
 ): ts.Node | undefined {
   const local = declarations(source).get(name);
   const link = bindings(source).get(name);
+  const to = local && ts.isVariableDeclaration(local) && local.initializer;
+  if (to && ts.isIdentifier(to) && hops > 0) {
+    return follow(source, to.text, hops - 1);
+  }
   if (local || hops === 0 || !link) return local;
   const renamed = link.spec === "" && link.name !== name;
   if (link.spec === "" && !renamed) return undefined;
@@ -537,6 +552,19 @@ export function givenTo(def: ts.Node) {
     (ts.isPropertyAccessExpression(e) &&
       e.expression.getText() === props &&
       (name === undefined || e.name.text === name));
+}
+/** Whether spreading `x` hands on what `def` is handed as `name`: its props
+ * object, or the rest it destructures `name` into. */
+export function spreads(def: ts.Node, x: ts.Node, name?: string): boolean {
+  const first = propsOf(def);
+  if (!first || !ts.isIdentifier(x)) return false;
+  if (ts.isIdentifier(first)) return first.text === x.text;
+  if (!ts.isObjectBindingPattern(first)) return false;
+  const rest = first.elements.find((b) => !!b.dotDotDotToken);
+  if (!rest || rest.name.getText() !== x.text) return false;
+  return !first.elements.some(
+    (b) => b !== rest && (b.propertyName ?? b.name).getText() === name,
+  );
 }
 /** The literal a component's destructured prop defaults to. */
 export function presetOf(def: ts.Node, name: string): string | undefined {
@@ -784,10 +812,14 @@ const wrapsChildren = (text: string, name: string) =>
   [...text.matchAll(new RegExp(`<${name}\\b[\\s\\S]*?</${name}>`, "g"))].some(
     (m) => /\{\s*(?:props\.)?children\s*\}/.test(m[0]),
   );
-const aliases = (text: string, names: Set<string>) =>
-  [...text.matchAll(/\b(\w+) as (\w+)\b/g)]
+const aliases = (text: string, names: Set<string>) => [
+  ...[...text.matchAll(/\b(\w+) as (\w+)\b/g)]
     .filter((m) => names.has(m[1]))
-    .map((m) => m[2]);
+    .map((m) => m[2]),
+  ...[...text.matchAll(/\bconst\s+(\w+)\s*=\s*(\w+)\s*;/g)]
+    .filter((m) => names.has(m[2]))
+    .map((m) => m[1]),
+];
 // A name a file can spell as a tag: one it declares, imports or renames to.
 const spells = (text: string, name: string) =>
   new RegExp(
