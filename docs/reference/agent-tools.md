@@ -47,8 +47,7 @@ Every core verb the surface serves, including those a client reaches only throug
   - The relink verbs (`relink_activity`, `relink_thread`, `relink_activities`) read the record type the activity moves
     to. Filing under a project is 🟡, because it marks every named activity as sales mail. A thread or a named set
     cannot pin a version, so a named set always waits.
-  - `relink_thread` is not offered. It refuses at every target, because the retry reads a thread key again, and sends
-    the caller to `relink_activities`, whose approval binds the named IDs.
+  - `relink_thread` is not offered and refuses every call; `relink_activities`, whose approval binds the named IDs, replaces it.
   - A credential may give the approval for its own staged relink with `decide_approvals`, on a call with a human there.
     The same checks the decision applies must pass: the decision grants, and the target is visible. The change must
     also be one a user can undo. Margince records the approval as the decision of the member, made through the agent.
@@ -241,7 +240,6 @@ route runs the tool through the registry (`served_by: registry`), so the verb is
 
 `destructiveHint` and `idempotentHint` are not set. The protocol defaults (destructive, not idempotent) are already
 the safe reading. Only a value that promises more would need a call per tool, with nothing to hold it true.
-
 These gates keep the catalog and the contract from drifting:
 
 | Gate | Where | What it holds |
@@ -251,8 +249,7 @@ These gates keep the catalog and the contract from drifting:
 | `TestNoWritingToolIsAdvertisedAsReadOnly` | `backend/internal/modules/agents/conformance_test.go` | The derived hint stays true across the whole registered set. |
 | `TestEveryToolScopeIsGrantableAndEgressNeedsAnOutboundCap` | `backend/internal/modules/agents/scope_fitness_test.go` | An egress tool cannot use a cap that is not outbound. |
 
-Both scans in that file come from the generated policy table. So a verb added to the contract later is covered, and
-nobody has to add it to a list.
+Both scans read the generated policy table, so a verb added to the contract later is covered with no list to edit.
 
 ## When a tool refuses
 
@@ -296,14 +293,14 @@ back*, never what it may do. Both reach the same registry and the same admission
 framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
 answer one would tell a client it had reached the era it was looking for.
 
-The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is
-`-32601 method not found`, with HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does
-not host the endpoint.
+The `2026-07-28` version removed `ping`, and the handshake `ping` kept open. Anything else is `-32601 method not found`, with
+HTTP `404` in the modern framing. That lets a client of either era tell this server from one that does not host the endpoint.
 
 **Protocol versions**, newest first: `2026-07-28` (modern, per request), `2025-11-25` and `2025-06-18` (handshake
 era). `2025-03-26` is outside the window Margince still supports; `2024-11-05` is not served, because it is older than
 Streamable HTTP. In the handshake era, `initialize` sends back the version the client asked for when the server
 supports it. If not, it answers with the newest one it does support.
+
 It never answers with a version the server does not support. It also never answers with the modern version, which
 needs no handshake. A version this server does not serve is refused `400` with `-32022 UnsupportedProtocolVersion` and
 a `data.supported` list naming every version it does. So a client retries, and does not guess.
@@ -320,6 +317,7 @@ sampling, elicitation or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
 lets a client write *any* value that way, plain ASCII included. This server reads the value back before it compares.
+
 Take a server in the middle that filters on the header as sent, and does not read the sentinel form. A client can pass
 it by writing the value that way. Route on these headers only if you read them back the same way.
 
@@ -328,6 +326,7 @@ result a client may cache carries `ttlMs` + `cacheScope`. `server/discover` is `
 every caller, and a test holds that claim. Every catalog (`tools/list`, `resources/*`, `prompts/list`) is
 **`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
 data to the wrong caller.
+
 The server would never see that, so it could not audit it. A TTL is a hint for caches, never a permission. Every call
 signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
 
@@ -344,6 +343,7 @@ does not open. The surface does change per caller, but this server cannot say so
 **A tool result carries the answer twice.** Every registered tool declares an `outputSchema`. So a `tools/call` that
 works returns the JSON both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second
 copy built again.
+
 So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
 writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
 server.
@@ -351,6 +351,7 @@ server.
 **No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
 If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no
 session to close. **Every call signs in again** with its Bearer passport, so any replica can answer any call.
+
 The binder runs per call. So when someone revokes the passport, or lowers the rights of the human who gave it, the
 change applies on the next `tools/call`. When the server cannot *reach* a result on a credential, it answers `503`,
 never `401`. A 401 would tell a good client its good token is bad, and turn a short failure into a new consent from

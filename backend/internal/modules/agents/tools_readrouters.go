@@ -113,7 +113,7 @@ func (readRelationships) Spec() mcp.ToolSpec {
 	}
 }
 
-// relationshipCompanyID is spelled once: the generated record shapes repeat it.
+// relationshipCompanyID is the argument a warm-route read takes.
 const relationshipCompanyID = "company_id"
 
 // relationshipTargetByID is each target by the one id it takes.
