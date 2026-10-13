@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -69,6 +69,41 @@ describe("the pipeline stage table", () => {
     expect((await screen.findAllByText("Intake")).length).toBeGreaterThan(0);
     expect(screen.queryByText("other-s1")).toBeNull();
   });
+
+  it("names a stage of an archived pipeline and adds no row for its empty stages", async () => {
+    vi.stubGlobal(
+      "fetch",
+      reportsStub({
+        archivedPipelines: [
+          {
+            id: "old",
+            name: "Retired",
+            is_default: false,
+            position: 2,
+            archived_at: "2026-05-01T00:00:00Z",
+            stages: [
+              stage("old-s1", "old", "Legacy intake", 1),
+              stage("old-s2", "old", "Legacy close", 2),
+            ],
+          },
+        ],
+        stageRows: [
+          { stage_id: "pl-s1", raw_minor: 100, deal_count: 1 },
+          { stage_id: "old-s1", raw_minor: 200, deal_count: 2 },
+        ],
+      }),
+    );
+    render(<AnalyticsScreen />);
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
+    const table = within(
+      await screen.findByRole("table", { name: "Open deals by stage" }),
+    );
+    expect(await table.findByText("Retired · Legacy intake")).toBeTruthy();
+    expect(table.queryByText("old-s1")).toBeNull();
+    expect(table.queryByText(/Legacy close/)).toBeNull();
+  });
 });
 
 describe("stagesOfEveryPipeline", () => {
@@ -101,5 +136,22 @@ describe("stagesOfEveryPipeline", () => {
       "Won",
     ]);
     expect(stages.map((entry) => entry.position)).toEqual([0, 1, 2]);
+  });
+
+  it("lists an archived pipeline's stages last, under its name, renaming no live stage", () => {
+    const names = stagesOfEveryPipeline([
+      {
+        name: "Retired",
+        archived_at: "2026-05-01T00:00:00Z",
+        stages: [stage("r1", "old", "Qualify", 1)],
+      },
+      { name: "Partners", stages: [stage("p1", "o", "Intake", 1)] },
+      {
+        name: "Sales",
+        is_default: true,
+        stages: [stage("s1", "pl", "Qualify", 1)],
+      },
+    ]).map((entry) => entry.name);
+    expect(names).toEqual(["Qualify", "Intake", "Retired · Qualify"]);
   });
 });
