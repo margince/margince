@@ -98,16 +98,22 @@ type StoredActor struct {
 	OnBehalfOf   ids.UUID                `json:"on_behalf_of"`
 }
 
+// StoredActorOf is what a queued job needs to act as this principal again.
+// Grants are left out, because the job reads them live.
+func StoredActorOf(p principal.Principal) StoredActor {
+	return StoredActor{
+		Type: p.Type, ID: p.ID, UserID: p.UserID, PassportID: p.PassportID,
+		ConnectionID: p.ConnectionID, OnBehalfOf: p.OnBehalfOf,
+	}
+}
+
 // storedActorOf encodes the acting principal for a move that queues work.
 func storedActorOf(ctx context.Context) ([]byte, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, fmt.Errorf("queueing import work needs an authenticated principal: %w", apperrors.ErrPermissionDenied)
 	}
-	return json.Marshal(StoredActor{
-		Type: p.Type, ID: p.ID, UserID: p.UserID, PassportID: p.PassportID,
-		ConnectionID: p.ConnectionID, OnBehalfOf: p.OnBehalfOf,
-	})
+	return json.Marshal(StoredActorOf(p))
 }
 
 // fence is the predicate of every write a lease makes.
