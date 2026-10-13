@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
 import { Button, EmptyState, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -25,6 +27,11 @@ import "./sign-in-methods.css";
 /** The narrow sign-in read, keyed apart from the installation aggregate. */
 const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
 
+type SignInPolicyChange = Pick<
+  components["schemas"]["UpdateInstallationSettingsRequest"],
+  "enabled_oidc_providers" | "oidc_group_role_map" | "require_mfa"
+>;
+
 /**
  * Which ways contacts may sign in to this installation.
  *
@@ -43,23 +50,17 @@ const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
  * show a control that exists and cannot be moved. Hiding the row instead would
  * leave an admin wondering whether password sign-in was configured at all.
  */
-function useSetEnabledProviders() {
+function useSaveSignInPolicy() {
   const queryClient = useQueryClient();
   return useMutation({
-    // The WHOLE list travels, never a single key: the setting replaces rather
-    // than merges, so sending one provider would silently turn every other one
-    // off. The caller passes it as a variable rather than closing over render
-    // state, so a click cannot submit a list older than the row it came from.
-    mutationFn: async (keys: string[]) => {
-      unwrap(
-        await api.PATCH("/installation/settings", {
-          body: { enabled_oidc_providers: keys },
-        }),
-      );
+    // The change is a variable rather than closed-over render state, so a click
+    // cannot submit a value older than the control it came from.
+    mutationFn: async (change: SignInPolicyChange) => {
+      unwrap(await api.PATCH("/installation/settings", { body: change }));
     },
     onSuccess: async () => {
       // BOTH caches. The write goes through the installation PATCH, so the
-      // aggregate holds a copy of these providers — but the card now reads the
+      // aggregate holds a copy of these settings — but the card reads the
       // narrow projection, and invalidating only the aggregate would leave the
       // switch showing what it showed before the save.
       await Promise.all([
@@ -95,36 +96,24 @@ function useAuthenticationPolicy() {
   });
 }
 
-// The server refuses a larger map; mirrored here so the refusal reaches the
-// admin before a request does.
-const MAX_GROUP_GRANTS = 64;
-
-function useSetGroupRoleMap() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // The WHOLE map travels: the PATCH replaces the stored map rather than
-    // merging into it, so sending one entry would silently drop every other
-    // grant. An empty object is the deliberate "clear" and is sent as itself.
-    // The caller passes the map as a variable rather than closing over render
-    // state, so a click cannot submit rows older than the ones on screen.
-    mutationFn: async (map: Record<string, string>) => {
-      unwrap(
-        await api.PATCH("/installation/settings", {
-          body: { oidc_group_role_map: map },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      // Both caches, for the reason useSetEnabledProviders gives: the write
-      // lands on the installation aggregate, but this card reads the narrow
-      // authentication-policy projection.
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: INSTALLATION_SETTINGS_KEY }),
-        queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
-      ]);
+// Asked only while the confirm is open: it decides one line of that dialog.
+function useOwnMfaStatus(enabled: boolean) {
+  return useQuery({
+    queryKey: ["me", "mfa"],
+    enabled,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET("/me/mfa");
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
     },
   });
 }
+
+// The server refuses a larger map; mirrored here so the refusal reaches the
+// admin before a request does.
+const MAX_GROUP_GRANTS = 64;
 
 // A draft grant row. Keyed by a minted id rather than by the group name,
 // because the group is the thing being typed: keying on it would remount the
@@ -178,7 +167,8 @@ function grantRefusal(
  *
  * A DRAFT, saved whole. The wire setting is one map that replaces rather than
  * merges, so the rows are edited locally and one Save sends them all — the same
- * reason useSetEnabledProviders sends the whole provider list. The draft is
+ * reason the provider switches send the whole provider list. An empty object is
+ * the deliberate "clear" and is sent as itself. The draft is
  * seeded from the stored map once and then owned by the admin: a background
  * refetch must not overwrite rows mid-edit, and after a save the draft already
  * IS what the server stored.
@@ -191,7 +181,7 @@ function GroupRoleGrants({
   canManage,
 }: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
   const t = useT();
-  const save = useSetGroupRoleMap();
+  const save = useSaveSignInPolicy();
   // Asked only of a reader who may write the map: the list is the invite's own
   // assignable-roles ceiling, which refuses anybody else.
   const assignable = useAssignableRoles(canManage);
@@ -293,9 +283,11 @@ function GroupRoleGrants({
             disabled={!canManage}
             reason={refusal ?? undefined}
             onClick={() =>
-              save.mutate(
-                Object.fromEntries(rows.map((row) => [row.group, row.role])),
-              )
+              save.mutate({
+                oidc_group_role_map: Object.fromEntries(
+                  rows.map((row) => [row.group, row.role]),
+                ),
+              })
             }
           >
             {t("groupRoles.save")}
@@ -351,14 +343,16 @@ export function SignInMethodsCard() {
   // Gated separately so the switches stay usable for them while the map does not.
   const canManageGrants = useCanWrite("authentication_policy", "update");
   const settings = useAuthenticationPolicy();
-  const save = useSetEnabledProviders();
+  const save = useSaveSignInPolicy();
+  const [confirmingMfa, setConfirmingMfa] = useState(false);
+  const ownMfa = useOwnMfaStatus(confirmingMfa);
 
   return (
     <>
       <Panel title={t("signInMethods.title")}>
         <PanelBody>
           <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
-          {settings.isSuccess && save.error && (
+          {settings.isSuccess && save.error && !confirmingMfa && (
             <Callout
               tone="danger"
               kind="outcome"
@@ -393,6 +387,28 @@ export function SignInMethodsCard() {
                       />
                     )}
                   />
+                  <SettingRow
+                    label={t("signInMethods.requireMfa")}
+                    description={t("signInMethods.requireMfaHint")}
+                    control={(control) => (
+                      <Switch
+                        label={t("signInMethods.requireMfa")}
+                        labelHidden
+                        checked={current.require_mfa === true}
+                        describedBy={control["aria-describedby"]}
+                        pending={save.isPending}
+                        disabled={!canManage || save.isPending}
+                        onChange={(next) => {
+                          if (!next) {
+                            save.mutate({ require_mfa: false });
+                            return;
+                          }
+                          save.reset();
+                          setConfirmingMfa(true);
+                        }}
+                      />
+                    )}
+                  />
                   {providers.map((provider) => (
                     <SettingRow
                       key={provider.key}
@@ -408,14 +424,16 @@ export function SignInMethodsCard() {
                           // The list is sent whole, so a second flip during a
                           // save would send the stale list and undo the first.
                           disabled={!canManage || save.isPending}
+                          // The WHOLE list travels: the setting replaces rather
+                          // than merges, so one key alone turns the rest off.
                           onChange={(next) =>
-                            save.mutate(
-                              next
+                            save.mutate({
+                              enabled_oidc_providers: next
                                 ? [...enabledKeys, provider.key]
                                 : enabledKeys.filter(
                                     (key) => key !== provider.key,
                                   ),
-                            )
+                            })
                           }
                         />
                       )}
@@ -432,6 +450,28 @@ export function SignInMethodsCard() {
           }}
         </QueryGate>
       </Panel>
+      <ConfirmModal
+        open={confirmingMfa}
+        onClose={() => {
+          setConfirmingMfa(false);
+          save.reset();
+        }}
+        title={t("signInMethods.requireMfaConfirmTitle")}
+        confirmLabel={t("signInMethods.requireMfa")}
+        pending={save.isPending}
+        error={save.error ? problemMessageOf(save.error, t) : null}
+        onConfirm={() =>
+          save.mutate(
+            { require_mfa: true },
+            { onSuccess: () => setConfirmingMfa(false) },
+          )
+        }
+      >
+        <p>{t("signInMethods.requireMfaConfirmBody")}</p>
+        {ownMfa.data?.confirmed === false && (
+          <p>{t("signInMethods.requireMfaConfirmSelf")}</p>
+        )}
+      </ConfirmModal>
       {settings.data && (
         <GroupRoleGrants
           // Defaulted for the same reason `sign_in_providers` is: the field is

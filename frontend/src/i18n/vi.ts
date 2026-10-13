@@ -8011,6 +8011,13 @@ export const vi = {
   "auth.resetDoneTitle": "Đã cập nhật mật khẩu",
   "auth.resetDoneBody":
     "Đã đổi mật khẩu và đăng xuất mọi phiên khác. Đăng nhập bằng mật khẩu mới.",
+  "auth.mfaTitle": "Mã xác minh",
+  "auth.mfaSub":
+    "Nhập mã từ ứng dụng xác thực, hoặc một mã khôi phục chưa dùng.",
+  "auth.mfaCode": "Mã",
+  "auth.mfaVerify": "Xác minh mã",
+  "auth.mfaErrCode":
+    "Mã không được chấp nhận. Kiểm tra mã rồi thử lại, hoặc quay lại đăng nhập và bắt đầu lại.",
   "auth.backToLogin": "Quay lại đăng nhập",
   "auth.signOut": "Đăng xuất",
 
@@ -9865,6 +9872,14 @@ export const vi = {
     "Hiển thị nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng các lượt đăng nhập đang diễn ra; các phiên hiện có vẫn tiếp tục.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfaHint":
+    "Mọi thành viên cần có ứng dụng xác thực để dùng Margince.",
+  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+  "signInMethods.requireMfaConfirmBody":
+    "Thành viên chưa có ứng dụng xác thực sẽ không dùng được Margince cho tới khi có. Trước tiên, đảm bảo mọi thành viên đã thiết lập ứng dụng trong Cài đặt, mục Tài khoản.",
+  "signInMethods.requireMfaConfirmSelf":
+    "Bạn chưa thiết lập ứng dụng xác thực. Thiết lập trong Cài đặt, mục Tài khoản trước, nếu không bạn cũng không dùng được Margince.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",

@@ -4,11 +4,7 @@ import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuthCapabilities } from "../app/capabilities";
 import { useOutageRecovery } from "../app/connectivity";
-import {
-  forgetHashCredential,
-  navigate,
-  takeHashCredential,
-} from "../app/router";
+import { forgetHashCredential, takeHashCredential } from "../app/router";
 import {
   previewedOidcProviders,
   previewedPasswordReset,
@@ -29,6 +25,13 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
+import {
+  LoginError,
+  landSignedIn,
+  loginErrorKey,
+  loginFailureOf,
+  MfaForm,
+} from "./auth-signin";
 import { problemMessageOf, sessionAnswers, unwrap } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
@@ -93,6 +96,7 @@ function clearOidcFailureMarker(): void {
 
 type View =
   | { kind: "login" }
+  | { kind: "mfa"; challenge: string }
   | { kind: "forgot" }
   | { kind: "forgot-sent"; email: string }
   | { kind: "reset"; token: string }
@@ -135,6 +139,11 @@ function clearResetHash(): void {
       `${globalThis.location.pathname}${globalThis.location.search}`,
     );
   }
+}
+
+// The two sign-in steps drive the Core; every other view leaves it at rest.
+function corePhase(view: View, phase: AuthPhase): AuthPhase {
+  return view.kind === "login" || view.kind === "mfa" ? phase : "quiet";
 }
 
 export function AuthScreen({
@@ -250,7 +259,7 @@ export function AuthScreen({
     previewedUnavailableProviders(servedOidcProviders);
 
   return (
-    <AuthExperience phase={view.kind === "login" ? authPhase : "quiet"}>
+    <AuthExperience phase={corePhase(view, authPhase)}>
       <Wordmark alt={t("auth.title")} />
       {view.kind === "login" && (
         <>
@@ -280,9 +289,21 @@ export function AuthScreen({
               providersSynthesized={oidcProvidersSynthesized}
               unavailableProviders={unavailableProviders}
               onForgot={() => setView({ kind: "forgot" })}
+              onChallenge={(challenge) => {
+                setAuthPhase("idle");
+                setView({ kind: "mfa", challenge });
+              }}
             />
           )}
         </>
+      )}
+      {view.kind === "mfa" && (
+        <MfaForm
+          challenge={view.challenge}
+          onAuthed={onAuthed}
+          onPhase={setAuthPhase}
+          onBack={setLoginView}
+        />
       )}
       {view.kind === "forgot" && (
         <ForgotForm
@@ -418,28 +439,6 @@ function LocaleFooter() {
   );
 }
 
-// loginFailureKind maps the login response status onto its UX state (§9):
-// one non-enumerating message for bad credentials, an actionable one for
-// rate limiting, and connectivity presented as connectivity — never parsed
-// from human-readable detail strings.
-type LoginFailure = "credentials" | "rate-limited" | "unreachable";
-
-class LoginError extends Error {
-  readonly failure: LoginFailure;
-  constructor(failure: LoginFailure) {
-    super(failure);
-    this.name = "LoginError";
-    this.failure = failure;
-  }
-}
-
-function loginErrorKey(error: unknown): MessageKey {
-  const failure = error instanceof LoginError ? error.failure : "unreachable";
-  if (failure === "credentials") return "auth.errCredentials";
-  if (failure === "rate-limited") return "auth.errRateLimited";
-  return "auth.errUnreachable";
-}
-
 function LoginForm({
   onAuthed,
   onPhase,
@@ -448,6 +447,7 @@ function LoginForm({
   providersSynthesized,
   unavailableProviders,
   onForgot,
+  onChallenge,
 }: Readonly<{
   onAuthed: () => void | Promise<void>;
   onPhase: (phase: AuthPhase) => void;
@@ -460,6 +460,7 @@ function LoginForm({
   /** Preview-only; empty in the product. See `ProviderButtons`. */
   unavailableProviders: ReadonlySet<string>;
   onForgot: () => void;
+  onChallenge: (challenge: string) => void;
 }>) {
   const t = useT();
   const [email, setEmail] = useState("");
@@ -487,28 +488,24 @@ function LoginForm({
       if (!result) {
         throw new LoginError("unreachable");
       }
-      const { status } = result.response;
       if (result.error) {
-        if (status === 401) throw new LoginError("credentials");
-        if (status === 429) throw new LoginError("rate-limited");
-        if (status >= 500) throw new LoginError("unreachable");
+        throw new LoginError(loginFailureOf(result.response.status));
       }
-      const data = unwrap(result);
+      // 202 sets no session: the password was right and a second factor is owed.
+      if (result.response.status === 202) {
+        if (!result.data || !("mfa_challenge" in result.data)) {
+          throw new LoginError("unreachable");
+        }
+        return { challenge: result.data.mfa_challenge };
+      }
       // The login response only says the credential exchange succeeded. The
       // session is real when the app's authenticated /me probe accepts the
       // resulting cookie; keep the Core in its signing-in state until then.
       await onAuthed();
-      return data;
+      return null;
     },
-    onSuccess: () => {
-      onPhase("success");
-      // Restore the originally requested route (§8.5): a deep link the
-      // user followed stays; only a bare entry lands on the Brief.
-      const hash = globalThis.location?.hash ?? "";
-      if (!hash || hash === "#" || hash === "#/") {
-        navigate({ screen: "home" });
-      }
-    },
+    onSuccess: (pending) =>
+      pending ? onChallenge(pending.challenge) : landSignedIn(onPhase),
     onError: (error) => {
       onPhase("error");
       if (error instanceof LoginError && error.failure === "credentials") {

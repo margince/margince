@@ -44,12 +44,23 @@ function mount(
   providers: { key: string; label: string; enabled: boolean }[],
   groupRoleMap: Record<string, string> = {},
   allow: GrantSpec = fullSignInGrants,
+  mfa: { required?: boolean; ownConfirmed?: boolean } = {},
 ) {
   const calls: unknown[] = [];
   const refusing = { writes: false, reads: false };
+  const asked = { ownMfa: 0 };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.url.endsWith("/v1/me/mfa")) {
+      asked.ownMfa += 1;
+      const confirmed = mfa.ownConfirmed ?? true;
+      return jsonResponse({
+        enrolled: confirmed,
+        confirmed,
+        recovery_codes_left: confirmed ? 10 : 0,
+      });
     }
     if (request.method === "PATCH" ? refusing.writes : refusing.reads) {
       return jsonResponse({ title: "Unavailable", status: 503 }, 503);
@@ -68,7 +79,7 @@ function mount(
     return jsonResponse({
       sign_in_providers: providers,
       require_sso: false,
-      require_mfa: false,
+      require_mfa: mfa.required ?? false,
       oidc_group_role_map: groupRoleMap,
     });
   });
@@ -80,7 +91,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<SignInMethodsCard />, { wrapper: Wrap });
-  return { calls, refusing, qc };
+  return { calls, refusing, qc, asked };
 }
 
 describe("the sign-in methods card", () => {
@@ -158,6 +169,81 @@ describe("the sign-in methods card", () => {
       await screen.findByText(/no external provider configured/i),
     ).toBeTruthy();
     expect(screen.queryByRole("switch", { name: /google/i })).toBeNull();
+  });
+});
+
+// Turning the requirement on can shut members out until they hold a factor, so
+// it asks first; turning it off takes nothing from anyone and saves at once.
+describe("the second-factor requirement", () => {
+  const requireSwitch = () =>
+    screen.findByRole("switch", { name: /require second factor/i });
+
+  it("asks before requiring a second factor, then saves it", async () => {
+    const { calls } = mount([]);
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/cannot use margince until they have one/i),
+    ).toBeTruthy();
+    expect(calls).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("button", { name: /require second factor/i }),
+    );
+    await waitFor(() => expect(calls).toEqual([{ require_mfa: true }]));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("sends nothing when the confirm is cancelled", async () => {
+    const { calls } = mount([]);
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls).toEqual([]);
+  });
+
+  it("warns an admin with no factor of their own that it shuts them out too", async () => {
+    mount([], {}, fullSignInGrants, { ownConfirmed: false });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(/you have not set up an authenticator/i),
+    ).toBeTruthy();
+  });
+
+  it("leaves the self warning out for an admin who holds a factor", async () => {
+    const { asked } = mount([], {}, fullSignInGrants, { ownConfirmed: true });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(asked.ownMfa).toBe(1));
+    await within(dialog).findByText(/cannot use margince until they have one/i);
+    expect(
+      within(dialog).queryByText(/you have not set up an authenticator/i),
+    ).toBeNull();
+  });
+
+  it("turns the requirement off without asking", async () => {
+    const { calls } = mount([], {}, fullSignInGrants, { required: true });
+    const user = userEvent.setup();
+    const control = await requireSwitch();
+    expect(control.getAttribute("aria-checked")).toBe("true");
+    await user.click(control);
+    await waitFor(() => expect(calls).toEqual([{ require_mfa: false }]));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("is read-only for a caller who cannot update the installation", async () => {
+    mount(
+      [],
+      {},
+      { installation_settings: ["read"], authentication_policy: ["read"] },
+    );
+    expect((await requireSwitch()).hasAttribute("disabled")).toBe(true);
   });
 });
 

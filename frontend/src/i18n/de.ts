@@ -8187,6 +8187,13 @@ export const de = {
   // wird beendet.
   "auth.resetDoneBody":
     "Das Passwort wurde geändert, und alle anderen Sitzungen wurden abgemeldet. Melde dich mit dem neuen Passwort an.",
+  "auth.mfaTitle": "Bestätigungscode",
+  "auth.mfaSub":
+    "Gib den Code aus deiner Authenticator-App oder einen unbenutzten Wiederherstellungscode ein.",
+  "auth.mfaCode": "Code",
+  "auth.mfaVerify": "Code bestätigen",
+  "auth.mfaErrCode":
+    "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut, oder geh zurück zur Anmeldung und beginne neu.",
   "auth.backToLogin": "Zurück zur Anmeldung",
   "auth.signOut": "Abmelden",
 
@@ -10079,6 +10086,14 @@ export const de = {
     "Zeigt diesen Anbieter auf der Anmeldeseite. Beim Ausschalten werden laufende Anmeldungen abgebrochen; bestehende Sitzungen bleiben bestehen.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
+  "signInMethods.requireMfa": "Zweiten Faktor verlangen",
+  "signInMethods.requireMfaHint":
+    "Jedes Mitglied braucht eine Authenticator-App, um Margince zu nutzen.",
+  "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
+  "signInMethods.requireMfaConfirmBody":
+    "Mitglieder ohne Authenticator-App können Margince erst wieder nutzen, wenn sie eine eingerichtet haben. Sorge dafür, dass alle zuerst eine in den Kontoeinstellungen einrichten.",
+  "signInMethods.requireMfaConfirmSelf":
+    "Du hast noch keine Authenticator-App eingerichtet. Richte zuerst eine in den Kontoeinstellungen ein, sonst kannst auch du Margince nicht nutzen.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Unternehmensanmeldung eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Konto entsteht dabei nicht: eine nicht eingeladene E-Mail-Adresse wird weiterhin abgewiesen, mit oder ohne Gruppen.",

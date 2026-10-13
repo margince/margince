@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -29,10 +30,14 @@ type Story = StoryObj<typeof SignInMethodsCard>;
 function Served({
   providers,
   groupRoleMap = {},
+  requireMfa = false,
+  ownMfaConfirmed = true,
   children,
 }: Readonly<{
   providers: { key: string; label: string; enabled: boolean }[];
   groupRoleMap?: Record<string, string>;
+  requireMfa?: boolean;
+  ownMfaConfirmed?: boolean;
   children: ReactNode;
 }>) {
   installFetchStub({
@@ -40,7 +45,7 @@ function Served({
       jsonResponse({
         sign_in_providers: providers,
         require_sso: false,
-        require_mfa: false,
+        require_mfa: requireMfa,
         oidc_group_role_map: groupRoleMap,
       }),
     "GET /me": () =>
@@ -50,6 +55,12 @@ function Served({
           installation_settings: ["read", "update"],
           authentication_policy: ["read", "update"],
         },
+      }),
+    "GET /me/mfa": () =>
+      jsonResponse({
+        enrolled: ownMfaConfirmed,
+        confirmed: ownMfaConfirmed,
+        recovery_codes_left: ownMfaConfirmed ? 10 : 0,
       }),
     "GET /users/assignable-roles": () =>
       jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
@@ -123,4 +134,39 @@ export const GroupsGrantRolesPhone: Story = {
       <SignInMethodsCard />
     </Served>
   ),
+};
+
+/** A second factor required of every member. Turning it off saves at once. */
+export const SecondFactorRequired: Story = {
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      requireMfa
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+};
+
+/** Turning the requirement on asks first. This admin holds no factor of their
+ * own, so the dialog says the change shuts them out too. */
+export const SecondFactorConfirm: Story = {
+  render: () => (
+    <Served
+      providers={[{ key: "google", label: "Google", enabled: true }]}
+      ownMfaConfirmed={false}
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("switch", { name: /require second factor/i }),
+    );
+    // The dialog portals to the body, outside the canvas.
+    await within(canvasElement.ownerDocument.body).findByText(
+      /you have not set up an authenticator/i,
+    );
+  },
 };
