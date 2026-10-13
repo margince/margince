@@ -160,10 +160,10 @@ var busyRunCopy = map[string]string{
 }
 
 // stagingRefused answers a refused StageRun. A refusal for this agent's other
-// test discards the draft, since the caller is told to preview again and a
-// looping caller would leave one upload per call. Any other refused draft is
-// kept: createImportRun on its source_ref tests it again, and the sweep
-// cancels one nobody returns to.
+// test discards the draft. The caller is told to preview again, so a looping
+// caller would leave one upload per call. Any other refused draft is kept.
+// createImportRun on its source_ref tests it again, and the sweep cancels one
+// nobody returns to.
 func stagingRefused(ctx context.Context, imports Imports, ref string, err error) error {
 	if busy, ok := errors.AsType[*httperr.DetailedError](err); ok && busy.Code == httperr.AgentBusyCode {
 		err = discarding(ctx, imports, ref, err)

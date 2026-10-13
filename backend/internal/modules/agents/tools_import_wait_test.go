@@ -197,8 +197,8 @@ func TestPreviewWaitEndsBeforeTheCallsDeadline(t *testing.T) {
 	}
 }
 
-// A preview refused because this agent's other test still runs keeps nothing:
-// the caller is told to come back, so a kept draft would only hold its upload.
+// A preview refused because this agent's other test still runs keeps nothing.
+// The caller is told to come back, so a kept draft would only hold its upload.
 func TestAPreviewRefusedForAnotherTestDiscardsItsDraft(t *testing.T) {
 	holder := ids.NewV7().String()
 	for code, wantDiscarded := range map[string]bool{httperr.AgentBusyCode: true, httperr.SourceBusyCode: false} {

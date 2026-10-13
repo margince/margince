@@ -449,8 +449,8 @@ func TestAnObserverHearsWhereEachPageEndedAndCanEndTheRead(t *testing.T) {
 	}
 }
 
-// A test run asks a source for its counts before its read and again inside
-// it, and the stored file never changes, so the file is counted once.
+// A test run asks a source for its counts before its read and again inside it.
+// The stored file never changes, so the file is counted once.
 func TestASourceCountsItsFileOnce(t *testing.T) {
 	mapping, sourceKey := leadMapping()
 	src := NewCSVSource(seedCSV(t, "Email,First Name\na@x.test,A\nb@x.test,B\n"), testCSVKey, ObjectLead, mapping, sourceKey)

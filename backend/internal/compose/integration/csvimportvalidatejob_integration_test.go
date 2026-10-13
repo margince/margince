@@ -99,8 +99,8 @@ func TestATestRunAnswersBeforeAnyRowIsRead(t *testing.T) {
 	}
 }
 
-// A second test of the version being tested answers from the run, before the
-// request opens the file: a double click costs no read of the object store.
+// A second test of the version being tested answers from the run. The request
+// opens no file, so a double click costs no read of the object store.
 func TestASecondTestOfTheVersionBeingTestedReadsNoFile(t *testing.T) {
 	e, store := setupImportAppWithStore(t)
 	queued := queueLeadTest(t, e, prospectCSV)

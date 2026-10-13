@@ -26,7 +26,7 @@ const stillTesting = "the test is still running: call read_import (view report) 
 	"until state is no longer validating. awaiting_approval carries the report, pending carries " +
 	"the error that stopped the test, cancelled means a newer preview replaced this run"
 
-// testEnded is what a preview answers when its test ended with no report: a
+// testEnded is what a preview answers when its test ended with no report. A
 // human stopped it, or a newer test of the same source_name replaced it.
 const testEnded = "the test ended without a report (state %s): call preview_import again to test the file"
 

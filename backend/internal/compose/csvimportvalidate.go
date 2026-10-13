@@ -39,8 +39,8 @@ func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request
 		httperr.Write(w, r, err)
 		return
 	}
-	// This door tests the saved choices, so a run being tested at this version
-	// has nothing to save or queue, and a double click opens no file.
+	// This door tests the saved choices. A run being tested at this version
+	// has nothing to save or queue, so a double click opens no file.
 	if run.Status == migration.StatusValidating && run.Version == req.Version {
 		httperr.WriteJSON(w, http.StatusOK, toContractImportRun(run))
 		return
