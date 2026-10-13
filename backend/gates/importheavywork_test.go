@@ -78,7 +78,7 @@ func TestImportRowsAreWrittenOnlyByTheImportJobs(t *testing.T) {
 	}
 	// Every other import stands in empty, and what that leaves unresolved is
 	// dropped. A slice with no caller here means the check resolved nothing.
-	for _, entry := range []string{"RunSlice", "UndoSlice"} {
+	for _, entry := range []string{"RunSlice", "UndoSlice", "DryRun"} {
 		for fn, obj := range g.owner {
 			if g.pkgOf[fn] == "migration" && fn.Name.Name == entry && len(g.sites[obj]) == 0 {
 				t.Errorf("the census found no caller of %s: it has stopped resolving calls into migration", g.name(fn))
@@ -489,6 +489,7 @@ type CommitArgs struct{}
 type Engine struct{}
 func (e *Engine) Run() {}
 func (e *Engine) RunSlice() {}
+func (e *Engine) DryRun() {}
 type RunStore struct{}
 func (s *RunStore) UndoSlice(rows int) {}
 type worker struct{ e *Engine }
@@ -506,6 +507,7 @@ func (*tagResolver) createMissing() {}
 `
 	entries := []importEntryPoint{
 		{"migration", "Engine", "Run"},
+		{"migration", "Engine", "DryRun"},
 		{"migration", "Engine", "RunSlice"},
 		{"migration", "RunStore", "UndoSlice"},
 		{"migration", "tagResolver", "createMissing"},
@@ -516,6 +518,7 @@ func (*tagResolver) createMissing() {}
 	}{
 		"a slice reached only through the job": {``, nil},
 		"a handler that walks the engine":      {`func approve(e *Engine) { e.RunSlice() }`, []string{"migration.approve"}},
+		"a handler that dry-runs the file":     {`func validate(e *Engine) { e.DryRun() }`, []string{"migration.validate"}},
 		"a goroutine a handler spawns":         {`func approve(e *Engine) { go func() { e.Run() }() }`, []string{"migration.approve"}},
 		"a handler that calls the job's slice": {`func approve(w *worker) { _ = slice(w.commit) }`, []string{"migration.approve", "migration.approve"}},
 		"a helper the job and a handler share": {`func approve(w *worker) { w.commit() }`, []string{"migration.approve"}},
