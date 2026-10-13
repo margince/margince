@@ -3,7 +3,13 @@
 
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
-import { needsStory } from "./lib/uat-scope.mjs";
+import {
+  needsStory,
+  scopeFor,
+  storiesInScope,
+  uatVerdict,
+  unresolvedStoryFiles,
+} from "./lib/uat-scope.mjs";
 import {
   drainInOrder,
   renewingBroken,
@@ -42,6 +48,126 @@ describe("needsStory", () => {
   it("asks nothing of a file no story could render", () => {
     expect(needsStory("frontend/src/app/router.ts")).toBe(false);
     expect(needsStory("frontend/src/api/schema.d.ts")).toBe(false);
+  });
+});
+
+describe("scopeFor", () => {
+  it("renders what the diff reaches unless asked for every story", () => {
+    expect(scopeFor(["node", "fe-uat.mjs"])).toBe("diff");
+    expect(scopeFor(["node", "fe-uat.mjs", "--allow-missing"])).toBe("diff");
+    expect(scopeFor(["node", "fe-uat.mjs", "--all-stories"])).toBe("all");
+  });
+});
+
+describe("storiesInScope", () => {
+  const index = [
+    { id: "a--one", type: "story", importPath: "./src/a.stories.tsx" },
+    { id: "a--two", type: "story", importPath: "./src/a.stories.tsx" },
+    { id: "b--one", type: "story", importPath: "./src/b.stories.tsx" },
+    { id: "intro--docs", type: "docs", importPath: "./src/intro.mdx" },
+  ];
+  const ids = (entries) => entries.map((entry) => entry.id);
+
+  it("takes every story the build registered, and no docs page", () => {
+    expect(ids(storiesInScope(index, "all", new Set()))).toEqual([
+      "a--one",
+      "a--two",
+      "b--one",
+    ]);
+  });
+
+  it("takes only the story files the diff reached", () => {
+    expect(
+      ids(storiesInScope(index, "diff", new Set(["./src/a.stories.tsx"]))),
+    ).toEqual(["a--one", "a--two"]);
+  });
+});
+
+describe("unresolvedStoryFiles", () => {
+  const stories = [
+    { id: "a--one", type: "story", importPath: "./src/a.stories.tsx" },
+  ];
+
+  it("reports a story file on disk the build registered no story from", () => {
+    expect(
+      unresolvedStoryFiles(
+        new Set(["./src/a.stories.tsx", "./src/dropped.stories.tsx"]),
+        stories,
+      ),
+    ).toEqual(["./src/dropped.stories.tsx"]);
+  });
+
+  it("reports nothing when every story file registered", () => {
+    expect(
+      unresolvedStoryFiles(new Set(["./src/a.stories.tsx"]), stories),
+    ).toEqual([]);
+  });
+});
+
+describe("uatVerdict", () => {
+  const clean = {
+    results: [{ id: "a--one", pass: true }],
+    unresolved: [],
+    missing: [],
+    allowMissing: false,
+  };
+
+  it("fails an all-stories run that captured nothing", () => {
+    expect(uatVerdict({ ...clean, scope: "all", results: [] })).toEqual({
+      pass: false,
+      emptyCensus: true,
+    });
+  });
+
+  it("passes a diff run that captured nothing and misses nothing", () => {
+    expect(uatVerdict({ ...clean, scope: "diff", results: [] })).toEqual({
+      pass: true,
+      emptyCensus: false,
+    });
+  });
+
+  it.each(["all", "diff"])(
+    "fails an unregistered story file in the %s scope",
+    (scope) => {
+      expect(
+        uatVerdict({ ...clean, scope, unresolved: ["./src/x.stories.tsx"] })
+          .pass,
+      ).toBe(false);
+    },
+  );
+
+  it("fails a story that did not render clean", () => {
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "all",
+        results: [{ id: "a--one", pass: false }],
+      }).pass,
+    ).toBe(false);
+  });
+
+  it("lets allowMissing excuse a missing story and nothing else", () => {
+    const missing = [{ component: "frontend/src/x.tsx" }];
+    expect(uatVerdict({ ...clean, scope: "diff", missing }).pass).toBe(false);
+    expect(
+      uatVerdict({ ...clean, scope: "diff", missing, allowMissing: true }).pass,
+    ).toBe(true);
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "diff",
+        allowMissing: true,
+        unresolved: ["./src/x.stories.tsx"],
+      }).pass,
+    ).toBe(false);
+    expect(
+      uatVerdict({
+        ...clean,
+        scope: "diff",
+        allowMissing: true,
+        results: [{ id: "a--one", pass: false }],
+      }).pass,
+    ).toBe(false);
   });
 });
 

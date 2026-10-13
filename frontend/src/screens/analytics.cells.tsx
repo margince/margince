@@ -17,6 +17,10 @@ import "./analytics.css";
 export type ReportRow = components["schemas"]["ReportResult"]["rows"][number];
 export type Stage = components["schemas"]["Stage"];
 
+// The report engine's name for the currency dimension. A typo in the request
+// or a row read is a cross-currency sum that looks right.
+export const FIELD_CURRENCY = "currency";
+
 // A figure that names a set, drawn as the way into it. The count stays the
 // text — a reader is looking for the number, not for a verb — and the link is
 // what the number now is.
@@ -82,9 +86,8 @@ export function rowCurrency(row: ReportRow): string | null {
   // An empty code is not a currency. Left as "" it renders a blank cell where a
   // code belongs, and it groups apart from null while meaning the same thing —
   // which would give the forecast two bands with the same key.
-  return typeof row.currency === "string" && row.currency !== ""
-    ? row.currency
-    : null;
+  const currency = row[FIELD_CURRENCY];
+  return typeof currency === "string" && currency !== "" ? currency : null;
 }
 
 export function rowMoney(row: ReportRow, key: string): number | null {

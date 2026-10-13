@@ -3,7 +3,6 @@ import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useAuthCapabilities } from "../app/capabilities";
-import { useOutageRecovery } from "../app/connectivity";
 import {
   forgetHashCredential,
   navigate,
@@ -22,6 +21,7 @@ import { usePasswordReveal } from "../design-system/passwordreveal";
 import { providerBrandName } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useOutageRecovery } from "../lib/connectivity";
 import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import {
   FederatedOnlyCard,

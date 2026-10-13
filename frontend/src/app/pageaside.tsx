@@ -13,7 +13,7 @@ import {
 } from "react";
 import { Button, OptionCount } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useHasUnsavedChanges } from "./unsaved";
 
 /**

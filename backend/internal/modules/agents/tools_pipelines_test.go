@@ -110,11 +110,11 @@ func TestListPipelinesRefusesAnUnknownArgument(t *testing.T) {
 // end. Derived from the registry, so a tool added later that takes a stage id
 // inherits the obligation instead of quietly reopening the dead end.
 func TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines(t *testing.T) {
-	const source = "list_pipelines"
+	const source = pipelinesSource
 	checked := 0
 	for _, spec := range fullRegistry(t).Specs() {
-		// The source itself owes no pointer to itself.
-		if spec.Name == source {
+		// The source and the router fronting it owe no pointer to themselves.
+		if spec.Name == "list_pipelines" || spec.Name == "read_directory" {
 			continue
 		}
 		schemaText := string(spec.InputSchema)

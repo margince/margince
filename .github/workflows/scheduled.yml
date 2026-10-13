@@ -34,6 +34,8 @@ name: scheduled
 #                        catch that, because the change that breaks it is the
 #                        CALENDAR rather than a diff — and it sat red on main for
 #                        a month behind the classifier skipping the frontend jobs.
+#   every story        — fe-uat renders only the stories a diff reaches, so a story
+#                        red on main stays hidden until a change fans out to it.
 #   perf budgets       — PERF-3/PERF-7 rode the integration lane at the SMB tier
 #                        until it stopped being worth 37.9s of every merge gate
 #                        for a claim it could not make: the SLO binds at
@@ -783,6 +785,57 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: make fe-clock-drift
 
+  fe-all-stories:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: every story renders (main)
+    runs-on: ubuntu-latest
+    # Every story takes about half an hour on four local workers, plus builds; a runner is slower.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install the Playwright Chromium browser
+        uses: ./.github/actions/install-playwright-chromium
+      - name: Render every story (make fe-uat ARGS=--all-stories)
+        env:
+          # The runner is this job's alone, so every core captures.
+          FE_UAT_WORKERS: "4"
+        run: make fe-uat ARGS=--all-stories
+      - name: Collect the manifest and the failing captures
+        if: failure()
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/fe-uat-failures"
+          manifest=.tmp/fe-uat/manifest.json
+          mkdir -p "$out"
+          [ -f "$manifest" ] || exit 0
+          cp "$manifest" "$out/"
+          jq -r '.stories[] | select(.pass | not) | .png // empty' "$manifest" |
+            while IFS= read -r png; do cp "$png" "$out/"; done
+      - uses: ./.github/actions/upload-artifact-retried
+        if: failure()
+        with:
+          name: fe-uat-failures
+          path: ${{ runner.temp }}/fe-uat-failures
+          if-no-files-found: ignore
+          retention-days: 14
+
   # Delete the build caches nothing can restore. The go-build key ends in the
   # commit sha and falls back through restore-keys to the newest entry sharing
   # its deps hash, so within one deps hash only the newest is ever read — and one
@@ -921,7 +974,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend, vendor-live]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend, vendor-live]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -966,6 +1019,7 @@ jobs:
           LANE_RESULT: ${{ needs.backend-lane.result }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
+          STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}

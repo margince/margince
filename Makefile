@@ -777,6 +777,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## deterministic — each scenario runs three times and passes at two, because one
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
+## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
 ##
 ## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
@@ -875,7 +876,8 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
-## Optional: ARGS="--allow-missing".
+## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
+## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \

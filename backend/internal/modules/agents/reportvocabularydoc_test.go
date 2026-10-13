@@ -138,7 +138,7 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 		t.Fatal("a catalog naming pipeline_id carries no note about where one comes from, so a " +
 			"correct refusal dead-ends")
 	}
-	if !strings.Contains(withPipeline.Notes[0], "list_pipelines") {
+	if !strings.Contains(withPipeline.Notes[0], pipelinesSource) {
 		t.Errorf("the note does not name the tool that yields the id: %s", withPipeline.Notes[0])
 	}
 	// The note is keyed on ALL THREE vocabularies, so each is exercised ALONE: a

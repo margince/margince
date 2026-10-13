@@ -86,6 +86,11 @@ var dailyFlows = []dailyFlow{
 	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
 		return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
 	}},
+	// The company screen loads its whole page through this one read, every
+	// section included; search_to_company times only the record beside it.
+	{Name: "company_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
+		return []dailyCall{{Path: "/v1/companies/" + in.CompanyID + "/360"}}
+	}},
 	{Name: "search_to_deal", Journey: true, Calls: func(in dailyInput) []dailyCall {
 		page := "/v1/deals/" + in.DealID
 		return []dailyCall{

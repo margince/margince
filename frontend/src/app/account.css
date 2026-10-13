@@ -296,7 +296,7 @@
    the menu's own left edge is already close to the window's, and there is no
    scrollbar to recover what falls off it. It is also the only appearance control
    at that width, so it may not be the one that goes off screen.
-   Below the sheet's breakpoint (PHONE_MAX_WIDTH in app/viewport.ts) it stops
+   Below the sheet's breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
    being a popover and becomes an indented group inside the menu: in the flow, no
    surface of its own, its rows stepped in so they read as belonging to the row
    that opened them. */

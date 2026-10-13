@@ -49,15 +49,15 @@ var readRecordCopy = toolCopy{
 var createRecordCopy = toolCopy{
 	Purpose: "Create a contact, company, deal, lead, project, activity or relationship that " +
 		"does not exist yet.",
-	Limits: "Creating a deal requires a pipeline_id and a stage_id, and list_pipelines is what " +
-		"yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
+	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
+		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to the human you are acting for " +
 		"and to nobody else, until they publish it or correspondence with that address earns a " +
 		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
 		"a contact you just created is on their colleagues' screens.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
-		"company is a problem that then needs merge_records to undo. A record that shares only " +
+		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
 		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
 		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
@@ -105,8 +105,8 @@ var logActivityCopy = toolCopy{
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed; attach_document for a file, whose text never " +
 		"goes into a note.",
-	Retain: "Keep the activity id — draft_email, send_email and send_message identify a " +
-		"conversation by it.",
+	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +
+		"by it.",
 }
 
 var createTaskCopy = toolCopy{
@@ -166,7 +166,7 @@ var archiveRecordCopy = toolCopy{
 	Limits: "Archiving hides the record from day-to-day work; it does not delete it and does not " +
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
-	Instead: "Use merge_records when a duplicate's history should end up on the record that " +
+	Instead: "Use resolve_duplicates when a duplicate's history should end up on the record that " +
 		"survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
@@ -189,7 +189,7 @@ var mergeRecordsCopy = toolCopy{
 
 var advanceDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline.",
-	Limits: "The stage is named by id from list_pipelines — call it first; a deal you read " +
+	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won/lost stage is a human's " +
 		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
 		"stage's semantic rather than guessing from its name.",
@@ -202,7 +202,7 @@ var advanceDealCopy = toolCopy{
 var progressDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
 		"timeline saying why, in one call.",
-	Limits: "The stage is named by id from list_pipelines — call it first; a deal you read " +
+	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
 		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +

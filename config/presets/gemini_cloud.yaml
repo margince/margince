@@ -22,9 +22,9 @@ seeds:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
       # thinking_level low: a prose site sends no schema, so without it
-      # gemini-3.5-flash thinks at its own default — measured at 4–8k reasoning
+      # gemini-3.6-flash thinks at its own default — measured at 4–8k reasoning
       # tokens against the ~8k output cap, which cut one call in eight short.
-      premium:     { provider: gemini, model: gemini-3.5-flash, thinking_level: low }
+      premium:     { provider: gemini, model: gemini-3.6-flash, thinking_level: low }
       frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
     # The embed lane rides the SAME provider as the tiers above, so this preset
     # needs one credential rather than two.
