@@ -62,7 +62,7 @@ func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
 		{StatusRunning, "", week, "", sweptRun{StatusRunning, "", false}},
 		{StatusUndoing, "", week, "", sweptRun{StatusUndoing, "", false}},
 	} {
-		id := seedRunIn(t, ctx, db, tc.status)
+		id := seedRunIn(ctx, t, db, tc.status)
 		ageRun(ctx, t, db, id, tc.age, tc.cause)
 		for name, rule := range rules {
 			want := 0
@@ -73,7 +73,7 @@ func TestEachSweepRuleSettlesOnlyTheRunsItNames(t *testing.T) {
 				t.Errorf("%s over a %s run aged %s = (%d, %v), want %d settled", name, tc.status, tc.age, n, err, want)
 			}
 		}
-		got := mustGetStaged(t, ctx, s, id)
+		got := mustGetStaged(ctx, t, s, id)
 		if (sweptRun{got.Status, got.Error, got.SourceReleased}) != tc.want {
 			t.Errorf("a %s run aged %s reads (%s, %q, released %v), want %+v",
 				tc.status, tc.age, got.Status, got.Error, got.SourceReleased, tc.want)
@@ -85,7 +85,7 @@ func TestOneSweepPassSettlesAtMostOneBatch(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	for range sweepBatch + 1 {
-		seedRunIn(t, ctx, db, StatusComplete)
+		seedRunIn(ctx, t, db, StatusComplete)
 	}
 	for pass, want := range []int{sweepBatch, 1, 0} {
 		if n, err := s.ReleaseFinishedSources(ctx); n != want || err != nil {

@@ -57,7 +57,7 @@ func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID
 // only state Undo starts from.
 func completeCSVRun(ctx context.Context, t *testing.T, s *RunStore) Run {
 	t.Helper()
-	run := toReport(t, ctx, s, newDraft(t, ctx, s, ""))
+	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
 	if _, err := s.Approve(ctx, run.ID, run.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 func TestUndoRefusesAnythingButComplete(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run := newDraft(t, ctx, s, "")
+	run := newDraft(ctx, t, s, "")
 	if _, err := s.QueueValidation(ctx, run.ID, run.Version); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
@@ -348,7 +348,7 @@ func TestACompletedRunReleasesItsSource(t *testing.T) {
 	if !done.SourceReleased || done.Profile != nil {
 		t.Fatalf("the completed run reads released=%v profile=%s, want its file and profile released", done.SourceReleased, done.Profile)
 	}
-	if kinds := intentKinds(t, ctx, db, done.SourceRef); !slices.Equal(kinds, []string{"import"}) {
+	if kinds := intentKinds(ctx, t, db, done.SourceRef); !slices.Equal(kinds, []string{"import"}) {
 		t.Errorf("the released key is in the ledger as %v, want one import intent for the reaper", kinds)
 	}
 	holder, err := s.RunOfSource(ctx, done.SourceRef)

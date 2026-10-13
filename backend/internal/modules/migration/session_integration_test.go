@@ -25,7 +25,7 @@ var everyRunStatus = []string{
 }
 
 // seedRunIn writes an approved, unnamed csv run in status, as no store path would.
-func seedRunIn(t *testing.T, ctx context.Context, db *database.DB, status string) RunID {
+func seedRunIn(ctx context.Context, t *testing.T, db *database.DB, status string) RunID {
 	t.Helper()
 	var id RunID
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -39,13 +39,15 @@ func seedRunIn(t *testing.T, ctx context.Context, db *database.DB, status string
 	return id
 }
 
-func newDraft(t *testing.T, ctx context.Context, s *RunStore, sourceName string) Run {
+func newDraft(ctx context.Context, t *testing.T, s *RunStore, sourceName string) Run {
 	t.Helper()
 	run, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
 		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv",
 		Profile: []byte(`{"files":[{"name":"leads.csv","row_count":3}]}`),
-		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email",
-			SourceName: sourceName},
+		Mapping: RunMapping{
+			Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email",
+			SourceName: sourceName,
+		},
 	})
 	if err != nil {
 		t.Fatalf("CreateDraftRun: %v", err)
@@ -54,7 +56,7 @@ func newDraft(t *testing.T, ctx context.Context, s *RunStore, sourceName string)
 }
 
 // toReport takes a draft through its test run to a report awaiting approval.
-func toReport(t *testing.T, ctx context.Context, s *RunStore, run Run) Run {
+func toReport(ctx context.Context, t *testing.T, s *RunStore, run Run) Run {
 	t.Helper()
 	if _, err := s.QueueValidation(ctx, run.ID, run.Version); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
@@ -62,10 +64,10 @@ func toReport(t *testing.T, ctx context.Context, s *RunStore, run Run) Run {
 	if err := s.AwaitApproval(ctx, run.ID, Report{Imported: 3}); err != nil {
 		t.Fatalf("AwaitApproval: %v", err)
 	}
-	return mustGetStaged(t, ctx, s, run.ID)
+	return mustGetStaged(ctx, t, s, run.ID)
 }
 
-func mustGetStaged(t *testing.T, ctx context.Context, s *RunStore, id RunID) Run {
+func mustGetStaged(ctx context.Context, t *testing.T, s *RunStore, id RunID) Run {
 	t.Helper()
 	run, err := s.GetStaged(ctx, id)
 	if err != nil {
@@ -74,7 +76,7 @@ func mustGetStaged(t *testing.T, ctx context.Context, s *RunStore, id RunID) Run
 	return run
 }
 
-func auditCount(t *testing.T, ctx context.Context, db *database.DB, id RunID) int {
+func auditCount(ctx context.Context, t *testing.T, db *database.DB, id RunID) int {
 	t.Helper()
 	var n int
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -90,9 +92,9 @@ func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
 	s := NewRunStore(db)
 	for name, move := range sessionMoves {
 		for _, status := range everyRunStatus {
-			id := seedRunIn(t, ctx, db, status)
+			id := seedRunIn(ctx, t, db, status)
 			err := db.Tx(ctx, func(tx pgx.Tx) error { return stageTransition(ctx, tx, id, name, runChange{}) })
-			got := mustGetStaged(t, ctx, s, id).Status
+			got := mustGetStaged(ctx, t, s, id).Status
 			if slices.Contains(move.from, status) {
 				if err != nil || got != move.to {
 					t.Errorf("%s from %s = (%s, %v), want it to move to %s", name, status, got, err, move.to)
@@ -109,7 +111,7 @@ func TestEveryTransitionMovesOnlyFromItsDeclaredStates(t *testing.T) {
 func TestAPatchOfAChoiceReturnsAReportToDraft(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run := toReport(t, ctx, s, newDraft(t, ctx, s, ""))
+	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
 
 	step := DraftStepMap
 	if _, err := s.UpdateDraft(ctx, run.ID, run.Version, DraftPatch{DraftStep: &step}); !errors.Is(err, apperrors.ErrConflict) {
@@ -129,8 +131,8 @@ func TestAPatchOfAChoiceReturnsAReportToDraft(t *testing.T) {
 func TestAPatchOfNothingWritesNothing(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run := newDraft(t, ctx, s, "Fair 2026")
-	audits := auditCount(t, ctx, db, run.ID)
+	run := newDraft(ctx, t, s, "Fair 2026")
+	audits := auditCount(ctx, t, db, run.ID)
 
 	same, fields, empty := "Fair 2026", map[string]string{"Email": "email"}, []PartMapping{}
 	got, err := s.UpdateDraft(ctx, run.ID, run.Version, DraftPatch{SourceName: &same, Fields: &fields, Parts: &empty})
@@ -140,7 +142,7 @@ func TestAPatchOfNothingWritesNothing(t *testing.T) {
 	if got.Version != run.Version || !got.UpdatedAt.Equal(run.UpdatedAt) {
 		t.Errorf("a patch repeating every value moved the run to version %d at %s, want it untouched", got.Version, got.UpdatedAt)
 	}
-	if after := auditCount(t, ctx, db, run.ID); after != audits {
+	if after := auditCount(ctx, t, db, run.ID); after != audits {
 		t.Errorf("a patch repeating every value wrote %d audit row(s), want none", after-audits)
 	}
 }
@@ -148,7 +150,7 @@ func TestAPatchOfNothingWritesNothing(t *testing.T) {
 func TestVersionMismatchIsAConflict(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run := newDraft(t, ctx, s, "")
+	run := newDraft(ctx, t, s, "")
 	key := "Email address"
 	if _, err := s.UpdateDraft(ctx, run.ID, run.Version, DraftPatch{SourceKey: &key}); err != nil {
 		t.Fatalf("UpdateDraft: %v", err)
@@ -161,7 +163,7 @@ func TestVersionMismatchIsAConflict(t *testing.T) {
 	if _, err := s.QueueValidation(ctx, run.ID, run.Version); !errors.Is(err, ErrVersionMismatch) {
 		t.Errorf("a test run of the old version = %v, want ErrVersionMismatch", err)
 	}
-	if got := mustGetStaged(t, ctx, s, run.ID); got.Status != StatusPending || got.Mapping.SourceKey != key {
+	if got := mustGetStaged(ctx, t, s, run.ID); got.Status != StatusPending || got.Mapping.SourceKey != key {
 		t.Errorf("after both refusals the run reads %s keyed on %q, want the draft as the first patch left it", got.Status, got.Mapping.SourceKey)
 	}
 }
@@ -169,9 +171,9 @@ func TestVersionMismatchIsAConflict(t *testing.T) {
 func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	older := toReport(t, ctx, s, newDraft(t, ctx, s, "Fair 2026"))
-	draft := newDraft(t, ctx, s, "Fair 2026")
-	newer := newDraft(t, ctx, s, "Fair 2026")
+	older := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
+	draft := newDraft(ctx, t, s, "Fair 2026")
+	newer := newDraft(ctx, t, s, "Fair 2026")
 
 	queued, err := s.QueueValidation(ctx, newer.ID, newer.Version)
 	if err != nil {
@@ -180,20 +182,20 @@ func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 	if queued.Status != StatusValidating {
 		t.Errorf("the new test run reads %s, want validating", queued.Status)
 	}
-	got := mustGetStaged(t, ctx, s, older.ID)
+	got := mustGetStaged(ctx, t, s, older.ID)
 	if got.Status != StatusCancelled || got.SupersededBy == nil || *got.SupersededBy != newer.ID ||
 		!got.SourceReleased || got.Error != CauseSuperseded {
 		t.Errorf("the older report reads %+v, want cancelled, superseded by %s and released", got, newer.ID)
 	}
-	if got := mustGetStaged(t, ctx, s, draft.ID); got.Status != StatusPending {
+	if got := mustGetStaged(ctx, t, s, draft.ID); got.Status != StatusPending {
 		t.Errorf("a draft of the same name reads %s, want it left alone: a draft holds no report", got.Status)
 	}
 	// The same version again changes nothing, so a double click starts one test run.
-	audits := auditCount(t, ctx, db, newer.ID)
+	audits := auditCount(ctx, t, db, newer.ID)
 	if _, err := s.QueueValidation(ctx, newer.ID, newer.Version); err != nil {
 		t.Fatalf("a repeated QueueValidation: %v", err)
 	}
-	if after := auditCount(t, ctx, db, newer.ID); after != audits {
+	if after := auditCount(ctx, t, db, newer.ID); after != audits {
 		t.Errorf("a repeated test run of one version wrote %d audit row(s), want none", after-audits)
 	}
 }
@@ -201,18 +203,18 @@ func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	writing := toReport(t, ctx, s, newDraft(t, ctx, s, "Fair 2026"))
+	writing := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
 	if _, err := s.Approve(ctx, writing.ID, writing.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
-	draft := newDraft(t, ctx, s, "Fair 2026")
+	draft := newDraft(ctx, t, s, "Fair 2026")
 
 	_, err := s.QueueValidation(ctx, draft.ID, draft.Version)
 	var busy *SourceBusyError
 	if !errors.As(err, &busy) || busy.RunID != writing.ID || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a test run beside a writing run of its name = %v, want SourceBusyError naming %s", err, writing.ID)
 	}
-	if got := mustGetStaged(t, ctx, s, draft.ID); got.Status != StatusPending {
+	if got := mustGetStaged(ctx, t, s, draft.ID); got.Status != StatusPending {
 		t.Errorf("the refused draft reads %s, want pending", got.Status)
 	}
 }
@@ -221,7 +223,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	// Only code before saved sessions failed a test run; such a run was never approved.
-	unapproved := seedRunIn(t, ctx, db, StatusFailed)
+	unapproved := seedRunIn(ctx, t, db, StatusFailed)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE import_run SET approved_at = NULL WHERE id = $1`, unapproved)
 		return err
@@ -232,7 +234,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 		t.Errorf("resuming a failed run nobody approved = %v, want a conflict: it never reached a commit", err)
 	}
 
-	approved := toReport(t, ctx, s, newDraft(t, ctx, s, ""))
+	approved := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
 	if _, err := s.Approve(ctx, approved.ID, approved.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
@@ -245,7 +247,7 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	}
 }
 
-func intentKinds(t *testing.T, ctx context.Context, db *database.DB, key string) []string {
+func intentKinds(ctx context.Context, t *testing.T, db *database.DB, key string) []string {
 	t.Helper()
 	var kinds []string
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -268,12 +270,14 @@ func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
 	if err := s.RecordImportSourceIntent(ctx, key); err != nil {
 		t.Fatalf("RecordImportSourceIntent: %v", err)
 	}
-	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: key, Source: "import_api",
-		Profile: []byte(`{"files":[]}`)})
+	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
+		SourceRef: key, Source: "import_api",
+		Profile: []byte(`{"files":[]}`),
+	})
 	if err != nil {
 		t.Fatalf("CreateDraftRun: %v", err)
 	}
-	if kinds := intentKinds(t, ctx, db, key); len(kinds) != 0 || len(draft.Profile) == 0 {
+	if kinds := intentKinds(ctx, t, db, key); len(kinds) != 0 || len(draft.Profile) == 0 {
 		t.Fatalf("a draft left the ledger at %v with profile %s, want the intent cleared and the profile kept", kinds, draft.Profile)
 	}
 	cancelled, err := s.Cancel(ctx, draft.ID)
@@ -283,7 +287,7 @@ func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
 	if cancelled.Status != StatusCancelled || !cancelled.SourceReleased || cancelled.Profile != nil {
 		t.Errorf("the cancelled draft reads %+v, want cancelled, released and with no profile", cancelled)
 	}
-	if kinds := intentKinds(t, ctx, db, key); !slices.Equal(kinds, []string{"import"}) {
+	if kinds := intentKinds(ctx, t, db, key); !slices.Equal(kinds, []string{"import"}) {
 		t.Errorf("the released key is in the ledger as %v, want one import intent for the reaper", kinds)
 	}
 }
@@ -291,7 +295,7 @@ func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
 func TestUnreferencedImportKeysAnswersAReleasedKey(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	draft := newDraft(t, ctx, s, "")
+	draft := newDraft(ctx, t, s, "")
 	system := principal.SystemActing(ctx, "stored-object-sweep")
 
 	unreferenced, err := s.UnreferencedImportKeys(system, []string{draft.SourceRef})

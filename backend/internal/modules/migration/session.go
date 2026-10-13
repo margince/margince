@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -154,27 +156,24 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 	to := sessionMoves[name].to
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	set := storekit.SQLf(`status = $%d, updated_at = now()`, arg(to))
+	var set strings.Builder
+	set.WriteString(storekit.SQLf(`status = $%d, updated_at = now()`, arg(to)))
 	for _, v := range change.values {
-		set += storekit.SQLf(`, %s = $%d`, v.column, arg(v.value))
+		set.WriteString(storekit.SQLf(`, %s = $%d`, v.column, arg(v.value)))
 	}
 	for _, literal := range change.literals {
-		set += ", " + literal
+		set.WriteString(", " + literal)
 	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))
-	if _, err := tx.Exec(ctx, `UPDATE import_run SET `+set+where, args...); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
 		return fmt.Errorf("moving import run %s to %s: %w", id, to, err)
 	}
 	before, after := map[string]any{}, map[string]any{}
 	if state.status != to {
 		before[auditFieldStatus], after[auditFieldStatus] = state.status, to
 	}
-	for field, value := range change.before {
-		before[field] = value
-	}
-	for field, value := range change.after {
-		after[field] = value
-	}
+	maps.Copy(before, change.before)
+	maps.Copy(after, change.after)
 	_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id, before, after)
 	return err
 }

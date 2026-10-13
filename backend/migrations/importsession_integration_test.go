@@ -106,10 +106,14 @@ func readSessionRow(t *testing.T, conn *pgx.Conn, id string) sessionRow {
 func TestTheBackfillCancelsEveryLegacyValidationFailure(t *testing.T) {
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
-	stopped := seedLegacyRun(t, conn, legacyRun{status: "failed", sourceRef: "ws/import/a",
-		runError: migration.CauseValidationStopped})
-	commitStopped := seedLegacyRun(t, conn, legacyRun{status: "failed", sourceRef: "ws/import/b",
-		runError: migration.CauseStopped})
+	stopped := seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/a",
+		runError: migration.CauseValidationStopped,
+	})
+	commitStopped := seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/b",
+		runError: migration.CauseStopped,
+	})
 	replayImportSession(t, conn)
 
 	if got := readSessionRow(t, conn, stopped); got.status != migration.StatusCancelled || !got.released {
@@ -127,8 +131,10 @@ func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
 	for _, status := range []string{"running", "complete", "undoing", "undone"} {
 		wrote[status] = seedLegacyRun(t, conn, legacyRun{status: status, sourceRef: "ws/import/" + status})
 	}
-	wrote["failed"] = seedLegacyRun(t, conn, legacyRun{status: "failed", sourceRef: "ws/import/failed",
-		runError: migration.CauseStopped})
+	wrote["failed"] = seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/failed",
+		runError: migration.CauseStopped,
+	})
 	unwritten := map[string]string{}
 	for _, status := range []string{"validating", "awaiting_approval"} {
 		unwritten[status] = seedLegacyRun(t, conn, legacyRun{status: status, sourceRef: "ws/import/" + status})
@@ -150,14 +156,22 @@ func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
 func TestTheOlderOfTwoNamedReportsIsCancelled(t *testing.T) {
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
-	older := seedLegacyRun(t, conn, legacyRun{status: "awaiting_approval", sourceRef: "ws/import/old",
-		sourceName: "Fair 2026", age: 2 * time.Hour})
-	newer := seedLegacyRun(t, conn, legacyRun{status: "validating", sourceRef: "ws/import/new",
-		sourceName: "Fair 2026", age: time.Hour})
-	writing := seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/w",
-		sourceName: "Expo", age: 2 * time.Hour})
-	laterReport := seedLegacyRun(t, conn, legacyRun{status: "awaiting_approval", sourceRef: "ws/import/r",
-		sourceName: "Expo", age: time.Hour})
+	older := seedLegacyRun(t, conn, legacyRun{
+		status: "awaiting_approval", sourceRef: "ws/import/old",
+		sourceName: "Fair 2026", age: 2 * time.Hour,
+	})
+	newer := seedLegacyRun(t, conn, legacyRun{
+		status: "validating", sourceRef: "ws/import/new",
+		sourceName: "Fair 2026", age: time.Hour,
+	})
+	writing := seedLegacyRun(t, conn, legacyRun{
+		status: "running", sourceRef: "ws/import/w",
+		sourceName: "Expo", age: 2 * time.Hour,
+	})
+	laterReport := seedLegacyRun(t, conn, legacyRun{
+		status: "awaiting_approval", sourceRef: "ws/import/r",
+		sourceName: "Expo", age: time.Hour,
+	})
 	replayImportSession(t, conn)
 
 	got := readSessionRow(t, conn, older)
@@ -208,8 +222,10 @@ func TestOneUnreleasedRunPerSource(t *testing.T) {
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	finished := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/same", age: 3 * time.Hour})
-	resumable := seedLegacyRun(t, conn, legacyRun{status: "failed", sourceRef: "ws/import/same",
-		runError: migration.CauseStopped, age: 2 * time.Hour})
+	resumable := seedLegacyRun(t, conn, legacyRun{
+		status: "failed", sourceRef: "ws/import/same",
+		runError: migration.CauseStopped, age: 2 * time.Hour,
+	})
 	report := seedLegacyRun(t, conn, legacyRun{status: "awaiting_approval", sourceRef: "ws/import/same", age: time.Hour})
 	replayImportSession(t, conn)
 
