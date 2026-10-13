@@ -396,3 +396,28 @@ func TestCSVSourceServesAnEarlierOffsetAfterALaterOne(t *testing.T) {
 		t.Fatalf("skipped = %+v, want line 4 once", skipped)
 	}
 }
+
+func TestCountRecordsCountsWhatARunReads(t *testing.T) {
+	const file = "\xEF\xBB\xBFEmail;Full Name\n" +
+		"ada@lovelace.example;\"Ada\nLovelace\"\n" +
+		"grace@hopper.example;Grace Hopper\n" +
+		"katherine@johnson.example;Katherine Johnson\n"
+	counted, err := CountRecords(strings.NewReader(file))
+	if err != nil {
+		t.Fatalf("CountRecords: %v", err)
+	}
+	fields, key := leadMapping()
+	read, err := NewCSVSource(seedCSV(t, file), testCSVKey, ObjectLead, fields, key).Counts(context.Background())
+	if err != nil {
+		t.Fatalf("Counts: %v", err)
+	}
+	if counted != 3 || read[ObjectLead] != counted {
+		t.Errorf("CountRecords = %d and the walk read %d, want 3 both: a quoted line break is one row", counted, read[ObjectLead])
+	}
+	if n, err := CountRecords(strings.NewReader("")); err != nil || n != 0 {
+		t.Errorf("an empty file counts (%d, %v), want (0, nil)", n, err)
+	}
+	if _, err := CountRecords(strings.NewReader("Email\na@x.test,\"unterminated\n")); !errors.Is(err, ErrSourceUnreadable) {
+		t.Errorf("a broken row = %v, want ErrSourceUnreadable", err)
+	}
+}

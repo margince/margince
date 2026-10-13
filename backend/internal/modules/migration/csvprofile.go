@@ -67,6 +67,27 @@ type Profile struct {
 	RowsProfiled int
 }
 
+// CountRecords answers how many data rows a file holds, read with the reader
+// the walk uses, so it counts what a run will read.
+func CountRecords(r io.Reader) (int, error) {
+	cr, err := newRecordReader(r)
+	if err != nil {
+		return 0, err
+	}
+	cr.ReuseRecord = true
+	rows := -1
+	for {
+		_, err := cr.Read()
+		if errors.Is(err, io.EOF) {
+			return max(rows, 0), nil
+		}
+		if err != nil {
+			return 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		}
+		rows++
+	}
+}
+
 // ProfileCSV reads at most rowLimit data rows and describes the columns it
 // found. It never writes and never decides anything — the mapping is the
 // human's, and this is the evidence they make it on.

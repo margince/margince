@@ -395,10 +395,14 @@ func (s *RunStore) advanceCheckpoint(ctx context.Context, id RunID, checkpoint i
 	})
 }
 
-// complete records the finished run with its report, audited.
+// complete records the finished run with its report, audited, and releases
+// its uploaded file: undo reads the identity map, never the file.
 func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 	return s.transition(ctx, id, StatusComplete, func(tx pgx.Tx) error {
-		return storeReport(ctx, tx, id, rep)
+		if err := storeReport(ctx, tx, id, rep); err != nil {
+			return err
+		}
+		return releaseSource(ctx, tx, id)
 	})
 }
 
