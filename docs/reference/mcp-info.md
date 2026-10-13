@@ -15,7 +15,7 @@ receives it. This page is rendered from that file.
 | Resources | 9 |
 | Tool catalog | 172.2 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 44969 |
+| Approx. wire tokens | 44986 |
 | Largest tool | `prep_for_meeting` (9.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 58.6 KB | 34% | **No**: a result's shape, never listed to a model |
+| Output schemas | 58.6 KB | 33% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.4 KB | 28% | Yes, every step |
 | Input schemas | 51.8 KB | 30% | Yes, every step |
 | _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **100.2 KB** | **58%** | **the recurring cost** |
+| **Description + input schema** | **100.3 KB** | **58%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 3.5 KB |
 | [`change_tags`](#change_tags) | Change tags |  |  | 2.2 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.6 KB |
-| [`commit_import`](#commit_import) | Commit an import |  |  | 2.3 KB |
+| [`commit_import`](#commit_import) | Commit an import |  |  | 2.4 KB |
 | [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 4.2 KB |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 4.7 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
@@ -2698,13 +2698,14 @@ time.
 ```text
 Write a checked import into the workspace. The dry run is the check; this starts the write and
 answers at once with the run running. Only from awaiting_approval, the state a run reaches by
-producing a dry-run report, so there is always a report first. This cannot be undone from here —
-undoing an import needs the web app. A request to get a file in is not a review of it: unless the
-asker says they have already been through these rows, show the counts and the mapping and wait for
-their go-ahead. Use read_import for the report first: numbers nobody read are not a check. The write
-goes on after this answers. Read read_import's report until its state is complete or failed, then
-report what landed: the counts and the mapping the run used, each column by the field it went to.
-(Runs immediately; requires passport scope "write".)
+producing a dry-run report, so there is always a report first, or from a failed commit, which
+resumes at the row it stopped at. This cannot be undone from here — undoing an import needs the
+web app. A request to get a file in is not a review of it: unless the asker says they have already
+been through these rows, show the counts and the mapping and wait for their go-ahead. Use
+read_import for the report first: numbers nobody read are not a check. The write goes on after this
+answers. Read read_import's report until its state is complete or failed, then report what landed:
+the counts and the mapping the run used, each column by the field it went to. (Runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

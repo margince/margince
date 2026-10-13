@@ -22,4 +22,5 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["duplicate_linkedin_url", "common.duplicate.linkedinUrl"],
   ["duplicate_contact_lead", "common.duplicate.contactLead"],
   ["slot_taken", "common.duplicate.slotTaken"],
+  ["import_source_busy", "import.sourceBusy"],
 ]);

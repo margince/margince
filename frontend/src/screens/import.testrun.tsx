@@ -11,6 +11,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
 import { problemMessageOf, QueryStates } from "./common";
 import { ImportContextTagSummary } from "./import.contexttag";
+import { ImportRefusal } from "./import.notices";
 import type { ImportWizardState } from "./importflow";
 import type {
   ImportFormat,
@@ -108,7 +109,7 @@ function TestRunBody({
   const { locale } = useLocale();
   const invalid = countOf(report.issues, "invalid_value");
   const linkless = countOf(report.issues, "broken_link", "dropped_link");
-  const restaging = wizard.stage.isPending;
+  const restaging = wizard.retest.isPending;
   const landing = report.disposition.created + report.disposition.updated;
   return (
     <div className="import">
@@ -161,7 +162,10 @@ function TestRunBody({
           disabled={restaging}
           pending={wizard.approve.isPending}
           busyLabel={t("import.importing")}
-          onClick={() => wizard.approve.mutate(runId)}
+          onClick={() => {
+            const run = wizard.run.data;
+            if (run) wizard.approve.mutate(run);
+          }}
         >
           {wizard.anyway
             ? t("import.test.importAnyway")
@@ -175,14 +179,11 @@ function TestRunBody({
           {problemMessageOf(wizard.approve.error, t)}
         </Callout>
       ) : null}
-      {wizard.stage.error ? (
-        <Callout
-          tone="danger"
-          kind="outcome"
+      {wizard.retest.error ? (
+        <ImportRefusal
           title={t("import.map.stageFailed")}
-        >
-          {problemMessageOf(wizard.stage.error, t)}
-        </Callout>
+          error={wizard.retest.error}
+        />
       ) : null}
     </div>
   );

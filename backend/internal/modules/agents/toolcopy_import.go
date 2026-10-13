@@ -59,7 +59,8 @@ var commitImportCopy = toolCopy{
 	Purpose: "Write a checked import into the workspace. The dry run is the check; this starts the " +
 		"write and answers at once with the run running.",
 	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
-		"so there is always a report first. This cannot be undone from here — undoing an import " +
+		"so there is always a report first, or from a failed commit, which resumes at the row it " +
+		"stopped at. This cannot be undone from here — undoing an import " +
 		"needs the web app. A request to get a file in is not a review of it: unless the asker " +
 		"says they have already been through these rows, show the counts and the mapping and wait " +
 		"for their go-ahead.",

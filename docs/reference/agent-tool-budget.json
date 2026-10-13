@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 56,
     "system_frame_tokens": 586,
-    "tokens": 24762,
+    "tokens": 24778,
     "median_tool_tokens": 393,
-    "mean_tool_tokens": 441
+    "mean_tool_tokens": 442
   },
   "agents": [
     {
@@ -257,6 +257,10 @@
       "tokens": 292
     },
     {
+      "name": "commit_import",
+      "tokens": 279
+    },
+    {
       "name": "whats_slipping_this_week",
       "tokens": 273
     },
@@ -267,10 +271,6 @@
     {
       "name": "invite_meeting",
       "tokens": 264
-    },
-    {
-      "name": "commit_import",
-      "tokens": 263
     },
     {
       "name": "relink_activities",

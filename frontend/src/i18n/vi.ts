@@ -5718,7 +5718,7 @@ export const vi = {
   "import.recent.files_other": "{count} tệp",
   "import.recent.filesBy": "{files} · bởi {name}",
   "import.recent.undo": "Hoàn tác",
-  "import.status.pending": "Đang chờ",
+  "import.status.pending": "Bản nháp",
   "import.status.validating": "Đang kiểm tra",
   "import.status.awaiting_approval": "Chưa nhập",
   "import.status.running": "Đang nhập",
@@ -5726,6 +5726,19 @@ export const vi = {
   "import.status.failed": "Đã dừng",
   "import.status.undoing": "Đang hoàn tác",
   "import.status.undone": "Đã hoàn tác",
+  "import.status.cancelled": "Đã hủy",
+  "import.closed.cancelled": "Lần nhập này đã bị hủy",
+  "import.closed.draft":
+    "Bản nháp này sẽ không được mở lại. Hãy tải tệp lên lại để bắt đầu lần nhập mới.",
+  "import.closed.stopped":
+    "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
+  "import.closed.upload": "Tải tệp lên",
+  "import.sourceBusy":
+    "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi chạy thử lại.",
+  "import.sourceBusyOpen": "Mở lần nhập đó",
+  "import.upload.tooManyRowsTitle": "Tệp quá dài cho một lần chạy thử",
+  "import.upload.tooManyRows":
+    "Tệp này có nhiều hàng hơn mức một lần chạy thử có thể đọc. Hãy chia thành các tệp nhỏ hơn và nhập từng tệp.",
   "import.undoConfirm.title": "Hoàn tác lần nhập này?",
   "import.undoConfirm.confirm": "Hoàn tác lần nhập",
   "import.undoConfirm.order": "Hoàn tác theo thứ tự ngược: {order}.",

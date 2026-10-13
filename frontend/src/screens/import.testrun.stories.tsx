@@ -90,10 +90,12 @@ const REPORT = {
 };
 
 const PROFILE = {
+  run_id: "019ff-draft",
   source_ref: "ws/import/abc",
   object: "lead",
   file_name: "leads.csv",
   rows_profiled: 1,
+  row_count: 1,
   columns: [{ header: "email", fill_rate: 1, samples: ["jo@acme.com"] }],
   suggested_mapping: { email: "email" },
   targets: ["email"],

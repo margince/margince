@@ -8,8 +8,8 @@ import { RecordTabs } from "../design-system/recordtabs";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
 import { ColumnGuideButton } from "./import.guide";
+import { ImportRefusal } from "./import.notices";
 import type { ImportWizardState, WizardFile } from "./importflow";
 import type {
   ImportColumn,
@@ -197,6 +197,10 @@ export function MapStep({
   const targets =
     format.files.find((file) => file.object === current.object)?.columns ?? [];
   const stage = wizard.stage;
+  const refused = stage.error ?? wizard.retest.error;
+  // A test run that stopped left the run a draft, with the reason on it.
+  const stopped =
+    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
   return (
     <div className="import">
       <RecordTabs
@@ -253,13 +257,15 @@ export function MapStep({
           {t("import.map.run")}
         </Button>
       </div>
-      {stage.error ? (
+      {refused ? (
+        <ImportRefusal title={t("import.map.stageFailed")} error={refused} />
+      ) : stopped ? (
         <Callout
           tone="danger"
-          kind="outcome"
+          kind="standing"
           title={t("import.map.stageFailed")}
         >
-          {problemMessageOf(stage.error, t)}
+          {stopped}
         </Callout>
       ) : null}
     </div>

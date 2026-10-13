@@ -39,7 +39,7 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 	// Moved to undoing before the answer, so a refused undo is still refused
 	// here; the reversal runs detached and holds its own claim.
 	if err := runs.ClaimUndo(ctx, run.ID); err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, h.sessionRefusal(ctx, err))
 		return
 	}
 	h.runDetached(ctx, run.ID, "undo", func(undoCtx context.Context) error {

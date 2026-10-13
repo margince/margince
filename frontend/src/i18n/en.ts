@@ -5992,7 +5992,7 @@ export const en = {
   "import.recent.files_other": "{count} files",
   "import.recent.filesBy": "{files} · by {name}",
   "import.recent.undo": "Undo",
-  "import.status.pending": "Pending",
+  "import.status.pending": "Draft",
   "import.status.validating": "Checking",
   "import.status.awaiting_approval": "Not imported",
   "import.status.running": "Importing",
@@ -6000,6 +6000,18 @@ export const en = {
   "import.status.failed": "Stopped",
   "import.status.undoing": "Undoing",
   "import.status.undone": "Undone",
+  "import.status.cancelled": "Canceled",
+  "import.closed.cancelled": "This import was canceled",
+  "import.closed.draft":
+    "This draft is not offered again. Upload the file again to start over.",
+  "import.closed.stopped": "This import stopped before anything was imported.",
+  "import.closed.upload": "Upload a file",
+  "import.sourceBusy":
+    "Another import of this source name is still writing. Wait for it to finish, then test again.",
+  "import.sourceBusyOpen": "Open that import",
+  "import.upload.tooManyRowsTitle": "File is too long for one test run",
+  "import.upload.tooManyRows":
+    "This file has more rows than one test run can read. Split it into smaller files and import each one.",
   "import.undoConfirm.title": "Undo this import?",
   "import.undoConfirm.confirm": "Undo import",
   "import.undoConfirm.order": "Undo runs in reverse order: {order}.",

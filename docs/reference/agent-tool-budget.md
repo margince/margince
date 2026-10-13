@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 56 | 1917 | 1315 | 3819 | 11% | 19391 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 56 | 2915 | 1985 | 5486 | 16% | 17724 | 5 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 56 |  | 24762 |  |  | 75% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 56 |  | 24778 |  |  | 75% |  |  |  |
 
 ### `morning_brief`
 
@@ -144,7 +144,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 393 tokens, mean 441, across 56 served tools.
+Median 393 tokens, mean 442, across 56 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -195,10 +195,10 @@ listing once. Read a row as what that tool costs a menu.
 | `archive_record` | 292 |  |
 | `read_project` | 292 |  |
 | `read_record` | 292 | 2 scenarios |
+| `commit_import` | 279 |  |
 | `whats_slipping_this_week` | 273 |  |
 | `list_approvals` | 268 |  |
 | `invite_meeting` | 264 |  |
-| `commit_import` | 263 |  |
 | `relink_activities` | 260 |  |
 | `create_task` | 221 |  |
 | `at_risk_relationships` | 212 |  |

@@ -354,10 +354,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `archive_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
+| `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `relink_activities` | 1.00 | 4 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `merge_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
@@ -397,10 +397,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `archive_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
+| `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `whats_slipping_this_week` | 1.00 | 2 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 2 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `commit_import` | 1.00 | 2 | `case10_finish_the_import` |
 | `at_risk_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `merge_tags` | 1.00 | 2 | `case32_two_words_for_one_thing` |
 | `read_import` | 1.00 | 2 | `case10_finish_the_import` |

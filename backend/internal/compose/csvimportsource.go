@@ -22,8 +22,8 @@ func (h importHandlers) storeSource(ctx context.Context, body []byte, contentTyp
 		return "", fmt.Errorf("no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
 	}
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, ids.NewV7().String())
-	// Declared before the bytes exist. Only a submitted mapping makes this key
-	// durable, so the intent lets a sweep remove a profile nobody staged.
+	// Declared before the bytes exist. Only the draft run makes this key
+	// durable, so the intent lets a sweep remove bytes no run came to name.
 	if err := migration.NewRunStore(h.db).RecordImportSourceIntent(ctx, key); err != nil {
 		return "", err
 	}

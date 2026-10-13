@@ -72,17 +72,10 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			_, err := s.UnreferencedImportKeys(ctx, []string{"ws/import/x"})
 			return err
 		}},
-		{"CreateStagedRun", func() error {
-			_, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
-				Connector: ConnectorCSV, SourceRef: "x", Source: "t",
-				Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
-			})
-			return err
-		}},
+		{"RunOfSource", func() error { _, err := s.RunOfSource(ctx, "x"); return err }},
 		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
-		{"Approve", func() error { _, err := s.Approve(ctx, runID); return err }},
-		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID); return err }},
-		{"FailValidation", func() error { return s.FailValidation(ctx, runID) }},
+		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0); return err }},
+		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
 		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {
@@ -102,7 +95,19 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
-		{"FailStaleValidating", func() error { _, err := s.FailStaleValidating(ctx, time.Minute); return err }},
+		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
+		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
+		{"CancelIdleDrafts", func() error { _, err := s.CancelIdleDrafts(ctx, time.Minute); return err }},
+		{"ReleaseFinishedSources", func() error { _, err := s.ReleaseFinishedSources(ctx); return err }},
+		{"CreateDraftRun", func() error {
+			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
+			return err
+		}},
+		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
+		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
+		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
+		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -652,11 +657,14 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
-		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
-		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
+		"RunOfSource": true, "DiscardOwnDraft": true, "AwaitApproval": true, "Approve": true,
+		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
-		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true, "FailStaleValidating": true,
+		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
+		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
+		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
+		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

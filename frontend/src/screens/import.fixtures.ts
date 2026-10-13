@@ -125,6 +125,8 @@ export const recentRunsFixture: ImportRun[] = [
     source_name: "hubspot-export",
     status: "complete",
     checkpoint: 1240,
+    version: 2,
+    source_released: true,
     source: "import_api",
     captured_by: "u-ada",
     parts: [
@@ -142,6 +144,8 @@ export const recentRunsFixture: ImportRun[] = [
     file_name: "leads-webinar.csv",
     status: "undone",
     checkpoint: 0,
+    version: 2,
+    source_released: true,
     source: "import_api",
     captured_by: "u-ada",
     parts: [{ file: "leads-webinar.csv", object: "lead", row_count: 80 }],
