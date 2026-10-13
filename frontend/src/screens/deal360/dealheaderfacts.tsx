@@ -182,12 +182,7 @@ export function DealIdentityFacts({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-              )}
+              provenance={provenanceOf(deal.captured_by, viewerId, deal.author)}
             />
           }
         >

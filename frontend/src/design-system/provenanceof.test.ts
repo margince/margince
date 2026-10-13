@@ -189,47 +189,51 @@ describe("what a tool is called on screen", () => {
 
 // An import runs as one administrator, so captured_by names that seat on every
 // row it wrote. The reader who ran it would be told they typed the file.
-describe("a row an import wrote", () => {
+describe("a row the CSV importer wrote", () => {
   const VIEWER = "u-admin";
+  const imported = (stamp: string) =>
+    provenanceOf(`human:${VIEWER}`, VIEWER, undefined, stamp);
 
   it("reads as imported, not typed by the administrator who ran it", () => {
-    expect(
-      provenanceOf(
-        `human:${VIEWER}`,
-        VIEWER,
-        undefined,
-        "mirror:csv:pipedrive-export:company:co-12",
-      ),
-    ).toEqual({ kind: "import", source: "pipedrive-export" });
+    expect(imported("mirror:csv:pipedrive-export:company:co-12")).toEqual({
+      kind: "import",
+      uploadName: "pipedrive-export",
+    });
   });
 
   it("names the upload and never the stamp that carries it", () => {
-    const provenance = provenanceOf(
-      `human:${VIEWER}`,
-      VIEWER,
-      null,
-      "mirror:csv:Q3 leads.v2:contact:a@b.example",
-    );
+    const provenance = imported("mirror:csv:Q3 leads.v2:contact:a@b.example");
 
-    expect(provenance).toEqual({ kind: "import", source: "Q3 leads.v2" });
+    expect(provenance).toEqual({ kind: "import", uploadName: "Q3 leads.v2" });
     expect(JSON.stringify(provenance)).not.toContain("mirror:");
   });
 
   it("says only that it was imported when the upload has no name", () => {
-    expect(
-      provenanceOf(
-        `human:${VIEWER}`,
-        VIEWER,
-        undefined,
-        "mirror:csv:company:7",
-      ),
-    ).toEqual({ kind: "import", source: undefined });
+    for (const stamp of [
+      "mirror:csv:company:7",
+      "mirror:csv:lead:l-3",
+      "mirror:csv",
+      "mirror:",
+    ]) {
+      expect(imported(stamp), stamp).toEqual({
+        kind: "import",
+        uploadName: undefined,
+      });
+    }
   });
 
-  it("names another importer's system by its first segment", () => {
-    expect(
-      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "mirror:hubspot"),
-    ).toEqual({ kind: "import", source: "hubspot" });
+  it("keeps an upload whose name is an object word", () => {
+    expect(imported("mirror:csv:contact:contact:7")).toEqual({
+      kind: "import",
+      uploadName: "contact",
+    });
+  });
+
+  it("never reads an object it does not know as the upload's name", () => {
+    expect(imported("mirror:csv:deal:7")).toEqual({
+      kind: "import",
+      uploadName: undefined,
+    });
   });
 
   it("lets the source system's author speak first", () => {
@@ -246,11 +250,12 @@ describe("a row an import wrote", () => {
   });
 
   it("leaves a typed row typed, whatever free text its source holds", () => {
-    expect(
-      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "manual"),
-    ).toEqual({ kind: "human", self: true, userId: VIEWER });
-    expect(
-      provenanceOf(`human:${VIEWER}`, VIEWER, undefined, "my-mirror:csv:x"),
-    ).toEqual({ kind: "human", self: true, userId: VIEWER });
+    for (const stamp of ["manual", "my-mirror:csv:x"]) {
+      expect(imported(stamp), stamp).toEqual({
+        kind: "human",
+        self: true,
+        userId: VIEWER,
+      });
+    }
   });
 });

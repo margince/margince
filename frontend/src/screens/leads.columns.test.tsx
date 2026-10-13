@@ -84,4 +84,14 @@ describe("the lead table's columns", () => {
     renderCell("tags");
     expect(screen.getByTestId("cell").textContent).toContain("Product A");
   });
+
+  it("name an imported lead's upload in the source column, never its stamp", () => {
+    renderCell("source", {
+      ...lead,
+      source: "mirror:csv:pipedrive-export:lead:l-7",
+    });
+    expect(screen.getByTestId("cell").textContent).toBe(
+      "Imported from pipedrive-export",
+    );
+  });
 });

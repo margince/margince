@@ -76,7 +76,7 @@ export const EveryArm: Story = {
       </div>
       <div style={row}>
         <ProvenanceTag
-          provenance={{ kind: "import", source: "pipedrive-export" }}
+          provenance={{ kind: "import", uploadName: "pipedrive-export" }}
         />
         <ProvenanceTag provenance={{ kind: "import" }} />
       </div>

@@ -148,22 +148,35 @@ function connectorLabel(rest: string): string {
  */
 const IMPORT_NAMESPACE = "mirror:";
 
-/** The objects an import stamps after its source name (`mirror:csv:<name>:<object>:<id>`). */
+/** The connector segment the CSV importer writes after the namespace. */
+const IMPORT_CONNECTOR = "csv";
+
+/** The objects an import stamps after its upload name. */
 const IMPORT_OBJECTS = new Set(["company", "contact", "lead"]);
 
-// `mirror:csv:<name>:<object>:<id>` names the upload; an unnamed upload omits the
-// name. A name that reads as an object is taken for the object, so that row says
-// only "Imported", which stays true.
-function importProvenance(
-  source: string | null | undefined,
-): Provenance | undefined {
-  if (!source?.startsWith(IMPORT_NAMESPACE)) {
+/**
+ * The import arm a row's `source` stamp reads as, or undefined when no import
+ * wrote it. The CSV importer stamps `mirror:csv[:<upload>]:<object>:<id>`.
+ */
+export function importProvenance(
+  stamp: string | null | undefined,
+): Extract<Provenance, { kind: "import" }> | undefined {
+  if (!stamp?.startsWith(IMPORT_NAMESPACE)) {
     return undefined;
   }
-  const [system = "", ...tail] = source
-    .slice(IMPORT_NAMESPACE.length)
-    .split(":");
-  const name = system === "csv" ? tail[0] : system;
-  const named = name && !IMPORT_OBJECTS.has(name) ? name : undefined;
-  return { kind: "import", source: named };
+  const [connector, ...tail] = stamp.slice(IMPORT_NAMESPACE.length).split(":");
+  return { kind: "import", uploadName: uploadNameOf(connector, tail) };
+}
+
+// The upload is named exactly when the segment after it is an object. Keyed on
+// that segment, an upload called "contact" keeps its name and an object the
+// browser does not know yet reads "Imported" instead of passing for a name.
+function uploadNameOf(
+  connector: string | undefined,
+  tail: readonly string[],
+): string | undefined {
+  if (connector !== IMPORT_CONNECTOR || !IMPORT_OBJECTS.has(tail[1] ?? "")) {
+    return undefined;
+  }
+  return tail[0] || undefined;
 }
