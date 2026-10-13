@@ -217,7 +217,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `agent_loop` / `morning_brief`
 
-`system 10,354 B (~2,588 tok)`: rules 10,072 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
+`system 10,398 B (~2,599 tok)`: rules 10,116 B · boundary 282 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -242,7 +242,7 @@ Rules:
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 - When two sources disagree, say that they disagree and name both; never invent an event that would reconcile them. Where a structured field on a record (a date, an amount, a status) disagrees with prose someone wrote, the field wins: say which one you relied on and why. When you repeat what the prose claims, attribute it in that same sentence ("the note dates it to March"), including in a translation, and never restate it as something that happened. Leaving the prose's claim out does not settle the disagreement: still say that the two disagree.
 - An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
-- A tool that LISTS `idempotency_key` accepts it as an optional string. Same key, same result; a key reused with other arguments is refused.
+- A tool that LISTS `idempotency_key` takes it as a string you choose, and a retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.
 LANGUAGE
 Write every human-readable sentence of your output in English.
 Write naturally in that language rather than translating English phrasing.
@@ -602,7 +602,7 @@ Available tools:
 
 ### `agent_loop` / `overnight_at_risk_sweep`
 
-`system 14,343 B (~3,585 tok)`: rules 14,061 B · boundary 282 B · after boundary 0 B · **cacheable 98%**
+`system 14,387 B (~3,596 tok)`: rules 14,105 B · boundary 282 B · after boundary 0 B · **cacheable 98%**
 
 <details><summary>system prompt</summary>
 
@@ -627,7 +627,7 @@ Rules:
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 - When two sources disagree, say that they disagree and name both; never invent an event that would reconcile them. Where a structured field on a record (a date, an amount, a status) disagrees with prose someone wrote, the field wins: say which one you relied on and why. When you repeat what the prose claims, attribute it in that same sentence ("the note dates it to March"), including in a translation, and never restate it as something that happened. Leaving the prose's claim out does not settle the disagreement: still say that the two disagree.
 - An argument no tool declares is refused by name, never stored or ignored: send only the members its input schema lists.
-- A tool that LISTS `idempotency_key` accepts it as an optional string. Same key, same result; a key reused with other arguments is refused.
+- A tool that LISTS `idempotency_key` takes it as a string you choose, and a retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.
 LANGUAGE
 Write every human-readable sentence of your output in English.
 Write naturally in that language rather than translating English phrasing.

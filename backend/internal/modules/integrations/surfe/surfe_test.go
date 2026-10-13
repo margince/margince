@@ -16,6 +16,7 @@ package surfe
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -307,8 +308,11 @@ func TestCredentialVerificationReadsTheBalanceAndNamesARefusal(t *testing.T) {
 	}
 
 	refused := &recorder{status: http.StatusUnauthorized, body: `{"message":"unauthorized"}`}
-	if _, err := testAdapter(refused).VerifyCredential(context.Background(), provider.Credential("bad")); err == nil {
-		t.Error("a refused key verified successfully, so it would be sealed and stored")
+	// The sentinel, not merely an error. A decode fault also fails this call,
+	// and reporting one would name the wrong cause to the customer.
+	_, err = testAdapter(refused).VerifyCredential(context.Background(), provider.Credential("bad"))
+	if !errors.Is(err, ErrCredentialRefused) {
+		t.Errorf("a refused key gave %v, want ErrCredentialRefused: otherwise it would be sealed and stored", err)
 	}
 }
 

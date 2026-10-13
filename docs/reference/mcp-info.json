@@ -10,16 +10,16 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 176384,
+    "tool_catalog_bytes": 177159,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 44986,
+    "approx_wire_tokens_total": 45179,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49588,
-      "input_schema_bytes": 53091,
+      "input_schema_bytes": 53866,
       "output_schema_bytes": 59966,
-      "description_plus_input_schema_bytes": 102679
+      "description_plus_input_schema_bytes": 103454
     }
   },
   "tools": {
@@ -55,7 +55,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -200,7 +200,7 @@
           "additionalProperties": false,
           "properties": {
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -368,7 +368,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -739,7 +739,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             }
@@ -917,7 +917,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -1104,7 +1104,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -1747,7 +1747,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -1878,7 +1878,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -2084,7 +2084,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -2318,7 +2318,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -2732,7 +2732,7 @@
               "type": "object"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -2972,7 +2972,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -3143,7 +3143,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -3231,7 +3231,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -3329,7 +3329,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -3460,7 +3460,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -4344,7 +4344,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -4540,7 +4540,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -5579,7 +5579,7 @@
               "type": "array"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -5825,7 +5825,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -7720,7 +7720,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -7874,7 +7874,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -8014,7 +8014,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -9753,7 +9753,7 @@
               "type": "object"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },
@@ -9861,7 +9861,7 @@
               "type": "string"
             },
             "idempotency_key": {
-              "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
               "maxLength": 255,
               "type": "string"
             },

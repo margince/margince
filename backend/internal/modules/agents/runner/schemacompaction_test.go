@@ -26,9 +26,9 @@ func mutating(schema json.RawMessage) mcp.ToolSpec {
 // its description, which is what the compaction takes out.
 //
 // It shares mcp.ReservedIdempotencyKeyRule with the surface, so a reworded rule
-// moves this fixture too. The bound and the `Optional. ` prefix are copied, and
-// that much is a copy: nothing holds them equal to agents.retryKeyProperty, and
-// what the compaction reads is the member's presence rather than its shape.
+// moves this fixture too. The bound and the lead-in before that clause are
+// copied. Nothing holds them equal to agents.retryKeyProperty, and what the
+// compaction reads is the member's presence rather than its shape.
 func mutatingSpec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name:          "log_activity",
@@ -37,7 +37,7 @@ func mutatingSpec() mcp.ToolSpec {
 		InputSchema: json.RawMessage(`{"type":"object","required":["record_id"],"properties":{` +
 			`"record_id":{"type":"string","description":"The record this happened on."},` +
 			`"idempotency_key":{"type":"string","maxLength":255,` +
-			`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
+			`"description":"A retry without it may repeat the write. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
 			`"additionalProperties":false}`),
 	}
 }
@@ -179,7 +179,7 @@ func TestANestedMemberOfTheReservedNameKeepsItsDescription(t *testing.T) {
 		`"idempotency_key":{"type":"string","description":"` + perItem + `"}},` +
 		`"additionalProperties":false}},` +
 		`"idempotency_key":{"type":"string","maxLength":255,` +
-		`"description":"Optional. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
+		`"description":"A retry without it may repeat the write. ` + mcp.ReservedIdempotencyKeyRule + `"}},` +
 		`"additionalProperties":false}`)
 	compacted := CompactSchema(mutating(spec))
 	if !strings.Contains(compacted, perItem) {
@@ -188,7 +188,7 @@ func TestANestedMemberOfTheReservedNameKeepsItsDescription(t *testing.T) {
 	}
 	// And the ROOT one is still compacted — otherwise this test would pass by
 	// the compaction having stopped working altogether.
-	if strings.Contains(compacted, "Optional. "+mcp.ReservedIdempotencyKeyRule) {
+	if strings.Contains(compacted, "A retry without it may repeat the write. "+mcp.ReservedIdempotencyKeyRule) {
 		t.Errorf("the root retry key kept its description, so the level rule went the wrong way:\n%s", compacted)
 	}
 }
@@ -292,7 +292,7 @@ func TestTheSharedRetryKeyRuleIsSafeInAJSONLiteral(t *testing.T) {
 	// Asserted by ENCODING it the way the surface does, not by listing forbidden
 	// characters: JSON requires every one of U+0000-U+001F escaped, and a
 	// hand-written set of five will always be an incomplete version of that.
-	spliced := json.RawMessage(`{"type":"string","description":"Optional. ` +
+	spliced := json.RawMessage(`{"type":"string","description":"A retry without it may repeat the write. ` +
 		mcp.ReservedIdempotencyKeyRule + `"}`)
 	if !json.Valid(spliced) {
 		t.Errorf("mcp.ReservedIdempotencyKeyRule does not survive being pasted into a JSON string "+
