@@ -57,8 +57,7 @@ may_call:
   - resolve_entities
   - who_knows
   - run_analytics_query
-  - describe_analytics_vocabulary
-  - describe_report_vocabulary
+  - describe_vocabulary
   - forecast_readings
   - query_workspace
   - search_context

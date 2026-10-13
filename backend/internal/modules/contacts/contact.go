@@ -116,21 +116,20 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 // transaction — one whose own write must land with this contact or not at all.
 // Same gates in the same order; only the transaction is borrowed.
 //
-// Custom fields are refused rather than dropped: the catalog they are matched
-// against is read in a transaction of its own, which is exactly the second
-// connection this seam exists to avoid taking.
-func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContactInput) (crmcontracts.Contact, error) {
+// Custom fields ride on the columns the caller read before it opened the
+// transaction (ActiveCreateColumns); with none, they are refused, never dropped.
+func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContactInput, cols CustomColumns) (crmcontracts.Contact, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	if err := refuseCustomFields(in.CustomFields); err != nil {
+	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Contact{}, err
 	}
 	by, err := s.readyContactCreate(ctx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	return s.createContactInTx(ctx, tx, in, by, nil)
+	return s.createContactInTx(ctx, tx, in, by, cols.cols)
 }
 
 // readyContactCreate runs what a create settles BEFORE any transaction opens —

@@ -35,7 +35,7 @@ may_call:
   - list_records
   - resolve_entities
   - query_workspace
-  - forecast_input_checks
+  - read_input_checks
 
 must_mention:
   - "Vorort"

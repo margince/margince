@@ -6,6 +6,7 @@ package contacts
 import (
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -18,18 +19,32 @@ const (
 	linkedInCompanyPrefix = "/company/"
 	linkedInField         = "linkedin_url"
 	linkedInHost          = "linkedin.com"
+	// companyLinkedInKey is the unique index that makes one LinkedIn page name
+	// one live company.
+	companyLinkedInKey = "company_linkedin_url_key"
 )
 
-// normalizeCompanyLinkedInURL reduces a LinkedIn *company* URL to its stored
+// DuplicateCompanyLinkedInError refuses a LinkedIn page another live company
+// already holds. It names no incumbent, so it discloses nothing beyond the
+// caller's own value.
+type DuplicateCompanyLinkedInError struct {
+	URL string
+}
+
+func (e *DuplicateCompanyLinkedInError) Error() string {
+	return "the LinkedIn page " + e.URL + " already belongs to a company"
+}
+
+// Is maps the claim onto the shared conflict sentinel, as its siblings do.
+func (e *DuplicateCompanyLinkedInError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// NormalizeCompanyLinkedInURL reduces a LinkedIn *company* URL to its stored
 // spelling (PO-DDL-N-2, ADR-0085). The scheme, host, query and fragment rules
-// are the profile normalizer's, so both sides of the product canonicalize a
-// LinkedIn URL exactly once and the same way. What differs is the path: a
-// company URL must name a company, and the slug must be present.
+// are the profile normalizer's; only the path differs, and must name a company.
 //
-// The caller decides what an empty input means. Here it is a parse failure,
-// because "" is not a company URL; the update path treats a cleared field as a
-// clear before it ever reaches this function.
-func normalizeCompanyLinkedInURL(raw string) (string, error) {
+// "" is a parse failure here; the update path treats a cleared field as a
+// clear before it reaches this function.
+func NormalizeCompanyLinkedInURL(raw string) (string, error) {
 	normalized, err := NormalizeLinkedInURL(raw)
 	if err != nil {
 		return "", err
@@ -67,7 +82,7 @@ func companyLinkedInPatchValue(raw string) (*string, error) {
 	if strings.TrimSpace(raw) == "" {
 		return nil, nil //nolint:nilnil // a cleared optional field is a NULL write, not an error
 	}
-	normalized, err := normalizeCompanyLinkedInURL(raw)
+	normalized, err := NormalizeCompanyLinkedInURL(raw)
 	if err != nil {
 		return nil, err
 	}

@@ -1,104 +1,44 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { useUnsavedGuard } from "../app/unsaved";
-import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
-import { useImportFlow } from "./importflow";
+import { routeHash } from "../app/router";
 import {
-  type ImportObject,
-  isImportObject,
-  UNNAMED_IMPORT_OBJECT,
-} from "./importtypes";
+  currentParams,
+  hashWithParams,
+  replaceParams,
+  useUrlParams,
+} from "../app/urlstate";
+import { IMPORT_RUN_SUBPAGE, settingsHref } from "./settingsrouting";
 
-const OBJECT_PARAM = "object";
+const RUN_PARAM = "run";
 
-function nameObject(object: ImportObject) {
-  replaceParams(new Map(currentParams()).set(OBJECT_PARAM, object));
+/**
+ * The run the page is about, held in the address (`?run=`). A reader who
+ * leaves a running import and comes back, from Recent imports or by reload,
+ * lands on the same run. The server answers 404 for a run that is not theirs.
+ */
+export function useAddressedRun(): [
+  string | null,
+  (id: string | null) => void,
+] {
+  const [params] = useUrlParams();
+  const id = params.get(RUN_PARAM) || null;
+  const address = (next: string | null) => {
+    const dials = new Map(currentParams());
+    if (next) {
+      dials.set(RUN_PARAM, next);
+    } else {
+      dials.delete(RUN_PARAM);
+    }
+    replaceParams(dials);
+  };
+  return [id, address];
 }
 
-// A move that starts the flow over, and so throws away a profiled file.
-type Restart =
-  | Readonly<{ kind: "object"; next: ImportObject }>
-  | Readonly<{ kind: "file"; file: File }>;
-
-// The run page's flow. `?object=` and the row type on screen agree both ways:
-// the address moving changes the type, and the type changing writes the address,
-// so a reload, a shared link or Back keeps it.
-export function useAddressedImportFlow() {
-  const [params] = useUrlParams();
-  const named = params.get(OBJECT_PARAM) ?? UNNAMED_IMPORT_OBJECT;
-  const flow = useImportFlow(
-    isImportObject(named) ? named : UNNAMED_IMPORT_OBJECT,
+/** The address of the run page opened on one run. */
+export function runHref(id: string): string {
+  return hashWithParams(
+    routeHash({ ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE }),
+    new Map([[RUN_PARAM, id]]),
   );
-  const { run, upload, validate, commit, undo } = flow;
-  const committed =
-    run?.status === "complete" ||
-    run?.status === "failed" ||
-    run?.status === "undoing" ||
-    run?.status === "undone";
-  const unsaved = (flow.profile !== null || upload.isPending) && !committed;
-  useUnsavedGuard(unsaved);
-  // Leaving keeps a resumable run's remembered id; starting over forgets it.
-  const holdsWork =
-    unsaved || run?.status === "failed" || run?.status === "undoing";
-  const [asking, setAsking] = useState<Restart | null>(null);
-
-  const perform = (restart: Restart) => {
-    if (restart.kind === "file") {
-      upload.mutate(restart.file);
-      return;
-    }
-    flow.chooseObject(restart.next);
-    nameObject(restart.next);
-  };
-  const request = (restart: Restart) =>
-    holdsWork ? setAsking(restart) : perform(restart);
-
-  const adopt = useEffectEvent((next: ImportObject) =>
-    request({ kind: "object", next }),
-  );
-  const seen = useRef(named);
-  useEffect(() => {
-    const moved = seen.current !== named;
-    seen.current = named;
-    if (named === flow.object) {
-      return;
-    }
-    if (moved && isImportObject(named)) {
-      adopt(named);
-      return;
-    }
-    // A typo, or a recovered run of another type.
-    nameObject(flow.object);
-  }, [named, flow.object]);
-
-  return {
-    ...flow,
-    busy:
-      upload.isPending ||
-      validate.isPending ||
-      commit.isPending ||
-      undo.isPending,
-    committed,
-    chooseObject: (next: ImportObject) => {
-      if (next !== flow.object) {
-        request({ kind: "object", next });
-      }
-    },
-    chooseFile: (file: File) => request({ kind: "file", file }),
-    asking: asking !== null,
-    keepWork: () => {
-      setAsking(null);
-      if (named !== flow.object) {
-        nameObject(flow.object);
-      }
-    },
-    discardWork: () => {
-      setAsking(null);
-      if (asking) {
-        perform(asking);
-      }
-    },
-  };
 }

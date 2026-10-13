@@ -1323,6 +1323,7 @@
       "warnings"
     ]
   },
+  "change_lead_state": null,
   "change_lists": {
     "type": "object",
     "properties": {
@@ -1418,6 +1419,7 @@
       "warnings"
     ]
   },
+  "change_tags": null,
   "check_availability": {
     "type": "object",
     "properties": {
@@ -2780,6 +2782,7 @@
       "warnings"
     ]
   },
+  "decide_approvals": null,
   "decide_duplicate": {
     "type": "object",
     "properties": {
@@ -2982,6 +2985,185 @@
         },
         "required": [
           "vocabulary"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "describe_import_format": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "custom": {
+                            "type": "boolean"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "example": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "required_on_new_row": {
+                            "type": "boolean"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "custom",
+                          "description",
+                          "example",
+                          "name",
+                          "required_on_new_row"
+                        ]
+                      }
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "columns",
+                    "file",
+                    "object"
+                  ]
+                }
+              },
+              "key_rules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "order": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "size_limit_mb": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "files",
+              "key_rules",
+              "order",
+              "size_limit_mb",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "format"
         ]
       },
       "evidence": {
@@ -3425,6 +3607,7 @@
       "warnings"
     ]
   },
+  "describe_vocabulary": null,
   "disqualify_lead": {
     "type": "object",
     "properties": {
@@ -7381,6 +7564,48 @@
               "type": "string"
             }
           },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "columns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "name": {
+                  "type": "string"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "part": {
+                  "type": "string"
+                },
+                "unmapped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "columns",
+                "mapping",
+                "name",
+                "object",
+                "part"
+              ]
+            }
+          },
           "mapping": {
             "type": "object",
             "additionalProperties": {
@@ -7421,8 +7646,6 @@
           }
         },
         "required": [
-          "columns",
-          "mapping",
           "run"
         ]
       },
@@ -8464,12 +8687,41 @@
       "warnings"
     ]
   },
+  "read_import": null,
   "read_import_report": {
     "type": "object",
     "properties": {
       "data": {
         "type": "object",
         "properties": {
+          "checkpoint": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "row_count": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "file",
+                "object",
+                "row_count"
+              ]
+            }
+          },
           "report": {
             "type": "object",
             "properties": {
@@ -8510,15 +8762,23 @@
                     "column": {
                       "type": "string"
                     },
+                    "file": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
                     "line": {
                       "type": "integer"
                     },
                     "reason": {
                       "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "line",
                     "reason"
                   ]
                 }
@@ -8564,6 +8824,55 @@
                 "type": "object",
                 "additionalProperties": {
                   "type": "string"
+                }
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "disposition": {
+                      "type": "object",
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
+                          "type": "integer"
+                        },
+                        "skipped": {
+                          "type": "integer"
+                        },
+                        "unchanged": {
+                          "type": "integer"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "skipped",
+                        "unchanged",
+                        "updated"
+                      ]
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "rows_read": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "disposition",
+                    "file",
+                    "object",
+                    "rows_read"
+                  ]
                 }
               },
               "rows_read": {
@@ -8655,103 +8964,6 @@
               "source_key_used",
               "status"
             ]
-          }
-        },
-        "required": [
-          "report"
-        ]
-      },
-      "evidence": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "captured_by": {
-              "type": "string"
-            },
-            "record_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "record_type": {
-              "type": "string"
-            },
-            "source": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "record_id",
-            "record_type"
-          ]
-        }
-      },
-      "freshness": {
-        "type": "object",
-        "properties": {
-          "authoritative": {
-            "type": "boolean"
-          },
-          "last_synced_at": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "authoritative"
-        ]
-      },
-      "schema_version": {
-        "type": "string"
-      },
-      "trace_id": {
-        "type": "string"
-      },
-      "trust": {
-        "type": "string"
-      },
-      "warnings": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "message"
-          ]
-        }
-      }
-    },
-    "required": [
-      "data",
-      "evidence",
-      "freshness",
-      "schema_version",
-      "trace_id",
-      "trust",
-      "warnings"
-    ]
-  },
-  "read_import_run": {
-    "type": "object",
-    "properties": {
-      "data": {
-        "type": "object",
-        "properties": {
-          "checkpoint": {
-            "type": "integer"
-          },
-          "error": {
-            "type": "string"
-          },
-          "object": {
-            "type": "string"
           },
           "run_id": {
             "type": "string"
@@ -8762,7 +8974,6 @@
         },
         "required": [
           "checkpoint",
-          "object",
           "run_id",
           "state"
         ]
@@ -8844,6 +9055,7 @@
       "warnings"
     ]
   },
+  "read_input_checks": null,
   "read_lists": {
     "type": "object",
     "properties": {
@@ -9753,6 +9965,7 @@
       "warnings"
     ]
   },
+  "read_tags": null,
   "relink_activities": {
     "type": "object",
     "properties": {

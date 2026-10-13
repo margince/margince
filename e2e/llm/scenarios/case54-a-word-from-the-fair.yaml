@@ -34,12 +34,10 @@ must_call_with:
   - create_record.offer_tag=K5 Conference 2026
 
 may_call:
-  - list_tags
+  - read_tags
   - search_records
   - resolve_entities
   - read_record
-  - get_record_tags
-  - get_tag
   - whoami
   - query_workspace
 

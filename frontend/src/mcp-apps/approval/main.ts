@@ -1,7 +1,8 @@
-// The approval card: a change an assistant proposed and a human has to release,
-// with the two answers it can be given. It draws what read_approval returns, and Approve and Reject call decide_approval through the
-// host, so the same engine, authority checks and audit row apply as when the
-// decision is made in the inbox.
+// The approval card: a change an assistant proposed and a human has to release.
+// It offers the two answers it can be given. It draws what read_approval returns.
+// Approve and Reject call decide_approvals through the host. The same engine,
+// authority checks and audit row then apply as when the decision is made in the
+// inbox.
 //
 // Approving an assistant's own proposal releases it; the assistant still has to
 // run the call again, which is why the settled line says so instead of claiming
@@ -161,7 +162,7 @@ function choices(
   const decide = (approve: boolean) => {
     outcomes.set(item.id, { kind: "busy" });
     again();
-    void callServerTool("decide_approval", {
+    void callServerTool("decide_approvals", {
       staged_action_id: item.id,
       decision: approve ? "approve" : "reject",
     }).then((result) => {

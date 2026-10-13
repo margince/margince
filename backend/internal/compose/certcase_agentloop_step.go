@@ -25,11 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// agentLoopRegistry is the registered surface, resolved once: the set a
-// passport admitting every scope is offered, which the runner then narrows to
-// the agent's allowlist. Built from the same NewRegistry every other sweep over
-// this surface builds, with no pool — registration is composition-time and
-// needs no database, and a certification turn executes nothing.
+// agentLoopRegistry is the registered surface, resolved once: every tool a
+// passport admitting every scope may call. The runner narrows it to what is
+// offered and then to the agent's allowlist. It is built from the same
+// NewRegistry every other sweep builds, with no pool. Registration is
+// composition-time and needs no database, and a certification turn executes
+// nothing.
 var agentLoopRegistry = sync.OnceValue(func() []mcp.ToolSpec {
 	return NewRegistry(nil, SendPath{}).Specs()
 })

@@ -131,7 +131,11 @@ func recordWrittenBy(entity datasource.EntityType, syncedAt time.Time, authorita
 // populates them — is the integration lane's, because only a real call can
 // prove it.
 func TestEveryToolAdvertisesTheWholeEnvelope(t *testing.T) {
-	for _, spec := range fullRegistry(t).Specs() {
+	r := fullRegistry(t)
+	for _, spec := range r.Specs() {
+		if _, isRouter := r.RouteTargets(spec.Name); isRouter {
+			continue // answers in its target's envelope, checked as that target
+		}
 		var declared struct {
 			Properties map[string]json.RawMessage `json:"properties"`
 			Required   []string                   `json:"required"`

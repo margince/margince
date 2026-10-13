@@ -228,7 +228,7 @@ func (t promoteLead) Spec() mcp.ToolSpec {
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
 		Description:   promoteLeadCopy.render(),
 		Instead:       promoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "promoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","trigger"],"properties":{
 			"lead_id":{"type":"string","format":"uuid"},

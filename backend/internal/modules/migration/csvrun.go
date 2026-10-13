@@ -51,6 +51,33 @@ type RunMapping struct {
 	// chose it, and a decision that lived only in the create call would be lost
 	// by the time anything wrote a row.
 	ContextTag string `json:"context_tag,omitempty"`
+	// Parts is a ZIP run's files, one object each; empty for a single CSV,
+	// whose one part is Object, Fields and SourceKey above.
+	Parts []PartMapping `json:"parts,omitempty"`
+	// SourceName is the namespace the run's provenance is filed under.
+	SourceName string `json:"source_name,omitempty"`
+	// FileName is the uploaded file's name, for display only: nothing about
+	// the run is decided by it.
+	FileName     string `json:"file_name,omitempty"`
+	OnBrokenLink string `json:"on_broken_link,omitempty"`
+}
+
+// PartMapping is one file of a run: which object its rows are, which column
+// lands in which field, and which column identifies a row.
+type PartMapping struct {
+	File      string            `json:"file"`
+	Object    string            `json:"object"`
+	Fields    map[string]string `json:"fields"`
+	SourceKey string            `json:"source_key"`
+}
+
+// PartList answers the run's parts, so a reader walks a single CSV and a ZIP
+// the same way: a single-CSV mapping is one part.
+func (m RunMapping) PartList() []PartMapping {
+	if len(m.Parts) > 0 {
+		return m.Parts
+	}
+	return []PartMapping{{File: m.FileName, Object: m.Object, Fields: m.Fields, SourceKey: m.SourceKey}}
 }
 
 // CreateStagedRunInput opens a run that must be approved before it writes.
@@ -65,7 +92,7 @@ type CreateStagedRunInput struct {
 // mapping, and has written nothing to the estate. The dry run reports against
 // it and AwaitApproval hands it to a human.
 func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return Run{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -87,7 +114,7 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
+		if _, err := storekit.Audit(ctx, tx, "create", ImportRunObject, run.ID, nil, map[string]any{
 			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
 			"object": in.Mapping.Object,
 		}); err != nil {
@@ -111,7 +138,7 @@ func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput)
 // Valid only from `validating`: a run that already moved on is not the one the
 // report describes.
 func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	encoded, err := json.Marshal(report)
@@ -128,7 +155,7 @@ func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) e
 // acting on a state that is not the one they judged. The conflict says so
 // rather than starting a second pass over the same file.
 func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
 	if err := s.stageTransition(ctx, id, StatusAwaitingApproval, StatusRunning, nil); err != nil {
@@ -171,30 +198,30 @@ func (s *RunStore) stageTransition(ctx context.Context, id RunID, from, to strin
 			// only its current callers keep, so it is decided here.
 			return s.explainMiss(ctx, tx, id, from, to)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: from}, map[string]any{auditFieldStatus: to})
 		return err
 	})
 }
 
-// FailValidation records a dry run that could not finish. Valid only from
-// `validating`, so it can never overwrite the outcome of a run that has since
-// been approved and committed.
-func (s *RunStore) FailValidation(ctx context.Context, id RunID, cause error) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+// FailValidation records a dry run that could not finish, with a fixed cause.
+// Valid only from `validating`, so it can never overwrite the outcome of a run
+// that has since been approved and committed.
+func (s *RunStore) FailValidation(ctx context.Context, id RunID) error {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE import_run SET status = $2, error = $3, updated_at = now()
-			 WHERE id = $1 AND status = $4`, id, StatusFailed, cause.Error(), StatusValidating)
+			 WHERE id = $1 AND status = $4`, id, StatusFailed, CauseValidationStopped, StatusValidating)
 		if err != nil {
 			return fmt.Errorf("failing import run %s: %w", id, err)
 		}
 		if tag.RowsAffected() == 0 {
 			return s.explainMiss(ctx, tx, id, StatusValidating, StatusFailed)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id,
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
 			map[string]any{auditFieldStatus: StatusValidating}, map[string]any{auditFieldStatus: StatusFailed})
 		return err
 	})
@@ -221,9 +248,86 @@ func (s *RunStore) explainMiss(ctx context.Context, tx pgx.Tx, id RunID, from, t
 // and report surfaces answer from. A run outside the caller's scope answers
 // not-found, never forbidden.
 func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Run{}, err
 	}
+	var run Run
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		run, err = scanStaged(tx.QueryRow(ctx, `
+			SELECT `+stagedColumns+`
+			-- Scoped as well as keyed, exactly as Get is: a run id from another
+			-- workspace owes the existence-hiding not-found, not its status,
+			-- its mapping and its report.
+			  FROM import_run WHERE id = $1`, id))
+		return err
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
+	}
+	if err != nil {
+		return Run{}, fmt.Errorf("reading import run %s: %w", id, err)
+	}
+	return run, nil
+}
+
+// ListStaged reads one page of CSV runs, newest first, each as GetStaged reads
+// one. The flip's own runs are left out: they carry no mapping this surface
+// describes. An empty cursor starts at the newest run.
+func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]Run, storekit.Page, error) {
+	// The exported name, not the alias: the grant-reachability census resolves
+	// only a literal-valued constant.
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV))
+	if cursor != "" {
+		after, err := storekit.DecodeCursor(cursor)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where += storekit.SQLf(` AND (created_at, id) < ($%d, $%d)`, arg(after.CreatedAt), arg(after.ID))
+	}
+	query := `SELECT ` + stagedColumns + ` FROM import_run WHERE ` + where +
+		storekit.SQLf(` ORDER BY created_at DESC, id DESC LIMIT $%d`, arg(limit+1))
+	runs := []Run{}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("listing import runs: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			run, err := scanStaged(rows)
+			if err != nil {
+				return err
+			}
+			runs = append(runs, run)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if len(runs) <= limit {
+		return runs, storekit.Page{}, nil
+	}
+	runs = runs[:limit]
+	last := runs[limit-1]
+	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return runs, storekit.Page{HasMore: true, NextCursor: next}, nil
+}
+
+// stagedColumns is what scanStaged reads, in its order.
+const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at, updated_at,
+			mapping, report, undo_report, error, captured_by`
+
+func scanStaged(row pgx.Row) (Run, error) {
 	var (
 		run        Run
 		mapping    []byte
@@ -231,21 +335,9 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 		undoReport []byte
 		runErr     *string
 	)
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			SELECT id, connector, status, source_ref, checkpoint, created_at, updated_at, mapping, report, undo_report, error, captured_by
-			-- Scoped as well as keyed, exactly as Get is: a run id from another
-			-- workspace owes the existence-hiding not-found, not its status,
-			-- its mapping and its report.
-			  FROM import_run WHERE id = $1`, id)
-		return row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
-			&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy)
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
-		}
-		return Run{}, fmt.Errorf("reading import run %s: %w", id, err)
+	if err := row.Scan(&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
+		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy); err != nil {
+		return Run{}, err
 	}
 	if runErr != nil {
 		run.Error = *runErr
@@ -253,26 +345,26 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	if len(mapping) > 0 {
 		var m RunMapping
 		if err := json.Unmarshal(mapping, &m); err != nil {
-			return Run{}, fmt.Errorf("reading the mapping of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the mapping of import run %s: %w", run.ID, err)
 		}
 		// An empty object is what the flip's own runs carry; only a mapping
 		// that actually names one is handed on, so a caller cannot mistake
 		// "no mapping" for "a mapping of nothing".
-		if m.Object != "" {
+		if m.Object != "" || len(m.Parts) > 0 {
 			run.Mapping = &m
 		}
 	}
 	if len(report) > 0 {
 		var rep Report
 		if err := json.Unmarshal(report, &rep); err != nil {
-			return Run{}, fmt.Errorf("reading the report of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the report of import run %s: %w", run.ID, err)
 		}
 		run.Report = &rep
 	}
 	if len(undoReport) > 0 {
 		var rep UndoReport
 		if err := json.Unmarshal(undoReport, &rep); err != nil {
-			return Run{}, fmt.Errorf("reading the undo report of import run %s: %w", id, err)
+			return Run{}, fmt.Errorf("reading the undo report of import run %s: %w", run.ID, err)
 		}
 		run.UndoReport = &rep
 	}
@@ -326,4 +418,37 @@ func (s *RunStore) RecordImportSourceIntent(ctx context.Context, key string) err
 		return err
 	}
 	return storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindImport, key)
+}
+
+// BindingsOf is LookupBinding for every key one source has landed of one
+// object, keyed by external id. A dry run reads them once instead of once per
+// row.
+func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) (map[string]Binding, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	out := map[string]Binding{}
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT m.external_id, m.native_id, r.status FROM import_record_map m
+			  JOIN import_run r ON r.id = m.import_run_id
+			WHERE m.source_system = $1 AND m.object = $2`, sourceSystem, object)
+		if err != nil {
+			return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var external string
+			var binding Binding
+			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus); err != nil {
+				return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
+			}
+			out[external] = binding
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

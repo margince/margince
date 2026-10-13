@@ -13,10 +13,7 @@ import (
 // withinArgsBound refuses arguments larger than the tool declares, before any
 // reading of them: the MCP transport admits one tool's file, not every tool's.
 func withinArgsBound(spec mcp.ToolSpec, args []byte) error {
-	limit := spec.MaxArgsBytes
-	if limit == 0 {
-		limit = httperr.MaxBodyBytes
-	}
+	limit := argsLimit(spec)
 	if int64(len(args)) <= limit {
 		return nil
 	}
@@ -25,4 +22,13 @@ func withinArgsBound(spec mcp.ToolSpec, args []byte) error {
 			httperr.Megabytes(int64(len(args))), httperr.Megabytes(limit)),
 		Guidance: "send less in one call; a file goes through attach_document, or is uploaded in the Margince app",
 	}
+}
+
+// argsLimit is the bound a tool's arguments are held to: its own, or the one
+// every request body is held to when it declares none.
+func argsLimit(spec mcp.ToolSpec) int64 {
+	if spec.MaxArgsBytes == 0 {
+		return httperr.MaxBodyBytes
+	}
+	return spec.MaxArgsBytes
 }

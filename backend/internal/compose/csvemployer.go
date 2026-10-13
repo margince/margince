@@ -39,6 +39,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -82,7 +83,7 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	if normalized == "" {
 		return employerResolution{reason: "the company column is empty, so the row names no employer"}, nil
 	}
-	hit, err := w.employerFor(ctx, normalized)
+	hit, err := w.links.employerFor(ctx, normalized)
 	if err != nil {
 		return employerResolution{}, err
 	}
@@ -91,12 +92,17 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 		return employerResolution{reason: fmt.Sprintf(
 			"no company named %q is in the CRM, so there was nothing to link this contact to", strings.TrimSpace(name))}, nil
 	case hit.count > 1:
-		return employerResolution{reason: fmt.Sprintf(
-			"more than one company is named %q, so which one employs this contact is a question only a human can answer",
-			strings.TrimSpace(name))}, nil
+		return employerResolution{reason: ambiguousEmployerReason(name)}, nil
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
 	}
+}
+
+// ambiguousEmployerReason is the answer for a name more than one visible
+// company wears.
+func ambiguousEmployerReason(name string) string {
+	return fmt.Sprintf("more than one company is named %q, so which one employs this contact is a question only a human can answer",
+		strings.TrimSpace(name))
 }
 
 // employerKey folds a company name for comparison: case and whitespace, and
@@ -122,44 +128,38 @@ func employerKey(name string) string {
 // employerCandidate is one folded name's answer: the company, and whether more
 // than one wears the name.
 //
-// The count is capped at two by the read that fills it, because only "exactly
-// one" links and a name worn by forty companies is the same answer as one worn
-// by two. Zero means no company of that name — which, deliberately, is also
-// what a name worn only by companies this caller cannot see answers.
+// The read caps the count at two (see estateEmployer). Zero means no company
+// of that name, which is also the answer for a name only hidden companies wear.
+//
+// pending marks an answer that counts a company of this upload. Only the dry
+// run sees one, and its id may be zero.
 type employerCandidate struct {
-	id    ids.CompanyID
-	count int
+	id      ids.CompanyID
+	count   int
+	pending bool
 }
 
-// employerFor answers ONE folded name: which company wears it, and whether
-// more than one does. Cached, so a file naming the same employer on nineteen
-// thousand rows asks once.
-//
-// It replaces an index of the whole estate. That shape read every visible
-// company into a Go map, once for the dry run and again for the commit, so a
-// ten-row file against a workspace holding hundreds of thousands of companies
-// loaded all of them — and a run that linked nothing paid exactly the same.
-// The upload cap bounds the FILE; nothing bounded this. Now the work is
-// bounded by the distinct names in the file, which is what the caller actually
-// asked about.
-//
-// LIMIT 2 is the whole count. Only "exactly one" links, and a name worn by
-// forty companies is the same answer as one worn by two — so the read stops as
-// soon as it can tell those apart, and a common name never drags a page of rows
-// back to be counted.
-//
-// The answer is a SNAPSHOT per name, taken when the first row needs it. A
-// company created by someone else while the run is in flight is not in it, so a
-// link that could have resolved is reported as unresolved instead. That is the
-// same staleness collidesWithExisting already accepts and for the same reason:
-// the failure mode is a missing link the report names, never a link to the
-// wrong company.
-func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandidate, error) {
-	if hit, ok := w.employers[key]; ok {
+// employerFor answers one folded name as the run will see it once this
+// upload's companies have landed.
+func (r *linkResolver) employerFor(ctx context.Context, key string) (employerCandidate, error) {
+	hit, err := r.estateEmployer(ctx, key)
+	if err != nil {
+		return employerCandidate{}, err
+	}
+	return r.names[key].over(hit), nil
+}
+
+// estateEmployer answers which company wears one folded name, cached per name,
+// so the work scales with the file's names. `LIMIT 2` is the whole count: only
+// a single match links. The answer is a snapshot, so a company created mid-run
+// reads unresolved, as in collidesWithExisting. The worst case is a missing
+// link the report names, never a link to the wrong company.
+func (r *linkResolver) estateEmployer(ctx context.Context, key string) (employerCandidate, error) {
+	if hit, ok := r.employers[key]; ok {
 		return hit, nil
 	}
 	var found employerCandidate
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
 		// Scoped to what this caller may READ, so a company they cannot see
 		// contributes nothing — neither a match nor an ambiguity.
 		var args []any
@@ -206,10 +206,7 @@ func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandi
 	}); err != nil {
 		return employerCandidate{}, fmt.Errorf("import: %w", err)
 	}
-	if w.employers == nil {
-		w.employers = map[string]employerCandidate{}
-	}
-	w.employers[key] = found
+	r.employers[key] = found
 	return found, nil
 }
 
@@ -218,24 +215,10 @@ func (w *csvWriters) employerFor(ctx context.Context, key string) (employerCandi
 // The `From` endpoint resolves through the run's identity map, which knows the
 // contact this run just landed. The `To` endpoint is a NAME and resolves through
 // resolveEmployer, exactly once per distinct name thanks to the cached index.
-//
-// A conflict is convergence, not a failure: the edge is unique per (contact,
-// company), and the engine's association phase is replayed whole by a
-// resumed run. Every other error still stops the run, because an edge that
-// failed for an unknown reason is not an edge anybody should assume landed.
 func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
-	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
-	if errors.Is(err, errBoundRecordArchived) {
-		found, err = false, nil
-	}
-	if err != nil {
-		return migration.AssocResult{}, err
-	}
-	if !found {
-		// The row never landed — refused, skipped, or not yet committed. The
-		// contact is the thing missing, so that is what the report says.
-		return migration.AssocResult{Reason: fmt.Sprintf(
-			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID)}, nil
+	contactID, missing, err := w.landedContact(ctx, a)
+	if err != nil || missing != "" {
+		return migration.AssocResult{Reason: missing}, err
 	}
 	resolved, err := w.resolveEmployer(ctx, a.ToID)
 	if err != nil {
@@ -244,18 +227,58 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 	if !resolved.found {
 		return migration.AssocResult{Reason: resolved.reason}, nil
 	}
+	return w.writeEmployment(ctx, contactID, resolved.id, w.provenanceOf(a.FromID+"→"+a.ToID))
+}
 
+// linkCompanyRef writes the edge a company_ref cell names, through the run's
+// one link resolver, so it finds what the row check found.
+func (w *csvWriters) linkCompanyRef(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
+	contactID, missing, err := w.landedContact(ctx, a)
+	if err != nil || missing != "" {
+		return migration.AssocResult{Reason: missing}, err
+	}
+	answer, err := w.links.resolveCompany(ctx, a.ToID)
+	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if !answer.Found {
+		return migration.AssocResult{Reason: answer.Reason}, nil
+	}
+	return w.writeEmployment(ctx, contactID, ids.From[ids.CompanyKind](answer.ID), w.provenanceOf(a.FromID+"→"+a.ToID))
+}
+
+// landedContact is the contact an edge starts at, or why there is none: the
+// row was refused, skipped, or not yet committed.
+func (w *csvWriters) landedContact(ctx context.Context, a migration.Assoc) (ids.UUID, string, error) {
+	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
+	if errors.Is(err, errBoundRecordArchived) {
+		found, err = false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, "", err
+	}
+	if !found {
+		return ids.UUID{}, fmt.Sprintf(
+			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID), nil
+	}
+	return contactID, "", nil
+}
+
+// writeEmployment writes one contact→company employment edge. Any error but a
+// conflict stops the run: an edge that failed for an unknown reason did not land.
+func (w *csvWriters) writeEmployment(
+	ctx context.Context, contactID ids.UUID, companyID ids.CompanyID, source string,
+) (migration.AssocResult, error) {
 	pid := ids.From[ids.ContactKind](contactID)
-	oid := resolved.id
 	if _, err := w.contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
 		Kind:      relationshipKindEmployment,
 		ContactID: &pid,
-		CompanyID: &oid,
+		CompanyID: &companyID,
 		// Stated rather than left nil: a company column on a contact row means
 		// THE employer, singular, and a caller who said so must not have the
 		// store's own rule decide otherwise.
 		IsCurrentPrimary: ptrTrue(),
-		Source:           w.provenanceOf(a.FromID + "→" + a.ToID),
+		Source:           source,
 	}); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
 			// The edge is unique per (contact, company), so a conflict means
@@ -271,9 +294,53 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 			// the disclosure says linked rather than created.
 			return migration.AssocResult{Applied: true}, nil
 		}
-		return migration.AssocResult{}, fmt.Errorf("import: linking %s to %q: %w", a.FromID, a.ToID, err)
+		return migration.AssocResult{}, fmt.Errorf("import: linking %s to %s: %w", pid, companyID, err)
 	}
 	return migration.AssocResult{Applied: true}, nil
+}
+
+// rowLink is what a row's employer cells say about the row: nothing, a warning
+// it lands with, or a reason it is skipped.
+type rowLink struct {
+	skip    bool
+	problem *migration.SkippedRow
+}
+
+// linkProblemOf checks a contact row's employer before the row lands, so the
+// run's broken-link policy decides the row and not only its edge. The dry run
+// and the commit both ask here. A company_ref is checked in every run and wins
+// over a company name, which is checked only in a ZIP run.
+func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowLink, error) {
+	fields := textFields(row.Fields)
+	if ref := strings.TrimSpace(fields[csvTargetCompanyRef]); w.companyRefColumn != "" && ref != "" {
+		answer, err := w.links.resolveCompany(ctx, ref)
+		if err != nil || answer.resolves() {
+			return rowLink{}, err
+		}
+		return w.brokenLink(row, w.companyRefColumn, ref, answer.Reason), nil
+	}
+	if name := strings.TrimSpace(fields[csvEmployerName]); w.companyNameColumn != "" && name != "" {
+		resolved, err := w.resolveEmployer(ctx, name)
+		if err != nil || resolved.found {
+			return rowLink{}, err
+		}
+		return w.brokenLink(row, w.companyNameColumn, name, resolved.reason), nil
+	}
+	return rowLink{}, nil
+}
+
+// brokenLink is the run's policy applied to a link cell that found nothing.
+func (w *csvWriters) brokenLink(row migration.Row, column, value, reason string) rowLink {
+	problem := &migration.SkippedRow{
+		ExternalID: row.ExternalID, Line: row.Line, Column: column,
+		Kind: migration.ProblemBrokenLink, Value: value, Reason: reason,
+	}
+	if w.onBrokenLink != string(crmcontracts.ImportOnBrokenLinkDropLink) {
+		return rowLink{skip: true, problem: problem}
+	}
+	problem.Kind = migration.ProblemDroppedLink
+	problem.Reason = reason + "; the row was imported without the link"
+	return rowLink{problem: problem}
 }
 
 // relationshipKindEmployment is the edge a company column means.

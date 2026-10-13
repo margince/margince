@@ -39,6 +39,9 @@ const maxDescriptionRunes = 3000
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
 	spec := t.Spec()
+	if rt, isRouter := t.(router); isRouter {
+		spec = r.routedSpec(rt)
+	}
 	if spec.Name == "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a tool with no name")

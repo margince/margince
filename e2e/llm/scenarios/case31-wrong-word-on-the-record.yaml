@@ -46,22 +46,22 @@ prompt: |
   strategic accounts and that word stays.
 
 must_call:
-  - get_record_tags
-  - remove_tag
+  - read_tags
+  - change_tags
 
 # record_type is pinned on both. The tool name alone passes on a read or a
 # removal aimed at a CONTACT of the same name — get_record_tags serves three
 # record types and remove_tag five, and this errand is about a company.
 must_call_with:
-  - get_record_tags.record_type=company
-  - remove_tag.record_type=company
+  - read_tags.mode=record
+  - change_tags.action=remove
+  - read_tags.record_type=company
+  - change_tags.record_type=company
 
 may_call:
   - search_records
   - read_record
   - list_records
-  - list_tags
-  - get_tag
   - query_workspace
   - whoami
   - list_colleagues

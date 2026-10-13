@@ -779,14 +779,14 @@ describe("signing out", () => {
 
   it("forgets what the member left in storage and keeps what no one else inherits", async () => {
     const declined = `${STORAGE_KEYS.platformDeclined.prefix}account-1`;
-    localStorage.setItem(STORAGE_KEYS.importRun.name, "run-1");
+    localStorage.setItem(STORAGE_KEYS.faultsSeen.name, "run-1");
     sessionStorage.setItem(STORAGE_KEYS.oauthAttempt.name, "gmail");
     localStorage.setItem(STORAGE_KEYS.theme.name, "dark");
     localStorage.setItem(declined, "1");
 
     await resetToSignedOut(new QueryClient());
 
-    expect(localStorage.getItem(STORAGE_KEYS.importRun.name)).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.faultsSeen.name)).toBeNull();
     expect(sessionStorage.getItem(STORAGE_KEYS.oauthAttempt.name)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEYS.theme.name)).toBe("dark");
     expect(localStorage.getItem(declined)).toBe("1");

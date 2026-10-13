@@ -48,9 +48,8 @@ prompt: |
   Start a new word for that, call it Revisit Q1, and put it on those two.
 
 must_call:
-  - list_tags
-  - create_tag
-  - apply_tag
+  - read_tags
+  - change_tags
 
 # The tool name alone would pass on a create_tag that coined a SECOND K5 word
 # and never touched the one the user asked for. Pinning the name is what says
@@ -63,15 +62,17 @@ must_call:
 # list_tags and applies by id is the BETTER path, and a must_call_with on
 # tag_name would score it as a failure.
 must_call_with:
-  - create_tag.name=Revisit Q1
+  - read_tags.mode=list
+  - change_tags.action=create
+  - change_tags.action=apply
+  - change_tags.name=Revisit Q1
 
 may_call:
   - search_records
   - list_records
   - query_workspace
   - read_record
-  - get_record_tags
-  - get_tag
+  - read_tags
   - resolve_entities
   # Called unprompted on most runs, and no part of this errand needs either.
   - whoami
