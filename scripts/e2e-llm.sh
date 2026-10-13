@@ -175,7 +175,7 @@ echo "==> judge $E2E_LLM_JUDGE via $E2E_LLM_JUDGE_VIA"
 # replayed when the seed stops — the run is over either way, and only one of the
 # two says where.
 seed_everything() {
-  local trail="$ROOT/e2e/llm/records/seed.log"
+  local trail="$RECORD_DIR/seed.log"
   mkdir -p "$(dirname "$trail")"
   if ! (cd "$ROOT" && DEV_SLUG="$SLUG" API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >"$trail"); then
     echo "==> the seed stopped; its trail to that point:" >&2
@@ -552,7 +552,17 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   results="$WORK/$name.results"
   : > "$results"
 
+  made=0
   for i in $(seq 1 "$runs"); do
+    # A run that cannot move the verdict is not paid for: two passes at 2-of-3
+    # already hold, two failures already fail. E2E_LLM_ALL_RUNS=1 makes every
+    # run, for a reliability figure rather than a verdict.
+    if [[ "$made" -gt 0 && "${E2E_LLM_ALL_RUNS:-0}" != "1" ]] &&
+      python3 "$ROOT/e2e/llm/check.py" --settled "$ok" "$made" "$runs" "$pass_at"; then
+      echo "  settled after $made runs"
+      break
+    fi
+    made=$i
     # RESET WHEN THE WORLD IS DIRTY, not when this case is the one that dirtied
     # it. Two things were wrong with keying the reset on `$i -gt 1`.
     #
@@ -695,10 +705,10 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   if [[ "$ok" -ge "$pass_at" ]]; then
     PASSED=$((PASSED + 1))
-    echo "  $name: PASS ($ok/$runs)" | tee -a "$REPORT"
+    echo "  $name: PASS ($ok/$made)" | tee -a "$REPORT"
   else
     FAILED=$((FAILED + 1))
-    echo "  $name: FAIL ($ok/$runs, needed $pass_at)" | tee -a "$REPORT"
+    echo "  $name: FAIL ($ok/$made, needed $pass_at)" | tee -a "$REPORT"
     sed 's/^/    /' "$results"
   fi
 
@@ -709,7 +719,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # what mcp-tool-coverage.md publishes, so the current answer has to be at a
   # stable path. Git carries what it replaced.
   mkdir -p "$VERDICT_DIR"
-  EXPECTED_RUNS=$((EXPECTED_RUNS + runs))
+  EXPECTED_RUNS=$((EXPECTED_RUNS + made))
 
   # The transcripts of this scenario's runs, as an array so an absent glob is an
   # empty list rather than the literal pattern. A run that died without writing
@@ -722,13 +732,13 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
-    python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$runs" \
+    python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
     ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather
   # than assembled here out of JSON the shell would have to parse.
-  python3 "$ROOT/e2e/llm/check.py" --usage "$runs" \
+  python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
