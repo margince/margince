@@ -41,9 +41,11 @@ type importEntryPoint struct{ pkg, recv, name string }
 // importEngineEntryPoints are the engine's walks over a source or a run's rows.
 // A Work method reaches them through the slice function it hands its slicer.
 // Engine.Run, the unsliced flip, has no caller a Work method could name.
+// DryRun is the test run's walk, which holds a snapshot for the whole file.
 // createMissing writes the tags a file names before its rows, through no seam.
 var importEngineEntryPoints = []importEntryPoint{
 	{"migration", "Engine", "Run"},
+	{"migration", "Engine", "DryRun"},
 	{"migration", "Engine", "RunSlice"},
 	{"migration", "RunStore", "UndoSlice"},
 	{"compose", "tagResolver", "createMissing"},
@@ -395,7 +397,7 @@ func (g *importCallGraph) finding(obj *types.Func, site callSite) string {
 		where = g.name(site.in)
 	}
 	return g.fset.Position(site.pos).String() + ": " + where + " reaches " + g.name(g.decls[obj]) +
-		", which writes an import's rows. Only an import job's Work method, or work nothing but " +
+		", which writes an import's rows or tests its whole file. Only an import job's Work method, or work nothing but " +
 		"one reaches, may reach it: a request queues the job and answers"
 }
 
