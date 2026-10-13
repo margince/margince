@@ -195,18 +195,34 @@ function main(argv: readonly string[]) {
   const moves = planMoves(pairs, (dir) => filesMatching(dir, /./), isDirectory);
   const isFile = (path: string) => existsSync(path) && statSync(path).isFile();
 
-  const rewritten: string[] = [];
-  for (const file of corpus()) {
-    const text = readFileSync(file, "utf8");
-    const next = rewriteImports(file, text, moves, isFile);
-    if (next !== text) {
-      writeFileSync(file, next);
-      rewritten.push(moves.get(file) ?? file);
-    }
+  // A clean tree is what makes a failed move undoable: resetting to HEAD then
+  // drops only this script's own writes.
+  const git = (args: readonly string[]) =>
+    execFileSync("git", args, { cwd: frontendDir, encoding: "utf8" });
+  if (git(["status", "--porcelain"]).trim() !== "") {
+    throw new Error(
+      "the tree has uncommitted changes; commit or stash them first",
+    );
   }
   for (const [from, to] of moves) {
     execFileSync("mkdir", ["-p", dirname(to)]);
-    execFileSync("git", ["mv", from, to], { cwd: frontendDir });
+    git(["mv", "-n", from, to]);
+  }
+
+  const rewritten: string[] = [];
+  try {
+    for (const file of corpus()) {
+      const text = readFileSync(file, "utf8");
+      const next = rewriteImports(file, text, moves, isFile);
+      if (next !== text) {
+        writeFileSync(file, next);
+        rewritten.push(moves.get(file) ?? file);
+      }
+    }
+    for (const [from, to] of moves) git(["mv", from, to]);
+  } catch (error) {
+    git(["reset", "--hard", "--quiet", "HEAD"]);
+    throw error;
   }
   // A new path can sort differently, so the edited files are re-sorted the way
   // fe-lint wants them.
