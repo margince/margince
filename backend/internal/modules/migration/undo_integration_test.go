@@ -279,6 +279,31 @@ func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
 	}
 }
 
+func TestARestartedUndoDoesNotKeepTheCauseOfTheStopBeforeIt(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	run := completeCSVRun(ctx, t, s)
+	landLead(ctx, t, s, run.ID, "row-1")
+
+	l, err := claimUndoLease(ctx, t, s, run.ID)
+	if err != nil {
+		t.Fatalf("claimUndoLease: %v", err)
+	}
+	if err := s.FailLease(ctx, l, CauseStale); err != nil {
+		t.Fatalf("FailLease: %v", err)
+	}
+	if got := mustGetStaged(ctx, t, s, run.ID); got.Status != StatusUndoing || got.Error == "" {
+		t.Fatalf("a stopped undo reads %q with error %q, want undoing carrying its cause", got.Status, got.Error)
+	}
+
+	if _, err := claimUndoLease(ctx, t, s, run.ID); err != nil {
+		t.Fatalf("restarting the undo: %v", err)
+	}
+	if got := mustGetStaged(ctx, t, s, run.ID); got.Error != "" {
+		t.Errorf("a restarted undo still reads error %q, want none while it runs", got.Error)
+	}
+}
+
 func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)

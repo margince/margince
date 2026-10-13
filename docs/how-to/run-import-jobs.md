@@ -93,17 +93,17 @@ A run that stays `running` or `undoing` is read in the `import_run` table. These
 
 Then read the answer from the table:
 
-- **`claimed_attempt` is behind `job_attempt`, and `updated_at` is under 2 minutes old.** The job waits
+- `claimed_attempt` is behind `job_attempt`, and `updated_at` is under 2 minutes old. The job waits
   in the queue. Check that a worker with the `import_write` queue is running, and that it is a new
   release.
-- **`heartbeat_at` moves.** The run is working. A large file takes many slices. Compare `checkpoint`
+- `heartbeat_at` moves. The run is working. A large file takes many slices. Compare `checkpoint`
   to its length.
-- **`heartbeat_at` is older than 2 minutes and does not change.** The process is gone. The sweep
+- `heartbeat_at` is older than 2 minutes and does not change. The process is gone. The sweep
   starts a new attempt within the bound above, and `resume_count` goes up by one.
-- **`heartbeat_at` is old, and a new attempt starts and snoozes without progress.** Another session
+- `heartbeat_at` is old, and a new attempt starts and snoozes without progress. Another session
   holds the run's advisory lock. Look in `pg_locks` for a session that holds it and has no client.
   This is the node-loss case, and it ends when Postgres drops the session.
-- **`resume_count` is 3 and the run is `failed`.** The sweep stopped after 3 attempts. Read the worker
+- `resume_count` is 3 and the run is `failed`. The sweep stopped after 3 attempts. Read the worker
   log for the error of the slice, fix the cause, and approve the run again.
 
 An undo that stops stays `undoing`, with its cause in `error` and its cursor kept. It resumes the same
