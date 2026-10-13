@@ -21,3 +21,20 @@ export function contactQuery(contactId: string | undefined) {
             ),
   });
 }
+
+// A 360 refused while the row is re-read may be an archive the row will report.
+// So the contact page waits for the row before it calls itself unopened.
+export function contactPageState(
+  record: Readonly<{
+    isPending: boolean;
+    isError: boolean;
+    isFetching: boolean;
+  }>,
+  view: Readonly<{ isLoading: boolean; isError: boolean }>,
+): "opening" | "notOpened" | "ready" {
+  if (record.isPending || view.isLoading) return "opening";
+  if (record.isError || (view.isError && !record.isFetching)) {
+    return "notOpened";
+  }
+  return "ready";
+}

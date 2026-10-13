@@ -47,6 +47,21 @@ export const MayNotCreateLeads: Story = {
   },
 };
 
+// An archived contact: the verb stays and points at the page's one reason.
+export const RefusedOnArchived: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ lead: ["read", "create"] }) });
+    return (
+      <StoryProviders>
+        <WorkAsLeadAction contactId="p-1" reasonId="contact-archived" />
+        <p id="contact-archived" className="t-caption">
+          This contact is archived and takes no changes.
+        </p>
+      </StoryProviders>
+    );
+  },
+};
+
 /** The same row in dark, where the button's tones are re-derived. */
 export const MayCreateLeadsDark: Story = {
   ...MayCreateLeads,

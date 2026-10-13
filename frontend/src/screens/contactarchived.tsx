@@ -32,7 +32,8 @@ export function ArchivedContactPage({
 }: Readonly<{
   contact: Contact;
   band: ReactNode;
-  refusedReasonId?: string;
+  // Required: without it every verb below would take the press.
+  refusedReasonId: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();

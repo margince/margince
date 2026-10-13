@@ -61,6 +61,37 @@ describe("the contact page on an archived row", () => {
     expect(asked).toEqual([]);
   });
 
+  it("refuses the write verbs in the header and in the menu", async () => {
+    const user = userEvent.setup();
+    mount(archivedContactRoutes());
+
+    const reason = await screen.findByText(en["contact.rail.archivedReadOnly"]);
+    const refused = (control: HTMLElement) => {
+      expect(control.hasAttribute("disabled")).toBe(true);
+      expect(control.getAttribute("aria-describedby")).toContain(reason.id);
+    };
+    refused(screen.getByRole("button", { name: en["contact.action.write"] }));
+    await user.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
+    for (const verb of [
+      en["contact.action.research"],
+      en["lists.addToShortlist"],
+      en["contact.action.workAsLead"],
+    ]) {
+      refused(await screen.findByRole("button", { name: verb }));
+    }
+  });
+
+  it("offers no address to write to, because the archived row carries none", async () => {
+    mount(archivedContactRoutes());
+
+    await screen.findByText(en["contact.rail.archivedReadOnly"]);
+    const facts = document.querySelector(".record-facts");
+    expect(facts?.textContent).toContain(en["contact.page.owner"]);
+    expect(facts?.textContent).not.toContain(en["history.field.email"]);
+  });
+
   it("says the contact could not be opened when the row read fails", async () => {
     const routes = archivedContactRoutes();
     routes["GET /contacts/p-1"] = () =>

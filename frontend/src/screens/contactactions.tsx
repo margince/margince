@@ -190,8 +190,12 @@ export function ContactActions({
                 recordId={contactId}
                 disabledReasonId={refusedReasonId}
               />
-              <AddToShortlistAction entityType="contact" entityId={contactId} />
-              <WorkAsLeadAction contactId={contactId} />
+              <AddToShortlistAction
+                entityType="contact"
+                entityId={contactId}
+                reasonId={archived}
+              />
+              <WorkAsLeadAction contactId={contactId} reasonId={archived} />
               <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>

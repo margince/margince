@@ -20,6 +20,7 @@ import {
   type BookingSlot,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
+import { contactQuery } from "./contact.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import { useWorkingHours } from "./working-hours";
 
@@ -49,15 +50,8 @@ export function BookingInviteScreen({
   const profile = useSchedulingProfile(true);
   const selectedId = edits.contact?.id ?? contactId ?? "";
   const contact = useQuery({
-    queryKey: ["booking-contact", selectedId],
+    ...contactQuery(selectedId || undefined),
     enabled: !!selectedId,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}", {
-          params: { path: { id: selectedId } },
-        }),
-      );
-    },
   });
   const saved = profile.data;
   const provider = saved?.provider ?? "";

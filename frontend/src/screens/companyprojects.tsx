@@ -53,13 +53,11 @@ export function roleKey(role: string): MessageKey {
 export function CompanyProjects({
   companyId,
   projects,
-  readOnly,
   create,
   bare,
 }: Readonly<{
   companyId: string;
   projects: readonly Company360Project[] | undefined;
-  readOnly?: boolean;
   // The create verb, handed to the section's own verb row.
   create?: ReactNode;
   // As a group inside the pane the caller holds — see ProjectLinks.
@@ -121,7 +119,6 @@ export function CompanyProjects({
         <PhaseBadge phase={project.phase as ProjectPhase} />
       ) : null,
     })),
-    readOnly,
     // A company can be on any number of projects — that is the whole point of
     // the edge this section writes.
     allowsMany: true,
@@ -157,7 +154,6 @@ export function CompanyProjectsPanel({
   view,
   loading,
   failed,
-  readOnly,
 }: Readonly<{
   companyId: string;
   view?: Company360;
@@ -166,7 +162,6 @@ export function CompanyProjectsPanel({
   // answers, and `sectionState` can tell neither from the other on its own.
   loading?: boolean;
   failed?: boolean;
-  readOnly?: boolean;
 }>) {
   const t = useT();
   const projects = view?.projects;
@@ -190,7 +185,6 @@ export function CompanyProjectsPanel({
       <CompanyProjects
         companyId={companyId}
         projects={projects}
-        readOnly={readOnly}
         create={
           company && (
             <NewProjectAction

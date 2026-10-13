@@ -1235,7 +1235,9 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
       name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
     })
     .click();
-  await expect(page.getByText(de["common.duplicate.slotTaken"])).toBeVisible();
+  await expect(
+    page.getByText(de["common.duplicate.slotTaken"]),
+  ).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 

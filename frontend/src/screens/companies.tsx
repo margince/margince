@@ -647,9 +647,7 @@ function companyTabsFor(
   // The server refuses an archived account's roster, deals, tasks and money, so
   // these tabs would open onto nothing too.
   if (company.archived_at) {
-    for (const refused of REFUSED_WHEN_ARCHIVED) {
-      if (refused !== tab) drop.add(refused);
-    }
+    for (const refused of REFUSED_WHEN_ARCHIVED) drop.add(refused);
   }
   return drop.size === 0
     ? COMPANY_TABS
@@ -742,7 +740,7 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
 function CompanyRecord({
   company,
   view,
-  tab,
+  tab: addressed,
   onTab,
   t,
 }: Readonly<{
@@ -753,6 +751,11 @@ function CompanyRecord({
   t: ReturnType<typeof useT>;
 }>) {
   const archived = Boolean(company.archived_at);
+  // A link to a tab an archived account cannot answer opens its Overview.
+  const tab =
+    archived && REFUSED_WHEN_ARCHIVED.includes(addressed)
+      ? "overview"
+      : addressed;
   const assembled = archived ? undefined : view.data;
   const visibleTabs = companyTabsFor(company, tab);
   // The strip stands whatever it holds: the details switch rides at its end,
@@ -934,9 +937,6 @@ function useChronologySlots({
   // through the opener a pill press uses — one act, one set of rules about
   // opening a cut, and no screen of its own.
   const showChanges = () => openCut("changes");
-  // Every cut but Changes reads the 360's exchanges, which the server refuses
-  // for an archived account.
-  const refusedExchanges = Boolean(company.archived_at) && filter !== "changes";
 
   if (!active) {
     return {
@@ -973,10 +973,8 @@ function useChronologySlots({
       // rendering of rows another cut shows. The By-field reading and the
       // put-back control live in the record's Full history (the header's
       // overflow menu), the one surface that carries the restore write.
-      timelineNotice: refusedExchanges ? (
-        <span />
-      ) : (
-        (chronologyNotice(
+      timelineNotice:
+        chronologyNotice(
           filter === "conversations"
             ? "chronology.conversationsEmpty"
             : "co.timeline.empty",
@@ -986,10 +984,11 @@ function useChronologySlots({
             loading: loading || timeline.isPending,
             failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
-            // answers; the unfiltered one is the 360's section.
-            assembled: hasTimelineFilters(filters)
-              ? timeline.isSuccess
-              : Boolean(view?.activities),
+            // answers. So is an archived account's, whose 360 is refused.
+            assembled:
+              hasTimelineFilters(filters) || company.archived_at
+                ? timeline.isSuccess
+                : Boolean(view?.activities),
           },
           t,
         ) ??
@@ -1001,8 +1000,7 @@ function useChronologySlots({
             groups={groupChronology(history.entries, timeline.hasNextPage)}
             zone={recordZone}
           />
-        ) : undefined))
-      ),
+        ) : undefined),
     },
   };
 }
@@ -1179,9 +1177,6 @@ function CompanyPage({
     onTab("tasks");
   };
   const receipt = useCitedReceipt();
-  // An archived company takes no new activity, so completing or snoozing a
-  // task from here would only be refused server-side.
-  const readOnly = Boolean(company.archived_at);
   // Shared by the Tasks tab's row verbs and its detail modal, so a complete
   // fired from one and a snooze fired from the other land on the same
   // mutation and invalidate the same reads — the account's own timeline (the
@@ -1344,7 +1339,6 @@ function CompanyPage({
           }}
           decisionsOpen={decisionsOpen}
           onDecisionsOpen={setDecisionsOpen}
-          readOnly={readOnly}
           openTaskId={openTaskId}
           onOpenTask={setOpenTaskId}
           onOpenTaskFromToday={openTaskFromToday}
@@ -1412,7 +1406,6 @@ function CompanyRecordBody({
   onPerform,
   decisionsOpen,
   onDecisionsOpen,
-  readOnly,
   openTaskId,
   onOpenTask,
   onOpenTaskFromToday,
@@ -1437,7 +1430,6 @@ function CompanyRecordBody({
   onPerform: (action: SuggestionAction) => void;
   decisionsOpen: boolean;
   onDecisionsOpen: (open: boolean) => void;
-  readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
   // Opens a task the daily brief named, switching to the Tasks tab first:
@@ -1526,7 +1518,6 @@ function CompanyRecordBody({
         view={view}
         loading={loading}
         failed={failed}
-        readOnly={readOnly}
         openTaskId={openTaskId}
         onOpenTask={onOpenTask}
         onOpenRecord={openCitation}
@@ -1575,7 +1566,6 @@ function CompanyRecordBody({
             <BillingContactsPanel
               contacts={view?.billing_contacts}
               companyId={company.id}
-              readOnly={readOnly}
             />
           )}
         </div>
@@ -1594,7 +1584,6 @@ function CompanyRecordBody({
         <CompanyFinanceCard
           companyId={company.id}
           lifecycle={company.lifecycle}
-          readOnly={readOnly}
         />
       )}
       {tab === "documents" && (
@@ -1777,7 +1766,6 @@ function CompanyDealsAndTasksTabs({
   view,
   loading,
   failed,
-  readOnly,
   openTaskId,
   onOpenTask,
   onOpenRecord,
@@ -1791,7 +1779,6 @@ function CompanyDealsAndTasksTabs({
   // wait from a failure.
   loading: boolean;
   failed: boolean;
-  readOnly: boolean;
   openTaskId: string | null;
   onOpenTask: (activityId: string | null) => void;
   // Where a recommended step's citations lead: the page's own, so a chip
@@ -1828,12 +1815,7 @@ function CompanyDealsAndTasksTabs({
                 <CompanyContractState view={view} />
               </Panel>
             )}
-          <CompanyDealsTab
-            company={company}
-            view={view}
-            failed={failed}
-            readOnly={readOnly}
-          />
+          <CompanyDealsTab company={company} view={view} failed={failed} />
           {/* The deliveries this account is part of, as its own block under
               the pipeline: the tab reads "Deals & projects" because both are
               the account's work in flight, and a reader who came here for
@@ -1843,7 +1825,6 @@ function CompanyDealsAndTasksTabs({
             view={view}
             loading={loading}
             failed={failed}
-            readOnly={readOnly}
           />
         </div>
       )}
@@ -1852,7 +1833,6 @@ function CompanyDealsAndTasksTabs({
           companyId={company.id}
           view={view}
           failed={failed}
-          readOnly={readOnly}
           onOpenTask={onOpenTask}
           onOpenRecord={onOpenRecord}
           onOpenReceipt={onOpenReceipt}
@@ -1862,7 +1842,7 @@ function CompanyDealsAndTasksTabs({
       {tab === "tasks" && !company.archived_at && openTaskId && (
         <TaskDetailModal
           activityId={openTaskId}
-          readOnly={readOnly}
+          readOnly={false}
           onClose={() => onOpenTask(null)}
           update={taskUpdate}
         />
@@ -1886,14 +1866,10 @@ function CompanyDealsTab({
   company,
   view,
   failed,
-  readOnly,
 }: Readonly<{
   company: Company;
   view?: Company360View;
   failed: boolean;
-  // An archived company takes no new deal, so it shows no verb that would
-  // only be refused.
-  readOnly: boolean;
 }>) {
   if (!view && !failed) {
     return (
@@ -1906,12 +1882,10 @@ function CompanyDealsTab({
     <DealsCard
       view={view}
       actions={
-        readOnly ? undefined : (
-          <NewDealAction
-            companyId={company.id}
-            companyName={company.display_name}
-          />
-        )
+        <NewDealAction
+          companyId={company.id}
+          companyName={company.display_name}
+        />
       }
       extra={<CompanyLastOffer view={view} />}
     />
@@ -1930,7 +1904,6 @@ function CompanyTasksTab({
   companyId,
   view,
   failed,
-  readOnly,
   onOpenTask,
   onOpenRecord,
   onOpenReceipt,
@@ -1939,9 +1912,6 @@ function CompanyTasksTab({
   companyId: string;
   view?: Company360View;
   failed: boolean;
-  // An archived company takes no new activity, so completing or snoozing a
-  // task from here would only be refused server-side.
-  readOnly: boolean;
   onOpenTask: (activityId: string) => void;
   onOpenRecord: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
@@ -1978,34 +1948,25 @@ function CompanyTasksTab({
   return (
     <NextSteps
       view={view}
-      // The recommended steps, above the ones already on the list. An archived
-      // account draws none: writing one would only be refused, and offering a
-      // button that cannot fire is the failure this whole surface avoids.
       proposed={
-        readOnly ? undefined : (
-          <ProposedNextSteps
-            companyId={companyId}
-            view={view}
-            onOpenRecord={onOpenRecord}
-            onOpenReceipt={onOpenReceipt}
-          />
-        )
+        <ProposedNextSteps
+          companyId={companyId}
+          view={view}
+          onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
+        />
       }
       onOpenTask={(step) => onOpenTask(step.activity_id)}
-      update={readOnly ? undefined : update}
-      renderAction={
-        readOnly
-          ? undefined
-          : (step) => (
-              <TaskQuickActions
-                activityId={step.activity_id}
-                version={step.version}
-                dueAt={step.due_at}
-                update={update}
-                showComplete={false}
-              />
-            )
-      }
+      update={update}
+      renderAction={(step) => (
+        <TaskQuickActions
+          activityId={step.activity_id}
+          version={step.version}
+          dueAt={step.due_at}
+          update={update}
+          showComplete={false}
+        />
+      )}
     />
   );
 }

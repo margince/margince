@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { emptyPage, jsonResponse, meRoute, type RouteMap } from "./story-utils";
+import { meFixture } from "../app/mefixture";
+import { emptyPage, jsonResponse, type RouteMap } from "./story-utils";
 
 type Contact = components["schemas"]["Contact"];
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
-// An archived contact as GET /contacts/{id} answers it. The story and the
-// suite share it, so the two cannot drift on what the server sends.
+// An archived contact as GET /contacts/{id} answers it: no addresses, which the
+// server leaves off an archived row. The story and the suite share it.
 export const archivedContact: Contact = {
   id: "p-1",
   full_name: "Dana Buyer",
@@ -17,18 +18,6 @@ export const archivedContact: Contact = {
   writable: false,
   version: 8,
   archived_at: "2026-08-14T09:00:00Z",
-  emails: [
-    {
-      id: "pe-1",
-      contact_id: "p-1",
-      email: "dana@brandt.example",
-      email_type: "work",
-      is_primary: true,
-      position: 0,
-      source: "manual",
-      captured_by: "human:u-1",
-    },
-  ],
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-06-01T08:00:00Z",
@@ -56,7 +45,17 @@ export const refusedRead = () =>
 
 export function archivedContactRoutes(): RouteMap {
   return {
-    "GET /me": meRoute({ contact: ["read", "update"], activity: ["create"] }),
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({
+          allow: {
+            contact: ["read", "update"],
+            activity: ["create"],
+            lead: ["create", "read"],
+          },
+          settingsAvailability: { lists: true },
+        }),
+      ),
     "GET /contacts/p-1": () => jsonResponse(archivedContact),
     "GET /contacts/p-1/360": refusedRead,
     "GET /contacts/p-1/brief": refusedRead,

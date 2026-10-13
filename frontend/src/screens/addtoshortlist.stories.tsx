@@ -14,7 +14,7 @@ export default meta;
 
 type Story = StoryObj;
 
-function offered() {
+function offered(reasonId?: string) {
   installFetchStub({
     "GET /me": listsMe(true),
     "GET /lists": () =>
@@ -22,16 +22,28 @@ function offered() {
   });
   return (
     <StoryProviders>
-      <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
+      <AddToShortlistAction
+        entityType="company"
+        entityId={MEMBER_ID}
+        reasonId={reasonId}
+      />
+      {reasonId && (
+        <p id={reasonId} className="t-caption">
+          This company is archived and takes no changes.
+        </p>
+      )}
     </StoryProviders>
   );
 }
 
-export const Offered: Story = { render: offered };
+export const Offered: Story = { render: () => offered() };
+
+/** Refused on a record that takes no changes, pointing at the page's reason. */
+export const Refused: Story = { render: () => offered("record-refused") };
 
 /** The verb pressed: which Shortlist, and the note on why. */
 export const Choosing: Story = {
-  render: offered,
+  render: () => offered(),
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {

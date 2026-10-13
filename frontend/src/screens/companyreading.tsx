@@ -21,8 +21,8 @@ type Company360View = components["schemas"]["Company360"];
 export type CompanyOverviewProps = Readonly<{
   company: Company;
   view?: Company360View;
-  // Decided by the page, so the research offer stands on this column or on the
-  // Profile tab, never on both and never on neither.
+  // Decided by the page, so the research offer never stands on this column and
+  // on the Profile tab at once.
   offerResearch: boolean;
   // The composite read's own pending flag (see CompanyRecordBody).
   loading: boolean;
@@ -104,29 +104,14 @@ export function CompanyReading({
   });
   return (
     <>
-      {/* The readings lead, under the bar that chose this tab: five doors into
-          the tabs that hold their rows. They belong to THIS tab rather than to
-          the record — the Contacts tab is a roster and the Documents tab is a
-          filing cabinet, and a row of account readings over either is a header
-          for a page it is not describing. */}
+      {/* On this tab rather than the record: over a roster or a filing cabinet,
+          a row of account readings heads a page it does not describe. */}
       {view && (
         <StateStrip companyId={company.id} view={view} onOpenTab={onOpenTab} />
       )}
-      {/* An account with nothing on file is asked a different question from a
-          running one: not "what should you do here" but "shall Margince go and
-          find out who these contacts are". So the research offer LEADS the
-          column on such an account, and stands down the moment there is
-          anything to read: on a live account the lead is the 360 below, and
-          two leads is none.
-
-          An account already RESEARCHED has answered that question too, even
-          when the read filled nothing in. The offer belongs on Profile from
-          then on, with the record's other tools, where a rep goes to run it
-          again — see offerResearchOnOverview. */}
+      {/* An account with nothing on file asks whether to research it, so the
+          offer leads; once there is anything to read, the call below leads. */}
       {offerResearch && <DeepReadPanel companyId={company.id} />}
-      {/* The call leads at full measure: the word, its sentence, the three
-          dimensions, the spine and the folded thread. What moved since the
-          reader's last visit rides in its foot. */}
       <Company360Call
         reading={reading}
         name={company.display_name}
@@ -134,11 +119,8 @@ export function CompanyReading({
         titleAction={
           view && (
             <>
-              {/* The reading's own date, and only where the payload carries a
-                  date this can read. A server one release out of step answers
-                  the 360 without `as_of`, and Intl refuses an unparseable
-                  value by throwing, which took the whole record down over a
-                  line that only qualifies the head. */}
+              {/* Intl throws on an unparseable date, and a server one release
+                  out of step answers without `as_of`. */}
               {!Number.isNaN(Date.parse(view.as_of)) && (
                 <span className="t-caption">
                   {t("contact.brief.updatedAt", {
@@ -146,10 +128,7 @@ export function CompanyReading({
                   })}
                 </span>
               )}
-              {/* The 360 call is a composition read off this account's own
-                  records rather than model prose, so its claim of authorship
-                  is the deterministic one — the same distinction the sources
-                  under the dossier and the brief already carry. */}
+              {/* Composed from the account's own records, not model prose. */}
               <WrittenBy by="deterministic" />
             </>
           )
@@ -166,11 +145,8 @@ export function CompanyReading({
           nameOf={nameOf}
           onOpenEmail={onOpenEmail}
         />
-        {/* Keyed on the account, so its fold is the account's own. The page
-              stays mounted while the route swaps companies, and without
-              this a thread a reader OPENED on one company arrives open on the
-              next — carrying one account's reading into another's, and
-              spending the glance the fold is closed to protect. */}
+        {/* Keyed on the account: the page stays mounted across companies, and a
+            thread opened on one must not arrive open on the next. */}
         <ThreadFold
           key={company.id}
           view={view}
@@ -180,14 +156,8 @@ export function CompanyReading({
           onOpenEmail={onOpenEmail}
         />
       </Company360Call>
-      {/* One column under the 360, full width at every measure: content-driven
-          cards of unequal height never share a row, so a tall needs list and a
-          short Ask box beside it would leave the short one's row half empty.
-          The order is the order a rep works them: what needs a contact, then
-          what the account is, then the questions the 360 already answers. The
-          money and the pipeline read on the Deals tab now, and the rail's own
-          DealsSection stands on every tab: a third copy of them here would be
-          a figure the reader has to reconcile against the other two. */}
+      {/* Full width at every measure: cards of unequal height never share a
+          row, or the shorter one's row is left half empty. */}
       <NeedsList reading={reading} onOpenTasks={onOpenTasks} />
     </>
   );

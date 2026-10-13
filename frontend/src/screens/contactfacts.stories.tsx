@@ -16,10 +16,22 @@ export default meta;
 
 type Story = StoryObj;
 
-const live = {
+const live: typeof archivedContact = {
   ...archivedContact,
   archived_at: null,
   writable: true,
+  emails: [
+    {
+      id: "pe-1",
+      contact_id: "p-1",
+      email: "dana@brandt.example",
+      email_type: "work",
+      is_primary: true,
+      position: 0,
+      source: "manual",
+      captured_by: "human:u-1",
+    },
+  ],
   social: { linkedin: "https://linkedin.com/in/danabuyer" },
   address: { city: "Munich", country: "DE" },
 };
@@ -40,7 +52,7 @@ export const Live: Story = {
   render: () => <Facts contact={live} buyingRole="champion" />,
 };
 
-// No buying role without the 360, and the address reads rather than writes.
+// The row alone: no buying role without the 360, and no address on file.
 export const Archived: Story = {
   render: () => <Facts contact={archivedContact} />,
 };

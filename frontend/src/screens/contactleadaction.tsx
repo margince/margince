@@ -29,7 +29,12 @@ type Lead = components["schemas"]["Lead"];
  */
 export function WorkAsLeadAction({
   contactId,
-}: Readonly<{ contactId: string }>) {
+  reasonId,
+}: Readonly<{
+  contactId: string;
+  // The page's sentence for a contact that takes no changes, by id.
+  reasonId?: string;
+}>) {
   const t = useT();
   const me = useMe();
   const canCreate = useCanWrite("lead", "create");
@@ -95,6 +100,7 @@ export function WorkAsLeadAction({
   return (
     <Button
       disabled={create.isPending || !me.data || worked.isPending}
+      reasonId={reasonId}
       onClick={() =>
         create.mutate({ contact: contactId, owner: me.data?.user.id })
       }

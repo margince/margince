@@ -26,7 +26,8 @@ import { BriefQueue } from "./brief.queue";
 import { ComposeModal } from "./compose";
 import { intentAbout } from "./compose.intent";
 import { useWaitingDraftBand } from "./composewaitingdraft";
-import { contactQuery } from "./contact.queries";
+import { contactPageState, contactQuery } from "./contact.queries";
+import { useContact360 } from "./contact360";
 import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
 import { ContactDealsTab } from "./contactdeals";
@@ -283,17 +284,7 @@ export function ContactPageV2({
   // Read at screen level and handed down, so the schema request runs BESIDE
   // the contact's rather than after it — an edit opened before this landed
   // would otherwise offer a form with no custom fields on it.
-  const view = useQuery({
-    queryKey: ["contact360", id],
-    enabled: !record.data?.archived_at,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}/360", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
+  const view = useContact360(id, !record.data?.archived_at);
 
   const brief = useQuery({
     queryKey: ["contactBrief", id],
@@ -375,12 +366,13 @@ export function ContactPageV2({
       <ArchivedContactPage
         contact={record.data}
         band={band}
-        refusedReasonId={refusedReasonId}
+        refusedReasonId={readOnlyReasonId}
       />
     );
   }
-  if (record.isPending || view.isLoading) return <ContactOpening id={id} />;
-  if (record.isError || view.isError || !view.data) {
+  const reads = contactPageState(record, view);
+  if (reads === "opening") return <ContactOpening id={id} />;
+  if (reads === "notOpened" || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;
   }
 

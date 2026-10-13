@@ -1,18 +1,24 @@
 /** @vitest-environment happy-dom */
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { createQueryClient } from "../app/queryclient";
+import { RecordShell } from "../app/testing/recordshell.testkit";
+import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompanyScreen } from "./companies";
-import { company } from "./company.fixtures";
+import { company, company360 } from "./company.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-  StoryProviders,
 } from "./story-utils";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.location.hash = "";
+});
 
 const archived = {
   ...company,
@@ -23,9 +29,29 @@ const archived = {
 
 const notFound = () => jsonResponse({ status: 404, code: "not_found" }, 404);
 
+function activity(id: string, subject: string) {
+  return {
+    id,
+    kind: "call",
+    subject,
+    occurred_at: "2026-07-10T09:00:00Z",
+    is_done: true,
+    source: "manual",
+    captured_by: "human:u1",
+    created_at: "2026-07-10T09:00:00Z",
+    updated_at: "2026-07-10T09:00:00Z",
+  };
+}
+
 // Every read the server refuses for an archived account, answered as it does.
 // Each is counted, so a spec can say which of them the page asked.
-function mountArchived(): string[] {
+function mountArchived(
+  options: Readonly<{
+    tab?: string;
+    routes?: RouteMap;
+    client?: QueryClient;
+  }> = {},
+): string[] {
   const asked: string[] = [];
   const refused = (path: string) => () => {
     asked.push(path);
@@ -40,15 +66,25 @@ function mountArchived(): string[] {
   for (const path of [
     "/companies/o-1/360",
     "/companies/o-1/finance-summary",
+    "/companies/o-1/contracts",
     "/records/company/o-1/lists",
   ]) {
     routes[`GET ${path}`] = refused(path);
   }
-  installFetchStub(routes);
+  installFetchStub({ ...routes, ...options.routes });
+  window.location.hash = `#/companies/o-1/${options.tab ?? "overview"}`;
+  const client = options.client ?? createQueryClient();
+  client.setDefaultOptions({
+    queries: { ...client.getDefaultOptions().queries, retry: false },
+  });
   render(
-    <StoryProviders>
-      <CompanyScreen id="o-1" />
-    </StoryProviders>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <RecordShell>
+          <CompanyScreen id="o-1" />
+        </RecordShell>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   return asked;
 }
@@ -86,5 +122,68 @@ describe("CompanyScreen — an archived account", () => {
     ]) {
       expect(screen.queryByRole("button", { name: tab })).toBeNull();
     }
+  });
+
+  for (const refusedTab of ["contacts", "deals", "tasks", "finance"]) {
+    it(`opens a link to its ${refusedTab} tab on the Overview`, async () => {
+      mountArchived({ tab: refusedTab });
+
+      const overview = await screen.findByRole("button", {
+        name: en["tab.overview"],
+      });
+      expect(overview.getAttribute("aria-pressed")).toBe("true");
+    });
+  }
+
+  it("draws its timeline from the activity list, not from a 360 it never shows", async () => {
+    mountArchived({
+      tab: "timeline",
+      routes: {
+        "GET /companies/o-1/360": () =>
+          jsonResponse({
+            ...company360,
+            activities: {
+              data: [activity("a-360", "From the composite")],
+              page: { has_more: false },
+            },
+          }),
+        "GET /activities": () =>
+          jsonResponse({
+            data: [activity("a-list", "From the list")],
+            page: { has_more: false },
+          }),
+      },
+    });
+
+    expect(await screen.findByText("From the list")).toBeTruthy();
+    expect(screen.queryByText("From the composite")).toBeNull();
+  });
+
+  it("waits on nothing when its 360 is never asked", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["company", "o-1"], archived);
+    mountArchived({
+      tab: "timeline",
+      client,
+      routes: {
+        "GET /activities": () =>
+          jsonResponse({
+            data: [activity("a-list", "From the list")],
+            page: { has_more: false },
+          }),
+      },
+    });
+
+    expect(await screen.findByText("From the list")).toBeTruthy();
+    expect(screen.queryByText(en["record.chronologyLoading"])).toBeNull();
+  });
+
+  it("reads no contracts on its documents tab", async () => {
+    const asked = mountArchived({ tab: "documents" });
+
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+    await waitFor(() => expect(asked).toContain("/companies/o-1/360"));
+    expect(screen.queryByText(en["contracts.title"])).toBeNull();
+    expect(asked).not.toContain("/companies/o-1/contracts");
   });
 });

@@ -298,7 +298,7 @@ describe("CompanyScreen — the Tasks tab", () => {
     ).toBeNull();
   });
 
-  it("draws no task and no verb on an archived account's addressed Tasks tab", async () => {
+  it("opens a link to an archived account's Tasks tab on its Overview", async () => {
     stubFetch(
       async (url) =>
         url.endsWith("/companies/o-1")
@@ -307,13 +307,12 @@ describe("CompanyScreen — the Tasks tab", () => {
       { company360: company360WithOpenTask },
     );
     window.location.hash = "#/companies/o-1/tasks";
-    const { container } = render(<CompanyScreen id="o-1" />);
+    render(<CompanyScreen id="o-1" />);
 
-    expect(await screen.findByText("Archived")).toBeTruthy();
+    const overview = await screen.findByRole("button", { name: "Overview" });
+    expect(overview.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.queryByRole("button", { name: /^Tasks/ })).toBeNull();
     expect(screen.queryByText(openTask.subject)).toBeNull();
-    expect(screen.queryByRole("checkbox", { name: "Done" })).toBeNull();
-    // No placeholder either: the read it would wait for is never answered.
-    expect(container.querySelector(".co-card .skeleton")).toBeNull();
   });
 
   // The detail modal renders on this tab and nowhere else, so a tab change
