@@ -236,8 +236,8 @@ func TestAJobLostBeforeItsClaimIsReinsertedOnce(t *testing.T) {
 	}
 }
 
-// A queued run whose job is alive is asked about once a window, not on every
-// pass: the insert that found the job dates the run.
+// A queued run whose job is alive is asked about once a window. The insert that
+// found the job dates the run, so the next pass leaves it.
 func TestALiveJobsRequeueWaitsAWholeWindow(t *testing.T) {
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()

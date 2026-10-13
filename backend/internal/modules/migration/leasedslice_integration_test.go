@@ -132,9 +132,9 @@ func TestARunTheWalkStoppedCarriesTheSentenceForItsCause(t *testing.T) {
 	}
 }
 
-// A slice whose setup or first read outlasts its time budget still lands a move
-// before it stops, so a run of seven moves ends in at most seven slices. Only the
-// first slice counts the source; later ones read the totals its flush recorded.
+// A slice whose setup or first read outlasts its time budget still lands a move.
+// A run of seven moves then ends in at most seven slices. Only the first slice
+// counts the source; later ones read the totals its flush recorded.
 func TestASliceWhoseSetupOutlastsItsBudgetStillLandsARow(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)

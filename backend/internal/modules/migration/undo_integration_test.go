@@ -444,8 +444,8 @@ func (w *archivingUndoWriters) Reverse(_ context.Context, _ string, nativeID ids
 	return nil
 }
 
-// A page replayed after the process died counts each row it reversed once:
-// the checkpoint and the report are one write, so both lost the same rows.
+// A page replayed after the process died counts each row it reversed once. The
+// checkpoint and the report are one write, so both lost the same rows.
 func TestAReplayedUndoPageCountsEachRowOnce(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)

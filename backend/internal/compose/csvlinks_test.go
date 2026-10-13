@@ -62,8 +62,8 @@ func TestARowNamedByIDAnswersItsRef(t *testing.T) {
 	}
 }
 
-// A company an earlier slice landed by id is checked only when a link asks for
-// its ref, and once, so a resumed slice pays for the links it writes.
+// A company an earlier slice landed by id is checked once, when a link first
+// asks for its ref. A resumed slice pays only for the links it writes.
 func TestANamedCompanyIsCheckedOnlyWhenALinkAsksForIt(t *testing.T) {
 	r := newTestLinkResolver(t)
 	id := ids.NewV7()

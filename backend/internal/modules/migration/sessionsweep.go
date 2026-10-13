@@ -175,7 +175,7 @@ func (s *RunStore) ResumeStaleAttempts(ctx context.Context, staleAfter time.Dura
 }
 
 // settleStale resumes or stops one attempt the read found stale, once its row
-// lock shows it still is: a slice that beat since then keeps its run.
+// lock shows it still is. A slice that beat since then keeps its run.
 func (s *RunStore) settleStale(ctx context.Context, d dueAttempt, staleAfter time.Duration, maxResumes int, requeue Requeue) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := lockGuarded(ctx, tx, d.lease, staleClaim, staleAfter); err != nil {
