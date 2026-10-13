@@ -35,26 +35,26 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `approved_at` | `timestamp with time zone` |  |  |
+| `approved_at` | `timestamp with time zone` |  | When the run was approved. |
 | `approved_by` | `text` |  |  |
 | `checkpoint` | `integer`, default `0` | yes | Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. |
 | `connector` | `text` | yes | One of `csv`, `salesforce`. |
 | `draft_step` | `text` |  | One of `files`, `map`. |
-| `error` | `text` |  | Why a failed run stopped, in the uploader's terms. |
+| `error` | `text` |  | Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. |
 | `mapping` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `profile` | `jsonb` |  |  |
+| `profile` | `jsonb` |  | What the upload read of the file. |
 | `report` | `jsonb` |  |  |
 | `source_name` | `text`, generated as `COALESCE((mapping ->> 'source_name'::text), ''::text)` |  | Computed by the database. It cannot be written directly. |
 | `source_ref` | `text` | yes |  |
 | `source_released_at` | `timestamp with time zone` |  |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 3 more. |
-| `superseded_by` | `uuid` |  |  |
+| `superseded_by` | `uuid` |  | The newer test run of the same source that cancelled this one. |
 | `undo_report` | `jsonb` |  |  |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `integer`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+| `version` | `integer`, default `1` | yes | Bumped by every saved change of a choice. |
 
 **Rules**
 

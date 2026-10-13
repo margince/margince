@@ -72,17 +72,10 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			_, err := s.UnreferencedImportKeys(ctx, []string{"ws/import/x"})
 			return err
 		}},
-		{"CreateStagedRun", func() error {
-			_, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
-				Connector: ConnectorCSV, SourceRef: "x", Source: "t",
-				Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
-			})
-			return err
-		}},
+		{"RunOfSource", func() error { _, err := s.RunOfSource(ctx, "x"); return err }},
 		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
-		{"Approve", func() error { _, err := s.Approve(ctx, runID); return err }},
+		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID); return err }},
-		{"FailValidation", func() error { return s.FailValidation(ctx, runID) }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
 		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {
@@ -665,8 +658,8 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
 		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
 		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
-		"CreateStagedRun": true, "AwaitApproval": true, "Approve": true,
-		"ResumeApproved": true, "FailValidation": true, "GetStaged": true, "ListStaged": true,
+		"RunOfSource": true, "AwaitApproval": true, "Approve": true,
+		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
 		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,

@@ -119,7 +119,7 @@ func (i importSeam) ProfileSource(
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	return i.door().profileAndStore(ctx, object, []byte(csv))
+	return i.door().profileAndStore(ctx, object, "", []byte(csv))
 }
 
 // DiscardSource removes a stored source no run will reference. Same grant as
@@ -231,7 +231,7 @@ func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.Impor
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	return i.door().commitRun(ctx, openapi_types.UUID(id))
+	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
 
 // ready refuses the three verbs that need the source bytes when this role

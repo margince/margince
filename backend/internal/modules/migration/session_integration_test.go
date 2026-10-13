@@ -202,7 +202,7 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	writing := toReport(t, ctx, s, newDraft(t, ctx, s, "Fair 2026"))
-	if _, err := s.Approve(ctx, writing.ID); err != nil {
+	if _, err := s.Approve(ctx, writing.ID, writing.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	draft := newDraft(t, ctx, s, "Fair 2026")
@@ -220,22 +220,20 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	unapproved, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
-		Connector: ConnectorCSV, SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api",
-		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
-	})
-	if err != nil {
-		t.Fatalf("CreateStagedRun: %v", err)
+	// Only code before saved sessions failed a test run; such a run was never approved.
+	unapproved := seedRunIn(t, ctx, db, StatusFailed)
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE import_run SET approved_at = NULL WHERE id = $1`, unapproved)
+		return err
+	}); err != nil {
+		t.Fatalf("clearing the approval: %v", err)
 	}
-	if err := s.FailValidation(ctx, unapproved.ID); err != nil {
-		t.Fatalf("FailValidation: %v", err)
-	}
-	if _, err := s.ResumeApproved(ctx, unapproved.ID); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ResumeApproved(ctx, unapproved); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("resuming a failed run nobody approved = %v, want a conflict: it never reached a commit", err)
 	}
 
 	approved := toReport(t, ctx, s, newDraft(t, ctx, s, ""))
-	if _, err := s.Approve(ctx, approved.ID); err != nil {
+	if _, err := s.Approve(ctx, approved.ID, approved.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	if err := s.FailRunning(ctx, approved.ID, CauseStopped); err != nil {

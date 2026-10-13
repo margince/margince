@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -56,17 +57,8 @@ func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID
 // only state Undo starts from.
 func completeCSVRun(ctx context.Context, t *testing.T, s *RunStore) Run {
 	t.Helper()
-	run, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
-		Connector: ConnectorCSV, SourceRef: "src", Source: "import_api",
-		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
-	})
-	if err != nil {
-		t.Fatalf("CreateStagedRun: %v", err)
-	}
-	if err := s.AwaitApproval(ctx, run.ID, Report{}); err != nil {
-		t.Fatalf("AwaitApproval: %v", err)
-	}
-	if _, err := s.Approve(ctx, run.ID); err != nil {
+	run := toReport(t, ctx, s, newDraft(t, ctx, s, ""))
+	if _, err := s.Approve(ctx, run.ID, run.Version); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	if err := s.complete(ctx, run.ID, Report{Imported: 2}); err != nil {
@@ -266,12 +258,9 @@ func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 func TestUndoRefusesAnythingButComplete(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	run, err := s.CreateStagedRun(ctx, CreateStagedRunInput{
-		Connector: ConnectorCSV, SourceRef: "src", Source: "import_api",
-		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
-	})
-	if err != nil {
-		t.Fatalf("CreateStagedRun: %v", err)
+	run := newDraft(t, ctx, s, "")
+	if _, err := s.QueueValidation(ctx, run.ID, run.Version); err != nil {
+		t.Fatalf("QueueValidation: %v", err)
 	}
 	if _, err := s.Undo(ctx, run.ID, &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("undo of a validating run err = %v, want ErrConflict", err)
@@ -347,5 +336,26 @@ func TestUndoOfAnUnknownRunIsNotFound(t *testing.T) {
 	s := NewRunStore(db)
 	if _, err := s.Undo(ctx, RunID(ids.NewV7()), &fakeUndoWriters{}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Undo of an unknown run = %v, want ErrNotFound", err)
+	}
+}
+
+// Undo reads the identity map and never the file, so a finished run lets the
+// file go. No run can then test its upload again.
+func TestACompletedRunReleasesItsSource(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	done := completeCSVRun(ctx, t, s)
+	if !done.SourceReleased || done.Profile != nil {
+		t.Fatalf("the completed run reads released=%v profile=%s, want its file and profile released", done.SourceReleased, done.Profile)
+	}
+	if kinds := intentKinds(t, ctx, db, done.SourceRef); !slices.Equal(kinds, []string{"import"}) {
+		t.Errorf("the released key is in the ledger as %v, want one import intent for the reaper", kinds)
+	}
+	holder, err := s.RunOfSource(ctx, done.SourceRef)
+	if err != nil || holder.ID != done.ID || !holder.SourceReleased {
+		t.Errorf("RunOfSource = (%+v, %v), want the completed run, released", holder, err)
+	}
+	if _, err := s.RunOfSource(ctx, "ws/import/"+ids.NewV7().String()); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("RunOfSource of an upload no run names = %v, want not found", err)
 	}
 }

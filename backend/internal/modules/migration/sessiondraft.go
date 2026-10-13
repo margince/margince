@@ -6,6 +6,7 @@ package migration
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -67,7 +68,35 @@ func (s *RunStore) CreateDraftRun(ctx context.Context, in CreateDraftRunInput) (
 		if err := storedobjects.Clear(ctx, tx, in.SourceRef); err != nil {
 			return err
 		}
-		run, err = readStaged(ctx, tx, id, true)
+		run, err = readStaged(ctx, tx, id)
+		return err
+	})
+	if err != nil {
+		return Run{}, err
+	}
+	return run, nil
+}
+
+// RunOfSource reads the csv run that holds an upload: its unreleased run, or
+// else the newest run that released it. An upload no run names is not found.
+func (s *RunStore) RunOfSource(ctx context.Context, sourceRef string) (Run, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return Run{}, err
+	}
+	var run Run
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var id RunID
+		err := tx.QueryRow(ctx, `
+			SELECT id FROM import_run WHERE connector = $1 AND source_ref = $2
+			 ORDER BY source_released_at IS NULL DESC, created_at DESC, id DESC LIMIT 1`,
+			ConnectorCSV, sourceRef).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("no import run holds this upload: %w", apperrors.ErrNotFound)
+		}
+		if err != nil {
+			return fmt.Errorf("finding the import run of an upload: %w", err)
+		}
+		run, err = readStaged(ctx, tx, id)
 		return err
 	})
 	if err != nil {
@@ -128,7 +157,7 @@ func (s *RunStore) UpdateDraft(ctx context.Context, id RunID, version int, patch
 				return err
 			}
 		}
-		run, err = readStaged(ctx, tx, id, true)
+		run, err = readStaged(ctx, tx, id)
 		return err
 	})
 	if err != nil {

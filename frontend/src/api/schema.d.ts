@@ -18893,8 +18893,14 @@ export interface paths {
          *     blank is visible and the guess is not.
          *
          *     The uploaded bytes are durable and addressed by the returned
-         *     `source_ref`; nothing is imported, validated or written by this call.
-         *     A source that is never used by `createImportRun` expires unreferenced.
+         *     `source_ref`; nothing is imported or validated by this call. It opens
+         *     the upload's run as a draft (`pending`), named by `run_id`, which keeps
+         *     the profile and every later choice. A draft left idle is cancelled and
+         *     its file released.
+         *
+         *     The file's rows are counted first. A file with more rows than one test
+         *     run reads is refused 422 `too_many_rows`, and no run and no stored file
+         *     are left behind.
          */
         post: operations["uploadImportSource"];
         delete?: never;
@@ -18928,6 +18934,19 @@ export interface paths {
          *     validation pass — which writes **no** domain rows (AC-M5). The run
          *     arrives at `awaiting_approval` carrying the report
          *     `getImportRunReport` reads.
+         *
+         *     An upload has one run. This call writes the mapping onto the draft the
+         *     upload opened and tests it, so a second call on one `source_ref`
+         *     re-tests the same run rather than opening another. A source with no run
+         *     gets one. A source whose run has written, or whose file was released,
+         *     is a 409.
+         *
+         *     A test run of a `source_name` cancels every other run of that name that
+         *     has not written (`superseded_by` names this run). A run of that name
+         *     that is writing refuses it with 409 `import_source_busy`, whose
+         *     `details.run_id` names that run when the caller may read it. A test run
+         *     that stops on the file is refused 422, and the run returns to `pending`
+         *     with the reason in `error`.
          *
          *     Permission-gated as a workspace-wide bulk mutation of the estate: a rep
          *     neither starts nor reads a migration run.
@@ -19023,6 +19042,75 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Save choices on a draft import run.
+         * @description Writes the choices the body names onto a `pending` run, or onto an
+         *     `awaiting_approval` run, which a changed choice returns to `pending`
+         *     with its report cleared. A field left out is left as it is, and a body
+         *     that changes nothing writes nothing and keeps the `version`. Every write
+         *     bumps `version`.
+         *
+         *     `version` must equal the run's, so a write made on an older read is a
+         *     409 rather than an overwrite. A body changing only `draft_step` on an
+         *     `awaiting_approval` run is a 409 too. The choices are checked for shape
+         *     here and against the object's fields by `validateImportRun`, because a
+         *     draft may hold a mapping the importer has not finished.
+         */
+        patch: operations["updateImportRun"];
+        trace?: never;
+    };
+    "/imports/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test a draft import run against the estate.
+         * @description Runs the test of the run's saved choices, which writes no domain rows,
+         *     on the same run. "Import anyway" is `updateImportRun` with
+         *     `on_broken_link: drop_link`, then this call. `version` must equal the
+         *     run's. The run answers at `awaiting_approval` with its report, or at
+         *     `pending` with the reason in `error` when the test stopped on the file
+         *     (also a 422). A second call for a run already being tested at that
+         *     `version` changes nothing.
+         *
+         *     Supersede and `import_source_busy` work as they do for
+         *     `createImportRun`.
+         */
+        post: operations["validateImportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a draft or a report nobody will approve.
+         * @description Moves a `pending` or `awaiting_approval` run to `cancelled` and
+         *     releases its uploaded file. Neither state has written anything, so
+         *     nothing is left to undo. Any other state is a 409.
+         */
+        post: operations["cancelImportRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -19092,14 +19180,18 @@ export interface paths {
         put?: never;
         /**
          * Approve a validated import run and commit it.
-         * @description IEM-WIRE-5, and one of the three audited gates. Valid **only** from
-         *     `awaiting_approval`: approving a run that is already running, complete
-         *     or failed is a conflict, not a no-op, because each of those means the
-         *     approver is looking at a state that is not the one they judged.
+         * @description IEM-WIRE-5, and one of the three audited gates. Valid from
+         *     `awaiting_approval`: approving a run that is already running or
+         *     complete is a conflict, not a no-op, because each of those means the
+         *     approver is looking at a state that is not the one they judged. A
+         *     `version`, when sent, must equal the run's, so the report approved is
+         *     the one read. A `failed` run that was approved once resumes from its
+         *     checkpoint; one never approved is a 409.
          *
          *     The commit is checkpointed and idempotent on the source's own key, so a
          *     re-run of the same file converges rather than duplicating (IEM-AC-9),
-         *     and a run interrupted mid-way resumes from its checkpoint.
+         *     and a run interrupted mid-way resumes from its checkpoint. A run that
+         *     completes releases its uploaded file; undo does not read it.
          */
         post: operations["approveImportRun"];
         delete?: never;
@@ -23113,12 +23205,19 @@ export interface components {
         };
         /**
          * @description What one uploaded file looks like, plus the mapping proposed for it.
-         *     Nothing here is stored against a run yet: the human may change every
-         *     line of `suggested_mapping` before `createImportRun` accepts one.
+         *     The upload's draft run keeps it; the human may change every line of
+         *     `suggested_mapping` before `createImportRun` accepts one.
          */
         ImportSourceProfile: {
+            /**
+             * Format: uuid
+             * @description The draft run the upload opened. Every later choice and test is made on it.
+             */
+            run_id: string;
             /** @description Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct. */
             source_ref: string;
+            /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
+            row_count: number;
             object?: components["schemas"]["ImportObject"];
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
@@ -23156,6 +23255,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             columns: components["schemas"]["ImportColumn"][];
             rows_profiled: number;
+            /** @description Rows the file holds, as `ImportRun.parts[].row_count` counts them. */
+            row_count: number;
             /** @description One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file's type needs no second call. */
             suggested_mappings: {
                 [key: string]: {
@@ -23471,9 +23572,51 @@ export interface components {
             undo?: components["schemas"]["ImportUndoReport"];
         };
         /**
-         * @description IEM-DDL-1's lifecycle. `failed` is resumable, not terminal: the run
-         *     carries the checkpoint it stopped at, and resuming continues from
-         *     there rather than re-reading the file from the top. `undoing`/`undone`
+         * @description The choices one save changes on a draft run, with the `version` it was
+         *     made on. Each choice has the meaning and the shape it has on
+         *     `CreateImportRunRequest`. A field left out keeps its value.
+         */
+        UpdateImportRunRequest: {
+            /** @description The run's `version` this save was made on. */
+            version: number;
+            object?: components["schemas"]["ImportObject"];
+            parts?: components["schemas"]["ImportPartRequest"][];
+            mapping?: {
+                [key: string]: string;
+            };
+            /** @description Empty means the mapped natural key. */
+            source_key?: string;
+            source_name?: string;
+            on_duplicate?: components["schemas"]["ImportOnDuplicate"];
+            on_broken_link?: components["schemas"]["ImportOnBrokenLink"];
+            /**
+             * Format: uuid
+             * @description The tag every created record is filed under; `null` files them under none.
+             */
+            context_tag_id?: string | null;
+            draft_step?: components["schemas"]["ImportDraftStep"];
+        };
+        /** @description The run's `version` a call was made on. */
+        ImportRunVersion: {
+            version: number;
+        };
+        /** @description What the approver read. Without a body, the run is approved at whatever version it holds. */
+        ApproveImportRunRequest: {
+            /** @description The run's `version` the approved report was read at. */
+            version?: number;
+        };
+        /**
+         * @description The wizard step a draft reopens on.
+         * @enum {string}
+         */
+        ImportDraftStep: "files" | "map";
+        /**
+         * @description IEM-DDL-1's lifecycle. `pending` is a draft: uploaded, with choices
+         *     still being made, and carrying the reason in `error` when its last test
+         *     stopped. `failed` only ever means a commit stopped, and it is
+         *     resumable, not terminal: the run carries the checkpoint it stopped at,
+         *     and resuming continues from there rather than re-reading the file from
+         *     the top. `undoing`/`undone`
          *     (IEM-WIRE-9) are the reversal's own states, reachable only from
          *     `complete` and only for the `csv` connector. `cancelled` ended before
          *     the run wrote anything: cancelled, superseded by a newer test run of
@@ -23544,8 +23687,25 @@ export interface components {
             status: components["schemas"]["ImportRunStatus"];
             /** @description Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. What a resume continues from. */
             checkpoint: number;
-            /** @description Why a failed run stopped, in the uploader's terms. Never a driver or SQL message. */
+            /** @description Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message. */
             error?: string | null;
+            /** @description Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another. */
+            version: number;
+            draft_step?: components["schemas"]["ImportDraftStep"];
+            /** @description What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list. */
+            profile?: components["schemas"]["ImportSourceProfile"];
+            /**
+             * Format: date-time
+             * @description When the run was approved. Absent for a run never approved.
+             */
+            approved_at?: string;
+            /**
+             * Format: uuid
+             * @description The newer test run of the same source that cancelled this one.
+             */
+            superseded_by?: string;
+            /** @description The uploaded file is no longer kept: the run completed, was cancelled or was superseded. */
+            source_released: boolean;
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -73327,6 +73487,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -73403,6 +73564,94 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    updateImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateImportRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The run as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    validateImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRunVersion"];
+            };
+        };
+        responses: {
+            /** @description The run after its test. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    cancelImportRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cancelled run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportRun"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     getImportRunReport: {
         parameters: {
             query?: never;
@@ -73464,7 +73713,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApproveImportRunRequest"];
+            };
+        };
         responses: {
             /** @description Approved; the commit is under way (or complete — the run record says which). */
             202: {

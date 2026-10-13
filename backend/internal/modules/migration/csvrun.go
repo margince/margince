@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -88,71 +87,6 @@ func (m RunMapping) PartList() []PartMapping {
 	return []PartMapping{{File: m.FileName, Object: m.Object, Fields: m.Fields, SourceKey: m.SourceKey}}
 }
 
-// CreateStagedRunInput opens a run that must be approved before it writes.
-type CreateStagedRunInput struct {
-	Connector string
-	SourceRef string
-	Source    string
-	Mapping   RunMapping
-}
-
-// CreateStagedRun opens a run in `validating`: the row exists, carries its
-// mapping, and has written nothing to the estate. The dry run reports against
-// it and AwaitApproval hands it to a human.
-func (s *RunStore) CreateStagedRun(ctx context.Context, in CreateStagedRunInput) (Run, error) {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
-		return Run{}, err
-	}
-	capturedBy, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return Run{}, err
-	}
-	mapping, err := json.Marshal(in.Mapping)
-	if err != nil {
-		return Run{}, fmt.Errorf("encoding the import mapping: %w", err)
-	}
-
-	var run Run
-	id := RunID(ids.NewV7())
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// A new test run replaces the unwritten runs of its name and of its upload,
-		// which each hold one active run.
-		if err := supersedeName(ctx, tx, id, in.Mapping.SourceName); err != nil {
-			return err
-		}
-		if err := supersedeWhere(ctx, tx, id, "source_ref", in.SourceRef); err != nil {
-			return err
-		}
-		row := tx.QueryRow(ctx, `
-			INSERT INTO import_run (id, connector, status, mapping, source_ref, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id, connector, status, source_ref, checkpoint, created_at, updated_at`,
-			id, in.Connector, StatusValidating, mapping, in.SourceRef, in.Source, capturedBy)
-		if err := scanRun(row, &run); storekit.IsUniqueViolation(err) {
-			return fmt.Errorf("the upload is held by an import run that has written: %w", apperrors.ErrConflict)
-		} else if err != nil {
-			return fmt.Errorf("creating import run: %w", err)
-		}
-		if _, err := storekit.Audit(ctx, tx, "create", ImportRunObject, run.ID, nil, map[string]any{
-			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
-			"object": in.Mapping.Object,
-		}); err != nil {
-			return err
-		}
-		// Retired on THIS transaction, now that a run names the source. A profile
-		// the contact abandons never reaches here, which is the point: the bytes
-		// were stored to be profiled and nothing adopts them, so the ledger
-		// collects them a grace period later instead of keeping them forever.
-		return storedobjects.Clear(ctx, tx, in.SourceRef)
-	})
-	if err != nil {
-		return Run{}, err
-	}
-	run.Mapping = &in.Mapping
-	run.CapturedBy = capturedBy
-	return run, nil
-}
-
 // AwaitApproval records what the dry run found and parks the run for a human.
 // Valid only from `validating`: a run that already moved on is not the one the
 // report describes.
@@ -169,13 +103,14 @@ func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) e
 	})
 }
 
-// Approve moves a validated run to `running`.
+// Approve moves a validated run to `running`. A version other than zero must
+// equal the run's, so the report approved is the one the approver read.
 //
 // Valid ONLY from `awaiting_approval`, and the refusal is the point: approving
 // a run that is already running, complete or failed means the approver is
 // acting on a state that is not the one they judged. The conflict says so
 // rather than starting a second pass over the same file.
-func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
+func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
@@ -185,6 +120,7 @@ func (s *RunStore) Approve(ctx context.Context, id RunID) (Run, error) {
 	}
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		return stageTransition(ctx, tx, id, moveApprove, runChange{
+			version:  version,
 			values:   []runValue{{"approved_by", approver}},
 			literals: []string{"approved_at = now()"},
 			after:    map[string]any{"approved_by": approver},
@@ -215,46 +151,6 @@ func (s *RunStore) ResumeApproved(ctx context.Context, id RunID) (Run, error) {
 	return s.GetStaged(ctx, id)
 }
 
-// FailValidation records a dry run that could not finish, with a fixed cause.
-// Valid only from `validating`, so it can never overwrite the outcome of a run
-// that has since been approved and committed.
-func (s *RunStore) FailValidation(ctx context.Context, id RunID) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET status = $2, error = $3, updated_at = now()
-			 WHERE id = $1 AND status = $4`, id, StatusFailed, CauseValidationStopped, StatusValidating)
-		if err != nil {
-			return fmt.Errorf("failing import run %s: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return s.explainMiss(ctx, tx, id, StatusValidating, StatusFailed)
-		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: StatusValidating}, map[string]any{auditFieldStatus: StatusFailed})
-		return err
-	})
-}
-
-// explainMiss turns a transition that moved nothing into the honest refusal:
-// not-found when this installation has no such run, conflict when it does but
-// the run had already moved on.
-func (s *RunStore) explainMiss(ctx context.Context, tx pgx.Tx, id RunID, from, to string) error {
-	var status string
-	err := tx.QueryRow(ctx, `
-		SELECT status FROM import_run
-		 WHERE id = $1`, id).Scan(&status)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
-	}
-	if err != nil {
-		return fmt.Errorf("reading import run %s: %w", id, err)
-	}
-	return fmt.Errorf("import run %s is %s, not %s, so it cannot become %s: %w", id, status, from, to, apperrors.ErrConflict)
-}
-
 // GetStaged reads one run with its mapping and report — everything the status
 // and report surfaces answer from. A run outside the caller's scope answers
 // not-found, never forbidden.
@@ -265,7 +161,7 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		run, err = readStaged(ctx, tx, id, true)
+		run, err = readStaged(ctx, tx, id)
 		return err
 	})
 	if err != nil {
@@ -274,14 +170,10 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 	return run, nil
 }
 
-// readStaged is GetStaged on the caller's transaction. The profile is read
-// only when asked for: a list never carries it.
-func readStaged(ctx context.Context, tx pgx.Tx, id RunID, withProfile bool) (Run, error) {
-	columns := stagedColumns
-	if withProfile {
-		columns += `, profile`
-	}
-	run, err := scanStaged(tx.QueryRow(ctx, `SELECT `+columns+` FROM import_run WHERE id = $1`, id), withProfile)
+// readStaged is GetStaged on the caller's transaction, with the profile a list
+// never carries.
+func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
+	run, err := scanStaged(tx.QueryRow(ctx, `SELECT `+stagedColumns+`, profile FROM import_run WHERE id = $1`, id), true)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 	}
@@ -357,9 +249,11 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		undoReport []byte
 		runErr     *string
 	)
-	dest := []any{&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
+	dest := []any{
+		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
 		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
-		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased}
+		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
+	}
 	if withProfile {
 		dest = append(dest, &run.Profile)
 	}

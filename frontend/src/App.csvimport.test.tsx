@@ -49,10 +49,12 @@ function answers(): Readonly<Record<string, unknown>> {
     }),
     "GET /v1/imports/format": formatFixture,
     "POST /v1/imports/sources": {
+      run_id: "019ff-draft",
       source_ref: "ws/import/abc",
       object: "lead",
       file_name: "estate.csv",
       rows_profiled: 1,
+      row_count: 1,
       columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
       suggested_mapping: { Email: "email" },
       targets: ["full_name", "email"],

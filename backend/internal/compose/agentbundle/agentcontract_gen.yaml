@@ -8109,6 +8109,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/format:
     get:
@@ -8191,14 +8192,22 @@ paths:
       security: [{bearerAuth: []}]
       summary: Approve a validated import run and commit it.
       description: |-
-        Valid **only** from
-        `awaiting_approval`: approving a run that is already running, complete
-        or failed is a conflict, not a no-op, because each of those means the
-        approver is looking at a state that is not the one they judged.
+        Valid from
+        `awaiting_approval`: approving a run that is already running or
+        complete is a conflict, not a no-op, because each of those means the
+        approver is looking at a state that is not the one they judged. A
+        `version`, when sent, must equal the run's, so the report approved is
+        the one read. A `failed` run that was approved once resumes from its
+        checkpoint; one never approved is a 409.
 
         Needs the passport permission Change records.
 
         Runs at once.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ApproveImportRunRequest'}
       responses:
         '202':
           description: 'Approved; the commit is under way (or complete — the run record says which).'
@@ -9144,6 +9153,95 @@ components:
       enum: [company, lead, contact]
       description: |-
         What the file's rows are, and therefore what the run creates.
+    ImportColumn:
+      type: object
+      description: One column of the uploaded file, described well enough to map it without opening the file elsewhere.
+      required: [header, fill_rate, samples]
+      properties:
+        header: {type: string, description: 'The column name as the file spells it.'}
+        fill_rate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 'Non-empty values ÷ rows profiled. A column at 0.02 is usually a mapping mistake waiting to happen, and the number is the only way to see that before committing.'
+        samples:
+          type: array
+          maxItems: 3
+          items: {type: string}
+          description: 'Up to three non-empty values, in file order. Values, not statistics — a human recognizes their own data.'
+    ImportSourceProfile:
+      type: object
+      description: |-
+        What one uploaded file looks like, plus the mapping proposed for it.
+        The upload's draft run keeps it; the human may change every line of
+        `suggested_mapping` before `createImportRun` accepts one.
+      required: [run_id, source_ref, columns, rows_profiled, row_count, suggested_mapping, targets]
+      properties:
+        run_id: {type: string, format: uuid, description: 'The draft run the upload opened. Every later choice and test is made on it.'}
+        source_ref: {type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.'}
+        row_count: {type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.'}
+        object: {$ref: '#/components/schemas/ImportObject'}
+        file_name: {type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.'}
+        suggested_source_name:
+          type: string
+          maxLength: 80
+          description: |-
+            The server's proposal for `createImportRun`'s `source_name`: a ZIP's file stem with
+            every character outside `[A-Za-z0-9 ._-]` turned into `-`, cut to 80. Empty for a
+            single CSV, so a re-upload of one keeps the namespace it was first imported under.
+        parts:
+          type: array
+          items: {$ref: '#/components/schemas/ImportPartProfile'}
+          description: 'One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.'
+        ignored:
+          type: array
+          items: {$ref: '#/components/schemas/ImportIgnoredEntry'}
+          description: 'The ZIP entries no part was made from, each with why. Listed so a file left out is never a silent one.'
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/ImportColumn'}
+        rows_profiled:
+          type: integer
+          minimum: 0
+          description: 'Rows read to build this profile. May be fewer than the file holds — the profile is a sample, and saying so is what keeps `fill_rate` honest.'
+        suggested_mapping:
+          type: object
+          additionalProperties: {type: string}
+          description: 'Proposed `{source column → target field}`. Normalized-name matches only; an unmatched column is absent rather than guessed.'
+        targets:
+          type: array
+          items: {type: string}
+          description: |-
+            The closed set a mapping may name — every field this object can receive THROUGH AN
+            IMPORT, which is not every field it has.
+    ImportPartProfile:
+      type: object
+      description: One file of an uploaded ZIP, profiled the way a single CSV is. Only a file whose name names a type is a part; any other file is listed under `ignored`.
+      required: [file, object, columns, rows_profiled, row_count, suggested_mappings]
+      properties:
+        file: {type: string, description: 'The entry''s path inside the ZIP.'}
+        object: {$ref: '#/components/schemas/ImportObject'}
+        columns:
+          type: array
+          items: {$ref: '#/components/schemas/ImportColumn'}
+        rows_profiled: {type: integer, minimum: 0}
+        row_count: {type: integer, minimum: 0, description: 'Rows the file holds, as `ImportRun.parts[].row_count` counts them.'}
+        suggested_mappings:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: {type: string}
+          description: 'One proposed `{source column → target field}` per importable object, keyed by `ImportObject` value, so changing the file''s type needs no second call.'
+    ImportIgnoredEntry:
+      type: object
+      description: One ZIP entry no part was made from.
+      required: [file, reason]
+      properties:
+        file: {type: string, description: 'The entry''s path inside the ZIP.'}
+        reason:
+          type: string
+          enum: [unknown_name, not_yet_importable]
+          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
     ImportPartRequest:
       type: object
       description: One file of a ZIP run, with the type and mapping the human settled for it.
@@ -9387,13 +9485,25 @@ components:
         undo:
           allOf: [{$ref: '#/components/schemas/ImportUndoReport'}]
           description: 'Present once the run has been undone; absent otherwise.'
+    ApproveImportRunRequest:
+      type: object
+      description: 'What the approver read. Without a body, the run is approved at whatever version it holds.'
+      properties:
+        version: {type: integer, minimum: 1, description: 'The run''s `version` the approved report was read at.'}
+    ImportDraftStep:
+      type: string
+      enum: [files, map]
+      description: 'The wizard step a draft reopens on.'
     ImportRunStatus:
       type: string
       enum: [pending, validating, awaiting_approval, running, complete, failed, undoing, undone, cancelled]
       description: |-
-        `failed` is resumable, not terminal: the run
-        carries the checkpoint it stopped at, and resuming continues from
-        there rather than re-reading the file from the top. `undoing`/`undone` are the reversal's own states, reachable only from
+        `pending` is a draft: uploaded, with choices
+        still being made, and carrying the reason in `error` when its last test
+        stopped. `failed` only ever means a commit stopped, and it is
+        resumable, not terminal: the run carries the checkpoint it stopped at,
+        and resuming continues from there rather than re-reading the file from
+        the top. `undoing`/`undone` are the reversal's own states, reachable only from
         `complete` and only for the `csv` connector. `cancelled` ended before
         the run wrote anything: cancelled, superseded by a newer test run of
         its source, or left idle as a draft. Its file is released.
@@ -9440,7 +9550,7 @@ components:
               reason: {type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.'}
     ImportRun:
       type: object
-      required: [id, connector, status, checkpoint, source, captured_by, created_at, updated_at]
+      required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         connector: {type: string, enum: [csv, salesforce]}
@@ -9456,7 +9566,15 @@ components:
           $ref: '#/components/schemas/ImportOnBrokenLink'
         status: {$ref: '#/components/schemas/ImportRunStatus'}
         checkpoint: {type: integer, minimum: 0, description: 'What a resume continues from.'}
-        error: {type: [string, 'null'], description: 'Why a failed run stopped, in the uploader''s terms. Never a driver or SQL message.'}
+        error: {type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.'}
+        version: {type: integer, minimum: 1, description: 'Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.'}
+        draft_step: {$ref: '#/components/schemas/ImportDraftStep'}
+        profile:
+          allOf: [{$ref: '#/components/schemas/ImportSourceProfile'}]
+          description: 'What the upload read of the file. Present on a single read of a `pending` or `awaiting_approval` run whose file is kept; never in a list.'
+        approved_at: {type: string, format: date-time, description: 'When the run was approved. Absent for a run never approved.'}
+        superseded_by: {type: string, format: uuid, description: 'The newer test run of the same source that cancelled this one.'}
+        source_released: {type: boolean, description: 'The uploaded file is no longer kept: the run completed, was cancelled or was superseded.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
