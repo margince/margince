@@ -243,7 +243,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 		// A new attempt for every undo request, so a job queued for an older one is fenced off.
 		if err := execHoldingName(ctx, tx, id, `
 			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now(), error = NULL,
-			       job_attempt = job_attempt + 1, job_status = $2, actor = $5, attempt_correlation_id = $6
+			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6
 			 WHERE id = $1`,
 			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7()); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)

@@ -57,8 +57,9 @@ again after the fix.
 Rows a killed slice wrote after its last checkpoint are written again by the next attempt. The write
 is idempotent on the source key, so no record is doubled.
 
-A run is re-queued at most 3 times. After that it is `failed` with a cause, and a user can approve it
-again to continue from the checkpoint.
+A run is re-queued at most 3 times for each approval or undo request. After that a commit is `failed`
+with a cause, and a user can approve it again to continue from the checkpoint. That approval counts
+its own 3 from zero.
 
 A job that was queued and never started is queued again after 2 minutes under the same attempt. If
 the job is still alive, the insert finds it and does nothing.
@@ -89,7 +90,7 @@ A run that stays `running` or `undoing` is read in the `import_run` table. These
 | `heartbeat_at` | The last time a slice wrote. It moves at least every 2 seconds while rows are written. |
 | `progress_at` | The last time the checkpoint moved |
 | `phase` | `creating_tags`, `importing`, `linking`, `undoing` or `finishing` |
-| `resume_count` | How many times the sweep started a new attempt |
+| `resume_count` | How many times the sweep started a new attempt since the last approval or undo request |
 
 Then read the answer from the table:
 

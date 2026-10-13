@@ -201,7 +201,8 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 		if err != nil {
 			return err
 		}
-		set.WriteString(storekit.SQLf(`, job_attempt = job_attempt + 1, job_status = $%d, actor = $%d, attempt_correlation_id = $%d`,
+		set.WriteString(", " + openAttempt)
+		set.WriteString(storekit.SQLf(`, job_status = $%d, actor = $%d, attempt_correlation_id = $%d`,
 			arg(to), arg(actor), arg(ids.NewV7())))
 	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))

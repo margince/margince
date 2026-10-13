@@ -121,6 +121,10 @@ func encodeActorOf(ctx context.Context) ([]byte, error) {
 	return json.Marshal(StoredActorOf(p))
 }
 
+// openAttempt is the SET of every move that queues work. The attempt is new, so
+// the sweep counts its resumes from zero.
+const openAttempt = `job_attempt = job_attempt + 1, resume_count = 0`
+
 // fence is the predicate of every write a lease makes.
 const fence = ` WHERE id = $1 AND status = $2 AND job_attempt = $3`
 
