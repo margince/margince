@@ -3,14 +3,10 @@
 
 package compose
 
-// The pass that settles every import run nothing else will move. A commit or
-// undo whose claimed attempt stopped beating gets a new attempt, and one whose
-// job was lost before its claim gets that job again. A commit old code started
-// and whose process stopped is marked failed, so approve resumes it. A test run
-// whose process stopped returns to draft. A draft left untouched past its time
-// to live is cancelled. A run that will never read its file again releases it,
-// so the stored-object reaper deletes the bytes. The pass never reads River's
-// tables: the run row says which attempt is due.
+// The pass that settles every import run nothing else will move. A stale or
+// lost attempt of a commit or undo is queued again. A commit old code started
+// fails once idle, so approve resumes it. Idle test runs and drafts are closed,
+// and finished runs release their file. River's tables are never read.
 
 import (
 	"context"

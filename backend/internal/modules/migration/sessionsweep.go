@@ -138,7 +138,7 @@ const (
 type Requeue func(ctx context.Context, tx pgx.Tx, run Run) (inserted bool, err error)
 
 // legacyRow marks a run whose status old code entered, or whose attempt queues
-// no job: the sweep never re-queues it, and keeps the rules old code had.
+// no job. The sweep never re-queues such a run.
 const legacyRow = `(job_attempt = 0 OR job_status IS DISTINCT FROM status)`
 
 // queuedWork selects the runs of the given statuses a queued job works.

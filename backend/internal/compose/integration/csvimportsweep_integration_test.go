@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -33,32 +34,39 @@ func sweepImportRuns(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-func TestTheSweepFailsARunWhoseProcessStoppedAndApproveResumesIt(t *testing.T) {
+func TestALegacyRunningRunIsNeverRequeued(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
-	// Its commit job is never worked, as when the process that held it stopped.
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
-		t.Fatalf("approve → %d, want 202", status)
+	commit := compose.ImportCommitArgs{}.Kind()
+	runID := approvedButUnworked(t, e)
+	killJobs(t, e, commit, runID)
+	claimThenFallSilent(t, e, runID, 0)
+	// Old code approved a run a new worker had validated, so the status it
+	// entered is not the one its attempt was queued for.
+	if _, err := e.Owner.Exec(t.Context(),
+		`UPDATE import_run SET job_status = 'validating' WHERE id = $1`, runID); err != nil {
+		t.Fatalf("making the run legacy: %v", err)
 	}
+	legacy := readLease(t, e, runID)
 
 	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "running" {
-		t.Fatalf("a run inside its budget was swept: %q", polled.Status)
+	if polled := readRun(t, e, runID); polled.Status != "running" {
+		t.Fatalf("a legacy run inside its idle window was swept: %q", polled.Status)
+	}
+	if got := readLease(t, e, runID); got.attempt != legacy.attempt || got.resumes != 0 {
+		t.Fatalf("the sweep moved a legacy run to attempt %d with %d resumes; it must never re-queue one",
+			got.attempt, got.resumes)
 	}
 
-	backdateImportRun(t, e, run.ID)
+	backdateImportRun(t, e, runID)
 	sweepImportRuns(t, e)
-	var failed struct {
-		Status string `json:"status"`
-		Error  string `json:"error"`
+	if polled := readRun(t, e, runID); polled.Status != "failed" || !strings.Contains(polled.Error, "server restarted") {
+		t.Fatalf("after the sweep: %q %q, want failed saying the server restarted", polled.Status, polled.Error)
 	}
-	e.Call(t, http.MethodGet, "/v1/imports/"+run.ID, nil, nil, &failed)
-	if failed.Status != "failed" || !strings.Contains(failed.Error, "server restarted") {
-		t.Fatalf("after the sweep: %q %q, want failed saying the server restarted", failed.Status, failed.Error)
+	if jobs := jobsOf(t, e, commit, runID); !slices.Equal(jobs, []attemptJob{{legacy.attempt, "running"}}) {
+		t.Fatalf("the legacy run's jobs are %v, want no new one", jobs)
 	}
 
-	approveAndRead(t, e, run.ID)
+	approveAndRead(t, e, runID)
 	if n := leadCount(t, e); n != 3 {
 		t.Fatalf("%d leads after the resumed commit, want 3", n)
 	}
