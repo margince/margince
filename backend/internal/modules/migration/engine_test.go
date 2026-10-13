@@ -100,6 +100,8 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
 		{"CancelIdleDrafts", func() error { _, err := s.CancelIdleDrafts(ctx, time.Minute); return err }},
 		{"ReleaseFinishedSources", func() error { _, err := s.ReleaseFinishedSources(ctx); return err }},
+		{"ResumeStaleAttempts", func() error { _, err := s.ResumeStaleAttempts(ctx, time.Minute, 1, requeueNothing); return err }},
+		{"RequeueLostJobs", func() error { _, err := s.RequeueLostJobs(ctx, time.Minute, requeueNothing); return err }},
 		{"CreateDraftRun", func() error {
 			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
 			return err
@@ -241,6 +243,8 @@ type fakeRuns struct {
 
 // queueNothing stands in for the job queue, which lives in compose.
 func queueNothing(context.Context, pgx.Tx, Run) error { return nil }
+
+func requeueNothing(context.Context, pgx.Tx, Run) (bool, error) { return false, nil }
 
 func newFakeRuns() *fakeRuns {
 	return &fakeRuns{run: Run{Status: StatusRunning}}
@@ -680,6 +684,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
 		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
+		"ResumeStaleAttempts": true, "RequeueLostJobs": true,
 		"Claim": true, "Heartbeat": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()

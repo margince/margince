@@ -23,10 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// FailStaleRunning fails every running import whose last checkpoint is older
-// than idle, and answers how many. updated_at moves on every checkpoint, so a
-// run that has not moved for that long has no process left working it. The
-// cutoff is taken on the database clock that wrote updated_at.
+// FailStaleRunning fails every running import old code started whose last
+// checkpoint is older than idle, and answers how many. A run a queued job works
+// is the sweep's resume rules' to settle, so this one never touches it.
 func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
 	return s.failStale(ctx, StatusRunning, idle, cause)
 }
@@ -40,6 +39,7 @@ func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duratio
 		rows, err := tx.Query(ctx, `
 			UPDATE import_run SET status = $1, error = $2, updated_at = now()
 			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
+			   AND `+legacyRow+`
 			RETURNING id`, StatusFailed, cause, from, ConnectorCSV, idle.Seconds())
 		if err != nil {
 			return fmt.Errorf("failing stale %s import runs: %w", from, err)

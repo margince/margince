@@ -216,6 +216,8 @@ func nullable(s string) *string {
 // FailLease records why the attempt stopped. A commit becomes failed, which a
 // resume continues from its checkpoint. An undo stays undoing with the cause,
 // because failing it would let a resume re-run the commit over a half-undone run.
+// Its job_status is cleared: no job is queued for it, so the sweep leaves it to
+// an undo request.
 func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
@@ -233,7 +235,7 @@ func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {
 			if err != nil {
 				return fmt.Errorf("reading import run %s: %w", l.Run, err)
 			}
-			if err := execFenced(ctx, tx, l, `error = $4, updated_at = now()`, cause); err != nil {
+			if err := execFenced(ctx, tx, l, `error = $4, job_status = NULL, updated_at = now()`, cause); err != nil {
 				return err
 			}
 			_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, l.Run,

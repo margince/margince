@@ -3,12 +3,14 @@
 
 package compose
 
-// The pass that settles every import run nothing else will move. A commit
-// whose process stopped is marked failed, so approve resumes it from its
-// checkpoint. A test run whose process stopped returns to draft. A draft left
-// untouched past its time to live is cancelled. A run that will never read its
-// file again releases it, so the stored-object reaper deletes the bytes. An
-// undoing run is never touched, because undo already resumes it.
+// The pass that settles every import run nothing else will move. A commit or
+// undo whose claimed attempt stopped beating gets a new attempt, and one whose
+// job was lost before its claim gets that job again. A commit old code started
+// and whose process stopped is marked failed, so approve resumes it. A test run
+// whose process stopped returns to draft. A draft left untouched past its time
+// to live is cancelled. A run that will never read its file again releases it,
+// so the stored-object reaper deletes the bytes. The pass never reads River's
+// tables: the run row says which attempt is due.
 
 import (
 	"context"
@@ -16,6 +18,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -54,6 +57,12 @@ type importSweepRule struct {
 }
 
 var importSweepRules = []importSweepRule{
+	{"stale_attempts_resumed", func(ctx context.Context, runs *migration.RunStore) (int, error) {
+		return runs.ResumeStaleAttempts(ctx, importStaleAfter, importMaxResumes, requeueImportAttempt)
+	}},
+	{"lost_jobs_requeued", func(ctx context.Context, runs *migration.RunStore) (int, error) {
+		return runs.RequeueLostJobs(ctx, importQueuedReinsertAfter, requeueImportAttempt)
+	}},
 	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.FailStaleRunning(ctx, importLegacyIdleAfter, staleImportCause)
 	}},
@@ -69,6 +78,33 @@ var importSweepRules = []importSweepRule{
 	{"sources_released", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.ReleaseFinishedSources(ctx)
 	}},
+}
+
+// requeueImportAttempt inserts the job of the run's current attempt through
+// the River client working the sweep, and answers whether River inserted it.
+func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bool, error) {
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	if err != nil {
+		return false, fmt.Errorf("the sweep runs outside a River job: %w", err)
+	}
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return false, errors.New("the sweep's context binds no workspace")
+	}
+	var args importJobArgs
+	switch run.Status {
+	case migration.StatusRunning:
+		args = ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	case migration.StatusUndoing:
+		args = ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	default:
+		return false, fmt.Errorf("import run %s is %s, which no job works", run.ID, run.Status)
+	}
+	res, err := client.InsertTx(ctx, tx, args, args.insertOpts())
+	if err != nil {
+		return false, fmt.Errorf("inserting %s for import run %s: %w", args.Kind(), run.ID, err)
+	}
+	return !res.UniqueSkippedAsDuplicate, nil
 }
 
 // Work runs every rule even when one fails, so one broken rule cannot keep
