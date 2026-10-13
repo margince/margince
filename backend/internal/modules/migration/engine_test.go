@@ -107,12 +107,16 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
-		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1, queueNothing); return err }},
 		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},
 		{"Yield", func() error { return s.Yield(ctx, lease) }},
+		{"Heartbeat", func() error { return s.Heartbeat(ctx, lease) }},
+		{"FlushTestProgress", func() error { return s.FlushTestProgress(ctx, lease, Progress{}, PhaseReading, "") }},
+		{"FinishValidation", func() error { return s.FinishValidation(ctx, lease, Report{}) }},
+		{"RefuseValidation", func() error { return s.RefuseValidation(ctx, lease, CauseStopped) }},
 		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
 		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
 		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
@@ -693,7 +697,8 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
 		"ResumeStaleAttempts": true, "RequeueLostJobs": true,
-		"Claim": true, "Yield": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
+		"Claim": true, "Yield": true, "Heartbeat": true, "Flush": true,
+		"FlushTestProgress": true, "FinishValidation": true, "RefuseValidation": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {

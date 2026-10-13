@@ -15,6 +15,9 @@ import (
 const (
 	CauseStopped    = "the import stopped on an error; approve it again to continue from its checkpoint"
 	CauseOverBudget = "the import ran past its time budget; approve it again to continue from its checkpoint"
+	// CauseValidateOverBudget is a test run that read past its time budget; it
+	// imported nothing, and a smaller file tests within it.
+	CauseValidateOverBudget = "the test run took too long and imported nothing; split the file into smaller ones and test again"
 	// CauseValidationStopped is matched, never written: a legacy row carries it
 	// for a test run that stopped. The backfill and the sweep cancel such a run.
 	CauseValidationStopped = "the test run stopped on an error; upload the file again to start a new import"

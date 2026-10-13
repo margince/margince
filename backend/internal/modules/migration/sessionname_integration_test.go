@@ -99,7 +99,7 @@ func TestAReplacedRunAnswersWithTheRunThatReplacedIt(t *testing.T) {
 	s := NewRunStore(db)
 	older := toReport(ctx, t, s, newDraft(ctx, t, s, fairName))
 	newer := newDraft(ctx, t, s, fairName)
-	if _, _, err := s.QueueValidation(ctx, newer.ID, newer.Version); err != nil {
+	if _, _, err := s.QueueValidation(ctx, newer.ID, newer.Version, queueNothing); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
 

@@ -93,7 +93,7 @@ func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if _, err := e.Owner.Exec(t.Context(),
-		`UPDATE import_run SET status = 'validating', updated_at = now() WHERE id = $1`, run.ID); err != nil {
+		`UPDATE import_run SET status = 'validating', job_attempt = 0, updated_at = now() WHERE id = $1`, run.ID); err != nil {
 		t.Fatalf("putting the run back in validating: %v", err)
 	}
 

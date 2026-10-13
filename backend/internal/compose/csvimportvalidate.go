@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -70,7 +71,7 @@ func (h importHandlers) testRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version)
+	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version, testsInRequest)
 	if err != nil {
 		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
@@ -95,6 +96,9 @@ func (h importHandlers) testRun(
 	}
 	return toContractImportRun(staged), nil
 }
+
+// testsInRequest queues no job: this request runs the test itself.
+func testsInRequest(context.Context, pgx.Tx, migration.Run) error { return nil }
 
 // checkedMapping holds a request to what a run's choices must satisfy before
 // a test reads a row. That is the object's fields, the grants and the tag.

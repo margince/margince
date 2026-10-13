@@ -59,7 +59,7 @@ func TestATestRunStoppedByItsRequestDeadlineStillReturnsToItsDraft(t *testing.T)
 	_, profile := leadSourceHandlers(t, e, 0)
 	runs := migration.NewRunStore(e.DB())
 	id := migration.RunID(profile.RunId)
-	if _, _, err := runs.QueueValidation(importAdmin(e), id, 1); err != nil {
+	if _, _, err := runs.QueueValidation(importAdmin(e), id, 1, testsInRequest); err != nil {
 		t.Fatalf("starting the test run: %v", err)
 	}
 
