@@ -198,11 +198,8 @@ describe("groupFacts", () => {
   });
 
   it("breaks a field tie on the label the reader SEES, not the wire name", () => {
-    // The row draws `t(factFieldLabelKey(field))`, so an order computed from
-    // the identifiers is an order in words nobody reads. English and German
-    // disagree here in opposite directions, which is the whole point:
-    // contact_email < founded_year as identifiers and as "Contact email" before
-    // "Founded", but "Gegründet" comes before "Kontakt-E-Mail".
+    // English labels sort like the identifiers: "Contact email" before "Founded".
+    // German labels sort the other way round: "Gegründet" before "Kontakt-E-Mail".
     const tie = [
       fact({
         category: "company",
