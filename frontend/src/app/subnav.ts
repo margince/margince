@@ -173,12 +173,13 @@ export function navLevelRoute(path: readonly string[], id?: string): Route {
   // more. `[...path, undefined]` would put an undefined segment in the middle
   // and shift every one after it, so the id is appended only when there is one.
   const segments = id === undefined ? [...path] : [...path, id];
+  const [first] = segments;
   return {
     // A level's path is strings by the time a row is a link, so its first
     // segment is checked here exactly as a typed hash's is: a level rooted at no
     // screen this app answers addresses the not-found page rather than minting a
     // link to nowhere.
-    screen: isScreen(segments[0]) ? segments[0] : "not-found",
+    screen: first !== undefined && isScreen(first) ? first : "not-found",
     id: segments[1],
     id2: segments[2],
     id3: segments[3],

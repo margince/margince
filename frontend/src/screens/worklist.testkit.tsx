@@ -31,6 +31,11 @@ export function jsonResponse(body: unknown): Response {
   });
 }
 
+function withoutQuery(url: string): string {
+  const [path = ""] = url.split("?");
+  return path;
+}
+
 // The DAY's own read, told apart from its siblings under the same prefix.
 //
 // `/worklist/hidden` and `/worklist/team` both start with `/worklist`, so a
@@ -39,7 +44,7 @@ export function jsonResponse(body: unknown): Response {
 // lands in React's render rather than in an assertion. The suite passed and
 // printed an unhandled error nobody owned.
 function isWorklistRead(url: string): boolean {
-  return url.split("?")[0].endsWith("/worklist");
+  return withoutQuery(url).endsWith("/worklist");
 }
 
 // The quietest board the server can actually send.
@@ -64,7 +69,7 @@ const QUIET_BOARD = {
 // The board's own read, so it is answered with a board rather than the
 // catch-all. A test that wants rows on it stubs fetch itself.
 function isTeamBoardRead(url: string): boolean {
-  return url.split("?")[0].endsWith("/worklist/team");
+  return withoutQuery(url).endsWith("/worklist/team");
 }
 
 // The reads `stub`'s one optional answer is served to.
@@ -93,7 +98,7 @@ export function stub(day: Worklist, answer?: unknown) {
       // retry write sit on different rows.
       if (
         answer &&
-        ANSWERED_READS.some((path) => path.test(url.split("?")[0]))
+        ANSWERED_READS.some((path) => path.test(withoutQuery(url)))
       ) {
         return jsonResponse(answer);
       }
@@ -104,7 +109,7 @@ export function stub(day: Worklist, answer?: unknown) {
       // chain — a completion is undone by a second write — and the second one
       // pins on what the first returned, so a stub answering an empty envelope
       // would make the undo refuse itself.
-      if (/\/activities\/[^/?]+$/.test(url.split("?")[0])) {
+      if (/\/activities\/[^/?]+$/.test(withoutQuery(url))) {
         return jsonResponse({ version: 4 });
       }
       return jsonResponse({ data: [] });

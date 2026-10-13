@@ -110,6 +110,7 @@ export const MappingAClaim: Story = {
     const [picker] = await within(dialog).findAllByRole("combobox", {
       name: "Profile field",
     });
+    if (!picker) throw new Error("the drawer shows no Profile field picker");
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "Role" }));
   },

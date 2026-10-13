@@ -38,8 +38,7 @@ export function formatInterval(seconds: number, locale: Locale): string {
 // 61 minutes ago reads "1 hour", where the remainder would only be noise.
 export function formatAge(seconds: number, locale: Locale): string {
   const whole = Math.max(0, Math.floor(seconds));
-  const size =
-    INTERVAL_UNITS.find(([, unit]) => whole >= unit)?.[1] ??
-    INTERVAL_UNITS[INTERVAL_UNITS.length - 1][1];
+  // Only zero matches no unit, and zero of any unit is zero.
+  const size = INTERVAL_UNITS.find(([, unit]) => whole >= unit)?.[1] ?? 1;
   return formatInterval(Math.floor(whole / size) * size, locale);
 }

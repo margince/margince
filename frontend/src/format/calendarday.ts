@@ -58,6 +58,9 @@ export function isRealCalendarDay(day: string): boolean {
     return false;
   }
   const [year, month, dayOfMonth] = match.slice(1).map(Number);
+  if (year === undefined || month === undefined || dayOfMonth === undefined) {
+    return false;
+  }
   return (
     month >= 1 &&
     month <= 12 &&

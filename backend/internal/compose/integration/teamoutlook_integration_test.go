@@ -36,6 +36,7 @@ type teamScopeSpy struct {
 	teamCalls int
 	askedFor  ids.UUID
 	outlooks  []weekly.Outlook
+	coverage  []weekly.Coverage
 }
 
 func (s *teamScopeSpy) CloseWeek(
@@ -47,10 +48,10 @@ func (s *teamScopeSpy) CloseWeek(
 
 func (s *teamScopeSpy) CloseTeamWeek(
 	_ context.Context, _ pgx.Tx, teamID ids.UUID, _, _ time.Time,
-) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
+) (weekly.TeamClose, error) {
 	s.teamCalls++
 	s.askedFor = teamID
-	return s.outlooks, nil, nil, nil
+	return weekly.TeamClose{Outlooks: s.outlooks, Coverage: s.coverage}, nil
 }
 
 func oneTeamHorizon() []weekly.Outlook {
@@ -158,9 +159,9 @@ func (r *refusingForecast) CloseWeek(
 
 func (r *refusingForecast) CloseTeamWeek(
 	_ context.Context, _ pgx.Tx, _ ids.UUID, _, _ time.Time,
-) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
+) (weekly.TeamClose, error) {
 	r.calls++
-	return nil, nil, nil, apperrors.ErrNotFound
+	return weekly.TeamClose{}, apperrors.ErrNotFound
 }
 
 // A REFUSED OUTLOOK COSTS THE OUTLOOK, NOT THE WEEK.

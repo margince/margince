@@ -66,7 +66,7 @@ class Scanner {
 
   private value(path: string): boolean {
     this.space();
-    const c = this.text[this.at];
+    const c = this.text.charAt(this.at);
     if (c === "{" || c === "[") return this.nested(c, path);
     if (c === '"') return this.string() !== null;
     for (const word of ["true", "false", "null"]) {
@@ -133,7 +133,7 @@ class Scanner {
   /** Past a comma (more to read), past the closer (closed), or neither. */
   private separator(closer: string): "more" | "closed" | "bad" {
     this.space();
-    const c = this.text[this.at];
+    const c = this.text.charAt(this.at);
     if (c !== "," && c !== closer) return "bad";
     this.at++;
     return c === "," ? "more" : "closed";
@@ -144,7 +144,7 @@ class Scanner {
     this.at++;
     let out = "";
     while (this.at < this.text.length) {
-      const c = this.text[this.at];
+      const c = this.text.charAt(this.at);
       if (c === '"') {
         this.at++;
         return out;

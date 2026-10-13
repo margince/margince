@@ -13,11 +13,17 @@ import type { EntityKind } from "../app/entity";
 // Derived here once rather than spelled at each mutation site, so a new screen
 // that renders a timeline from a different read is fixed in one place.
 
+// The record's own timeline read, which every record kind has.
+export const timelineBaseKey = (
+  entityType: EntityKind,
+  entityId: string,
+): QueryKey => ["activities", entityType, entityId];
+
 export function entityTimelineKeys(
   entityType: EntityKind,
   entityId: string,
 ): QueryKey[] {
-  const keys: QueryKey[] = [["activities", entityType, entityId]];
+  const keys = [timelineBaseKey(entityType, entityId)];
   const seed = TIMELINE_SEED_KEYS[entityType]?.(entityId);
   if (seed) {
     keys.push(seed);

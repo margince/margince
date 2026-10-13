@@ -128,7 +128,7 @@ export const CollectBelowFloor: Story = {
   render: () => (
     <Collect
       corpus={summary(320, 1)}
-      manifest={[MANIFEST[0]]}
+      manifest={MANIFEST.slice(0, 1)}
       canBuild={false}
     />
   ),

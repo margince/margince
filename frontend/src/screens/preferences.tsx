@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
@@ -112,20 +112,17 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   // Whether this subject may take a grant at all — see subjectMayGrant.
   const mayGrant = subjectMayGrant(purposes);
 
-  // The wording rendered at each toggle IS the wording submitted for it —
-  // one map, computed once per data load, read both for display and for the
-  // save payload. An independent re-derivation at submit time would break
-  // the passthrough invariant the moment the two computations drifted.
-  const wordingByKey = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const purpose of purposes) {
+  // The wording rendered at each toggle is the wording submitted for it: one
+  // function, read both for display and for the save payload.
+  const wordingOf = useCallback(
+    (purpose: PurposeView) => {
       const wordingKey = WORDING_KEYS[purpose.key];
-      map[purpose.key] = wordingKey
+      return wordingKey
         ? t(wordingKey)
         : t("prefs.wordingGeneric", { label: labelOf(t, purpose) });
-    }
-    return map;
-  }, [purposes, t]);
+    },
+    [t],
+  );
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [partialSave, setPartialSave] = useState(false);
@@ -170,7 +167,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
         await api.PUT("/public/preferences/{token}", {
           params: { path: { token } },
           body: {
-            choices: toChoices(purposes, choices, (key) => wordingByKey[key]),
+            choices: toChoices(purposes, choices, wordingOf),
           },
         }),
       );
@@ -345,7 +342,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             key={purpose.key}
             purpose={purpose}
             on={rowIsOn(purpose, draft)}
-            wording={wordingByKey[purpose.key]}
+            wording={wordingOf(purpose)}
             t={t}
             disabled={writePending}
             mayGrant={mayGrant}

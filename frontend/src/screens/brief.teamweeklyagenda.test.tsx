@@ -196,3 +196,57 @@ describe("the agenda on the screen", () => {
     ).toBeTruthy();
   });
 });
+
+describe("every pattern a rep's week named", () => {
+  const busy = rep({
+    user_id: "u3",
+    display_name: "Mira Sandoval",
+    focus_kind: "leads_breached",
+    focus_label: "2 leads went past the response target",
+    patterns: [
+      {
+        kind: "leads_breached",
+        label: "2 leads went past the response target",
+      },
+      { kind: "stage_regressions", label: "1 deal moved backwards" },
+    ],
+    funnel: [
+      {
+        pipeline_id: "p1",
+        pipeline_name: "Sales",
+        stage_id: "s1",
+        stage_name: "Meeting",
+        next_stage_name: "Proposal",
+        rep_entered: 5,
+        rep_converted: 1,
+        team_entered: 20,
+        team_converted: 9,
+        deviation_bp: -2500,
+      },
+    ],
+  });
+
+  it("copies the patterns after the first on the rep's line", () => {
+    expect(agendaText([busy], "Monday agenda")).toBe(
+      [
+        "Monday agenda",
+        "1. Mira Sandoval — 2 leads went past the response target; 1 deal moved backwards",
+      ].join("\n"),
+    );
+  });
+
+  it("draws the further patterns and the stage that converts differently", async () => {
+    stubApi({
+      "GET /weekly-reviews/team": () =>
+        jsonResponse(review({ reps: [busy], agenda: ["u3"] })),
+    });
+    render(<TeamWeeklySection teamId="t1" />);
+
+    expect(
+      await screen.findByText(en["teamweekly.focus.stage_regressions"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Meeting → Proposal: 20% against the team’s 45%"),
+    ).toBeTruthy();
+  });
+});

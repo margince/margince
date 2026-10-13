@@ -86,6 +86,7 @@ export const MatchingACompany: Story = {
     const [match] = await screen.findAllByRole("button", {
       name: "Match company",
     });
+    if (!match) throw new Error("no row offers Match company");
     await userEvent.click(match);
     await screen.findByRole("dialog", { name: "Match company" });
   },

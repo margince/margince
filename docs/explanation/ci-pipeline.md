@@ -23,6 +23,14 @@ Three lanes run without blocking: `vuln`, the SonarCloud scan and `live-boot`. `
 for why a gate that does not block needs that second check. Why they do not block yet is under
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
 
+`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that
+call is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and
+that the answer still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does
+not reach the calls that cost money.
+
+The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which is
+not a pass. The job is not required, so a vendor that is down blocks no merge.
+
 **The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
 holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
 the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue

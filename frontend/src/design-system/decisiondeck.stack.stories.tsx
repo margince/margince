@@ -95,7 +95,8 @@ function item(seed: string): DecisionDeckItem {
   };
 }
 
-const THREE = [item("01"), item("02"), item("03")];
+const FIRST = item("01");
+const THREE = [FIRST, item("02"), item("03")];
 
 const BASE = {
   now: NOW,
@@ -121,7 +122,7 @@ export const AStackOfThree: Story = {
 // THE LAST CARD. No edges behind it, and no count either: there is nothing left
 // to say a number about, and the plate itself already says it is the only one.
 export const TheLastCard: Story = {
-  args: { ...BASE, live: THREE[0], waiting: [THREE[0]] },
+  args: { ...BASE, live: FIRST, waiting: [FIRST] },
 };
 
 // MID-DRAG, to the right: the live card leans by one degree per 22px travelled

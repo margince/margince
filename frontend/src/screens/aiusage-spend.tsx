@@ -85,8 +85,7 @@ function sum(
   return lines.reduce((total, entry) => total + pick(entry), 0);
 }
 
-function total(tiers: readonly UsageTask[]): SpendRow {
-  const first = tiers[0];
+function total(first: UsageTask, tiers: readonly UsageTask[]): SpendRow {
   const priced = tiers.filter((tier) => tier.cost_est_minor !== undefined);
   return {
     key: first.task,
@@ -120,13 +119,19 @@ export function spendRows(lines: readonly UsageTask[]): SpendRow[] {
   for (const entry of lines) {
     byTask.set(entry.task, [...(byTask.get(entry.task) ?? []), entry]);
   }
-  const groups = [...byTask.values()].map((tiers) => {
+  const groups = [...byTask.values()].flatMap((tiers) => {
     const ordered = [...tiers].sort(
       (a, b) => tierRank(a.tier) - tierRank(b.tier),
     );
-    return ordered.length === 1
-      ? [line(ordered[0], false)]
-      : [total(ordered), ...ordered.map((tier) => line(tier, true))];
+    const [first] = ordered;
+    if (first === undefined) {
+      return [];
+    }
+    const rows: [SpendRow, ...SpendRow[]] =
+      ordered.length === 1
+        ? [line(first, false)]
+        : [total(first, ordered), ...ordered.map((tier) => line(tier, true))];
+    return [rows];
   });
   groups.sort(([a], [b]) => (b.cost ?? 0) - (a.cost ?? 0) || b.calls - a.calls);
   return groups.flat();

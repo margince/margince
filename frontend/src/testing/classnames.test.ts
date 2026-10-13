@@ -66,7 +66,8 @@ describe("a name in a className reads the binding in its own scope", () => {
     function Chip({ size }) {
       return <i className={size} />;
     }`);
-    const given = (name: string) => (name === "size" ? ["s", "l"] : undefined);
+    const given = (read: ts.Expression) =>
+      read.getText() === "size" ? ["s", "l"] : undefined;
     expect(
       classVariants(source, classAttribute(source, "i"), 16, given),
     ).toEqual([["s"], ["l"]]);

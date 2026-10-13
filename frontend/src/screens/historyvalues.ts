@@ -122,8 +122,7 @@ export function historyValue(
     return ctx.nameOf?.(value) ?? value;
   }
   if (PATH_LIKE.test(value)) {
-    const segments = value.split("/");
-    return segments[segments.length - 1];
+    return value.split("/").at(-1) ?? value;
   }
   return value;
 }

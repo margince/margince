@@ -45,6 +45,10 @@ name: scheduled
 #                        bench-perf-check), and an alarm that cannot finish files
 #                        a breach it never measured.
 #
+#   vendor live        — one real call to each data vendor, daily. The offline
+#                        tests read a recording of the vendor's API, which stays
+#                        green when the vendor changes it.
+#
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
@@ -819,12 +823,105 @@ jobs:
           REPO: ${{ github.repository }}
         run: ./scripts/reap-build-caches.sh
 
+  # One real call to each data vendor, through the production adapter, so a
+  # vendor that changed its API is found before a customer's enrichment breaks.
+  # The offline pin in surfe/testdata/vendor-wire.json cannot see that change.
+  # The credit read costs nothing. Never a required check: a vendor outage must
+  # block no merge.
+  vendor-live:
+    # Daily, and on main only: a dispatch can run from any branch, and a branch
+    # must not spend the vendor key or file issues about main.
+    if: >-
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      && (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *')
+    name: vendor live check (Surfe credits)
+    outputs:
+      outcome: ${{ steps.funded.outputs.outcome || steps.live.outputs.outcome }}
+      detail: ${{ steps.live.outputs.detail }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A step, not a job `if`, because `jobs.<id>.if` cannot read `secrets`
+      # (see llm-use-cases). No key is "not checked", which is no verdict.
+      - name: Is there a Surfe key?
+        id: funded
+        env:
+          KEY: ${{ secrets.SURFE_LIVE_KEY }}
+        run: |
+          if [ -z "${KEY:-}" ]; then
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "outcome=not-checked" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Surfe: not checked, no key. This is not a pass"
+              echo
+              echo "\`SURFE_LIVE_KEY\` is not set for this repository, so nothing read"
+              echo "Surfe's API today. Add a low-limit Surfe key as that secret."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.funded.outputs.configured == 'yes'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.funded.outputs.configured == 'yes'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      # The test prints one line, `VENDOR_LIVE surfe credits <outcome> [detail]`,
+      # and nothing from the response. No line means the check broke before a
+      # verdict, and the reporter files that as `no-verdict`.
+      - name: Read Surfe's credit balance (make vendor-live)
+        id: live
+        if: steps.funded.outputs.configured == 'yes'
+        env:
+          MARGINCE_SURFE_LIVE_KEY: ${{ secrets.SURFE_LIVE_KEY }}
+        run: |
+          set -o pipefail
+          status=0
+          make vendor-live 2>&1 | tee vendor-live.log || status=$?
+          lines="$(grep -c -E '^VENDOR_LIVE surfe credits ' vendor-live.log || true)"
+          line="$(grep -m1 -E '^VENDOR_LIVE surfe credits ' vendor-live.log || true)"
+          # Exactly one verdict line counts; two are no verdict at all.
+          [ "$lines" = 1 ] || line=""
+          verdict="${line#VENDOR_LIVE surfe credits }"
+          outcome="${verdict%% *}"
+          detail=""
+          [ "$verdict" != "$outcome" ] && detail="${verdict#* }"
+          case "$status/$outcome" in
+          0/ok)
+            # A pass carries no detail, so `ok` with anything after it is not one.
+            if [ -n "$line" ] && [ -z "$detail" ]; then
+              echo "outcome=ok" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::make vendor-live gave no verdict that matches its exit status"
+              status=1
+            fi
+            ;;
+          [1-9]*/drift | [1-9]*/refused)
+            echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+            echo "detail=$detail" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error::make vendor-live gave no verdict that matches its exit status"
+            [ "$status" -ne 0 ] || status=1
+            ;;
+          esac
+          exit "$status"
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches, slop-trend, vendor-live]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -877,4 +974,7 @@ jobs:
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
           TREND_RESULT: ${{ needs['slop-trend'].result }}
+          VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
+          VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
+          VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
         run: ./scripts/scheduled-report.sh

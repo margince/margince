@@ -373,7 +373,8 @@ function foldActivities(
   );
   const byId = new Map(rows.map((row) => [row.id, row]));
   return groupChronology(activityTimeline(rows)).flatMap((group) => {
-    const row = byId.get(group.entries[0].id);
+    const [newest] = group.entries;
+    const row = newest && byId.get(newest.id);
     if (!row) return [];
     const status = statusOf(row, rows);
     const withheldRow = row.content_state === "withheld";

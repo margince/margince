@@ -536,10 +536,8 @@ function HierarchyRollupPanel({ companyId }: Readonly<{ companyId: string }>) {
 // LANDED on the record, whatever lane wrote them.
 // PROFILE_FIELD_LABELS names the profile fields as statements ABOUT a company.
 //
-// The same fields are asked of the reader during onboarding, where the second
-// contact is right — "What do you sell?" is a question to us. On a prospect's
-// record that framing put the reader in the wrong chair: the page appeared to
-// be interviewing us about a company we are trying to sell to.
+// Onboarding asks the same fields as questions to us ("What do you sell?"),
+// which reads wrong on a prospect's record.
 const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
   display_name: "co.profileField.display_name",
   offer_summary: "co.profileField.offer_summary",
@@ -666,13 +664,8 @@ function companyTabsFor(
 // unmounting this component, so a task detail modal opened on one account
 // would keep rendering over the next one.
 //
-// It is scoped to the TAB for the same reason at one level down. The detail
-// modal only renders on Tasks, so a tab change takes the dialog off screen
-// without its own `onClose` ever running — and an id that outlives the surface
-// holding it reopens the dialog by itself when the reader comes back to Tasks,
-// having closed nothing. That the reader cannot currently reach a tab pill
-// behind the open modal's backdrop is a property of Modal, not of this state:
-// resetting here is what makes the invariant this page's own.
+// It is scoped to the tab too. The modal renders only on Tasks, so a tab change
+// hides it without `onClose`, and a kept id would reopen it on return to Tasks.
 function useOpenTaskId(
   recordId: string,
   tab: CompanyTab,
@@ -1055,7 +1048,11 @@ function useCitedReceipt() {
     if (at < 0) {
       return;
     }
-    setCited(list[(at + direction + list.length) % list.length]);
+    const next = list[(at + direction + list.length) % list.length];
+    if (next === undefined) {
+      return;
+    }
+    setCited(next);
   };
   return {
     cited,

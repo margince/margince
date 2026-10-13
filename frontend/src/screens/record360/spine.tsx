@@ -535,10 +535,11 @@ function earlierStop(
 ): Stop {
   const cut = view.activities?.page?.has_more === true;
   const folded = conversations.slice(conversations.length - earlier);
+  const latest = conversations.at(-1);
   return {
     key: "earlier",
     tone: "past",
-    when: cut ? "" : on(conversations[conversations.length - 1].at, ctx),
+    when: cut || latest === undefined ? "" : on(latest.at, ctx),
     title: cut
       ? ctx.t("co.spine.earlierMore")
       : // Through the catalog's own plural rule rather than an if: which

@@ -229,8 +229,8 @@ export function CriterionCreateDialog({
         await api.POST("/stages/{id}/exit-criteria", {
           params: { path: { id: draft.stageId } },
           body: {
-            key: values.key,
-            label: values.label,
+            key: values.key ?? "",
+            label: values.label ?? "",
             kind: criterionKindOf(values.kind),
             required: values.required !== "false",
             ...(values.hint ? { hint: values.hint } : {}),

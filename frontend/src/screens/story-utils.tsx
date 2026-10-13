@@ -273,7 +273,8 @@ export function StoryProviders({
 export async function expectNameAndValueApart(canvasElement: HTMLElement) {
   const name = await within(canvasElement).findByText("Value");
   const row = name.closest(".entry-field");
-  if (!row || row.children.length < 2) {
+  const [labelPart, valuePart] = row ? [...row.children] : [];
+  if (!row || !labelPart || !valuePart) {
     throw new Error(
       'the field named "Value" is not drawn as an .entry-field row holding a name and a value',
     );
@@ -284,9 +285,8 @@ export async function expectNameAndValueApart(canvasElement: HTMLElement) {
   await expect(Number.parseFloat(style.columnGap)).toBeGreaterThanOrEqual(
     space,
   );
-  const [label, value] = [...row.children].map((part) =>
-    part.getBoundingClientRect(),
-  );
+  const label = labelPart.getBoundingClientRect();
+  const value = valuePart.getBoundingClientRect();
   if (value.left > label.right - 0.5) {
     await expect(value.top).toBeLessThan(label.bottom);
     await expect(value.left - label.right).toBeGreaterThanOrEqual(space - 0.5);

@@ -109,9 +109,9 @@ export function NewDealAction({
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
         body: {
-          name: values.name.trim(),
+          name: (values.name ?? "").trim(),
           pipeline_id: pipeline.id,
-          stage_id: values.stage_id,
+          stage_id: values.stage_id ?? "",
           // The form takes major units; the wire is minor units.
           amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
           currency: currencyBeside(currency, amount),

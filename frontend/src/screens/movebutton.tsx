@@ -247,6 +247,7 @@ function FollowUpDraft({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [contact, ...alsoTo] = recipients;
+  if (contact === undefined) return null;
   return (
     <>
       <Button variant="ai" onClick={() => setOpen(true)}>

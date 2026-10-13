@@ -45,13 +45,17 @@ export function drawCrawl(
   ctx.strokeStyle = faint;
   for (let i = 0; i < arrived; i++) {
     const node = nodes[i];
+    const age = ages[i];
     // Not due yet: the first hand is dealt a beat apart, so a page's stamp can
     // sit in the future and its age be negative until its turn comes.
-    if (node.parent < 0 || ages[i] < 0) {
+    if (node === undefined || age === undefined || node.parent < 0 || age < 0) {
       continue;
     }
     const from = nodes[node.parent];
-    const grow = span(ages[i], GROW_S);
+    if (from === undefined) {
+      continue;
+    }
+    const grow = span(age, GROW_S);
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.quadraticCurveTo(
@@ -66,7 +70,7 @@ export function drawCrawl(
   for (let i = 0; i < arrived; i++) {
     const node = nodes[i];
     const age = ages[i];
-    if (age < 0) {
+    if (node === undefined || age === undefined || age < 0) {
       continue;
     }
     const halo = Math.max(0, 1 - age / HALO_S);
@@ -130,13 +134,16 @@ export function drawMotes(
   const arrived = Math.min(nodes.length, ages.length);
   ctx.clearRect(0, 0, width, height);
   for (let i = 1; i < arrived; i++) {
+    const node = nodes[i];
+    const life = ages[i];
+    if (node === undefined || life === undefined) {
+      continue;
+    }
     for (let k = 0; k < MOTES_PER_PAGE; k++) {
       const span = MOTE_LIFE_S + k * 0.16;
-      const life = ages[i];
       if (life < 0 || life > span) {
         continue;
       }
-      const node = nodes[i];
       const k2 = (life / span) ** 2;
       const offset = (k - 1) * 9;
       ctx.globalAlpha = (1 - life / span) * 0.9;

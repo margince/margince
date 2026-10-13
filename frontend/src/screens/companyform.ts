@@ -83,7 +83,7 @@ function mapDomainRowsReplaceSet(rows: FormRows): DomainPatch {
   return (rows.domains ?? [])
     .filter((row) => (row.domain ?? "").trim().length > 0)
     .map((row) => ({
-      domain: row.domain.trim().toLowerCase(),
+      domain: (row.domain ?? "").trim().toLowerCase(),
       is_primary: row.is_primary === "true",
     }));
 }
@@ -108,7 +108,7 @@ export function mapCompanyBody(
   rows: FormRows,
 ): CreateCompanyRequest {
   return {
-    display_name: values.display_name.trim(),
+    display_name: (values.display_name ?? "").trim(),
     legal_name: values.legal_name?.trim() || undefined,
     industry: values.industry?.trim() || undefined,
     size_band: asSizeBand(values.size_band),

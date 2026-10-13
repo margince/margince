@@ -57,7 +57,7 @@ const RECORD_ID_RE =
 // ("commercial_correspondence · §257 HGB / §147 AO"); the statute after the
 // separator is shown as written, because it is the citation and not a label.
 function splitReason(reason: string): { cls: string; basis: string } {
-  const [cls, ...rest] = reason.split(" · ");
+  const [cls = "", ...rest] = reason.split(" · ");
   return { cls, basis: rest.join(" · ") };
 }
 
@@ -209,8 +209,10 @@ export function RestrictedRecordsCard() {
     );
   }
 
-  const kindOf = (row: RestrictedRecord) =>
-    KIND_LABEL[row.kind] ? t(KIND_LABEL[row.kind]) : humanizeToken(row.kind);
+  const kindOf = (row: RestrictedRecord) => {
+    const label = KIND_LABEL[row.kind];
+    return label ? t(label) : humanizeToken(row.kind);
+  };
   const columns: DataTableColumn<RestrictedRecord>[] = [
     {
       key: "record",

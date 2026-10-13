@@ -171,10 +171,10 @@ export function primaryTransportAction(
   transports: readonly Transport[],
   t: ReturnType<typeof useT>,
 ): TransportAction {
-  if (transports.length !== 1) {
+  const [only] = transports;
+  if (transports.length !== 1 || only === undefined) {
     return { label: t("contact.action.write"), icon: Send };
   }
-  const only = transports[0];
   if (only.id === "email") {
     return { label: t("contact.action.email"), icon: Mail };
   }

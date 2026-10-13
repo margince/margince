@@ -12,6 +12,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelOf } from "./preferences.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 
@@ -66,7 +67,10 @@ export function PrivacyNotice({
   const sourceKey = isAcquisitionKind(card.acquired_as)
     ? SOURCE_LABEL[card.acquired_as]
     : "privacynotice.source.unknown";
-  const purposes = card.purposes ?? [];
+  const keys = card.purpose_keys ?? [];
+  const purposes = (card.purposes ?? []).map((label, i) =>
+    labelOf(t, { key: keys[i] ?? "", label }),
+  );
 
   return (
     <div className="pref-page">

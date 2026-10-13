@@ -46,12 +46,13 @@ import (
 // The one %s expression is used by both arms: a bind ("$3") on the page's own
 // reads, a correlated column ("c.id") where a set of contacts is answered in one
 // statement. Every call site passes it exactly once.
-const contactReachesActivity = `(EXISTS (
-	SELECT 1 FROM activity_link l
-	WHERE l.activity_id = a.id AND l.contact_id = %[1]s)
- OR EXISTS (
-	SELECT 1 FROM activity_participant ap
-	WHERE ap.activity_id = a.id AND ap.contact_id = %[1]s))`
+//
+// One IN over both arms, not two ORed EXISTS. Postgres runs the IN as a join
+// from the contact's few rows; it tests ORed EXISTS on every activity.
+const contactReachesActivity = `(a.id IN (
+	SELECT l.activity_id FROM activity_link l WHERE l.contact_id = %[1]s
+	UNION ALL
+	SELECT ap.activity_id FROM activity_participant ap WHERE ap.contact_id = %[1]s))`
 
 // bind spells one placeholder for the predicates that take the contact as an
 // expression.

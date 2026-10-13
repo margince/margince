@@ -50,7 +50,7 @@ export const Expired: Story = {
       redacted: true,
       withheld: true,
       evaluation: {
-        ...reportingEditions[0].evaluation,
+        ...reportingEditions[0]?.evaluation,
         charts: [],
         metrics: [],
       },

@@ -19,7 +19,12 @@ export async function tableRowCells(
     .find((candidate) => candidate.textContent?.includes(text));
   if (!row) throw new Error(`no row with ${text} in ${table}`);
   const cells = within(row).getAllByRole("cell");
-  return Object.fromEntries(headers.map((header, i) => [header, cells[i]]));
+  return Object.fromEntries(
+    headers.flatMap((header, i): [string, HTMLElement][] => {
+      const cell = cells[i];
+      return cell ? [[header, cell]] : [];
+    }),
+  );
 }
 
 /** The menu one row's "…" opened, named by the row so no other row's can pass. */

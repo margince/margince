@@ -29,7 +29,7 @@ export function isoMonth(month: Date): string {
 
 /** The first of the month a chosen day belongs to, as the grid holds months. */
 export function monthOf(day: ISODay): Date {
-  const [year, month] = day.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN] = day.split("-").map(Number);
   return new Date(year, month - 1, 1);
 }
 
@@ -49,7 +49,9 @@ export function monthWindow(month: Date, zone: string, now: number) {
 
 /** The instants one day covers in the guest's zone, starting no earlier than now. */
 export function dayWindow(day: ISODay, zone: string, now: number) {
-  const [year, month, date] = day.split("-").map(Number);
+  const [year = Number.NaN, month = Number.NaN, date = Number.NaN] = day
+    .split("-")
+    .map(Number);
   const to = startOfDayInZone(
     isoDay(new Date(year, month - 1, date + 1)),
     zone,

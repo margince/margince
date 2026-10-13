@@ -71,6 +71,7 @@ export const PickedTime: Story = {
     const [first] = await page.findAllByRole("button", {
       name: /^\d{1,2}:\d{2}/,
     });
+    if (!first) throw new Error("the month offers no time");
     await userEvent.click(first);
   },
 };
