@@ -323,22 +323,24 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		if err != nil {
 			return nil, err
 		}
-		sql := fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s
-			 FROM %s t
-			 WHERE %s
-			   AND t.archived_at IS NULL`,
-			branch.entity, branch.title, snippet,
-			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
-			noEmployer, branch.table, branch.ownMatch("t", tsquery, identifierPos))
+		where := branch.ownMatch("t", tsquery, identifierPos) + " AND t.archived_at IS NULL"
 		if narrowing := branch.narrowing("t"); narrowing != "" {
-			sql += " AND " + narrowing
+			where += " AND " + narrowing
 		}
 		if scope != "" {
-			sql += " AND " + scope
+			where += " AND " + scope
 		}
-		branches = append(branches, sql)
+		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
+		if branch.rankSample > 0 {
+			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
+		}
+		branches = append(branches, fmt.Sprintf(
+			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
+			        %s::float8 AS score, %s
+			 FROM %s`,
+			branch.entity, branch.title, snippet,
+			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
+			noEmployer, source))
 	}
 	return branches, nil
 }
