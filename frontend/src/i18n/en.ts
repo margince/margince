@@ -8279,6 +8279,60 @@ export const en = {
   // refusal the server did not explain, and naming the current password would
   // send someone hunting a mistake that may not be theirs.
   "password.errorGeneric": "No cause was reported. Retry.",
+  "mfa.title": "Two-step sign-in",
+  "mfa.body": "A code from an authenticator app, asked for after the password.",
+  "mfa.off": "Not set up",
+  "mfa.pending": "Not finished",
+  "mfa.on_one": "On · {count} recovery code left",
+  "mfa.on_other": "On · {count} recovery codes left",
+  "mfa.statusFailed": "Status not loaded. Reload the page.",
+  "mfa.setUp": "Set up",
+  "mfa.remove": "Remove",
+  "mfa.lowTitle": "Few recovery codes left",
+  "mfa.low": "For new codes, remove two-step sign-in and set it up again.",
+  "mfa.setupTitle": "Set up two-step sign-in",
+  "mfa.startFailedTitle": "Setup not started",
+  "mfa.alreadyOn":
+    "Two-step sign-in is already on. Remove it first to set it up again.",
+  "mfa.scan": "Scan this QR code with an authenticator app.",
+  "mfa.qrLabel": "QR code for the authenticator app",
+  "mfa.secretLabel": "Secret key",
+  "mfa.secretHint": "If the app cannot scan, enter this key in it.",
+  "mfa.copyKey": "Copy key",
+  "mfa.copied": "Copied",
+  "mfa.copyKeyFailed":
+    "Copy failed. Select the key above and copy it manually.",
+  "mfa.code": "Code from the app",
+  "mfa.signsOut": "Turning it on signs out all other devices.",
+  "mfa.turnOn": "Turn on",
+  "mfa.turningOn": "Turning on…",
+  "mfa.codeRefused": "The code was not accepted. Check it and retry.",
+  "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
+  "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
+  "mfa.onTitle": "Two-step sign-in on",
+  "mfa.onBody": "All other devices were signed out.",
+  "mfa.saveCodesTitle": "Save these recovery codes now",
+  "mfa.saveCodes":
+    "Each code signs in once without the app. The codes are not shown again.",
+  "mfa.codesLabel": "Recovery codes",
+  "mfa.copyCodes": "Copy codes",
+  "mfa.copyCodesFailed":
+    "Copy failed. Select the codes above and copy them manually.",
+  "mfa.done": "Done",
+  "mfa.cancel": "Cancel",
+  "mfa.removeTitle": "Remove two-step sign-in?",
+  "mfa.removeBody":
+    "Signing in then needs only the password, and the recovery codes stop working.",
+  "mfa.removeConfirm": "Remove two-step sign-in",
+  "mfa.removeCode": "Code",
+  "mfa.removeCodeHint":
+    "A code from the authenticator app, or an unused recovery code.",
+  "mfa.discardTitle": "Discard unfinished setup?",
+  "mfa.discardBody":
+    "The authenticator app was never confirmed, so no code is needed.",
+  "mfa.discard": "Discard setup",
+  "mfa.removed": "Two-step sign-in removed",
+  "mfa.discarded": "Setup discarded",
   "setup.pageTitle": "Set up Margince",
   "setup.title": "Claim this installation",
   "setup.body":
@@ -10195,7 +10249,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "How people can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
+    "How members can sign in. The list shows the providers this installation has credentials for: an administrator can turn one off but cannot add one.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available. Every user can sign in this way, so the other methods can be turned off safely.",

@@ -8107,6 +8107,65 @@ export const de = {
   "password.changeFailedTitle": "Passwort nicht geändert",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Versuche es erneut.",
+  "mfa.title": "Zweistufige Anmeldung",
+  "mfa.body":
+    "Ein Code aus einer Authenticator-App, nach dem Passwort abgefragt.",
+  "mfa.off": "Nicht eingerichtet",
+  "mfa.pending": "Nicht abgeschlossen",
+  "mfa.on_one": "An · {count} Wiederherstellungscode übrig",
+  "mfa.on_other": "An · {count} Wiederherstellungscodes übrig",
+  "mfa.statusFailed": "Der Status wurde nicht geladen. Lade die Seite neu.",
+  "mfa.setUp": "Einrichten",
+  "mfa.remove": "Entfernen",
+  "mfa.lowTitle": "Wenige Wiederherstellungscodes übrig",
+  "mfa.low":
+    "Für neue Codes entferne die zweistufige Anmeldung und richte sie neu ein.",
+  "mfa.setupTitle": "Zweistufige Anmeldung einrichten",
+  "mfa.startFailedTitle": "Einrichtung nicht gestartet",
+  "mfa.alreadyOn":
+    "Die zweistufige Anmeldung ist schon an. Entferne sie zuerst, um sie neu einzurichten.",
+  "mfa.scan": "Scanne diesen QR-Code mit einer Authenticator-App.",
+  "mfa.qrLabel": "QR-Code für die Authenticator-App",
+  "mfa.secretLabel": "Geheimer Schlüssel",
+  "mfa.secretHint":
+    "Wenn die App nicht scannen kann, gib dort diesen Schlüssel ein.",
+  "mfa.copyKey": "Schlüssel kopieren",
+  "mfa.copied": "Kopiert",
+  "mfa.copyKeyFailed":
+    "Kopieren fehlgeschlagen. Markiere den Schlüssel oben und kopiere ihn von Hand.",
+  "mfa.code": "Code aus der App",
+  "mfa.signsOut": "Beim Einschalten werden alle anderen Geräte abgemeldet.",
+  "mfa.turnOn": "Einschalten",
+  "mfa.turningOn": "Wird eingeschaltet…",
+  "mfa.codeRefused":
+    "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
+  "mfa.tooManyCodes":
+    "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
+  "mfa.onTitle": "Zweistufige Anmeldung an",
+  "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
+  "mfa.saveCodesTitle": "Wiederherstellungscodes jetzt sichern",
+  "mfa.saveCodes":
+    "Jeder Code gilt für eine Anmeldung ohne die App. Die Codes werden nicht noch einmal angezeigt.",
+  "mfa.codesLabel": "Wiederherstellungscodes",
+  "mfa.copyCodes": "Codes kopieren",
+  "mfa.copyCodesFailed":
+    "Kopieren fehlgeschlagen. Markiere die Codes oben und kopiere sie von Hand.",
+  "mfa.done": "Fertig",
+  "mfa.cancel": "Abbrechen",
+  "mfa.removeTitle": "Zweistufige Anmeldung entfernen?",
+  "mfa.removeBody":
+    "Für die Anmeldung reicht dann das Passwort, und die Wiederherstellungscodes gelten nicht mehr.",
+  "mfa.removeConfirm": "Zweistufige Anmeldung entfernen",
+  "mfa.removeCode": "Code",
+  "mfa.removeCodeHint":
+    "Ein Code aus der Authenticator-App oder ein unbenutzter Wiederherstellungscode.",
+  "mfa.discardTitle": "Unfertige Einrichtung verwerfen?",
+  "mfa.discardBody":
+    "Die Authenticator-App wurde nie bestätigt, deshalb ist kein Code nötig.",
+  "mfa.discard": "Einrichtung verwerfen",
+  "mfa.removed": "Zweistufige Anmeldung entfernt",
+  "mfa.discarded": "Einrichtung verworfen",
   "setup.pageTitle": "Margince einrichten",
   "setup.title": "Diese Installation übernehmen",
   "setup.body":
@@ -10076,7 +10135,7 @@ export const de = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Wie sich Personen anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Ein Admin kann einen Anbieter ausschalten, aber keinen hinzufügen.",
+    "Wie sich Mitglieder anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Ein Admin kann einen Anbieter ausschalten, aber keinen hinzufügen.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos ausschalten.",

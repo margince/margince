@@ -16,6 +16,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useMyMfa } from "./mfa.queries";
 import {
   type AssignableRole,
   roleLabel,
@@ -88,21 +89,6 @@ function useAuthenticationPolicy() {
       const { data, error, response } = await api.GET(
         "/installation/authentication-policy",
       );
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-// Asked only while the confirm is open: it decides one line of that dialog.
-function useOwnMfaStatus(enabled: boolean) {
-  return useQuery({
-    queryKey: ["me", "mfa"],
-    enabled,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/me/mfa");
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -345,7 +331,8 @@ export function SignInMethodsCard() {
   const settings = useAuthenticationPolicy();
   const save = useSaveSignInPolicy();
   const [confirmingMfa, setConfirmingMfa] = useState(false);
-  const ownMfa = useOwnMfaStatus(confirmingMfa);
+  // Asked only while the confirm is open: it decides one line of that dialog.
+  const ownMfa = useMyMfa(confirmingMfa);
 
   return (
     <>

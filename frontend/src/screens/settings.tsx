@@ -67,6 +67,7 @@ import { LinkedInImportCard } from "./linkedin-import";
 import { LinkedInReachCard } from "./linkedin-reach";
 import { MailSharingCard, MailSharingPostureRow } from "./mail-sharing";
 import { MeetingSettings } from "./meeting-settings";
+import { MfaSettingRow } from "./mfacard";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppCard } from "./oauth-app";
 import { OfferTemplatesAdmin } from "./offertemplates";
@@ -617,6 +618,7 @@ function AccountCard() {
         <DisplayNameSettingRow toast={toast} />
         <GreetingNameSettingRow toast={toast} />
         <PasswordSettingRow />
+        <MfaSettingRow />
         <SignatureSettingRow toast={toast} />
         <LanguageSettingRow />
         <AppearanceSettingRow />
