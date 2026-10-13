@@ -10,27 +10,103 @@ package gates
 //
 // The three parts of that grammar it reads are declared mirrors of the server's:
 // IMPORT_NAMESPACE of provenance.ReservedSourceSystemPrefix, IMPORT_CONNECTOR
-// of migration.ConnectorCSV, IMPORT_OBJECTS of migration.ImportOrder. A drift
+// of migration's ConnectorCSV, IMPORT_OBJECTS of migration's ImportOrder. A drift
 // in either direction fails, and so does a second hand-typed namespace.
 
 import (
+	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 const (
 	frontendSrc           = "../frontend/src"
 	frontendImportGrammar = "../frontend/src/design-system/provenanceof.ts"
+	// The importer's owner, read as source: gates may not import a module.
+	migrationModuleDir = "internal/modules/migration"
 )
+
+// importerGrammar reads ConnectorCSV and the ImportOrder slice out of the
+// migration module's own files, so the gate compares against what it ships.
+func importerGrammar(t *testing.T) (connector string, objects []string) {
+	t.Helper()
+	fset := token.NewFileSet()
+	files := parsePackageDir(t, fset, migrationModuleDir)
+	consts := stringConsts(t, fset, files)
+	connector, found := consts["ConnectorCSV"]
+	if !found || connector == "" {
+		t.Fatalf("%s declares no string constant ConnectorCSV: the importer's connector moved, so check the browser's IMPORT_CONNECTOR moved with it", migrationModuleDir)
+	}
+	objects, err := stringSliceVar(files, "ImportOrder", consts)
+	if err != nil {
+		t.Fatalf("%s: %v", migrationModuleDir, err)
+	}
+	return connector, objects
+}
+
+// stringSliceVar resolves `var <name> = []string{...}`, each element a string
+// literal or a string constant. An element it cannot resolve, or an empty
+// list, is an error: a short census would compare against fewer objects.
+func stringSliceVar(files []*ast.File, name string, consts map[string]string) ([]string, error) {
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, isGen := decl.(*ast.GenDecl)
+			if !isGen || gen.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue || len(value.Names) != 1 || value.Names[0].Name != name || len(value.Values) != 1 {
+					continue
+				}
+				return stringSliceElements(value.Values[0], name, consts)
+			}
+		}
+	}
+	return nil, fmt.Errorf("no `var %s = []string{...}` found", name)
+}
+
+func stringSliceElements(expr ast.Expr, name string, consts map[string]string) ([]string, error) {
+	lit, isLit := expr.(*ast.CompositeLit)
+	if !isLit {
+		return nil, fmt.Errorf("%s is not a slice literal", name)
+	}
+	var values []string
+	for _, elt := range lit.Elts {
+		switch e := elt.(type) {
+		case *ast.Ident:
+			value, found := consts[e.Name]
+			if !found {
+				return nil, fmt.Errorf("%s names %s, which is no string constant of the package", name, e.Name)
+			}
+			values = append(values, value)
+		case *ast.BasicLit:
+			value, err := strconv.Unquote(e.Value)
+			if err != nil || e.Kind != token.STRING {
+				return nil, fmt.Errorf("%s holds %s, which is not a string", name, e.Value)
+			}
+			values = append(values, value)
+		default:
+			return nil, fmt.Errorf("%s holds an element this gate cannot resolve", name)
+		}
+	}
+	if len(values) == 0 {
+		return nil, errors.New(name + " is empty: a census of nothing agrees with everything")
+	}
+	return values, nil
+}
 
 // tsStringConst reads `const <name> = "<value>"` in any quote a string literal
 // admits, so a re-quoted declaration is still read instead of counted as gone.
@@ -91,9 +167,10 @@ func TestTheFrontendImportGrammarMirrorsTheImporter(t *testing.T) {
 		t.Fatalf("read %s: %v", frontendImportGrammar, err)
 	}
 	source := string(raw)
+	connector, importOrder := importerGrammar(t)
 	for _, mirror := range []struct{ name, server, cost string }{
 		{"IMPORT_NAMESPACE", provenance.ReservedSourceSystemPrefix, "an imported record would read as typed by the administrator who ran the import"},
-		{"IMPORT_CONNECTOR", migration.ConnectorCSV, "every imported record would lose its upload's name"},
+		{"IMPORT_CONNECTOR", connector, "every imported record would lose its upload's name"},
 	} {
 		got := tsStringConst(source, mirror.name)
 		if len(got) != 1 {
@@ -108,14 +185,14 @@ func TestTheFrontendImportGrammarMirrorsTheImporter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v", frontendImportGrammar, err)
 	}
-	for _, object := range migration.ImportOrder {
+	for _, object := range importOrder {
 		if !slices.Contains(objects, object) {
-			t.Errorf("IMPORT_OBJECTS lacks %q from migration.ImportOrder: a record of it would lose its upload's name", object)
+			t.Errorf("IMPORT_OBJECTS lacks %q from ImportOrder: a record of it would lose its upload's name", object)
 		}
 	}
 	for _, object := range objects {
-		if !slices.Contains(migration.ImportOrder, object) {
-			t.Errorf("IMPORT_OBJECTS holds %q, which migration.ImportOrder does not import: the browser reads a stamp no importer writes", object)
+		if !slices.Contains(importOrder, object) {
+			t.Errorf("IMPORT_OBJECTS holds %q, which ImportOrder does not import: the browser reads a stamp no importer writes", object)
 		}
 	}
 }
@@ -186,6 +263,24 @@ func TestTheImportGrammarReaderSeesQuotedDeclarationsAndPredicateCopies(t *testi
 	}
 	if _, err := tsImportObjectSet(`const IMPORT_OBJECTS = new Set(["company", ...MORE]);`); err == nil {
 		t.Error("a spread member was read as nothing instead of refused")
+	}
+	for _, c := range []struct{ name, source, err string }{
+		{"constants and literals", `package m; const A = "a"; var Order = []string{A, "b"}`, ""},
+		{"an unknown constant", `package m; var Order = []string{Missing}`, "no string constant"},
+		{"an empty list", `package m; var Order = []string{}`, "empty"},
+		{"no such var", `package m; var Other = []string{"a"}`, "no `var Order"},
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), c.name+".go", c.source, 0)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		got, err := stringSliceVar([]*ast.File{file}, "Order", map[string]string{"A": "a"})
+		if c.err == "" && (err != nil || !slices.Equal(got, []string{"a", "b"})) {
+			t.Errorf("%s: read %v, %v", c.name, got, err)
+		}
+		if c.err != "" && (err == nil || !strings.Contains(err.Error(), c.err)) {
+			t.Errorf("%s: error %v, want one naming %q", c.name, err, c.err)
+		}
 	}
 	for path, want := range map[string]bool{"a/b.ts": true, "a/b.tsx": true, "a/b.stories.tsx": false, "a/b.test.ts": false, "a/b.md": false} {
 		if got := isProductTypeScript(path); got != want {
