@@ -1003,7 +1003,7 @@ export function AnalyticsScreen() {
           onSelectScope={selectScope}
           scopeControl={scopeControl}
           stages={stagesOfEveryPipeline(pipelinesQuery.data ?? [], (name) =>
-            t("analytics.archivedPipeline", { name }),
+            t("analytics.retiredPipeline", { name }),
           )}
         />
       </div>

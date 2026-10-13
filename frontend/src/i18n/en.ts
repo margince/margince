@@ -5506,7 +5506,7 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
-  "analytics.archivedPipeline": "{name} (archived)",
+  "analytics.retiredPipeline": "{name} (retired)",
   "analytics.forecastBanner":
     "Each tile shows the raw total and, below it, the probability-weighted total. Rounding is per deal, so it always matches Explain this number.",
   "analytics.company": "Company",

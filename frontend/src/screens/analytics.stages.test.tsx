@@ -77,7 +77,7 @@ describe("the pipeline stage table", () => {
         archivedPipelines: [
           {
             id: "old",
-            name: "Retired",
+            name: "Old partners",
             is_default: false,
             position: 2,
             archived_at: "2026-05-01T00:00:00Z",
@@ -101,7 +101,7 @@ describe("the pipeline stage table", () => {
       await screen.findByRole("table", { name: "Open deals by stage" }),
     );
     expect(
-      await table.findByText("Retired (archived) · Legacy intake"),
+      await table.findByText("Old partners (retired) · Legacy intake"),
     ).toBeTruthy();
     expect(table.queryByText("old-s1")).toBeNull();
     expect(table.queryByText(/Legacy close/)).toBeNull();
@@ -109,7 +109,7 @@ describe("the pipeline stage table", () => {
 });
 
 describe("stagesOfEveryPipeline", () => {
-  const archived = (name: string) => `${name} (archived)`;
+  const retired = (name: string) => `${name} (retired)`;
   const ARCHIVED_AT = "2026-05-01T00:00:00Z";
 
   it("tells apart a stage name two pipelines share", () => {
@@ -122,7 +122,7 @@ describe("stagesOfEveryPipeline", () => {
         },
         { name: "Partners", stages: [stage("b", "o", "Qualify", 1)] },
       ],
-      archived,
+      retired,
     ).map((entry) => entry.name);
     expect(names).toEqual(["Sales · Qualify", "Partners · Qualify"]);
   });
@@ -139,7 +139,7 @@ describe("stagesOfEveryPipeline", () => {
         },
         { is_default: true, stages: [stage("p1", "pl", "Qualify", 1)] },
       ],
-      archived,
+      retired,
     );
     expect(stages.map((entry) => entry.name)).toEqual([
       "Qualify",
@@ -149,11 +149,11 @@ describe("stagesOfEveryPipeline", () => {
     expect(stages.map((entry) => entry.position)).toEqual([0, 1, 2]);
   });
 
-  it("lists an archived pipeline's stages last, marked archived, renaming no live stage", () => {
+  it("lists an archived pipeline's stages last, marked retired, renaming no live stage", () => {
     const names = stagesOfEveryPipeline(
       [
         {
-          name: "Retired",
+          name: "Old partners",
           archived_at: ARCHIVED_AT,
           stages: [stage("r1", "old", "Qualify", 1)],
         },
@@ -164,12 +164,12 @@ describe("stagesOfEveryPipeline", () => {
           stages: [stage("s1", "pl", "Qualify", 1)],
         },
       ],
-      archived,
+      retired,
     ).map((entry) => entry.name);
     expect(names).toEqual([
       "Qualify",
       "Intake",
-      "Retired (archived) · Qualify",
+      "Old partners (retired) · Qualify",
     ]);
   });
 
@@ -188,12 +188,12 @@ describe("stagesOfEveryPipeline", () => {
           stages: [stage("a1", "old", "Qualify", 1)],
         },
       ],
-      archived,
+      retired,
     ).map((entry) => entry.name);
     expect(names).toEqual([
       "Sales · Qualify",
       "Partners · Qualify",
-      "Sales (archived) · Qualify",
+      "Sales (retired) · Qualify",
     ]);
   });
 
@@ -213,17 +213,17 @@ describe("stagesOfEveryPipeline", () => {
         {
           name: "Sales",
           is_default: true,
-          stages: [stage("l1", "pl", "Sales (archived) · Qualify (2)", 1)],
+          stages: [stage("l1", "pl", "Sales (retired) · Qualify (2)", 1)],
         },
       ],
-      archived,
+      retired,
     );
     const names = stages.map((entry) => entry.name);
     expect(new Set(names).size).toBe(stages.length);
     expect(names).toEqual([
-      "Sales (archived) · Qualify (2)",
-      "Sales (archived) · Qualify",
-      "Sales (archived) · Qualify (3)",
+      "Sales (retired) · Qualify (2)",
+      "Sales (retired) · Qualify",
+      "Sales (retired) · Qualify (3)",
     ]);
   });
 });
