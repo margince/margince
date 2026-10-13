@@ -71,30 +71,32 @@ func TestALostTestRunJobIsQueuedAgain(t *testing.T) {
 	}
 }
 
-// The legacy rule judges a test run old code started, by its idle time. The
-// resume rule judges one a queued job works, by its heartbeat.
-func TestEachStaleTestRunRuleSettlesOnlyItsOwnRuns(t *testing.T) {
+// An old API pod moves a run to validating as queued work and tests it in its
+// request, with no job. If the pod dies, the lost-job rule queues that attempt;
+// the stale-claim rule leaves it, since no job ever claimed it.
+func TestATestRunAnOldPodLeftIsQueuedByTheLostJobRule(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
-	queued := claimedTest(ctx, t, s)
-	legacy := seedRunIn(ctx, t, db, StatusValidating)
-	for _, id := range []RunID{queued.Run, legacy} {
+	claimed := claimedTest(ctx, t, s)
+	oldPod := startTest(ctx, t, s, newDraft(ctx, t, s, ""), &jobQueue{})
+	for _, id := range []RunID{claimed.Run, oldPod.Run} {
 		setRunColumn(ctx, t, db, id, `updated_at = now() - interval '1 hour', heartbeat_at = now() - interval '1 hour'`)
 	}
 
-	if n, err := s.ReturnStaleTestRuns(ctx, time.Minute); n != 1 || err != nil {
-		t.Fatalf("ReturnStaleTestRuns = (%d, %v), want only the legacy run returned", n, err)
+	resumed := &jobQueue{}
+	if n, err := s.ResumeStaleAttempts(ctx, time.Minute, 3, resumed.requeue); n != 1 || err != nil {
+		t.Fatalf("ResumeStaleAttempts = (%d, %v), want only the claimed test run resumed", n, err)
 	}
-	q := &jobQueue{}
-	if n, err := s.ResumeStaleAttempts(ctx, time.Minute, 3, q.requeue); n != 1 || err != nil {
-		t.Fatalf("ResumeStaleAttempts = (%d, %v), want only the queued test run resumed", n, err)
+	lost := &jobQueue{}
+	if n, err := s.RequeueLostJobs(ctx, time.Minute, lost.requeue); n != 1 || err != nil {
+		t.Fatalf("RequeueLostJobs = (%d, %v), want only the old pod's test run queued", n, err)
 	}
-	if got := mustGetStaged(ctx, t, s, legacy); got.Status != StatusPending || got.Error != CauseTestRunStopped {
-		t.Errorf("the legacy test run reads %s with %q, want its draft with the cause", got.Status, got.Error)
+	if len(lost.attempts) != 1 || lost.attempts[0] != oldPod.Attempt {
+		t.Errorf("queued jobs %v, want one of the old pod's attempt %d", lost.attempts, oldPod.Attempt)
 	}
-	if got := mustGetStaged(ctx, t, s, queued.Run); got.Status != StatusValidating || got.JobAttempt != queued.Attempt+1 {
-		t.Errorf("the queued test run reads %s at attempt %d, want it validating at attempt %d",
-			got.Status, got.JobAttempt, queued.Attempt+1)
+	if got := mustGetStaged(ctx, t, s, oldPod.Run); got.Status != StatusValidating || got.JobAttempt != oldPod.Attempt {
+		t.Errorf("the old pod's test run reads %s at attempt %d, want it validating at attempt %d",
+			got.Status, got.JobAttempt, oldPod.Attempt)
 	}
 }
 

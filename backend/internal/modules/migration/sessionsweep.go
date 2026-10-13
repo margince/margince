@@ -33,22 +33,6 @@ type sweepRule struct {
 	errorIs string
 	// unreleased narrows the rule to runs that still hold their source.
 	unreleased bool
-	// legacy narrows the rule to runs whose status old code entered.
-	legacy bool
-}
-
-// ReturnStaleTestRuns returns to draft every test run old code started that
-// has not moved for idle. Its process is gone, and its choices are still good. A test run a queued job works is the resume rules' to settle.
-func (s *RunStore) ReturnStaleTestRuns(ctx context.Context, idle time.Duration) (int, error) {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return 0, err
-	}
-	rule := sweepRule{statuses: sessionMoves[moveRefuse].from, idle: idle, legacy: true}
-	return s.sweepEach(ctx, rule, func(tx pgx.Tx, id RunID) error {
-		return stageTransition(ctx, tx, id, moveRefuse, runChange{
-			values: []runValue{{errorColumn, CauseTestRunStopped}}, literals: testRunEnded,
-		})
-	})
 }
 
 // CancelStoppedTestRuns closes every test run that old code recorded as
@@ -101,19 +85,23 @@ func (s *RunStore) ReleaseFinishedSources(ctx context.Context) (int, error) {
 // sweepEach settles up to sweepBatch runs the rule selects, in one transaction.
 // A run another writer holds is skipped, and the next pass meets it again.
 func (s *RunStore) sweepEach(ctx context.Context, rule sweepRule, settle func(pgx.Tx, RunID) error) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	errorIs := arg(rule.errorIs)
+	query := storekit.SQLf(`
+		SELECT id FROM import_run
+		 WHERE connector = $%d AND status = ANY($%d)
+		   AND updated_at < now() - make_interval(secs => $%d)
+		   AND ($%d::text = '' OR error = $%d::text)
+		   AND (NOT $%d::bool OR source_released_at IS NULL)
+		 ORDER BY updated_at, id
+		 LIMIT $%d
+		   FOR UPDATE SKIP LOCKED`,
+		arg(ConnectorCSV), arg(rule.statuses), arg(rule.idle.Seconds()), errorIs, errorIs,
+		arg(rule.unreleased), arg(sweepBatch))
 	settled := 0
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM import_run
-			 WHERE connector = $1 AND status = ANY($2)
-			   AND updated_at < now() - make_interval(secs => $3)
-			   AND ($4::text = '' OR error = $4::text)
-			   AND (NOT $5::bool OR source_released_at IS NULL)
-			   AND (NOT $7::bool OR `+legacyRow+`)
-			 ORDER BY updated_at, id
-			 LIMIT $6
-			   FOR UPDATE SKIP LOCKED`,
-			ConnectorCSV, rule.statuses, rule.idle.Seconds(), rule.errorIs, rule.unreleased, sweepBatch, rule.legacy)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("selecting %v import runs to sweep: %w", rule.statuses, err)
 		}

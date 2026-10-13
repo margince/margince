@@ -58,9 +58,6 @@ var importSweepRules = []importSweepRule{
 	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.FailStaleRunning(ctx, importLegacyIdleAfter, staleImportCause)
 	}},
-	{"test_runs_returned", func(ctx context.Context, runs *migration.RunStore) (int, error) {
-		return runs.ReturnStaleTestRuns(ctx, importLegacyTestRunAfter)
-	}},
 	{"stopped_test_runs_cancelled", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.CancelStoppedTestRuns(ctx)
 	}},

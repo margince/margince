@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 const (
@@ -46,9 +45,6 @@ const (
 	// importLegacyIdleAfter is when a running run that moved no checkpoint has
 	// no process left working it, by the rule that held before commits sliced.
 	importLegacyIdleAfter = 30 * time.Minute
-	// importLegacyTestRunAfter is when a test run old code started inside its
-	// request is past saving: twice the deadline that request answered by.
-	importLegacyTestRunAfter = 2 * httpserver.ResponseDeadline
 	// importHeartbeatEvery is how often a test run tells the sweep it is alive
 	// while its one snapshot read writes nothing else.
 	importHeartbeatEvery = 10 * time.Second

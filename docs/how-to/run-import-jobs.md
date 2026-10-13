@@ -17,9 +17,9 @@ queues the job. To use the import, read [import-a-company-spreadsheet.md](import
 The queue `import_check` has two workers in each worker process, one for each open wizard tab. It keeps
 a test run, which a user watches, from waiting behind a commit. The queue `import_write` has one worker
 in each worker process. It keeps import slices apart from the jobs a user waits on. In each process the
-two queues hold at most six database connections at once:
+two queues hold at most eight database connections at once:
 
-- a test run holds one for its read and a short one for its progress;
+- a test run holds one for its read, and up to two short ones, for its progress and its heartbeat;
 - a slice holds one for the run's lock and one for its rows.
 
 ## What a test run is
@@ -53,8 +53,8 @@ the same attempt cannot queue a second job.
 
 Deploy in this order: migrate, then every worker, then the API and the web app.
 
-1. **Migrate.** The migration adds the lease columns to `import_run`. Old API pods keep working: the
-   rows they write take the defaults, and the sweep treats them as old rows (see below).
+1. **Migrate.** Old API pods keep working on the new schema, and the sweep settles a run they leave
+   behind (see below).
 2. **Every worker.** A worker must know the `import_check` and `import_write` queues before an API
    queues a job on them.
    A new API with an old worker leaves jobs waiting, with nothing failed, until a new worker starts.
@@ -88,8 +88,10 @@ the job is still alive, the insert finds it and does nothing.
 
 While old and new API pods answer together, a request can reach either one.
 
-- A test run started on an old pod runs inside that pod's request. A run it leaves `validating` goes
-  back to `pending` after a minute, and may be refused once. Start it again.
+- A test run started on an old pod runs inside that pod's request and ends within 22.5 seconds. It may
+  be refused once; start it again. The old pod queues no job for it, so a run that pod leaves
+  `validating` reads as a job waiting in the queue. After 2 minutes the sweep queues the job of its
+  attempt, and a worker tests the file.
 - A run approved on an old pod commits inside that pod's process. It carries no job, so the sweep
   never queues it again. It is failed after 30 minutes with no change, and a user can approve it
   again, which queues a job on the new API.
@@ -122,7 +124,8 @@ Then read the answer from the table:
 - `claimed_attempt` is empty or behind `job_attempt`. The job waits in the queue, behind the slices
   of other runs. A silent heartbeat means nothing here. If no slice starts, check that a worker with
   the run's queue (`import_check` for a test run, `import_write` for the rest) is running, and that it
-  is a new release.
+  is a new release. A run that stays this way for 2 minutes has lost its job, for example a test run
+  an old pod started, and the sweep queues its job again.
 - `heartbeat_at` moves. The run is working. A large file takes many slices. Compare `checkpoint`
   to its length.
 - `claimed_attempt` equals `job_attempt`, and `heartbeat_at` is older than 2 minutes and does not

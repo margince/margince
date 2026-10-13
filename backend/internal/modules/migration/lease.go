@@ -246,8 +246,9 @@ func nullable(s string) *string {
 }
 
 // FailLease records why the attempt stopped. A test run returns to its draft
-// with the cause. A commit becomes failed, which a resume continues from its checkpoint. An undo stays undoing with the cause,
-// because failing it would let a resume re-run the commit over a half-undone run.
+// with the cause. A commit becomes failed, which a resume continues from its
+// checkpoint. An undo stays undoing with the cause, because failing it would
+// let a resume re-run the commit over a half-undone run.
 // Its job_status is cleared: no job is queued for it, so the sweep leaves it to
 // an undo request.
 func (s *RunStore) FailLease(ctx context.Context, l Lease, cause string) error {

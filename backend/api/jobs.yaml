@@ -191,8 +191,8 @@ queues:
     reason: >-
       A test run of an import that a user is watching. Its own pool, so a
       long commit can never queue ahead of it. Two, one per open wizard tab.
-      Each holds its snapshot connection plus a short one for its progress
-      and heartbeat.
+      Each holds its snapshot connection plus up to two short ones, for its
+      progress and its heartbeat.
   import_write:
     max_workers: 1
     reason: >-
@@ -1475,7 +1475,8 @@ kinds:
       Settles every import run nothing else will move. A commit or undo slice
       or test run whose process died stops heartbeating, and the sweep queues a
       new attempt within a couple of minutes, so the cadence is one minute. A
-      test run old code started and never recorded returns to draft; a draft or report
+      run whose job was lost, such as a test run an old API pod started, has
+      its job queued again after two minutes; a draft or report
       untouched for 7 days is cancelled; and every run that will not read its
       uploaded file again releases it, so the stored-object reaper deletes the
       bytes. Each rule selects its runs by status over an index, so on an idle
