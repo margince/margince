@@ -197,8 +197,8 @@ function QueuedBehind() {
 
 /**
  * A refusal is never kept waiting behind a verb. Hide a file, then refuse the
- * next one: the refusal takes the region at once and the Undo waits second,
- * back with its full eight seconds once the refusal is closed.
+ * next one. The refusal takes the region at once, and the Undo waits second
+ * with its full eight seconds still ahead.
  */
 export const ARefusalOutranksAVerb: Story = {
   render: () => (

@@ -146,14 +146,11 @@ const ToastQueueContext = createContext<readonly ToastMessage[]>([]);
 const NO_REGION: Toast = { show: () => 0, dismiss: () => {} };
 
 /**
- * The queue, and the one rule that shapes it.
- *
- * A message carrying a verb, or a refusal (`danger` and sticky), holds the
- * region, and anything else arriving QUEUES BEHIND IT: an undo is the reader's
- * only way back, and a refusal says a write did not land. A refusal arriving
- * goes ahead of all but the refusals already waiting. A newer undo takes
- * the older undo's place wherever it waits: three Done presses want the latest
- * Undo, not three toasts to close. Otherwise the newest message wins.
+ * A verb or a refusal (`danger` and sticky) on screen holds the region. An
+ * undo is the only way back, and a refusal says a write failed. Anything
+ * arriving queues behind it, but a refusal goes ahead of all except waiting
+ * refusals. A newer undo replaces the older one wherever it waits. Otherwise
+ * the newest message wins.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [queue, setQueue] = useState<readonly ToastMessage[]>([]);
@@ -407,8 +404,8 @@ export function ToastRegion() {
     setFocusInside(region.contains(document.activeElement));
   }, [shownId, replacedShown, region]);
 
-  // Escape belongs to the REGION, not its buttons: the message body can carry a
-  // link of its own, and a reader focused there needs the same way out.
+  // Escape belongs to the REGION, not its buttons. The message body can carry a
+  // link, and a reader focused there needs the same way out.
   useEffect(() => {
     if (region === null) {
       return;
