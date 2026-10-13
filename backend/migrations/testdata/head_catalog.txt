@@ -4696,6 +4696,7 @@ public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.version integer NOT NULL gen=- def=1
 public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_active_per_source_name ON public.import_run USING btree (source_name) WHERE ((connector = 'csv'::text) AND (source_name <> ''::text) AND (status = ANY (ARRAY['validating'::text, 'awaiting_approval'::text, 'running'::text, 'undoing'::text])))
 public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
+public.import_run_one_test_per_agent CREATE UNIQUE INDEX import_run_one_test_per_agent ON public.import_run USING btree (((actor ->> 'id'::text))) WHERE ((status = 'validating'::text) AND ((actor ->> 'type'::text) = 'agent'::text))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-
