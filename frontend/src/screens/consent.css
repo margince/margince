@@ -26,7 +26,6 @@
  * the expanded proof log reads as a sibling of the NEXT purpose row rather
  * than belonging to the one whose button opened it. */
 .consent-proof-log {
-  margin-top: 8px;
   margin-left: 4px;
 }
 
