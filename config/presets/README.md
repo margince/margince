@@ -13,6 +13,7 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`gemini_cloud.yaml`](gemini_cloud.yaml) | every tier to Gemini, embeddings to `gemini-embedding-001` | `GEMINI_API_KEY` |
 | [`gemini_vertex_eu.yaml`](gemini_vertex_eu.yaml) | every tier to Gemini on Vertex AI at `location: eu` and embeddings at `europe-west4`, under `eu_hosted` | `GEMINI_VERTEX_SA_JSON` (a service-account key) |
 | [`openrouter_cloud.yaml`](openrouter_cloud.yaml) | every tier to an OpenRouter-brokered model | `OPENAI_COMPATIBLE_API_KEY` |
+| [`openrouter_openai.yaml`](openrouter_openai.yaml) | every tier to a GPT-6 model (`gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-sol`) through OpenRouter, embeddings to `text-embedding-3-large` at 1024 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`consumer_class_brokered.yaml`](consumer_class_brokered.yaml) | every tier to a Gemma 4 an operator could self-host, brokered at fp8 | `OPENAI_COMPATIBLE_API_KEY` |
 | [`openrouter_cloud_eu.yaml`](openrouter_cloud_eu.yaml) | every lane, embeddings included, to Mistral's EU-region endpoint (`only: [mistral/eu]`) | `OPENAI_COMPATIBLE_API_KEY` |
 | [`gemma4_local_ollama.yaml`](gemma4_local_ollama.yaml) | every tier to `gemma4:12b` on loopback Ollama, embeddings to `bge-m3`; zero egress | Ollama with both models pulled, nothing else |
