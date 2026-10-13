@@ -122,12 +122,20 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	}
 }
 
-// The per-company shape is the bound walk with the enclosing company's column
-// where the bind was: every arm, compared against the row the outer query is on.
-func TestThePerCompanyWalkIsTheBoundWalkCorrelated(t *testing.T) {
-	bound := strings.ReplaceAll(CompanyLinkedActivityExists(1), "$1", OuterCompanyAlias+".id")
-	if got := CompanyLinkedActivityExistsPerCompany(); got != bound {
-		t.Errorf("the per-company walk drifted from the bound one:\n got %s\nwant %s", got, bound)
+// The set form is the predicate's walk split by arm. Every link branch carries
+// the shared arms verbatim. The participant branch decides with the predicate's
+// own arm, bound to the account the branch started from.
+func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
+	set := CompanyReachedActivities(1)
+	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
+		branch := "SELECT l.activity_id, " + column + " AS company_id " + companyArms +
+			"\n\t\t    WHERE " + column + " = ANY($1)"
+		if !strings.Contains(set, branch) {
+			t.Errorf("the reached set has no branch for %s over the shared arms:\n%s", column, set)
+		}
+	}
+	if !strings.Contains(set, sprintf(participantEmployerArm, "e0.company_id")) {
+		t.Errorf("the reached set's participant branch is not the predicate's own arm:\n%s", set)
 	}
 }
 

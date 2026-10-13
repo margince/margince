@@ -59,28 +59,39 @@ func CompanyLinkedActivityExistsAny(companiesPos int) string {
 	return activityReachesCompany(sprintf("ANY($%d)", companiesPos))
 }
 
-// OuterCompanyAlias is the alias CompanyLinkedActivityExistsPerCompany compares
-// against: the company table of the enclosing query.
-const OuterCompanyAlias = "co"
-
-// CompanyLinkedActivityExistsPerCompany is the same walk correlated with an
-// enclosing query over company aliased OuterCompanyAlias, for a set reader
-// that answers each company separately rather than the set as a whole.
+// CompanyReachedActivities is the predicate's four-arm walk as a set that
+// starts from the accounts. It yields (activity_id, company_id) for each bound
+// account an activity reaches.
 //
-// The operand is a fixed column, not a parameter, so no caller text ever
-// reaches the SQL.
-func CompanyLinkedActivityExistsPerCompany() string {
-	return activityReachesCompany(OuterCompanyAlias + ".id")
+// The predicate's arms are one `OR` of `EXISTS`, so no plan can start from the
+// account, and a quiet account walks the whole activity table. Here each arm is
+// a branch on its own indexed column, over the same companyArms text.
+//
+// The participant `EXISTS` reads the activity's date inside a join, which keeps
+// Postgres from planning it as a join. Its branch reaches the employees'
+// activities first, and that same `EXISTS` decides which of them count.
+func CompanyReachedActivities(companiesPos int) string {
+	companies := sprintf("ANY($%d)", companiesPos)
+	linkBranch := func(column string) string {
+		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
+			column, companyArms, companies)
+	}
+	participantBranch := sprintf(`SELECT a.id, e0.company_id FROM relationship e0
+		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
+		    JOIN activity a ON a.id = p0.activity_id
+		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `+participantEmployerArm,
+		companies, "e0.company_id")
+	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
+		"\n\t\t    UNION " + linkBranch("r.company_id") + "\n\t\t    UNION " + participantBranch
 }
 
 // companyArms is the three links themselves — the account an activity is filed
 // against, the account its deal belongs to, and the employer of the contact it
 // is about.
 //
-// The arms live apart from the two shapes built on them because that is where
-// drift would happen — an arm gaining a condition in one spelling and not the
-// other — while the shapes differ for a reason that will not go away
-// (CompanyReachSet says what it is).
+// The arms live apart from the shapes built on them, because drift happens in
+// the arms: one spelling gains a condition and another does not. The
+// shapes differ for a reason that will not go away (CompanyReachSet says it).
 //
 // search/graphcompanyreach.go spells the SAME arms for the context walk, because a
 // module never imports a sibling (ADR-0054). The two texts are held equal by

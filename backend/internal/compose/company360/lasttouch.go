@@ -42,6 +42,10 @@ type LastContact struct {
 	ActivityID ids.ActivityID
 }
 
+// lastTouchCompanyAlias is the company alias LastTouchFor's statement and its
+// company row scope share.
+const lastTouchCompanyAlias = "co"
+
 // LastTouchFor answers the pair that replaced the header's 0-100 score
 // (AC-company-2, ADR-0079 arc) for every company in the set the caller may
 // read. A company the caller may not read, or one that is archived, is absent;
@@ -52,9 +56,10 @@ type LastContact struct {
 // that wrote to us this morning have the same last-touch date and opposite
 // meanings.
 //
-// It walks the links the timeline does, so the header can never disagree with
-// the list under it, and it carries the caller's activity row scope, so a rep
-// sees the last message THEY may read rather than the account's true last one.
+// It walks the links the timeline does, through the timeline predicate's set
+// form, so the header can never disagree with the list under it. It carries the
+// caller's activity row scope, so a rep sees the last message THEY may read
+// rather than the account's true last one.
 // A message dated after now has not been sent yet, so it is neither side's last
 // word: a scheduled send must not hide the real last one.
 func LastTouchFor(
@@ -73,7 +78,7 @@ func LastTouchFor(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wantedPos := arg(companyIDs)
-	visible, err := scopeClause(ctx, "company", activities.OuterCompanyAlias, arg)
+	visible, err := scopeClause(ctx, "company", lastTouchCompanyAlias, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -81,17 +86,16 @@ func LastTouchFor(
 	if err != nil {
 		return nil, err
 	}
-	reached := "FROM activity a WHERE a.archived_at IS NULL AND " + activities.CompanyLinkedActivityExistsPerCompany()
+	// The walk starts from the accounts and is aggregated once. Its cost is the
+	// page's own activity, not how far back a quiet account's last message is.
+	touched := "FROM (" + activities.CompanyReachedActivities(wantedPos) + ") reach " +
+		"JOIN activity a ON a.id = reach.activity_id WHERE a.archived_at IS NULL"
 	if scope != "" {
-		reached += " AND " + scope
+		touched += " AND " + scope
 	}
-	reached += opts.projectScope(arg)
-	reached += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
-	// An ordered LIMIT-1 arm per direction rather than a FILTERed max(): an
-	// aggregate sees every qualifying row, each arm stops at the newest, so the
-	// cost per company is bounded by how far back that message is.
-	//
-	// Both arms skip a called-off meeting, which the last_contact lateral below
+	touched += opts.projectScope(arg)
+	touched += fmt.Sprintf(" AND a.occurred_at <= $%d", arg(now))
+	// Both direction clocks skip a called-off meeting, which the last contact
 	// already does through InteractionCountsSQL. A meeting nobody attended is
 	// not a touch in either direction, and leaving it in moved these clocks
 	// while the tile beside them stood still.
@@ -99,18 +103,27 @@ func LastTouchFor(
 	// NotCalledOffSQL rather than InteractionCountsSQL: a direction clock
 	// answers when a message last went each way, so any directed kind counts.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT %[1]s.id,
-		       (SELECT a.occurred_at %[2]s AND a.direction = 'inbound' AND %[6]s
-		          ORDER BY a.occurred_at DESC LIMIT 1),
-		       (SELECT a.occurred_at %[2]s AND a.direction = 'outbound' AND %[6]s
-		          ORDER BY a.occurred_at DESC LIMIT 1),
-		       lc.id, lc.occurred_at, lc.kind
+		WITH touched AS (
+		  SELECT reach.company_id, a.id, a.occurred_at, a.kind, a.direction,
+		         %[5]s AS directed, %[6]s AS counts
+		  %[2]s
+		), clocks AS (
+		  SELECT company_id,
+		         max(occurred_at) FILTER (WHERE direction = 'inbound' AND directed) AS inbound_at,
+		         max(occurred_at) FILTER (WHERE direction = 'outbound' AND directed) AS outbound_at
+		  FROM touched GROUP BY company_id
+		), last_contact AS (
+		  SELECT DISTINCT ON (company_id) company_id, id, occurred_at, kind
+		  FROM touched WHERE counts
+		  ORDER BY company_id, occurred_at DESC, id DESC
+		)
+		SELECT %[1]s.id, clocks.inbound_at, clocks.outbound_at, lc.id, lc.occurred_at, lc.kind
 		FROM company %[1]s
-		LEFT JOIN LATERAL (SELECT a.id, a.occurred_at, a.kind %[2]s AND %[5]s
-		                   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) lc ON true
+		LEFT JOIN clocks ON clocks.company_id = %[1]s.id
+		LEFT JOIN last_contact lc ON lc.company_id = %[1]s.id
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
-		activities.OuterCompanyAlias, reached, wantedPos, visible,
-		relstrength.InteractionCountsSQL("a"), relstrength.NotCalledOffSQL("a")), args...)
+		lastTouchCompanyAlias, touched, wantedPos, visible,
+		relstrength.NotCalledOffSQL("a"), relstrength.InteractionCountsSQL("a")), args...)
 	if err != nil {
 		return nil, err
 	}
