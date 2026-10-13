@@ -134,6 +134,21 @@ func OfferRecurringTotals(lines []RecurringLineInput) (RecurringFigures, error) 
 	return out, nil
 }
 
+// CommittedNetMinor is one recurring line's net across the periods the buyer
+// committed to: the per-period net this engine already rounded, times the
+// count of periods.
+//
+// It lives here rather than at the surface that prints it, because this is the
+// multiplication NetTcvMinor does above. A renderer doing it for itself would
+// be a second answer to what a line is worth.
+//
+// Through big.Int and minorFromBig, so a count large enough to overflow is
+// refused rather than wrapped into a smaller number than the buyer owes.
+func CommittedNetMinor(perPeriodNetMinor int64, periods int) (int64, error) {
+	committed := new(big.Int).Mul(big.NewInt(perPeriodNetMinor), big.NewInt(int64(periods)))
+	return minorFromBig(committed, "committed_net_minor", "line_net_minor", "interval_count")
+}
+
 // validBillingShape refuses a half-stated classification before it reaches the
 // constraint, so the caller gets a field to fix rather than a schema name.
 //
