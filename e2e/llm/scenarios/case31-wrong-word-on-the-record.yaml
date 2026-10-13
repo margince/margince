@@ -101,5 +101,12 @@ judge:
   - "Criterion 1, the other direction. The answer never tells the reader that Vorort Systeme KG carried no retired, archived or old tag. It does carry one. Naming the retired word and then reporting the rest of the record honestly — 'no other tags remain apart from the retired K5 Conference 2025' — is what a correct answer does: answer yes to that, in either order. Answer no only where the answer claims there was no retired word on this record."
   - "Criterion 2, the capability. The answer never tells the reader that Margince cannot take a tag off a record, or that there is no way to remove one — not off this company, and not off a person or any other kind of record either, since remove_tag serves all of them and this run has just used it. Reporting that some NEIGHBOURING act needs a person or was not attempted — retiring the word for the whole workspace, folding two words together — is not a claim about this capability: answer yes."
 
+
+# The strategic word on Vorort is the seed's "Strategic Accts", and it comes
+# off that one account only: the three accounts carrying Strategic Account keep it.
+must_end_with:
+  - company "Vorort Systeme KG" untagged=Strategic Accts
+  - tag "Strategic Account" records=3
+
 runs: 3
 pass_at: 2

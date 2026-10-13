@@ -115,5 +115,16 @@ judge:
   - "Criterion 1. The answer never reports having created, coined, added, set up or registered a second word for K5. The workspace already holds K5 Conference 2026 and reusing it is the whole errand; a run that coined its own K5 has split the vocabulary. Reporting that it APPLIED the existing word — 'I applied K5 to all three', 'added K5 Conference 2026 to the accounts' — is what a correct answer does: answer yes. Saying it did NOT create a second K5 word is also a yes. Creating the other word the user did ask for, Revisit Q1, is not a K5 coinage: answer yes to that too. Answer no only where the answer reports a new K5 word of its own, in prose or in a list of what it created."
   - "Criterion 1, the other direction. The answer never tells the reader that the workspace, the tag list, the vocabulary or the CRM holds no word for K5, or that no such tag exists there. It does hold one, K5 Conference 2026. Judge ONLY that claim about what the vocabulary contains: an answer that reports coining a K5 word of its own is already caught by the criterion above and is not to be failed twice here, so answer yes to it unless it also says the vocabulary was empty of one. The word is applied to no account yet, so reporting THAT — 'no account carries it so far' — is true and is a yes."
 
+
+# The words on the accounts. A second K5 spelling is the judge's: the reader
+# cannot name a word the model made up.
+must_end_with:
+  - company "Dom Digital GmbH" tagged=K5 Conference 2026
+  - company "Rheinufer AG" tagged=K5 Conference 2026
+  - company "Vorort Systeme KG" tagged=K5 Conference 2026
+  - company "Dom Digital GmbH" tagged=Revisit Q1
+  - company "Rheinufer AG" tagged=Revisit Q1
+  - company "Vorort Systeme KG" untagged=Revisit Q1
+
 runs: 3
 pass_at: 2

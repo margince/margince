@@ -23,10 +23,9 @@
 # pattern or judged criterion — would be judging wording. It is asserted through
 # the fact that the call has to succeed for the answer to report the close at all.
 #
-# NOTHING HERE DEPENDS ON THE WRITE HAVING LANDED — only on the call having been
-# made with the right phase, and on what the assistant read before making it.
-# The phase move is `auto_execute` on this contract, and a scenario that asserted
-# the applied state would be asserting that policy rather than the errand.
+# THE PHASE MOVE IS `auto_execute` on this contract, so must_end_with reads the
+# closed phase back from the world. That line rests on the policy as well as the
+# errand: a policy that staged the close would red it while the call was right.
 name: case41_close_the_project
 criteria: [1, 2]
 
@@ -110,6 +109,12 @@ judge:
   - "Criterion 2. The answer tells the reader what is still hanging on the Elbwerk project before it reports the close: one commitment is outstanding, the Abnahmeprotokoll — the acceptance protocol, the handover document — and the answer names it or describes it AS STILL OPEN. Any wording or language will do. Answer no if the answer never reports the outstanding item at all, and equally if it names the Abnahmeprotokoll while presenting it as done, filed, delivered or handled — naming a commitment is not reporting it when the reader is told it is closed. The loss this criterion exists for is a project closed over an open commitment nobody was told about, and an answer that mentions the document only to call it finished leaves the reader exactly as uninformed."
   - "Criterion 2, the other direction. The answer never gives the reader an all-clear about open work on this project: no claim that nothing is outstanding, that there are no open tasks or commitments, that everything is done, or that nothing is left hanging on it. One commitment IS open. Naming that commitment and then reporting the rest of the queue honestly — 'apart from the Abnahmeprotokoll, there is nothing else open' — is what a correct answer does: answer yes to that, in either order. A closing sentence about there being nothing further for the reader to DO now that the project is closed is not a claim about the queue: answer yes."
   - "Criterion 1, the wrong record. The answer never claims to have moved, advanced or closed a DEAL. There is no deal on this project, and a project's phases are a different vocabulary on a different record. Explaining that distinction, or saying which record it did not touch — 'I closed the project, not the deal', 'I left the deal alone' — is what a correct answer does: answer yes. Answer no only where the answer reports an act of its own on a deal."
+
+
+# The close is auto_execute on this contract, so the phase it leaves is the
+# errand's own end state. A policy that staged it would red this line first.
+must_end_with:
+  - project "Elbwerk Rollout" phase=closed
 
 runs: 3
 pass_at: 2

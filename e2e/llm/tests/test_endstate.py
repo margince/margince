@@ -93,8 +93,8 @@ class EndStateTest(unittest.TestCase):
             self.read(replies)
 
     def test_a_field_the_read_does_not_carry_is_a_harness_fault(self):
-        with self.assertRaisesRegex(endstate.Unreadable, "carries no field 'stage'"):
-            self.read(world(SEEDED), ['company "Emsland Ventilbau GmbH" stage=won'])
+        with self.assertRaisesRegex(endstate.Unreadable, "carries no field 'tier'"):
+            self.read(world(SEEDED), ['company "Emsland Ventilbau GmbH" tier=gold'])
 
     def test_a_transport_error_is_a_harness_fault(self):
         with FakeMcp(TOOLS, status=500) as server:
@@ -190,8 +190,10 @@ def project_world(files, timeline=None, contracts=None, truncated=False):
         rows = [{"record_type": "project", "id": "p1", "fields": {"name": "Rollout"}}]
         return json.dumps({"data": {"records": rows}}), False
 
-    def read_project_360(arguments):
-        if arguments.get("project_id") != "p1":
+    def read_project(arguments):
+        # The router, with its view: read_project_360 is the hidden name it
+        # routes to, and a call by that name is logged as hidden-tool traffic.
+        if arguments.get("project_id") != "p1" or arguments.get("view") != "overview":
             return "not found", True
         view = {
             "activities": {"items": [{"activity_id": i, "subject": s} for s, i in timeline], "truncated": truncated},
@@ -203,7 +205,7 @@ def project_world(files, timeline=None, contracts=None, truncated=False):
         rows = [{"filename": n, "checksum": c, "contract_id": k} for n, c, k in files.get(arguments.get("entity_id"), [])]
         return json.dumps({"data": {"documents": rows}}), False
 
-    return {"list_records": list_records, "read_project_360": read_project_360, "list_documents": list_documents}
+    return {"list_records": list_records, "read_project": read_project, "list_documents": list_documents}
 
 
 class FoundOnAProjectTest(unittest.TestCase):
@@ -246,6 +248,167 @@ class FoundOnAProjectTest(unittest.TestCase):
         replies = project_world({MEETING: [("signed.pdf", SIGNED, SERVICE)]}, contracts=[("Old contract", OTHER)])
         with self.assertRaisesRegex(endstate.Unreadable, '0 contracts titled "Service contract"'):
             self.read(replies, [AGAINST_SERVICE])
+
+
+QUALIFIED, NEGOTIATION = "s-qualified", "s-negotiation"
+
+
+def crm_world(records, tags=None, words=None, runs=None):
+    """A workspace over [(record_type, id, name, fields, owner_name)].
+
+    tags maps a record id to the words read_tags lists on it; words maps a word
+    to (tag_id, {kind: count}) for read_tags list and get; runs maps an import
+    run id to the states read_import answers in turn, the last one repeating.
+    """
+    tags, words, runs = tags or {}, words or {}, {k: list(v) for k, v in (runs or {}).items()}
+    name_field = {"company": "display_name", "deal": "name", "contact": "full_name", "lead": "full_name"}
+
+    def ok(data):
+        return json.dumps({"data": data}), False
+
+    def list_records(arguments):
+        rows = [{"record_type": t, "id": i, "fields": {name_field[t]: n}} for t, i, n, _, _ in records
+                if t == arguments.get("record_type")]
+        return ok({"records": rows})
+
+    def read_record(arguments):
+        for t, i, n, fields, owner in records:
+            if i == arguments.get("id") and t == arguments.get("record_type"):
+                return ok({"record_type": t, "id": i, "fields": {name_field[t]: n, **fields},
+                           "owner": {"id": "u-" + owner, "name": owner, "is_you": False}})
+        return "not found", True
+
+    def read_directory(arguments):
+        if arguments.get("list") != "pipelines":
+            return "unknown list", True
+        stages = [{"id": QUALIFIED, "name": "Qualified"}, {"id": NEGOTIATION, "name": "Negotiation"}]
+        return ok({"pipelines": [{"id": "p", "name": "Sales", "stages": stages}]})
+
+    def read_tags(arguments):
+        mode = arguments.get("mode")
+        if mode == "record":
+            return ok({"tags": [{"tag_id": "t-" + w, "name": w} for w in tags.get(arguments.get("record_id"), [])],
+                       "withheld": False})
+        if mode == "list":
+            return ok({"tags": [{"tag_id": tag_id, "name": w} for w, (tag_id, _) in words.items()]})
+        for w, (tag_id, counts) in words.items():
+            if tag_id == arguments.get("tag_id"):
+                return ok({"tag_id": tag_id, "name": w, "contacts": 0, "companies": 0, "deals": 0, "leads": 0, **counts})
+        return "not found", True
+
+    def read_import(arguments):
+        states = runs.get(arguments.get("run_id"))
+        if arguments.get("view") != "report" or states is None:
+            return "not found", True
+        return ok({"run_id": arguments["run_id"], "state": states.pop(0) if len(states) > 1 else states[0]})
+
+    return {"list_records": list_records, "read_record": read_record, "read_directory": read_directory,
+            "read_tags": read_tags, "read_import": read_import}
+
+
+HERZOG = [("company", "c1", "Herzog Fertigung GmbH", {"description": "Fertigungsbetrieb."}, "Sofia Meier"),
+          ("deal", "d1", "Rheinufer Netzmodernisierung", {"stage_id": QUALIFIED}, "Demo Admin"),
+          ("contact", "n1", "Nora Feld", {}, "Demo Admin"),
+          ("lead", "l1", "Ines Waldner", {"status": "promoted"}, "Demo Admin")]
+
+
+class ReadersTest(unittest.TestCase):
+    def read(self, replies, entries, calls=()):
+        tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            self.calls = server.calls
+            return endstate.end_state(session, list(entries), calls)
+
+    def test_a_name_absent_from_the_world_counts_zero_records(self):
+        held, problems = self.read(crm_world(HERZOG), ['company "Weserblick Logistik GmbH" records=0',
+                                                       'company "Herzog Fertigung GmbH" records=0'])
+        self.assertEqual(held, ['company "Weserblick Logistik GmbH" records=0'])
+        self.assertEqual(problems, ['ended with 1 company records named "Herzog Fertigung GmbH", wanted 0'])
+
+    def test_the_owner_is_read_by_name(self):
+        _, problems = self.read(crm_world(HERZOG), ['company "Herzog Fertigung GmbH" owner=Sofia Meier',
+                                                    'company "Herzog Fertigung GmbH" owner=Demo Admin'])
+        self.assertEqual(problems, ['ended with company "Herzog Fertigung GmbH" owner=Sofia Meier, wanted Demo Admin'])
+
+    def test_a_stage_is_read_by_its_name_not_its_id(self):
+        held, problems = self.read(crm_world(HERZOG), ['deal "Rheinufer Netzmodernisierung" stage=Negotiation'])
+        self.assertEqual(problems, ['ended with deal "Rheinufer Netzmodernisierung" stage=Qualified, wanted Negotiation'])
+        moved = [r if r[0] != "deal" else r[:3] + ({"stage_id": NEGOTIATION}, r[4]) for r in HERZOG]
+        held, problems = self.read(crm_world(moved), ['deal "Rheinufer Netzmodernisierung" stage=Negotiation'])
+        self.assertEqual((len(held), problems), (1, []))
+
+    def test_a_contact_and_a_lead_are_found_by_full_name(self):
+        held, _ = self.read(crm_world(HERZOG), ['lead "Ines Waldner" status=promoted'])
+        self.assertEqual(held, ['lead "Ines Waldner" status=promoted'])
+
+    def test_a_field_left_empty_is_a_score_not_a_harness_fault(self):
+        _, problems = self.read(crm_world(HERZOG), ['contact "Nora Feld" title=Head of Procurement'])
+        self.assertEqual(problems, ['ended with contact "Nora Feld" title=(empty), wanted Head of Procurement'])
+
+    def test_tagged_and_untagged_read_the_words_on_the_record(self):
+        replies = crm_world(HERZOG, tags={"c1": ["K5 Conference 2026"], "n1": ["K5 Conference 2026"]})
+        held, problems = self.read(replies, ['company "Herzog Fertigung GmbH" tagged=K5 Conference 2026',
+                                             'company "Herzog Fertigung GmbH" tagged=Revisit Q1',
+                                             'contact "Nora Feld" untagged=K5 Conference 2026'])
+        self.assertEqual(held, ['company "Herzog Fertigung GmbH" tagged=K5 Conference 2026'])
+        self.assertEqual(problems, ['ended with company "Herzog Fertigung GmbH" not tagged Revisit Q1 (tags: K5 Conference 2026)',
+                                    'ended with contact "Nora Feld" tagged K5 Conference 2026 (tags: K5 Conference 2026)'])
+
+    def test_withheld_tags_are_a_harness_fault_not_an_untagged_record(self):
+        replies = {**crm_world(HERZOG), "read_tags": (json.dumps({"data": {"tags": [], "withheld": True}}), False)}
+        with self.assertRaisesRegex(endstate.Unreadable, "withheld"):
+            self.read(replies, ['company "Herzog Fertigung GmbH" untagged=Strategic Accts'])
+
+    def test_a_tag_counts_every_kind_of_record_carrying_it(self):
+        words = {"Strategic Account": ("t1", {"companies": 3}), "Strategic Accts": ("t2", {"companies": 1, "deals": 1})}
+        held, problems = self.read(crm_world(HERZOG, words=words), ['tag "Strategic Account" records=3',
+                                                                    'tag "Strategic Accts" records=1',
+                                                                    'tag "Key Account" records=0'])
+        self.assertEqual(held, ['tag "Strategic Account" records=3'])
+        self.assertEqual(problems, ['ended with tag "Strategic Accts" on 2 records, wanted 1',
+                                    'ended with 0 tags named "Key Account"'])
+
+    def test_a_committed_import_is_waited_for_before_the_world_is_read(self):
+        commit = ("mcp__margince_e2e_llm__commit_import", {"run_id": "r1"})
+        replies = crm_world(HERZOG, runs={"r1": ["running", "running", "complete"]})
+        with unittest.mock.patch.object(endstate, "_IMPORT_POLL_SECONDS", 0):
+            self.read(replies, ['company "Herzog Fertigung GmbH" records=1'], [commit])
+        polls = [args for name, args in self.calls if name == "read_import"]
+        self.assertEqual(len(polls), 3)
+        self.assertLess(self.calls.index(("read_import", polls[-1])), self.calls.index(next(c for c in self.calls if c[0] == "list_records")))
+
+    def test_an_import_that_never_finishes_is_a_harness_fault(self):
+        ticks = iter(range(0, 1000, 60))
+        replies = crm_world(HERZOG, runs={"r1": ["running"]})
+        tools = [{"name": n, "inputSchema": {"type": "object"}} for n in replies]
+        with FakeMcp(tools, replies=replies) as server:
+            session = mcpclient.Session(server.url, "tok")
+            session.open()
+            with self.assertRaisesRegex(endstate.Unreadable, "still running"):
+                endstate.settle_imports(session, [("commit_import", {"run_id": "r1"})],
+                                        sleep=lambda _s: None, clock=lambda: next(ticks))
+
+    def test_a_run_id_the_server_does_not_know_is_not_waited_for(self):
+        held, _ = self.read(crm_world(HERZOG), ['company "Herzog Fertigung GmbH" records=1'],
+                            [("commit_import", {"run_id": "invented"})])
+        self.assertEqual(len(held), 1)
+
+    def test_a_type_is_enumerated_once_however_many_entries_name_it(self):
+        # The server rate-limits a passport, and a read-back that paged the
+        # whole list once per entry spent its budget before the last entry.
+        self.read(crm_world(HERZOG), ['company "Herzog Fertigung GmbH" owner=Sofia Meier',
+                                      'company "Herzog Fertigung GmbH" records=1',
+                                      'company "Weserblick Logistik GmbH" records=0'])
+        self.assertEqual([name for name, _ in self.calls].count("list_records"), 1)
+
+    def test_a_malformed_special_entry_is_refused(self):
+        for entry in ('company "E" records=some', 'company "E" stage=Won', 'project "P" tagged=K5',
+                      'tag "T" description=x', 'tag "T" on project "P" records=1',
+                      'activity "S" on project "P" records=1', 'activity "S" on project "P" owner=X'):
+            with self.assertRaises(ValueError, msg=entry):
+                endstate.parse(entry)
 
 
 class ParseTest(unittest.TestCase):
