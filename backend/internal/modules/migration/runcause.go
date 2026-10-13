@@ -40,6 +40,16 @@ const (
 	CauseDraftExpired = "this import was left unfinished too long, so it was closed and its file deleted"
 )
 
+// ErrStopRecorded marks the error of a walk whose run already records why it
+// stopped, so its job only logs it.
+var ErrStopRecorded = errors.New("the import run records why it stopped")
+
+// stopRecorded is a walk's error once its run recorded the stop.
+type stopRecorded struct{ cause error }
+
+func (s stopRecorded) Error() string   { return s.cause.Error() }
+func (s stopRecorded) Unwrap() []error { return []error{s.cause, ErrStopRecorded} }
+
 // RunStop stops an attempt with the sentence its run carries.
 type RunStop struct {
 	Cause string

@@ -99,6 +99,11 @@ func TestASliceThatWritesNothingSettlesWithoutAFailure(t *testing.T) {
 			t.Errorf("%s: settle = %+v, %v; want settled with no stop, nil", name, result, err)
 		}
 	}
+	recorded := fmt.Errorf("walk: %w", migration.ErrStopRecorded)
+	if result, err := slicer.settle(context.Background(), context.Background(), nil, migration.Lease{}, recorded); err != nil ||
+		result != (importSliceResult{stopped: recorded}) {
+		t.Errorf("a stop the engine recorded: settle = %+v, %v; want it settled and logged with no second write", result, err)
+	}
 }
 
 func TestAStoppedRunCarriesASentenceNeverItsError(t *testing.T) {

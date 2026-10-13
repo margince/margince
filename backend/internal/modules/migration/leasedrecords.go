@@ -115,11 +115,11 @@ func (r *leasedRecords) complete(ctx context.Context, wk *walk) error {
 
 // fail fails the run for a cause of its own. A stopped context is no such
 // cause: the slice flushes, and the job decides between a snooze and a failure.
-func (r *leasedRecords) fail(ctx context.Context, wk *walk, cause error) error {
+func (r *leasedRecords) fail(ctx context.Context, wk *walk, cause error) (bool, error) {
 	if ctx.Err() != nil {
-		return r.stopFlush(ctx, wk)
+		return false, r.stopFlush(ctx, wk)
 	}
-	return r.runs.tx(ctx, func(tx pgx.Tx) error {
+	return true, r.runs.tx(ctx, func(tx pgx.Tx) error {
 		if err := flushInTx(ctx, tx, r.lease, wk.flush()); err != nil {
 			return err
 		}

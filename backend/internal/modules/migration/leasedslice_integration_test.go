@@ -121,8 +121,9 @@ func TestARunTheWalkStoppedCarriesTheSentenceForItsCause(t *testing.T) {
 				t.Fatalf("Claim: %v", err)
 			}
 			w := &refusingWriters{mapWriters: newMapWriters(s, l.Run), refuse: "company-2", refusal: tc.refusal}
-			if _, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, twoObjectSource(), Budget{}); !errors.Is(err, tc.refusal) {
-				t.Fatalf("the slice = %v, want the row's error", err)
+			_, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, twoObjectSource(), Budget{})
+			if !errors.Is(err, tc.refusal) || !errors.Is(err, ErrStopRecorded) {
+				t.Fatalf("the slice = %v, want the row's error, marked as recorded on the run", err)
 			}
 			if got := mustGetStaged(ctx, t, s, l.Run); got.Status != StatusFailed || got.Error != tc.want {
 				t.Errorf("the run reads %s with %q, want failed with %q", got.Status, got.Error, tc.want)

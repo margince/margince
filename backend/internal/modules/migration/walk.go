@@ -62,7 +62,8 @@ type ledger interface {
 	// stop runs before every row and edge, and answers whether the slice ends there.
 	stop(ctx context.Context, wk *walk) (bool, error)
 	complete(ctx context.Context, wk *walk) error
-	fail(ctx context.Context, wk *walk, cause error) error
+	// fail answers whether it recorded the stop on the run.
+	fail(ctx context.Context, wk *walk, cause error) (bool, error)
 }
 
 // flipLedger keeps the flip's contract: the checkpoint advances after every
@@ -85,8 +86,8 @@ func (f flipLedger) complete(ctx context.Context, wk *walk) error {
 	return f.runs.complete(ctx, wk.runID, wk.leg())
 }
 
-func (f flipLedger) fail(ctx context.Context, wk *walk, cause error) error {
-	return f.runs.failRun(ctx, wk.runID, wk.leg(), cause)
+func (f flipLedger) fail(ctx context.Context, wk *walk, cause error) (bool, error) {
+	return true, f.runs.failRun(ctx, wk.runID, wk.leg(), cause)
 }
 
 // walk is one slice's position and what it has landed since its last flush.

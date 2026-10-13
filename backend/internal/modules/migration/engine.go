@@ -374,8 +374,12 @@ func (e *Engine) ensureRow(ctx context.Context, object string, row Row) (EnsureR
 // reports its own attempt: without persisting this one, every record
 // landed before the crash vanishes from the operator's final count.
 func (e *Engine) fail(ctx context.Context, led ledger, wk *walk, cause error) error {
-	if ferr := led.fail(ctx, wk, cause); ferr != nil {
+	recorded, ferr := led.fail(ctx, wk, cause)
+	switch {
+	case ferr != nil:
 		return fmt.Errorf("%w (and recording the failure failed: %w)", cause, ferr)
+	case recorded:
+		return stopRecorded{cause}
 	}
 	return cause
 }

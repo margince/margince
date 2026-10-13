@@ -78,8 +78,12 @@ func TestAnUndoSlicePastItsBudgetSnoozesAndTheNextOneFinishes(t *testing.T) {
 	e := integration.Setup(t)
 	h, undo := committedUndo(t, e)
 	late := commitWorkerFor(e, h).slicer
-	// A slice that started an hour ago is past its wall clock after one row.
-	late.now = func() time.Time { return time.Now().Add(-time.Hour) }
+	// Every read of the slicer's clock is a minute on, so one row spends the budget.
+	clock := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	late.now = func() time.Time {
+		clock = clock.Add(time.Minute)
+		return clock
+	}
 
 	worker := &importUndoWorker{slicer: late}
 	if got := snoozeOf(t, worker.Work(context.Background(), &river.Job[ImportUndoArgs]{Args: undo})); got != 0 {
@@ -117,6 +121,24 @@ func TestAnUndoWhoseApproverLostTheirSeatStaysUndoingWithTheCause(t *testing.T) 
 	}
 	if !strings.Contains(logged.String(), "import_undo: the attempt stopped") {
 		t.Errorf("the log reads %q, want the stopped attempt and its error", logged.String())
+	}
+}
+
+// An attempt a newer one fenced off records nothing, so it logs no stop either.
+func TestAFencedOffAttemptLogsNoStop(t *testing.T) {
+	e := integration.Setup(t)
+	_, args := approvedLeadRun(t, e)
+	stale := args.lease()
+	stale.Attempt--
+	runs := migration.NewRunStore(e.DB())
+
+	result, err := newImportSlicer(e.Pool, slog.New(slog.DiscardHandler)).
+		settle(importAdmin(e), importAdmin(e), runs, stale, errors.New("the row could not be written"))
+	if err != nil || result != (importSliceResult{}) {
+		t.Errorf("settling a fenced-off attempt = %+v, %v; want settled with no stop to log", result, err)
+	}
+	if run := runOf(t, e, args.RunID); run.Status != migration.StatusRunning || run.Error != "" {
+		t.Errorf("run = %s with %q, want the newer attempt's run untouched", run.Status, run.Error)
 	}
 }
 

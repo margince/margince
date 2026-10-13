@@ -183,11 +183,13 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	system := principal.SystemActing(ctx, importWorkerActor)
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			result = importSliceResult{stopped: fmt.Errorf("%s panicked: %v", args.Kind(), recovered)}
-			err = s.stop(system, runs, lease, migration.CauseStopped)
+			result, err = s.stop(system, runs, lease, fmt.Errorf("%s panicked: %v", args.Kind(), recovered), migration.CauseStopped)
 		}
 	}()
-	actorCtx, err := s.actAs(ctx, system, runs, lease)
+	actorCtx, trace, err := s.actAs(ctx, system, runs, lease)
+	if trace != nil {
+		system = principal.WithCorrelationID(system, *trace)
+	}
 	if err != nil {
 		return s.settle(ctx, system, runs, lease, err)
 	}
@@ -226,55 +228,61 @@ func (s importSlicer) yield(system context.Context, runs *migration.RunStore, le
 }
 
 // actAs reads the run and binds the principal that queued its attempt. The
-// attempt's correlation and the run's batch go on every audit row. A run gone
-// or moved past this attempt answers ErrSuperseded.
+// attempt's correlation and the run's batch go on every audit row. The
+// correlation is answered even when the principal is refused, so the record of
+// that stop joins its attempt's trace. A run gone or moved past this attempt
+// answers ErrSuperseded.
 func (s importSlicer) actAs(
 	ctx, system context.Context, runs *migration.RunStore, lease migration.Lease,
-) (context.Context, error) {
+) (context.Context, *ids.UUID, error) {
 	run, err := runs.GetStaged(system, lease.Run)
 	if errors.Is(err, apperrors.ErrNotFound) || (err == nil && (run.Status != lease.Status || run.JobAttempt != lease.Attempt)) {
-		return nil, fmt.Errorf("import run %s attempt %d: %w", lease.Run, lease.Attempt, migration.ErrSuperseded)
+		return nil, nil, fmt.Errorf("import run %s attempt %d: %w", lease.Run, lease.Attempt, migration.ErrSuperseded)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	actorCtx, err := s.actors.actAsRun(ctx, run)
 	if err != nil {
-		return nil, err
+		return nil, run.AttemptCorrelationID, err
 	}
-	return storekit.WithBatch(actorCtx, lease.Run), nil
+	return storekit.WithBatch(actorCtx, lease.Run), run.AttemptCorrelationID, nil
 }
 
 // settle records how a slice that will not continue ended.
 //
 // A stopped worker cancels the slice, which has flushed: the next slice
 // resumes it. A slice past its wall clock has flushed too, and fails over
-// budget. Any other error fails the attempt with its cause; a commit the engine
-// already failed answers that write as superseded.
+// budget. A stop the engine recorded is only logged. Any other error fails the
+// attempt with its cause.
 func (s importSlicer) settle(
 	ctx, system context.Context, runs *migration.RunStore, lease migration.Lease, err error,
 ) (importSliceResult, error) {
 	switch {
 	case err == nil, errors.Is(err, migration.ErrSuperseded):
 		return importSliceResult{}, nil
+	case errors.Is(err, migration.ErrStopRecorded):
+		return importSliceResult{stopped: err}, nil
 	case errors.Is(ctx.Err(), context.Canceled):
 		return s.yield(system, runs, lease)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return importSliceResult{stopped: err}, s.stop(system, runs, lease, migration.CauseOverBudget)
+		return s.stop(system, runs, lease, err, migration.CauseOverBudget)
 	}
-	return importSliceResult{stopped: err}, s.stop(system, runs, lease, migration.StopCause(err))
+	return s.stop(system, runs, lease, err, migration.StopCause(err))
 }
 
 // stop writes why the attempt stopped, on a context of its own: the slice's may
-// be what ended. A newer attempt owning the run is not a failure to record.
-func (s importSlicer) stop(system context.Context, runs *migration.RunStore, lease migration.Lease, cause string) error {
+// be what ended. A newer attempt owning the run is no stop to record or log.
+func (s importSlicer) stop(
+	system context.Context, runs *migration.RunStore, lease migration.Lease, stopped error, cause string,
+) (importSliceResult, error) {
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(system), importStopFlushTimeout)
 	defer cancel()
 	err := runs.FailLease(stopCtx, lease, cause)
 	if errors.Is(err, migration.ErrSuperseded) {
-		return nil
+		return importSliceResult{}, nil
 	}
-	return err
+	return importSliceResult{stopped: stopped}, err
 }
 
 // addImportJobs registers the commit and undo slices. They always register: a
