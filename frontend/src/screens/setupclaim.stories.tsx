@@ -48,7 +48,8 @@ type Story = StoryObj<typeof SetupClaimScreen>;
  */
 async function fill(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  const user = userEvent.setup();
+  // No pause between keys: on software WebGL each waits out a ~100 ms frame.
+  const user = userEvent.setup({ delay: null });
   await user.type(
     canvas.getByLabelText(/setup token/i),
     "9f2c-not-a-real-token",
@@ -94,7 +95,7 @@ export const Ready: Story = {
 export const PasswordTooShort: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     await user.type(
       canvas.getByLabelText(/setup token/i),
       "9f2c-not-a-real-token",
