@@ -103,7 +103,6 @@
 3 react-hooks/refs src/screens/listlibrary.tsx
 5 react-hooks/refs src/screens/listpage.tsx
 1 react-hooks/refs src/screens/listquery.tsx
-1 react-hooks/set-state-in-effect src/screens/merge.tsx
 1 react-hooks/use-memo src/screens/oauthconsent.tsx
 2 react-hooks/refs src/screens/onboarding-conversation/company-act-state.ts
 3 react-hooks/refs src/screens/onboarding-conversation/company-act.tsx
