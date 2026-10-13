@@ -172,8 +172,8 @@ describe("the sign-in methods card", () => {
   });
 });
 
-// Turning the requirement on can shut members out until they hold a factor, so
-// it asks first; turning it off takes nothing from anyone and saves at once.
+// Turning the requirement on can shut members out, so it asks first. Turning it
+// off takes nothing from anyone, so it saves at once.
 describe("the second-factor requirement", () => {
   const requireSwitch = () =>
     screen.findByRole("switch", { name: /require second factor/i });

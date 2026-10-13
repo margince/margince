@@ -12,8 +12,8 @@ import type { MessageKey } from "../i18n/en";
 import { AuthCardTitle, type AuthPhase } from "./auth-core";
 import { enteredCode, MfaCodeField } from "./mfacode";
 
-// One non-enumerating message for a refused credential, one for rate limiting,
-// and connectivity as connectivity (§9); never parsed from detail strings.
+// A refused credential never says which half was wrong, and a status decides
+// the message; detail strings are never parsed.
 type LoginFailure = "credentials" | "rate-limited" | "unreachable";
 
 export class LoginError extends Error {
@@ -41,8 +41,7 @@ export function loginErrorKey(
   return "auth.errUnreachable";
 }
 
-// Restore the originally requested route (§8.5): a deep link the user followed
-// stays; only a bare entry lands on the Brief.
+// A deep link the user followed stays; only a bare entry lands on the Brief.
 export function landSignedIn(onPhase: (phase: AuthPhase) => void) {
   onPhase("success");
   const hash = globalThis.location?.hash ?? "";

@@ -60,10 +60,8 @@ function useSaveSignInPolicy() {
       unwrap(await api.PATCH("/installation/settings", { body: change }));
     },
     onSuccess: async () => {
-      // BOTH caches. The write goes through the installation PATCH, so the
-      // aggregate holds a copy of these settings — but the card reads the
-      // narrow projection, and invalidating only the aggregate would leave the
-      // switch showing what it showed before the save.
+      // Both caches: the aggregate holds a copy of these settings, and the
+      // card reads the narrow projection.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: INSTALLATION_SETTINGS_KEY }),
         queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
@@ -148,19 +146,9 @@ function grantRefusal(
 }
 
 /**
- * The group→role grant editor: which IdP groups grant which role at corporate
- * sign-in.
- *
- * A DRAFT, saved whole. The wire setting is one map that replaces rather than
- * merges, so the rows are edited locally and one Save sends them all — the same
- * reason the provider switches send the whole provider list. An empty object is
- * the deliberate "clear" and is sent as itself. The draft is
- * seeded from the stored map once and then owned by the admin: a background
- * refetch must not overwrite rows mid-edit, and after a save the draft already
- * IS what the server stored.
- *
- * The warning is a standing Callout rather than a tooltip because it is the
- * setting's honest cost, not a hint: the directory only ever grants here.
+ * A draft, saved whole: the stored map is replaced, never merged, and an empty
+ * object clears it. A background refetch must not overwrite rows mid-edit.
+ * The grant-only warning stands as a Callout because it is the setting's cost.
  */
 function GroupRoleGrants({
   initial,
@@ -411,8 +399,8 @@ export function SignInMethodsCard() {
                           // The list is sent whole, so a second flip during a
                           // save would send the stale list and undo the first.
                           disabled={!canManage || save.isPending}
-                          // The WHOLE list travels: the setting replaces rather
-                          // than merges, so one key alone turns the rest off.
+                          // The setting replaces the list, so one key alone
+                          // would turn the rest off.
                           onChange={(next) =>
                             save.mutate({
                               enabled_oidc_providers: next

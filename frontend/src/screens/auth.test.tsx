@@ -418,8 +418,8 @@ describe("AuthScreen second factor", () => {
     expect(window.location.hash).toBe("#/home");
   });
 
-  // A recovery code is base64url and case-sensitive, so it must reach the
-  // server exactly as typed, letters, dashes and underscores included.
+  // A recovery code is case-sensitive base64url, so it reaches the server as
+  // typed, letters, dashes and underscores included.
   it("accepts a recovery code as typed", async () => {
     const calls = stubSecondFactor(() =>
       ok(200, { user: {}, roles: [], teams: [] }),
