@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "../screens/common";
+import { throwProblem } from "../lib/problem";
 import { useCan } from "./capability";
 
 // The installation's licence, and the one thing the chrome does with it.

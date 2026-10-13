@@ -29,7 +29,7 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
 import "./listquery.css";

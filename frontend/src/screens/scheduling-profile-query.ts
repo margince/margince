@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 export function useSchedulingProfile(refreshOnReturn = false) {
   return useQuery({

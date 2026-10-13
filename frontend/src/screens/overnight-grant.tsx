@@ -19,7 +19,8 @@ import {
   writeStored,
 } from "../lib/storage";
 import "./overnight-grant.css";
-import { problemMessageOf, QueryGate, unwrap } from "./common";
+import { QueryGate } from "../design-system/querystates";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // The rep's standing answer: may an agent work as them overnight?
 //

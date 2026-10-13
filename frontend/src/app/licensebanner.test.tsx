@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { useMe } from "../screens/common";
+import { useMe } from "../lib/session";
 import { useCan } from "./capability";
 import { useLicensePosture } from "./license-posture";
 import { LicenseBanner } from "./licensebanner";

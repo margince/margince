@@ -11,9 +11,9 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AddEmploymentModal } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
-import { problemMessageOf, unwrap } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,

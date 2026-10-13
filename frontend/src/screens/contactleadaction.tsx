@@ -14,8 +14,8 @@ import {
   problemExistingId,
   problemMessageOf,
   unwrap,
-  useMe,
-} from "./common";
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 import { contactLeadKey, LEAD_LIST_KEY } from "./leadkeys";
 
 type Lead = components["schemas"]["Lead"];

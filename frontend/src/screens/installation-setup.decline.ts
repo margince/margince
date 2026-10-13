@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useSyncExternalStore } from "react";
+import { useMe } from "../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { useMe } from "./common";
 
 /**
  * Where "Not now" on the platform question is remembered.

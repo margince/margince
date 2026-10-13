@@ -10,9 +10,9 @@ import { Button, Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { useArchiveRecord } from "./archive";
-import { unwrap } from "./common";
-import "./common.css";
+import "../design-system/querystates.css";
 
 type Company = components["schemas"]["Company"];
 

@@ -23,11 +23,12 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   type MutationOutcome,
   useRowHandoff,

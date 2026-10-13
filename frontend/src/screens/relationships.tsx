@@ -19,8 +19,8 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { unwrap } from "./common";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -29,7 +29,7 @@ import {
 } from "./relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
-import "./common.css";
+import "../design-system/querystates.css";
 import "./relationships.css";
 import { ErrorLine } from "../design-system/errorline";
 

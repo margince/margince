@@ -3,7 +3,7 @@ import { useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { replaceDial, useUrlParams } from "../app/urlstate";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
 export type AnalyticsScope = components["schemas"]["AnalyticsScope"];

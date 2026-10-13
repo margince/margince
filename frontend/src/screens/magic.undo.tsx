@@ -14,7 +14,7 @@ import type { components } from "../api/schema";
 import { isEntityKind } from "../app/entity";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { magicUndoReasonKey } from "./magic.keys";
 import { magicKey } from "./magic.queries";
 import { useRecordRestore } from "./recordrestore";

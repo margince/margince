@@ -15,17 +15,15 @@ import { routeHash } from "../app/router";
 import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
-import { INTL_LOCALE } from "../format/format";
-import { useLocale, useT } from "../i18n";
 import {
-  isVersionSkew,
-  ProblemError,
-  problemMessageOf,
   QueryGate,
   type QueryLike,
   QueryStates,
-  useMe,
-} from "./common";
+} from "../design-system/querystates";
+import { INTL_LOCALE } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
+import { useMe } from "../lib/session";
 import "./extension-access.css";
 import {
   EXTENSIONS_KEY,

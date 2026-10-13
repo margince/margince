@@ -5,12 +5,13 @@ import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
+import { LoadMoreButton } from "../design-system/querystates";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { AddDocumentDialog } from "./adddocument";
-import { LoadMoreButton, unwrap } from "./common";
 import "./contact360.css";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one

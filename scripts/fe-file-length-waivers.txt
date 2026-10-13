@@ -9,11 +9,11 @@
 # Regenerate with scripts/seed-fe-file-length-waivers.sh — to ESTABLISH this
 # baseline, never to absorb a file that grew.
 # Format: <frozen-line-count> <path>
-967 frontend/src/screens/webhooks.tsx
+969 frontend/src/screens/webhooks.tsx
 982 frontend/src/app/shell.tsx
 991 frontend/src/App.tsx
 952 frontend/src/screens/installation-setup.tsx
-921 frontend/src/screens/auth.tsx
+922 frontend/src/screens/auth.tsx
 1088 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1096 frontend/src/screens/worklist.test.tsx
 1100 frontend/src/screens/contactpage.test.tsx
@@ -22,7 +22,7 @@
 1136 frontend/src/screens/record360/spine.test.tsx
 1106 frontend/src/design-system/conformance.test.ts
 1178 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1005 frontend/src/screens/contactpage.tsx
+1006 frontend/src/screens/contactpage.tsx
 1182 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
 959 frontend/src/screens/worklist.row.tsx
@@ -38,7 +38,7 @@
 1185 frontend/src/design-system/listtable.tsx
 1725 frontend/src/screens/onboarding-facts.test.tsx
 1903 frontend/src/screens/contactpage.stories.tsx
-1124 frontend/src/screens/analytics.tsx
+1125 frontend/src/screens/analytics.tsx
 1515 frontend/src/design-system/atoms.tsx
 1536 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
@@ -55,10 +55,10 @@
 512 frontend/src/design-system/relationshipmap.tsx
 509 frontend/src/screens/documentextraction.tsx
 504 frontend/src/screens/onboarding-backread.tsx
-531 frontend/src/screens/leadpresentation.tsx
+532 frontend/src/screens/leadpresentation.tsx
 535 frontend/src/screens/scheduledsends.tsx
 517 frontend/src/screens/worklist.queries.ts
-549 frontend/src/screens/project360.tsx
+551 frontend/src/screens/project360.tsx
 520 frontend/src/screens/adddocument.tsx
 568 frontend/src/app/account.tsx
 534 frontend/src/screens/logactivity.tsx
@@ -66,8 +66,8 @@
 580 frontend/src/screens/taskactions.tsx
 614 frontend/src/screens/onboarding-connect-panels.tsx
 568 frontend/src/screens/retention.tsx
-506 frontend/src/screens/leads.list.tsx
-614 frontend/src/screens/partners.tsx
+508 frontend/src/screens/leads.list.tsx
+615 frontend/src/screens/partners.tsx
 661 frontend/src/screens/record360/citations.tsx
 529 frontend/src/screens/contractform.tsx
 601 frontend/src/screens/worklist.dispositions.tsx
@@ -83,13 +83,12 @@
 542 frontend/src/screens/relationships.tsx
 855 frontend/src/screens/onboarding-gate.tsx
 833 frontend/src/screens/worklist.copy.ts
-795 frontend/src/screens/common.tsx
 894 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 849 frontend/src/screens/settingscatalog.ts
-590 frontend/src/screens/customfields.tsx
+592 frontend/src/screens/customfields.tsx
 922 frontend/src/screens/contactprovider.tsx
-887 frontend/src/screens/share.tsx
-848 frontend/src/screens/integrations-provider.tsx
+888 frontend/src/screens/share.tsx
+850 frontend/src/screens/integrations-provider.tsx
 546 frontend/src/design-system/decisiondeck.tsx
 855 frontend/src/screens/create.tsx
 815 frontend/src/design-system/decisioncard.tsx

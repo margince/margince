@@ -11,7 +11,7 @@ import { Heading } from "../design-system/heading";
 import { Chip } from "../design-system/readings";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { CreateAction } from "./create";
 import { EntityRef } from "./entityref";
 import {

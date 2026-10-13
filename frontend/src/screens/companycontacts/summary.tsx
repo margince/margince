@@ -25,8 +25,8 @@ import {
   problemMessageOf,
   throwProblem,
   unwrap,
-  useViewerId,
-} from "../common";
+} from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 import { EntityRef } from "../entityref";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";

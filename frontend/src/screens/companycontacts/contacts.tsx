@@ -6,7 +6,7 @@ import { useRecordZone } from "../../app/recordzone";
 import { Badge } from "../../design-system/atoms";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem } from "../common";
+import { throwProblem } from "../../lib/problem";
 import { CoverageExplorer } from "../coverageexplorer";
 import {
   type ListPage,

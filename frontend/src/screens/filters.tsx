@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { navigateReplacing } from "../app/router";
 import { PendingBody } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import { FocusedPending } from "./filterhead";
 import { ListFilterPage } from "./filterlistedit";
 import { FilterPage } from "./filterpage";

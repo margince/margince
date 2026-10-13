@@ -5,7 +5,7 @@ import { Avatar } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, type useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import type { Employment } from "./contactemployers";
 
 type Company = components["schemas"]["Company"];

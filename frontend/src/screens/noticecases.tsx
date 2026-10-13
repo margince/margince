@@ -18,20 +18,19 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
-import {
-  LoadMoreButton,
-  problemMessageOf,
-  QueryGate,
-  QueryStates,
-  unwrap,
-  useMe,
-} from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { EntityRef, rosterOwnerName, useRoster } from "./entityref";
 import { useMemberName } from "./membernames";
 import {

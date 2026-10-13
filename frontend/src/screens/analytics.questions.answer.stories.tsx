@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import { ProblemError } from "../lib/problem";
 import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
 import {
   ANSWER,
@@ -19,7 +20,6 @@ import type {
   AnalyticsAnswer,
   AnalyticsQuery,
 } from "./analytics.questions.vocab";
-import { ProblemError } from "./common";
 import {
   installFetchStub,
   jsonResponse,

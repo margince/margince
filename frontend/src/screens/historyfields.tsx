@@ -15,6 +15,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import {
   EvidenceChip,
@@ -23,7 +24,8 @@ import {
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { LoadMoreButton, QueryStates, unwrap, useViewerId } from "./common";
+import { unwrap } from "../lib/problem";
+import { useViewerId } from "../lib/session";
 import {
   type ActorFacet,
   distinctFields,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
 import type { RetentionAction, RetentionScope } from "./retention.logic";
 import {
   ACTION_LABEL_KEYS,

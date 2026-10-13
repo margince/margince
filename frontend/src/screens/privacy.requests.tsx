@@ -19,7 +19,7 @@ import { ruleText } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ProblemError, problemMessageOf, unwrap } from "./common";
+import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
 import {
   EntityRef,
   RosterPartialNote,

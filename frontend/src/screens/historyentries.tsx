@@ -11,18 +11,13 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  LoadMoreButton,
-  problemCodeOf,
-  problemMessageOf,
-  QueryStates,
-  unwrap,
-  useViewerId,
-} from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
+import { useViewerId } from "../lib/session";
 import {
   type EntryFieldChange,
   entryFieldChanges,

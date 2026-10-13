@@ -13,13 +13,13 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { throwProblem } from "../lib/problem";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
   type BulkRow,
 } from "./bulkchange";
 import type { PickedTag } from "./bulktag";
-import { throwProblem } from "./common";
 import { useEmployerSummary } from "./contactemployersummary";
 import { useApplyTag, useRecordTags } from "./tags.queries";
 

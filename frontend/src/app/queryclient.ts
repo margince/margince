@@ -10,8 +10,8 @@ import {
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
+import { logUnexpectedError, ProblemError } from "../lib/problem";
 import { isRecordRead } from "../screens/activitykeys";
-import { logUnexpectedError, ProblemError } from "../screens/common";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The

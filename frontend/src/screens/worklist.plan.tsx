@@ -6,8 +6,8 @@ import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { useMe } from "../lib/session";
 import { TeamPlanReview } from "./brief.teamplan";
-import { useMe } from "./common";
 import { useSetCommitmentState } from "./weeklyplan.queries";
 import type { WorklistItem } from "./worklist.queries";
 

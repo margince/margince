@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
 import { Callout } from "./callout";
 import { PanelBody } from "./panel";
 import "./panel.css";

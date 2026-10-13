@@ -22,10 +22,12 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import {
   ADMISSION_LABEL,
   BLANK_DECISION,
@@ -35,7 +37,6 @@ import {
   type SetDecision,
   useSetBlockedDomain,
 } from "./blocked-domains-decision";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import "./blocked-domains.css";
 
 // The domains this installation refuses a company (ADR-0072). A vendor the

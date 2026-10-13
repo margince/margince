@@ -14,7 +14,7 @@ import { Avatar } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useMe } from "../common";
+import { useMe } from "../../lib/session";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";

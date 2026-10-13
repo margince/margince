@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
 // The reads behind the hidden-backlog panel: the figures, and the messages

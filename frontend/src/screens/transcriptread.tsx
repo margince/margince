@@ -21,7 +21,7 @@ import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import "./transcriptread.css";
 
 type Activity = components["schemas"]["Activity"];

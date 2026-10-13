@@ -15,9 +15,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
-import { unwrap } from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE

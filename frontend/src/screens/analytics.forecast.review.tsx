@@ -7,6 +7,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   type ResolveAnswer,
   ResolveSheet,
@@ -14,8 +15,8 @@ import {
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];

@@ -5,9 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EmptyState } from "../design-system/atoms";
 import { FactList } from "../design-system/factlist";
 import { PanelBody } from "../design-system/panel";
+import type { QueryLike } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { ProblemError, type QueryLike } from "./common";
+import { ProblemError } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 

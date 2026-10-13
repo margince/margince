@@ -14,6 +14,7 @@ import { greetingNameOf } from "../format/greetingname";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useMe } from "../lib/session";
 import { LinkedApprovalDrawer } from "./approvaldrawer";
 import { changedSinceBrief } from "./brief.changed";
 import { BriefChanges } from "./brief.changes";
@@ -38,7 +39,6 @@ import {
 } from "./brief.view";
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
-import { useMe } from "./common";
 import { MagicPanel } from "./magic";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import type { TeamWeekReach } from "./teamweekly.queries";

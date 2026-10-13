@@ -17,9 +17,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { unwrap } from "../../lib/problem";
 import { DEAL_COMMITMENTS_KEY } from "../activitykeys";
 import { DismissClaimButton } from "../claimdismiss";
-import { unwrap } from "../common";
 import "./deal360.css";
 
 type DealCommitments = components["schemas"]["DealCommitments"];

@@ -20,10 +20,10 @@ import { Switch } from "../design-system/switch";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { useBookingIntent } from "./booking-common";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
-import { unwrap } from "./common";
 import { ComposeModal } from "./compose";
 import { refreshContactMeetings } from "./contactmeetings.waiting";
 

@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import { SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { PostureRefused } from "./integrations-provider.notices";
 
 // The installation's lookup posture, read and written through its own surface.

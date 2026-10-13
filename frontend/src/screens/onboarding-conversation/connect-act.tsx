@@ -4,7 +4,7 @@ import { navigateReplacing } from "../../app/router";
 import { ErrorLine } from "../../design-system/errorline";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import { problemMessageOf } from "../common";
+import { problemMessageOf } from "../../lib/problem";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
   clearOAuthAttempt,

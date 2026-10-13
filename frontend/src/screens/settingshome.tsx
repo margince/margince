@@ -9,7 +9,7 @@ import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import type {
   SettingsGroupId,
   SettingsPage,

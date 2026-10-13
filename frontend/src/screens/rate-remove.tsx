@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { LANE_LABEL } from "./rate-manual";
 
 type SheetRow = components["schemas"]["AiModelRate"];

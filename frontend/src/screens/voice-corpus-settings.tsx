@@ -4,7 +4,7 @@ import { FileDropzoneControl } from "../design-system/filedropzone";
 import { SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { useFileDrop } from "./use-file-drop";
 import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
 import { useVoiceIntake } from "./use-voice-intake";

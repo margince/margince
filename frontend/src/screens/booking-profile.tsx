@@ -12,10 +12,11 @@ import { ErrorLine } from "../design-system/errorline";
 import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import "./booking-profile.css";
 

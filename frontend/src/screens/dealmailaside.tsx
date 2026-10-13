@@ -25,10 +25,11 @@ import { DealMailChip } from "../design-system/dealcard";
 import { EmailReference } from "../design-system/emailreference";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListColumn } from "../design-system/listtable";
+import { QueryStates } from "../design-system/querystates";
 import { formatElapsed } from "../format/now";
 import { type Translator, useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { boardMail } from "./boarddeal";
-import { QueryStates, unwrap } from "./common";
 import "./dealmailaside.css";
 import { useNow } from "../format/now";
 

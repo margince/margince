@@ -22,6 +22,11 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
+import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
@@ -30,15 +35,12 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import {
-  LoadMoreButton,
   ProblemError,
   problemFieldErrorsOf,
   problemMessageOf,
-  QueryGate,
-  QueryStates,
   unwrap,
-  useMe,
-} from "./common";
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {

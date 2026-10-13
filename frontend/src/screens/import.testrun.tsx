@@ -4,12 +4,13 @@
 import { Badge, Button, Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { QueryStates } from "../design-system/querystates";
 import { StatCard } from "../design-system/statcard";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
 import type { ImportWizardState } from "./importflow";

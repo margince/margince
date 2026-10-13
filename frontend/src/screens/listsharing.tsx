@@ -9,7 +9,7 @@ import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import { rosterMissLabel } from "./entityref";
 import type { List } from "./lists.queries";
 import { useRoster, useRosterPartial } from "./roster";

@@ -30,9 +30,10 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, QueryStates, unwrap } from "../common";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { FINISHED_STATES, refusalFor, useDealRoom } from "../dealroom";
 import {
   buyerLink,

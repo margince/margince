@@ -73,11 +73,6 @@ func subject(flow, row string) string {
 var DailyKnownIssues = []KnownIssue{
 	{Flow: "worklist", Issue: 4912},
 	{Flow: "home", Row: "home_worklist", Issue: 4912},
-	{Flow: "lists", Row: "lists_contacts_q", Issue: 7082},
-	{Flow: "palette_search", Row: "palette_search_meeting", Issue: 7037},
-	{Flow: "results_search", Row: "results_search_all", Issue: 7037},
-	{Flow: "results_search", Row: "results_search_activity", Issue: 7621},
-	{Flow: "palette_search_prefix", Issue: 7037},
 	{Flow: "morning_load", Issue: 7068, Allow5xx: true},
 }
 
@@ -576,10 +571,10 @@ func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
 func TestOnlyAnUnlistedGatedBreachIsMeasuredAgain(t *testing.T) {
 	specs := []dailyRowSpec{
 		{flow: "lists", name: "lists_contacts", budget: Perf2Budget, gated: true},
-		{flow: "lists", name: "lists_contacts_q", budget: Perf2Budget, gated: true},
+		{flow: "home", name: "home_worklist", budget: Perf8Budget, gated: true},
 		{flow: "search_to_deal", name: "search_to_deal_total", budget: Perf10Budget},
 	}
-	first := steadyRound(90*time.Millisecond, 400*time.Millisecond, 5*time.Second)
+	first := steadyRound(90*time.Millisecond, 3*time.Second, 5*time.Second)
 	got, err := confirmBreaches(specs, first, func() ([][]time.Duration, error) {
 		t.Fatal("a row within budget, a listed row and an ungated row are never measured again")
 		return nil, nil

@@ -14,7 +14,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf } from "./common";
+import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { useFilterVocabulary } from "./filterdata";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {

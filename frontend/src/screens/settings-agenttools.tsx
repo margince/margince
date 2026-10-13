@@ -15,10 +15,11 @@ import {
   PassportSelect,
   scopeChipLabel,
 } from "../design-system/passportselect";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
-import { QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { usePassports } from "./passports.queries";
 import "./settings-agents.css";
 

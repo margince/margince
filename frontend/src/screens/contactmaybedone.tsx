@@ -5,7 +5,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { useClaimSettle, useTaskUpdate } from "./taskactions";
 import { useCompleteTask } from "./taskcomplete";
 

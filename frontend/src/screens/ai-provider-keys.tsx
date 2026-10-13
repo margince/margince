@@ -5,9 +5,11 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf } from "../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import { useProviderHealth } from "./ai-provider-health";
 import {
@@ -36,7 +38,6 @@ import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
-import { problemMessageOf, QueryGate } from "./common";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.

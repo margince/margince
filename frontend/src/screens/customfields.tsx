@@ -18,11 +18,13 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, unwrap, useMe } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,

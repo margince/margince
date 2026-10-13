@@ -5,9 +5,10 @@ import { useCanWrite } from "../app/capability";
 import { ErrorLine } from "../design-system/errorline";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
 type FollowUpSettings = components["schemas"]["FollowUpSettings"];

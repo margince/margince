@@ -13,7 +13,7 @@ import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import {
   type ObjectTab,
   RESOURCE_OF,

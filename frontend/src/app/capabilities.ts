@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "../screens/common";
+import { unwrap } from "../lib/problem";
 
 /**
  * The anonymous capability probe, read by everything that needs it.

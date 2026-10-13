@@ -5,8 +5,8 @@ import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useCaptureSettings } from "./capture-settings";
-import { problemMessageOf, unwrap } from "./common";
 
 // The posture question, asked while a mailbox is being connected.
 //

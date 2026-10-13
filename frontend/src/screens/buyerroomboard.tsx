@@ -10,14 +10,15 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { previewMediaType } from "../design-system/filechip";
 import { useFilePreview } from "../design-system/filepreview";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { throwProblem } from "../lib/problem";
 import {
   bearer,
   refuseOrThrow,
   retireOnRefusal,
   SessionRefusedError,
 } from "./buyerroomsession";
-import { QueryStates, throwProblem } from "./common";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 import { downloadBytes } from "./download";

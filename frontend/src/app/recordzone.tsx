@@ -4,7 +4,7 @@
 import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { isRenderableZone } from "../format/format";
 import { FALLBACK_RECORD_ZONE } from "../format/timezone";
-import { logUnexpectedError } from "../screens/common";
+import { logUnexpectedError } from "../lib/problem";
 import { useInstallationSettings } from "./uploadlimit";
 
 /**

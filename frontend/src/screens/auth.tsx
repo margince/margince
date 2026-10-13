@@ -22,6 +22,8 @@ import { providerBrandName } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useOutageRecovery } from "../lib/connectivity";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { sessionAnswers } from "../lib/session";
 import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import {
   FederatedOnlyCard,
@@ -29,7 +31,6 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
-import { problemMessageOf, sessionAnswers, unwrap } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 

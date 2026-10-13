@@ -16,7 +16,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -26,7 +26,7 @@ import {
   useRecordRoles,
   useUpdateRecordAssignment,
 } from "./recordassignments.queries";
-import "./common.css";
+import "../design-system/querystates.css";
 
 const SUBJECT_KINDS: readonly AssignmentSubjectKind[] = ["user", "team"];
 

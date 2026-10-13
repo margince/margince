@@ -19,8 +19,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { unwrap } from "../../lib/problem";
 import { DEAL_COVERAGE_KEY } from "../activitykeys";
-import { unwrap } from "../common";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 

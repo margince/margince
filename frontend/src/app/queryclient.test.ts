@@ -11,7 +11,7 @@ import {
   reportUnreached,
   watchConnectivity,
 } from "../lib/connectivity";
-import { ProblemError, throwProblem } from "../screens/common";
+import { ProblemError, throwProblem } from "../lib/problem";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 import {
   createQueryClient,

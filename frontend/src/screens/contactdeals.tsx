@@ -9,7 +9,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { formatDayMonth, formatMoneyCompact } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import "./contact360.css";
 import { readableRole } from "./contactcards";
 import { ContactDealRooms } from "./contactdealrooms";

@@ -13,7 +13,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import "./companyvatmark.css";
 
 type VatCheck = components["schemas"]["CompanyVatCheck"];

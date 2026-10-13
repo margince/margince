@@ -12,12 +12,13 @@ import {
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { humanizeToken } from "./audit";
-import { QueryStates, unwrap } from "./common";
 import "./consent.css";
 import { stable } from "../format/collate";
 

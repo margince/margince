@@ -24,6 +24,8 @@ import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import {
   type ActivityDraft,
   activityRequestBody,
@@ -34,7 +36,6 @@ import {
 import { ActivityBodyField } from "./activitybodyfield";
 import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { unwrap, useMe } from "./common";
 import "./logactivity.css";
 import { MeetingAttendeeFields } from "./meetingattendees";
 

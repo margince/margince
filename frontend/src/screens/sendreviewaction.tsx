@@ -16,7 +16,7 @@ import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import type { SendReview } from "./sendreview";
 
 // requestDecision asks the installation to decide a refused send.

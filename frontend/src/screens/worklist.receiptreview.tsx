@@ -8,7 +8,7 @@ import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import { type Receipt, worklistKey } from "./worklist.queries";
 import { ReceiptUndo } from "./worklist.receiptundo";
 

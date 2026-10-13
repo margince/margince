@@ -9,8 +9,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { AddDocumentDialog } from "./adddocument";
-import { unwrap } from "./common";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the

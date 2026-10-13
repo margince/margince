@@ -22,14 +22,15 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { captureValueMessage } from "./capturevalue";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer

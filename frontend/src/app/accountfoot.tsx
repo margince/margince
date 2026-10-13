@@ -4,7 +4,8 @@
 import { LogOut } from "lucide-react";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { problemMessageOf, useLogout } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
+import { useLogout } from "../lib/session";
 import { comparableRelease, SPA_RELEASE } from "./release";
 
 // The foot of the account menu: the way out, and the release the reader is on.

@@ -19,20 +19,20 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { captureValueMessage } from "./capturevalue";
 import {
   problemCodeOf,
   problemMessageOf,
-  QueryGate,
   throwProblem,
   unwrap,
-} from "./common";
+} from "../lib/problem";
+import { captureValueMessage } from "./capturevalue";
 import {
   type MutationOutcome,
   useRowHandoff,

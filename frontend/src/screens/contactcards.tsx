@@ -14,8 +14,8 @@ import { daysPast } from "../format/lateness";
 import { useNow } from "../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useViewerId } from "../lib/session";
 import { DismissClaimButton } from "./claimdismiss";
-import { useViewerId } from "./common";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a

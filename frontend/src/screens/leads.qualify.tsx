@@ -12,7 +12,7 @@ import { leadIdentityName } from "../format/leadname";
 import { toMinorUnits } from "../format/minorunits";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { EntityRef } from "./entityref";
 import { leadPromotePreviewKey, leadWriteKeys } from "./leadkeys";
 import { usePipelines } from "./pipelines.queries";

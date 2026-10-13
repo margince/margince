@@ -17,8 +17,8 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { callsHrefFor } from "./aicalls";
-import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What a provider, a tier or a host actually did, read from the call record

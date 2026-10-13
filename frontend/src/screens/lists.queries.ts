@@ -13,8 +13,9 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { recordListsKey } from "./activitykeys";
-import { throwProblem, unwrap, useMe } from "./common";
 import type { MutationOutcome } from "./undoableremoval";
 
 export type List = components["schemas"]["List"];

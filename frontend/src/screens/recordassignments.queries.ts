@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // Who is responsible for a record, and the administered roles they hold it
 // under. The record panel, the settings card and the role picker all read the

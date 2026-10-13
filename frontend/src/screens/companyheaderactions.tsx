@@ -9,7 +9,7 @@ import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ListPopover } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import { ComposeModal } from "./compose";
 import { LogActivityAction } from "./logactivity";
 import { searchCompanyContacts } from "./meetingattendees";

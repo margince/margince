@@ -9,9 +9,9 @@ import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { statusLabel, statusTone } from "./connector-status";
-import "./common.css";
+import "../design-system/querystates.css";
 
 // The Telegram connector: one bot connects for the WHOLE workspace, not
 // per-user — there is no OAuth handshake, so first-connect is the same "paste a

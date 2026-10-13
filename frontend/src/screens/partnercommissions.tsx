@@ -5,14 +5,15 @@ import { useCanWrite } from "../app/capability";
 import { Badge, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
-import { QueryGate, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import "./partnercommissions.css";
 

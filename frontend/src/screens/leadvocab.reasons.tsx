@@ -12,6 +12,7 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { NameDialog, nameRefusal } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
+import { QueryStates } from "../design-system/querystates";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import {
@@ -22,7 +23,7 @@ import {
   useT,
 } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   type LeadDisqualifyReason,

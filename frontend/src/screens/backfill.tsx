@@ -7,13 +7,13 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { ProblemError, problemCode, problemMessageOf } from "../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
   ImportWindowPicker,
 } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { RunView } from "./backfillrunview";
-import { ProblemError, problemCode, problemMessageOf } from "./common";
 import "./backfill.css";
 
 // The bounded connect-time backfill (ADR-0063): pick a window, see the scope

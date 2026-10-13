@@ -17,11 +17,12 @@ import {
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { SUBMIT_COPY, type SubmitIntent } from "./create";
 import { EntityRef } from "./entityref";
 import {

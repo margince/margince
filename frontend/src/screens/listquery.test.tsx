@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListChip } from "../design-system/listsurface";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
 import {
   type FilterSpec,
   LIST_PAGE_SIZES,
