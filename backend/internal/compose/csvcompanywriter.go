@@ -27,8 +27,6 @@ import (
 
 // createCompany lands one row as a company, its identity-map row in the same
 // transaction.
-//
-//nolint:dupl // createContact has the same shape over a different store call and a different held key; one generic seam would hide which rule judged a row.
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {

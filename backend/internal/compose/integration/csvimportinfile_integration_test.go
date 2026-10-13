@@ -327,8 +327,10 @@ func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 	}{{
 		object: "contact", path: "/v1/contacts", header: "Full Name,Email",
 		first: "Grace Hopper,grace@hopper.example", moved: "Grace Hopper,ada@lovelace.example",
-		incumbent: map[string]any{"source": "manual", "full_name": "Ada Lovelace",
-			"emails": []map[string]any{{"email": "ada@lovelace.example", "is_primary": true}}},
+		incumbent: map[string]any{
+			"source": "manual", "full_name": "Ada Lovelace",
+			"emails": []map[string]any{{"email": "ada@lovelace.example", "is_primary": true}},
+		},
 		mapping: map[string]string{"Full Name": "full_name", "Email": "email"},
 	}, {
 		object: "lead", path: "/v1/leads", header: "Full Name,Email",
@@ -338,8 +340,10 @@ func TestAnUpdateMeetsAKeyTheCRMAlreadyHolds(t *testing.T) {
 	}, {
 		object: "company", path: "/v1/companies", header: "Full Name,Website",
 		first: "Nordwind Logistik,nordwind.example", moved: "Nordwind Logistik,zephyr.example",
-		incumbent: map[string]any{"source": "manual", "display_name": "Zephyr Freight",
-			"domains": []map[string]any{{"domain": "zephyr.example", "is_primary": true}}},
+		incumbent: map[string]any{
+			"source": "manual", "display_name": "Zephyr Freight",
+			"domains": []map[string]any{{"domain": "zephyr.example", "is_primary": true}},
+		},
 		mapping: map[string]string{"Full Name": "display_name", "Website": "domain"},
 	}}
 	for _, tc := range cases {

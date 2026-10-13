@@ -38,8 +38,6 @@ import (
 // An address that already belongs to someone else is a SKIP with a reason, never
 // an automatic merge: two records that look like one contact is a question for a
 // human, and answering it by writing is the one move no undo reverses.
-//
-//nolint:dupl // createCompany has the same shape over a different store call and a different held key; one generic seam would hide which rule judged a row.
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
