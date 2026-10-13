@@ -13,8 +13,8 @@ import { undoAction, useToast } from "../design-system/toast";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AddDocumentDialog } from "./adddocument";
-import { problemMessageOf, unwrap } from "./common";
 import "./dealfiles.css";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived

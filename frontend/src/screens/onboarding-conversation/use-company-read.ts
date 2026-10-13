@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { ProblemError, problemMessageOf, unwrap } from "../common";
+import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, prefill } from "../onboarding";
 import { defaultSelectedFactKeys } from "../onboarding-facts";

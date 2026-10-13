@@ -1,6 +1,6 @@
 import { api } from "../api/client";
 import { ifMatch } from "../api/version";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { companyEditComparison } from "./companyform";
 import { contactEditComparison } from "./contactformfields";
 import { saveIndependentEdit } from "./independentedit";

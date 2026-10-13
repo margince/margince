@@ -15,7 +15,7 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { EntityRef } from "./entityref";
 import { leadManualSignalsKey, leadWriteKeys } from "./leadkeys";
 import "./leadsignals.css";

@@ -15,6 +15,7 @@ import {
   MONEY_ABSENT,
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { ProblemError, throwProblem } from "../lib/problem";
 import { derivationColumns } from "./analytics.explain";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import {
@@ -37,7 +38,6 @@ import {
   REFUSAL_KEY,
   refusalOf,
 } from "./analytics.questions.vocab";
-import { ProblemError, throwProblem } from "./common";
 
 type Translate = ReturnType<typeof useT>;
 

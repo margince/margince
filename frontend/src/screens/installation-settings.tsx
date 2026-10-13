@@ -28,18 +28,14 @@ import {
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { fiscalYearLabel } from "../format/fiscalyear";
 import { identifierNumber, monthName } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
-import {
-  problemFieldErrorsOf,
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-} from "./common";
+import { problemFieldErrorsOf, problemMessageOf, unwrap } from "../lib/problem";
 import {
   RegionalSettingsFields,
   RegionalSettingsRows,

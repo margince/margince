@@ -19,7 +19,7 @@ import {
 } from "../../design-system/projectpicker";
 import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../common";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
 

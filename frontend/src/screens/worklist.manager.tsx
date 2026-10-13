@@ -27,8 +27,9 @@ import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemCodeOf } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { problemCodeOf, useMe } from "./common";
 import { useRosterPartial, useRosterPartialHint } from "./entityref";
 import {
   subjectAcceptsAnOwner,

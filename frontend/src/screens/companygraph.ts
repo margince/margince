@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The account's one-hop connection graph, as data.
 //

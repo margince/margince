@@ -33,7 +33,7 @@ import {
 import { unitsForSecretScope } from "../app/extensions";
 import type { NavLevelEntry, NavLevelGroup, NavSection } from "../app/nav";
 import type { Route } from "../app/router";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
   type SettingsPage,

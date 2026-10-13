@@ -29,8 +29,9 @@ import {
 } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
-import { QueryGate, unwrap } from "./common";
-import "./common.css";
+import { QueryGate } from "../design-system/querystates";
+import { unwrap } from "../lib/problem";
+import "../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit

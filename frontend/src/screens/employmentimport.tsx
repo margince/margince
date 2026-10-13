@@ -12,10 +12,10 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
-import "./common.css";
+import "../design-system/querystates.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];

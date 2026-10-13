@@ -31,7 +31,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { projectRoleLabel } from "./record360";
 
 type SetProjectStakeholderRequest =

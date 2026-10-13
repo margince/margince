@@ -10,6 +10,7 @@ import { FactList } from "../design-system/factlist";
 import { FileChip } from "../design-system/filechip";
 import { Markdown } from "../design-system/markdown";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatBytes, formatDate, formatNumber } from "../format/format";
@@ -20,7 +21,7 @@ import {
 } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { DSR_KIND_LABEL } from "./privacy.logic";
 import {
   AUDIENCE_LABEL,

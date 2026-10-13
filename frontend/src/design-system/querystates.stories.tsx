@@ -3,11 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "../design-system/atoms";
-import { QueryGate, WriteRefused } from "./common";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../screens/story-utils";
+import { Button } from "./atoms";
+import { QueryGate, WriteRefused } from "./querystates";
 
-// The two surfaces `common.tsx` renders for every screen. QueryGate is the
+// The two surfaces `querystates.tsx` renders for every screen. QueryGate is the
 // shared loading/error/empty/loaded ladder a detail read goes through —
 // exercised off a small demo query against the shared fetch stub, one story per
 // state, rather than a hand-built UseQueryResult (react-query's result shape

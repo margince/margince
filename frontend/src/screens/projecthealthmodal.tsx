@@ -15,7 +15,7 @@ import {
   useCorrectProjectHealth,
   useRecordProjectHealth,
 } from "./projecthealth.queries";
-import "./common.css";
+import "../design-system/querystates.css";
 
 const STATES: readonly ProjectHealthState[] = [
   "on_track",

@@ -15,7 +15,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { postMultipart } from "./multipart";
 import "./vcard-import.css";
 

@@ -36,22 +36,20 @@ import {
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
+import {
+  QueryGate,
+  type QueryLike,
+  WriteRefused,
+} from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  coldFieldLabel,
-  problemMessageOf,
-  provenanceOf,
-  QueryGate,
-  type QueryLike,
-  throwProblem,
-  unwrap,
-  useMe,
-  WriteRefused,
-} from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
+import { coldFieldLabel } from "./coldfieldlabels";
 import { ReadWarnings, SavedNotice } from "./company-context.notices";
 import { CompanyMark } from "./companymark";
 import { storeCompany, useCompany } from "./installationcompany";

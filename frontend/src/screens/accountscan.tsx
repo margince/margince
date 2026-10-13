@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 export type AccountScan = components["schemas"]["CompanyScan"];
 

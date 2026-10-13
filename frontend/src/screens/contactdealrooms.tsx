@@ -8,9 +8,10 @@ import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { RoomStateBadge, STATE_LABELS } from "./dealroom";
 import { participantsKey } from "./dealroomaccess";
 

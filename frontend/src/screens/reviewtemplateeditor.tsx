@@ -18,7 +18,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,

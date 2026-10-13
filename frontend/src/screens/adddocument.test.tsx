@@ -49,7 +49,7 @@ const OLDER_DEAL = {
   status: "open",
 };
 
-// /me refuses a payload without `user` (common.tsx:105), so a fixture that
+// /me refuses a payload without `user` (lib/session.ts), so a fixture that
 // carried only the authorization block would leave every control refused for a
 // reason the test was not testing.
 const USER = { id: "u-1", email: "rep@example.com", name: "Demo Rep" };

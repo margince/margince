@@ -1,5 +1,5 @@
 import type { components } from "../api/schema";
-import { useMe } from "../screens/common";
+import { useMe } from "../lib/session";
 // The pure half, in its own module so a consumer that only reads the
 // vocabulary does not pull `useMe` — and through it the design system and its
 // stylesheets — into its bundle. Re-exported here so every call site inside the

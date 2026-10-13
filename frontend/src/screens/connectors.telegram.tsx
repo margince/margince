@@ -24,8 +24,8 @@ import {
   problemMessageOf,
   throwProblem,
   unwrap,
-  useMe,
-} from "./common";
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 import { statusLabel, statusTone } from "./connector-status";
 import { TelegramConnectForm } from "./telegram-connect-form";
 

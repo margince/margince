@@ -16,6 +16,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { unwrap } from "../../lib/problem";
 import {
   type BulkBatch,
   type BulkChangeRequest,
@@ -27,7 +28,6 @@ import {
   previewBulkChange,
 } from "../bulkchangeapi";
 import { SkipReason } from "../bulkwords";
-import { unwrap } from "../common";
 
 type Activity = components["schemas"]["Activity"];
 

@@ -16,12 +16,20 @@ import {
   type DecisionStatusLabels,
 } from "../design-system/decisioncard";
 import { ErrorLine } from "../design-system/errorline";
+import { provenanceOf } from "../design-system/provenanceof";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
+import {
+  isAlreadyDecided,
+  isVersionSkew,
+  ProblemError,
+  unwrap,
+} from "../lib/problem";
+import { useViewerId } from "../lib/session";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
@@ -33,14 +41,6 @@ import {
 import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import type { Approval } from "./approvals.queries";
 import { stagedSendOf } from "./approvalsend";
-import {
-  isAlreadyDecided,
-  isVersionSkew,
-  ProblemError,
-  provenanceOf,
-  unwrap,
-  useViewerId,
-} from "./common";
 import { SendPermission } from "./sendpermission";
 import { useSendPermission } from "./usesendpermission";
 import "./approvalrow.css";

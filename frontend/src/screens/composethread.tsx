@@ -18,7 +18,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import type { RelinkKind } from "./compose";
 import { groupChronology } from "./timelinegroups";
 import "./composethread.css";

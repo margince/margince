@@ -23,6 +23,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
   type RecordTimeline,
@@ -39,14 +40,9 @@ import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useClaimRecord } from "./claimrecord";
-import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useMe,
-} from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 import { useRecordHistory } from "./history";
 import { leadBand } from "./leadband";

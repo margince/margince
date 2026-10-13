@@ -11,7 +11,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // Fitness function for a caught failure reaching the screen in the SERVER's
 // words instead of the reader's.
 //
-// `problemMessageOf` (screens/common.tsx) calls itself the one way a caught
+// `problemMessageOf` (lib/problem.ts) calls itself the one way a caught
 // failure becomes words on a screen, and the reason is not tidiness: `httperr`
 // composes a refusal's detail from `err.Error()`, and every producer of
 // `permission_denied` wraps it with internals — `auth.Require` sends the RBAC

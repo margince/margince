@@ -5,11 +5,12 @@ import { useCanWrite } from "../app/capability";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 
 // The company capture-settings card (CAP-WIRE-7, ADR-0072): the
 // captured-company auto-enrich toggle. Every role reads it; only admin/ops

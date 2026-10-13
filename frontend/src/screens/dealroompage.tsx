@@ -18,9 +18,10 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import {
   FINISHED_STATES,

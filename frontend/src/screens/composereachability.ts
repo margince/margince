@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 type Contact360 = components["schemas"]["Contact360"];
 

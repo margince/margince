@@ -1,7 +1,7 @@
 import type { components } from "../api/schema";
+import { provenanceOf } from "../design-system/provenanceof";
 import type { Provenance } from "../design-system/trust";
 import { stable } from "../format/collate";
-import { provenanceOf } from "./common";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];

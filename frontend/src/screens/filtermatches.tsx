@@ -9,10 +9,10 @@ import { useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates } from "./common";
 import {
   PREVIEW_PAGE,
   useFilterPreview,

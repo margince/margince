@@ -11,6 +11,7 @@ import { FilterBar } from "../design-system/filterbar";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
+import { QueryGate } from "../design-system/querystates";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { rowsState, SurfaceState } from "../design-system/surfacestate";
@@ -22,6 +23,7 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import {
   openAnalyticsSection,
   SECTIONS,
@@ -63,7 +65,6 @@ import { QuestionsView } from "./analytics.questions";
 import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, unwrap } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";

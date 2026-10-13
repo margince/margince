@@ -16,7 +16,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { ContractForm } from "./contractform";
 import {
   ContractCancelModal,

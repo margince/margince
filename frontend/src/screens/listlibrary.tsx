@@ -23,7 +23,7 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import { RECORDS_COUNT_LABEL } from "./filtersaddress";
 import {

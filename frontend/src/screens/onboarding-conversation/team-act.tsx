@@ -5,7 +5,7 @@ import type { Dispatch } from "react";
 import { useState } from "react";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { useMe } from "../common";
+import { useMe } from "../../lib/session";
 import { EMPTY_DRAFT } from "../onboarding";
 import { type InvitedMember, InviteUserForm } from "../users-invite-form";
 import { PasswordLinkModal, usePasswordLink } from "../users-password-link";

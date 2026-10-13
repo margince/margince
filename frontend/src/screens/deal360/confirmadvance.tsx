@@ -5,7 +5,7 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { problemFieldErrorsOf } from "../common";
+import { problemFieldErrorsOf } from "../../lib/problem";
 import { WON_REASON_LABELS, WON_REASONS, type WonReason } from "../winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";

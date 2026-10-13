@@ -7,7 +7,8 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { routeHash } from "../app/router";
 import { useT } from "../i18n";
-import { unwrap, useMe } from "./common";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { settingsHref } from "./settingsrouting";
 import { SignatureHtml } from "./signaturehtml";
 

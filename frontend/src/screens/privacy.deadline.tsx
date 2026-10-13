@@ -8,7 +8,7 @@ import { formatDate } from "../format/format";
 import { ruleText } from "../format/jurisdiction";
 import { endOfDayInZone, startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The deadline a manual subject request gets. The server computes it from the
 // installation's jurisdiction and the day the request arrived. The form shows

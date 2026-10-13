@@ -19,7 +19,7 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";

@@ -7,7 +7,7 @@ import type {
   DecisionDeckItem,
   StagedDecision,
 } from "../design-system/decisiondeck";
-import { isAlreadyDecided, ProblemError, unwrap } from "./common";
+import { isAlreadyDecided, ProblemError, unwrap } from "../lib/problem";
 
 // Sending the Brief's staging tray: what one verdict does, and what a whole
 // tray does.

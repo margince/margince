@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { ProblemError } from "../lib/problem";
 import { ACCEPTED_ATTACHMENT_ATTR } from "./attachmentupload";
-import { ProblemError } from "./common";
 import { ContractForm } from "./contractform";
 import { paperState } from "./contractpaper";
 

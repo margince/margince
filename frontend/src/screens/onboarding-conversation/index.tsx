@@ -8,7 +8,7 @@ import { useHoldsAdminRole } from "../../app/capability";
 import { navigate, navigateReplacing, useRoute } from "../../app/router";
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem } from "../common";
+import { throwProblem } from "../../lib/problem";
 import {
   type useCompany,
   useInstallationDescribed,

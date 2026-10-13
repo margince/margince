@@ -6,8 +6,9 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { RedirectUriGroup } from "./oauth-redirects";
 
 /**

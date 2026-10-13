@@ -24,10 +24,11 @@ import {
   PanelIntro,
   PanelRow,
 } from "../design-system/panel";
+import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap, WriteRefused } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import {
   DocumentList,
   INGEST_POLL_MS,

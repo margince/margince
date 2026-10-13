@@ -13,7 +13,7 @@ import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { INTL_LOCALE } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import type { ReportingReport } from "./reporting.model";
 
 type Schedule = components["schemas"]["ReportingSchedule"];

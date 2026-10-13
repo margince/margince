@@ -26,7 +26,7 @@ import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { ComposeModal } from "./compose";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";

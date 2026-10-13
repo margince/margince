@@ -8,8 +8,8 @@ import type { components, operations } from "../api/schema";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
+import { unwrap } from "../lib/problem";
 import { timelineBaseKey } from "../screens/activitykeys";
-import { unwrap } from "../screens/common";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];

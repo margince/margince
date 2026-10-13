@@ -9,12 +9,14 @@ import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, unwrap, useMe } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import {
   membersOf,

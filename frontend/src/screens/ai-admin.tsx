@@ -17,13 +17,14 @@ import {
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatTokens } from "../format/tokens";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AiFeatureTable } from "./ai-feature-table";
 import { SpendEstimate } from "./ai-settings";
-import { problemMessageOf, QueryGate, unwrap } from "./common";
 
 type Budget = components["schemas"]["AiBudgetSnapshot"];
 type Change = components["schemas"]["AiBudgetChange"];

@@ -7,7 +7,7 @@ import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf, throwProblem } from "./common";
+import { problemCodeOf, problemMessageOf, throwProblem } from "../lib/problem";
 
 // The share screen's refusal wording and its revoke dialog.
 

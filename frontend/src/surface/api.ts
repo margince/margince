@@ -25,6 +25,7 @@
 // helper a unit cannot call. problemMessageOf's MessageKey is already
 // published through useT, so this widens no type surface.
 export { api } from "../api/client";
+export { QueryStates } from "../design-system/querystates";
 // resetToSignedOut is published for the same reason the rest of this block is:
 // a unit's screen that polls will one day meet the 401 of a session that ended
 // under it, and the answer — drop every cached answer belonging to the member
@@ -36,7 +37,6 @@ export {
   isVersionSkew,
   ProblemError,
   problemMessageOf,
-  QueryStates,
-  resetToSignedOut,
   throwProblem,
-} from "../screens/common";
+} from "../lib/problem";
+export { resetToSignedOut } from "../lib/session";

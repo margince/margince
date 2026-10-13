@@ -15,13 +15,14 @@ import {
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatDateAbbrev, monthName } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { metricLabel, type ReportingMetricID } from "./reporting.model";
 import { useReportingPipelines } from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";

@@ -19,13 +19,14 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RowOpen } from "../design-system/rowopen";
 import { useToast } from "../design-system/toast";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { EntityRef } from "./entityref";
 import "./capture-senders.css";
 

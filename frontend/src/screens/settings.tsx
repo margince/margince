@@ -10,12 +10,15 @@ import { Avatar, Button, Disclosure, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useLogout, useMe } from "../lib/session";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
@@ -37,13 +40,6 @@ import {
   MailSyncCard,
   WebsiteReadingCard,
 } from "./capture-settings";
-import {
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-  useLogout,
-  useMe,
-} from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";

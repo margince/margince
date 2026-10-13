@@ -11,7 +11,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Row } from "../design-system/stack";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];

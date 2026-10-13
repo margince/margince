@@ -4,7 +4,7 @@
 import type { MessageKey } from "../i18n/en";
 
 // Wire codes whose server detail is not a sentence for this screen's reader,
-// and the catalog copy problemDetail (common.tsx) shows in its place.
+// and the catalog copy problemDetail (problem.ts) shows in its place.
 export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["gateway_unavailable", "common.gatewayUnavailable"],
   ["assistant_unavailable", "common.assistantUnavailable"],

@@ -3,6 +3,7 @@
 
 import type { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { problemCode, problemCodeOf, throwProblem } from "../lib/problem";
 import {
   fetchRouting,
   ROUTING_KEY,
@@ -14,7 +15,6 @@ import {
   sliceOf,
   withSlice,
 } from "./ai-routing-slice";
-import { problemCode, problemCodeOf, throwProblem } from "./common";
 
 // Writing one slice of the routing document onto the latest one, and telling a
 // colleague's edit to the same slice from one elsewhere.

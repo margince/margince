@@ -9,9 +9,10 @@ import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { QueryGate } from "../../design-system/querystates";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import { problemFieldErrorsOf, QueryGate } from "../common";
+import { problemFieldErrorsOf } from "../../lib/problem";
 import {
   currencyNote,
   useUpdateInstallationSettings,

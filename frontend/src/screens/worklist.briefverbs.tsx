@@ -14,9 +14,9 @@ import { useToast } from "../design-system/toast";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import type { BriefMarkRequest } from "./brief.queries";
 import { useBriefItemMark } from "./brief.queries";
-import { problemMessageOf } from "./common";
 import type { WorklistItem } from "./worklist.queries";
 
 /**

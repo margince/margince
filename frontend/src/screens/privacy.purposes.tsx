@@ -21,8 +21,10 @@ import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { QueryStates, unwrap, useMe } from "./common";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];

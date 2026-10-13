@@ -12,7 +12,7 @@ import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 import { roleOptions, useAssignableRoles } from "./roles.queries";
 import { AccessPreviewPanel } from "./users-access";

@@ -9,9 +9,9 @@ import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf } from "../lib/problem";
 import { ImportWindowPicker } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
-import { problemMessageOf } from "./common";
 import { errorClassKey } from "./connector-status";
 import "./onboarding-backread.css";
 

@@ -11,7 +11,7 @@ import {
   type StageProgress,
 } from "../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../common";
+import { throwProblem, unwrap } from "../../lib/problem";
 import { loadWizardState } from "../onboarding";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";

@@ -4,8 +4,8 @@
 import { Badge, Disclosure } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
-import { QueryStates } from "./common";
 import { ColumnGuide } from "./import.guide";
 import { useImportFormat } from "./importrun";
 import type { ImportFormat, ImportFormatColumn } from "./importtypes";

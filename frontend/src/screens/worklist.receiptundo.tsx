@@ -18,7 +18,7 @@ import { useState } from "react";
 import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { problemCodeOf, problemMessageOf } from "./common";
+import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { VERSION_SKEW_CODE } from "./historyundo";
 import { useRecordRestore } from "./recordrestore";
 import { type Receipt, worklistKey } from "./worklist.queries";

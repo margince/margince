@@ -11,7 +11,7 @@ import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import {
   type BriefSentence,
   type OpenReceipt,

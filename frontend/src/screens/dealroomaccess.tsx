@@ -15,10 +15,11 @@ import { ChoiceList } from "../design-system/choicelist";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { humanizeToken } from "./audit";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
 import { IssuedNotice } from "./dealroomaccess.notices";
 import {
   CAPABILITIES,

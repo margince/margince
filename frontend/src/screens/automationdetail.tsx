@@ -13,12 +13,13 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryStates, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 // The shapes this file draws. Imported here rather than left to the caller:
 // the row that folds these open lives in another sheet, and a story or a test
 // that mounts one panel alone would otherwise render it unstyled.

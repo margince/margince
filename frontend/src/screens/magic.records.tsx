@@ -22,7 +22,7 @@ import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";

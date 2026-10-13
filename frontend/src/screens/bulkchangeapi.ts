@@ -7,8 +7,8 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { requireVersion } from "../api/version";
+import { throwProblem } from "../lib/problem";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
-import { throwProblem } from "./common";
 
 type BulkChangePreview = components["schemas"]["BulkChangePreview"];
 

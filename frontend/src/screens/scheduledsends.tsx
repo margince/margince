@@ -14,6 +14,7 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { QueryStates, WriteRefused } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
@@ -29,10 +30,8 @@ import {
   isVersionSkewOf,
   logUnexpectedError,
   problemMessageOf,
-  QueryStates,
   unwrap,
-  WriteRefused,
-} from "./common";
+} from "../lib/problem";
 import { scheduleFields } from "./composesend";
 import "./scheduledsends.css";
 import { QueueSkewNotice } from "./scheduledsends.notices";

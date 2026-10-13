@@ -13,12 +13,13 @@ import {
 import { DataTable } from "../design-system/datatable";
 import { isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { QueryGate, unwrap } from "./common";
 import {
   metricLabel,
   reportingAmount,

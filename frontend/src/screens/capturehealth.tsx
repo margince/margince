@@ -23,7 +23,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own

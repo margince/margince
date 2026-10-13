@@ -21,14 +21,15 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import {
   type MutationOutcome,
   useRowHandoff,

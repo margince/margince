@@ -9,8 +9,8 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useMe } from "../lib/session";
 import { ApprovalDecisionDrawer } from "./approvaldrawer";
-import { useMe } from "./common";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
   useAutomationRetry,

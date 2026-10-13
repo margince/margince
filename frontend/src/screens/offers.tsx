@@ -17,6 +17,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -24,7 +25,7 @@ import {
 import { Select } from "../design-system/select";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,

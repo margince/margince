@@ -19,18 +19,14 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { CellStrip } from "../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate, QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import {
-  problemMessageOf,
-  QueryGate,
-  QueryStates,
-  unwrap,
-  useMe,
-} from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import {
   actionLabelKey,
   actionTone,

@@ -7,7 +7,7 @@ import { useT } from "../i18n";
 // What the company-context card says about ITSELF: the confirmation a save
 // leaves behind, and the caveats a website read came back with. Its four
 // refusals — the cold-start form, the profile dialog, the site-read panel and
-// the review's Apply — are the shared `WriteRefused` in `common.tsx`, which is
+// the review's Apply — are the shared `WriteRefused` in `querystates.tsx`, which is
 // where the same nine lines went once every card's copy of them was one.
 
 /**

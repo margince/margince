@@ -54,7 +54,7 @@ describe("Sign-out (AS-1)", () => {
     await user.click(screen.getByText("Sign out"));
     // POST fired and the ["me"] entry lost its data, so the auth gate
     // re-probes → 401 → login. This bites if useLogout's onSuccess stops
-    // calling resetToSignedOut (screens/common.tsx).
+    // calling resetToSignedOut (lib/session.ts).
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
   });

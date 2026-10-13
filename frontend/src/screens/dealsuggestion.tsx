@@ -28,8 +28,8 @@ import {
 } from "../design-system/trust";
 import { formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf } from "../lib/problem";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { problemCodeOf } from "./common";
 import {
   type AcceptDealSuggestionBody,
   type DealSuggestion,

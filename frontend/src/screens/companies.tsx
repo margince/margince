@@ -25,6 +25,7 @@ import { CellStrip } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
+import { QueryGate } from "../design-system/querystates";
 import { RecordTabs } from "../design-system/recordtabs";
 import {
   hasTimelineFilters,
@@ -42,18 +43,13 @@ import {
 } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { useViewerId } from "../lib/session";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
 import { BillingContactsPanel } from "./billingcontacts";
 import { useBulkSelection } from "./bulkverbs";
-import {
-  coldFieldLabel,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useViewerId,
-} from "./common";
+import { coldFieldLabel } from "./coldfieldlabels";
 import { ThreadFold } from "./company/glance";
 import {
   DealsCard,

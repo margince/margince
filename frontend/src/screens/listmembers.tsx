@@ -22,9 +22,9 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { throwProblem, unwrap } from "../lib/problem";
 import { BULK_MAX_ITEMS } from "./bulkchangeapi";
 import { BulkVerbs } from "./bulkverbs";
-import { throwProblem, unwrap } from "./common";
 import { downloadBytes, filenameFromDisposition } from "./download";
 import {
   LISTS_KEY,

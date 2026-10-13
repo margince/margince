@@ -9,7 +9,12 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { useLocale, usePlural, useT } from "../i18n";
-import { ProblemError, problemMessageOf, throwProblem, unwrap } from "./common";
+import {
+  ProblemError,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
 import { useRoster } from "./entityref";
 import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";

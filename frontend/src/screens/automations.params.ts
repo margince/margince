@@ -3,7 +3,7 @@
 // screen, so it lives apart from the screen that renders the result: the
 // reading is testable on its own, and the form file stays about the form.
 
-import { isRecord } from "./problembody";
+import { isRecord } from "../lib/problembody";
 
 export type ParamField = {
   key: string;

@@ -14,7 +14,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { isTagTone } from "../design-system/tagpill";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import "./tagresult.css";
 
 /**

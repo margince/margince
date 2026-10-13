@@ -14,7 +14,7 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, unwrap } from "./common";
+import { problemCodeOf, unwrap } from "../lib/problem";
 import { CompanyDetails } from "./companydetails";
 import { DealsSection } from "./companyraildeals";
 import { CompanyProfileDetails } from "./companyraildetails";

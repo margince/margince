@@ -7,10 +7,11 @@ import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 

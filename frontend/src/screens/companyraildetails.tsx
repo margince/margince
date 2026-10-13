@@ -15,7 +15,7 @@ import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinetext";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { CompanyDetails } from "./companydetails";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { VatMark } from "./companyvatmark";
