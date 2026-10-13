@@ -76,6 +76,8 @@ type CSVSource struct {
 
 	// body is the stored file's bytes, read on first use.
 	body []byte
+	// rows is the file's row count once Counts has walked it; body is fixed by then.
+	rows *int
 	// cursor is where the last page of Rows stopped.
 	cursor *rowCursor
 
@@ -117,15 +119,18 @@ func (s *CSVSource) Objects() []string { return []string{s.object} }
 
 // Counts reports how many rows the file holds, for the run's progress figure.
 func (s *CSVSource) Counts(ctx context.Context) (map[string]int, error) {
-	rows := 0
-	err := s.walk(ctx, func(int, []string, map[string]int) error {
-		rows++
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	if s.rows == nil {
+		rows := 0
+		err := s.walk(ctx, func(int, []string, map[string]int) error {
+			rows++
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		s.rows = &rows
 	}
-	return map[string]int{s.object: rows}, nil
+	return map[string]int{s.object: *s.rows}, nil
 }
 
 // Skipped reports the rows no page could deliver, with the line to open and the

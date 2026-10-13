@@ -448,3 +448,19 @@ func TestAnObserverHearsWhereEachPageEndedAndCanEndTheRead(t *testing.T) {
 		t.Fatalf("observer heard %v, want [2 3]", heard)
 	}
 }
+
+// A test run asks a source for its counts before its read and again inside
+// it, and the stored file never changes, so the file is counted once.
+func TestASourceCountsItsFileOnce(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	src := NewCSVSource(seedCSV(t, "Email,First Name\na@x.test,A\nb@x.test,B\n"), testCSVKey, ObjectLead, mapping, sourceKey)
+	first, err := src.Counts(t.Context())
+	if err != nil || first[ObjectLead] != 2 {
+		t.Fatalf("Counts = (%v, %v), want 2 leads", first, err)
+	}
+	src.body = []byte("Email,First Name\n")
+	again, err := src.Counts(t.Context())
+	if err != nil || again[ObjectLead] != 2 {
+		t.Fatalf("a second Counts = (%v, %v), want the 2 leads already counted, not a second walk", again, err)
+	}
+}
