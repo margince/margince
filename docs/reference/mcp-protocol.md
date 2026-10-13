@@ -57,7 +57,7 @@ every caller, and a test holds that claim. Every catalog (`tools/list`, `resourc
 **`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
 data to the wrong caller.
 
-The server could not audit a wrong cache hit, because it never sees one. A TTL is a hint for caches, never a permission. Every call
+The server could not audit a wrong cached answer, because it never sees one. A TTL is a hint for caches, never a permission. Every call
 signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
@@ -126,10 +126,12 @@ holds a loopback port.
 
 ## When a tool refuses
 
-When a tool refuses, the agent gets a normal result with `isError: true` and one line of text, so it can read the line
-and act on it. Nothing has changed. The first column names the Go error behind each line. `Dispatcher.explain`
-(`backend/internal/modules/agents/explain.go`) turns the sentinel errors into that text. The next move of the agent
-turns on what the answer means. It may be "you may never", "a human must say yes", or "you typed the ID wrong".
+When a tool refuses, the agent gets a normal result with `isError: true` and one line of text. It can read the line
+and act on it. Nothing has changed. The first column names the Go error behind each line.
+
+`Dispatcher.explain` (`backend/internal/modules/agents/explain.go`) turns the sentinel errors into that text. The next
+move of the agent turns on what the answer means. It may be "you may never", "a human must say yes", or "you typed the
+ID wrong".
 
 | Error | What the agent reads | Retry? |
 |---|---|---|

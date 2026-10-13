@@ -46,7 +46,14 @@ const catalogPage = "../docs/reference/agent-tools.md"
 var catalogRow = regexp.MustCompile("^\\|\\s*`([a-z0-9_]+)`\\s*\\|\\s*([^|]+?)\\s*\\|")
 
 // rowActions reads the actions a row lists inside its own cell.
-var rowActions = regexp.MustCompile(`<code>([a-z0-9_]+)</code>`)
+var rowActions = regexp.MustCompile("`([a-z0-9_]+)`")
+
+// lastCell is the final column of a row, where a tool lists its actions. The
+// earlier cells name the tool and its scope in the same quotes.
+func lastCell(row string) string {
+	cells := strings.Split(strings.TrimSuffix(strings.TrimSpace(row), "|"), "|")
+	return cells[len(cells)-1]
+}
 
 // catalogHeader opens the table this gate reads. The page holds a SECOND table
 // of the same row shape — the passport scopes, keyed by scope name — and a scan
@@ -114,7 +121,7 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 		documented[match[1]] = tier
 		// A row lists the actions its tool fronts. An action takes the tier of
 		// that tool, because a router refuses targets whose tiers differ.
-		for _, action := range rowActions.FindAllStringSubmatch(line, -1) {
+		for _, action := range rowActions.FindAllStringSubmatch(lastCell(line), -1) {
 			documented[action[1]] = tier
 		}
 	}

@@ -1,12 +1,12 @@
 <!-- prose:plain -->
 # Agent tools
 
-An agent in Margince acts for the person who gave it a **passport**, the credential an agent carries
-([how to make one](../how-to/mint-a-passport.md)). It can only do what that person could do alone.
+An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
+([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
 Most tools run at once. Three always wait for a human to approve them: `merge_tags`, `invite_meeting` and `enrich`.
-A few more wait only in some cases, such as moving a deal to won or lost: `create_record`, `update_record`,
-`progress_deal`, `relink_activity` and `relink_activities`. A waiting call changes nothing until a person approves it in
+A few more wait only in some cases, such as moving a deal to `won` or `lost`: `create_record`, `update_record`,
+`progress_deal`, `relink_activity` and `relink_activities`. A waiting call changes nothing until a human approves it in
 the CRM. The agent then repeats the call with the approval's ID.
 
 ## Which page do you need?
@@ -15,7 +15,7 @@ the CRM. The agent then repeats the call with the approval's ID.
 |---|---|
 | What can an agent call, and does a human have to approve it? | This page |
 | What does each scheduled agent's tool menu cost the context window? | [agent-tool-budget.md](agent-tool-budget.md) |
-| What does a connecting client receive, word for word? | [mcp-info.md](mcp-info.md) |
+| What does a connecting client get, word for word? | [mcp-info.md](mcp-info.md) |
 | How do the transport, sessions, limits and client sign-in work? | [mcp-protocol.md](mcp-protocol.md) |
 | Can a given assistant do the everyday jobs? | [mcp-tool-coverage.md](mcp-tool-coverage.md) |
 
@@ -28,7 +28,7 @@ The reasons behind the rules are in [authorization.md](../explanation/authorizat
 
 | Column | Meaning |
 |---|---|
-| **Tier** | 🟢 runs at once. 🟡 does nothing until a person approves it. **dynamic** is decided on each call: a deal moved to won waits, a move to an open stage runs. 🟢 / 🟡 waits only for some record types or fields. |
+| **Tier** | 🟢 runs at once. 🟡 does nothing until a human approves it. **dynamic** is decided on each call: a deal moved to `won` waits, a move to an open stage runs. 🟢 / 🟡 waits only for some record types or fields. |
 | **Scope** | The kind of action the passport must allow: `read`, `draft`, `write`, `send` or `enrich`. [What each scope buys](#what-each-scope-buys) says more. |
 | **Egress** | Whether the tool leaves Margince, for example to send an email. |
 
@@ -41,61 +41,61 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
 | Tool | Tier | Scope | Egress | For |
 |---|---|---|---|---|
 | `at_risk_relationships` | 🟢 | `read` | no | Relationships going cold |
-| `catch_me_up_on` | 🟢 | `read` | no | Catch me up on a record |
-| `check_availability` | 🟢 | `read` | no | Check calendar availability |
-| `compose_analytics_report` | 🟢 | `read` | no | Compose an analytics report |
-| `describe_vocabulary` | 🟢 | `read` | no | 🔀 Describe what a tool accepts <details><summary>actions</summary><code>describe_analytics_vocabulary</code><br><code>describe_query_vocabulary</code><br><code>describe_record_fields</code><br><code>describe_report_blocks</code><br><code>describe_report_vocabulary</code></details> |
+| `catch_me_up_on` | 🟢 | `read` | no | Get a short account of a record |
+| `check_availability` | 🟢 | `read` | no | Check free times on a calendar |
+| `compose_analytics_report` | 🟢 | `read` | no | Build a report from data |
+| `describe_vocabulary` | 🟢 | `read` | no | 🔀 Describe what a tool accepts <details><summary>actions</summary>`describe_analytics_vocabulary` `describe_query_vocabulary` `describe_record_fields` `describe_report_blocks` `describe_report_vocabulary`</details> |
 | `list_approvals` | 🟢 | `read` | no | List what is waiting for a decision |
 | `list_documents` | 🟢 | `read` | no | List a record's documents |
 | `list_records` | 🟢 | `read` | no | List records |
-| `prep_for_meeting` | 🟢 | `read` | no | Prepare for a meeting |
+| `prep_for_meeting` | 🟢 | `read` | no | Get ready for a meeting |
 | `query_workspace` | 🟢 | `read` | no | Query the workspace |
 | `read_approval` | 🟢 | `read` | no | Read one staged action in full |
 | `read_brief` | 🟢 | `read` | no | Read the morning brief |
-| `read_directory` | 🟢 | `read` | no | 🔀 Read the workspace's colleagues, pipelines and channels <details><summary>actions</summary><code>list_channel_providers</code><br><code>list_colleagues</code><br><code>list_pipelines</code></details> |
-| `read_forecast` | 🟢 | `read` | no | 🔀 Read the forecast and how it moved <details><summary>actions</summary><code>forecast_movement</code><br><code>forecast_readings</code></details> |
-| `read_import` | 🟢 | `read` | no | 🔀 Read an import run or the import format <details><summary>actions</summary><code>describe_import_format</code><br><code>read_import_report</code></details> |
-| `read_input_checks` | 🟢 | `read` | no | 🔀 Can the forecast's inputs be trusted <details><summary>actions</summary><code>data_coverage</code><br><code>forecast_input_checks</code><br><code>list_input_checks</code></details> |
+| `read_directory` | 🟢 | `read` | no | 🔀 Read the workspace's colleagues, pipelines and channels <details><summary>actions</summary>`list_channel_providers` `list_colleagues` `list_pipelines`</details> |
+| `read_forecast` | 🟢 | `read` | no | 🔀 Read the forecast and how it changed <details><summary>actions</summary>`forecast_movement` `forecast_readings`</details> |
+| `read_import` | 🟢 | `read` | no | 🔀 Read an import run or the import format <details><summary>actions</summary>`describe_import_format` `read_import_report`</details> |
+| `read_input_checks` | 🟢 | `read` | no | 🔀 Can the forecast's inputs be trusted <details><summary>actions</summary>`data_coverage` `forecast_input_checks` `list_input_checks`</details> |
 | `read_lists` | 🟢 | `read` | no | Find and read lists |
-| `read_project` | 🟢 | `read` | no | 🔀 Read a project or its handover <details><summary>actions</summary><code>prepare_handoff</code><br><code>read_project_360</code></details> |
+| `read_project` | 🟢 | `read` | no | 🔀 Read a project, or what to pass on <details><summary>actions</summary>`prepare_handoff` `read_project_360`</details> |
 | `read_record` | 🟢 | `read` | no | Read a record |
-| `read_relationships` | 🟢 | `read` | no | 🔀 Read who we know, and how well <details><summary>actions</summary><code>company_coverage</code><br><code>intro_path_to</code><br><code>who_knows</code></details> |
+| `read_relationships` | 🟢 | `read` | no | 🔀 Read who we know, and how well <details><summary>actions</summary>`company_coverage` `intro_path_to` `who_knows`</details> |
 | `read_reporting` | 🟢 | `read` | no | Read sales reporting |
-| `read_tags` | 🟢 | `read` | no | 🔀 Read tags <details><summary>actions</summary><code>get_record_tags</code><br><code>get_tag</code><br><code>list_tags</code></details> |
+| `read_tags` | 🟢 | `read` | no | 🔀 Read tags <details><summary>actions</summary>`get_record_tags` `get_tag` `list_tags`</details> |
 | `resolve_entities` | 🟢 | `read` | no | Resolve contacts and companies |
-| `review_commitments` | 🟢 | `read` | no | Review open commitments |
-| `run_analytics_query` | 🟢 | `read` | no | Run an analytics query |
+| `review_commitments` | 🟢 | `read` | no | Review open promises |
+| `run_analytics_query` | 🟢 | `read` | no | Ask a question of the data |
 | `run_report` | 🟢 | `read` | no | Run a report |
-| `search_context` | 🟢 | `read` | no | Search for relevant material |
+| `search_context` | 🟢 | `read` | no | Search the text of records |
 | `search_records` | 🟢 | `read` | no | Search records |
 | `search_report_evidence` | 🟢 | `read` | no | Search the evidence behind a saved run |
-| `whats_slipping_this_week` | 🟢 | `read` | no | What's slipping this week |
+| `whats_slipping_this_week` | 🟢 | `read` | no | Deals at risk this week |
 | `whoami` | 🟢 | `read` | no | Who this passport acts for |
-| `draft_outbound` | 🟢 | `draft` | no | 🔀 Draft an email or follow-ups <details><summary>actions</summary><code>draft_email</code><br><code>draft_follow_ups_for</code></details> |
+| `draft_outbound` | 🟢 | `draft` | no | 🔀 Draft an email or follow-ups <details><summary>actions</summary>`draft_email` `draft_follow_ups_for`</details> |
 | `advance_project_phase` | 🟢 | `write` | no | Move a project to a phase |
 | `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
 | `archive_record` | 🟢 | `write` | no | Archive a record |
 | `attach_document` | 🟢 | `write` | no | Attach a file to a record |
 | `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
-| `change_lead_state` | 🟢 | `write` | no | 🔀 Change a lead's state <details><summary>actions</summary><code>demote_lead</code><br><code>disqualify_lead</code><br><code>promote_lead</code><br><code>qualify_lead</code></details> |
+| `change_lead_state` | 🟢 | `write` | no | 🔀 Change a lead's state <details><summary>actions</summary>`demote_lead` `disqualify_lead` `promote_lead` `qualify_lead`</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
-| `change_tags` | 🟢 | `write` | no | 🔀 Change tags <details><summary>actions</summary><code>apply_tag</code><br><code>create_tag</code><br><code>remove_tag</code><br><code>update_tag</code></details> |
+| `change_tags` | 🟢 | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply_tag` `create_tag` `remove_tag` `update_tag`</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
 | `create_record` | 🟢 / 🟡 | `write` | no | Create a record |
 | `create_task` | 🟢 | `write` | no | Create a task |
-| `decide_approvals` | 🟢 | `write` | no | 🔀 Approve or reject staged actions <details><summary>actions</summary><code>decide_approval_bundle</code><br><code>decide_approval</code></details> |
+| `decide_approvals` | 🟢 | `write` | no | 🔀 Approve or reject staged actions <details><summary>actions</summary>`decide_approval_bundle` `decide_approval`</details> |
 | `log_activity` | 🟢 | `write` | no | Log an activity |
-| `merge_tags` | 🟡 | `write` | no | Fold one tag into another |
+| `merge_tags` | 🟡 | `write` | no | Join one tag into another |
 | `preview_import` | 🟢 | `write` | no | Preview an import |
-| `progress_deal` | dynamic | `write` | no | 🔀 Progress a deal with a note <details><summary>actions</summary><code>advance_deal</code></details> |
-| `relink_activities` | dynamic | `write` | no | Re-associate a set of activities to a record <details><summary>Replaces an old action</summary><code>relink_thread</code> refuses every call</details> |
-| `relink_activity` | dynamic | `write` | no | Re-associate an activity to a record |
-| `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records or dismiss a flagged pair <details><summary>actions</summary><code>decide_duplicate</code><br><code>merge_records</code></details> |
+| `progress_deal` | dynamic | `write` | no | 🔀 Move a deal on, with a note <details><summary>actions</summary>`advance_deal`</details> |
+| `relink_activities` | dynamic | `write` | no | Move a set of activities to another record <details><summary>Replaces an old action</summary>`relink_thread` refuses every call</details> |
+| `relink_activity` | dynamic | `write` | no | Move an activity to another record |
+| `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records, or keep both <details><summary>actions</summary>`decide_duplicate` `merge_records`</details> |
 | `update_record` | 🟢 / 🟡 | `write` | no | Update a record |
 | `book_meeting` | 🟢 | `send` | yes | Book a meeting |
-| `invite_meeting` | 🟡 | `send` | yes | Send a calendar invitation |
-| `send_outbound` | 🟢 | `send` | yes | 🔀 Send a message <details><summary>actions</summary><code>send_company_email</code><br><code>send_email</code><br><code>send_message</code></details> |
-| `enrich` | 🟡 | `enrich` | yes | Enrich a company from its website |
+| `invite_meeting` | 🟡 | `send` | yes | Send a meeting invite |
+| `send_outbound` | 🟢 | `send` | yes | 🔀 Send a message <details><summary>actions</summary>`send_company_email` `send_email` `send_message`</details> |
+| `enrich` | 🟡 | `enrich` | yes | Look up a company on the web |
 
 ## Rules for single tools
 
@@ -103,8 +103,8 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
   The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
   call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
   blocks the own fields of the machine.
-- **A deal move follows its stage.** It waits or runs by what the stage means. A column renamed `"Won"` still waits, because
-  `advanceDealTier` trusts the meaning set up for the stage, and a stage it cannot prove is `open` waits too.
+- **A deal move follows its stage.** It waits or runs by what the stage means. A column renamed `"Won"` still waits.
+  `advanceDealTier` trusts the meaning set up for the stage. A stage it cannot prove is `open` waits too.
 - **Margince works out the `list_records` filters at boot.** They are the overlap of the `crm.yaml` query fields of
   each list operation and what the record store can bind. The tool lists them in its own schema.
 ### Why a tool waits
@@ -125,7 +125,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
   the approval for such a relink in the CRM.
 - **Mixed rows.** A 🟢 / 🟡 tool waits for `custom_field` and `webhook_subscription`, which the contract declares
   confirm-first, and runs for the other record types.
-- **Why the rest run at once.** A tool is 🟢 when the person who gave the passport could do the same act alone. The tier
+- **Why the rest run at once.** A tool is 🟢 when the human who gave the passport could do the same act alone. The tier
   with the last word is `agentPolicies` in `compose/agentpolicy_gen.go`, generated from `crm.yaml`.
 
 ## Reads filtered to what you may see
