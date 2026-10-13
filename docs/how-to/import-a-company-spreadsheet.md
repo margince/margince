@@ -26,6 +26,7 @@ Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, a
 the test. If the test takes longer, it answers `state: validating` with a `next` line; read
 `read_import` again until `state` is `awaiting_approval`. A test that refuses the file answers the
 refusal, and the run goes back to `pending`.
+
 One assistant tests one run at a time. A second `preview_import` while its first test still runs is
 refused, and the refusal names the run still being tested. `commit_import` answers at once while the run
 goes on, so read `read_import` with `view: report` again until `state` is `complete`. On a run that
