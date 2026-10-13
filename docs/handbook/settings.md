@@ -119,7 +119,7 @@ The Sign-in and apps page in Settings (group **Company**) holds how members sign
 To require two-step sign-in for every member of Margince, first have every member set it up on their own **Account** page, you too.
 A member without it cannot use Margince while the switch is on.
 
-Then open Settings → **Sign-in and apps** and turn on **Require a second factor**. Margince asks you to confirm first.
+Then open Settings → **Sign-in and apps** and turn on **Require second factor**. Margince asks you to confirm first.
 Members who already use it go on as before, with their own phone app.
 The switch keeps its setting when someone resets data.
 Also called: require MFA, two-step sign-in for everyone, sign-in codes for all.

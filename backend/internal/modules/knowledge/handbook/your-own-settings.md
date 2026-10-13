@@ -41,31 +41,35 @@ Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or as
 Also called: reset my password, update login.
 
 ### How do I turn on two-step sign-in?
-To turn on two-step sign-in in Margince, open Settings → **Account** and choose to set it up in its row.
+To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
 1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
-2. If you cannot scan it, type the secret shown under it into the app instead.
-3. Enter the six-number code the app shows, to confirm it works.
-4. Keep the backup codes Margince shows you, in a place only you can reach.
+2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
+3. Type the code the app shows into **Code from the app**, and choose **Turn on**.
+4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
+5. Choose **Done**.
 
-Margince shows the backup codes once, and never again. The row then says how many you have left.
+Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left".
+When two or fewer are left, the row warns you.
 Turning it on signs you out on all your other computers and phones.
 Also called: MFA, second sign-in step, sign-in code, code app.
 
+A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
+
 ### How do I sign in with two-step sign-in?
-To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then asks for a code.
-Enter the six-number code your phone app shows now, or one of your backup codes.
+To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
+Type the code your phone app shows now, or one of your backup codes, into **Code**, and choose **Verify code**.
 Each backup code works once. A wrong code is refused, and after too many wrong codes Margince makes you wait a short while.
 
-The code page stays open for five minutes. After that, start again with your password.
+The code page stays open for five minutes. After that, choose **Back to sign in** and start again with your password.
 Also called: sign-in code, code not working, use a backup code.
 
 ### How do I turn off two-step sign-in?
-To turn off two-step sign-in in Margince, open Settings → **Account**, choose to turn it off in its row, and enter a code.
+To turn off two-step sign-in in Margince, open Settings → **Account**, choose **Remove** in the **Two-step sign-in** row, and enter a code.
 The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
-For new backup codes, or to move to a new phone, turn it off and set it up again.
+For new backup codes, or to move to a new phone, remove it and set it up again.
 
-If your installation requires two-step sign-in, turning it off means you cannot use Margince until it is set up again.
-So leave it on, or ask an administrator to turn off **Require a second factor** first.
+If your installation requires two-step sign-in, removing it means you cannot use Margince until it is set up again.
+So leave it on, or ask an administrator to turn off **Require second factor** first.
 Also called: new phone, new backup codes, lost phone.
 
 Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
