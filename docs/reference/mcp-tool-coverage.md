@@ -106,7 +106,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 34 of 34 | 34 | 0 | 97/102 | 95% |
-| `gpt-5.6-sol@codex-cli` | 34 of 34 | 34 | 0 | 92/102 | 90% |
+| `gpt-5.6-sol@codex-cli` | 34 of 34 | 34 | 0 | 94/102 | 92% |
 
 ## The two surfaces
 
@@ -207,7 +207,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case54_a_word_from_the_fair](../../e2e/llm/scenarios/case54-a-word-from-the-fair.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** A tag is offered and not claimed | `create_record` |
 | [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
-| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
+| [case56_not_the_same](../../e2e/llm/scenarios/case56-not-the-same.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Two different contacts are told apart | `create_record`, `decide_duplicate` |
 | [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
 | [case57_put_it_on_the_file](../../e2e/llm/scenarios/case57-put-it-on-the-file.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** A file handed over is kept as a file<br>**2** The file is not retyped as a note<br>**3** A refused kind of file is reported, not worked around | `attach_document` |
 | [case58_quiet_for_three_weeks](../../e2e/llm/scenarios/case58-quiet-for-three-weeks.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The window the user named is the window asked | `whats_slipping_this_week` |
@@ -215,7 +215,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `attach_document` |
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | `attach_document` |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | `search_context` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case7_ask_for_a_number](../../e2e/llm/scenarios/case7-ask-for-a-number.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** The counts asked for come back as counts<br>**3** A refusal is not reported as a missing capability | `run_analytics_query` or `run_report` |
 | [case8_whats_waiting](../../e2e/llm/scenarios/case8-whats-waiting.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** The staged change is opened before it is reported<br>**2** Each verdict lands on the item it was given for<br>**3** The approve and the reject are carried out as given | `decide_approvals`, `list_approvals`, `read_approval` |
@@ -378,6 +378,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `attach_document` | 1.00 | 6 | `case57_put_it_on_the_file`, `case59_file_it_on_the_meeting_and_the_contract` |
 | `read_input_checks` | 1.00 | 3 | `case22_can_i_trust_the_numbers` |
 | `book_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
+| `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
@@ -386,6 +387,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
 | `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
+| `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |
 | `intro_path_to` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `list_channel_providers` | 1.00 | 3 | `case42_can_i_answer_on_whatsapp` |
@@ -414,7 +416,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
-| `create_record` | 0.83 | 10/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `create_record` | 0.92 | 11/12 | - | `case1_log_it`, `case2_business_card`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `update_record` | 0.83 | 5/6 | - | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `forecast_readings` | 0.83 | 5/6 | - | `case21_what_are_we_closing`, `case50_what_moved_my_quarter` |
@@ -423,12 +425,10 @@ Driven, and not every run passed. Open the case to see what was asked.
 | `change_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `search_records` | 0.67 | 2/3 | - | `case5_before_the_meeting` |
 | `decide_approvals` | 0.89 | 8/9 | - | `case43_the_fair_leads_are_prospects`, `case48_that_whole_thread_is_filed_wrong`, `case8_whats_waiting` |
-| `search_context` | 0.67 | 2/3 | - | `case6_ask_the_company` |
 | `read_tags` | 0.89 | 8/9 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `merge_records` | 0.67 | 2/3 | - | `case33_two_cards_for_one_company` |
 | `archive_record` | 0.67 | 2/3 | - | `case33_two_cards_for_one_company` |
 | `relink_activities` | 0.83 | 5/6 | - | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
-| `decide_duplicate` | 0.67 | 2/3 | - | `case56_not_the_same` |
 | `list_colleagues` | 0.67 | 2/3 | - | `case33_two_cards_for_one_company` |
 
 ## Who judged it, and how well
