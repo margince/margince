@@ -36,13 +36,15 @@ needs no handshake. A version this server does not serve is refused `400` with `
 a `data.supported` list naming every version it does. So a client retries, and does not guess.
 
 **A modern request must carry what it declares.** `_meta` must hold both `io.modelcontextprotocol/protocolVersion` and
-`io.modelcontextprotocol/clientCapabilities` (missing → `400` + `-32602`). The `MCP-Protocol-Version`, `Mcp-Method`
-and `Mcp-Name` headers must each say what the body says (missing or not the same → `400` + `-32020 HeaderMismatch`).
+`io.modelcontextprotocol/clientCapabilities` (missing → `400` + `-32602`). The `MCP-Protocol-Version` and `Mcp-Method`
+headers must match the request. A method that names a target needs `Mcp-Name`, which must match the body. Any other
+method must leave it out. A request that breaks this gets `400` + `-32020 HeaderMismatch`.
+
 The headers let a server in the middle route without reading the body.
 
 The server compares each header with the body value the handler will act on, read the way the handler reads it. That
-matters because `encoding/json` matches members no matter the case, and takes the last of two members with the same
-name. A map read does not do either. Margince never sends `-32021 MissingRequiredClientCapability`: no tool here needs
+matters because `encoding/json` matches struct members no matter the case. A map lookup does not. Both take the last of
+two members with the same name. Margince never sends `-32021 MissingRequiredClientCapability`: no tool here needs
 sampling, elicitation or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
@@ -127,7 +129,8 @@ holds a loopback port.
 ## When a tool refuses
 
 When a tool refuses, the agent gets a normal result with `isError: true` and one line of text. It can read the line
-and act on it. Nothing has changed. The first column names the Go error behind each line.
+and act on it. A refusal before the handler runs leaves state unchanged. A handler can still fail after a partial write,
+so follow the error text before a retry. The first column names the Go error behind each line.
 
 `Dispatcher.explain` (`backend/internal/modules/agents/explain.go`) turns the sentinel errors into that text. The next
 move of the agent turns on what the answer means. It may be "you may never", "a human must say yes", or "you typed the
@@ -147,7 +150,8 @@ ID wrong".
 | anything else | Sorted through `httperr.Classify`: a short error says "the same call can work later"; any other `4xx` says "refused as sent" | Per the message |
 | not sorted | "The tool failed for an internal reason", the only answer on the surface the agent cannot act on | Yes, then tell a human |
 
-- **Nothing has changed when a tool refuses.** Every branch above runs before the write, or in place of it.
+- **Nothing changes when the handler never runs.** Some handlers compose writes, so a later error can report a partial
+  change. Read that error before you retry.
 - **Details from inside never leave the server.** Driver errors, hosts and wrapped error text go to the server log;
   the agent sees the own words of the sentinel. Text sent back from the arguments of the caller is limited and
   escaped. So a new line in a tool name cannot forge a line in the run transcript that later prompts read.
