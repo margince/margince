@@ -2271,7 +2271,7 @@ export const vi = {
   "co.growthFit.dim.access": "Khả năng tiếp cận",
   "co.growthFit.band.moderate": "Phù hợp vừa",
   "co.growthFit.band.weak": "Ít phù hợp",
-  "co.growthFit.band.unknown": "Chưa đủ để đánh giá",
+  "co.growthFit.band.unknown": "Chưa đủ dữ liệu",
   "co.growthFit.completeness":
     "Đã ghi nhận {present}/{expected} dữ liệu đầu vào",
   "co.growthFit.missing": "Còn thiếu",
