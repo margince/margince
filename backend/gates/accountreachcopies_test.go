@@ -27,10 +27,15 @@ package gates
 // answer itself.
 
 import (
+	"errors"
+	"fmt"
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"os"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -85,85 +90,328 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 	}
 }
 
-// last_activity_of_company is a third spelling of the employment arm, in SQL
-// because a trigger folds it. Its bound is the walk's own rendered text, so a
-// company's stored clock and its timeline count the same mail.
-func TestTheStoredCompanyClockBoundsEmploymentLikeTheWalk(t *testing.T) {
+// Every SQL function at head that reads employments carries the walk's rendered
+// currency test, and its bound wherever it dates mail. last_activity_of_company
+// and last_activity_reach are the two today; the corpus is every function.
+func TestEverySQLEmploymentReachCountsLikeTheWalk(t *testing.T) {
 	t.Parallel()
-	body, ok := currentRecencyBodies(t)["last_activity_of_company"]
-	if !ok {
-		t.Fatal("no migration defines last_activity_of_company, so this gate checks nothing")
+	dir := filepath.Join("migrations", "core")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
 	}
-	arms, unbounded := employmentArmsWithoutTheBound(body)
-	if arms == 0 {
-		t.Error("last_activity_of_company has no employment arm the gate can find, so it checks nothing")
+	var migrations []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".up.sql") {
+			migrations = append(migrations, entry.Name())
+		}
 	}
-	for _, alias := range unbounded {
-		t.Errorf("last_activity_of_company's employment arm on %s does not carry %q, so mail from a "+
-			"contact's previous job sets the clock of the employer they have now. Replace the "+
-			"function in a new migration with the bound's current text.",
-			alias, employment.InPlaceAtSQL(alias, "a.occurred_at"))
+	// Filenames lead with the unix second they were written, so lexical order is apply order.
+	slices.Sort(migrations)
+	texts := make([]string, 0, len(migrations))
+	for _, name := range migrations {
+		raw, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		texts = append(texts, string(raw))
+	}
+	bodies, err := functionBodiesAtHead(texts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	judged, findings := employmentFindings(bodies)
+	catalog, err := os.ReadFile(filepath.Join("migrations", "testdata", "head_catalog.txt"))
+	if err != nil {
+		t.Fatalf("reading the head catalog: %v", err)
+	}
+	atHead := map[string]bool{}
+	for _, m := range coreCatalogFunction.FindAllStringSubmatch(string(catalog), -1) {
+		atHead[m[1]] = true
+	}
+	for name := range atHead {
+		if _, replayed := bodies[name]; !replayed {
+			t.Errorf("the head catalog holds function %s and the migration replay does not, so the census reads short", name)
+		}
+	}
+	for name := range bodies {
+		if !atHead[name] {
+			t.Errorf("the migration replay holds function %s and the head catalog does not", name)
+		}
+	}
+	for _, known := range []string{"last_activity_of_company", "last_activity_reach"} {
+		if judged[known] == 0 {
+			t.Errorf("the census found no employment arm in %s, so it reads a smaller tree than exists", known)
+		}
+	}
+	for _, finding := range findings {
+		t.Error(finding)
 	}
 }
 
 func TestTheClockBoundCensusSeesEveryEmploymentArm(t *testing.T) {
 	t.Parallel()
 	bound := employment.InPlaceAtSQL("r", "a.occurred_at")
+	current := employment.IsCurrentSQL("r.ended_at")
 	cases := []struct {
-		name      string
-		body      string
-		arms      int
-		unbounded []string
+		name       string
+		body       string
+		arms       int
+		unbounded  []string
+		notCurrent []string
 	}{
-		{"bounded", "SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + bound, 1, nil},
+		{"no employment arm", "SELECT 1 FROM activity_link l WHERE l.company_id = cid", 0, nil, nil},
+		{"a trigger's row, not a relationship read", "IF NEW.kind = 'employment' OR OLD.kind = 'employment' THEN", 0, nil, nil},
 		{
-			"second arm under another alias, unbounded",
-			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + bound +
-				"\n UNION ALL\n SELECT 1 FROM relationship emp WHERE emp.kind='employment'", 2,
+			"bounded and current",
+			"SELECT a.occurred_at FROM relationship r JOIN activity a ON true WHERE r.kind = 'employment' AND " +
+				current + " AND " + bound, 1,
+			nil, nil,
+		},
+		{
+			"second arm under another alias, unbounded and bare",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + current + " AND " + bound +
+				"\n UNION ALL\n SELECT a.occurred_at FROM relationship emp JOIN activity a ON true" +
+				" WHERE emp.kind='employment' AND " + bareEndedAtTest("emp"), 2,
+			[]string{"emp"},
 			[]string{"emp"},
 		},
 		{
 			"bound only in a comment",
-			"SELECT 1 FROM relationship r WHERE r . kind\n = 'employment' -- AND " + bound, 1,
+			"SELECT a.occurred_at FROM relationship r WHERE r . kind\n = 'employment' AND " + current + " -- AND " + bound, 1,
 			[]string{"r"},
+			nil,
 		},
 		{
 			"bound only in a block comment",
-			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' /* AND " + bound + " */", 1,
+			"SELECT a.occurred_at FROM relationship r WHERE r.kind = 'employment' AND " + current +
+				" /* AND " + bound + " */", 1,
+			[]string{"r"},
+			nil,
+		},
+		{
+			"a bare null test of the end date in place of the predicate",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment'\n AND " + bareEndedAtTest("r") + " AND " + bound, 1,
+			nil,
+			[]string{"r"},
+		},
+		{
+			"predicate beside a bare null test of the end date",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " + current +
+				"\n AND r . ended_at  is null AND " + bound, 1,
+			nil,
+			[]string{"r"},
+		},
+		{
+			"predicate only in a comment",
+			"SELECT 1 FROM relationship r WHERE r.kind = 'employment'\n -- AND " + current + "\n AND " + bound, 1,
+			nil,
+			[]string{"r"},
+		},
+		{
+			"reach branch without the predicate",
+			"SELECT 'contact', named FROM unnest(contact_ids) named\n" +
+				" UNION SELECT 'company', r.company_id FROM relationship r WHERE r.contact_id = ANY (contact_ids)" +
+				" AND r.kind = 'employment' AND " + bareEndedAtTest("r") + " AND r.archived_at IS NULL", 1,
+			nil,
 			[]string{"r"},
 		},
 	}
 	for _, tc := range cases {
-		arms, unbounded := employmentArmsWithoutTheBound(tc.body)
-		if arms != tc.arms || strings.Join(unbounded, ",") != strings.Join(tc.unbounded, ",") {
-			t.Errorf("%s: found %d arms, unbounded %v; want %d, %v", tc.name, arms, unbounded, tc.arms, tc.unbounded)
+		arms := employmentArms(tc.body)
+		var unbounded, notCurrent []string
+		for _, arm := range arms {
+			if !arm.bounded {
+				unbounded = append(unbounded, arm.alias)
+			}
+			if !arm.current {
+				notCurrent = append(notCurrent, arm.alias)
+			}
+		}
+		if len(arms) != tc.arms || strings.Join(unbounded, ",") != strings.Join(tc.unbounded, ",") ||
+			strings.Join(notCurrent, ",") != strings.Join(tc.notCurrent, ",") {
+			t.Errorf("%s: found %d arms, unbounded %v, not current %v; want %d, %v, %v",
+				tc.name, len(arms), unbounded, notCurrent, tc.arms, tc.unbounded, tc.notCurrent)
 		}
 	}
 }
 
+// The corpus is replayed from the migrations, so a function added later is
+// judged. A dropped function is not, and a renamed one is judged by its new name.
+func TestTheClockBoundCensusReadsEveryFunctionAtHead(t *testing.T) {
+	t.Parallel()
+	current := employment.IsCurrentSQL("r.ended_at")
+	planted := []string{
+		"CREATE FUNCTION standard(lang text) RETURNS int LANGUAGE sql IMMUTABLE RETURN 1;\n" +
+			"CREATE FUNCTION kept() RETURNS int LANGUAGE sql AS $$ SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND " +
+			current + " $$;\n-- CREATE FUNCTION mentioned() is only a comment\n" +
+			"CREATE FUNCTION retired() RETURNS int LANGUAGE sql AS $$ SELECT 1 FROM relationship r" +
+			" WHERE r.kind = 'employment' AND " + bareEndedAtTest("r") + " $$;",
+		"DROP FUNCTION IF EXISTS retired();\n" +
+			"CREATE OR REPLACE FUNCTION public.added_later(cid uuid) RETURNS int LANGUAGE plpgsql AS $body$\n" +
+			"BEGIN PERFORM 1 FROM relationship AS emp WHERE emp.kind = 'employment' AND " + bareEndedAtTest("emp") +
+			"; RETURN 1; END $body$;\nALTER FUNCTION kept() RENAME TO renamed;",
+	}
+	bodies, err := functionBodiesAtHead(planted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	judged, findings := employmentFindings(bodies)
+	if judged["renamed"] != 1 || judged["added_later"] != 1 || len(judged) != 2 {
+		t.Errorf("judged %v; want one arm each in renamed and added_later, and nothing else", judged)
+	}
+	if len(findings) != 1 || !strings.HasPrefix(findings[0], "added_later's employment arm on emp ") {
+		t.Errorf("findings %q; want one, for added_later's bare arm", findings)
+	}
+	if _, err := functionBodiesAtHead([]string{"CREATE FUNCTION quoted() RETURNS int LANGUAGE sql AS 'SELECT 1';"}); err == nil {
+		t.Error("a function body the census cannot read was skipped rather than refused")
+	}
+}
+
 var (
-	sqlBlockComment   = regexp.MustCompile(`(?s)/\*.*?\*/`)
-	sqlUnionAll       = regexp.MustCompile(`(?i)\bUNION\s+ALL\b`)
-	employmentKindArm = regexp.MustCompile(`(?i)\b(\w+)\s*\.\s*kind\s*=\s*'employment'`)
+	sqlBlockComment     = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	sqlUnion            = regexp.MustCompile(`(?i)\bUNION(?:\s+ALL)?\b`)
+	employmentKindArm   = regexp.MustCompile(`(?i)\b(\w+)\s*\.\s*kind\s*=\s*'employment'`)
+	relationshipAlias   = regexp.MustCompile(`(?i)\brelationship\s+(?:AS\s+)?(\w+)`)
+	occurredAtRead      = regexp.MustCompile(`(?i)\b(\w+)\s*\.\s*occurred_at\b`)
+	sqlDollarQuote      = regexp.MustCompile(`\$(\w*)\$`)
+	sqlStandardReturn   = regexp.MustCompile(`(?i)\bRETURN\b`)
+	coreCatalogFunction = regexp.MustCompile(`(?m)^public\.(\w+)\(.*\) secdef=`)
+	sqlFunctionDDL      = regexp.MustCompile(`(?i)\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?(\w+)` +
+		`|\bDROP\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?(?:public\.)?(\w+)` +
+		`|\bALTER\s+FUNCTION\s+(?:public\.)?(\w+)\s*\([^)]*\)\s*RENAME\s+TO\s+(\w+)`)
 )
 
-// employmentArmsWithoutTheBound counts the employment arms of a function body
-// and names the alias of each arm that lacks employment.InPlaceAtSQL. Comments
-// are dropped first, so a bound that is only mentioned does not count.
-func employmentArmsWithoutTheBound(body string) (int, []string) {
-	code := stripSQLComments(sqlBlockComment.ReplaceAllString(body, " "))
-	arms := 0
-	var unbounded []string
-	for _, part := range sqlUnionAll.Split(code, -1) {
-		flat := normalizeSQL(part)
-		for _, m := range employmentKindArm.FindAllStringSubmatch(flat, -1) {
-			arms++
-			if !strings.Contains(flat, normalizeSQL(employment.InPlaceAtSQL(m[1], "a.occurred_at"))) {
-				unbounded = append(unbounded, m[1])
+// functionBodiesAtHead replays the function DDL of migrations, in apply order,
+// and answers each function's body at head. Comments are dropped first.
+func functionBodiesAtHead(migrations []string) (map[string]string, error) {
+	bodies := map[string]string{}
+	for _, migration := range migrations {
+		sql := stripSQLComments(sqlBlockComment.ReplaceAllString(migration, " "))
+		for at := 0; ; {
+			m := sqlFunctionDDL.FindStringSubmatchIndex(sql[at:])
+			if m == nil {
+				break
+			}
+			name := func(group int) string { return sql[at+m[2*group] : at+m[2*group+1]] }
+			end := at + m[1]
+			switch {
+			case m[2] >= 0:
+				body, consumed, err := migratedFunctionBody(sql[end:])
+				if err != nil {
+					return nil, fmt.Errorf("function %s: %w", name(1), err)
+				}
+				bodies[name(1)] = body
+				end += consumed
+			case m[4] >= 0:
+				delete(bodies, name(2))
+			default:
+				bodies[name(4)] = bodies[name(3)]
+				delete(bodies, name(3))
+			}
+			at = end
+		}
+	}
+	return bodies, nil
+}
+
+// migratedFunctionBody answers the body after a function header and how far it ran:
+// dollar-quoted, or a SQL-standard RETURN. Any other form is refused, because
+// reading past it would judge the next function's text under this one's name.
+func migratedFunctionBody(rest string) (string, int, error) {
+	statementEnd := strings.Index(rest, ";")
+	if statementEnd < 0 {
+		statementEnd = len(rest)
+	}
+	open := sqlDollarQuote.FindStringSubmatchIndex(rest)
+	if open == nil || open[0] > statementEnd {
+		if standard := sqlStandardReturn.FindStringIndex(rest[:statementEnd]); standard != nil {
+			return rest[standard[0]:statementEnd], statementEnd, nil
+		}
+		return "", 0, errors.New("its body is neither dollar-quoted nor a RETURN, so the census cannot read it")
+	}
+	tag := rest[open[0]:open[1]]
+	closing := strings.Index(rest[open[1]:], tag)
+	if closing < 0 {
+		return "", 0, fmt.Errorf("its %s body never closes", tag)
+	}
+	return rest[open[1] : open[1]+closing], open[1] + closing + len(tag), nil
+}
+
+// employmentFindings judges every employment arm of bodies, answering the arm
+// count per function and one message per arm that counts employment its own way.
+func employmentFindings(bodies map[string]string) (map[string]int, []string) {
+	judged := map[string]int{}
+	var findings []string
+	names := make([]string, 0, len(bodies))
+	for name := range bodies {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	for _, fn := range names {
+		for _, arm := range employmentArms(bodies[fn]) {
+			judged[fn]++
+			if !arm.current {
+				findings = append(findings, fmt.Sprintf("%s's employment arm on %s does not carry %q, or also "+
+					"tests ended_at IS NULL on its own, so a contact serving notice stops counting for the "+
+					"employer they still work for. Replace the function in a new migration with the predicate's text.",
+					fn, arm.alias, employment.IsCurrentSQL(arm.alias+".ended_at")))
+			}
+			if !arm.bounded {
+				findings = append(findings, fmt.Sprintf("%s's employment arm on %s does not carry %q, so mail "+
+					"from a contact's previous job counts for the employer they have now. Replace the function "+
+					"in a new migration with the bound's text.",
+					fn, arm.alias, employment.InPlaceAtSQL(arm.alias, arm.mailAt)))
 			}
 		}
 	}
-	return arms, unbounded
+	return judged, findings
+}
+
+// employmentArm is one employment arm of a function body, under its alias.
+// bounded holds when the arm dates no mail, or bounds the mail it dates.
+type employmentArm struct {
+	alias   string
+	mailAt  string
+	bounded bool
+	current bool
+}
+
+// employmentArms reads each employment arm of a function body: a relationship
+// read under an alias and scoped to employments. Comments are dropped first, so
+// a predicate that is only mentioned does not count.
+func employmentArms(body string) []employmentArm {
+	code := stripSQLComments(sqlBlockComment.ReplaceAllString(body, " "))
+	var arms []employmentArm
+	for _, part := range sqlUnion.Split(code, -1) {
+		flat := normalizeSQL(part)
+		aliases := map[string]bool{}
+		for _, m := range relationshipAlias.FindAllStringSubmatch(flat, -1) {
+			aliases[strings.ToLower(m[1])] = true
+		}
+		for _, m := range employmentKindArm.FindAllStringSubmatch(flat, -1) {
+			alias := m[1]
+			if !aliases[strings.ToLower(alias)] {
+				continue
+			}
+			arm := employmentArm{alias: alias, bounded: true}
+			if read := occurredAtRead.FindStringSubmatch(flat); read != nil {
+				arm.mailAt = read[1] + ".occurred_at"
+				arm.bounded = strings.Contains(flat, normalizeSQL(employment.InPlaceAtSQL(alias, arm.mailAt)))
+			}
+			current := normalizeSQL(employment.IsCurrentSQL(alias + ".ended_at"))
+			bareEnd := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(alias) + `\s*\.\s*ended_at\s+IS\s+NULL\b`)
+			arm.current = strings.Contains(flat, current) && !bareEnd.MatchString(strings.ReplaceAll(flat, current, " "))
+			arms = append(arms, arm)
+		}
+	}
+	return arms
+}
+
+// bareEndedAtTest is the defect the census plants, declared apart so the
+// employment currency census does not read a planted body as a real query.
+func bareEndedAtTest(alias string) string {
+	return alias + ".ended_at IS NULL"
 }
 
 // constText answers the string literal a named package-level constant holds.

@@ -60,6 +60,17 @@ func TestThePredicateAsksAboutTheColumnItWasGiven(t *testing.T) {
 	}
 }
 
+// A sweep looking for departures must find them on the day the currency
+// predicate flips.
+func TestAnEmploymentStopsBeingCurrentOnItsEffectiveEnd(t *testing.T) {
+	t.Parallel()
+
+	end := EffectiveEndSQL("r.ended_at", "r.ended_precision")
+	if got := IsCurrentSQL("r.ended_at"); !strings.Contains(got, end+" > current_date") {
+		t.Errorf("the currency predicate is %q and does not compare the effective end %q with today", got, end)
+	}
+}
+
 // The three questions about is_current_primary are three, and two of them are
 // deliberately DATE-BLIND: they are the index's own predicates, and asking them
 // with the date comparison would read a slot as free while the index still held

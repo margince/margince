@@ -59,8 +59,15 @@ func IsCurrentSQL(date string, asserted ...string) string {
 	if len(asserted) > 1 {
 		precision = asserted[1]
 	}
-	end := sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
-	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
+	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))",
+		status, date, EffectiveEndSQL(date, precision))
+}
+
+// EffectiveEndSQL is the first day an employment ending on `date` is no longer
+// current. At month precision that is the first of the next month.
+func EffectiveEndSQL(date, precision string) string {
+	return sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END",
+		precision, date, date)
 }
 
 // CurrentPrimarySQL is what a READER of `is_current_primary` means:

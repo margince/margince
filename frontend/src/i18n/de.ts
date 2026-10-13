@@ -887,6 +887,7 @@ export const de = {
   "systemJob.deal_key_names": "Ergänzung von Deal-Schlüsseln",
   "systemJob.deal_room_link_request": "Link-Anfrage für den Deal Room",
   "systemJob.deal_room_timeline": "Verlauf im Deal Room",
+  "systemJob.departed_employer_clock": "Letzte Aktivität nach einem Austritt",
   "systemJob.deployment_secret_seal": "Versiegelung von Geheimnissen",
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",

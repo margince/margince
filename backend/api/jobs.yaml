@@ -1020,6 +1020,24 @@ kinds:
       pass did not reach is still due then. A backing-off row would only
       suppress that tick.
 
+  departed_employer_clock_refold:
+    role: worker
+    go_type: DepartedEmployerClockRefoldArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 24h
+    reason: >-
+      A notice period ends on a date, and no row changes on that date, so no
+      trigger moves the stored last-activity clock of the company the contact
+      left. Daily, because the rule turns over once a day at the database's
+      midnight. The pass looks back a week, so a missed day is refolded by the
+      next one.
+
+      One attempt: the retry is the next tick, and what this pass did not
+      reach still reads stale then.
+
   approval_auto_apply:
     role: worker
     go_type: ApprovalAutoApplyArgs
