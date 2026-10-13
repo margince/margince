@@ -3,8 +3,8 @@
 
 package migration
 
-// A commit and an undo run detached from the request that started them. These
-// transitions keep such a run movable when its work dies. A failed run is
+// A commit and an undo run in the worker, apart from the request that started
+// them. These transitions keep such a run movable when its work dies. A failed run is
 // resumable by approve, and an undoing run by undo.
 //
 // Only `running` is ever moved to `failed` here. An `undoing` run is already

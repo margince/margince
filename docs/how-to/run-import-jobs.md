@@ -55,7 +55,9 @@ again after the fix.
 | Node lost | The advisory lock of the run belongs to a Postgres session. It stays held until Postgres drops that session. | Set by the TCP keepalive settings of your Postgres server and its network path |
 
 Rows a killed slice wrote after its last checkpoint are written again by the next attempt. The write
-is idempotent on the source key, so no record is doubled.
+is idempotent on the source key, so no record is doubled. A created row replayed this way still
+counts as created. An updated row replayed this way can count as unchanged, so after a crash the
+updated count can be short by up to 500 rows, one flush.
 
 A run is re-queued at most 3 times for each approval or undo request. After that a commit is `failed`
 with a cause, and a user can approve it again to continue from the checkpoint. That approval counts
@@ -72,6 +74,10 @@ While old and new API pods answer together, a request can reach either one.
 - A run approved on an old pod commits inside that pod's process. It carries no job, so the sweep
   never queues it again. It is failed after 30 minutes with no change, and a user can approve it
   again, which queues a job on the new API.
+- A run the new release failed and an old pod approves again is the one exception. The old pod
+  commits it in its own process, but the run still reads as queued work, so after 2 minutes the
+  sweep also starts an attempt in the worker. Both write the same rows by the same source keys, so
+  no record is doubled. When the old pod finishes first, its completion fences the worker off.
 
 Do not leave pods of two releases running longer than the rollout.
 
