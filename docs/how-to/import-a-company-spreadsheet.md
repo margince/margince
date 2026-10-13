@@ -14,19 +14,27 @@ before it writes, and nothing lands until the run is approved.
 
 The steps are the same over MCP and REST:
 
-1. **Preview**: hand over the file and a map of columns. This writes nothing, and returns a `run_id` and a report.
-2. **Read the report**: the counts, and the issues that name any row that will not land.
+1. **Preview**: hand over the file and a map of columns. This writes nothing. It returns a `run_id` at
+   once, and the worker then tests the file against your records.
+2. **Read the report** once the run is `awaiting_approval`. It holds the counts and the issues.
+   An issue names a row that will not land. A test that stops returns the run to `pending`, with the
+   reason in `error`.
 3. **Commit**: approve the run by its ID. *This* is the call that writes.
 
 Over MCP that is three tool calls: `preview_import` (the CSV goes in the call, as text),
-`read_import` with `view: report`, and `commit_import`. `commit_import` answers at once while the run
+`read_import` with `view: report`, and `commit_import`. Read `read_import` again until `state` is
+`awaiting_approval`.
+One assistant tests one run at a time. A second `preview_import` while its first test still runs is
+refused, and the refusal names the run still being tested. `commit_import` answers at once while the run
 goes on, so read `read_import` with `view: report` again until `state` is `complete`.
 
 Over REST you upload the file first, so it is five calls:
 
 - `POST /v1/imports/sources`, with the file as `multipart`;
-- `POST /v1/imports`, which names the `source_ref` that the first call returns;
-- `GET /v1/imports/{id}/report`;
+- `POST /v1/imports`, which names the `source_ref` that the first call returns and answers at once
+  with the run `validating`;
+- `GET /v1/imports/{id}`, read again until `status` is `awaiting_approval`, then
+  `GET /v1/imports/{id}/report`;
 - `POST /v1/imports/{id}/approve`, which answers at once while the run goes on;
 - `GET /v1/imports/{id}`, read again until `status` is `complete`.
 
@@ -117,7 +125,7 @@ link to a company in the same ZIP.
 3. Read `parts` in the answer: one profile per file, with a map for each type. `ignored` names the
    files no type takes.
 4. Call `POST /v1/imports` with `parts`. Each part names its `file`, its `object` and its `mapping`.
-5. Read the report, then approve the run as for one CSV.
+5. Read the report once the run is `awaiting_approval`, then approve the run as for one CSV.
 
 A ZIP holds at most 20 files, and the upload limit applies to the ZIP. Two files of one type are
 refused.
