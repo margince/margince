@@ -5,6 +5,7 @@ import {
 } from "@composition/extensions";
 import { extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
+import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
 
 // What the SPA knows about the units an installation composed.
@@ -143,6 +144,24 @@ export function findExtension(
     return null;
   }
   return registry.find((unit) => unit.name === name) ?? null;
+}
+
+/** What `unit` is called in `locale`: its own title, else its directory name. */
+export function unitTitle(unit: ExtensionDescriptor, locale: Locale): string {
+  return unit.title ? translate(locale, unit.title) : unit.name;
+}
+
+/**
+ * What unit `name` is called in `locale`. A unit this installation does not
+ * compose has only its name.
+ */
+export function extensionTitle(
+  name: string,
+  locale: Locale,
+  registry: readonly ExtensionDescriptor[] = extensions,
+): string {
+  const unit = findExtension(name, registry);
+  return unit ? unitTitle(unit, locale) : name;
 }
 
 /**

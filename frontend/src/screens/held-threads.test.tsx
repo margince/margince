@@ -47,6 +47,8 @@ const JUDGED: HeldThread = {
   subject: "Entwurf Aufhebungsvertrag",
   activity_id: "01a05500-0000-7000-8000-0000000000b1",
   occurred_at: "2026-08-29T15:40:00Z",
+  participants: [],
+  participant_count: 0,
 };
 
 // And the refusal, as the server actually answers it: the message EXISTS —
@@ -57,6 +59,8 @@ const WITHHELD: HeldThread = {
   thread_key: "t-withheld",
   subject: undefined,
   activity_id: undefined,
+  participants: undefined,
+  participant_count: undefined,
 };
 
 type Clock = components["schemas"]["CaptureVerdictClock"];
@@ -403,4 +407,64 @@ it("names a thread the classifier was unsure about", async () => {
 
   await screen.findByText(en["heldThreads.kind.unsure"]);
   expect(screen.queryByText("unsure")).toBeNull();
+});
+
+// Who a thread is with tells two held threads apart; a contact on file is a link.
+it("names who a held thread is with, and counts the ones it leaves out", async () => {
+  renderCard([
+    {
+      ...JUDGED,
+      participants: [
+        {
+          address: "k.huber@kanzlei.example",
+          contact_id: "0190b7a2-0000-7000-8000-0000000000c7",
+        },
+        { address: "office@kanzlei.example" },
+      ],
+      participant_count: 7,
+    },
+  ]);
+
+  const [beside, folded] = await screen.findAllByRole("link", {
+    name: "k.huber@kanzlei.example",
+  });
+  expect(beside.getAttribute("href")).toContain(
+    "0190b7a2-0000-7000-8000-0000000000c7",
+  );
+  // Under the subject, in the subject's own cell: one run of addresses that a
+  // narrow cell cuts short. The count is an element of its own.
+  const line = beside.closest(".held-threads-parties");
+  expect(line?.closest("td")?.textContent).toContain(JUDGED.subject);
+  expect(line?.querySelector(".held-threads-parties-list")?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example",
+  );
+  expect(line?.querySelector(".held-threads-parties-more")?.textContent).toBe(
+    "+5 more",
+  );
+  // Folded, the same line is a column drawn only then, heading included.
+  const cell = folded.closest("td");
+  expect(cell?.getAttribute("data-fold")).toBe("only");
+  expect(cell?.textContent).toBe(
+    "k.huber@kanzlei.example, office@kanzlei.example+5 more",
+  );
+  expect(
+    screen.getByRole("columnheader", { name: en["heldThreads.colParties"] })
+      .className,
+  ).toBe("datatable-fold-only");
+  expect(
+    screen.queryByRole("link", { name: "office@kanzlei.example" }),
+  ).toBeNull();
+});
+
+// Withheld names nobody, and a thread only with colleagues has nobody to name.
+it.each([
+  ["a withheld message", WITHHELD],
+  ["a thread only with colleagues", JUDGED],
+])("draws no participant line for %s", async (_, row) => {
+  const { container } = renderCard([row]);
+
+  expect(await screen.findByText(en["heldThreads.kind.legal"])).toBeTruthy();
+  expect(
+    container.querySelector(".held-threads-parties, .held-threads-parties-all"),
+  ).toBeNull();
 });

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
+import { extensionTitle } from "../app/extensions";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -63,9 +64,10 @@ function unitColumns(
     {
       key: "unit",
       header: t("extIngest.col.connector"),
-      // The unit's own name, verbatim: what the operator greps the connector's
-      // log with and what names the directory the mapping lives in.
-      render: (unit) => <KeyedName name={unit.unit} code={unit.unit} />,
+      // The key under the title is what the connector's log and directory carry.
+      render: (unit) => (
+        <KeyedName name={extensionTitle(unit.unit, locale)} code={unit.unit} />
+      ),
     },
     {
       key: "refused",

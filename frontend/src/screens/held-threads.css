@@ -9,3 +9,42 @@
   inline-size: 0;
   min-inline-size: 100%;
 }
+
+/* One line under the subject: the run of addresses is cut short, never the
+   count of the rest. */
+.held-threads-parties {
+  display: flex;
+  inline-size: 0;
+  min-inline-size: 100%;
+  gap: var(--space-1);
+}
+.held-threads-parties > .held-threads-parties-list {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.held-threads-parties-more {
+  flex: none;
+  white-space: nowrap;
+}
+.held-threads-parties-all .held-threads-parties-more {
+  margin-inline-start: var(--space-1);
+}
+/* A line breaks between addresses, never inside one; one longer than the line
+   is cut short rather than widening the row. */
+.held-threads-parties-all .held-threads-party {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* Folded, the fold-only column carries the line, so the cell's copy goes. */
+@container table-fold (width < 36rem) {
+  .held-threads-parties {
+    display: none;
+  }
+}
