@@ -59,7 +59,8 @@ func (e *AgentBusyError) Error() string {
 
 func (e *AgentBusyError) Unwrap() error { return apperrors.ErrConflict }
 
-// agentTestHolder names the acting agent's other test run.
+// agentTestHolder names the acting agent's other test run. The index spans
+// every workspace and this read sees one, so a holder elsewhere goes unnamed.
 func agentTestHolder(ctx context.Context, tx pgx.Tx, id RunID) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
@@ -71,7 +72,8 @@ func agentTestHolder(ctx context.Context, tx pgx.Tx, id RunID) error {
 		 WHERE status = $1 AND actor->>'type' = $2 AND actor->>'id' = $3 AND id <> $4
 		 LIMIT 1`, StatusValidating, string(principal.PrincipalAgent), p.ID, id).Scan(&holder)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("another test run of this agent moved at the same time as import run %s: %w", id, apperrors.ErrConflict)
+		return fmt.Errorf("this agent is testing another import that cannot be named here, or that ended just now; "+
+			"test import run %s again once it ends: %w", id, apperrors.ErrConflict)
 	}
 	if err != nil {
 		return fmt.Errorf("finding the agent's running test run: %w", err)
