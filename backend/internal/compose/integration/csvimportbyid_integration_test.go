@@ -304,7 +304,6 @@ func TestCSVImportByIDOfIdenticalValuesIsUnchanged(t *testing.T) {
 	}
 }
 
-// An unedited export re-imports unchanged, though its formula guard quoted cells.
 func TestCSVImportOfAnUneditedExportIsUnchanged(t *testing.T) {
 	e := setupImportApp(t)
 	createCompanyReturningID(t, e, map[string]any{"display_name": "=Name", "description": "- first point"})

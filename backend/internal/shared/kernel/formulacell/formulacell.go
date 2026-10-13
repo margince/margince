@@ -10,7 +10,7 @@ import "strings"
 const guardQuote = '\''
 
 // Guard looks past quotes s already opens with, so a stored `'=x` stays distinct
-// from a guarded `=x`. A bare phone number can only evaluate to itself.
+// from a guarded `=x`. A bare phone number holds no formula a spreadsheet could run.
 func Guard(s string) string {
 	if !opensOnLead(strings.TrimLeft(s, string(guardQuote))) || isBarePhone(s) {
 		return s
@@ -38,7 +38,6 @@ func opensOnLead(s string) bool {
 	return false
 }
 
-// isBarePhone holds for an E.164 number: a plus and 6 to 15 digits, nothing else.
 func isBarePhone(s string) bool {
 	digits, ok := strings.CutPrefix(s, "+")
 	if !ok || len(digits) < 6 || len(digits) > 15 {

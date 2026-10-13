@@ -51,8 +51,7 @@ func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
 		}
 	}
 
-	// A bare international phone number can only evaluate to itself, so it
-	// exports as dialled.
+	// A bare phone number holds no formula a spreadsheet could run, so it exports raw.
 	if got := csvCell("+84901234567"); got != "+84901234567" {
 		t.Errorf("csvCell(%q) = %q, want the bare number", "+84901234567", got)
 	}

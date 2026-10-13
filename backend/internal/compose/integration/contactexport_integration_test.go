@@ -126,7 +126,6 @@ func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
 	if got := byName["Wilma Weber"][emailAt]; got != "wilma@corp.example" {
 		t.Errorf("primary_email = %q, want the primary address", got)
 	}
-	// A bare international number can only evaluate to itself, so it exports unquoted.
 	if got := byName["Wilma Weber"][phoneAt]; got != "+4930123456" {
 		t.Errorf("primary_phone = %q, want the primary number as dialled", got)
 	}
