@@ -12,7 +12,7 @@ import {
   parseSource,
 } from "../../scripts/lib/source-tree";
 
-// Web Storage has ONE spelling, `lib/storage.ts`: a key stored anywhere else is
+// Web Storage has one spelling, `lib/storage.ts`: a key stored anywhere else is
 // missing from its registry, so a sign-out cannot forget it.
 
 // Matched on the parsed name, so a comment never counts and an alias does; a

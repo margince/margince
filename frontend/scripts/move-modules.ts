@@ -1,12 +1,11 @@
-// Moves frontend modules and rewrites every relative import that names them, so
-// a move PR is a pure move: no file changes except its import paths.
+// Moves frontend modules and rewrites every relative import that names them.
+// A move PR then changes nothing but import paths.
 //
 //   node scripts/move-modules.ts <from> <to> [<from> <to> ...]
 //
 // Paths are relative to frontend/. A <from> directory moves every file under it.
-// After the move, the script lists each place outside an import that still names
-// an old path, such as a gate or a waiver list, because only a reader can say
-// whether that text should follow.
+// Afterwards the script lists text outside imports that still names an old path,
+// such as a gate or a waiver list. Only a reader can say if that text follows.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
@@ -21,8 +20,8 @@ import {
 
 const frontendDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// Module specifiers are the arguments of these calls as well as of import and
-// export declarations: a test mocks a module by the same path it imports.
+// These calls take a module specifier too, because a test mocks a module by the
+// path it imports.
 const SPECIFIER_CALLS = new Set([
   "vi.mock",
   "vi.doMock",
@@ -88,7 +87,7 @@ export function specifierNodes(source: ts.SourceFile): ts.StringLiteralLike[] {
 }
 
 // targetOf is the file a relative specifier names: a module the bundler would
-// load, or a file named exactly, such as a stylesheet.
+// load, or a file named in full, such as a stylesheet.
 function targetOf(
   fromFile: string,
   specifier: string,
