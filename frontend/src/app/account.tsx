@@ -150,7 +150,7 @@ function nextSeat(
   const count = seats.length;
   for (let hop = 1; hop <= count; hop++) {
     const at = (from + delta * hop + count * count) % count;
-    if (isSeatFocusable(seats[at])) {
+    if (isSeatFocusable(seats[at] ?? null)) {
       return at;
     }
   }

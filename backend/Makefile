@@ -111,7 +111,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
+.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -764,6 +764,11 @@ GOVULNCHECK_VERSION ?= v1.7.0
 GOVULNCHECK ?= $(call resolve-gate-tool,govulncheck,golang\.org/x/vuln,$(GOVULNCHECK_VERSION),golang.org/x/vuln/cmd/govulncheck)
 vuln: ## Scan dependencies for known vulnerabilities (govulncheck)
 	$(GOVULNCHECK) ./...
+
+# -v because the scheduled lane reads the VENDOR_LIVE line, and go test hides a
+# passing test's output without it. The key comes from MARGINCE_SURFE_LIVE_KEY.
+vendor-live: ## Read Surfe's credit balance through the production adapter (network; needs MARGINCE_SURFE_LIVE_KEY; fails without it)
+	$(GO) test -count=1 -v -tags vendorlive ./internal/modules/integrations/surfe/ -run TestSurfeLiveCreditRead
 
 # Fresh-machine bootstrap. golangci-lint is the one gate binary `make check`
 # runs from an install rather than a pinned `go run`; the lint target

@@ -61,28 +61,18 @@ export function parseBlock(
   // functional pseudo-class (`:root:not([data-theme="light"])`) is matched as
   // the literal text it is rather than compiled into a capture group — which
   // matches nothing, and would report the block as missing.
-  const match = css.match(
+  const block = css.match(
     new RegExp(`${selector.replace(/[[\]"=():]/g, "\\$&")}\\s*\\{([^}]*)\\}`),
-  );
-  if (!match) {
+  )?.[1];
+  if (block === undefined) {
     throw new Error(`tokens.css has no ${selector} block`);
   }
   const props: Record<string, string> = {};
-  // Split, rather than scanned with `/(--[\w-]+)\s*:([^;]+);/g`. That pattern
-  // was flagged for super-linear runtime and the width of its value class is
-  // why: `[^;]+` can run to the end of the block from every start position the
-  // engine tries, so the cost grows with the square of the block. The grammar
-  // is the same one stated without backtracking — a declaration ends at `;`
-  // and divides at its FIRST `:`, so a value may hold a colon (`url(https://…)`)
-  // and still arrive whole.
-  //
-  // One deliberate difference from the pattern: a LAST declaration with no `;`
-  // is read rather than dropped, which is what CSS means by it. The sheet ends
-  // every declaration today — both spellings parse its `:root` and dark blocks
-  // to the same 173 and 63 properties — so this only decides what happens to a
-  // token somebody adds without the semicolon, and dropping it silently was
-  // the worse of the two answers.
-  for (const declaration of match[1].split(";")) {
+  // Split rather than matched by a regex, so the cost stays linear in the block.
+  // A declaration ends at `;` and divides at its first `:`, so a value may hold
+  // a colon (`url(https://…)`). A last declaration with no `;` is still read,
+  // as CSS reads it.
+  for (const declaration of block.split(";")) {
     const divide = declaration.indexOf(":");
     if (divide < 0) {
       continue; // The block's trailing whitespace, and anything not a declaration.
@@ -111,29 +101,30 @@ export function parseBlock(
 // visible step off where it was authored, in the direction the eye reads as a
 // colour cast.
 
+type Vec3 = [number, number, number];
+type Matrix3 = readonly [Vec3, Vec3, Vec3];
+
 /** D50 white, from the spec's chromaticity. */
-const D50: readonly number[] = [
-  0.3457 / 0.3585,
-  1,
-  (1 - 0.3457 - 0.3585) / 0.3585,
-];
+const D50: Vec3 = [0.3457 / 0.3585, 1, (1 - 0.3457 - 0.3585) / 0.3585];
 
 /** Bradford-adapted D50 → D65 (CSS Color 4). */
-const D50_TO_D65: readonly number[][] = [
+const D50_TO_D65: Matrix3 = [
   [0.9554734527042182, -0.023098536874261423, 0.0632593086610217],
   [-0.028369706963208136, 1.0099954580058226, 0.021041398966943008],
   [0.012314001688319899, -0.020507696433477912, 1.3303659366080753],
 ];
 
 /** XYZ (D65) → linear-light sRGB (CSS Color 4). */
-const XYZ_TO_RGB: readonly number[][] = [
+const XYZ_TO_RGB: Matrix3 = [
   [3.2409699419045226, -1.537383177570094, -0.4986107602930034],
   [-0.9692436362808796, 1.8759675015077202, 0.04155505740717559],
   [0.05563007969699366, -0.20397695888897652, 1.0569715142428786],
 ];
 
-const apply = (m: readonly number[][], v: readonly number[]) =>
-  m.map((row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
+function apply([x, y, z]: Matrix3, v: Vec3): Vec3 {
+  const dot = (row: Vec3) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2];
+  return [dot(x), dot(y), dot(z)];
+}
 
 /** The sRGB transfer function, on one linear-light channel. */
 function gamma(channel: number): number {
@@ -161,7 +152,9 @@ export function lchToHex(value: string): string {
   if (!parts) {
     throw new Error(`${value} is not an lch(L% C H) value`);
   }
-  const [lightness, chroma, hue] = parts.slice(1).map(Number);
+  const lightness = Number(parts[1]);
+  const chroma = Number(parts[2]);
+  const hue = Number(parts[3]);
   const radians = (hue * Math.PI) / 180;
   const [a, b] = [chroma * Math.cos(radians), chroma * Math.sin(radians)];
 
@@ -170,12 +163,16 @@ export function lchToHex(value: string): string {
   const epsilon = 216 / 24389;
   const fy = (lightness + 16) / 116;
   const [fx, fz] = [fy + a / 500, fy - b / 200];
-  const ratios = [
+  const ratios: Vec3 = [
     fx ** 3 > epsilon ? fx ** 3 : (116 * fx - 16) / kappa,
     lightness > kappa * epsilon ? fy ** 3 : lightness / kappa,
     fz ** 3 > epsilon ? fz ** 3 : (116 * fz - 16) / kappa,
   ];
-  const xyzD50 = ratios.map((ratio, i) => ratio * D50[i]);
+  const xyzD50: Vec3 = [
+    ratios[0] * D50[0],
+    ratios[1] * D50[1],
+    ratios[2] * D50[2],
+  ];
 
   const rgb = apply(XYZ_TO_RGB, apply(D50_TO_D65, xyzD50))
     .map(gamma)
@@ -183,15 +180,8 @@ export function lchToHex(value: string): string {
   return `#${rgb.map((n) => n.toString(16).padStart(2, "0")).join("")}`;
 }
 
-// ONE PALETTE OF COLOUR MATHS, FOR EVERY GATE THAT MEASURES THE SHEET.
-//
-// These lived inside tokens.test.ts, where they were reachable by exactly the
-// assertions in that file. The state family's own gate is a sibling file now
-// (state-tokens.test.ts) and it measures the same tints against the same
-// grounds, so a second copy of the sRGB/Oklab conversions would be two answers
-// to one question — and the copy that drifts is always the one whose failures
-// nobody has seen. They are here, exported once, and each test file states only
-// what it asserts.
+// One copy of the colour maths for every gate that measures the sheet, so
+// tokens.test.ts and state-tokens.test.ts cannot drift apart.
 
 // The :root palette, which both themes are read as a delta from.
 const light = parseBlock(tokenDecls, ":root");
@@ -219,10 +209,11 @@ export function luminance(hex: string): number {
   if (full.length !== 6) {
     throw new Error(`${hex} is not a 3- or 6-digit hex`);
   }
-  const [r, g, b] = [0, 2, 4].map((i) => {
+  const channelAt = (i: number) => {
     const c = Number.parseInt(full.slice(i, i + 2), 16) / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
+  };
+  const [r, g, b] = [channelAt(0), channelAt(2), channelAt(4)];
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -246,20 +237,22 @@ function channels(value: string): [number, number, number, number] {
             .map((d) => d + d)
             .join("")
         : h.slice(0, 6);
-    const [r, g, b] = [0, 2, 4].map((i) =>
-      Number.parseInt(full.slice(i, i + 2), 16),
-    );
-    return [r, g, b, 1];
+    const byteAt = (i: number) => Number.parseInt(full.slice(i, i + 2), 16);
+    return [byteAt(0), byteAt(2), byteAt(4), 1];
   }
-  const inside = v.match(/rgba?\(([^)]+)\)/);
-  if (!inside) {
+  const inside = v.match(/rgba?\(([^)]+)\)/)?.[1];
+  if (inside === undefined) {
     throw new Error(`${value} is neither a hex nor an rgb()`);
   }
-  const parts = inside[1]
+  const parts = inside
     .replace(/\//g, ",")
     .split(",")
     .map((n) => Number.parseFloat(n.trim()));
-  return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+  const [r, g, b, a = 1] = parts;
+  if (r === undefined || g === undefined || b === undefined) {
+    throw new Error(`${value} has fewer than three channels`);
+  }
+  return [r, g, b, a];
 }
 
 // Source-over, the compositing every alpha tint in this file goes through
@@ -316,7 +309,7 @@ function topLevelArgs(inside: string): string[] {
 // Bradford adaptation to D65, then D65 XYZ to linear sRGB. Skipping the
 // adaptation moves every hue here by more than the headroom being
 // measured.
-function labToLinear(L: number, a: number, b: number): number[] {
+function labToLinear(L: number, a: number, b: number): Vec3 {
   const fy = (L + 16) / 116;
   const fx = fy + a / 500;
   const fz = fy - b / 200;
@@ -325,36 +318,33 @@ function labToLinear(L: number, a: number, b: number): number[] {
   const x = fx ** 3 > epsilon ? fx ** 3 : (116 * fx - 16) / kappa;
   const y = L > kappa * epsilon ? fy ** 3 : L / kappa;
   const z = fz ** 3 > epsilon ? fz ** 3 : (116 * fz - 16) / kappa;
-  const d50 = [0.9642956764295677, 1, 0.8251046025104602];
-  const [xd, yd, zd] = [x * d50[0], y * d50[1], z * d50[2]];
-  const toD65 = [
+  const d50: Vec3 = [0.9642956764295677, 1, 0.8251046025104602];
+  const xyzD50: Vec3 = [x * d50[0], y * d50[1], z * d50[2]];
+  const toD65: Matrix3 = [
     [0.955473452704218, -0.02309853687426142, 0.0632593086610217],
     [-0.02836970696320814, 1.0099954580058226, 0.021041398966943],
     [0.0123140016883199, -0.02050769643347791, 1.3303659366080753],
   ];
-  const toLinear = [
+  const toLinear: Matrix3 = [
     [3.2409699419045226, -1.537383177570094, -0.4986107602930034],
     [-0.9692436362808796, 1.8759675015077202, 0.04155505740717559],
     [0.05563007969699366, -0.20397695888897652, 1.0569715142428786],
   ];
-  const xyz = toD65.map((row) => row[0] * xd + row[1] * yd + row[2] * zd);
-  return toLinear.map((row) =>
-    row.reduce((sum, coef, i) => sum + coef * xyz[i], 0),
-  );
+  return apply(toLinear, apply(toD65, xyzD50));
 }
 
 // Oklab, the space tokens.css interpolates the status family in (CSS Color
 // 4 §10). A mix there is a straight interpolation of these three
 // coordinates, which is why the tokens are written in it: one ink share
 // means the same thing to the eye at every hue in the family.
-export function linearToOklab(rgb: number[]): number[] {
+export function linearToOklab(rgb: Vec3): Vec3 {
   const l =
     0.4122214708 * rgb[0] + 0.5363325363 * rgb[1] + 0.0514459929 * rgb[2];
   const m =
     0.2119034982 * rgb[0] + 0.6806995451 * rgb[1] + 0.1073969566 * rgb[2];
   const s =
     0.0883024619 * rgb[0] + 0.2817188376 * rgb[1] + 0.6299787005 * rgb[2];
-  const [l_, m_, s_] = [l, m, s].map((v) => Math.cbrt(v));
+  const [l_, m_, s_] = [Math.cbrt(l), Math.cbrt(m), Math.cbrt(s)];
   return [
     0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
     1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
@@ -362,7 +352,7 @@ export function linearToOklab(rgb: number[]): number[] {
   ];
 }
 
-export function oklabToLinear(lab: number[]): number[] {
+export function oklabToLinear(lab: Vec3): Vec3 {
   const l_ = lab[0] + 0.3963377774 * lab[1] + 0.2158037573 * lab[2];
   const m_ = lab[0] - 0.1055613458 * lab[1] - 0.0638541728 * lab[2];
   const s_ = lab[0] - 0.0894841775 * lab[1] - 1.291485548 * lab[2];
@@ -390,23 +380,37 @@ export function hexOf(linear: number[]): string {
   return `#${bytes.join("")}`;
 }
 
-export function linearOf(value: string): number[] {
+export function linearOf(value: string): Vec3 {
   const [r, g, b] = channels(value);
-  return [r, g, b].map((n) => {
+  const linear = (n: number) => {
     const c = n / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
+  };
+  return [linear(r), linear(g), linear(b)];
 }
 
 // A colour and the share of the mix it takes, split off one argument. It
 // throws rather than defaulting: a spelling it cannot read would otherwise
 // be measured as the literal text it failed to parse.
 function shareOf(arg: string, whole: string): [string, number] {
-  const share = arg.match(/^(.*)\s(\d+(?:\.\d+)?)%$/);
-  if (!share) {
+  const [, colour, percent] = arg.match(/^(.*)\s(\d+(?:\.\d+)?)%$/) ?? [];
+  if (colour === undefined || percent === undefined) {
     throw new Error(`${whole}: "${arg}" states no percentage`);
   }
-  return [share[1], Number.parseFloat(share[2]) / 100];
+  return [colour, Number.parseFloat(percent) / 100];
+}
+
+function labHex(value: string): string | undefined {
+  const [, L, a, b] =
+    value.match(/^lab\(\s*([\d.]+)%\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)$/) ?? [];
+  if (L === undefined || a === undefined || b === undefined) return undefined;
+  return hexOf(
+    labToLinear(
+      Number.parseFloat(L),
+      Number.parseFloat(a),
+      Number.parseFloat(b),
+    ),
+  );
 }
 
 export function resolve(
@@ -415,44 +419,43 @@ export function resolve(
   seen: ReadonlySet<string>,
 ): string {
   const v = value.trim();
-  const named = v.match(/^var\((--[\w-]+)\)$/);
-  if (named) {
-    if (seen.has(named[1])) {
-      throw new Error(`${named[1]} resolves to itself`);
+  const named = v.match(/^var\((--[\w-]+)\)$/)?.[1];
+  if (named !== undefined) {
+    if (seen.has(named)) {
+      throw new Error(`${named} resolves to itself`);
     }
-    if (!pal[named[1]]) {
-      throw new Error(`${value} names undeclared ${named[1]}`);
+    const declared = pal[named];
+    if (!declared) {
+      throw new Error(`${value} names undeclared ${named}`);
     }
-    return resolve(pal[named[1]], pal, new Set([...seen, named[1]]));
+    return resolve(declared, pal, new Set([...seen, named]));
   }
-  const lab = v.match(/^lab\(\s*([\d.]+)%\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)$/);
-  if (lab) {
-    const [L, a, b] = lab.slice(1, 4).map(Number.parseFloat);
-    return hexOf(labToLinear(L, a, b));
-  }
-  const mix = v.match(/^color-mix\(\s*in (oklab|srgb)\s*,([\s\S]*)\)$/);
-  if (!mix) return v;
-  const args = topLevelArgs(mix[2]);
-  if (args.length !== 2) {
+  const lab = labHex(v);
+  if (lab !== undefined) return lab;
+  const [, space, mixed] =
+    v.match(/^color-mix\(\s*in (oklab|srgb)\s*,([\s\S]*)\)$/) ?? [];
+  if (space === undefined || mixed === undefined) return v;
+  const args = topLevelArgs(mixed);
+  const [left, right] = args;
+  if (args.length !== 2 || left === undefined || right === undefined) {
     throw new Error(`${value} is not a two-colour mix`);
   }
   // color-mix(in srgb, C P%, transparent) is C at alpha P/100, how a tint
   // derives from its base; over an opaque ground instead, sRGB
   // interpolation is exactly that tint composited on the ground.
-  if (mix[1] === "srgb") {
-    const [colour, alpha] = shareOf(args[0], value);
+  if (space === "srgb") {
+    const [colour, alpha] = shareOf(left, value);
     const [r, g, b] = channels(resolve(colour, pal, seen));
     const tint = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    return args[1] === "transparent"
+    return right === "transparent"
       ? tint
-      : composite(tint, resolve(args[1], pal, seen));
+      : composite(tint, resolve(right, pal, seen));
   }
-  const [inkName, part] = shareOf(args[1], value);
-  const hue = linearToOklab(linearOf(resolve(args[0], pal, seen)));
+  const [inkName, part] = shareOf(right, value);
+  const hue = linearToOklab(linearOf(resolve(left, pal, seen)));
   const ink = linearToOklab(linearOf(resolve(inkName, pal, seen)));
-  return hexOf(
-    oklabToLinear(hue.map((n, i) => n * (1 - part) + ink[i] * part)),
-  );
+  const mixAt = (i: 0 | 1 | 2) => hue[i] * (1 - part) + ink[i] * part;
+  return hexOf(oklabToLinear([mixAt(0), mixAt(1), mixAt(2)]));
 }
 
 // One theme's palette with every colour resolved. Non-colour tokens — the

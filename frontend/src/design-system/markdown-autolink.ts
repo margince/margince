@@ -66,8 +66,9 @@ function showDestination(link: Extract<Inline, { kind: "link" }>): Inline[] {
     ...link,
     children: [{ kind: "text", text: link.href }],
   };
-  if (link.children.length === 1 && link.children[0].kind === "text") {
-    if (link.children[0].text === link.href) return [shown];
+  const [only] = link.children;
+  if (link.children.length === 1 && only?.kind === "text") {
+    if (only.text === link.href) return [shown];
   }
   return [
     // The label stays as written: an address in it is a claim, not a link.

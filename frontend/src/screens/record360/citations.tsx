@@ -118,13 +118,13 @@ export function citationChips(
   groupable: (entityType: CitedKind) => boolean = () => false,
 ): CitationChip[] {
   const chips: CitationChip[] = [];
-  const seenAt = new Map<string, number>();
-  const groupAt = new Map<CitedKind, number>();
+  const seen = new Map<string, CitationChip>();
+  const groups = new Map<CitedKind, CitationChip>();
   for (const cited of evidence) {
     const identity = `${cited.entity_type}:${cited.entity_id}`;
-    const already = seenAt.get(identity);
+    const already = seen.get(identity);
     if (already !== undefined) {
-      nameRepeat(chips[already], cited);
+      nameRepeat(already, cited);
       continue;
     }
     const isOpenable = openable(cited);
@@ -133,36 +133,35 @@ export function citationChips(
     // quote is about ONE record, and a chip for three activities that opened
     // one message's words would be claiming the other two said the same.
     if ((isOpenable && !groupable(cited.entity_type)) || hasReceipt(cited)) {
-      seenAt.set(identity, chips.length);
-      chips.push(ownChip(cited, isOpenable));
+      const own = ownChip(cited, isOpenable);
+      seen.set(identity, own);
+      chips.push(own);
       continue;
     }
-    const at = groupAt.get(cited.entity_type);
-    if (at === undefined) {
-      // The record's chip is the one just pushed. Recorded per BRANCH rather
+    const grouped = groups.get(cited.entity_type);
+    if (grouped === undefined) {
+      // The record's chip is the one just made. Recorded per BRANCH rather
       // than once above, because a record joining an existing group lands on
-      // that group's index and not at the end.
-      seenAt.set(identity, chips.length);
-      groupAt.set(cited.entity_type, chips.length);
-      chips.push(
-        isOpenable
-          ? {
-              openable: true,
-              entityType: cited.entity_type,
-              entityId: cited.entity_id,
-              count: 1,
-            }
-          : {
-              openable: false,
-              entityType: cited.entity_type,
-              count: 1,
-              name: cited.name,
-            },
-      );
+      // that group's chip and not on a new one.
+      const chip: CitationChip = isOpenable
+        ? {
+            openable: true,
+            entityType: cited.entity_type,
+            entityId: cited.entity_id,
+            count: 1,
+          }
+        : {
+            openable: false,
+            entityType: cited.entity_type,
+            count: 1,
+            name: cited.name,
+          };
+      seen.set(identity, chip);
+      groups.set(cited.entity_type, chip);
+      chips.push(chip);
       continue;
     }
-    seenAt.set(identity, at);
-    const grouped = chips[at];
+    seen.set(identity, grouped);
     grouped.count += 1;
     // It now speaks for several records, so it may no longer carry one of
     // their names: a chip reading "Slots for the pilot review" over three

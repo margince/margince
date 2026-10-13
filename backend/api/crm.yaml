@@ -53877,6 +53877,13 @@ components:
           type: array
           description: 'What the installation uses this contact''s data for, by published name.'
           items: { type: string }
+        purpose_keys:
+          type: array
+          description: |
+            The key of each entry in `purposes`, at the same index. A page names a purpose the
+            product seeds in its reader's language by its key, and shows the published name of any
+            other.
+          items: { type: string }
         rights:
           type: array
           description: |
@@ -55622,6 +55629,43 @@ components:
             same as a team that landed on nothing — a reader says "no forecast" rather than
             drawing zeros. Every figure is a COPY, so it still reads after the snapshots it came
             from age out under retention.
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyMember' }
+          description: |
+            Every live member of the team that week, including those whose own week could not be
+            read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
+            kept.
+        quality: { $ref: '#/components/schemas/TeamWeeklyQuality' }
+        coverage:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyCoverage' }
+          description: |
+            The month's and the quarter's coverage, frozen at close. Empty where no forecast was
+            composed or the team's book was refused.
+        replan_recommended:
+          type: boolean
+          description: |
+            True when any horizon in `coverage` recommends a replan: coverage at risk against a
+            named basis.
+        summary:
+          type: string
+          description: |
+            A short paragraph composed from the frozen figures by fixed rules, never by a model.
+            Absent on a snapshot frozen before it existed or a week nobody was counted in.
+        exceptions:
+          type: array
+          items: { $ref: '#/components/schemas/InputCheck' }
+          description: |
+            LIVE, computed on every read and never frozen: the open input-check findings on deals
+            the team's members own now, under the reader's own deal scope. Absent when the read
+            did not ask.
+        stale_deals:
+          type: array
+          items: { $ref: '#/components/schemas/TeamWeeklyStaleDeal' }
+          description: |
+            LIVE, like `exceptions`: the members' open deals with no activity for the stalled
+            period, quietest first. Together with `exceptions` at most 25 items, findings first.
         agenda:
           type: array
           items: { type: string, format: uuid }
@@ -55673,9 +55717,10 @@ components:
     TeamWeeklyRep:
       type: object
       additionalProperties: false
-      description: One member's week as their lead reads it, with the one thing to raise.
+      description: One member's week as their lead reads it, with what to raise.
       required: [user_id, display_name, deals_won, leads_breached, meetings_held,
-                 commitments_due, commitments_kept, help_requested, focus_kind, focus_label]
+                 commitments_due, commitments_kept, help_requested, focus_kind, focus_label,
+                 patterns]
       properties:
         user_id: { type: string, format: uuid }
         display_name:
@@ -55690,17 +55735,140 @@ components:
         focus_kind:
           type: string
           enum: [help_requested, leads_breached, commitments_missed,
-                 deals_at_risk, meetings_without_next_step, strong_week, quiet_week]
+                 deals_at_risk, forecast_downgrades, stage_regressions, close_dates_provisional,
+                 no_next_step_coverage, strong_week, meetings_without_next_step, quiet_week]
           description: |
             Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
-            celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
-            outranks any metric, because walking past a request to raise a number is the
-            fastest way to teach them not to ask.
+            celebrate. Always the kind of `patterns[0]`. Tried in the order a lead should raise
+            them: a rep who ASKED for help outranks any metric, because walking past a request
+            to raise a number is the fastest way to teach them not to ask.
+
+            `deals_at_risk` is no longer written. Snapshots frozen before the four deal kinds
+            replaced it still carry it.
         focus_label:
           type: string
           description: |
             The focus in words, composed from the stored figures — never model-written, so it
             cannot say something the snapshot does not hold.
+        patterns:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/TeamWeeklyPattern' }
+          description: |
+            Every rule that fired for this rep, in the order a lead raises them. The first is
+            the focus. A snapshot frozen before the list existed reads its focus as the one
+            pattern.
+        funnel:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/TeamWeeklyFunnelDeviation' }
+          description: |
+            Up to three stages where this rep's conversion differs most from the team's, over
+            the 13 weeks before the week closed. Stages with fewer than five entries on either
+            side are left out. Empty when no stage qualified or the snapshot predates it.
+    TeamWeeklyPattern:
+      type: object
+      additionalProperties: false
+      required: [kind, label]
+      properties:
+        kind:
+          type: string
+          enum: [help_requested, leads_breached, commitments_missed,
+                 deals_at_risk, forecast_downgrades, stage_regressions, close_dates_provisional,
+                 no_next_step_coverage, strong_week, meetings_without_next_step, quiet_week]
+        label:
+          type: string
+          description: The pattern in words, composed from the stored figures.
+    TeamWeeklyFunnelDeviation:
+      type: object
+      additionalProperties: false
+      description: |
+        One stage where the rep converts differently from the team. Entries and conversions are
+        attributed to the owner at the time of each move. "Converted" is a later move to a won
+        stage or to a later stage, compared by the stage order as it was configured when the
+        week was assembled.
+      required: [pipeline_id, pipeline_name, stage_id, stage_name, rep_entered, rep_converted,
+                 team_entered, team_converted, deviation_bp]
+      properties:
+        pipeline_id: { type: string, format: uuid }
+        pipeline_name: { type: string }
+        stage_id: { type: string, format: uuid }
+        stage_name: { type: string }
+        next_stage_name:
+          type: string
+          description: The stage after this one when the week was assembled; absent for the last.
+        rep_entered: { type: integer, minimum: 0 }
+        rep_converted: { type: integer, minimum: 0 }
+        team_entered: { type: integer, minimum: 0 }
+        team_converted: { type: integer, minimum: 0 }
+        deviation_bp:
+          type: integer
+          minimum: -10000
+          maximum: 10000
+          description: The rep's conversion rate less the team's, in basis points.
+    TeamWeeklyMember:
+      type: object
+      additionalProperties: false
+      required: [user_id, display_name, measured]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string, description: 'What they were called that week.' }
+        measured:
+          type: boolean
+          description: Whether this member's own week was read into the counts.
+    TeamWeeklyQuality:
+      type: object
+      additionalProperties: false
+      description: |
+        How well the team kept the CRM over the week, frozen with it. A figure is absent on a
+        snapshot frozen before it was measured, which is not zero.
+      properties:
+        proposals_accepted: { type: integer, minimum: 0 }
+        proposals_rejected: { type: integer, minimum: 0 }
+        auto_change_reversals:
+          type: integer
+          minimum: 0
+          description: |
+            Changes an agent, a connector or the system made that a member of the team undid
+            inside the week.
+    TeamWeeklyCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        Whether the team's open pipeline covered what one horizon needs, frozen at close. Read as
+        coverage at risk against the named basis, never as a target: the product has none.
+        Exactly one of `basis` and `absent` is present, and the figures only beside a basis.
+      required: [period_kind, base_currency, replan_recommended]
+      properties:
+        period_kind: { type: string, enum: [month, quarter] }
+        basis: { type: string, enum: [manager_call, historical_median] }
+        absent:
+          type: string
+          enum: [insufficient_basis, insufficient_history, not_authorized]
+          description: |
+            Why there is no answer. `not_authorized` is a standing call the member who closed the
+            week could not read, which is not the same as no call.
+        reference_landing_minor: { type: integer, format: int64 }
+        remaining_to_support_minor: { type: integer, format: int64 }
+        needed_open_minor: { type: integer, format: int64 }
+        current_open_minor: { type: integer, format: int64 }
+        coverage_bp: { type: integer, format: int64 }
+        base_currency: { type: string }
+        replan_recommended:
+          type: boolean
+          description: |
+            True when coverage is at risk against a named basis: under 8000 basis points of what
+            the basis needs. Never true without a basis.
+    TeamWeeklyStaleDeal:
+      type: object
+      additionalProperties: false
+      required: [deal_id, deal_name, owner_id, last_activity_at, days_quiet]
+      properties:
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        owner_id: { type: string, format: uuid }
+        last_activity_at: { type: string, format: date-time }
+        days_quiet: { type: integer, minimum: 0 }
 
     WeeklyReviewLearnings:
       type: object

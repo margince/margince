@@ -113,9 +113,13 @@ export const PausedReason: Story = {
       /Restoring the list does not resume it/,
     );
   },
-  render: () => (
-    <StoryProviders>
-      <RulePausedReason automation={configuredAutomations(Date.now())[5]} />
-    </StoryProviders>
-  ),
+  render: () => {
+    const automation = configuredAutomations(Date.now())[5];
+    if (!automation) throw new Error("the fixtures hold no sixth automation");
+    return (
+      <StoryProviders>
+        <RulePausedReason automation={automation} />
+      </StoryProviders>
+    );
+  },
 };

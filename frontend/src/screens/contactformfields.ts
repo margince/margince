@@ -35,7 +35,7 @@ function contactEmailInputs(rows: FormRows) {
   return (rows.emails ?? [])
     .filter((row) => (row.email ?? "").trim().length > 0)
     .map((row, index) => ({
-      email: row.email.trim(),
+      email: (row.email ?? "").trim(),
       email_type: asEmailType(row.email_type),
       is_primary: row.is_primary === "true",
       position: index,
@@ -47,7 +47,7 @@ function contactPhoneInputs(rows: FormRows) {
   return (rows.phones ?? [])
     .filter((row) => (row.phone ?? "").trim().length > 0)
     .map((row, index) => ({
-      phone: row.phone.trim(),
+      phone: (row.phone ?? "").trim(),
       phone_type: asPhoneType(row.phone_type),
       is_primary: row.is_primary === "true",
       position: index,
@@ -66,7 +66,7 @@ export function mapContactBody(
   const emails = contactEmailInputs(rows);
   const phones = contactPhoneInputs(rows);
   return {
-    full_name: values.full_name.trim(),
+    full_name: (values.full_name ?? "").trim(),
     first_name: values.first_name?.trim() || undefined,
     last_name: values.last_name?.trim() || undefined,
     title: values.title?.trim() || undefined,

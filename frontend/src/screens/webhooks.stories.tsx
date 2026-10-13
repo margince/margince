@@ -406,8 +406,9 @@ export const DeliveriesOpenBetweenTwoSubscriptions: Story = {
   // testid alone rejects on the pair rather than picking one. The first row is
   // the one whose log is stubbed.
   play: async () => {
-    const toggles = await screen.findAllByTestId("view-deliveries");
-    await userEvent.click(toggles[0]);
+    const [toggle] = await screen.findAllByTestId("view-deliveries");
+    if (!toggle) throw new Error("the page shows no deliveries toggle");
+    await userEvent.click(toggle);
     await screen.findByTestId("dead-letter-group");
   },
 };

@@ -230,7 +230,9 @@ export const EmptyGroup: Story = {
     const removes = within(canvasElement).getAllByRole("button", {
       name: "Remove City condition",
     });
-    await user.click(removes[removes.length - 1]);
+    const last = removes.at(-1);
+    if (!last) throw new Error("the filter shows no City condition to remove");
+    await user.click(last);
   },
 };
 

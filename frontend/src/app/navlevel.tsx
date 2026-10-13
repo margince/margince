@@ -130,6 +130,8 @@ export function useNavLevel(
   const trail = railTrail(route, section);
   const depth = trail.length - 1;
   const shown = trail[depth];
+  if (shown === undefined)
+    throw new Error("the rail drew no level for this route");
   const parent = depth > 0 ? trail[depth - 1] : undefined;
   // With no shell above it the panel is all there is, so it keeps the walk's
   // memory itself — one lifetime, and no history before it.

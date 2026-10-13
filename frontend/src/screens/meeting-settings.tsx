@@ -352,7 +352,7 @@ function useMeetingCalendar(form: Profile, baseline: Profile) {
         (item.provider === "gcal" || item.provider === "graphcal") &&
         item.status !== "disconnected",
     ) ?? [];
-  const sole = providers.length === 1 ? providers[0].provider : "";
+  const sole = providers.length === 1 ? (providers[0]?.provider ?? "") : "";
   const provider = providers.some((item) => item.provider === form.provider)
     ? form.provider
     : sole === "gcal" || sole === "graphcal"

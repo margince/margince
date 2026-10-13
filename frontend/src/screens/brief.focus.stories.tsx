@@ -69,6 +69,10 @@ function Chosen({
   start,
 }: Readonly<{ rows: WorklistItem[]; start: number }>) {
   const [at, setAt] = useState(start);
+  const lead = rows[at];
+  if (lead === undefined) {
+    return null;
+  }
   return (
     <div id="brief-today">
       {/* The panel's own band, because the card is judged against it: INDIGO,
@@ -83,7 +87,7 @@ function Chosen({
         <Triage
           rows={rows}
           at={at}
-          lead={rows[at]}
+          lead={lead}
           onChoose={(item) => setAt(rows.indexOf(item))}
           onOpenEmail={() => undefined}
           onContext={() => undefined}
