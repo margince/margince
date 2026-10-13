@@ -469,7 +469,7 @@ export const FoldOnlyLinePhone: Story = {
     for (const row of canvasElement.querySelectorAll("tbody tr")) {
       const [line] = cellBox(row, '[data-fold="only"]');
       const others = cellBox(row, 'td:not([data-fold="only"])');
-      await expect(line).toBeDefined();
+      if (!line) throw new Error("the row draws no fold-only line");
       for (const other of others) {
         const beside = other.top < line.bottom && other.bottom > line.top;
         await expect(beside).toBe(false);
