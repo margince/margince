@@ -12,7 +12,8 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "./common";
+import { postMultipart } from "./multipart";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
@@ -47,21 +48,9 @@ function useImportConnections() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (file: File): Promise<ImportSummary> => {
-      // Sent as multipart by hand rather than through the typed client: the
-      // generated client serializes JSON bodies, and this endpoint takes a
-      // file part.
-      const body = new FormData();
-      body.append("file", file);
-      // contract-fetch:allow multipart — see the note above
-      const response = await fetch("/v1/me/linkedin-connections", {
-        method: "POST",
-        body,
-        credentials: "include",
+      const payload = await postMultipart("/v1/me/linkedin-connections", {
+        file,
       });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
       return payload as ImportSummary;
     },
     // An import changes what all three cards on this tab read, and they hold

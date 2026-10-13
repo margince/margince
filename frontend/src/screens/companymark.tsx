@@ -10,8 +10,9 @@ import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "./common";
 import { storeCompany } from "./installationcompany";
+import { postMultipart } from "./multipart";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -132,21 +133,7 @@ function useMarkWrites(
 ) {
   const upload = useMutation({
     mutationFn: async (file: File): Promise<CompanyProfile> => {
-      // Sent as multipart by hand rather than through the typed client: the
-      // generated client serializes JSON bodies, and this endpoint takes a
-      // file part.
-      const body = new FormData();
-      body.append("file", file);
-      // contract-fetch:allow multipart — see the note above
-      const response = await fetch(uploadPath, {
-        method: "POST",
-        body,
-        credentials: "include",
-      });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
+      const payload = await postMultipart(uploadPath, { file });
       return payload as CompanyProfile;
     },
     onSuccess: settle,

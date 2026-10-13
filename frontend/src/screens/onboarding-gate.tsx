@@ -18,7 +18,8 @@ import {
   STAGE_CORE_ID,
 } from "../design-system/onboarding-stage";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatAiRunCost } from "../format/aicost";
+import { formatNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { factFieldLabelKey } from "./factview";
@@ -506,22 +507,10 @@ function pageStatusWord(t: Translate, page: CompanySiteReadPage): string {
 }
 
 function costLine(t: Translate, runtime: AiRunSummary, locale: Locale): string {
-  // Not `formatMoney`: a read costs fractions of a cent and that renders a
-  // stored minor amount at its currency's ISO scale, so two decimals would
-  // round every honest disclosure here to zero. The LOCALE is still the
-  // reader's, from the one table.
-  const money = new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "currency",
-    currency: runtime.currency,
-    // A read costs fractions of a cent, and two decimals would round every
-    // honest disclosure down to zero.
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  });
   return t("ob.scan.costLine", {
     calls: formatNumber(runtime.call_attempts, locale),
     tokens: formatNumber(runtime.tokens_in + runtime.tokens_out, locale),
-    cost: money.format(runtime.estimated_cost_microusd / 1_000_000),
+    cost: formatAiRunCost(runtime.estimated_cost_microusd, locale),
   });
 }
 

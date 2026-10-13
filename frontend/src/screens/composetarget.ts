@@ -124,7 +124,6 @@ export function useConversationSwitch({
       fields: emptyFields(),
       offer: { offeredAddress: undefined, offered: false },
     };
-    fields.draftEpoch.current += 1;
     resetRequests();
     choose(id);
     fields.load(next.fields);

@@ -258,16 +258,19 @@ export function useNarrationQueue({
   }, []);
 
   const pump = useCallback(() => {
-    if (timer.current !== null) return;
-    const next = queue.current.shift();
-    if (!next) return;
-    emit.current(next);
-    // The timer arms even when the queue is now empty: it is the pacing
-    // window for whatever arrives next, not just for the current backlog.
-    timer.current = globalThis.setTimeout(() => {
-      timer.current = null;
-      pump();
-    }, paceMs);
+    const step = () => {
+      if (timer.current !== null) return;
+      const next = queue.current.shift();
+      if (!next) return;
+      emit.current(next);
+      // The timer arms even when the queue is now empty: it is the pacing
+      // window for whatever arrives next, not just for the current backlog.
+      timer.current = globalThis.setTimeout(() => {
+        timer.current = null;
+        step();
+      }, paceMs);
+    };
+    step();
   }, [paceMs]);
 
   const push = useCallback(

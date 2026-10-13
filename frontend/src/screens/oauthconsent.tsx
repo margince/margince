@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { navigate } from "../app/router";
@@ -190,7 +190,7 @@ export function OAuthConsent() {
   const t = useT();
   // Read once per mount: the fragment is the SPA's own address bar for this
   // screen, not a value that changes while it's open.
-  const params = useMemo(fragmentParams, []);
+  const [params] = useState(fragmentParams);
   const clientId = params.get("client_id") ?? "";
   const scope = params.get("scope") ?? "";
   const consent = params.get("consent") ?? "";
