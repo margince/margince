@@ -27,6 +27,13 @@ const (
 	StatusAwaitingApproval = "awaiting_approval"
 )
 
+// A saved session adds a draft before the test run and an end for a run that
+// stopped before it wrote anything: cancelled, superseded or left idle.
+const (
+	StatusPending   = "pending"
+	StatusCancelled = "cancelled"
+)
+
 // RunMapping is what a staged run knows about its source beyond the file
 // itself: which object the rows are, which source column lands in which field,
 // and which column identifies a row.

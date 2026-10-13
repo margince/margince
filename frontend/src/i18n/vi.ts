@@ -5697,6 +5697,7 @@ export const vi = {
   "import.status.failed": "Đã dừng",
   "import.status.undoing": "Đang hoàn tác",
   "import.status.undone": "Đã hoàn tác",
+  "import.status.cancelled": "Đã hủy",
   "import.undoConfirm.title": "Hoàn tác lần nhập này?",
   "import.undoConfirm.confirm": "Hoàn tác lần nhập",
   "import.undoConfirm.order": "Hoàn tác theo thứ tự ngược: {order}.",

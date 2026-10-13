@@ -23475,10 +23475,12 @@ export interface components {
          *     carries the checkpoint it stopped at, and resuming continues from
          *     there rather than re-reading the file from the top. `undoing`/`undone`
          *     (IEM-WIRE-9) are the reversal's own states, reachable only from
-         *     `complete` and only for the `csv` connector.
+         *     `complete` and only for the `csv` connector. `cancelled` ended before
+         *     the run wrote anything: cancelled, superseded by a newer test run of
+         *     its source, or left idle as a draft. Its file is released.
          * @enum {string}
          */
-        ImportRunStatus: "pending" | "validating" | "awaiting_approval" | "running" | "complete" | "failed" | "undoing" | "undone";
+        ImportRunStatus: "pending" | "validating" | "awaiting_approval" | "running" | "complete" | "failed" | "undoing" | "undone" | "cancelled";
         /**
          * @description The result of undoing a committed import run (IEM-WIRE-9; A93). Every
          *     import-created row lands in exactly one of three buckets: reversed,

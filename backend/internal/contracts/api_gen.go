@@ -10438,6 +10438,7 @@ func (e ImportRunConnector) Valid() bool {
 // Defines values for ImportRunStatus.
 const (
 	ImportRunStatusAwaitingApproval ImportRunStatus = "awaiting_approval"
+	ImportRunStatusCancelled        ImportRunStatus = "cancelled"
 	ImportRunStatusComplete         ImportRunStatus = "complete"
 	ImportRunStatusFailed           ImportRunStatus = "failed"
 	ImportRunStatusPending          ImportRunStatus = "pending"
@@ -10451,6 +10452,8 @@ const (
 func (e ImportRunStatus) Valid() bool {
 	switch e {
 	case ImportRunStatusAwaitingApproval:
+		return true
+	case ImportRunStatusCancelled:
 		return true
 	case ImportRunStatusComplete:
 		return true
@@ -36509,7 +36512,9 @@ type ImportRun struct {
 	// carries the checkpoint it stopped at, and resuming continues from
 	// there rather than re-reading the file from the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
 	Status    ImportRunStatus `json:"status"`
 	UpdatedAt time.Time       `json:"updated_at"`
 }
@@ -36644,7 +36649,9 @@ type ImportRunReport struct {
 	// carries the checkpoint it stopped at, and resuming continues from
 	// there rather than re-reading the file from the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
 	Status ImportRunStatus `json:"status"`
 
 	// Undo Present once the run has been undone (`status: undone`, IEM-WIRE-9); absent otherwise.
@@ -36655,7 +36662,9 @@ type ImportRunReport struct {
 // carries the checkpoint it stopped at, and resuming continues from
 // there rather than re-reading the file from the top. `undoing`/`undone`
 // (IEM-WIRE-9) are the reversal's own states, reachable only from
-// `complete` and only for the `csv` connector.
+// `complete` and only for the `csv` connector. `cancelled` ended before
+// the run wrote anything: cancelled, superseded by a newer test run of
+// its source, or left idle as a draft. Its file is released.
 type ImportRunStatus string
 
 // ImportSourceProfile What one uploaded file looks like, plus the mapping proposed for it.
@@ -36814,7 +36823,9 @@ type ImportUndoReport struct {
 	// carries the checkpoint it stopped at, and resuming continues from
 	// there rather than re-reading the file from the top. `undoing`/`undone`
 	// (IEM-WIRE-9) are the reversal's own states, reachable only from
-	// `complete` and only for the `csv` connector.
+	// `complete` and only for the `csv` connector. `cancelled` ended before
+	// the run wrote anything: cancelled, superseded by a newer test run of
+	// its source, or left idle as a draft. Its file is released.
 	Status ImportRunStatus `json:"status"`
 
 	// UpdatesNotReversed Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.

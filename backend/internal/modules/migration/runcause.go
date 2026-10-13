@@ -16,6 +16,9 @@ const (
 	// CauseValidationStopped is a test run that could not finish; nothing was
 	// written, so the way on is a new upload.
 	CauseValidationStopped = "the test run stopped on an error; upload the file again to start a new import"
+	// CauseSuperseded is a run a newer test run of its source replaced. The
+	// import-session migration writes the same text.
+	CauseSuperseded = "a newer test run of this source replaced this one"
 )
 
 func stopCause(cause error) string {

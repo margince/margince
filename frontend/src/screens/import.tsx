@@ -165,6 +165,7 @@ const STATUS_TONE = {
   failed: "danger",
   undoing: "info",
   undone: "default",
+  cancelled: "default",
 } as const satisfies Record<ImportRun["status"], string>;
 
 // The rows a run holds, once a dry run has counted them.

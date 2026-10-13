@@ -5970,6 +5970,7 @@ export const en = {
   "import.status.failed": "Stopped",
   "import.status.undoing": "Undoing",
   "import.status.undone": "Undone",
+  "import.status.cancelled": "Canceled",
   "import.undoConfirm.title": "Undo this import?",
   "import.undoConfirm.confirm": "Undo import",
   "import.undoConfirm.order": "Undo runs in reverse order: {order}.",

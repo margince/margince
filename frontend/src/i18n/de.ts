@@ -5821,6 +5821,7 @@ export const de = {
   "import.status.failed": "Angehalten",
   "import.status.undoing": "Wird rückgängig gemacht",
   "import.status.undone": "Rückgängig gemacht",
+  "import.status.cancelled": "Abgebrochen",
   "import.undoConfirm.title": "Diesen Import rückgängig machen?",
   "import.undoConfirm.confirm": "Import rückgängig machen",
   "import.undoConfirm.order": "Rückgängig in umgekehrter Reihenfolge: {order}.",
