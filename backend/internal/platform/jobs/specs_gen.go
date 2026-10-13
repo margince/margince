@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "1dac3a1a737d902fe0b9791abc290094552b3ea968e2a502ca7a768c06218667"
+const JobContractHash = "b0a693111854420fd319672634886f558210e7120ada3561f8e60b733e0cf6be"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -36,7 +36,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 65 * time.Minute, DerivedFrom: "agentSchedulerPassTimeout"},
 		MaxAttempts:  1,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "AgentScheduler.Interval", ScheduleWhenPositive: "AgentScheduler.Interval"},
+		Cadence:      Cadence{Setting: "installation.agent_runner_interval_seconds"},
 		Registration: Registration{When: []string{"AgentScheduler.Service"}},
 	},
 	"agent_task_retention": {
@@ -79,6 +79,16 @@ var specs = map[string]Spec{
 		MaxAttempts: 1,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 1 * time.Minute},
+	},
+	"ai_price_sync_sweep": {
+		Kind:      "ai_price_sync_sweep",
+		GoType:    "AIPriceSyncSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "rate_refresh",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
 	"approval_auto_apply": {
 		Kind:        "approval_auto_apply",
@@ -264,7 +274,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "CloseDateInterval"},
+		Cadence:   Cadence{Setting: "installation.close_date_sweep_interval_seconds"},
 	},
 	"comms_authz_disagreement": {
 		Kind:      "comms_authz_disagreement",
@@ -399,7 +409,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "ReconcileInterval"},
+		Cadence:   Cadence{Setting: "installation.follow_up_reconcile_interval_seconds"},
 	},
 	"forecast_snapshot_sweep": {
 		Kind:      "forecast_snapshot_sweep",
@@ -428,7 +438,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "Geocoding.BackfillInterval", ScheduleWhenPositive: "Geocoding.BackfillInterval"},
+		Cadence:      Cadence{Setting: "installation.geocode_backfill_interval_seconds", OffAtZero: true},
 		Registration: Registration{When: []string{"Geocoder"}},
 	},
 	"geocode_company": {
@@ -464,7 +474,7 @@ var specs = map[string]Spec{
 		FanOutUnit:   FanOutConnection,
 		FanOutTo:     "gmail_watch_renew_connection",
 		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "GmailWatch.Interval"},
+		Cadence:      Cadence{Setting: "installation.gmail_watch_scan_interval_seconds"},
 		Registration: Registration{When: []string{"GmailRegistry", "GmailWatch.Topic"}},
 	},
 	"gmail_watch_renew_connection": {
@@ -498,7 +508,7 @@ var specs = map[string]Spec{
 		FanOutUnit:   FanOutConnection,
 		FanOutTo:     "graph_watch_renew_connection",
 		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{OperatorField: "GraphWatch.Interval", ScheduleWhenPositive: "GraphWatch.Interval"},
+		Cadence:      Cadence{Setting: "installation.graph_watch_scan_interval_seconds"},
 		Registration: Registration{When: []string{"GmailRegistry.OffersGraph", "GraphWatch.NotificationURL"}},
 	},
 	"graph_watch_renew_connection": {
@@ -521,6 +531,35 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"import_commit": {
+		Kind:      "import_commit",
+		GoType:    "ImportCommitArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a failed row, an over-budget slice and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"import_run_sweep": {
+		Kind:      "import_run_sweep",
+		GoType:    "ImportRunSweepArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
+	},
+	"import_undo": {
+		Kind:      "import_undo",
+		GoType:    "ImportUndoArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: an undo that stops stays undoing with its cause and its cursor, and a lost fence is a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
 	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",
@@ -642,7 +681,7 @@ var specs = map[string]Spec{
 		Timeout:     TimeoutPolicy{Fixed: 26300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
-		Cadence:     Cadence{OperatorField: "PrivacyRetention.Interval", ScheduleWhenPositive: "PrivacyRetention.Interval"},
+		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
 	},
 	"provider_lookup_sweep": {
 		Kind:         "provider_lookup_sweep",
@@ -712,10 +751,10 @@ var specs = map[string]Spec{
 		GoType:       "SiteDeepReadArgs",
 		Role:         Worker,
 		Queue:        "deep_read",
-		Timeout:      TimeoutPolicy{OperatorField: "DeepReadCaps"},
+		Timeout:      TimeoutPolicy{Fixed: 830 * time.Second, DerivedFrom: "deepReadTimeout"},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
-		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "CompanyID"}, {Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the installation's own. The worker clamps it against the page limit an admin set, so it can only ever narrow it, and a crawl budget states nothing about a subject."}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
 	},
 	"stage_evidence_read": {
 		Kind:         "stage_evidence_read",
@@ -738,6 +777,27 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{Fixed: 1 * time.Hour},
 		Registration: Registration{When: []string{"Blobstore"}},
 	},
+	"suppression_journal_export": {
+		Kind:         "suppression_journal_export",
+		GoType:       "SuppressionJournalArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Hour},
+		Registration: Registration{When: []string{"Blobstore"}},
+	},
+	"tag_scout": {
+		Kind:      "tag_scout",
+		GoType:    "TagScoutArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
 	"technical_enrich_backfill": {
 		Kind:         "technical_enrich_backfill",
 		GoType:       "TechnicalEnrichBackfillArgs",
@@ -746,7 +806,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "TechnicalEnrichment.BackfillInterval", ScheduleWhenPositive: "TechnicalEnrichment.BackfillInterval"},
+		Cadence:      Cadence{Setting: "installation.technical_backfill_interval_seconds", OffAtZero: true},
 		Registration: Registration{When: []string{"TechnicalEnricher"}},
 	},
 	"technical_enrich_company": {
@@ -800,7 +860,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{OperatorField: "TimeScanInterval"},
+		Cadence:   Cadence{Setting: "installation.time_scan_interval_seconds"},
 	},
 	"transcript_propose": {
 		Kind:         "transcript_propose",
@@ -845,6 +905,16 @@ var specs = map[string]Spec{
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 15 * time.Minute},
 	},
+	"waiting_horizon_refresh": {
+		Kind:        "waiting_horizon_refresh",
+		GoType:      "WaitingHorizonRefreshArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
 	"webhook_retry": {
 		Kind:         "webhook_retry",
 		GoType:       "WebhookRetryArgs",
@@ -853,7 +923,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 1580 * time.Second, DerivedFrom: "webhookRetrySweepTimeout"},
 		MaxAttempts:  3,
 		OptsOwner:    OptsArgs,
-		Cadence:      Cadence{OperatorField: "WebhookRetry.Interval", ScheduleWhenPositive: "WebhookRetry.Interval"},
+		Cadence:      Cadence{Setting: "installation.webhook_retry_interval_seconds"},
 		Registration: Registration{When: []string{"WebhookRetry.Deliverer"}},
 	},
 	"weekly_review_generate": {
@@ -880,6 +950,7 @@ var queues = map[string]int{
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
+	"import_write":      1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { Callout } from "../design-system/callout";
+import { PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 
@@ -35,27 +36,29 @@ export function DeadWorkCallout({ health }: Readonly<{ health: JobHealth }>) {
     // work does not resume on its own. An `event` would be mentioned
     // quietly; this one interrupts, because the reader has to act on it and
     // nothing else on the page says so again.
-    <Callout
-      tone="danger"
-      kind="event"
-      live="alert"
-      title={plural("jobs.deadTitle", recent, {
-        count: formatNumber(recent, locale),
-        hours: formatNumber(health.dead_window_hours, locale),
-      })}
-    >
-      <p>
-        {plural("jobs.deadBody", recent, {
+    <PanelBody>
+      <Callout
+        tone="danger"
+        kind="event"
+        live="alert"
+        title={plural("jobs.deadTitle", recent, {
           count: formatNumber(recent, locale),
+          hours: formatNumber(health.dead_window_hours, locale),
         })}
-      </p>
-      {/* Only when the two differ: "531 recently, 531 this week" is a
-              sentence that reads as a second alarm rather than as context. */}
-      {dead > recent && (
-        <p className="t-sub">
-          {t("jobs.deadTotal", { count: formatNumber(dead, locale) })}
+      >
+        <p>
+          {plural("jobs.deadBody", recent, {
+            count: formatNumber(recent, locale),
+          })}
         </p>
-      )}
-    </Callout>
+        {/* Only when the two differ: "531 recently, 531 this week" is a
+              sentence that reads as a second alarm rather than as context. */}
+        {dead > recent && (
+          <p className="t-sub">
+            {t("jobs.deadTotal", { count: formatNumber(dead, locale) })}
+          </p>
+        )}
+      </Callout>
+    </PanelBody>
   );
 }

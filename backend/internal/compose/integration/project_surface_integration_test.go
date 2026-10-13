@@ -15,6 +15,7 @@ package integration
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -135,21 +136,11 @@ func TestBothPagesNameTheProjectsSectionWhenTheCallerLacksTheGrant(t *testing.T)
 }
 
 func containsCompanySection(names []crmcontracts.Company360SectionsOmitted, want crmcontracts.Company360SectionsOmitted) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 func containsContactSection(names []crmcontracts.Contact360SectionsOmitted, want crmcontracts.Contact360SectionsOmitted) bool {
-	for _, name := range names {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, want)
 }
 
 // A contact is part of a project through a seat on it, or through the company
@@ -250,7 +241,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 	// floor, no model lane) and a project of another company is refused as
 	// a field error rather than grounding this account's draft in it.
 	draft := accountdraft.NewService(svc, nil)
-	if _, err := draft.Draft(e.Admin(), companyIDOf(f.company), req); err != nil {
+	if _, _, err := draft.Draft(e.Admin(), companyIDOf(f.company), req); err != nil {
 		t.Fatalf("draft scoped to the account's own project: %v", err)
 	}
 	elsewhere := e.SeedCompany(t, "Other GmbH", &e.Rep1)
@@ -261,7 +252,7 @@ func TestAccountDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Fatalf("create the other company's project: %v", err)
 	}
 	foreignID := projectIDOf(ids.UUID(foreign.Id))
-	_, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{ContactID: f.contact.String(), ProjectID: &foreignID})
+	_, _, err = draft.Draft(e.Admin(), companyIDOf(f.company), accountdraft.Request{ContactID: f.contact.String(), ProjectID: &foreignID})
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != 422 {
 		t.Errorf("draft scoped to another company's project: err = %v, want a 422 naming project_id", err)
@@ -315,7 +306,7 @@ func TestContactDraftScopedToAProjectGroundsOnItAndNotTheOther(t *testing.T) {
 		t.Error("an unscoped fold lost the other engagement's mail, so the scoped absence proves nothing")
 	}
 
-	if _, err := contactdraft.NewService(svc, nil).Draft(e.Admin(), contactID, contactdraft.Request{ProjectID: &f.erp}); err != nil {
+	if _, _, err := contactdraft.NewService(svc, nil).Draft(e.Admin(), contactID, contactdraft.Request{ProjectID: &f.erp}); err != nil {
 		t.Fatalf("draft scoped to a project the contact is part of: %v", err)
 	}
 }
@@ -359,7 +350,7 @@ func TestLoggingAnActivityWithAContactAndAProjectLinkWritesBothAndTheEvidence(t 
 	f := seedTwoEngagementAccount(t, e)
 	subject := "Cutover date confirmed"
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "email", Direction: StrPtr("outbound"), Subject: &subject,
+		Kind: "email", Direction: new("outbound"), Subject: &subject,
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "contact", EntityID: f.contact},
 			{EntityType: "project", EntityID: f.erp.UUID},

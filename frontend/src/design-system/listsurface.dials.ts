@@ -19,15 +19,38 @@ export type ListChip = {
   allLabel: string;
   options: readonly { value: string; label: string }[];
   /**
-   * A relation filter too large to list whole (a workspace's companies): when
-   * present, the value step searches this instead of walking `options`. The
-   * "all" entry still clears the filter, and `options` stays required so a
-   * chip declared without `search` needs no separate shape.
+   * A list long enough to need a box that narrows it by name (every colleague
+   * in the workspace). Unlike `search`, every option is drawn before typing.
    */
-  search?: (
-    query: string,
-  ) => Promise<readonly { value: string; label: string }[]>;
-};
+  filterable?: boolean;
+  /**
+   * Query parameters another dial owns that this one cannot be combined with:
+   * picking a value here removes them. The owner and team dials name rows two
+   * ways, and the server refuses both at once.
+   */
+  excludes?: readonly string[];
+} & (
+  | { search?: undefined; appliedName?: undefined }
+  | {
+      /**
+       * A relation filter too large to list whole (a workspace's companies):
+       * the value step searches this instead of walking `options`. The "all"
+       * entry still clears the filter, and `options` stays required so a chip
+       * declared without `search` needs no separate shape.
+       */
+      search: (
+        query: string,
+      ) => Promise<readonly { value: string; label: string }[]>;
+      /**
+       * What to call the value now applied when nobody picked it in this
+       * session, one that arrived in an address. A searched chip has no
+       * `options` to look it up in, so the caller reads the name and hands it
+       * over (`undefined` falls back to the id). The key is required beside
+       * `search`, so a chip that can be searched always says how it is read back.
+       */
+      appliedName: string | undefined;
+    }
+);
 
 /** A saved view: a named tab whose meaning is entirely the caller's. */
 export type ListView = {

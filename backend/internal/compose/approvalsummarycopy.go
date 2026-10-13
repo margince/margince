@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -224,7 +225,7 @@ func approvalSummaryCopyFor(lang textlang.Lang) approvalSummaryCopy {
 
 // approvalSummaryCopyIn is the set for a stager already inside a transaction.
 func approvalSummaryCopyIn(ctx context.Context, tx pgx.Tx) approvalSummaryCopy {
-	return approvalSummaryCopyFor(baseLanguageForSummary(ctx, tx))
+	return approvalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
 }
 
 // approvalSummaryCopyOver is the set for a stager holding only the pool.

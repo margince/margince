@@ -77,8 +77,14 @@ var (
 	RuleWellbeingOpener = Rule{"wellbeing-opener", Style}
 	RuleMixedRegister   = Rule{"mixed-register", Style}
 	RuleUnbrokenBlock   = Rule{"unbroken-block", Style}
+	RuleMissingGreeting = Rule{"missing-greeting", Style}
 	RuleEmptySubject    = Rule{"empty-subject", Style}
 	RuleLongSubject     = Rule{"long-subject", Style}
+	// A wrong greeting is Style although it misnames the recipient. The floor
+	// replaces it whatever the retry returns, so a claim it cannot repair
+	// must outrank it.
+	RuleWrongAddressee   = Rule{"wrong-addressee", Style}
+	RuleGreetingLanguage = Rule{"greeting-language", Style}
 )
 
 // Worst is the severity of the most serious finding present, and false when

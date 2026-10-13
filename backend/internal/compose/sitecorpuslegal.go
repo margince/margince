@@ -10,6 +10,7 @@ package compose
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -169,10 +170,13 @@ func matchingLegalEntity(existing []corpusLegalEntity, candidate corpusLegalEnti
 // sameLegalEntity answers the pair. A shared identifier is decisive whatever
 // the names say; otherwise the printed name decides, and only while that name
 // stands for ONE identity.
+//
+// That identifier is the registry number alone. A VAT group shares one number,
+// so folding on it dropped a second company from the choice a human is offered.
 func sameLegalEntity(entity, candidate corpusLegalEntity, contested map[string]bool) bool {
 	register, candidateRegister := normalizeEvidence(entity.RegisterNumber), normalizeEvidence(candidate.RegisterNumber)
 	vat, candidateVat := normalizeEvidence(entity.VatNumber), normalizeEvidence(candidate.VatNumber)
-	if sameLegalIdentifier(register, candidateRegister) || sameLegalIdentifier(vat, candidateVat) {
+	if sameLegalIdentifier(register, candidateRegister) {
 		return true
 	}
 	name := legalEntityNameKey(candidate.Name)
@@ -235,13 +239,8 @@ func removeBrandOnlyLegalAliases(entities []corpusLegalEntity) []corpusLegalEnti
 				if i == j || legalEntityNameKey(richer.Name) == key {
 					continue
 				}
-				for _, token := range strings.Fields(legalEntityNameKey(richer.Name)) {
-					if token == key {
-						dropAlias = true
-						break
-					}
-				}
-				if dropAlias {
+				if slices.Contains(strings.Fields(legalEntityNameKey(richer.Name)), key) {
+					dropAlias = true
 					break
 				}
 			}
@@ -314,6 +313,11 @@ func fillLegalTrioFromCensus(fields []evidencedField, entities []corpusLegalEnti
 		return fields
 	}
 	entity := entities[0]
+	// Kept in the census for the abstention count, but with its evidence block
+	// refused there is nothing to cite, and the profile refuses a field without.
+	if strings.TrimSpace(entity.EvidenceSnippet) == "" {
+		return fields
+	}
 	// Only a legal page speaks for legal identity — the same authority test
 	// applyLegalGate applies, so a census sighting from anywhere else cannot
 	// enter through this door either.
@@ -486,7 +490,7 @@ func legalAuthorityPage(rawURL string) bool {
 		return false
 	}
 	depth := 0
-	for _, segment := range strings.Split(parsed.Path, "/") {
+	for segment := range strings.SplitSeq(parsed.Path, "/") {
 		if segment != "" {
 			depth++
 		}

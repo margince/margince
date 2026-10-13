@@ -10,7 +10,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -36,46 +35,27 @@ func (w *csvWriters) Reverse(
 	// puts the question in the same transaction as the write, since that check
 	// and this write are different transactions and a human can act between them.
 	untouched := contacts.NotTouchedByHumanSince(importedAt)
+	archived, err := w.isArchived(ctx, object, nativeID)
+	if err != nil {
+		return fmt.Errorf("import undo: reading %s %s: %w", object, nativeID, err)
+	}
+	if archived {
+		return nil
+	}
 	switch object {
 	case migration.ObjectLead:
-		lead, err := w.contacts.GetLead(ctx, ids.From[ids.LeadKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading lead %s: %w", nativeID, err)
-		}
-		if lead.ArchivedAt != nil {
-			return nil
-		}
-		if _, err := w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched); err != nil {
-			return fmt.Errorf("import undo: reversing lead %s: %w", nativeID, err)
-		}
-		return nil
+		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched)
 	case migration.ObjectCompany:
-		company, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading company %s: %w", nativeID, err)
-		}
-		if company.ArchivedAt != nil {
-			return nil
-		}
-		if _, err := w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched); err != nil {
-			return fmt.Errorf("import undo: reversing company %s: %w", nativeID, err)
-		}
-		return nil
+		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched)
 	case migration.ObjectContact:
-		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](nativeID), storekit.IncludeArchived)
-		if err != nil {
-			return fmt.Errorf("import undo: reading contact %s: %w", nativeID, err)
-		}
-		if contact.ArchivedAt != nil {
-			return nil
-		}
-		// The archive cascades to contact_email, contact_phone and the contact's
+		// The archive cascades to the contact's addresses, numbers and
 		// relationships, so the child rows this run created go with it.
-		if _, err := w.contacts.ArchiveContact(ctx, ids.From[ids.ContactKind](nativeID), nil, untouched); err != nil {
-			return fmt.Errorf("import undo: reversing contact %s: %w", nativeID, err)
-		}
-		return nil
+		_, err = w.contacts.ArchiveContact(ctx, ids.From[ids.ContactKind](nativeID), nil, untouched)
 	default:
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}
+	if err != nil {
+		return fmt.Errorf("import undo: reversing %s %s: %w", object, nativeID, err)
+	}
+	return nil
 }

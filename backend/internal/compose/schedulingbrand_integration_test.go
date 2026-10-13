@@ -151,8 +151,8 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 	blob := blobstore.NewMemory()
 	uploadMark(t, e, companyHandlers{store: e.Contacts, blob: blob}, logoFixture(t, 400, 100), "logo.png")
 	vault := keyvault.NewMemory()
-	now := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
-	store := e.Activities.WithClock(func() time.Time { return now }).WithPublicBaseURL("https://crm.example.test").WithMeetingVault(vault).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
+	// The public route reads expiry on the server's clock, so the proposal must be minted on it too.
+	store := e.Activities.WithPublicBaseURL("https://crm.example.test").WithMeetingVault(vault).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
 	if _, err := store.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{Provider: "gcal", CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30, Title: "Discovery"}); err != nil {
 		t.Fatal(err)
 	}

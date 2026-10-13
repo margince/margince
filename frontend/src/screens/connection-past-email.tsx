@@ -3,13 +3,14 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useDrawsImportRun } from "../app/import-onscreen";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Meter } from "../design-system/readings";
 import { formatDuration, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useDrawsImportRun } from "../lib/import-onscreen";
+import { problemMessageOf } from "../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
   isImportWindow,
@@ -17,7 +18,6 @@ import {
 import { EstimateCard } from "./backfill";
 import { type ImportWindow, useBackfillRun } from "./backfill-run";
 import { canResume, runReading } from "./backfillrunview";
-import { problemMessageOf } from "./common";
 
 // The Past email service of a connected mailbox: the import of mail from before
 // it was connected. A connect asks for a window; a small one starts on its own,

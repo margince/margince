@@ -25,3 +25,13 @@
 .signinmethods-line-missing {
   color: var(--warningText);
 }
+
+/* One width for every row's role, so the column reads straight down. On a
+   folded row it sits on the caption line and keeps a control's type there. */
+.select-control.group-grants-role {
+  inline-size: 14rem;
+  max-inline-size: 100%;
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}

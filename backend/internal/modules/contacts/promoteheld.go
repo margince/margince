@@ -106,7 +106,7 @@ func (s *Store) promoteHeldLeadTx(ctx context.Context, tx pgx.Tx, leadID ids.Lea
 	if _, err := tx.Exec(ctx, "SAVEPOINT promote_held_lead"); err != nil {
 		return fmt.Errorf("contacts: savepoint before promoting a held lead: %w", err)
 	}
-	out, err := s.promoteLeadTx(ctx, tx, leadID, in, by, nil)
+	out, err := s.promoteLeadTx(ctx, tx, leadID, in, by, nil, contactID)
 	if err == nil && (!out.Merged || ids.UUID(out.Contact.Id) != contactID.UUID) {
 		err = apperrors.ErrConflict
 	}

@@ -24,10 +24,12 @@ package mailmap
 // of them through.
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/emersion/go-message/mail"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarmethod"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -130,3 +132,110 @@ func participantExclusion(counterparty string, calendarNotice bool) string {
 	}
 	return counterparty
 }
+
+// calendarPart is what the MIME walk learns about a message's calendar parts.
+type calendarPart struct {
+	present bool
+	parts   []partMethods
+}
+
+// partMethods is what one calendar part declares: the known methods its
+// Content-Type and its body name, and whether the two disagree.
+type partMethods struct {
+	methods  []string
+	disputed bool
+}
+
+// see records one calendar part. A part whose bytes the collector refused names
+// no method: its header alone is a claim nothing else can check.
+func (c *calendarPart) see(params map[string]string, body []byte) {
+	c.present = true
+	if body == nil {
+		return
+	}
+	c.parts = append(c.parts, declaredMethods(params, body))
+}
+
+// method is the message's calendar method, resolved against the sender. It is
+// a response only when every part names one and no part contradicts itself;
+// otherwise the first non-response method wins, or none.
+func (c calendarPart) method() string {
+	response := len(c.parts) > 0
+	firstResponse, firstOther := "", ""
+	for _, part := range c.parts {
+		if part.disputed || len(part.methods) == 0 {
+			response = false
+		}
+		for _, method := range part.methods {
+			switch {
+			case !calendarmethod.IsResponse(method):
+				response = false
+				firstOther = cmp.Or(firstOther, method)
+			case firstResponse == "":
+				firstResponse = method
+			}
+		}
+	}
+	if response {
+		return firstResponse
+	}
+	return firstOther
+}
+
+// declaredMethods reads one part's Content-Type method parameter and the
+// unfolded METHOD line inside its BEGIN:VCALENDAR. RFC 6047 requires the two to
+// match, so a mismatch, or a value the RFC does not define, disputes the part.
+func declaredMethods(params map[string]string, body []byte) partMethods {
+	var out partMethods
+	declare := func(raw string) {
+		method := calendarmethod.Known(raw)
+		if method == "" {
+			out.disputed = true
+			return
+		}
+		if len(out.methods) > 0 && out.methods[0] != method {
+			out.disputed = true
+		}
+		out.methods = append(out.methods, method)
+	}
+	if raw, ok := params["method"]; ok {
+		declare(raw)
+	}
+	if raw, ok := bodyMethod(body); ok {
+		declare(raw)
+	}
+	return out
+}
+
+// bodyMethod is the raw value of the first METHOD property inside a VCALENDAR.
+func bodyMethod(body []byte) (string, bool) {
+	inCalendar := false
+	for _, line := range unfoldICalendar(body) {
+		name, value, found := strings.Cut(line, ":")
+		if !found {
+			continue
+		}
+		// A property name may carry parameters after a semicolon.
+		name, _, _ = strings.Cut(name, ";")
+		switch {
+		case strings.EqualFold(name, "BEGIN") && strings.EqualFold(strings.TrimSpace(value), "VCALENDAR"):
+			inCalendar = true
+		case inCalendar && strings.EqualFold(name, "METHOD"):
+			return value, true
+		}
+	}
+	return "", false
+}
+
+// unfoldICalendar splits iCalendar text into logical lines. RFC 5545 folds a
+// long line by a line break followed by one space or tab, which unfolding drops.
+func unfoldICalendar(body []byte) []string {
+	text := strings.ReplaceAll(string(body), "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\n ", "")
+	text = strings.ReplaceAll(text, "\n\t", "")
+	return strings.Split(text, "\n")
+}
+
+// CalendarMethod is the iCalendar METHOD this message's calendar parts declared,
+// resolved against the sender, or "" when they declared none.
+func (m Message) CalendarMethod() string { return m.calendarMethod }

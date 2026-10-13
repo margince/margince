@@ -18,8 +18,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordWriteRefusal } from "../app/capability";
-import { navigate, navigateReplacing } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
@@ -28,14 +26,12 @@ import { useToast } from "../design-system/toast";
 import { VisibilityBadge } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  isVersionSkewOf,
-  problemMessageOf,
-  throwProblem,
-  useViewerId,
-} from "./common";
+import { useRecordWriteRefusal } from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigate, navigateReplacing } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
-import { memberName, useRosterNames } from "./roster";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -117,8 +113,7 @@ export function RecordAccess({
   });
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
-  const failure = (error: unknown) =>
-    isVersionSkewOf(error) ? t("edit.versionSkew") : problemMessageOf(error, t);
+  const failure = (error: unknown) => problemMessageOf(error, t);
   const setVisibility = useMutation({
     // Every value the write needs is a VARIABLE, never a closure over the
     // render that drew the control: a click landing between the commit and the
@@ -135,13 +130,12 @@ export function RecordAccess({
       mayLoseAccess: boolean;
     }) => {
       const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
-      const { error } = await api.PATCH(path, {
-        params: { path: { id }, ...ifMatch(requireVersion(version)) },
-        body: { visibility },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH(path, {
+          params: { path: { id }, ...ifMatch(requireVersion(version)) },
+          body: { visibility },
+        }),
+      );
     },
     // The toast as well as the line in the panel, because the panel may be
     // closed by the time the refusal arrives.
@@ -355,9 +349,9 @@ function useAudienceSentence(
   const isPrivate = record.visibility === "owner";
   const ownerId = record.owner_id ?? undefined;
   const yours = viewerId !== undefined && ownerId === viewerId;
-  // The cache entry the facts strip already names the owner from, so this
-  // costs no request on either record page.
-  const roster = useRosterNames("user", isPrivate && !yours && !!ownerId);
+  // Named by id, batched with the facts strip's own request for the same
+  // owner within the same tick, so this costs no extra round trip.
+  const name = useMemberName(isPrivate && !yours ? ownerId : null);
   if (!record.visibility) {
     return undefined;
   }
@@ -367,6 +361,7 @@ function useAudienceSentence(
   if (yours) {
     return t(copy.privateYours);
   }
-  const owner = ownerId && memberName(roster.data, ownerId);
-  return owner ? t(copy.privateOf, { owner }) : t(copy.privateOfOwner);
+  return name.data != null
+    ? t(copy.privateOf, { owner: name.data })
+    : t(copy.privateOfOwner);
 }

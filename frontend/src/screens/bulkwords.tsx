@@ -5,10 +5,12 @@
 // record's state before and after. Kept apart from the dialog so a new verb is
 // taught its words here, in one place.
 
+import type { QueryKey } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { CLAIM_SETTLED_KEYS } from "./activitykeys";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
 import { OwnerName } from "./entityref";
 
@@ -24,6 +26,8 @@ export type RecordKind = Readonly<{
   unit: MessageKey;
   done: PluralBase;
   undone: PluralBase;
+  /** Further reads the change leaves stale beyond the record's own. */
+  stale?: readonly QueryKey[];
 }>;
 
 export const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
@@ -55,6 +59,17 @@ export const RECORD_KINDS: Readonly<Record<BulkRecordType, RecordKind>> = {
     done: "bulk.doneLeads",
     undone: "bulk.undoneLeads",
   },
+  // A task or a promise on the Worklist. The task's own reads sit under
+  // ["activity", id], and the Worklist under its own key.
+  worklist_item: {
+    list: "worklist",
+    record: "activity",
+    unit: "unit.worklistItems",
+    done: "bulk.doneWorklistItems",
+    undone: "bulk.undoneWorklistItems",
+    // A promise row is a claim, which the contact and deal pages list too.
+    stale: CLAIM_SETTLED_KEYS,
+  },
 };
 
 export function isListVerb(verb: BulkVerb): boolean {
@@ -81,8 +96,11 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
 };
 
 // `no_change` means what the verb could not change: the owner, the Shortlist
-// membership or the tag was already as asked.
+// membership, the tag or the done state was already as asked.
 function noChangeReason(verb: BulkVerb): MessageKey {
+  if (verb === "complete") {
+    return "bulk.reason.no_change_done";
+  }
   if (isListVerb(verb)) {
     return "bulk.reason.no_change_list";
   }
@@ -151,6 +169,11 @@ export function SampleState({
       </span>
     );
   }
+  if (verb === "complete") {
+    return (
+      <span>{state.done ? t("bulk.stateDone") : t("bulk.stateOpen")}</span>
+    );
+  }
   return state.archived ? (
     <Badge tone="warning">{t("record.archived")}</Badge>
   ) : (
@@ -164,7 +187,8 @@ type DialogWords = Readonly<{
   danger: boolean;
 }>;
 
-// The words of a verb that writes beside the record: a Shortlist, a tag, a task.
+// The words of a verb that writes beside the record — a Shortlist, a tag, a
+// task — or marks a Worklist item done.
 function besideWords(
   request: BulkChangeRequest,
   unit: string,
@@ -201,6 +225,12 @@ function besideWords(
       return {
         title: t("bulk.titleCreateTask", { unit }),
         confirm: t("bulk.confirmCreateTask"),
+        danger: false,
+      };
+    case "complete":
+      return {
+        title: t("bulk.titleComplete", { unit }),
+        confirm: t("bulk.confirmComplete"),
         danger: false,
       };
     default:

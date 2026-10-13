@@ -12,6 +12,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
+import { ACCOUNT_NAME, type AccountVendor } from "../format/connectorprovider";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -34,7 +35,6 @@ import {
   type Step,
 } from "./connect-flow-draft";
 import { StepTrail } from "./connect-flow-trail";
-import { ACCOUNT_NAME, type AccountVendor } from "./connectorproviders";
 import "./connect-flow.css";
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
@@ -157,7 +157,7 @@ export function ConnectFlow({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading
         size="large"
         id={headingId}

@@ -5,7 +5,7 @@
 
 package gates
 
-// A mask is conditioned only where the condition can be ANSWERED.
+// A mask is conditioned only where the condition can be answered.
 //
 // MaskOutsideWriteAuthority resolves through auth.WritableSubset, which needs
 // an owner and a grant — things only a shareable record's rows carry. Named on
@@ -20,6 +20,7 @@ package gates
 // off a mask no condition lifts.
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -77,7 +78,7 @@ func TestACrossObjectGroupHangsOffAMaskNoConditionLifts(t *testing.T) {
 // nothing — a sweep over an empty closure agrees with any group at all.
 func crossingsOnLiftableObjects(crossings map[string][]string, answerable func(string) bool) ([]string, error) {
 	if len(crossings) == 0 {
-		return nil, fmt.Errorf("the closure crosses no object, so this rule holds nothing")
+		return nil, errors.New("the closure crosses no object, so this rule holds nothing")
 	}
 	var liftable []string
 	for configured, consequences := range crossings {

@@ -8,6 +8,7 @@ package capturemetrics
 
 import (
 	"io"
+	"maps"
 	"sort"
 
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -78,9 +79,7 @@ func (c *collector) snapshot() snapshot {
 
 func copyMap[K comparable, V any](source map[K]V) map[K]V {
 	out := make(map[K]V, len(source))
-	for k, v := range source {
-		out[k] = v
-	}
+	maps.Copy(out, source)
 	return out
 }
 

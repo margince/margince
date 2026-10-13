@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "./company.fixtures";
 import {
   OAuthAppDrawer,
@@ -226,50 +226,6 @@ describe("removing an app", () => {
 // The table an operator copies from into the vendor's console. Drawn through
 // the setup drawer, the surface it is read on.
 describe("the redirect address table", () => {
-  it("copies every address at once, one per line", async () => {
-    const user = userEvent.setup();
-    mount(stored(), "google", { view: "drawer" });
-    await screen.findByText(SIGN_IN_URI);
-    const clipboard = stubClipboard("accepts");
-
-    await user.click(screen.getByRole("button", { name: "Copy all" }));
-
-    expect(clipboard.written).toEqual([`${SIGN_IN_URI}\n${CONNECT_URI}`]);
-    expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
-  });
-
-  // Copy all and a row write the same one-slot clipboard, so pressing a row
-  // after Copy all takes the claim away from Copy all.
-  it("moves the Copied claim from Copy all to the row copied after it", async () => {
-    const user = userEvent.setup();
-    mount(stored(), "google", { view: "drawer" });
-    await screen.findByText(SIGN_IN_URI);
-    stubClipboard("accepts");
-
-    await user.click(screen.getByRole("button", { name: "Copy all" }));
-    await screen.findByRole("button", { name: "Copied" });
-    await user.click(
-      screen.getByRole("button", { name: "Copy the Sign-in address" }),
-    );
-
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Copy all" })).toBeTruthy(),
-    );
-    expect(screen.getAllByRole("button", { name: "Copied" })).toHaveLength(1);
-  });
-
-  it("says the clipboard refused Copy all, and how to copy by hand", async () => {
-    const user = userEvent.setup();
-    mount(stored(), "google", { view: "drawer" });
-    await screen.findByText(SIGN_IN_URI);
-    stubClipboard("absent");
-
-    await user.click(screen.getByRole("button", { name: "Copy all" }));
-
-    expect(await screen.findByText(/clipboard access denied/i)).toBeTruthy();
-    expect(screen.getByText(/copy it manually/i)).toBeTruthy();
-  });
-
   // A row's copy control used to guard a missing clipboard and return, so on a
   // plain-http deployment it did nothing and an empty address got pasted.
   it("says the clipboard refused a row rather than leaving a dead button", async () => {
@@ -296,13 +252,15 @@ describe("the redirect address table", () => {
     await user.click(
       screen.getByRole("button", { name: "Copy the Sign-in address" }),
     );
-    await screen.findByRole("button", { name: "Copied" });
+    await screen.findByRole("button", { name: "Copied Sign-in URI" });
     await user.click(
       screen.getByRole("button", { name: "Copy the Mail connector address" }),
     );
 
     await waitFor(() =>
-      expect(screen.getAllByRole("button", { name: "Copied" })).toHaveLength(1),
+      expect(screen.getAllByRole("button", { name: /^Copied / })).toHaveLength(
+        1,
+      ),
     );
     expect(
       screen.getByRole("button", { name: "Copy the Sign-in address" }),
@@ -421,7 +379,7 @@ describe("the app setup drawer", () => {
     });
     const id = await screen.findByLabelText<HTMLInputElement>("Client ID");
     await waitFor(() => expect(id.value).toBe(ENTRA_ID));
-    expect(screen.getByLabelText<HTMLInputElement>("Directory ID").value).toBe(
+    expect(screen.getByLabelText<HTMLInputElement>("Directory (tenant) ID").value).toBe(
       DIRECTORY,
     );
     await user.type(screen.getByLabelText("Client secret"), "rotated");
@@ -478,7 +436,7 @@ describe("the app setup drawer", () => {
       view: "drawer",
     });
     const directory =
-      await screen.findByLabelText<HTMLInputElement>("Directory ID");
+      await screen.findByLabelText<HTMLInputElement>("Directory (tenant) ID");
     await waitFor(() => expect(directory.value).toBe(DIRECTORY));
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.clear(directory);
@@ -493,6 +451,6 @@ describe("the app setup drawer", () => {
   it("asks for a directory only for Microsoft", async () => {
     mount(absent(), "google", { view: "drawer" });
     await screen.findByLabelText("Client ID");
-    expect(screen.queryByLabelText("Directory ID")).toBeNull();
+    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
   });
 });

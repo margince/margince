@@ -5,9 +5,8 @@
 
 package gates
 
-// The enum-vocabulary sync as a fitness function: where domain logic
-// branches on a typed Go enum, its constant set must equal the schema's
-// CHECK (col IN (...)) set for the column it mirrors. The valid set
+// Where domain logic branches on a typed Go enum, its constant set equals the
+// schema's CHECK (col IN (...)) set for the column it mirrors. The valid set
 // living only in the DB is how a typo'd Go literal compiles and
 // misbehaves silently; a Go set drifting from the CHECK is how a valid
 // value 500s at insert. This gate pins the two spellings together —
@@ -49,6 +48,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"extension_ingest_refusal.refusal": {"pkg/extension", "RecordRefusal"},
 	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
+	"ai_model_rate.source":             {"internal/modules/ai", "RateSource"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
 	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
 	"consent_purpose.class":            {"internal/modules/consent", "Class"},
@@ -99,29 +99,31 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// to do with each other, and a gate that bound those would fail the day one
 	// of them legitimately moved. The pairs below are the ones where the schema
 	// NAMES the column's concept, which is a judgement a scan cannot make.
-	"activity.audience":               {"internal/contracts", "ActivityAudience"},
-	"capture_exclusion.kind":          {"internal/contracts", "CaptureExclusionKind"},
-	"capture_exclusion.scope":         {"internal/contracts", "CaptureExclusionScope"},
-	"capture_owner_identity.kind":     {"internal/contracts", "CaptureOwnerIdentityKind"},
-	"capture_owner_identity.source":   {"internal/contracts", "CaptureOwnerIdentitySource"},
-	"commission_entry.status":         {"internal/contracts", "CommissionStatus"},
-	"conversation_claim.kind":         {"internal/contracts", "ConversationClaimKind"},
-	"deal_room.state":                 {"internal/contracts", "DealRoomState"},
-	"deal_stage_evidence.author_side": {"internal/contracts", "StageEvidenceAuthorSide"},
-	"deal_stage_evidence.commitment":  {"internal/contracts", "StageEvidenceCommitment"},
-	"deal_stage_evidence.source_type": {"internal/contracts", "StageEvidenceSource"},
-	"import_run.status":               {"internal/contracts", "ImportRunStatus"},
-	"intro_request.fallback_policy":   {"internal/contracts", "IntroFallbackPolicy"},
-	"intro_request.note_generated_by": {"internal/contracts", "IntroNoteOrigin"},
-	"intro_request.route_type":        {"internal/contracts", "ContactGraphRouteType"},
-	"intro_request.status":            {"internal/contracts", "IntroRequestStatus"},
-	"lead_manual_signal.signal_kind":  {"internal/contracts", "LeadManualSignalKind"},
-	"lead_source.intent":              {"internal/contracts", "LeadSourceIntent"},
-	"project_health_assessment.state": {"internal/contracts", "ProjectHealthState"},
-	"provider_connection.mode":        {"internal/contracts", "ProviderConnectionMode"},
-	"provider_connection.status":      {"internal/contracts", "ProviderConnectionStatus"},
-	"retention_policy.action":         {"internal/contracts", "RetentionAction"},
-	"saved_view.resource":             {"internal/contracts", "SavedViewResource"},
+	"activity.audience":                       {"internal/contracts", "ActivityAudience"},
+	"capture_exclusion.kind":                  {"internal/contracts", "CaptureExclusionKind"},
+	"capture_exclusion.scope":                 {"internal/contracts", "CaptureExclusionScope"},
+	"capture_owner_identity.kind":             {"internal/contracts", "CaptureOwnerIdentityKind"},
+	"capture_owner_identity.source":           {"internal/contracts", "CaptureOwnerIdentitySource"},
+	"capture_owner_identity_withdrawn.kind":   {"internal/contracts", "CaptureOwnerIdentityKind"},
+	"capture_owner_identity_withdrawn.source": {"internal/contracts", "CaptureOwnerIdentitySource"},
+	"commission_entry.status":                 {"internal/contracts", "CommissionStatus"},
+	"conversation_claim.kind":                 {"internal/contracts", "ConversationClaimKind"},
+	"deal_room.state":                         {"internal/contracts", "DealRoomState"},
+	"deal_stage_evidence.author_side":         {"internal/contracts", "StageEvidenceAuthorSide"},
+	"deal_stage_evidence.commitment":          {"internal/contracts", "StageEvidenceCommitment"},
+	"deal_stage_evidence.source_type":         {"internal/contracts", "StageEvidenceSource"},
+	"import_run.status":                       {"internal/contracts", "ImportRunStatus"},
+	"intro_request.fallback_policy":           {"internal/contracts", "IntroFallbackPolicy"},
+	"intro_request.note_generated_by":         {"internal/contracts", "IntroNoteOrigin"},
+	"intro_request.route_type":                {"internal/contracts", "ContactGraphRouteType"},
+	"intro_request.status":                    {"internal/contracts", "IntroRequestStatus"},
+	"lead_manual_signal.signal_kind":          {"internal/contracts", "LeadManualSignalKind"},
+	"lead_source.intent":                      {"internal/contracts", "LeadSourceIntent"},
+	"project_health_assessment.state":         {"internal/contracts", "ProjectHealthState"},
+	"provider_connection.mode":                {"internal/contracts", "ProviderConnectionMode"},
+	"provider_connection.status":              {"internal/contracts", "ProviderConnectionStatus"},
+	"retention_policy.action":                 {"internal/contracts", "RetentionAction"},
+	"saved_view.resource":                     {"internal/contracts", "SavedViewResource"},
 
 	// One vocabulary, six columns. Every derived narrative row records whether a
 	// human template or a model wrote it, and WrittenBy is the word the contract
@@ -212,7 +214,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				current = ""
 				block.Reset()
 			}
-			for _, line := range strings.Split(sql, "\n") {
+			for line := range strings.SplitSeq(sql, "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					flush()
 					current = m[1]
@@ -228,7 +230,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				}
 			}
 			flush()
-			for _, stmt := range strings.Split(sql, ";") {
+			for stmt := range strings.SplitSeq(sql, ";") {
 				if alter := alterTableStmt.FindStringSubmatch(stmt); alter != nil {
 					recordChecks(sets, alter[1], stmt)
 				}

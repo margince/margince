@@ -1,18 +1,13 @@
+<!-- prose:plain -->
 # Work on an issue
 
-Two things go wrong between picking an issue up and writing the diff, and they
-are unrelated. Somebody else is already on it — most of this page. Or it is
-yours and its ruling describes a tree that has moved, which is the last section.
+Before you work on an issue, check that no one holds it, and that its decision still
+matches the tree. The last section covers the decision.
 
-Several sessions read the same tracker, and the interesting issues look
-interesting to all of them at once. Two of them start the same work, both write
-a diff, and one of those diffs is thrown away along with everything it cost —
-which is most of a context window, and a colleague's afternoon.
-
-A comment is not how that gets avoided. "Taking this one" sits in a thread
-nobody opens, while the issue list keeps showing the row as free. **The claim is
-an assignee plus `status: in progress`**, because those are the two things the
-list shows and a search can filter on.
+A comment such as "Taking this one" does not claim an issue. It sits in a thread
+that no one opens, while the issue list still shows the row as free. The claim is **an assignee and
+`status: in progress`**, because the list shows these, and a search can
+find them.
 
 ## Before you start
 
@@ -20,49 +15,49 @@ list shows and a search can filter on.
 gh issue view <n> --json assignees,labels,closedByPullRequestsReferences
 ```
 
-Every signal below is about somebody **else**, so start by learning who you are
-— `gh api user -q .login`, which is not always who ran the last session on this
-machine. The issue is **taken** if any of these is true:
+Every sign below is about someone **else**, so first learn who you are:
+`gh api user -q .login`. That is not always the user of the last session on this
+machine. The issue is **taken** if one of these is true:
 
 - an assignee who is not you;
 - the label `status: in progress` while the assignee is not you. With no
-  assignee at all it is still taken and there is nobody to name: say exactly
-  that, because an unattributable claim is the one nobody can ask about;
-- a still-open pull request under `closedByPullRequestsReferences` that you did
-  not write. That list carries the number and no author, and it keeps merged
-  and closed pull requests too, so read the one it names:
+  assignee at all, it is still taken, and there is no one to name. Say so,
+  because no one can ask about a claim with no name on it;
+- an open pull request under `closedByPullRequestsReferences` that someone
+  else wrote. That list has the number, but not the name of who wrote it. It also keeps merged
+  and closed pull requests, so read the one it names:
 
   ```sh
   gh pr view <pr> --json state,author -q '.state + " " + .author.login'
   ```
 
-Anything else and it is free. **An issue where every signal points at you is
-yours to resume** — no re-claim, no comment, just carry on. An issue that is
-merely old is free too: there is no expiry here, and nothing takes a claim over
+If no item is true, the issue is free. **An issue where every sign points at you is
+yours to go on with**: no new claim, no comment; go on with the work. An issue that is
+only old is free too. A claim has no end date here, and nothing takes a claim over
 on its own.
 
-A **reopened** issue keeps the assignee who closed it but not the label — a
-record of who did the work, not a claim on what is left. The first bullet still
-applies, so ask them first; if they are not back on it, claim it afresh.
+A **reopened** issue keeps the assignee who closed it, but not the label. The
+assignee is the record of who worked on it, and does not claim what is still to do. The first item
+still applies, so ask them first. If they are not back on it, claim it again.
 
 ## It is taken
 
-Do not work it. Say so, in this order, to whoever asked you:
+Do not work on it. Say so, in this order, to the user who asked you:
 
-1. **Who holds it** — the assignee's login, or the number of the open pull
+1. **Name who holds it**: the login of the assignee, or the number of the open pull
    request that closes it.
-2. **Ask them.** Questions about scope, and anything urgent, go to the one
-   already holding it; that costs a message where a second diff costs a day.
-3. **An alternative**, if there is one. Offer a nearby issue that is free
-   rather than handing back an empty answer.
+2. **Send questions to them.** Questions about scope, and questions that cannot wait, go to the one
+   who already holds it. That costs a message, where a second diff costs a day.
+3. **Offer another issue, if there is one.** Offer a free issue close by,
+   and do not hand back an empty answer.
 
 ```sh
 gh issue list --state open --label "area: <x>" \
   --search 'no:assignee -label:"status: in progress"' --limit 10
 ```
 
-Take the `area:` from the issue you were pointed at, so what you offer is work
-of the same shape. Add `--label "priority: high"` to narrow it further.
+Take the `area:` from the issue you started from, so what you offer is work
+of the same shape. Add `--label "priority: high"` for a shorter list.
 
 ## Claim it
 
@@ -76,109 +71,100 @@ Then read it again:
 gh issue view <n> --json assignees -q '[.assignees[].login]'
 ```
 
-**If somebody else appeared as assignee while you were writing, you are the
-later claimant and you back off.** Remove yourself, say who got there first, and
-pick something else. Checking and then claiming is not one atomic step, so the
-window is real — it is the same race the check exists to close, arriving through
-the check. After a takeover it reads one name higher: the original assignee is
-expected to still be there, and only a *third* login means somebody beat you.
+**If someone else is now an assignee** after you wrote, your claim is
+second and you step back. Remove yourself, say who claimed it first, and
+choose other work. A check and then a claim are not one step, so two
+sessions can both pass the check. After a take over, the count is one name more. The first
+assignee stays there, and only a *third* login means someone claimed it before you.
 
-## Taking one over anyway
+## Take one over when someone holds it
 
-The point of all of this is awareness, not a lock. If the one who asked you
-knows the issue is held and still wants it worked, that is their call, and you
-work it.
+A claim tells; it does not stop other users. The user who asked you may know that someone holds the issue,
+and still want you to work on it. That is their call, and you work on it.
 
-**Comment first, reassign second.** The comment says who is taking it over and
-why, and it goes on before the assignee changes, so the session that loses the
-issue finds an explanation rather than a silent reassignment:
+**Comment first, change the assignee second.** The comment says who takes it over and
+why. It goes on before the assignee changes, so the session you take it from
+finds a reason, and not a change with no word:
 
 ```sh
 gh issue comment <n> --body "Taking this over at <who asked>'s request: <why>."
 gh issue edit <n> --add-assignee @me --add-label "status: in progress"
 ```
 
-Leave the original assignee in place unless they have clearly stopped. Two
-assignees who have talked to each other is a better state than one who was
-replaced without being told.
+Leave the first assignee in place, unless you know they stopped. Two
+assignees who know about each other are a good state. One who learns of it later
+is not.
 
 ## Release it when you stop
 
-Finishing is nothing extra. GitHub closes the issue when a pull request whose
-body says `Closes #N` merges, but it keeps the labels, so
-[`issue-closed.yml`](../../.github/workflows/issue-closed.yml) strips
-`status: in progress` from an issue the moment it closes. A close no event
-reports — one a workflow makes with its own token — or a failed run is caught
-instead by the next daily sweep that runs, best-effort, since GitHub can delay
-or drop a scheduled run. The assignee stays: it is the record of who did the
-work. Closing one by hand needs nothing extra either; the workflow owns the
+To finish takes no step from you. GitHub closes the issue when a pull request whose
+body says `Closes #N` merges, but it keeps the labels. So
+[`issue-closed.yml`](../../.github/workflows/issue-closed.yml) takes
+`status: in progress` off an issue as soon as it closes.
+
+Some closes start no workflow,
+such as one a workflow makes with its own token, and a run can fail. The next daily
+sweep finds these, but not always, because GitHub can start a planned run
+later, or drop it. The assignee stays, as the record of who worked on the
+issue. To close an issue by hand also takes no step from you; the workflow owns the
 label.
 
-**A `status: in progress` on a closed issue is always stale** — take it off. On
-an open issue the rules under [Before you start](#before-you-start) apply
-unchanged.
+**A `status: in progress` on a closed issue** is always out of date, so take it off. On
+an open issue, the rules under [Before you start](#before-you-start) apply
+with no change.
 
-Stopping **without** finishing is the case that needs you. Unassign yourself and
-say where you stopped, always:
+To stop **without** finishing is the case that needs you. Take yourself off as assignee, and
+always say where you stopped:
 
 ```sh
 gh issue edit <n> --remove-assignee @me
 gh issue comment <n> --body "Stopped here: <done, not done, what I learned>."
 ```
 
-**The label comes off only once nobody holds the issue.** `--remove-assignee
-@me` drops your login alone, while `--remove-label` drops a signal the whole
-issue shares — so taking both off in one command strips the claim of an original
-assignee who is still working, after a takeover left two names on it, and the
-issue goes back to reading free. Look first, remove on an empty list:
+**The label comes off** only when no one holds the issue. `--remove-assignee @me`
+drops only your login, while `--remove-label` drops a sign that the whole
+issue shares. A take over can leave two names on an issue. If you take both off in
+one command, you remove the claim of the first assignee. That assignee may still work on it, and
+the issue looks free. Look first, and remove the label only when the list is empty:
 
 ```sh
 gh issue view <n> --json assignees -q '[.assignees[].login]'
 gh issue edit <n> --remove-label "status: in progress"
 ```
 
-Of the three, the comment is the valuable one: whoever picks the issue up next
-starts from your evidence instead of rediscovering it. A claim left behind by a
-dead session is worse than no claim — it reads as active work forever, and no
-timer clears it.
+The comment counts most. The next user to take the issue starts from your
+evidence, and does not have to find it again. A claim from a session that ended
+looks like open work for all time, and no clock takes it off.
 
 ## Claim the sub-issue, not the tracker
 
-A tracker gathers children and is worked by nobody directly. Assigning yourself
-to it says every child is taken, which stands the colleagues who would have
-worked its siblings down. Claim the child you are actually writing, and leave
-the parent alone.
+A tracker holds sub-issues, and no one works on the tracker itself. When you put yourself
+on it as assignee, it says that every sub-issue is taken. That keeps colleagues off the
+other sub-issues. Claim the sub-issue you write, and leave
+the tracker alone.
 
-## Re-derive the ruling before you execute it
+## Check the decision again before you build it
 
-The claim is settled and the issue is yours. **Open the files it names before
-you build any of it**, and check the prescription against what is there now —
-not just the premise, which is usually still true.
+The claim is in place and the issue is yours. **Open the files it names before
+you build any of it.** Check what it tells you to do against what is there now,
+and check its reason too, which is still true in most cases.
 
-This is not caution about old issues. A ruling that is recent, specific and
-confidently written is the one that costs most, because there is nothing about
-it to distrust. The rulebook's *"do not refuse or narrow ordinary product
-evolution because an older document disagrees"* fires on a disagreement you can
-SEE, and a stale ruling does not look like one: it reads as perfectly consistent
-with a tree it has not been checked against.
+New and exact decisions go out of date too.
 
-Three things worth asking of each item, because they fail differently:
+Ask these of each item, because each one fails in a different way:
 
-- **Is it already done?** Somebody may have built it since, under another
-  ticket or in passing. Grep for the thing before you write it.
-- **Would it still be right here?** A fix copied from a neighbouring rule can be
-  wrong in a way the diff cannot show. One lead-schema ruling said to copy
-  `company`'s `linkedin_url` CHECK across; `company`'s matches
-  `linkedin.com/company/…` while a lead's URL is an `/in/…` profile, so
-  the constraint would have refused the whole column — and in review it reads as
-  an obviously-correct copy of the rule beside it.
-- **What else touches this?** An observation can be right and its scope wrong.
-  The same ruling asked to rename one table's `source_system` to end a collision
-  with `source`; six tables carry both, so renaming one leaves five and invents
-  a second vocabulary.
+- **Is it already built?** Someone may have built it already, under another
+  issue or as part of other work. Search for the thing before you write it.
+- **Would it still be right here?** A fix copied from a rule close by can be
+  wrong in a way the diff cannot show. The `linkedin_url` CHECK of `company` matches
+  `linkedin.com/company/…`, while the URL of a lead is an `/in/…` profile. So
+  a copy of that CHECK on leads would refuse the whole column. In review, it looks
+  like a right copy of the rule next to it.
+- **What else touches this?** A finding can be right and its scope wrong.
+  Say you rename `source_system` in one table, so that it does not share a name with `source`.
+  That leaves every other table that has both, and makes a second vocabulary.
 
-**Fix what is actually there, and say on the issue what you did not build and
-why.** A ruling that has moved is not a reason to hand the work back — most of
-it is usually still worth doing, just not in the shape asked for. The write-up
-is often worth more than the diff: it is what stops the next session paying to
-rediscover the same four things.
+**Fix what is there**, and say on the issue what you leave out, and why. A
+decision that has changed is no reason to hand the work back. Most of it is still
+worth doing, in many cases in a different shape. In many cases the note is worth more than
+the diff, because it saves the next session the cost of finding it all again.

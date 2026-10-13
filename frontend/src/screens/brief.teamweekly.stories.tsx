@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { team, teamWeek, unavailableWeeklyNumbers } from "./brief.fixtures";
+import {
+  beforeHistoryWeeklyNumbers,
+  partlyRecordedWeeklyNumbers,
+  team,
+  teamWeek,
+  unavailableWeeklyNumbers,
+} from "./brief.fixtures";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import {
   jsonResponse,
@@ -177,5 +183,49 @@ export const SharedMetricsUnavailable: Story = {
       }),
     "GET /weekly-reviews/team": () =>
       jsonResponse({ ...teamWeek, numeric_summary: unavailableWeeklyNumbers }),
+  }),
+};
+
+// Before any source held a record: the headline says so and the strip reads
+// "Not recorded" where it would have printed zeros.
+export const WeekBeforeRecordedHistory: Story = {
+  render: panel({
+    "GET /teams": () =>
+      jsonResponse({ data: [team], page: { has_more: false } }),
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({
+        ...teamWeek,
+        counts: {
+          reps_counted: teamWeek.counts.reps_counted,
+          deals_won: 0,
+          deals_lost: 0,
+          deals_moved: 0,
+          leads_routed: 0,
+          leads_answered_in_target: 0,
+          leads_breached: 0,
+          meetings_held: 0,
+          meetings_with_next_step: 0,
+          commitments_due: 0,
+          commitments_kept: 0,
+        },
+        numeric_summary: beforeHistoryWeeklyNumbers,
+      }),
+  }),
+};
+
+// Deals counted from midweek keep their figures with the qualifier; leads, never
+// recorded, read "Not recorded" and leave the movement bars.
+export const PartlyRecordedWeek: Story = {
+  render: panel({
+    "GET /teams": () =>
+      jsonResponse({ data: [team], page: { has_more: false } }),
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({
+        ...teamWeek,
+        numeric_summary: {
+          ...partlyRecordedWeeklyNumbers,
+          meetings_coverage: { status: "ok", withheld: false },
+        },
+      }),
   }),
 };

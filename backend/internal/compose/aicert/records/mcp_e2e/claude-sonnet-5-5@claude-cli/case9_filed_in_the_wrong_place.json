@@ -1,0 +1,25 @@
+{
+  "scenario": "case9_filed_in_the_wrong_place",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 20,
+    "output_tokens": 3168,
+    "cache_creation_input_tokens": 34293,
+    "cache_read_input_tokens": 560993,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.225
+  }
+}

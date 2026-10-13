@@ -33,9 +33,9 @@ func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string
 		// filed against the CONTACT it was with, so a flat company_id
 		// match hides every message the company actually exchanged.
 		// CompanyLinkedActivityExists is the walk the company view's other
-		// readers already use. EXISTS rather than a join, so an activity
-		// reachable through two links stays one row and the keyset cursor
-		// keeps ordering over a stable set.
+		// readers already use. A membership test rather than a join keeps an
+		// activity reached through two links to one row, so the keyset
+		// cursor orders a stable set.
 		return []string{CompanyLinkedActivityExists(arg(*in.EntityID))}, nil
 	}
 	// EXISTS rather than a join, for the two reasons the company arm above
@@ -113,7 +113,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendRequestReviewClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
+	where = append(where, worklistClauses(in, readerOrNobody(ctx), arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {
 		return nil, "", nil, nil, err

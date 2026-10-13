@@ -4,7 +4,6 @@
 import { CalendarDays, Info, LogIn, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -14,9 +13,10 @@ import {
   ProviderRow,
   type ProviderRowTone,
 } from "../design-system/providerrow";
+import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
-import { QueryGate } from "./common";
+import { useCanWrite } from "../lib/capability";
 import { useCompanyPhrase } from "./company-phrase";
 import { useOAuthApp, type Vendor, vendorCopy } from "./oauth-app";
 import {

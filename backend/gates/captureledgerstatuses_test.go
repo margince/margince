@@ -5,8 +5,8 @@
 
 package gates
 
-// The disposition ledger's status vocabulary has ONE definition, and it is the
-// column's own constraint.
+// The disposition ledger's status vocabulary is defined by the column's own
+// constraint, and nowhere else.
 //
 // Two readers have to account for every state a sender's question can end in:
 // the capture-activity funnel decides which bucket each settled verdict counts
@@ -79,7 +79,7 @@ func ledgerStatusesFromCatalog() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading the head catalog: %w", err)
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if !strings.Contains(line, statusCheck) {
 			continue
 		}

@@ -74,6 +74,9 @@ type LogActivityInput struct {
 	RemindAt      *time.Time
 	AssigneeID    *ids.UserID
 	HostUserID    *ids.UserID
+	// AttendeeUserIDs are the colleagues who were in a meeting or call besides
+	// whoever logged it; each is stamped as an our-side participant.
+	AttendeeUserIDs []ids.UserID
 	// ClaimsHostSlot marks a meeting that HOLDS its host's hour, which is what
 	// activity_meeting_no_overlap refuses a second of. Only BookMeeting sets
 	// it: a booking door takes a slot on somebody's calendar, and taking one
@@ -412,7 +415,7 @@ func writeActivitySatellites(
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
 	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
-	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links, in.Author); err != nil {
+	if err := stampLoggedParticipants(ctx, tx, id, in); err != nil {
 		return err
 	}
 	if err := recordImportedProvenance(ctx, tx, id, in, by); err != nil {

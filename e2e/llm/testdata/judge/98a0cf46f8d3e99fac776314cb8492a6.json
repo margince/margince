@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer states the EUR 100k bookings figure was 'worked out from the won deals'—a computed figure—not quoted from a standard reporting reading, and does not specify a reporting period or coverage.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer quotes the bookings figure from the standard reporting reading it made, with its period or coverage, and does not present a figure it computed itself as the official one. Answer no if it gives a number with no reading behind it, or says it could not read the reporting figure without having tried.",
+  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
+}

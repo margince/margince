@@ -4,16 +4,18 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
-import { routeHash, useRoute } from "../app/router";
 import { Button, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Stack } from "../design-system/stack";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatMoneyOrAbsent } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { routeHash, useRoute } from "../lib/router";
 import { openAnalyticsSection, openSavedQuestion } from "./analytics.address";
 import {
   type AnalyticsContext,
@@ -41,7 +43,6 @@ import {
   opLabel,
   takesValue,
 } from "./analytics.questions.vocab";
-import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 
 // The population a query names, as one comparable string: the page's picker
@@ -51,22 +52,14 @@ function queryScopeKey(query: Pick<AnalyticsQuery, "scope_kind" | "scope_id">) {
 }
 
 async function askQuestion(query: AnalyticsQuery) {
-  const { data, error } = await api.POST("/analytics/query", { body: query });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.POST("/analytics/query", { body: query }));
 }
 
 function useAnalyticsSchema() {
   return useQuery({
     queryKey: ["analytics-schema"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/schema", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/analytics/schema", {}));
     },
   });
 }
@@ -307,13 +300,11 @@ function SavedQuestion({
   const run = useQuery({
     queryKey: ["analytics-run", runId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/runs/{run_id}", {
-        params: { path: { run_id: runId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/analytics/runs/{run_id}", {
+          params: { path: { run_id: runId } },
+        }),
+      );
     },
   });
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(

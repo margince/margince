@@ -334,7 +334,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	}()
 
 	var out bytes.Buffer
-	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, &out); err != nil {
+	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, defaultStatementCeiling, &out); err != nil {
 		t.Fatalf("up: %v", err)
 	}
 	if !strings.Contains(out.String(), namespace+" (1 declared)") {
@@ -349,7 +349,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	// Idempotent: the second run must apply nothing at all, extension lane
 	// included, and must not fail re-creating the index.
 	out.Reset()
-	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, &out); err != nil {
+	if err := up(ctx, conn, dsn, core, custom, []dbmigrate.Namespace{probe}, defaultStatementCeiling, &out); err != nil {
 		t.Fatalf("second up: %v", err)
 	}
 	if !strings.Contains(out.String(), "applied 0 core+custom+extension + 0 river") {
@@ -426,7 +426,8 @@ func assertRecorded(t *testing.T, dsn, table, version string) {
 		}
 	}()
 	var found bool
-	if err := conn.QueryRow(ctx,
+	if err := conn.QueryRow(
+		ctx,
 		"SELECT EXISTS (SELECT 1 FROM "+table+" WHERE version = $1)", version,
 	).Scan(&found); err != nil {
 		t.Fatalf("reading %s: %v", table, err)
@@ -453,7 +454,8 @@ func assertRiverWorkspaceArgIndex(t *testing.T, dsn string) {
 		}
 	}()
 	var exists bool
-	if err := conn.QueryRow(ctx,
+	if err := conn.QueryRow(
+		ctx,
 		`SELECT EXISTS (SELECT 1 FROM pg_indexes
 		    WHERE tablename = 'river_job' AND indexname = 'river_job_workspace_arg')`,
 	).Scan(&exists); err != nil {

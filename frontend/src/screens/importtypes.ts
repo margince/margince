@@ -11,6 +11,13 @@ export type ImportColumn = components["schemas"]["ImportColumn"];
 export type ImportRun = components["schemas"]["ImportRun"];
 export type ImportReport = components["schemas"]["ImportRunReport"];
 export type ImportUndoReport = components["schemas"]["ImportUndoReport"];
+export type ImportFormat = components["schemas"]["ImportFormat"];
+export type ImportFormatColumn = components["schemas"]["ImportFormatColumn"];
+export type ImportPartProfile = components["schemas"]["ImportPartProfile"];
+export type ImportRunPart = components["schemas"]["ImportRunPart"];
+export type ImportPartReport = components["schemas"]["ImportPartReport"];
+export type ImportProblemKind = components["schemas"]["ImportProblemKind"];
+export type ImportRowIssue = components["schemas"]["ImportRowIssue"];
 
 // DONT_IMPORT is the mapping table's resting choice: a column nobody has
 // assigned a destination to is LEFT OUT, never guessed into a field. It is a
@@ -18,12 +25,17 @@ export type ImportUndoReport = components["schemas"]["ImportUndoReport"];
 // nothing else.
 export const DONT_IMPORT = "";
 
-// identifyingFieldFor names the field a run recognizes a row by, per object.
-// The same defaults the server applies, stated here so the screen can say which
-// column will identify a row BEFORE the server has to refuse a mapping that
-// identifies none.
-export function identifyingFieldFor(object: ImportObject): string {
-  // A contact and a lead are both identified by their email: it is the one
-  // column that makes a re-import converge on the record it already wrote.
-  return object === "company" ? "display_name" : "email";
+// The row type a flow opens on when nothing names one.
+export const UNNAMED_IMPORT_OBJECT: ImportObject = "lead";
+
+// IMPORT_OBJECTS has one key per contract type; a type the contract adds fails
+// to compile here until the screens are taught it.
+const IMPORT_OBJECTS = {
+  company: true,
+  contact: true,
+  lead: true,
+} as const satisfies Record<ImportObject, true>;
+
+export function isImportObject(value: unknown): value is ImportObject {
+  return typeof value === "string" && Object.hasOwn(IMPORT_OBJECTS, value);
 }

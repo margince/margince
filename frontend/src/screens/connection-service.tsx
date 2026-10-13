@@ -10,12 +10,17 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
+import {
+  type AccountVendor,
+  type ConnectionAccount,
+  VENDOR_SERVICES,
+} from "../format/connectorprovider";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { routeHash } from "../lib/router";
 import type { ImportWindow } from "./connect-account";
 import { usePastEmail } from "./connection-past-email";
 import {
@@ -25,11 +30,6 @@ import {
   missingSendGrant,
   serviceHealth,
 } from "./connector-status";
-import {
-  type AccountVendor,
-  type ConnectionAccount,
-  VENDOR_SERVICES,
-} from "./connectorproviders";
 import { settingsHref } from "./settingsrouting";
 
 // One thing an account brings in (new mail, past email, the calendar) as a
@@ -74,7 +74,7 @@ export function AccountServices({
           onConnect={() => vendor && onReconnect(VENDOR_SERVICES[vendor].mail)}
         />
       )}
-      {vendor && mail && (
+      {vendor && mail?.can_backfill && (
         <PastEmailItem
           mail={mail}
           heldWindow={heldWindow}

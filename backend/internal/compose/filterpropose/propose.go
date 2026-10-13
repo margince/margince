@@ -17,6 +17,7 @@ package filterpropose
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -108,11 +109,11 @@ Each condition names a field, an operator and ONE value slot:
 - days_ago: a whole number of days counted back from today, for relative dates, and only with gt, gte, lt or lte. "In the last 45 days" is gte days_ago 45; "more than 45 days ago" is lt days_ago 45.
 Set every other slot to null. Put the words each condition was read from in phrase.
 
-"No activity in the last 45 days" means last_activity_at lt days_ago 45 OR last_activity_at exists false: a record nobody ever contacted has no activity either.
-A country is a two-letter ISO 3166 code: Germany is DE.
+"No activity in the last N days", in any language, means last_activity_at lt days_ago N OR last_activity_at exists false: a record nobody ever contacted has no activity either.
+A country is ALWAYS a two-letter ISO 3166 code, never its name: Germany is DE, Austria is AT, Switzerland is CH.
 A picklist value must be one of its options, spelled exactly as listed.
 
-Group conditions: each group joins its clauses with "and" or "or", and join says how the groups combine. Alternatives for one field ("Germany or Austria") belong in one "or" group or one "in" condition.
+Group conditions: each group joins its clauses with "and" or "or", and join says how the groups combine. Alternatives for one field ("Germany or Austria") belong in one "or" group or one "in" condition. An "or" inside a condition that also has other requirements is its own group. "Companies in Berlin with no activity in 10 days" is TWO groups under join "and": {"groups":[{"join":"and","clauses":[{"phrase":"in Berlin","field":"city","op":"eq","text":"Berlin"}]},{"join":"or","clauses":[{"phrase":"no activity in 10 days","field":"last_activity_at","op":"lt","days_ago":10},{"phrase":"never contacted","field":"last_activity_at","op":"exists","flag":false}]}],"join":"and"} (slots not shown are null). Never put an alternative into an "and" group, and never leave a text, list, number or flag slot null when the operator needs it.
 
 A phrase no field can express - an opinion, a prediction, a fact the fields do not record, a specific contact, company or colleague you cannot name by id - goes in unsupported, with a one-sentence reason. Never guess a field for it, and never drop it silently.`
 
@@ -188,7 +189,7 @@ func Parse(raw string) (Answer, error) {
 	// Required by the schema, so absent means malformed rather than empty: read
 	// as empty, a provider answering `{}` would report a sentence as unreadable.
 	if answer.Groups == nil {
-		return Answer{}, fmt.Errorf("filterpropose: the reply carries no groups field, which the schema requires")
+		return Answer{}, errors.New("filterpropose: the reply carries no groups field, which the schema requires")
 	}
 	if answer.Join != joinAnd && answer.Join != joinOr {
 		return Answer{}, fmt.Errorf("filterpropose: the reply joins its groups with %q, not and/or", answer.Join)

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -30,10 +31,6 @@ import (
 //   - Any other server is asked the decision POST with an empty body: a 401/403
 //     is a refused key, and a 400 says only that it answered without refusing —
 //     an unconfirmed pass. No model is named, so nothing is billed.
-//
-// A lane the profile would refuse to bind is not dialled either: testing a key
-// for a decision endpoint eu_hosted forbids answers profile_forbids, the same
-// verdict the routing validator gives.
 
 // decisionHost is which of those three a decision endpoint is.
 type decisionHost int
@@ -119,7 +116,7 @@ func (c *decisionClient) typeSafeModels(ctx context.Context) ([]model.Info, erro
 		return nil, fmt.Errorf("ai: jev: decode model list: %w", err)
 	}
 	if out.Models == nil {
-		return nil, fmt.Errorf("ai: jev: the answer carries no model list")
+		return nil, errors.New("ai: jev: the answer carries no model list")
 	}
 	models := make([]model.Info, 0, len(*out.Models))
 	for _, m := range *out.Models {
@@ -229,18 +226,15 @@ func (c *decisionClient) probeKey(ctx context.Context, provider string) (count i
 	}
 }
 
-// decisionLaneForbidden is whether the profile refuses this lane, read by the
-// routing validator's own residency rule rather than a second copy of it.
-func decisionLaneForbidden(profile Profile, lane DecisionsConfig) bool {
-	return RoutingConfig{Profile: profile, Decisions: &lane}.decisionsResidencyGap() != nil
-}
-
 // boundDecisionLane is the decision binding a test or a list uses for
-// provider: the stored lane when it names this provider, otherwise the
-// adapter's default endpoint — which `jev_compatible`, having none, refuses.
+// provider: the stored lane when it names this provider, at the provider's
+// endpoint — else the adapter's default, which `jev_compatible`, having none,
+// refuses.
 func boundDecisionLane(cfg RoutingConfig, provider string) DecisionsConfig {
+	lane := DecisionsConfig{Provider: provider}
 	if cfg.Decisions != nil && cfg.Decisions.Provider == provider {
-		return *cfg.Decisions
+		lane = *cfg.Decisions
 	}
-	return DecisionsConfig{Provider: provider}
+	lane.BaseURL = cfg.canonical().Providers[provider].BaseURL
+	return lane
 }

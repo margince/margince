@@ -5,7 +5,7 @@
 
 package gates
 
-// The screens ask what a seat MAY DO, not which role it holds.
+// The screens ask what a seat may do rather than which role it holds.
 //
 // /me carries the server's own answer — the object grants and the row scope it
 // computed from the stored policy — precisely so a screen never re-derives one
@@ -35,7 +35,7 @@ import (
 // two fixed-role helpers (useHoldsAdminRole, useHoldsOperatorSeat) that cover
 // authorities the RbacObject vocabulary does not name yet, and it documents
 // each as exceptional. Every other screen asks it, or asks useCan.
-const capabilityModule = "src/app/capability.ts"
+const capabilityModule = "src/lib/capability.ts"
 
 // roleKeyComparison matches a role key being COMPARED, not merely mentioned.
 //

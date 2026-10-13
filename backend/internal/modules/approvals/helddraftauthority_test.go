@@ -39,7 +39,7 @@ func sendGrantHolder(user ids.UUID) principal.Principal {
 
 func TestAHeldDraftIsDecidedByTheRepItSendsAs(t *testing.T) {
 	rep := ids.New[ids.UserKind]().UUID
-	staged := row{Kind: kindHeldDraft, OnBehalfOf: ptr(ids.From[ids.UserKind](rep))}
+	staged := row{Kind: kindHeldDraft, OnBehalfOf: new(ids.From[ids.UserKind](rep))}
 
 	// A manager with every activity grant there is, who is not the rep.
 	manager := sendGrantHolder(ids.New[ids.UserKind]().UUID)

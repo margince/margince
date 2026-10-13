@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -14,9 +14,7 @@ export function useSchedulingProfile({
     enabled,
     refetchOnWindowFocus: refreshOnReturn ? "always" : false,
     queryFn: async () => {
-      const { data, error } = await api.GET("/scheduling/profile");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/scheduling/profile"));
     },
   });
 }
@@ -28,13 +26,12 @@ export function useSchedulingProfile({
 export async function putSchedulingChanges(
   changes: Partial<Profile>,
 ): Promise<Profile> {
-  const latest = await api.GET("/scheduling/profile");
-  if (latest.error) throwProblem(latest.error);
-  const { data, error } = await api.PUT("/scheduling/profile", {
-    body: { ...latest.data, ...changes },
-  });
-  if (error) throwProblem(error);
-  return data;
+  const latest = unwrap(await api.GET("/scheduling/profile"));
+  return unwrap(
+    await api.PUT("/scheduling/profile", {
+      body: { ...latest, ...changes },
+    }),
+  );
 }
 
 export function usePatchSchedulingProfile() {

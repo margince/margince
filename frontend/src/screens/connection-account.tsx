@@ -12,13 +12,19 @@ import { ErrorLine } from "../design-system/errorline";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderRow } from "../design-system/providerrow";
 import { Chip } from "../design-system/readings";
+import {
+  ACCOUNT_NAME,
+  type AccountVendor,
+  type ConnectionAccount,
+  isMailbox,
+} from "../format/connectorprovider";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, throwProblem } from "../lib/problem";
 import { ImportPastEmailDialog } from "./backfill";
 import { isLiveRun } from "./backfill-run";
-import { problemMessageOf, throwProblem } from "./common";
 import {
   type ConnectAccountInput,
   type ImportWindow,
@@ -35,12 +41,6 @@ import {
   healthBadge,
   missingSendGrant,
 } from "./connector-status";
-import {
-  ACCOUNT_NAME,
-  type AccountVendor,
-  type ConnectionAccount,
-  isMailbox,
-} from "./connectorproviders";
 
 // One account on Connections: Google, Microsoft 365, an IMAP mailbox or the
 // test mailbox. Its row says how the account is doing as a whole; the services

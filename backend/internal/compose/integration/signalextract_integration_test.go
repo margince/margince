@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -104,11 +105,17 @@ func extractPassStats(t *testing.T, e *Env, brain *scriptedBrain) compose.Extrac
 	t.Helper()
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return extractClock }, slog.Default())
-	pass, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS))
+	pass, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS))
 	if err != nil {
 		t.Fatalf("signal extract: %v", err)
 	}
 	return pass
+}
+
+// signalScanCtx is the product's own pass, as the job binds it. A pass run as
+// an admin would pass gates the job never faces and fail ones it always passes.
+func signalScanCtx(e *Env) context.Context {
+	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "agent:signal-scan")
 }
 
 // reply builds the model answer for one event on the given message.
@@ -613,7 +620,7 @@ func TestAThreadTheModelCannotReadStarvesNoOneAndIsNotGivenUpOn(t *testing.T) {
 
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return extractClock }, slog.Default())
-	pass, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS))
+	pass, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS))
 	if err != nil {
 		t.Fatalf("one thread's refusal is not the pass's failure: %v", err)
 	}
@@ -626,7 +633,7 @@ func TestAThreadTheModelCannotReadStarvesNoOneAndIsNotGivenUpOn(t *testing.T) {
 	// pass reads it again. Retiring it would have dropped what it says for
 	// good, and it is a real conversation about a real account.
 	before := brain.calls
-	if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+	if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 		t.Fatalf("second pass: %v", err)
 	}
 	if brain.calls-before != 1 {
@@ -662,7 +669,7 @@ func TestAProviderFailureOnOneThreadStillLetsThePassReadTheRest(t *testing.T) {
 	extractor := compose.NewSignalExtractor(e.Pool, brain,
 		func() time.Time { return extractClock }, slog.Default())
 
-	pass, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS))
+	pass, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS))
 	if err == nil {
 		t.Fatal("a provider failure was not reported — nobody learns the model is down")
 	}
@@ -697,7 +704,7 @@ func TestARepeatedlyRefusedThreadIsParkedAndUnparkedByNewMail(t *testing.T) {
 		func() time.Time { return extractClock }, slog.Default())
 	pass := func() {
 		t.Helper()
-		if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+		if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 			t.Fatalf("a refused reading is not the pass's failure: %v", err)
 		}
 	}
@@ -762,7 +769,7 @@ func TestAParkedThreadIsOfferedAgainOnceTheParkExpires(t *testing.T) {
 		func() time.Time { return clock }, slog.Default())
 	pass := func() {
 		t.Helper()
-		if _, err := extractor.RunWorkspace(e.Admin(), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
+		if _, err := extractor.RunWorkspace(signalScanCtx(e), ids.From[ids.WorkspaceKind](e.WS)); err != nil {
 			t.Fatalf("a refused reading is not the pass's failure: %v", err)
 		}
 	}

@@ -72,5 +72,8 @@ func jobQueues() map[string]river.QueueConfig {
 		// audited transaction — minutes of database-bound work per tenant
 		// (privacyRetentionQueue).
 		privacyRetentionQueue: {MaxWorkers: privacyRetentionMaxWorkers},
+		// Commit and undo slices of an import: one per process, because slices
+		// of two runs interleave through the snooze (importWriteQueue).
+		importWriteQueue: {MaxWorkers: importWriteMaxWorkers},
 	}
 }

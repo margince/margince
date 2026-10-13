@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // Config is the root of margince.yaml. Every section beyond `version` is
@@ -43,6 +44,7 @@ type Config struct {
 	Lists          Lists           `yaml:"lists"`
 	Operations     Operations      `yaml:"operations"`
 	Uploads        Uploads         `yaml:"uploads"`
+	Web            Web             `yaml:"web"`
 }
 
 // Operations carries the ops kill switches (OPS-CFG-9): capabilities an
@@ -90,53 +92,6 @@ type Lists struct {
 	Enabled bool `yaml:"enabled"`
 }
 
-// CompanyContextRollout is the ordered deployment capability for company
-// knowledge. The empty YAML value resolves to onboarding so an upgrade keeps
-// today's behavior until an operator deliberately stages it backward.
-type CompanyContextRollout string
-
-const (
-	// CompanyContextOff disables context reads, task injection, and onboarding.
-	CompanyContextOff CompanyContextRollout = "off"
-	// CompanyContextRead enables the canonical read model and settings surface.
-	CompanyContextRead CompanyContextRollout = "read"
-	// CompanyContextTasks additionally enables declared AI task injection.
-	CompanyContextTasks CompanyContextRollout = "tasks"
-	// CompanyContextOnboarding additionally enables the first-run experience.
-	CompanyContextOnboarding CompanyContextRollout = "onboarding"
-)
-
-// CompanyContext configures the operator-controlled company-context rollout.
-type CompanyContext struct {
-	Rollout CompanyContextRollout `yaml:"rollout"`
-}
-
-// EffectiveRollout applies the compiled-in default without mutating the
-// decoded configuration.
-func (c CompanyContext) EffectiveRollout() CompanyContextRollout {
-	if c.Rollout == "" {
-		return CompanyContextOnboarding
-	}
-	return c.Rollout
-}
-
-// ReadEnabled reports whether typed reads, refresh, and settings are active.
-func (c CompanyContext) ReadEnabled() bool {
-	stage := c.EffectiveRollout()
-	return stage == CompanyContextRead || stage == CompanyContextTasks || stage == CompanyContextOnboarding
-}
-
-// TasksEnabled reports whether declared model tasks may receive company data.
-func (c CompanyContext) TasksEnabled() bool {
-	stage := c.EffectiveRollout()
-	return stage == CompanyContextTasks || stage == CompanyContextOnboarding
-}
-
-// OnboardingEnabled reports whether the five-step first-run surface is active.
-func (c CompanyContext) OnboardingEnabled() bool {
-	return c.EffectiveRollout() == CompanyContextOnboarding
-}
-
 // Workspace names the installation's singleton workspace — the tenant every
 // row is filed under, and what the schema has always called it. Consumed only
 // when the workspace is created; it never reconciles into an existing
@@ -151,6 +106,11 @@ type Workspace struct {
 	BaseCurrency string `yaml:"base_currency"`
 	BaseLanguage string `yaml:"base_language"`
 	Timezone     string `yaml:"timezone"`
+	// Country is the jurisdiction the installation runs under, as a lower-case
+	// ISO 3166-1 alpha-2 code naming a compiled-in pack. Empty leaves it unset.
+	// Seeded once, also into an existing installation that has none stored;
+	// after that Settings → Jurisdiction changes it, never this file.
+	Country string `yaml:"country"`
 }
 
 // BootstrapAdmin identifies the first administrator. The password is a
@@ -302,8 +262,9 @@ type SMTP struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
-	// Password is the reference form: ${file:...} or ${env:...}.
-	Password Secret `yaml:"password"`
+	// Password is the reference form: ${file:...} or ${env:...}, or ${none}
+	// for a relay that takes no credential.
+	Password RemovableSecret `yaml:"password"`
 	// PasswordFile is the original spelling, still honoured so an existing
 	// deployment boots unchanged. Prefer `password`.
 	PasswordFile string `yaml:"password_file"`
@@ -313,6 +274,8 @@ type SMTP struct {
 // which is an unauthenticated relay rather than a mistake.
 func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
 	switch {
+	case e.SMTP.Password.Removed():
+		return "", nil
 	case e.SMTP.Password.Configured():
 		return e.SMTP.Password.withField("email.smtp.password").Resolve(lookup)
 	case e.SMTP.PasswordFile != "":
@@ -321,6 +284,11 @@ func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
 		return "", nil
 	}
 }
+
+// SMTPPasswordRemoved reports whether the deployment declared the relay
+// password absent (`password: ${none}`), which removes any sealed
+// copy and sends mail without authenticating.
+func (e Email) SMTPPasswordRemoved() bool { return e.SMTP.Password.Removed() }
 
 // AIConfig carries operator-posture switches for the AI runtime. It names
 // no providers or models (that is `seeds.ai_routing`, and the stored binding
@@ -377,6 +345,11 @@ func (c Config) validate() error {
 	if cur := c.Workspace.BaseCurrency; cur != "" && !values.ValidCurrency(cur) {
 		return fmt.Errorf("deployconfig: workspace.base_currency %q is not a 3-letter ISO 4217 code", cur)
 	}
+	if code := c.Workspace.Country; code != "" {
+		if err := jurisdiction.Code(code).Validate(); err != nil {
+			return fmt.Errorf("deployconfig: workspace.country: %w", err)
+		}
+	}
 	if lang := c.Workspace.BaseLanguage; lang != "" && !textlang.Known(lang) {
 		return fmt.Errorf("deployconfig: workspace.base_language %q is not a language this build speaks (en, de, vi)", lang)
 	}
@@ -397,6 +370,9 @@ func (c Config) validate() error {
 		return fmt.Errorf("deployconfig: company_context.rollout %q is not off, read, tasks, or onboarding", c.CompanyContext.Rollout)
 	}
 	if err := c.Uploads.validate(); err != nil {
+		return err
+	}
+	if err := c.Web.validate(); err != nil {
 		return err
 	}
 	if c.Email.Enabled {
@@ -435,6 +411,9 @@ func (e Email) validate() error {
 	}
 	if _, err := values.ParseEmail(e.FromAddress); err != nil {
 		return fmt.Errorf("deployconfig: email.from_address: %w", err)
+	}
+	if e.SMTP.Password.Removed() && e.SMTP.PasswordFile != "" {
+		return errors.New("deployconfig: email.smtp.password declares the relay password absent while email.smtp.password_file names one — keep one of the two")
 	}
 	return nil
 }

@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { within } from "storybook/test";
+import { meFixture } from "../testing/mefixture";
 import { LinkedInReachSection } from "./linkedin-reach";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -81,8 +82,15 @@ export const ReachesDark: Story = {
   render: reachStory(REACHED),
 };
 
+// At 390 the table folds each account onto two lines: the name and its open
+// chevron, then the two figures in words.
 export const ReachesPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: reachStory(REACHED),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("table", {
+      name: "Companies you reach",
+    });
+  },
 };

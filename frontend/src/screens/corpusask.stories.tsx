@@ -46,10 +46,12 @@ const SET: Corpus = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   coverage: {
     documents_total: 12,
     chunks_total: 1_180,
     chunks_embedded: 1_180,
+    embed_state: "complete",
   },
   created_at: "2026-08-01T00:00:00Z",
 };
@@ -128,7 +130,12 @@ const NOT_COVERED_UNWRITTEN: Answer = {
 const NOT_READY: Answer = {
   ...NOT_COVERED_UNWRITTEN,
   outcome: "not_ready",
-  coverage: { documents_total: 12, chunks_total: 1_180, chunks_embedded: 407 },
+  coverage: {
+    documents_total: 12,
+    chunks_total: 1_180,
+    chunks_embedded: 407,
+    embed_state: "indexing",
+  },
 };
 
 const RETRIEVAL_UNAVAILABLE: Answer = {
@@ -189,12 +196,18 @@ function dialog() {
   return within(document.body);
 }
 
-// A carried question is ASKED on arrival, so the outcome stories press nothing:
-// they wait for the answer ITSELF rather than for a click to return, because
-// the reply commits a microtask later and a capture taken any earlier shows an
-// empty form under a story named for what the dialog said.
+// The palette only fills the box, so every outcome presses Ask itself. The set
+// is chosen in an effect as the list lands, and a press before that is refused.
+async function pressAsk() {
+  const submit = await dialog().findByRole("button", { name: "Ask" });
+  await waitFor(() => expect(submit).not.toHaveAttribute("disabled"));
+  await userEvent.click(submit);
+  return submit;
+}
+
 function seeAnswer(settled: RegExp) {
   return async () => {
+    await pressAsk();
     await dialog().findByText(settled);
   };
 }
@@ -271,7 +284,7 @@ export const NotReady: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(NOT_READY),
   ),
-  play: seeAnswer(/Nothing is wrong with your question/),
+  play: seeAnswer(/The question is not the problem/),
 };
 
 // The refusal about the INSTALLATION: no search lane is bound, so nothing was
@@ -291,19 +304,18 @@ export const Unreviewed: Story = {
   render: askCard("what is the boiling point of nitrogen", () =>
     jsonResponse(UNREVIEWED),
   ),
-  play: seeAnswer(/Nothing has read them/),
+  play: seeAnswer(/They have not been reviewed/),
 };
 
-// Mid-ask, the state a carried question lands in. The button keeps its label
-// and says it is busy beside it; swapping the word or disabling the control
-// would move the reader off the one thing about to tell them something.
+// Mid-ask: the button keeps its label and says it is busy beside it; swapping
+// the word or disabling it would move the reader off what is about to answer.
 export const Asking: Story = {
   render: askCard(
     "how long are captured messages kept",
     () => new Promise<Response>(() => {}),
   ),
   play: async () => {
-    const submit = await dialog().findByRole("button", { name: "Ask" });
+    const submit = await pressAsk();
     await waitFor(() => expect(submit).toHaveAttribute("aria-busy", "true"));
   },
 };
@@ -344,12 +356,7 @@ export const HandTyped: Story = {
       await canvas.findByLabelText("Your question"),
       "how long are captured messages kept",
     );
-    // The set is chosen in a passive effect as the list lands, so a press
-    // before that has no corpus and the card refuses it — and a refused click
-    // is indistinguishable on screen from one still in flight.
-    const submit = canvas.getByRole("button", { name: "Ask" });
-    await waitFor(() => expect(submit).not.toHaveAttribute("disabled"));
-    await userEvent.click(submit);
+    await pressAsk();
     await canvas.findByText(/Captured messages are kept for 400 days/);
   },
 };
@@ -370,10 +377,10 @@ export const WhichSet: Story = {
 export const CitationOpen: Story = {
   render: answeredCard,
   play: async () => {
+    await readTheAnswer();
     const canvas = dialog();
-    await canvas.findByText(/Captured messages are kept for 400 days/);
     await userEvent.click(
-      canvas.getByRole("button", { name: "operating.md, line 14" }),
+      await canvas.findByRole("button", { name: /operating\.md, line 14/ }),
     );
     await canvas.findByRole("link", { name: "Open file" });
   },

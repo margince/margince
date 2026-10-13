@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { OAuthAppsCard } from "./oauth-apps-card";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

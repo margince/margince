@@ -36,12 +36,12 @@ func TestTheOutcomeBucketsAreTheContractEnum(t *testing.T) {
 func TestTheCallFilterRefusesWhatWouldMatchNothing(t *testing.T) {
 	from := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	bad := crmcontracts.AiCallOutcome("retried")
-	cases := map[string]func() (CallFilter, error){
-		"an outcome off the enum":      func() (CallFilter, error) { return callFilterOf(nil, nil, nil, &bad, nil, nil) },
-		"a window ending at its start": func() (CallFilter, error) { return callFilterOf(nil, nil, nil, nil, &from, &from) },
+	cases := map[string]crmcontracts.ListAiCallsParams{
+		"an outcome off the enum":      {Outcome: &bad},
+		"a window ending at its start": {From: &from, To: &from},
 	}
-	for name, build := range cases {
-		_, err := build()
+	for name, params := range cases {
+		_, err := callFilterOf(params)
 		var detailed *httperr.DetailedError
 		if !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
 			t.Errorf("%s: want a 422, got %v", name, err)
@@ -52,12 +52,19 @@ func TestTheCallFilterRefusesWhatWouldMatchNothing(t *testing.T) {
 func TestTheCallFilterCarriesEveryParameter(t *testing.T) {
 	from, to := time.Now().Add(-time.Hour), time.Now()
 	task, model, q := "enrich", "gpt", "quota"
+	provider, servedProvider, tier := "gemini", "Cerebras", "cheap_cloud"
 	outcome := crmcontracts.AiCallOutcomeFailed
-	filter, err := callFilterOf(&task, &model, &q, &outcome, &from, &to)
+	filter, err := callFilterOf(crmcontracts.ListAiCallsParams{
+		Task: &task, Model: &model, Q: &q, Outcome: &outcome, From: &from, To: &to,
+		Provider: &provider, ServedProvider: &servedProvider, Tier: &tier,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := CallFilter{Task: task, Model: model, Query: q, Outcome: "failed", From: &from, To: &to}
+	want := CallListFilter{
+		Task: task, Model: model, Query: q, Outcome: "failed", From: &from, To: &to,
+		Provider: provider, ServedProvider: servedProvider, Tier: tier,
+	}
 	if filter != want {
 		t.Errorf("filter %+v, want %+v", filter, want)
 	}
@@ -67,7 +74,7 @@ func TestTheCallFilterCarriesEveryParameter(t *testing.T) {
 // match themselves.
 func TestTheCallFilterBindsEachValueOnce(t *testing.T) {
 	query := newCallQuery()
-	where := CallFilter{Task: "enrich", Model: "m", Query: " 50%_off ", Outcome: "failed"}.where(query)
+	where := CallListFilter{Task: "enrich", Model: "m", Query: " 50%_off ", Outcome: "failed"}.where(query)
 	if got, want := len(query.args), 6; got != want {
 		t.Fatalf("%d arguments, want %d", got, want)
 	}

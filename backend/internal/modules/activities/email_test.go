@@ -328,8 +328,7 @@ func TestTheMailboxResolutionRefusesOnlyWhenNothingCanTransmit(t *testing.T) {
 
 	none := store.WithSendAuthority(&stubSendAuthority{capable: false})
 	_, err := none.sendableMailProvider(context.Background())
-	var refusal *MailboxNotSendCapableError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*MailboxNotSendCapableError](err); !ok {
 		t.Fatalf("no transmitting mailbox = %v, want the refusal naming what to fix", err)
 	}
 }

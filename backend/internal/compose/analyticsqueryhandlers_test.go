@@ -25,7 +25,7 @@ func TestASavedQuestionSurvivesTheWireBothWays(t *testing.T) {
 		ScopeKind: ScopeKindOwner,
 		ScopeID:   ids.NewV7().String(),
 	}
-	assertEveryFieldSet(t, reflect.ValueOf(asked), "analyticsquery.Query")
+	assertEveryFieldSet(t, reflect.ValueOf(asked), "analyticsquery.Query", nil)
 
 	wire, err := wireFromQuery(asked)
 	if err != nil {
@@ -35,7 +35,7 @@ func TestASavedQuestionSurvivesTheWireBothWays(t *testing.T) {
 	// of the question.
 	save := true
 	wire.Save = &save
-	assertEveryFieldSet(t, reflect.ValueOf(wire), "crmcontracts.AnalyticsQuery")
+	assertEveryFieldSet(t, reflect.ValueOf(wire), "crmcontracts.AnalyticsQuery", nil)
 
 	if back := queryFromWire(wire); !reflect.DeepEqual(back, asked) {
 		t.Errorf("the question came back as %+v, want %+v", back, asked)

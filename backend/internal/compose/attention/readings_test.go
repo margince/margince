@@ -5,8 +5,10 @@ package attention
 
 import (
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The strip is a statement about the DAY, not about the page. A reader walking
@@ -31,7 +33,7 @@ func TestTheReadingsDoNotShrinkAsAReaderPagesThroughTheQueue(t *testing.T) {
 	// The same day read one row at a time. `pageFrom` is what a page cut is, so
 	// this walks the real one rather than a slice invented here.
 	var pages []crmcontracts.WorklistReadings
-	for at := 0; at < len(considered); at++ {
+	for at := range considered {
 		shown, _, _ := pageFrom(append([]ranked(nil), considered...), 1, worklistCursor{At: at})
 		if len(shown) == 0 {
 			t.Fatalf("the walk ran dry at offset %d with rows still owed", at)
@@ -329,7 +331,7 @@ func TestALaneThisReaderWasRefusedMakesTheFiguresAFloor(t *testing.T) {
 
 			out := (&Service{}).worklistFrom(
 				t.Context(), day, scopeAll, "", 25,
-				waitingRead{}, leadRead{}, worklistCursor{},
+				waitingRead{}, worklistCursor{},
 				[]*crmcontracts.WorklistSourceUnavailable{withheld})
 
 			if !out.Readings.MoreAvailable {
@@ -355,7 +357,7 @@ func TestARefusedLaneReachesBothTheWarningListAndTheFigures(t *testing.T) {
 
 	out := (&Service{}).worklistFrom(
 		t.Context(), day, scopeAll, "", 25,
-		waitingRead{}, leadRead{}, worklistCursor{},
+		waitingRead{}, worklistCursor{},
 		[]*crmcontracts.WorklistSourceUnavailable{withheld})
 
 	named := false
@@ -463,5 +465,17 @@ func TestTheDecisionCountKeepsAPairOnlyTheDismissalCanSettle(t *testing.T) {
 
 	if got.Review != 1 {
 		t.Errorf("counted %d decisions over a pair this reader is the one to clear", got.Review)
+	}
+}
+
+func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
+	leadTask := classifyTask(taskItem(Task{ID: ids.NewV7(), Subject: "Call selected prospect", LinkType: "lead", LinkID: ids.NewV7()}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC), rankInstant)
+	otherTask := classifyTask(taskItem(Task{ID: ids.NewV7(), Subject: "Review offer", LinkType: "deal", LinkID: ids.NewV7()}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC), rankInstant)
+	got := readingsOf([]ranked{leadTask, otherTask}, nil, nil)
+	if got.Prospecting != 1 {
+		t.Fatalf("prospecting tasks = %d", got.Prospecting)
+	}
+	if !keepsRow(leadTask, crmcontracts.WorklistFilterLeads) || keepsRow(otherTask, crmcontracts.WorklistFilterLeads) {
+		t.Fatal("prospecting filter disagrees with planned lead work")
 	}
 }

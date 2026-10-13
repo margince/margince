@@ -34,7 +34,7 @@ func TestASystemMintedTaskDoesNotCountAsTheNextStep(t *testing.T) {
 		return &crmcontracts.Contact360{
 			Commercial: &crmcontracts.Contact360Commercial{
 				Deal: &crmcontracts.Contact360CommercialDeal{Title: "Expansion"},
-				Role: ptr("champion"),
+				Role: new("champion"),
 			},
 			NextSteps: &struct {
 				Data []crmcontracts.Activity `json:"data"`
@@ -57,12 +57,12 @@ func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
 		role *string
 		want string
 	}{
-		{"an influencer", ptr("influencer"), "The deal is open and nothing is scheduled with them. They're the recorded influencer on it."},
-		{"an economic buyer", ptr("economic_buyer"), "The deal is open and nothing is scheduled with them. They're the recorded economic buyer on it."},
+		{"an influencer", new("influencer"), "The deal is open and nothing is scheduled with them. They're the recorded influencer on it."},
+		{"an economic buyer", new("economic_buyer"), "The deal is open and nothing is scheduled with them. They're the recorded economic buyer on it."},
 		// A stakeholder edge may carry no role at all, and a sentence naming
 		// one anyway would invent the fact the rung exists to report.
 		{"a seat with no role recorded", nil, "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
-		{"a seat whose role is blank", ptr("  "), "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
+		{"a seat whose role is blank", new("  "), "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			page := &crmcontracts.Contact360{

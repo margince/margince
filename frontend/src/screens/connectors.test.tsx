@@ -13,9 +13,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { locationDouble } from "../testing/locationdouble";
+import { meFixture } from "../testing/mefixture";
 import { ConnectorsCard } from "./connectors";
 import { type RouteMap, stubWithSession } from "./story-utils";
 
@@ -28,6 +28,7 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 const gmailConnected: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   scopes: [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -59,6 +60,7 @@ const imapConnected: CaptureConnection = {
   ...gmailConnected,
   id: "018f3a1b-0000-7000-8000-0000000000c9",
   provider: "imap",
+  can_backfill: false,
   scopes: [],
 };
 
@@ -69,6 +71,7 @@ const gcalConnected: CaptureConnection = {
   ...gmailConnected,
   id: "018f3a1b-0000-7000-8000-0000000000ca",
   provider: "gcal",
+  can_backfill: false,
   scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
 };
 
@@ -247,6 +250,15 @@ describe("the connected-inboxes card", () => {
     await screen.findByTestId("connector-gmail");
     expect(screen.getByTestId("connector-gmail-past-email")).toBeTruthy();
     expect(screen.getByTestId("connector-gmail-mail-posture")).toBeTruthy();
+  });
+
+  // The connector says whether old mail can come in, so a mailbox whose
+  // connector cannot import offers no import that would only be refused.
+  it("offers no past email where the connector cannot import old mail", async () => {
+    stubApi([{ ...gmailConnected, can_backfill: false }]);
+    render(<ConnectorsCard />);
+    await screen.findByTestId("connector-gmail");
+    expect(screen.queryByTestId("connector-gmail-past-email")).toBeNull();
   });
 
   // And the tag row stays: a meeting brings in contacts exactly as a message

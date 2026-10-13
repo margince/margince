@@ -29,13 +29,8 @@ func WriteMultipartRefusal(w http.ResponseWriter, r *http.Request, err error, li
 // MultipartRefusal is WriteMultipartRefusal for a caller that returns its
 // refusal rather than writing it.
 func MultipartRefusal(err error, limit int64) *DetailedError {
-	var tooLarge *http.MaxBytesError
-	if errors.As(err, &tooLarge) {
-		return &DetailedError{
-			Status: http.StatusRequestEntityTooLarge,
-			Code:   "body_too_large",
-			Detail: fmt.Sprintf("the upload exceeds the %s limit", Megabytes(limit)),
-		}
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		return BodyTooLargeRefusal(fmt.Sprintf("the upload exceeds the %s limit", Megabytes(limit)))
 	}
 	return Validation("file", "invalid_multipart",
 		"the request must be sent as multipart/form-data")
@@ -61,6 +56,12 @@ func Megabytes(limit int64) string {
 	}
 	tenths := limit * 10 / bytesPerMB
 	return fmt.Sprintf("%d.%d MB", tenths/10, tenths%10)
+}
+
+// WholeMegabytes is the ceiling in whole decimal MB, rounded down for the
+// reason Megabytes rounds down.
+func WholeMegabytes(limit int64) int64 {
+	return limit / bytesPerMB
 }
 
 // bytesPerMB is the decimal megabyte every upload ceiling is denominated in

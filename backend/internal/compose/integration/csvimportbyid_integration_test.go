@@ -21,6 +21,7 @@ package integration
 // because an id must be immune to every one of them.
 
 import (
+	"maps"
 	"net/http"
 	"strings"
 	"testing"
@@ -34,7 +35,9 @@ func createCompanyReturningID(t *testing.T, e *apptest.AppEnv, body map[string]a
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/companies", body, nil, &created); status != http.StatusCreated {
+	withSource := map[string]any{"source": "manual"}
+	maps.Copy(withSource, body)
+	if status := e.Call(t, http.MethodPost, "/v1/companies", withSource, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating a company → %d, want 201", status)
 	}
 	return created.ID
@@ -85,7 +88,7 @@ func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 			"updates it", report.Disposition.Created, report.Disposition.Updated)
 	}
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	gotID, city, _ := companyByName(t, e, "Kestrel Data")
@@ -113,7 +116,7 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		profile, _ := uploadCSV(t, e, "company", file)
 		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
-		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
 		}
 
@@ -137,7 +140,7 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		profile, _ := uploadCSV(t, e, "company", file)
 		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
-		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
 		}
 		if city := cityOf(t, e, ag); city != "Stuttgart" {
@@ -160,7 +163,7 @@ func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T
 		profile, _ := uploadCSV(t, e, "company", file)
 		run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 			map[string]string{"Id": "id", "Company": "display_name", "City": "address.city"})
-		if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+		if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 			t.Fatalf("approve → %d, want 202", status)
 		}
 		if city := cityOf(t, e, trading); city != "Bremen" {
@@ -232,7 +235,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 				t.Errorf("the disposition sums to %d for %d rows read", got, report.RowsRead)
 			}
 
-			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+			if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 				t.Fatalf("approve → %d, want 202", status)
 			}
 			if after := len(companyList(t, e).Data); after != before {
@@ -314,7 +317,7 @@ func TestCSVImportByIDOfOneAddressColumnKeepsTheRest(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "company", file)
 	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef,
 		map[string]string{"Id": "id", "City": "address.city"})
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 
@@ -415,7 +418,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
 			if status := e.Call(t, http.MethodPost, "/v1/companies",
-				map[string]any{"display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
+				map[string]any{"source": "manual", "display_name": "Kestrel Data"}, nil, nil); status != http.StatusCreated {
 				t.Fatalf("creating the incumbent → %d, want 201", status)
 			}
 
@@ -434,8 +437,7 @@ func TestThePreviewPromisesWhatTheCommitPerformsForACollision(t *testing.T) {
 			}
 			before := len(companyList(t, e).Data)
 
-			if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve",
-				nil, nil, nil); status != http.StatusAccepted {
+			if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 				t.Fatalf("approve → %d, want 202", status)
 			}
 

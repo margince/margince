@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiCallsCard } from "./aicalls";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -34,7 +34,7 @@ const summary = {
   estimated_cost_microusd: 3612,
 };
 
-// One call per outcome, so the badge column shows every tone it can draw.
+// One call per outcome bucket, so the outcome dial has every bucket to find.
 const calls = [
   summary,
   {
@@ -182,6 +182,15 @@ function list(
             "owed_verdict",
             "weekly_review",
           ],
+          task_options: [
+            {
+              task: "capture_classify",
+              display_name: "Message classification",
+            },
+            { task: "enrich" },
+            { task: "owed_verdict", display_name: "Unanswered-message triage" },
+            { task: "weekly_review", display_name: "Weekly review narrative" },
+          ],
           models: ["claude-sonnet", "gemini-2.5-flash"],
         }),
       "GET /ai/calls/call-1": () => jsonResponse(options.callDetail ?? detail),
@@ -227,7 +236,7 @@ export const FilteredEmpty: Story = {
 async function openFirstCall(canvasElement: HTMLElement, expected: RegExp) {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: /Open the Capture classify call/,
+      name: /Open the capture_classify call/,
     }),
   );
   // The drawer is portalled out of the canvas, so it is found on the page.
@@ -258,8 +267,8 @@ export const ListPhone: Story = {
   render: list(calls),
 };
 
-// A broker's model ids never break on their own, and the fixed columns cut them
-// at their edge rather than let them widen the table past its card.
+// A broker's model ids never break on their own, so they wrap anywhere rather
+// than widen the table past its card.
 export const BrokerModelsAtSettingsWidth: Story = {
   render: () => {
     const Card = list(brokered);

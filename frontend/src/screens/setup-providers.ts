@@ -34,7 +34,11 @@ export type SetupProvider = {
   readonly label: string;
   /** The adapter the wire names. */
   readonly provider: string;
-  /** Required for the OpenAI-wire brokers, absent for a native vendor. */
+  /**
+   * Required for the OpenAI-wire brokers, absent for a native vendor. Written
+   * on each lane, the older spelling: the server lifts it onto the provider,
+   * which names no host yet on a fresh installation.
+   */
   readonly baseUrl?: string;
   /** The variable the server reads this key from, shown so an operator can find it. */
   readonly keyEnv: string;

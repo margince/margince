@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Disclosure,
@@ -12,8 +11,10 @@ import {
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceReceipt } from "../design-system/evidencereceipt";
+import { FilterBar } from "../design-system/filterbar";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SegmentBar } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import {
@@ -25,10 +26,11 @@ import {
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { LandingCard, SufficiencyCard } from "./analytics.forecast.landing";
 import { ForecastReview } from "./analytics.forecast.review";
-import { QueryGate, throwProblem } from "./common";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -42,9 +44,11 @@ type Readings = components["schemas"]["ForecastReadings"];
 export function ForecastView({
   selection,
   canSubmit,
+  scopeControl,
 }: Readonly<{
   selection: AnalyticsSelection;
   canSubmit: boolean;
+  scopeControl?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -67,7 +71,22 @@ export function ForecastView({
           call about it. Above the readings rather than beside them, because
           every number on this page changes when the window moves — a control
           nested among them would read as filtering one. */}
-      <div className="analytics-toolbar">
+      <FilterBar
+        label={t("analytics.filters")}
+        actions={
+          canCall && !editing ? (
+            <Button onClick={() => setEditing(true)}>
+              {t("forecast.updateCall")}
+            </Button>
+          ) : null
+        }
+        caption={
+          readings.data?.period_start && readings.data.period_end
+            ? `${formatDateAbbrev(readings.data.period_start, locale, readings.data.timezone)} – ${formatDateAbbrev(readings.data.period_end, locale, readings.data.timezone)}`
+            : undefined
+        }
+      >
+        {scopeControl}
         <SegmentedControl
           label={t("forecast.period")}
           options={FORECAST_PERIODS}
@@ -79,25 +98,12 @@ export function ForecastView({
             week: t("forecast.period.week"),
           }}
         />
-        {canCall && !editing ? (
-          <Button onClick={() => setEditing(true)}>
-            {t("forecast.updateCall")}
-          </Button>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryGate query={readings} pendingLabel={t("forecast.updateCall")}>
         {(data) => (
           <>
-            {data.period_start && data.period_end && (
-              <p className="t-caption">
-                {formatDateAbbrev(data.period_start, locale, data.timezone)} –{" "}
-                {formatDateAbbrev(data.period_end, locale, data.timezone)}
-              </p>
-            )}
-            <ForecastAnswer readings={data} locale={locale} />
-            {period === "quarter" && (
-              <ReportingForecastGraphs scope={selection.scope} />
-            )}
+            {/* Directly under the verb that opened it, above the figures it
+                answers, so the form appears where the reader's eye already is. */}
             {canCall && editing ? (
               <ForecastCallEditor
                 readings={data}
@@ -106,6 +112,10 @@ export function ForecastView({
                 onClose={() => setEditing(false)}
               />
             ) : null}
+            <ForecastAnswer readings={data} locale={locale} />
+            {period === "quarter" && (
+              <ReportingForecastGraphs scope={selection.scope} />
+            )}
             {/* What to check comes BEFORE the receipt: a manager with ten
               minutes reads what needs doing first, and the receipt is what
               they consult when a number looks wrong. Side by side where the
@@ -295,27 +305,31 @@ function ForecastAnswer({
 
       {/* EVERY slot declares the narrow shape, the landing pair included: the
           fold is the strip's, so a card that did not declare it would keep its
-          box while the rows beside it lost theirs. */}
-      <StatStrip>
-        {/* Both are absent for a managed-teams reading, which covers several
-            populations at once: a landing summed across books that are called
-            separately, and a coverage rate blended over them, would each
-            describe none of them. */}
-        {readings.landing && (
-          <LandingCard
-            landing={readings.landing}
-            currency={currency}
-            locale={locale}
-          />
-        )}
-        {readings.sufficiency && (
-          <SufficiencyCard
-            sufficiency={readings.sufficiency}
-            currency={currency}
-            locale={locale}
-          />
-        )}
-      </StatStrip>
+          box while the rows beside it lost theirs.
+
+          Both are absent for a managed-teams reading, which covers several
+          populations at once: a landing summed across books that are called
+          separately, and a coverage rate blended over them, would each
+          describe none of them. With neither, no strip: an empty one still
+          takes its row and its gaps. */}
+      {(readings.landing || readings.sufficiency) && (
+        <StatStrip>
+          {readings.landing && (
+            <LandingCard
+              landing={readings.landing}
+              currency={currency}
+              locale={locale}
+            />
+          )}
+          {readings.sufficiency && (
+            <SufficiencyCard
+              sufficiency={readings.sufficiency}
+              currency={currency}
+              locale={locale}
+            />
+          )}
+        </StatStrip>
+      )}
     </>
   );
 }
@@ -357,27 +371,22 @@ function ForecastCallEditor({
         // unreachable rather than a state to design copy for.
         throw new Error("a forecast names one population");
       }
-      const { data, error } = await api.POST("/forecast/calls", {
-        body: {
-          // The forecast is published for the population AND the window the
-          // reader is LOOKING at. Hard-coded to the workspace, this recorded a
-          // company-wide belief while a manager read their own team's numbers
-          // — the assertion and the figure it was formed from disagreeing. A
-          // hard-coded quarter is the same defect one axis over: a call made
-          // while reading the week would be filed against three months.
-          period,
-          ...named,
-          amount_minor: call.amountMinor,
-          currency: readings.base_currency,
-          // An empty note is no note. Sent as "", it would claim the author
-          // wrote something blank.
-          note: call.note === "" ? undefined : call.note,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/forecast/calls", {
+          body: {
+            // The call is filed for the population and the window the reader is
+            // looking at, so the call and the figure it came from agree. A call made
+            // while reading one team's week must not land on the workspace or a quarter.
+            period,
+            ...named,
+            amount_minor: call.amountMinor,
+            currency: readings.base_currency,
+            // An empty note is no note. Sent as "", it would claim the author
+            // wrote something blank.
+            note: call.note === "" ? undefined : call.note,
+          },
+        }),
+      );
     },
     onSuccess: async () => {
       // The readings carry the standing call, so they are stale the moment one
@@ -444,11 +453,11 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/shared/{token}", {
-        params: { path: { token } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/forecast/shared/{token}", {
+          params: { path: { token } },
+        }),
+      );
     },
   });
   return (

@@ -73,7 +73,7 @@ func readNames(path string) (map[string]string, error) {
 		return nil, fmt.Errorf("reading the digest names: %w", err)
 	}
 	names := map[string]string{}
-	for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(string(body)), "\n") {
 		top, variable, found := strings.Cut(line, "\t")
 		if !found {
 			return nil, fmt.Errorf("%s holds %q, not an entry and its variable", path, line)
@@ -153,8 +153,9 @@ func undeclaredReads(log io.Reader, pkgDir string, names map[string]string) ([]s
 			}
 			top, _, _ := strings.Cut(rel, "/")
 			// git's own bookkeeping, not tracked content: locating the
-			// repository stats it, and no digest describes it.
-			if top == ".git" {
+			// repository stats it in every directory on the way up, and no
+			// digest describes it.
+			if top == ".git" || filepath.Base(rel) == ".git" {
 				continue
 			}
 			outside[rel] = top

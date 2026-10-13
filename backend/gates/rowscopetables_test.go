@@ -5,7 +5,7 @@
 
 package gates
 
-// WHICH table a row-scope call bounds, and which column names a reference to
+// Which table a row-scope call bounds, and which column names a reference to
 // one.
 //
 // The obligation used to be table-agnostic: a function that projected an
@@ -70,6 +70,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	// share arm, so it bounds a reference at least as tightly.
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
+	"VisibleSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
 	"LinkTargetVisibleClause": {table: anyTable},
@@ -485,5 +486,47 @@ const (
 	// 112: collections.lastChecks reads the latest check of lists its caller
 	// already found through their sharing (ListLists, GetList); it answers only
 	// for the ids it was handed, so it names no list the reader could not find.
-	modulesTierUnscopedCeiling = 112
+	//
+	// 113: contacts.nameDomainClaimant is the dedupe ladder's rival for a company
+	// named after a domain, the sibling of exactCompanyByDomain above it and
+	// unscoped for the same reason: the ladder scores every company in the
+	// installation, and the id it finds becomes a review row, never a response.
+	//
+	// 114: contacts.OpenDuplicateCompanyPairsTx is system-only and hands Deal
+	// Scout the open company pairs, so it can withdraw a suggestion raised twice
+	// for one business. The ids select suggestions to supersede; a rep sees a
+	// suggestion only through deals' visibility clause.
+	//
+	// 115: capture.AutoEnrichStore.ParkedEnrichments is the operator recovery's
+	// list of companies whose enrichment an outage exhausted. System-only, no
+	// seat to narrow to, and the ids go straight into the reopen of each
+	// company's own backoff cursor; nothing returns one to a reader, and the
+	// sweep that then re-reads them applies its own eligibility.
+	//
+	// 116: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
+	// belongs to the contact named or to the survivor a merge folded it into. A
+	// vouch chain spans records by construction (a merge copies the vouch
+	// onto the survivor and leaves the original on the predecessor, linked by
+	// carried_from), so the lookup reaches
+	// contact_id across several rows and no single row scope can bound it.
+	// auth.EnsureRetractable has already been taken on both the named contact
+	// and its survivor in the same transaction, so the caller was shown to reach
+	// every record the question can resolve to. The read hands back no
+	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
+	//
+	// 117: contacts.workedFromContact reads the contact a lead row was worked
+	// from, for the writers that keep one live lead per contact (reopen, demote,
+	// lead merge). They must see the link whether or not the caller may open
+	// the contact, so it is read off the row; it reaches no caller, and every
+	// read of a lead withholds it through withholdUnreadableSourceContacts.
+	//
+	// 118: privacy.contactsMatchingSuppression's second walk, over every live
+	// contact_channel_identity. It is unscoped for the reason given at 106: a
+	// chat-only subject has no address, and the list names their account.
+	//
+	// 119: activities.CompanyReachedActivities is a SQL fragment, not a read:
+	// the timeline predicate's arms as a set that starts from the accounts. Its
+	// one caller, company360.LastTouchFor, bounds the company with ScopeClauseFor
+	// and the activity with ActivityDiscoverClause around it.
+	modulesTierUnscopedCeiling = 119
 )

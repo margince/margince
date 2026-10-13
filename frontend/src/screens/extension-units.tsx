@@ -2,14 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Blocks, ChevronRight } from "lucide-react";
+import { KeyedName } from "../design-system/keyedname";
+import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { useLocale, useT } from "../i18n";
 import {
   EXTENSION_SCREEN,
+  type ExtensionDescriptor,
   type UnitSecretScope,
   unitsForSecretScope,
-} from "../app/extensions";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { ProviderList, ProviderRow } from "../design-system/providerrow";
-import { useT } from "../i18n";
+  unitTitle,
+} from "../lib/extensions";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -17,7 +19,7 @@ import "./extension-units.css";
 //
 // A unit used to have a row in the navigation rail, which put an
 // installation's surface beside Pipeline and Reports as though the product had
-// grown a destination. It has not: enabling a unit adds a thing to CONFIGURE,
+// grown a destination. It has not — enabling a unit adds a thing to CONFIGURE,
 // and this is the page that configures things.
 //
 // WHICH page is the manifest's decision and not this component's. A unit
@@ -25,25 +27,24 @@ import "./extension-units.css";
 // so it is offered on their personal Connections page; a `workspace` secret is
 // the installation's, so its unit is offered under Integrations. Both pages
 // already mean exactly that, which is why the declared scope is enough and no
-// unit names a destination. See app/extensions.ts's unitsForSecretScope.
+// unit names a destination. See lib/extensions.ts's unitsForSecretScope.
 //
 // The permission story is the page, and it was already written: Connections is
 // per-contact and ungated, Integrations is the company's and opens on the
 // grants its cards ask for OR on a workspace-scoped unit being composed at all,
 // because this page is the only place such a unit is offered. The rows here add
-// no gate of their own (the rail rows they replace had none either), and a
+// no gate of their own — the rail rows they replace had none either, and a
 // unit's screen refuses independently on the object it declares.
 //
-// A unit is ONE ProviderRow, not a panel of its own: it is a thing this
-// installation connects, and the only thing to do with it here is go to its
-// own screen, which owns its configuration.
+// A unit is one row whose only verb is to go there, so the whole row is the
+// link. Its own screen configures it.
 
 /**
  * The units whose credential lives in `scope`, or nothing at all.
  *
  * Nothing at all is the vanilla tree, where no unit is composed, and it is also
  * the honest answer for a page whose scope no composed unit declares. A heading
- * over an empty list is a promise the installation did not make, for the same
+ * over an empty list is a promise the installation did not make — the same
  * reason the rail group this replaces was absent rather than empty.
  */
 export function ExtensionUnitsCard({
@@ -61,42 +62,32 @@ export function ExtensionUnitsCard({
     <Panel title={t(`extUnits.${scope}.title`)}>
       <PanelBody>
         <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
-        <ProviderList>
-          {units.map((unit) => (
-            <UnitRow key={unit.name} name={unit.name} />
-          ))}
-        </ProviderList>
       </PanelBody>
+      {units.map((unit) => (
+        <UnitRow key={unit.name} unit={unit} />
+      ))}
     </Panel>
   );
 }
 
-/**
- * One unit, as a row whose verb leads to its screen. The link's visible text is
- * the verb and its accessible name carries the unit, because a list of links all
- * announced as "Open" names nothing out of context.
- */
-function UnitRow({ name }: Readonly<{ name: string }>) {
+/** One unit, as a row that is its own way in. */
+function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const { name } = unit;
+  const title = unitTitle(unit, locale);
   return (
-    <div data-testid={`ext-unit-${name}`}>
-      <ProviderRow
-        mark={<Blocks aria-hidden />}
-        // Untranslated: it is the INSTALLATION's text, and a catalogue this
-        // program ships cannot hold a string for a unit it has never seen.
-        name={name}
-        facts={<span className="t-sub">{t("extUnits.managedElsewhere")}</span>}
-        action={
-          <a
-            className="extunits-open"
-            href={`#/${EXTENSION_SCREEN}/${name}`}
-            aria-label={t("extUnits.openNamed", { name })}
-          >
-            {t("extUnits.open")}
-            <ChevronRight aria-hidden />
-          </a>
-        }
-      />
-    </div>
+    <PanelRow interactive record className="extunits-row">
+      <a
+        className="extunits-row-press"
+        data-testid={`ext-unit-${name}`}
+        href={`#/${EXTENSION_SCREEN}/${name}`}
+        aria-label={t("extUnits.openNamed", { name: title })}
+      >
+        <Blocks className="extunits-mark" aria-hidden />
+        <KeyedName name={title} code={name} />
+        <ChevronRight className="extunits-go" aria-hidden />
+      </a>
+    </PanelRow>
   );
 }

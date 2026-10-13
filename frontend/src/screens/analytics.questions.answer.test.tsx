@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProblemError } from "../lib/problem";
 import {
   AnswerTable,
   type ExplainSource,
@@ -24,7 +25,6 @@ import type {
   AnalyticsQuery,
 } from "./analytics.questions.vocab";
 import { render } from "./analytics.testkit";
-import { ProblemError } from "./common";
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -118,8 +118,7 @@ describe("the answer table", () => {
       { ...QUERY, group_by: ["status"], measures: [{ fn: "count" }] },
     );
     expect(await screen.findByText("Won")).toBeTruthy();
-    // No screen names an open deal yet, so it keeps its wire word.
-    expect(screen.getByText("open")).toBeTruthy();
+    expect(screen.getByText("Open")).toBeTruthy();
   });
 
   it("gives no figure for native amounts summed across currencies", async () => {

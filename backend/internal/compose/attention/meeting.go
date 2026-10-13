@@ -153,6 +153,7 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// as work due — unlike a proposal's expiry, which merely lapses.
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = reasons
+	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -180,8 +181,8 @@ func hostOf(item crmcontracts.AttentionItem) ids.UUID {
 // meetingAwaitingOutcomeItem draws one meeting that happened and owes an answer.
 //
 // The counterpart of meetingItem, and deliberately thinner. That row is about
-// preparing, so it carries a contact to read the brief on and a prep tri-state;
-// this one is about closing off, which needs the meeting and nothing else.
+// preparing, so it carries a prep tri-state and a brief to open; this one is
+// about closing off, which needs the meeting and who it was with.
 //
 // `OccurredAt` and no `DueAt`. The lane above races a start time, so its rows
 // carry a deadline; a meeting that already began cannot be late, and stamping
@@ -218,6 +219,12 @@ func meetingAwaitingOutcomeItem(meeting MeetingAwaitingOutcome) crmcontracts.Att
 		host := openapi_types.UUID(meeting.HostUserID)
 		item.HostUserId = &host
 	}
+	// Who it was with, by the forward lane's rule, so one meeting names the
+	// same customer before and after it starts.
+	if !meeting.ContactID.IsZero() {
+		with := openapi_types.UUID(meeting.ContactID)
+		item.WithContact = &with
+	}
 	return item
 }
 
@@ -238,6 +245,7 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 	// the consequence says what it costs.
 	row := base(item, levelAgreed, "meetings", "data_drifts")
 	row.Because = []crmcontracts.WorklistReason{reason("outcome_unrecorded", nil)}
+	row.Host = hostOnTheWire(item)
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),

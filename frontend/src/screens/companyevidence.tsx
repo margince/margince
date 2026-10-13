@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -13,7 +12,8 @@ import { Heading } from "../design-system/heading";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 
 type Receipt = components["schemas"]["ClaimEvidence"];
 type SourceKind = Receipt["source_kind"];
@@ -70,9 +70,8 @@ export function EvidenceModal({
   const receipt = useQuery({
     queryKey: ["claim-evidence", companyId, cited.entityType, cited.entityId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/evidence/{entityType}/{entityId}",
-        {
+      return unwrap(
+        await api.GET("/companies/{id}/evidence/{entityType}/{entityId}", {
           params: {
             path: {
               id: companyId,
@@ -80,12 +79,8 @@ export function EvidenceModal({
               entityId: cited.entityId,
             },
           },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 
@@ -98,7 +93,7 @@ export function EvidenceModal({
       open
       onClose={onClose}
       labelledBy="co-evidence-title"
-      placement="right"
+      intent="drawer"
     >
       <Heading size="large" id="co-evidence-title" className="modal-title">
         {t("co.evidence.title")}

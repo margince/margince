@@ -11,5 +11,23 @@ User-agent: SkypeUriPreview
 User-agent: MicrosoftPreview
 Allow: /
 
+# AI crawlers and training-data tokens, named although * below refuses them
+# too: the refusal is then explicit to each of them and to anyone reading this
+# file, and it does not depend on the * group staying as it is.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: Applebot-Extended
+User-agent: meta-externalagent
+User-agent: cohere-ai
+User-agent: Amazonbot
+Disallow: /
+
 User-agent: *
 Disallow: /

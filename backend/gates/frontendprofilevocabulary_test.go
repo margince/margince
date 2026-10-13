@@ -6,7 +6,7 @@
 package gates
 
 // The browser spells the company-profile vocabulary five more times, and every
-// one of them fails SILENTLY when it falls short.
+// one of them fails silently when it falls short.
 //
 // companyprofilevocabulary_test.go holds the Go mirrors against the
 // company_profile_field CHECK. It cannot read TypeScript, so the five
@@ -59,7 +59,7 @@ var profileVocabularyScreens = []struct {
 	omits map[string]string
 }{
 	{
-		file:   "../frontend/src/screens/common.tsx",
+		file:   "../frontend/src/screens/coldfieldlabels.ts",
 		opens:  "const COLD_FIELD_LABELS: Record<string, MessageKey> = {",
 		closes: "};",
 		why:    "the field renders as its own column name with the underscores spaced out",

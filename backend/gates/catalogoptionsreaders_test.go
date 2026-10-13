@@ -5,7 +5,7 @@
 
 package gates
 
-// Who may read a custom field's OPTIONS.
+// Who may read a custom field's options.
 //
 // fieldcatalog.Column carries three things with two different disclosure rules
 // (the port's own doc states them): Name and Type are schema, ambient to any
@@ -65,6 +65,9 @@ var catalogOptionsReaders = map[string]string{
 	// Reports a picklist's values so a builder can offer them, and gates that
 	// half on `custom_field:read` (customPicklistValuesAreReadable).
 	"internal/modules/collections": "the filter vocabulary",
+	// Checks an imported picklist cell against the options, and names them in a
+	// problem only for a caller with `custom_field:read` (importCatalog.optionsReadable).
+	"internal/compose": "the data import",
 }
 
 func TestOnlyTheDeclaredPackagesReadACustomFieldsOptions(t *testing.T) {

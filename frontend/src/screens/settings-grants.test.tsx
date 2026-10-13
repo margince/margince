@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   expectNavSettlesTo,
   floorPlus,
@@ -82,7 +82,13 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await waitFor(() => expect(offeredPages()).toEqual(floorPlus("company")));
+    // System health too: its schedule cards are this same editor's. And the
+    // jurisdiction, which this editor changes.
+    await waitFor(() =>
+      expect(offeredPages()).toEqual(
+        floorPlus("company", "jurisdiction", "system-health"),
+      ),
+    );
   });
 
   it("opens Seats & license for a lone license read", async () => {

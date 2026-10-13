@@ -12,11 +12,15 @@ package compose
 // helpers, not by living in the same file.
 
 import (
+	"cmp"
 	"context"
+	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // predictedOutcome is what a commit would do with one row, decided exactly the
@@ -55,18 +59,35 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 	return outcome, err
 }
 
-// predict answers what the commit will do AND, when it will refuse, the sentence
-// the report shows for it.
+// predictRow answers what the commit will do, and what the report says about
+// the row: why it is refused, or the warning it lands with.
 //
-// The reason travels with the outcome rather than being recomputed by the
-// caller. It used to be recomputed — from unwritableReason, which knows about
-// the size_band vocabulary and nothing else — so a refusal from any other source
-// reached the report as a skip with an EMPTY reason, and the reader reading it
-// was told a row would not land without being told why.
-func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
-	if reason := unwritableReason(w.object, textFields(row.Fields)); reason != "" {
-		return predictUnwritable, reason, nil
+// Checks run in Ensure's order: create grant, then cells, then a contact's
+// company link under the run's policy. A dropped link rides on the outcome.
+func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
+	if refused := w.createRefusal(ctx, row); refused != nil {
+		return predictUnwritable, refused, nil
 	}
+	typed, invalid, unknownOwner := w.landingCells(row)
+	if invalid != nil {
+		return predictUnwritable, invalid, nil
+	}
+	link, err := w.linkProblemOf(ctx, row)
+	if err != nil {
+		return predictCreate, nil, err
+	}
+	if link.skip {
+		return predictUnwritable, link.problem, nil
+	}
+	outcome, refusal, err := w.predictLanding(ctx, row, typed)
+	if refusal != "" {
+		return outcome, &migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: refusal}, err
+	}
+	return outcome, cmp.Or(link.problem, unknownOwner), err
+}
+
+// predictLanding is predictRow once the row's cells and links allow it to land.
+func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, string, error) {
 	// Mirrors Ensure, in the same order: a named record first, then the identity
 	// map. The two must answer alike or an approval decides one thing and the
 	// commit does another.
@@ -75,16 +96,19 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 		if target.reason != "" {
 			return predictUnwritable, target.reason, nil
 		}
-		return w.reconcilePrediction(ctx, target.id, row)
+		return w.reconcilePrediction(ctx, target.id, row, typed)
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
+	if errors.Is(err, errBoundRecordArchived) {
+		return predictUnwritable, boundArchivedReason, nil
+	}
 	if err != nil {
 		return predictCreate, "", err
 	}
 	if !found {
-		return w.predictCreatePath(ctx, row)
+		return w.predictCreatePath(ctx, row, typed)
 	}
-	return w.reconcilePrediction(ctx, id, row)
+	return w.reconcilePrediction(ctx, id, row, typed)
 }
 
 // predictCreatePath is what the commit will do with a row no previous run of
@@ -104,7 +128,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 // That one IS disclosure-filtered, whichever mode asked: passing the mode
 // through reported invisible companies as duplicates on a `skip` run, one CSV
 // row at a time.
-func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (predictedOutcome, string, error) {
+func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, string, error) {
 	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
 	if err != nil {
 		return predictCreate, "", err
@@ -118,6 +142,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 	}
 	if takenDomain {
 		return predictUnwritable, domainClaimedReason, nil
+	}
+	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
+	if err != nil {
+		return predictCreate, "", err
+	}
+	if takenLinkedIn {
+		return predictUnwritable, linkedInClaimedReason, nil
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
@@ -138,18 +169,21 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row) (
 // an `id` column naming it — so the preview cannot answer one thing for a row
 // the file identified and another for a row the importer remembered.
 func (w *csvWriters) reconcilePrediction(
-	ctx context.Context, id ids.UUID, row migration.Row,
+	ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any,
 ) (predictedOutcome, string, error) {
 	current, err := w.read(ctx, id)
 	if err != nil {
 		return predictCreate, "", err
 	}
-	changed, err := changedFields(current, textFields(row.Fields))
+	changed, err := changedFields(current, textFields(row.Fields), typed)
 	if err != nil {
 		return predictCreate, "", err
 	}
 	if len(changed) == 0 {
 		return predictUnchanged, "", nil
+	}
+	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
+		return predictUnwritable, cannotEditReason(w.object), nil
 	}
 	return predictUpdate, "", nil
 }

@@ -6,10 +6,10 @@ package activities
 // What the queue is NOT showing, and which rule is holding it back.
 //
 // The Worklist is designed to look finite: a rep works it to the bottom and the
-// day is done. Several rules make a waiting customer disappear from it. Three
-// are somebody's choice — `not_sales`, `not_mine`, `snooze`; one is a model's,
-// `informs_us`; the rest are nobody's, such as a message older than the horizon
-// or one with no link to a record the workspace sells to.
+// day is done. Several rules make a waiting customer disappear from it. Four
+// are somebody's choice: `not_sales`, `not_mine`, `snooze` and `handled`. One
+// is a model's, `informs_us`. The rest are nobody's, such as a message older
+// than the horizon or one with no link to a record the workspace sells to.
 //
 // Nothing watched whether any of that was hiding real work. A rep who marks
 // every hard reply `not_sales` produces a page identical to a rep with a clean
@@ -79,18 +79,17 @@ type HiddenBacklog struct {
 	// The figures below are differences between runs of this same query, so
 	// they are counted the same way and the proportions hold.
 	Shown int
-	// SetAside is work this reader has snoozed or marked not_mine. Their own
-	// choice, and the least alarming of the three — a snooze lifts on its own
-	// moment, so this figure includes work that will come back without anybody
-	// remembering it.
+	// SetAside is work this reader snoozed, marked not_mine or marked handled.
+	// Their own choice, and the least alarming of the three. A snooze lifts on
+	// its own moment, so this figure includes work that will come back by itself.
 	SetAside int
 	// NotSales is work somebody judged to be no business of the queue's. It
 	// hides the thread from the WHOLE workspace and does not lift, so it is the
 	// judgement worth watching: one rep's mistake removes a customer from
 	// everybody's day permanently.
 	NotSales int
-	// PastHorizon is work older than the queue's horizon with no open deal
-	// behind it. NOBODY CHOSE THIS. A customer who wrote four months ago and was
+	// PastHorizon is work older than the queue's horizon that no human holds,
+	// open deal or not. NOBODY CHOSE THIS. A customer who wrote four months ago and was
 	// never answered is exactly the failure a sales queue exists to prevent, and
 	// the horizon removes them silently.
 	PastHorizon int
@@ -144,11 +143,10 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 	var out HiddenBacklog
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		reader := readerOrNobody(ctx)
-		// The queue's own horizon, measured once and handed to every relaxation
-		// below. Measured per count instead, the guardrail could report a
-		// difference between two scans that came from two different cutoffs
-		// rather than from the rule it was relaxing.
-		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
+		// The queue's own horizon, read once and handed to every relaxation
+		// below. Read per count, two scans could differ by cutoff rather
+		// than by the rule being relaxed.
+		measured, err := s.waitingHorizonFor(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -168,14 +166,11 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		// unable to act on it — the whole point of this reading is which rule to
 		// look at.
 		//
-		// `ids.UUID{}` is the no-reader spelling readerOrNobody already uses for
-		// a background job: it matches no activity_reader_state row, so nothing
-		// is set aside for it.
 		for _, relaxed := range []struct {
 			into *int
 			with waitingRelaxation
 		}{
-			{&out.SetAside, waitingRelaxation{reader: ids.UUID{}}},
+			{&out.SetAside, waitingRelaxation{reader: reader, keepSetAside: true}},
 			{&out.NotSales, waitingRelaxation{reader: reader, keepNotSales: true}},
 			{&out.PastHorizon, waitingRelaxation{reader: reader, wholeHorizon: true}},
 			{&out.Unlinked, waitingRelaxation{reader: reader, keepUnlinked: true}},
@@ -215,9 +210,14 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 // keeps a new relaxation from silently widening the strict read every figure is
 // measured against.
 type waitingRelaxation struct {
-	// reader is whose set-asides apply. The zero uuid matches no reader_state
-	// row, which is how the SetAside figure is taken.
+	// reader is who is asking. Every reader-relative rule answers to them, the
+	// open request tasks assigned to somebody else included.
 	reader ids.UUID
+	// keepSetAside admits threads this reader snoozed, marked not_mine or marked
+	// handled. It is a flag beside the reader, not a swap to the zero uuid. The
+	// zero uuid means "any assignee" to the request-task rule, and hid every
+	// mail a colleague holds a request on from the relaxed read.
+	keepSetAside bool
 	// keepNotSales admits threads somebody judged to be no sales business.
 	keepNotSales bool
 	// wholeHorizon looks back hiddenHorizonDays instead of the queue's own
@@ -302,7 +302,16 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	setAside := neverRelaxed
+	if relax.keepSetAside {
+		setAside = scopeUnbounded
+	}
 	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+	if err != nil {
+		return "", err
+	}
+	// Relaxations widen eligibility rules, never what a reader may be shown.
+	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +320,6 @@ func (s *Store) waitingStatement(
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
-		liveRecord(openDealPredicate, "fd"),
 		arg(relax.reader),
 		scopeUnbounded,
 		notSales, unlinked,
@@ -319,7 +327,8 @@ func (s *Store) waitingStatement(
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		fmt.Sprintf("$%d", arg(readerAddresses)),
 		informsUs,
-		noKeyset), nil
+		noKeyset, bookedDiscover,
+		setAside, neverRelaxed), nil
 }
 
 // countWaiting is the statement above asked for how many.
@@ -336,8 +345,8 @@ func (s *Store) countWaiting(
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a
 	// count(*) pushed inside would report groups before the cap.
-	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM (`+inner+`) waiting`, args...).Scan(&count); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`,
+		planEachBind(args)...).Scan(&count); err != nil {
 		return 0, err
 	}
 	return count, nil

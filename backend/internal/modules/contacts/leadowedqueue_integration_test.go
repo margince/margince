@@ -34,7 +34,7 @@ func TestTheOwedDialKeepsAnsweredLeadsOutOfTheBoundedPage(t *testing.T) {
 	var answered []ids.UUID
 	for _, name := range []string{"Answered A", "Answered B"} {
 		lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{
-			FullName: strPtr(name), Source: "manual",
+			FullName: new(name), Source: "manual",
 		})
 		if err != nil {
 			t.Fatalf("create %s: %v", name, err)
@@ -54,11 +54,13 @@ func TestTheOwedDialKeepsAnsweredLeadsOutOfTheBoundedPage(t *testing.T) {
 		}
 	}
 	owedLead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{
-		FullName: strPtr("Nobody has answered this one"), Source: "manual",
+		FullName: new("Nobody has answered this one"), Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	e.seedLeadTouch(t, ids.From[ids.LeadKind](ids.UUID(owedLead.Id)), "email", "inbound", "human:x", "manual", owedLead.CreatedAt)
 
 	// A page smaller than the answered set: without the dial this returns only
 	// answered leads and the caller concludes nothing is owed.

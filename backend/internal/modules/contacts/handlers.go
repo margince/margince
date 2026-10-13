@@ -158,6 +158,13 @@ func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros 
 	return h
 }
 
+// WithGrantCarrier wires the seam that carries the shares on a retiring record
+// onto the survivor (grantcarry.go).
+func (h Handlers) WithGrantCarrier(carrier GrantCarrier) Handlers {
+	h.store = h.store.WithGrantCarrier(carrier)
+	return h
+}
+
 // duplicateID renders a duplicate error's existing-row pointer for the
 // wire. The dedupe pre-checks leave ExistingID zero when the row is not
 // visible to the caller (or a race hid it); the response then omits
@@ -170,11 +177,25 @@ func duplicateID(id ids.UUID) string {
 	return id.String()
 }
 
+// duplicateLeadProblem is the 409 for a lead refused over a key another live
+// lead holds, or nil when err is no such refusal.
+func duplicateLeadProblem(err error) *httperr.DetailedError {
+	if dupLead, ok := errors.AsType[*DuplicateLeadError](err); ok {
+		return httperr.Duplicate("duplicate_email", duplicateID(dupLead.ExistingID.UUID))
+	}
+	if dupLeadLinkedIn, ok := errors.AsType[*DuplicateLeadLinkedInError](err); ok {
+		return httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID))
+	}
+	if dupContactLead, ok := errors.AsType[*DuplicateContactLeadError](err); ok {
+		return httperr.Duplicate("duplicate_contact_lead", duplicateID(dupContactLead.ExistingID.UUID))
+	}
+	return nil
+}
+
 // writeStoreErr maps this module's typed store errors onto the wire
 // codes the contract names, then falls through to the sentinel registry.
 func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	var bothProjects *BothCompaniesCarryProjectsError
-	if errors.As(err, &bothProjects) {
+	if bothProjects, ok := errors.AsType[*BothCompaniesCarryProjectsError](err); ok {
 		// The names ride the body: "resolve your projects first" is only
 		// actionable if the caller is told which ones.
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -188,35 +209,25 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
-	var dupEmail *DuplicateEmailError
-	if errors.As(err, &dupEmail) {
+	if dupEmail, ok := errors.AsType[*DuplicateEmailError](err); ok {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupEmail.ExistingID.UUID)))
 		return
 	}
-	var dupDomain *DuplicateDomainError
-	if errors.As(err, &dupDomain) {
+	if dupDomain, ok := errors.AsType[*DuplicateDomainError](err); ok {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_domain", duplicateID(dupDomain.ExistingID.UUID)))
 		return
 	}
-	var dupLead *DuplicateLeadError
-	if errors.As(err, &dupLead) {
-		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupLead.ExistingID.UUID)))
+	if dup := duplicateLeadProblem(err); dup != nil {
+		httperr.Write(w, r, dup)
 		return
 	}
-	var dupLeadLinkedIn *DuplicateLeadLinkedInError
-	if errors.As(err, &dupLeadLinkedIn) {
-		httperr.Write(w, r, httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID)))
-		return
-	}
-	var primaryConflict *PrimaryConflictError
-	if errors.As(err, &primaryConflict) {
+	if primaryConflict, ok := errors.AsType[*PrimaryConflictError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "multiple_primary", Detail: primaryConflict.Error(),
 		})
 		return
 	}
-	var promoted *AlreadyPromotedError
-	if errors.As(err, &promoted) {
+	if promoted, ok := errors.AsType[*AlreadyPromotedError](err); ok {
 		e := &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "already_promoted", Detail: promoted.Error(),
 		}
@@ -228,22 +239,19 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, e)
 		return
 	}
-	var notPromoted *NotPromotedError
-	if errors.As(err, &notPromoted) {
+	if notPromoted, ok := errors.AsType[*NotPromotedError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "not_promoted", Detail: notPromoted.Error(),
 		})
 		return
 	}
-	var notDisqualified *NotDisqualifiedError
-	if errors.As(err, &notDisqualified) {
+	if notDisqualified, ok := errors.AsType[*NotDisqualifiedError](err); ok {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "not_disqualified", Detail: notDisqualified.Error(),
 		})
 		return
 	}
-	var alreadyMerged *AlreadyMergedError
-	if errors.As(err, &alreadyMerged) {
+	if alreadyMerged, ok := errors.AsType[*AlreadyMergedError](err); ok {
 		e := &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "already_merged", Detail: alreadyMerged.Error(),
 		}

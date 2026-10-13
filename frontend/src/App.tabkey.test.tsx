@@ -9,8 +9,8 @@ import {
   sessionOnlyFetch,
 } from "./testing/appharness";
 
-// A tab inside a record is a VIEW of that record, and the app keys its routed
-// subtree on what the address is ABOUT (app/router.tsx's routeIdentity) so that
+// A tab inside a record is a view of that record. The app keys its routed
+// subtree on what the address is about (lib/router.tsx's routeIdentity), so
 // moving between views is a re-render rather than a remount. What that buys is
 // visible: the record's header, its readings and the tab strip the reader just
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival
@@ -33,10 +33,8 @@ import {
 // which is two chained reads behind a full shell render — the record itself for
 // the header, then its /360 projection for the tabs. Measured: ~500ms for the
 // file alone, ~700-800ms with one other App suite beside it, against Testing
-// Library's un-overridden one-second default (`ASYNC_UTIL_TIMEOUT_MS`, which
-// vitest.budget.ts records as overridden nowhere). A quarter of a second of
-// headroom is not a budget, and `make check-fe` runs far more than one suite
-// alongside it.
+// Library's own one-second default. A quarter of a second of headroom is not a
+// budget, and `make check-fe` runs far more than one suite alongside it.
 //
 // The read settles. Lifting the waiter to 8s makes a previously-failing run
 // pass, and the instrumented wait completes in ~600ms with a sibling — so it

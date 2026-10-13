@@ -9,8 +9,8 @@ import { AvatarStack } from "./avatarstack";
 import { RecordCard } from "./recordcard";
 
 // A record listed somewhere else. The stories are the states a caller
-// actually meets: the two kinds, a record with nothing but a name, one the
-// reader may not open, and the stack they arrive in.
+// actually meets: the two kinds, a company's logo, a record with nothing but a
+// name, one the reader may not open, and the stack they arrive in.
 const meta: Meta<typeof RecordCard> = {
   title: "Components/Text and data display/Record card",
   component: RecordCard,
@@ -56,6 +56,23 @@ export const Company: Story = {
       name="Nordwind Logistik GmbH"
       identity="o-1"
       href="#/companies/o-1"
+      position="Freight forwarding · Hamburg"
+    />
+  ),
+};
+
+/**
+ * A company with a logo: the image sits on the same round mark, letterboxed,
+ * and the monogram stays under it until it paints.
+ */
+export const CompanyWithLogo: Story = {
+  render: () => (
+    <RecordCard
+      kind="company"
+      name="Nordwind Logistik GmbH"
+      identity="o-1"
+      href="#/companies/o-1"
+      logo="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%230e7490'/%3E%3C/svg%3E"
       position="Freight forwarding · Hamburg"
     />
   ),

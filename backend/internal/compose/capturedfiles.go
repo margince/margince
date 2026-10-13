@@ -82,3 +82,26 @@ func (k capturedFileKeeper) Record(
 		Category:   from.Category,
 	}, owned)
 }
+
+func (k capturedFileKeeper) RecordWithheld(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, files []capture.CapturedFile,
+) error {
+	// Only the size crosses: the body is what this row exists not to keep.
+	withheld := make([]activities.WithheldFile, 0, len(files))
+	for _, file := range files {
+		withheld = append(withheld, activities.WithheldFile{
+			PartID:       file.PartID,
+			Filename:     file.Filename,
+			ContentType:  file.ContentType,
+			DeclaredType: file.DeclaredType,
+			ByteSize:     len(file.Body),
+		})
+	}
+	return k.store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, withheld)
+}

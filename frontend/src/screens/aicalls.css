@@ -4,8 +4,7 @@
 /* Settings, AI call log: the dials, the trace table and the call drawer. */
 
 /* The search over the full width, then the four pickers in one row that folds
-   to two on a phone, where each still holds its longest label. The audit log's
-   toolbar, one page over, has the same shape. */
+   to two on a phone, where each still holds its longest label. */
 .aicalls-toolbar {
   display: flex;
   flex-direction: column;
@@ -31,100 +30,60 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-  margin-top: var(--space-3);
 }
 
-/* Fixed layout, so the widths come from the header row and nothing a row holds
-   (a long broker model id, a wide badge) can move a column. Feature takes what
-   the six sized columns leave. */
-.aicalls-table {
-  margin-top: var(--space-3);
-}
-
-.aicalls-table .table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.aicalls-table :is(th, td) {
-  padding-inline: var(--space-2);
-  vertical-align: middle;
-}
-
-.aicalls-table th:nth-child(1) {
-  width: 8.75rem;
-}
-
-.aicalls-table th:nth-child(3) {
-  width: 7rem;
-}
-
-.aicalls-table th:nth-child(4) {
-  width: 6.25rem;
-}
-
-.aicalls-table th:nth-child(5) {
-  width: 4.75rem;
-}
-
-/* Wide enough for a sub-cent estimate (US$0.0043) without cutting it. */
-.aicalls-table th:nth-child(6) {
-  width: 5.75rem;
-}
-
-.aicalls-table th:nth-child(7) {
-  width: 4.5rem;
-}
-
-.aicalls-when {
-  white-space: nowrap;
+.aicalls-time {
   font-variant-numeric: tabular-nums;
 }
 
-/* An id never breaks on its own, so it is cut at the column's edge and the
-   whole of it stays on hover and in the drawer. */
-.aicalls-clip {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* A broker's model id is one unbreakable string, and it is what would widen the
+ * table past its card. */
+.aicalls-model {
+  overflow-wrap: anywhere;
+}
+/* Seven columns share the settings column, so inner cells give up a third of
+   their padding; the outer ones keep the pane's. */
+.aicalls-card > .table-scroll > .table > * > tr > :is(th, td) {
+  padding-inline: var(--space-2);
+}
+
+/* Folded, every call keeps one shape: how long ago and the model on line two,
+   the figures on line three. The exact moment stays in the time's title. */
+@container table-fold (width < 36rem) {
+  .aicalls-card .aicalls-time {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .aicalls-card td:has(> .aicalls-model-line) {
+    flex: 1 1 0%;
+  }
+  .aicalls-card td:is(:has(> time), :has(> .aicalls-model-line)) {
+    align-self: baseline;
+  }
+  /* One run of text, so a long rung wraps under the model, not past it. */
+  .aicalls-model-line > .cell-stack {
+    display: inline;
+  }
+  .aicalls-model-line > .cell-stack > * {
+    margin-inline-end: var(--space-2);
+  }
+  .aicalls-card td:has(> .aicalls-figure) {
+    order: 5;
+  }
+  .aicalls-card tr:not(.datatable-detail)::before {
+    content: "";
+    flex-basis: 100%;
+    order: 4;
+  }
 }
 
 .aicalls-feature {
   max-width: 100%;
   text-align: start;
-}
-
-.aicalls-when-inline {
-  display: none;
-}
-
-/* On a phone the figures and the model live in the drawer. The time moves under
-   the feature so the row keeps two columns it can actually fit. */
-@media (max-width: 720px) {
-  .aicalls-table
-    :is(th, td):is(
-      :nth-child(1),
-      :nth-child(3),
-      :nth-child(5),
-      :nth-child(6),
-      :nth-child(7)
-    ) {
-    display: none;
-  }
-
-  .aicalls-when-inline {
-    display: block;
-  }
-}
-
-.aicalls-more {
-  padding-top: var(--space-3);
-}
-
-.aicalls-more:empty {
-  display: none;
 }
 
 /* The drawer. */

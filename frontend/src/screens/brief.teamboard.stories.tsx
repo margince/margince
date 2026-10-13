@@ -25,11 +25,13 @@ const aLoadedTeam: TeamBoardData = {
     {
       user_id: "00000000-0000-4000-8000-000000000001",
       display_name: "Lena Fischer",
+      activation: "active",
       counts: { waiting: 14, at_risk: 3, overdue: 6, promises_due: 2 },
     },
     {
       user_id: "00000000-0000-4000-8000-000000000002",
       display_name: "Marc Weber",
+      activation: "active",
       counts: { waiting: 2, at_risk: 0, overdue: 0, promises_due: 0 },
     },
   ],

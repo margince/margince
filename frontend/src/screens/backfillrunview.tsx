@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Building2, CheckCircle2, History, Mail, Users } from "lucide-react";
+import { Building2, CircleCheck, History, Mail, Users } from "lucide-react";
 import type { components } from "../api/schema";
-import { progressFraction } from "../app/capture-progress";
 import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
 import { ErrorLine } from "../design-system/errorline";
@@ -11,6 +10,7 @@ import { Heading } from "../design-system/heading";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { progressFraction } from "../lib/capture-progress";
 import { isLiveRun } from "./backfill-run";
 import "./backfill.css";
 
@@ -325,7 +325,7 @@ function RunHead({
     <div className="capture-head" aria-live="polite">
       <span className="capture-mark" aria-hidden>
         {state === "done" ? (
-          <CheckCircle2 />
+          <CircleCheck />
         ) : (
           <History className={reading ? "spin-slow" : ""} />
         )}

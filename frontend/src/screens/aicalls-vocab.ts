@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { formatMicroUSD } from "../format/format";
+import { formatAiRunCost } from "../format/aicost";
 import type { Locale, useT } from "../i18n";
-import { sentenceCaseToken } from "./settings.auditlog.vocab";
 
 type T = ReturnType<typeof useT>;
 export type AiCallSummary = components["schemas"]["AiCallSummary"];
@@ -45,7 +44,7 @@ export const OUTCOME_TONE = {
 export function costLabel(call: AiCallSummary, locale: Locale, t: T): string {
   return call.estimated_cost_microusd === undefined
     ? t("aicalls.cost.unpriced")
-    : formatMicroUSD(call.estimated_cost_microusd, locale);
+    : formatAiRunCost(call.estimated_cost_microusd, locale);
 }
 
 export function outcomeLabel(outcome: CallOutcome, t: T): string {
@@ -61,55 +60,12 @@ export function outcomeLabel(outcome: CallOutcome, t: T): string {
   }
 }
 
-// The failure codes classifyError writes. The wire widens without notice, so an
-// unknown code is spelled in words from its own key rather than refused.
-export function sentinelLabel(sentinel: string, t: T): string {
-  switch (sentinel) {
-    case "provider_quota":
-      return t("aicalls.error.provider_quota");
-    case "provider_throttled":
-      return t("aicalls.error.provider_throttled");
-    case "provider_refused":
-      return t("aicalls.error.provider_refused");
-    case "provider_error":
-      return t("aicalls.error.provider_error");
-    case "output_withheld":
-      return t("aicalls.error.output_withheld");
-    case "request_rejected":
-      return t("aicalls.error.request_rejected");
-    case "budget_deferred":
-      return t("aicalls.error.budget_deferred");
-    case "budget_unavailable":
-      return t("aicalls.error.budget_unavailable");
-    case "metering_failed":
-      return t("aicalls.error.metering_failed");
-    case "request_failed":
-      return t("aicalls.error.request_failed");
-    default:
-      return sentenceCaseToken(sentinel);
-  }
-}
-
-// A task is a wire key the trace carries without a display name, so it is
-// spelled in words here; the key itself stays in the drawer's technical facts.
-export function taskLabel(task: string): string {
-  return sentenceCaseToken(task);
+// The task as a screen names it, or its key where it has no name.
+export function taskName(call: AiCallSummary): string {
+  return call.task_display_name ?? call.task;
 }
 
 // The served model as one string, the spelling the model dial and search use.
 export function modelLabel(call: AiCallSummary): string {
   return call.served_model || call.model_id;
-}
-
-export function identitySourceLabel(source: string, t: T): string {
-  switch (source) {
-    case "response":
-      return t("aicalls.source.response");
-    case "echo":
-      return t("aicalls.source.echo");
-    case "configured":
-      return t("aicalls.source.configured");
-    default:
-      return sentenceCaseToken(source);
-  }
 }

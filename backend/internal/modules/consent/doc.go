@@ -17,10 +17,15 @@
 // data_subject_request, communication_decision, communication_basis,
 // communication_suppression, communication_instruction (a named human's
 // decision that one refused message goes out anyway — beside the refusal, never
-// replacing it with a grant nobody made), communication_review (what a refused send leaves
+// replacing it with a grant nobody made), communication_override (a rep's
+// standing vouch that outranks a machine-level refusal for one contact and
+// category, never a subject-level stop), communication_review (what a refused send leaves
 // behind, so the work is visible and the message can resume instead of being
 // retyped). Consumers (activities' send path) declare a
 // one-method authority interface; the composition root injects this module's
 // Gate and unsubscribe linker — consent never becomes an import edge between
 // siblings.
+//
+// It also owns lead_privacy_notice, the record of a website lead's notice.
+// That record names nobody.
 package consent

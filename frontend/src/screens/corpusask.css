@@ -11,6 +11,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  container: ask-modal / inline-size;
 }
 
 .ask-modal-head {
@@ -68,6 +69,27 @@
   border-inline-start: 1px solid var(--borderSubtle);
   padding-inline-start: var(--space-4);
   overflow-y: auto;
+}
+
+/* Below the width two readable columns need, the document stacks under the
+ * answer and the pair scrolls as one. */
+@container ask-modal (max-width: 40rem) {
+  .ask-modal-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .ask-modal-answer {
+    flex-grow: 0;
+    overflow-y: visible;
+  }
+  .ask-modal-doc {
+    flex-basis: auto;
+    overflow-y: visible;
+    border-inline-start: 0;
+    padding-inline-start: 0;
+    border-top: 1px solid var(--borderSubtle);
+    padding-top: var(--space-4);
+  }
 }
 
 /* The answer is PROSE. The citations are marks inside it rather than a list

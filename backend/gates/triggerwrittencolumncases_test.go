@@ -5,7 +5,7 @@
 
 package gates
 
-// The trigger-written-column reader driven with SYNTHETIC statements, for the
+// The trigger-written-column reader driven with synthetic statements, for the
 // reason retainedcolumncases_test.go gives for its own: the tree is supposed to
 // pass, so a reader proven only by "nothing in the tree trips it" is one that
 // keeps passing after it stops working.

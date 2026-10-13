@@ -4,7 +4,7 @@ import type { Decorator, Preview } from "@storybook/react-vite";
 // resolved. No `backgrounds` palette is configured: the addon needs literal
 // colours, which ds-purity bans — the theme switch below is a decorator.
 import "../src/app.css";
-// Structural chrome (.wrap/.list-head/.list-toolbar) and composed surfaces
+// Structural chrome (.wrap/.list-toolbar) and composed surfaces
 // (.card/.firmo/.meterbar/…) live in these two sheets, loaded in the real
 // app via component-colocated side-effect imports (app/shell.tsx,
 // design-system/composed.tsx) that most stories never reach — importing
@@ -80,10 +80,10 @@ const preview: Preview = {
     },
   },
   // The phone width, declared ONCE for the whole catalog rather than copied into
-  // every meta that wants it. Named after the RULE and not after a device: the
+  // every meta that wants it. Named after the rule and not after a device. The
   // shell's bottom bar and the settings section switcher are media queries at
-  // `PHONE_MAX_WIDTH` (src/app/viewport.ts), so 390px is a width that sits
-  // inside that rule rather than a particular handset. A story opts in with
+  // `PHONE_MAX_WIDTH` (src/lib/viewport.ts). So 390px is a width inside that
+  // rule, not a particular handset. A story opts in with
   // `globals: { viewport: { value: "phone" } }`.
   //
   // The viewport tool ships with Storybook itself, so this adds no addon.
@@ -96,7 +96,16 @@ const preview: Preview = {
         order: [
           "Get started",
           "Foundations",
-          ["Color", "Typography", "Radius", "Brand"],
+          [
+            "Color",
+            "Typography",
+            "Spacing",
+            "Radius",
+            "Elevation",
+            "Motion",
+            "Iconography",
+            "Brand",
+          ],
           "Components",
           [
             "Forms and input",
@@ -127,6 +136,12 @@ const preview: Preview = {
         phone: {
           name: "Phone (max 700px)",
           styles: { width: "390px", height: "844px" },
+        },
+        // The same phone on its side: a window short against its own text,
+        // which is a layout of its own wherever height is what runs out.
+        phoneOnItsSide: {
+          name: "Phone on its side",
+          styles: { width: "844px", height: "390px" },
         },
       },
     },

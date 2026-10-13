@@ -80,6 +80,9 @@ func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.Company
 // The audit says `origin: provider`, not `capture`. Somebody was paid to assert
 // this, which is a different kind of claim from one inferred out of the
 // installation's own correspondence.
+//
+// No first_observed_at: a provider answer is no message, and the purchase
+// date would cut off all the contact's mail from before it.
 func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.UUID, companyID ids.CompanyID, providerName string) (ids.UUID, bool, error) {
 	subject := ids.ContactID{UUID: contactID}
 	// The edge hangs off the contact, so an archive in flight must not be

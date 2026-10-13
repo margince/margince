@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -41,8 +42,10 @@ type Input struct {
 	// Server-derived, never read out of the counterparty's own text.
 	Envelope draftfloor.Envelope `json:"envelope"`
 
-	Company  string `json:"company"`
-	Industry string `json:"industry,omitempty"`
+	// CompanyID never reaches the model; it names the account for Grounding.
+	CompanyID string `json:"-"`
+	Company   string `json:"company"`
+	Industry  string `json:"industry,omitempty"`
 	// Description is the one line a contact wrote about what this company does
 	// (core 0203). Short, human, and the fastest way for a draft to sound like
 	// it knows who it is writing to.
@@ -128,10 +131,11 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 	}{wire: wire(d), Amount: amount})
 }
 
-// ProjectIn is the body of work the message is about. It carries no id: a
-// project is not a record a reason may cite, and an id the grounding filter
-// refuses only invites a citation it drops.
+// ProjectIn is the body of work the message is about. Its id never reaches the
+// model: a project is not a record a reason may cite, and an id the grounding
+// filter refuses only invites a citation it drops.
 type ProjectIn struct {
+	ID   string `json:"-"`
 	Name string `json:"name"`
 	// Key is the handle a human writes in a subject line, when the project
 	// has one.
@@ -178,6 +182,12 @@ type ActIn struct {
 	Snippet string `json:"snippet,omitempty"`
 }
 
+// ActivityKind lets draftcore.ThreadMail tell an email from a task or a call.
+func (a ActIn) ActivityKind() string { return a.Kind }
+
+// ActivitySubject is the subject draftcore.ThreadMail answers.
+func (a ActIn) ActivitySubject() string { return a.Subject }
+
 // draftInputActivities bounds how much of the conversation the draft reads.
 // A follow-up is about the last exchange, not the relationship's history; a
 // longer window costs prefill and buys older news.
@@ -204,6 +214,7 @@ func FromView(
 		Intent:     strings.TrimSpace(req.Intent),
 		RewriteOf:  strings.TrimSpace(req.RewriteOf),
 		Envelope:   req.Envelope,
+		CompanyID:  view.Company.Id.String(),
 		Company:    view.Company.DisplayName,
 		Recipient:  recipientOf(contact),
 		Recent:     foldRecent(view),
@@ -256,6 +267,7 @@ func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (Project
 // open tasks and the unfiled ones — never another project's.
 func projectFact(project crmcontracts.Company360Project, view crmcontracts.Company360) ProjectIn {
 	out := ProjectIn{
+		ID:    project.ProjectId.String(),
 		Name:  project.Name,
 		Phase: string(project.Phase),
 	}
@@ -346,14 +358,18 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 }
 
 // ConversationState reads where this account's correspondence stands off the
-// view's own last-message stamps.
+// view's own last-message stamps and the notes and meetings logged on it.
 //
 // Both are absent when the caller holds no activity grant, which reads as a
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
 func ConversationState(view crmcontracts.Company360, now time.Time) convstate.State {
-	return convstate.Classify(now, instant(view.LastInboundAt), instant(view.LastOutboundAt))
+	var activities []crmcontracts.Activity
+	if view.Activities != nil {
+		activities = view.Activities.Data
+	}
+	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant reads one optional stamp, treating an absent one as never.

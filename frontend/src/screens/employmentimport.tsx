@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
@@ -12,10 +11,11 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
 import { invalidateRecord } from "./recordwritekeys";
-import "./common.css";
+import "../design-system/querystates.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
@@ -37,12 +37,11 @@ export function ImportedEmploymentHistory({
     queryKey: key,
     enabled: hasEvidence,
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/contacts/{id}/employment-import",
-        { params: { path: { id } } },
+      return unwrap(
+        await api.GET("/contacts/{id}/employment-import", {
+          params: { path: { id } },
+        }),
       );
-      if (error) throwProblem(error);
-      return data;
     },
   });
   const [resolving, setResolving] = useState<Item | null>(null);
@@ -54,12 +53,12 @@ export function ImportedEmploymentHistory({
       contactId: string;
       body: Request;
     }) => {
-      const { data, error } = await api.POST(
-        "/contacts/{id}/employment-import",
-        { params: { path: { id: contactId } }, body },
+      return unwrap(
+        await api.POST("/contacts/{id}/employment-import", {
+          params: { path: { id: contactId } },
+          body,
+        }),
       );
-      if (error) throwProblem(error);
-      return data;
     },
     onSuccess: async (report) => {
       client.setQueryData(["employmentImport", report.contact_id], report);
@@ -235,7 +234,7 @@ function EmploymentMatchModal({
     item.employment_status,
   );
   return (
-    <Modal open onClose={onClose} labelledBy={heading}>
+    <Modal open onClose={onClose} labelledBy={heading} intent="form">
       <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
@@ -243,13 +242,18 @@ function EmploymentMatchModal({
         <p>
           {item.company_name} · {item.role}
         </p>
-        <RecordPicker
-          label={t("contact.rail.employer")}
-          searchTargets={searchCompanyCandidates}
-          selected={company}
-          onPick={setCompany}
-          disabled={pending}
-        />
+        <Field label={t("contact.rail.employer")}>
+          {(control) => (
+            <RecordPicker
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              searchTargets={searchCompanyCandidates}
+              selected={company}
+              onPick={setCompany}
+              disabled={pending}
+            />
+          )}
+        </Field>
         {!company && (
           <Field
             label={t("employment.website")}
@@ -285,25 +289,37 @@ function EmploymentMatchModal({
             />
           )}
         </Field>
-        <Select
-          aria-label={t("employment.statusLabel")}
-          value={status}
-          onChange={(value) => {
-            if (
-              value === "current" ||
-              value === "former" ||
-              value === "unknown"
-            )
-              setStatus(value);
-          }}
-          options={(["current", "former", "unknown"] as const).map((value) => ({
-            value,
-            label: t(`employment.status.${value}`),
-          }))}
-          disabled={pending}
-        />
+        <Field label={t("employment.statusLabel")}>
+          {(control) => (
+            <Select
+              {...control}
+              value={status}
+              onChange={(value) => {
+                if (
+                  value === "current" ||
+                  value === "former" ||
+                  value === "unknown"
+                )
+                  setStatus(value);
+              }}
+              options={(["current", "former", "unknown"] as const).map(
+                (value) => ({
+                  value,
+                  label: t(`employment.status.${value}`),
+                }),
+              )}
+              disabled={pending}
+            />
+          )}
+        </Field>
         <ErrorLine error={error} />
+      </div>
+      <div className="actions">
+        <Button onClick={onClose} disabled={pending}>
+          {t("create.cancel")}
+        </Button>
         <Button
+          variant="primary"
           disabled={
             pending ||
             (!company && !domain.trim()) ||

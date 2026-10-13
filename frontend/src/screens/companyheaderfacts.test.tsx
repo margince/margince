@@ -142,10 +142,23 @@ describe("the facts strip", () => {
   });
 });
 
-// The name line's own subtitle: what the account is and the one way in every
-// reader already knows, beside the name rather than mid-sentence under
-// everything else the header carries.
+// What the account is and the one way in every reader already knows, leading
+// the marks row under the name.
 describe("CompanySubtitle", () => {
+  it("draws nothing for an account with neither an industry nor a website", () => {
+    const { container } = renderInApp(
+      <CompanySubtitle
+        company={{
+          ...COMPANY,
+          industry: undefined,
+          domains: [],
+          website_url: undefined,
+        }}
+      />,
+    );
+    expect(container.querySelector(".record-sub-inline")).toBeNull();
+  });
+
   it("joins industry and domain on one inline line", () => {
     const { container } = renderInApp(<CompanySubtitle company={COMPANY} />);
 

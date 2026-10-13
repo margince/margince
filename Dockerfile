@@ -9,7 +9,7 @@
 # Deployment-target-agnostic: no image bakes instance configuration. Every
 # setting comes from the runtime environment (the MARGINCE_* vars in
 # docs/reference/configuration.md); the api additionally reads a margince.yaml
-# mounted at MARGINCE_CONFIG for first-boot bootstrap. See docs/deployment.md.
+# mounted at MARGINCE_CONFIG for first-boot bootstrap. See docs/how-to/deploy-margince.md.
 #
 # EVERY BASE IMAGE IS PINNED BY DIGEST, tag and all. A tag is mutable:
 # `alpine:3.24` today and `alpine:3.24` next month can be different bytes, so a
@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -301,7 +301,7 @@ RUN --mount=type=cache,id=margince-tsbuildinfo,target=/app/frontend/node_modules
 
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS api
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS api
 
 RUN apk add --no-cache ca-certificates tzdata
 
@@ -342,7 +342,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── worker: runtime ───────────────────────────────────────────────────────────
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS worker
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS worker
 
 RUN apk add --no-cache ca-certificates tzdata
 

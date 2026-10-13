@@ -2,18 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { type Fact, FactList } from "../design-system/factlist";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { Row } from "../design-system/stack";
+import { PanelBody, PanelGroupHead, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
+import { formatAge, formatInterval } from "../format/interval";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
-  type PluralBase,
   type PluralTranslator,
   type Translator,
   useLocale,
@@ -21,8 +22,9 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import { formatWaitedFor, HealthCard } from "./healthcard";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { HealthCard } from "./healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own
 // questions, for an administrator who may not see the mail itself.
@@ -78,194 +80,189 @@ export function sweepWarning(
   return null;
 }
 
-function formatCadence(
-  seconds: number,
-  plural: PluralTranslator,
-  locale: Locale,
-): string {
-  const [unit, count] =
-    seconds % 86_400 === 0
-      ? (["Days", seconds / 86_400] as const)
-      : seconds % 3_600 === 0
-        ? (["Hours", seconds / 3_600] as const)
-        : (["Minutes", Math.max(1, Math.round(seconds / 60))] as const);
-  const base: PluralBase = `captureHealth.every${unit}`;
-  return plural(base, count, { count: formatNumber(count, locale) });
-}
-
-function sweepFacts(
-  health: Health,
+function sweepColumns(
+  generatedAt: string,
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
   zone: string,
-): Fact[] {
-  return health.sweeps.map((sweep) => {
-    const warning = sweepWarning(sweep, health.generated_at);
-    const succeeded = sweep.last_succeeded_at;
-    const errorClass = sweep.last_run?.error_class;
-    const cadence = sweep.cadence_seconds;
-    return {
-      key: sweep.sweep,
-      term: <span>{t(SWEEP_LABEL[sweep.sweep])}</span>,
-      value: warning ? (
-        <Badge tone={warning.tone}>{t(warning.label)}</Badge>
-      ) : (
-        <Badge tone="success">{t("captureHealth.keepingUp")}</Badge>
-      ),
-      note: (
-        <>
-          {succeeded === null || succeeded === undefined
-            ? t("captureHealth.neverSucceeded")
-            : t("captureHealth.lastSucceeded", {
-                when: formatDateTime(succeeded, locale, zone),
-              })}
-          {cadence !== null && cadence !== undefined && (
-            <>
-              {" · "}
-              {formatCadence(cadence, plural, locale)}
-            </>
-          )}
-          {/* Verbatim, as the job card shows a class: it is the token an
-              operator greps the worker log for. */}
-          {errorClass !== undefined && (
-            <>
-              {" · "}
-              <span>{errorClass}</span>
-            </>
-          )}
-        </>
-      ),
-    };
-  });
+): DataTableColumn<Sweep>[] {
+  return [
+    {
+      key: "pass",
+      header: t("captureHealth.col.pass"),
+      render: (sweep) => t(SWEEP_LABEL[sweep.sweep]),
+    },
+    {
+      key: "lastSuccess",
+      header: t("captureHealth.col.lastSuccess"),
+      render: (sweep) =>
+        sweep.last_succeeded_at
+          ? formatDateTime(sweep.last_succeeded_at, locale, zone)
+          : t("captureHealth.never"),
+      folded: (sweep) =>
+        sweep.last_succeeded_at
+          ? t("captureHealth.lastSucceeded", {
+              when: formatDateTime(sweep.last_succeeded_at, locale, zone),
+            })
+          : t("captureHealth.neverSucceeded"),
+    },
+    {
+      key: "cadence",
+      header: t("captureHealth.col.runsEvery"),
+      render: (sweep) =>
+        sweep.cadence_seconds
+          ? formatInterval(sweep.cadence_seconds, locale)
+          : null,
+      folded: (sweep) =>
+        sweep.cadence_seconds
+          ? t("captureHealth.runsEvery", {
+              interval: formatInterval(sweep.cadence_seconds, locale),
+            })
+          : undefined,
+    },
+    {
+      key: "processed",
+      header: t("captureHealth.col.processed"),
+      align: "end",
+      render: (sweep) =>
+        sweep.last_run ? formatNumber(sweep.last_run.processed, locale) : null,
+      folded: (sweep) =>
+        sweep.last_run
+          ? plural("captureHealth.processed", sweep.last_run.processed, {
+              count: formatNumber(sweep.last_run.processed, locale),
+            })
+          : undefined,
+    },
+    {
+      key: "warning",
+      header: t("captureHealth.col.state"),
+      fold: "end",
+      render: (sweep) => {
+        const warning = sweepWarning(sweep, generatedAt);
+        const errorClass = sweep.last_run?.error_class;
+        // The class verbatim, as the job card shows one: the worker-log token.
+        return (
+          warning && (
+            <CellStack>
+              <Badge tone={warning.tone}>{t(warning.label)}</Badge>
+              {errorClass && <code className="t-caption">{errorClass}</code>}
+            </CellStack>
+          )
+        );
+      },
+    },
+  ];
 }
 
-function waitedNote(
-  key: MessageKey,
-  seconds: number | null | undefined,
+// A count above zero is the one thing in the row worth finding.
+function waitingCount(count: number, shown: ReactNode): ReactNode {
+  return count > 0 ? <Badge tone="warning">{shown}</Badge> : shown;
+}
+
+function oldestWait(box: Mailbox, locale: Locale): string | null {
+  const ages = [
+    box.oldest_contact_age_seconds,
+    box.oldest_thread_age_seconds,
+  ].filter((age): age is number => typeof age === "number");
+  return ages.length === 0 ? null : formatAge(Math.max(...ages), locale);
+}
+
+function mailboxColumns(
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
-): string | null {
-  if (seconds === null || seconds === undefined) {
-    return null;
-  }
-  return t(key, { waited: formatWaitedFor(seconds, plural, locale) });
-}
-
-function mailboxFacts(
-  mailboxes: readonly Mailbox[],
-  t: Translator,
-  plural: PluralTranslator,
-  locale: Locale,
-): Fact[] {
-  return mailboxes.map((box) => {
-    const notes = [
-      waitedNote(
-        "captureHealth.oldestContact",
-        box.oldest_contact_age_seconds,
-        t,
-        plural,
-        locale,
+): DataTableColumn<Mailbox>[] {
+  const counted = (
+    key: string,
+    header: MessageKey,
+    phrase: "captureHealth.contactsWaiting" | "captureHealth.threadsWaiting",
+    count: (box: Mailbox) => number,
+  ): DataTableColumn<Mailbox> => ({
+    key,
+    header: t(header),
+    align: "end",
+    render: (box) => waitingCount(count(box), formatNumber(count(box), locale)),
+    folded: (box) =>
+      waitingCount(
+        count(box),
+        plural(phrase, count(box), {
+          count: formatNumber(count(box), locale),
+        }),
       ),
-      waitedNote(
-        "captureHealth.oldestThread",
-        box.oldest_thread_age_seconds,
-        t,
-        plural,
-        locale,
-      ),
-    ].filter((note): note is string => note !== null);
-    return {
-      key: box.user_id,
-      term: (
-        <span>{box.display_name ?? t("captureHealth.unnamedMailbox")}</span>
-      ),
-      value: (
-        <Row>
-          <Badge
-            tone={box.contacts_awaiting_decision > 0 ? "warning" : undefined}
-          >
-            {plural(
-              "captureHealth.contactsWaiting",
-              box.contacts_awaiting_decision,
-              { count: formatNumber(box.contacts_awaiting_decision, locale) },
-            )}
-          </Badge>
-          <Badge
-            tone={box.threads_awaiting_verdict > 0 ? "warning" : undefined}
-          >
-            {plural(
-              "captureHealth.threadsWaiting",
-              box.threads_awaiting_verdict,
-              { count: formatNumber(box.threads_awaiting_verdict, locale) },
-            )}
-          </Badge>
-        </Row>
-      ),
-      note: notes.length > 0 ? notes.join(" · ") : undefined,
-    };
   });
+  return [
+    {
+      key: "owner",
+      header: t("captureHealth.col.owner"),
+      render: (box) => box.display_name ?? t("captureHealth.unnamedMailbox"),
+    },
+    counted(
+      "contacts",
+      "captureHealth.col.contacts",
+      "captureHealth.contactsWaiting",
+      (box) => box.contacts_awaiting_decision,
+    ),
+    counted(
+      "threads",
+      "captureHealth.col.threads",
+      "captureHealth.threadsWaiting",
+      (box) => box.threads_awaiting_verdict,
+    ),
+    {
+      key: "oldest",
+      header: t("captureHealth.col.oldestWait"),
+      align: "end",
+      render: (box) => oldestWait(box, locale),
+      folded: (box) => {
+        const age = oldestWait(box, locale);
+        return age === null
+          ? undefined
+          : t("captureHealth.oldestWaited", { age });
+      },
+    },
+  ];
 }
 
 function installationFacts(
   health: Health,
   t: Translator,
-  plural: PluralTranslator,
   locale: Locale,
 ): Fact[] {
   const { classifier, held_meetings: held } = health;
-  const shown = (value: number) => formatNumber(value, locale);
+  const waited = (seconds: number | null | undefined) =>
+    typeof seconds === "number"
+      ? t("captureHealth.oldestWaited", { age: formatAge(seconds, locale) })
+      : undefined;
   return [
     {
-      key: "classifier",
-      term: <span>{t("captureHealth.classifier")}</span>,
-      value: (
-        <Row>
-          <Badge>
-            {plural("captureHealth.pending", classifier.pending, {
-              count: shown(classifier.pending),
-            })}
-          </Badge>
-          <Badge tone={classifier.unsure > 0 ? "warning" : undefined}>
-            {plural("captureHealth.unsure", classifier.unsure, {
-              count: shown(classifier.unsure),
-            })}
-          </Badge>
-          <Badge tone={classifier.exhausted > 0 ? "warning" : undefined}>
-            {plural("captureHealth.exhausted", classifier.exhausted, {
-              count: shown(classifier.exhausted),
-            })}
-          </Badge>
-        </Row>
+      key: "pending",
+      term: t("captureHealth.fact.pending"),
+      value: formatNumber(classifier.pending, locale),
+      note: waited(classifier.oldest_pending_age_seconds),
+    },
+    {
+      key: "unsure",
+      term: t("captureHealth.fact.unsure"),
+      value: waitingCount(
+        classifier.unsure,
+        formatNumber(classifier.unsure, locale),
       ),
-      note:
-        waitedNote(
-          "captureHealth.oldestPending",
-          classifier.oldest_pending_age_seconds,
-          t,
-          plural,
-          locale,
-        ) ?? undefined,
+    },
+    {
+      key: "exhausted",
+      term: t("captureHealth.fact.exhausted"),
+      value: waitingCount(
+        classifier.exhausted,
+        formatNumber(classifier.exhausted, locale),
+      ),
     },
     {
       key: "held-meetings",
-      term: <span>{t("captureHealth.heldMeetings")}</span>,
-      value: (
-        <Badge tone={held.count > 0 ? "warning" : undefined}>
-          {plural("captureHealth.meetingsHeld", held.count, {
-            count: shown(held.count),
-          })}
-        </Badge>
-      ),
+      term: t("captureHealth.heldMeetings"),
+      value: waitingCount(held.count, formatNumber(held.count, locale)),
       note:
-        waitedNote(
-          "captureHealth.oldestMeeting",
-          held.oldest_age_seconds,
-          t,
-          plural,
-          locale,
-        ) ?? t("captureHealth.heldMeetingsSub"),
+        waited(held.oldest_age_seconds) ?? t("captureHealth.heldMeetingsSub"),
     },
   ];
 }
@@ -278,47 +275,41 @@ function CaptureHealthBody({
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <SettingList>
-      <SettingRow
+    <>
+      <PanelGroupHead title={t("captureHealth.sweeps")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("captureHealth.sweepsSub")}</PanelIntro>
+      </PanelBody>
+      <DataTable
+        bleed
+        fold
         label={t("captureHealth.sweeps")}
-        description={t("captureHealth.sweepsSub")}
-        layout="stack"
-        control={
-          <div className="settingrow-measure">
-            <FactList facts={sweepFacts(health, t, plural, locale, zone)} />
-          </div>
-        }
+        columns={sweepColumns(health.generated_at, t, plural, locale, zone)}
+        rows={[...health.sweeps]}
+        rowKey={(sweep) => sweep.sweep}
       />
-      <SettingRow
-        label={t("captureHealth.mailboxes")}
-        description={t("captureHealth.noDetail")}
-        layout="stack"
-        control={
-          <div className="settingrow-measure">
-            {health.mailboxes.length === 0 ? (
-              <EmptyState>{t("captureHealth.mailboxesEmpty")}</EmptyState>
-            ) : (
-              <FactList
-                numeric
-                facts={mailboxFacts(health.mailboxes, t, plural, locale)}
-              />
-            )}
-          </div>
-        }
-      />
-      <SettingRow
-        label={t("captureHealth.installation")}
-        layout="stack"
-        control={
-          <div className="settingrow-measure">
-            <FactList
-              numeric
-              facts={installationFacts(health, t, plural, locale)}
-            />
-          </div>
-        }
-      />
-    </SettingList>
+      <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("captureHealth.noDetail")}</PanelIntro>
+        {health.mailboxes.length === 0 && (
+          <EmptyState>{t("captureHealth.mailboxesEmpty")}</EmptyState>
+        )}
+      </PanelBody>
+      {health.mailboxes.length > 0 && (
+        <DataTable
+          bleed
+          fold
+          label={t("captureHealth.mailboxes")}
+          columns={mailboxColumns(t, plural, locale)}
+          rows={[...health.mailboxes]}
+          rowKey={(box) => box.user_id}
+        />
+      )}
+      <PanelGroupHead title={t("captureHealth.installation")} level="h3" />
+      <PanelBody>
+        <FactList numeric facts={installationFacts(health, t, locale)} />
+      </PanelBody>
+    </>
   );
 }
 
@@ -348,10 +339,7 @@ export function CaptureHealthCard() {
     queryKey: ["capture-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/capture-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/capture-health"));
       if (!isCaptureHealth(data)) {
         throw new Error("malformed capture-health response");
       }

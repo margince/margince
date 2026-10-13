@@ -69,39 +69,10 @@ func caseKindFor(submissionKind string) (string, bool) {
 	return "", false
 }
 
-// oneCalendarMonthAfter is the Art. 12(3) deadline: one month from receipt,
-// not thirty days.
-//
-// CLAMPED TO THE LAST DAY, which AddDate alone does not do. Go normalizes an
-// impossible date FORWARD — 31 January plus one month is 31 February, which
-// AddDate returns as 3 March — so a request arriving on the last day of a long
-// month would silently earn three extra days. The statute reads the other way:
-// with no 31st in February, the month ends on the 28th and so does the
-// deadline. Held by TestOneCalendarMonthFollowsTheShortMonths, which caught
-// exactly this.
-func oneCalendarMonthAfter(received time.Time) time.Time {
-	candidate := received.AddDate(0, 1, 0)
-	// OVERSHOT IS MEASURED BY THE MONTH, never by the day number.
-	//
-	// Comparing days looks equivalent and is not: AddDate normalizes across a
-	// DST boundary too, and a clock that goes back an hour moves the result
-	// into the previous day without any month having overflowed. A request
-	// received 00:30 on 6 August in Santiago lands at 23:30 on 5 September,
-	// and a day-number test read that as overflow and clamped the deadline to
-	// 31 August — five days off the month the subject is owed.
-	//
-	// The month is the fact the clamp is about. Only a target month too short
-	// to hold the day rolls the result into the month AFTER the one asked for.
-	wanted := received.Month() + 1
-	if wanted > time.December {
-		wanted -= 12
-	}
-	if candidate.Month() == wanted {
-		return candidate
-	}
-	// Rolled past it: step back to the last day of the month that was wanted,
-	// keeping the clock time the request arrived at.
-	return candidate.AddDate(0, 0, -candidate.Day())
+// caseDeadline is the resolved deadline a case is opened with, and its rule.
+type caseDeadline struct {
+	due  time.Time
+	rule string
 }
 
 // mintReceiptReference draws a reference the subject can quote.
@@ -132,11 +103,15 @@ func mintReceiptReference() (string, error) {
 // two references for one answer. The unique index decides it; ON CONFLICT reads
 // the standing case back so the replay answers the receipt it already earned.
 func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
-	submissionID ids.UUID, submissionKind string, receivedAt time.Time,
+	submissionID ids.UUID, submissionKind string, receivedAt time.Time, deadlines requestDeadlineFunc,
 ) (string, error) {
 	kind, ok := caseKindFor(submissionKind)
 	if !ok {
 		return "", nil
+	}
+	due, rule, err := deadlines(ctx, tx, kind, receivedAt)
+	if err != nil {
+		return "", err
 	}
 	// RETRIED ON A COLLIDING RECEIPT, because losing that draw must not cost
 	// the subject their request. Two references cannot both be quotable, so the
@@ -151,7 +126,7 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	// already given up on, and every attempt after the first fails identically.
 	for attempt := range receiptAttempts {
 		caseID, stored, created, err := attemptRightsCase(ctx, tx, kind, contactID,
-			submissionID, receivedAt)
+			submissionID, receivedAt, caseDeadline{due: due, rule: rule})
 		if err == nil {
 			return finishRightsCase(ctx, tx, caseID, stored, created, kind, submissionID)
 		}
@@ -166,7 +141,7 @@ func openRightsCaseTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	// Unreachable: the loop above either returns or exhausts its attempts and
 	// returns the last error. Go cannot see that, so this states it.
-	return "", fmt.Errorf("consent: opening the rights case this request owes an answer to: no attempt ran")
+	return "", errors.New("consent: opening the rights case this request owes an answer to: no attempt ran")
 }
 
 // errSavepointPoisoned marks a savepoint whose rollback did not take. The
@@ -182,7 +157,7 @@ const receiptAttempts = 3
 
 // attemptRightsCase makes one attempt at the insert, inside its own savepoint.
 func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, contactID ids.ContactID,
-	submissionID ids.UUID, receivedAt time.Time,
+	submissionID ids.UUID, receivedAt time.Time, deadline caseDeadline,
 ) (caseID ids.UUID, stored string, created bool, err error) {
 	receipt, err := mintReceiptReference()
 	if err != nil {
@@ -200,13 +175,13 @@ func attemptRightsCase(ctx context.Context, tx pgx.Tx, kind string, contactID id
 	err = nested.QueryRow(ctx, `
 		INSERT INTO data_subject_request
 		  (kind, subject_ref, contact_id, received_at, channel, due_at,
-		   source_submission_id, receipt_reference)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		   source_submission_id, receipt_reference, due_rule)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (source_submission_id) WHERE source_submission_id IS NOT NULL
 		  DO UPDATE SET source_submission_id = EXCLUDED.source_submission_id
 		RETURNING id, receipt_reference, (xmax = 0)`,
 		kind, contactID.String(), contactID.UUID, receivedAt, channelConfirmLink,
-		oneCalendarMonthAfter(receivedAt), submissionID, receipt,
+		deadline.due, submissionID, receipt, deadline.rule,
 	).Scan(&caseID, &stored, &created)
 	if err != nil {
 		// A savepoint whose rollback did not take is the ONE failure the redraw

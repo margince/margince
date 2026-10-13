@@ -51,10 +51,12 @@ func (a *assembly) readDocuments() error {
 func (a *assembly) readCommitments() error {
 	tasks, truncated, err := a.svc.activities.ListOpenTasksTx(a.ctx, a.tx, activities.ListOpenTasksInput{
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: sectionLimit,
+		ExcludeSystemMinted: a.reading.ExcludeSystemMinted,
 	})
 	if err != nil {
 		return err
 	}
+	a.tasks = tasks
 	data := make([]crmcontracts.Project360Commitment, 0, len(tasks))
 	for _, t := range tasks {
 		item := crmcontracts.Project360Commitment{

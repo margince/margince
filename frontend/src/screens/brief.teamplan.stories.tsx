@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { TeamPlanReview } from "./brief.teamplan";
 import {
   jsonResponse,
@@ -80,6 +80,7 @@ const openThePlan = async ({
   await user.click(
     await canvas.findByRole("button", { name: "Review current plan" }),
   );
+  await within(canvasElement.ownerDocument.body).findByRole("dialog");
 };
 
 const meta: Meta<typeof TeamPlanReview> = {

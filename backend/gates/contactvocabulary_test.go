@@ -7,8 +7,7 @@
 
 package gates
 
-// The record is called a contact, and this is what stops the other word coming
-// back.
+// The record is called a contact, and its retired name fails here.
 //
 // The screen half was done first and stopped at the last layer a reader can
 // see: the browser said `#/contacts/:id` and the request it fired said
@@ -202,7 +201,14 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +
 		"and names the columns back for the length of the replay so the real file runs rather " +
 		"than a retyped copy of it",
+	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
+		"an installation stored under the retired name, which is what the migration it replays exists " +
+		"to carry over",
 	"CHANGELOG.md": "entries say what they said when they were written",
+	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
+		"chose, and a licence is not restyled by a vocabulary rule",
+	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
+		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
@@ -222,10 +228,13 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/screens/settings-chrome.test.tsx":        "the seats settings group",
 	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
 	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
+	"frontend/src/screens/roles-detail.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/screens/team-dialogs.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/screens/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/screens/users-invite-form.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/screens/users-memberverbs.stories.tsx":   "a page under the seats settings group",
 	"frontend/src/screens/users-password-link.stories.tsx": "a page under the seats settings group",
 	"frontend/src/screens/users-rolecell.stories.tsx":      "a page under the seats settings group",
 	"frontend/src/screens/share.tsx": "the share target kind: a colleague with a seat, or a team " +
@@ -236,6 +245,8 @@ var retired = gatekit.Waive(map[string]string{
 	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
+	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word its " +
+		"pages use: the seats settings group, the trust mark for a value a human typed, and a deal won in person",
 
 	// The German compliance package: a works agreement, a consent form, an
 	// employee information sheet and the processing record. "Die beschäftigte
@@ -247,7 +258,7 @@ var retired = gatekit.Waive(map[string]string{
 	// Waived rather than renamed because the rename was tried: it produced
 	// "die beschäftigte Contact" and "Eine Einwilligung je Contact", which are
 	// not German, in four documents that get printed and signed.
-	"docs/compliance/de": "German legal prose about the employees whose mail is captured — " +
+	"extensions/de/documents/de": "German legal prose about the employees whose mail is captured — " +
 		"die beschäftigte Person is a human being, and these documents never name this record",
 
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +

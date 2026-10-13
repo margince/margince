@@ -11,6 +11,7 @@ package identity
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // InstallationSettings is the installation's identity and reporting basis.
@@ -35,6 +37,8 @@ type InstallationSettings struct {
 	// it calls dead work a problem. The full count stays a report figure; this
 	// bounds the one that is styled as an alarm.
 	DeadWorkBannerHours int
+	// OAuthAccessTokenTTLMinutes is how long a connector's access token lives.
+	OAuthAccessTokenTTLMinutes int
 	// ForecastForwardMeasure is which remaining-pipeline reading a projected
 	// landing is built from. A string here rather than a values.ForwardMeasure
 	// because this struct is what the setting STORED, and reporting it as the
@@ -51,6 +55,8 @@ type InstallationSettings struct {
 	// It is the STORED answer and not the effective one: the deployment decides
 	// what is possible, and compose intersects the two.
 	EnabledOidcProviders []string
+	// Operations is the worker's operating values (installationoperations.go).
+	Operations OperationSettings
 }
 
 // InstallationPatch is a sparse installation-settings write: a nil field is
@@ -58,15 +64,18 @@ type InstallationSettings struct {
 // them are *string and a transposed pair would write a language into the
 // currency row and pass the type checker.
 type InstallationPatch struct {
-	Name                   *string
-	Timezone               *string
-	BaseCurrency           *string
-	BaseLanguage           *string
-	DateFormat             *string
-	TimeFormat             *string
-	FiscalYearStartMonth   *int
-	DeadWorkBannerHours    *int
-	ForecastForwardMeasure *string
+	Name                 *string
+	Timezone             *string
+	BaseCurrency         *string
+	BaseLanguage         *string
+	DateFormat           *string
+	TimeFormat           *string
+	FiscalYearStartMonth *int
+	DeadWorkBannerHours  *int
+	// OAuthAccessTokenTTLMinutes reaches the next token minted, never one
+	// already issued.
+	OAuthAccessTokenTTLMinutes *int
+	ForecastForwardMeasure     *string
 	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
 	// unchanged; a pointer to an empty slice is a real choice — offer password
 	// only — so the two cannot be collapsed.
@@ -82,6 +91,12 @@ type InstallationPatch struct {
 	// group grants anything — so the two cannot be collapsed, exactly like
 	// EnabledOidcProviders above.
 	OidcGroupRoleMap *map[string]string
+	// Country selects the jurisdiction pack. "" selects none. A change runs
+	// the store's country-change hook in the same transaction.
+	Country *string
+	// Operations is the sparse patch of the worker's operating values; it
+	// checks its own completeness (installationoperations_test.go).
+	Operations OperationPatch
 }
 
 // pendingWrite is one field of a sparse patch, already reduced to the two
@@ -118,6 +133,21 @@ type InstallationSettingsStore struct {
 	// answer: whether the currency has become immutable.
 	db       *database.DB
 	settings *settings.Store
+	// onCountryChange runs inside the transaction that changes the country.
+	onCountryChange CountryChange
+}
+
+// CountryChange is what else must commit with a change of jurisdiction. compose
+// injects privacy's floor carry, which identity cannot import.
+type CountryChange func(ctx context.Context, tx pgx.Tx, store *settings.Store, from, to jurisdiction.Code) error
+
+// WithCountryChange wires the hook a jurisdiction change runs. A store
+// without it refuses to change the country, because the carried retention
+// floor would silently not be written.
+func (s *InstallationSettingsStore) WithCountryChange(hook CountryChange) *InstallationSettingsStore {
+	out := *s
+	out.onCountryChange = hook
+	return &out
 }
 
 // NewInstallationSettings builds the store over the settings mechanism, on a
@@ -160,6 +190,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	tokenTTL, err := settings.Get(ctx, s.settings, OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -176,13 +210,19 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	operations, err := s.readOperations(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	return InstallationSettings{
 		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
-		FiscalYearStartMonth:   fiscalStart,
-		DeadWorkBannerHours:    bannerHours,
-		ForecastForwardMeasure: measure,
-		BaseCurrencyLocked:     locked, BaseCurrencyLockedReason: why,
+		FiscalYearStartMonth:       fiscalStart,
+		DeadWorkBannerHours:        bannerHours,
+		OAuthAccessTokenTTLMinutes: tokenTTL,
+		ForecastForwardMeasure:     measure,
+		BaseCurrencyLocked:         locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
+		Operations:           operations,
 	}, nil
 }
 
@@ -245,6 +285,10 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	tokenTTL, err := encodePatchField(OAuthAccessTokenTTLMinutes, in.OAuthAccessTokenTTLMinutes)
+	if err != nil {
+		return nil, err
+	}
 	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
@@ -273,7 +317,15 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap}, nil
+	country, err := encodePatchField(Country, in.Country)
+	if err != nil {
+		return nil, err
+	}
+	operations, err := in.Operations.writes()
+	if err != nil {
+		return nil, err
+	}
+	return append([]pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country}, operations...), nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as
@@ -300,6 +352,9 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.changeCountryTx(ctx, tx, in.Country); err != nil {
+			return err
+		}
 		for _, w := range patch {
 			if w.raw == nil {
 				continue
@@ -314,4 +369,34 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 		return InstallationSettings{}, err
 	}
 	return s.GetInstallation(ctx)
+}
+
+// changeCountryTx runs the country-change hook under the setting's write lock,
+// before the new value is written. So the hook reads the country being
+// replaced, and no second change interleaves.
+func (s *InstallationSettingsStore) changeCountryTx(ctx context.Context, tx pgx.Tx, next *string) error {
+	if next == nil {
+		return nil
+	}
+	raw, err := json.Marshal(*next)
+	if err != nil {
+		return fmt.Errorf("identity: encoding %s: %w", Country.Key(), err)
+	}
+	if err := Country.ValidateJSON(raw); err != nil {
+		return err
+	}
+	if err := settings.LockForWrite(ctx, tx, Country.Key()); err != nil {
+		return err
+	}
+	current, err := CountryOf(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if current == jurisdiction.Code(*next) {
+		return nil
+	}
+	if s.onCountryChange == nil {
+		return errors.New("identity: this role cannot change the jurisdiction, because the retention-floor carry is not wired")
+	}
+	return s.onCountryChange(ctx, tx, s.settings, current, jurisdiction.Code(*next))
 }

@@ -57,7 +57,11 @@ type CoachingMove = Readonly<{
 // One move per contact. A teammate over every threshold has one problem — too
 // much work — and three lines about them would push two other contacts off a list
 // of three.
-export function movesFor(members: readonly TeamBoardMember[]): CoachingMove[] {
+//
+// An invited seat is never named: its counts were not measured, so any line
+// about them would coach a figure nobody took.
+export function movesFor(roster: readonly TeamBoardMember[]): CoachingMove[] {
+  const members = roster.filter((member) => member.activation !== "invited");
   const moves: CoachingMove[] = [];
   const named = new Set<string>();
   const take = (

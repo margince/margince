@@ -31,8 +31,35 @@ func TestEveryAdmittedActionSaysWhatItDidAndWhetherItCanBeTakenBack(t *testing.T
 			"gate is judging nothing")
 	}
 	for action, meaning := range admitted {
-		if meaning.sentence == "" {
+		if meaning.sentence == "" && len(meaning.perType) == 0 {
 			t.Errorf("%q is admitted with no sentence key — it would draw as a blank line", action)
+		}
+		for entityType, key := range meaning.perType {
+			if key == "" {
+				t.Errorf("%q on a %s is admitted with no sentence key", action, entityType)
+			}
+		}
+	}
+}
+
+// A create or an archive names what it made or put away, so its sentence is per
+// kind of record, and a kind this page cannot place has none.
+func TestABulkVerbIsSaidPerKindOfRecord(t *testing.T) {
+	if len(bulkActions) == 0 {
+		t.Fatal("no bulk verb is declared, so this gate is judging nothing")
+	}
+	for action := range bulkActions {
+		meaning, ok := meaningOf(action)
+		if !ok {
+			t.Fatalf("%q is not admitted, so this case is testing nothing", action)
+		}
+		for _, placed := range []string{typeContact, typeCompany, typeDeal, typeLead, typeProject, typeActivity} {
+			if _, said := meaning.sentenceFor(placed); !said {
+				t.Errorf("%q on a %s has no sentence, so the line would be dropped", action, placed)
+			}
+		}
+		if _, said := meaning.sentenceFor("tag"); said {
+			t.Errorf("%q on a tag is admitted: a tag is bookkeeping, not a record the reader keeps", action)
 		}
 	}
 }

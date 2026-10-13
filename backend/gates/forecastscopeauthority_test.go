@@ -5,7 +5,7 @@
 
 package gates
 
-// Every forecasting store entry point that RECORDS against a scope asks whether
+// Every forecasting store entry point that records against a scope asks whether
 // its caller answers for that scope.
 //
 // The object grant and the scope are different questions, and the module asked
@@ -48,6 +48,7 @@ package gates
 import (
 	"go/ast"
 	"regexp"
+	"slices"
 	"sort"
 	"testing"
 )
@@ -179,10 +180,8 @@ func reachesAForecastInsert(graph map[string]*graphFunc, from string, seen map[s
 	if !known {
 		return false
 	}
-	for _, statement := range fn.statements {
-		if forecastInsert.MatchString(statement) {
-			return true
-		}
+	if slices.ContainsFunc(fn.statements, forecastInsert.MatchString) {
+		return true
 	}
 	for callee := range fn.calls {
 		if reachesAForecastInsert(graph, callee, seen) {

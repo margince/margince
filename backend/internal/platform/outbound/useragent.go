@@ -104,10 +104,10 @@ const (
 	SignInProduct = "margince-signin"
 	SignInHeader  = SignInProduct + "/" + version
 
-	// ModelCatalogueProduct identifies the read of a model vendor's public
-	// catalogue during setup. The request carries no credential, so the agent
-	// is the only thing the vendor's operator has to attribute it by, and it
-	// is asked once per installation rather than on a schedule.
+	// ModelCatalogueProduct identifies the reads of a public model catalogue —
+	// OpenRouter's list and models.dev's price sheet — daily while auto-sync is
+	// on and whenever an admin presses Refresh now. The request carries no
+	// credential, so the agent is the only thing the operator can attribute it by.
 	//
 	// A SEPARATE token from the site reader even though both read public
 	// documents: this one goes to a named vendor's API on a path they publish

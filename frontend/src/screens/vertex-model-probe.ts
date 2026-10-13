@@ -143,9 +143,6 @@ function vertexModelHint({
   if (available?.unavailable === "no_key") {
     return { text: t("aiRouting.location.noKey") };
   }
-  if (available?.unavailable === "profile_forbids") {
-    return { text: t("aiRouting.location.forbidden") };
-  }
   if (available && !available.unavailable && available.models.length === 0) {
     return { text: t("aiRouting.location.noModels", { location }) };
   }

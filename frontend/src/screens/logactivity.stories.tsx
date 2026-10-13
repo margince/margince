@@ -3,6 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CheckSquare, FileText } from "lucide-react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { LogActivity, LogActivityAction } from "./logactivity";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -99,11 +101,25 @@ export const HeaderTriggers: Story = {
             entityType="company"
             entityId="o1"
             askedKind="task"
-            triggerLabel="log.addTask"
             triggerIcon={<CheckSquare aria-hidden="true" />}
           />
         </div>
       </StoryProviders>
     );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: en["log.title"],
+      }),
+    );
+    const drawer = await within(document.body).findByRole("dialog", {
+      name: en["log.title"],
+    });
+    const heading = await within(drawer).findByRole("heading", {
+      name: en["log.title"],
+    });
+    // The overlay arrives from opacity 0, so visibility holds once it settles.
+    await waitFor(() => expect(heading).toBeVisible());
   },
 };

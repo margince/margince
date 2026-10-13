@@ -51,6 +51,8 @@ func (h Handlers) ListAiProviderKeys(w http.ResponseWriter, r *http.Request) {
 			EnvVar:         s.EnvVar,
 			Optional:       s.Optional,
 			CredentialKind: crmcontracts.AiProviderKeyStatusCredentialKind(s.CredentialKind),
+			PricedBy:       optionalPricedBy(s.PricedBy),
+			Usable:         s.Usable(),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -144,4 +146,13 @@ func (h Handlers) DeleteAiProviderKey(w http.ResponseWriter, r *http.Request, pr
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// optionalPricedBy leaves the field off for a provider that borrows no prices,
+// rather than sending an empty name a client would have to read as absent.
+func optionalPricedBy(provider string) *string {
+	if provider == "" {
+		return nil
+	}
+	return &provider
 }

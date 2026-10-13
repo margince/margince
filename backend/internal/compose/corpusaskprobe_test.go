@@ -294,7 +294,7 @@ func TestTheProbeRanksTheShippedHandbookOverABoundEmbedLane(t *testing.T) {
 	dir := t.TempDir()
 	probe := CorpusProbe{
 		ModelSpec: "fake:fake-embed", Question: "how can I create a project",
-		Page: "records.md", WorkDir: dir, Floor: 0,
+		Page: "records.md", WorkDir: dir, Floor: new(float64(0)),
 	}
 	result, err := ProbeCorpusRetrieval(t.Context(), probe)
 	if err != nil {
@@ -356,7 +356,7 @@ func TestTheProbeRanksTheShippedHandbookOverABoundEmbedLane(t *testing.T) {
 func TestAFloorNothingClearsProducesNoFixture(t *testing.T) {
 	result, err := ProbeCorpusRetrieval(t.Context(), CorpusProbe{
 		ModelSpec: "fake:fake-embed", Question: "how can I create a project",
-		Page: "records.md", WorkDir: t.TempDir(), Floor: 1.1,
+		Page: "records.md", WorkDir: t.TempDir(), Floor: new(1.1),
 	})
 	if err != nil {
 		t.Fatalf("an empty ranking is a result, not an error: %v", err)

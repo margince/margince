@@ -1,15 +1,28 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
-import { useCan } from "../app/capability";
-import { useUrlParams } from "../app/urlstate";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
-import { CellStack } from "../design-system/cellstack";
-import { DataTable, type DataTableColumn } from "../design-system/datatable";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { formatDateTime, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { Button, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
+import { type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
+import { hashWithParams, type UrlParams, useUrlParams } from "../lib/urlstate";
+import { tierLabel } from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
 import { type AiCallRecord, CallDrawer } from "./aicalls-detail";
 import {
   CALL_PARAMS,
@@ -21,45 +34,77 @@ import {
   UNFILTERED_CALLS,
   withCallFilters,
 } from "./aicalls-filters";
-import {
-  type AiCallSummary,
-  costLabel,
-  modelLabel,
-  OUTCOME_TONE,
-  outcomeLabel,
-  taskLabel,
-} from "./aicalls-vocab";
+import { CallTable } from "./aicalls-table";
 import { ExportScenarioDialog } from "./aiexport";
-import {
-  LoadMoreButton,
-  QueryGate,
-  QueryStates,
-  throwProblem,
-  useMe,
-} from "./common";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
+import { settingsHref } from "./settingsrouting";
 import "./aicalls.css";
+
+/** The address dial the trace is narrowed by, so a task row can link to its calls. */
+export const CALL_TASK_PARAM = CALL_PARAMS.task;
+
+/**
+ * The dials a figure elsewhere narrows the trace by, each the `/ai/calls`
+ * filter of the same name. `model` is also the toolbar's own model dial.
+ */
+const CALL_FILTER_PARAMS = [
+  "provider",
+  "model",
+  "served_provider",
+  "tier",
+] as const;
+type CallFilterParam = (typeof CALL_FILTER_PARAMS)[number];
+export type CallFilter = Partial<
+  Record<CallFilterParam | typeof CALL_TASK_PARAM, string>
+>;
+
+// The figure dials the toolbar has no control for, so they are named in a
+// callout with their own way back.
+const FIGURE_PARAMS = ["provider", "served_provider", "tier"] as const;
+type FigureParam = (typeof FIGURE_PARAMS)[number];
+type FigureFilter = Partial<Record<FigureParam, string>>;
+
+/** The trace narrowed to the calls behind one figure. */
+export function callsHrefFor(filter: CallFilter): string {
+  return hashWithParams(
+    routeHash(settingsHref("model-calls")),
+    new Map(Object.entries(filter)),
+  );
+}
+
+function figureFilterOf(params: UrlParams): FigureFilter {
+  return Object.fromEntries(
+    FIGURE_PARAMS.flatMap((key) => {
+      const value = params.get(key);
+      return value ? [[key, value]] : [];
+    }),
+  );
+}
 
 // The trace as the server narrows it. Every dial is in the key, so a changed
 // filter is a fresh walk from the newest call rather than a cursor minted under
 // another question.
-function useCallTrace(filters: CallFilters, enabled: boolean) {
+function useCallTrace(
+  filters: CallFilters,
+  figure: FigureFilter,
+  enabled: boolean,
+) {
   return useInfiniteQuery({
     enabled,
-    queryKey: ["ai-calls", filters],
+    queryKey: ["ai-calls", filters, figure],
     initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/ai/calls", {
-        params: {
-          query: {
-            ...callQueryOf(filters, Date.now()),
-            cursor: pageParam ?? undefined,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/ai/calls", {
+          params: {
+            query: {
+              ...callQueryOf(filters, Date.now()),
+              ...figure,
+              cursor: pageParam ?? undefined,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
+        }),
+      ),
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 }
@@ -103,11 +148,7 @@ export function useLastCallAt(): LastCall {
     // The header says how long ago the last call was, so the figure has to move
     // while the page is open. A minute is the resolution it reads at.
     refetchInterval: 60_000,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls", {});
-      if (error) throwProblem(error);
-      return data;
-    },
+    queryFn: async () => unwrap(await api.GET("/ai/calls", {})),
   });
   // Read through the grant, not only around it. A revoked grant disables the
   // query but leaves its last answer in the cache, and answering from it would
@@ -127,134 +168,22 @@ export function useLastCallAt(): LastCall {
     : { state: "never" };
 }
 
-/** The address dial the trace is narrowed by, so a task row can link to its calls. */
-export const CALL_TASK_PARAM = CALL_PARAMS.task;
-
-function useCallColumns(
-  onOpen: (call: AiCallSummary) => void,
-): DataTableColumn<AiCallSummary>[] {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const n = (value: number) => formatNumber(value, locale);
-  return [
-    {
-      key: "when",
-      header: t("aicalls.col.when"),
-      render: (call) => (
-        <time className="aicalls-when" dateTime={call.occurred_at}>
-          {formatDateTime(call.occurred_at, locale, zone)}
-        </time>
-      ),
-    },
-    {
-      key: "feature",
-      header: t("aicalls.col.feature"),
-      // The row answers a pointer too, but a `<tr>` takes no focus and
-      // announces nothing, so the feature is the button a keyboard opens by.
-      render: (call) => {
-        const when = formatDateTime(call.occurred_at, locale, zone);
-        return (
-          <CellStack>
-            <Button
-              variant="link"
-              className="aicalls-feature"
-              aria-label={t("aicalls.open", {
-                feature: taskLabel(call.task),
-                when,
-              })}
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpen(call);
-              }}
-            >
-              {taskLabel(call.task)}
-            </Button>
-            <time
-              className="t-caption aicalls-when-inline"
-              dateTime={call.occurred_at}
-            >
-              {when}
-            </time>
-          </CellStack>
-        );
-      },
-    },
-    {
-      key: "model",
-      header: t("aicalls.col.model"),
-      render: (call) => (
-        <CellStack>
-          <span className="aicalls-clip" title={modelLabel(call)}>
-            {modelLabel(call)}
-          </span>
-          <span className="t-caption aicalls-clip">{call.provider}</span>
-        </CellStack>
-      ),
-    },
-    {
-      key: "outcome",
-      header: t("aicalls.col.outcome"),
-      render: (call) => (
-        <Badge tone={OUTCOME_TONE[call.outcome]}>
-          {outcomeLabel(call.outcome, t)}
-        </Badge>
-      ),
-    },
-    {
-      key: "tokens",
-      header: t("aicalls.col.tokens"),
-      align: "end",
-      render: (call) => (
-        <span
-          title={t("aicalls.fact.tokensInOut", {
-            in: n(call.tokens_in),
-            out: n(call.tokens_out),
-          })}
-        >
-          {n(call.tokens_in + call.tokens_out)}
-        </span>
-      ),
-    },
-    {
-      key: "cost",
-      header: t("aicalls.col.cost"),
-      align: "end",
-      render: (call) =>
-        call.estimated_cost_microusd === undefined ? (
-          <span className="t-caption" title={t("aicalls.cost.unpricedHint")}>
-            {costLabel(call, locale, t)}
-          </span>
-        ) : (
-          costLabel(call, locale, t)
-        ),
-    },
-    {
-      key: "latency",
-      header: t("aicalls.col.latency"),
-      align: "end",
-      render: (call) => t("aicalls.ms", { value: n(call.latency_ms) }),
-    },
-  ];
-}
-
 function CallTrace({
   query,
-  filters,
+  narrowed,
+  taskOnly,
   onClear,
 }: Readonly<{
   query: ReturnType<typeof useCallTrace>;
-  filters: CallFilters;
+  narrowed: boolean;
+  taskOnly: boolean;
   onClear: () => void;
 }>) {
   const t = useT();
   const [openId, setOpenId] = useState<string | null>(null);
   const [exporting, setExporting] = useState<AiCallRecord | null>(null);
-  const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
-  const rows = calls;
-  const columns = useCallColumns((call) => setOpenId(call.id));
-  const narrowed = isNarrowed(filters);
   const at = rows.findIndex((call) => call.id === openId);
   const open = at >= 0 ? rows[at] : undefined;
   const step = (offset: number) => {
@@ -265,38 +194,37 @@ function CallTrace({
   if (rows.length === 0) {
     // Under a filter the empty trace is a fact about the filter, not about the
     // installation, and the way back is beside it.
-    if (!narrowed) {
-      return <EmptyState>{t("aicalls.empty")}</EmptyState>;
-    }
-    const taskOnly = isNarrowed({ ...filters, task: "" }) === false;
     return (
-      <EmptyState>
-        <p>{t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}</p>
-        <Button onClick={onClear}>{t("aicalls.clear")}</Button>
-      </EmptyState>
+      <PanelBody>
+        {narrowed ? (
+          <EmptyState>
+            <p>{t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}</p>
+            <Button onClick={onClear}>{t("aicalls.clear")}</Button>
+          </EmptyState>
+        ) : (
+          <EmptyState>{t("aicalls.empty")}</EmptyState>
+        )}
+      </PanelBody>
     );
   }
   return (
     <>
       {narrowed && (
-        <div className="aicalls-countline">
-          <Button variant="link" onClick={onClear}>
-            {t("aicalls.clear")}
-          </Button>
-        </div>
+        <PanelBody>
+          <div className="aicalls-countline">
+            <Button variant="link" onClick={onClear}>
+              {t("aicalls.clear")}
+            </Button>
+          </div>
+        </PanelBody>
       )}
-      <div className="aicalls-table">
-        <DataTable
-          label={t("aicalls.callsLabel")}
-          columns={columns}
-          rows={rows}
-          rowKey={(call) => call.id}
-          onRowClick={(call) => setOpenId(call.id)}
-        />
-      </div>
-      <div className="aicalls-more">
-        <LoadMoreButton query={query} />
-      </div>
+      <PanelGroupHead title={t("aicalls.callsLabel")} level="h3" />
+      <CallTable calls={rows} onOpen={(call) => setOpenId(call.id)} />
+      {query.hasNextPage && (
+        <PanelBody>
+          <LoadMoreButton query={query} />
+        </PanelBody>
+      )}
       {open && (
         <CallDrawer
           call={open}
@@ -364,10 +292,21 @@ export function AiCallsCard() {
   const canSee = useCan("ai_diagnostics", "read");
   const [params, setParams] = useUrlParams();
   const filters = useMemo(() => callFiltersOf(params), [params]);
+  const figure = useMemo(() => figureFilterOf(params), [params]);
   const setFilters = useCallback(
     (next: CallFilters) => setParams(withCallFilters(params, next)),
     [params, setParams],
   );
+  const clearFigure = () => {
+    const dials = new Map(params);
+    for (const key of FIGURE_PARAMS) dials.delete(key);
+    setParams(dials);
+  };
+  const clearAll = () => {
+    const dials = new Map(withCallFilters(params, UNFILTERED_CALLS));
+    for (const key of FIGURE_PARAMS) dials.delete(key);
+    setParams(dials);
+  };
   const [search, setSearch] = useSettledSearch(
     filters.search,
     useCallback(
@@ -375,14 +314,22 @@ export function AiCallsCard() {
       [filters, setFilters],
     ),
   );
-  const query = useCallTrace(filters, canSee);
+  const query = useCallTrace(filters, figure, canSee);
   // The server's complete sets, carried on every page, NOT the values on the
   // loaded rows: those collapse to the one selected once a dial is set.
   const first = query.data?.pages[0];
   // A value reached by link may have no calls yet and so be absent from the
   // server's set; it stays selectable so the select shows what is filtered.
-  const tasks = withSelected(first?.tasks ?? [], filters.task);
+  const listedTasks = first?.task_options ?? [];
+  const tasks =
+    filters.task && !listedTasks.some((option) => option.task === filters.task)
+      ? [{ task: filters.task }, ...listedTasks]
+      : listedTasks;
   const models = withSelected(first?.models ?? [], filters.model);
+  const hasFigure = Object.keys(figure).length > 0;
+  const narrowed = isNarrowed(filters) || hasFigure;
+  const taskOnly =
+    !hasFigure && !isNarrowed({ ...filters, task: "" }) && filters.task !== "";
 
   if (!canSee) {
     // Withheld, not absent: an absent trace reads as "the installation made no
@@ -399,8 +346,9 @@ export function AiCallsCard() {
     );
   }
 
+  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
-    <Panel title={t("aicalls.title")}>
+    <Panel title={t("aicalls.title")} className="aicalls-card">
       <PanelBody>
         <PanelIntro>{t("aicalls.sub")}</PanelIntro>
         <CallFiltersBar
@@ -411,18 +359,56 @@ export function AiCallsCard() {
           onSearch={setSearch}
           onChange={setFilters}
         />
-        <QueryStates
-          query={query}
-          pendingLabel={t("aicalls.title")}
-          pendingLines={6}
-        >
-          <CallTrace
+        {hasFigure && (
+          <Callout
+            tone="info"
+            title={t("aicalls.filtered", { filter: figureWords(figure, t) })}
+          >
+            <Button variant="link" onClick={clearFigure}>
+              {t("aicalls.filtered.clear")}
+            </Button>
+          </Callout>
+        )}
+        {query.data === undefined && (
+          <QueryStates
             query={query}
-            filters={filters}
-            onClear={() => setFilters(UNFILTERED_CALLS)}
-          />
-        </QueryStates>
+            pendingLabel={t("aicalls.title")}
+            pendingLines={6}
+          >
+            {null}
+          </QueryStates>
+        )}
       </PanelBody>
+      {query.data !== undefined && (
+        <CallTrace
+          query={query}
+          narrowed={narrowed}
+          taskOnly={taskOnly}
+          onClear={clearAll}
+        />
+      )}
     </Panel>
   );
+}
+
+const FIGURE_TERM = {
+  provider: "aiTerms.provider",
+  served_provider: "aicalls.filter.servedProvider",
+  tier: "aiTerms.tier",
+} as const satisfies Record<FigureParam, MessageKey>;
+
+// Each dial under its own name, with a vendor or a tier named as the rest of
+// this page names them. An upstream host is its own name.
+function figureWords(figure: FigureFilter, t: Translator): string {
+  return FIGURE_PARAMS.flatMap((key) => {
+    const value = figure[key];
+    if (!value) return [];
+    const shown =
+      key === "provider"
+        ? providerName(value, t)
+        : key === "tier"
+          ? tierLabel(value, t)
+          : value;
+    return [`${t(FIGURE_TERM[key])}: ${shown}`];
+  }).join(" · ");
 }

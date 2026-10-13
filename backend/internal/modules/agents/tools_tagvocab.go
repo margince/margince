@@ -42,7 +42,7 @@ func (t createTag) Spec() mcp.ToolSpec {
 		Name: "create_tag", Title: "Create a tag", Version: toolVersionV1,
 		Description:   createTagCopy.render(),
 		Instead:       createTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry
@@ -50,16 +50,10 @@ func (t createTag) Spec() mcp.ToolSpec {
 		// coin a second word or re-issue an edit it had already made.
 		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionCreate},
 		OpenAPIOp:   "createTag",
-		// No `description`, though CreateTagRequest declares one and update_tag
-		// takes one. The REST handler decodes it and never passes it to the
-		// store (collections/handlers.go CreateTag), so the field is dropped in
-		// silence today — offering it here would advertise a write that does
-		// not happen. A tool schema is what a model trusts about the effect.
-		// Filed as debt rather than fixed here: making the HTTP write honour it
-		// is a change to that door, not to this one.
 		InputSchema: schema(`{"type":"object","required":["name"],"properties":{
 			"name":{"type":"string","minLength":1,"maxLength":64},
-			"color":{"type":"string","enum":["teal","amber","rose","slate","sky","violet","lime","orange"]}},
+			"color":{"type":"string","enum":["teal","amber","rose","slate","sky","violet","lime","orange"]},
+			"description":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[Tag](),
 	}
@@ -67,13 +61,14 @@ func (t createTag) Spec() mcp.ToolSpec {
 
 func (t createTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
-		Name  string  `json:"name"`
-		Color *string `json:"color"`
+		Name        string  `json:"name"`
+		Color       *string `json:"color"`
+		Description *string `json:"description"`
 	}
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	detail, err := t.tags.CreateTag(ctx, args.Name, args.Color)
+	detail, err := t.tags.CreateTag(ctx, args.Name, args.Color, args.Description)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +84,7 @@ func (t updateTag) Spec() mcp.ToolSpec {
 		Name: "update_tag", Title: "Rename or recolour a tag", Version: toolVersionV1,
 		Description:   updateTagCopy.render(),
 		Instead:       updateTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		// A tag is a WORD, not a row with a scope, so this answer names no
 		// record and the replay has nothing to re-read. The grant is what the
 		// handler checked; it is what the replay checks. Without it a retry

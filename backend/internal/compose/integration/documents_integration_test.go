@@ -380,7 +380,7 @@ func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms)
 	if _, err := companies.MergeCompany(ctx,
-		ids.From[ids.CompanyKind](dissolved), ids.From[ids.CompanyKind](survivor)); err != nil {
+		ids.From[ids.CompanyKind](dissolved), ids.From[ids.CompanyKind](survivor), nil); err != nil {
 		t.Fatalf("merging the duplicate company: %v", err)
 	}
 

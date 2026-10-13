@@ -1,10 +1,9 @@
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
-
 import { Panel, PanelBody } from "../design-system/panel";
 import { omitted, type SectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { ContactBillingRoles } from "./contactbillingroles";
 import { ContactConfirmCallout } from "./contactconfirm";
 import { ConsentAndChannels } from "./contactconsentpanel";
@@ -176,6 +175,7 @@ export function ContactTagsSection({ view }: Readonly<{ view: Contact360 }>) {
       entityType="contact"
       entityID={contact.id}
       canEdit={canUpdate && !readOnlyReason}
+      employer={contact.employer}
     />
   );
 }

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -200,7 +201,7 @@ func For(lang textlang.Lang, band convstate.Band) Phrases {
 // (DRAFT-AC-E-3).
 func Subject(lang textlang.Lang, band convstate.Band, topic string, threaded bool) string {
 	phrases := For(lang, band)
-	topic = strings.TrimSpace(topic)
+	topic = mailsubject.WithoutReplyPrefix(topic)
 	if topic == "" {
 		return phrases.SubjectNoContext
 	}
@@ -208,6 +209,19 @@ func Subject(lang textlang.Lang, band convstate.Band, topic string, threaded boo
 		return fill(For(lang, convstate.BandNone).SubjectAbout, topic)
 	}
 	return fill(phrases.SubjectAbout, topic)
+}
+
+// groupGreetings open a message written to several contacts at once, where
+// naming one of them would leave the others out.
+var groupGreetings = map[textlang.Lang]string{
+	textlang.English:    "Hello all,",
+	textlang.German:     "Guten Tag zusammen,",
+	textlang.Vietnamese: "Xin chào quý vị,",
+}
+
+// GroupGreeting renders the opening line of a message to several contacts.
+func GroupGreeting(lang textlang.Lang) string {
+	return groupGreetings[langOrDefault(lang)]
 }
 
 // Greeting renders the opening line, by name when one is known.

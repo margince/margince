@@ -105,8 +105,7 @@ func TestASharedMailboxNeedsTheWorkspaceOptIn(t *testing.T) {
 	// authority over their own mailbox is not in question, the workspace's
 	// posture is.
 	_, err := env.registry.SetMailPosture(seatContext(e, e.Rep1), "gmail", capturemod.PostureShared, false)
-	var refusal *capturemod.SharedPostureNotAllowedError
-	if !errors.As(err, &refusal) {
+	if _, ok := errors.AsType[*capturemod.SharedPostureNotAllowedError](err); !ok {
 		t.Fatalf("asking for shared without the opt-in gave %v, want the opt-in refusal", err)
 	}
 	if got := postureOf(t, e, e.Rep1); got != capturemod.PostureClassified {

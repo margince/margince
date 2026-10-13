@@ -135,22 +135,33 @@ func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 // the arrangement observed rather than assumed.
 func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
 	t.Helper()
-	ctx := context.Background()
 	var holderPID int
-	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
+	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
 		t.Fatalf("reading the holding connection's pid: %v", err)
 	}
+	waitUntilBlockedByPID(t, holder, holderPID, want)
+}
+
+// waitUntilBlockedByPID is the same wait when the holder is a POOLED connection
+// the caller cannot name — a production writer held open inside db.Tx, which
+// takes whichever connection the pool hands it. The holder reads its own pid
+// from inside that transaction and the probe runs on a connection of the test's
+// own, so the question stays "who is blocking WHOM" rather than the weaker "is
+// anyone waiting" this file's header warns about.
+func waitUntilBlockedByPID(t *testing.T, prober *pgx.Conn, holderPID, want int) {
+	t.Helper()
+	ctx := context.Background()
 	deadline := time.Now().Add(30 * time.Second)
 	for {
 		// pg_stat_activity is materialized once per transaction and cached
 		// until it ends, so a probe that did not clear it cannot see a backend
 		// that dialled after the snapshot was taken — the wait then runs to its
 		// deadline over contention that is really there.
-		if _, err := holder.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		if _, err := prober.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
 			t.Fatalf("clearing the stats snapshot before probing: %v", err)
 		}
 		var waiting int
-		if err := holder.QueryRow(ctx,
+		if err := prober.QueryRow(ctx,
 			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
 			holderPID).Scan(&waiting); err != nil {
 			t.Fatalf("reading who this connection is blocking: %v", err)

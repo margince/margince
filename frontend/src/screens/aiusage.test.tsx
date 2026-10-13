@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { AiUsageCard } from "./aiusage";
 
@@ -129,12 +129,90 @@ it("shows estimated cost when present independently of the current allowance ban
   expect(await screen.findByText("enrich")).toBeTruthy();
   expect(screen.getByText("Estimated cost")).toBeTruthy();
   expect(screen.getAllByText(/€1\.23/).length).toBeGreaterThan(0);
-  // The caveat and the total are what the table says taken TOGETHER, so they
-  // stand in the row's naming as its description rather than under the table as
-  // a caption: a sentence in a control column reads as that control's answer.
+  // The caveat and the total read under the table they sum.
   const note = screen.getByText(/Costs are estimates/);
-  expect(note.closest(".settingrow-naming")).not.toBeNull();
+  const table = screen.getByTestId("spend-enrich-premium").closest("table");
+  expect(table?.compareDocumentPosition(note)).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
   expect(note.textContent).toContain("€1.23");
+});
+
+it("sets every figure against the end of its column", async () => {
+  mount({
+    budget: { ...budget, currency: "EUR" },
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [
+          {
+            task: "enrich",
+            tier: "premium",
+            calls: 1200,
+            cached_hits: 3,
+            tokens_in: 960,
+            tokens_out: 8,
+            cost_est_minor: 123,
+          },
+        ],
+      },
+    ],
+  });
+  const row = await screen.findByTestId("spend-enrich-premium");
+  const table = row.closest("table");
+  if (!table) throw new Error("the spend is not a table");
+  for (const header of [
+    "Calls",
+    "Tokens in / out",
+    "Cached",
+    "Estimated cost",
+  ]) {
+    expect(
+      within(table).getByRole("columnheader", { name: header }).className,
+    ).toContain("datatable-end");
+  }
+  expect(within(row).getByText("960 / 8").className).toContain("datatable-end");
+  expect(within(row).getByText("1,200").className).toContain("datatable-end");
+  expect(
+    within(table).getByRole("columnheader", { name: "Task" }).className,
+  ).not.toContain("datatable-end");
+});
+
+it("groups the spend by task, with a line per tier only where a task ran on several", async () => {
+  const line = (task: string, tier: string, calls: number) => ({
+    task,
+    tier,
+    calls,
+    tokens_in: 10,
+    tokens_out: 1,
+  });
+  mount({
+    budget,
+    days: [
+      {
+        date: "2026-07-20",
+        tasks: [line("triage", "cheap_cloud", 2), line("enrich", "premium", 1)],
+      },
+      {
+        date: "2026-07-21",
+        tasks: [line("triage", "premium", 3)],
+      },
+    ],
+  });
+  const total = await screen.findByTestId("spend-triage");
+  expect(within(total).getByText("5")).toBeTruthy();
+  expect(within(total).getByText("20 / 2")).toBeTruthy();
+  const cheap = screen.getByTestId("spend-triage-cheap_cloud");
+  const premium = screen.getByTestId("spend-triage-premium");
+  expect(cheap.textContent).toContain("Everyday cloud");
+  expect(premium.textContent).toContain("Premium");
+  expect(total.compareDocumentPosition(cheap)).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  expect(screen.getAllByText("triage")).toHaveLength(1);
+  const single = screen.getByTestId("spend-enrich-premium");
+  expect(single.textContent).toContain("enrich");
+  expect(single.textContent).toContain("Premium");
 });
 
 // A total that is SHORT says so, and one that is whole does not.
@@ -243,7 +321,7 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
     ],
   });
   // The month is one decision, so the row names it once and each arrow keeps
-  // its own name: a glyph announces as nothing, and "‹" is not a direction.
+  // its own name: an icon announces as nothing.
   expect(await screen.findByText("Month")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Previous month" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Next month" })).toBeTruthy();
@@ -254,7 +332,10 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
   const summary = screen.getByText("Show days");
   const disclosure = summary.closest("details");
   expect(disclosure).toBeTruthy();
-  expect(disclosure?.textContent).toContain("2026-07-20");
+  // The day reads in the reader's words, never as the wire's ISO date.
+  const day = disclosure?.querySelector("time[datetime='2026-07-20']");
+  expect(day?.textContent).toBe("20 Jul");
+  expect(disclosure?.textContent).not.toContain("2026-07-20");
   expect(screen.queryByText("Hide days")).toBeNull();
 });
 
@@ -336,6 +417,20 @@ it("opens on the READER's month and steps from it, not from UTC's", async () => 
   } finally {
     vi.useRealTimers();
     viewer.zone = "UTC";
+  }
+});
+
+it("names the month on screen beside the arrows that step it", async () => {
+  const user = steppedClock();
+  vi.setSystemTime(new Date("2026-09-15T12:00:00Z"));
+  try {
+    mount({ budget, days: [] });
+    expect(await screen.findByText("September 2026")).toBeTruthy();
+
+    await user.click(screen.getByLabelText("Previous month"));
+    expect(await screen.findByText("August 2026")).toBeTruthy();
+  } finally {
+    vi.useRealTimers();
   }
 });
 
@@ -486,4 +581,43 @@ it("hides the decision model's rates when no decision model is bound", async () 
   expect(await screen.findByText("No AI calls this month.")).toBeTruthy();
   expect(screen.queryByText("site_triage")).toBeNull();
   expect(screen.queryByText("Decision model")).toBeNull();
+});
+
+// The decision table names its tasks the way the spend table does, so the
+// same name opens the same sentence about what the task does.
+it("opens a decision task's summary from its name", async () => {
+  const user = userEvent.setup();
+  mount(
+    {
+      ...decisionUsage,
+      days: [
+        {
+          date: "2026-07-20",
+          tasks: [
+            {
+              task: "site_triage",
+              task_display_name: "Website triage",
+              task_summary: "Decides what an email domain's website is.",
+              tier: "decide",
+              calls: 4,
+              tokens_in: 10,
+              tokens_out: 0,
+            },
+          ],
+        },
+      ],
+    },
+    200,
+    DECIDING_OPERATOR,
+    boundRouting,
+  );
+  const asked = await screen.findByRole("columnheader", { name: "Asked" });
+  const table = asked.closest("table");
+  if (!table) throw new Error("the decision summary is not a table");
+  await user.click(
+    within(table).getByRole("button", { name: "Website triage: what it does" }),
+  );
+  expect(
+    await screen.findByText("Decides what an email domain's website is."),
+  ).toBeTruthy();
 });

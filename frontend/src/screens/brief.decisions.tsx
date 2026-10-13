@@ -3,8 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { navigate } from "../app/router";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
@@ -17,6 +15,7 @@ import {
 } from "../design-system/decisiondeck";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
 import type { SectionState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
@@ -32,10 +31,13 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { isVersionSkewOf, problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalKindLabel } from "./approvalkind";
+import { approvalKindLabel, decisionSkewKey } from "./approvalkind";
 import { commitTray } from "./brief.decisions.commit";
-import { problemMessageOf, provenanceOf, useViewerId } from "./common";
 import { worklistLaneHref } from "./worklist.header";
 import { worklistKey } from "./worklist.queries";
 
@@ -61,6 +63,18 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
   };
+}
+
+// A verdict that lost a race answered a staging that has since moved. It gets
+// the Decisions row's words for its kind, not the lost-edit sentence.
+function verdictFailure(
+  error: unknown,
+  kind: string | null,
+  t: Translator,
+): string {
+  return isVersionSkewOf(error)
+    ? t(decisionSkewKey(kind))
+    : problemMessageOf(error, t);
 }
 
 /** The deck's vocabulary, in this surface's own words. */
@@ -186,7 +200,7 @@ export function DecisionsSection({
       if (result.failure) {
         // Reported after the outcomes that DID land, and as a failure: the tray
         // keeps what it still holds and the notice under it says what stopped.
-        const message = problemMessageOf(result.failure, t);
+        const message = verdictFailure(result.failure, result.failedKind, t);
         setFailure(message);
         toast.show(message, { tone: "danger", sticky: true });
         return;
@@ -211,7 +225,7 @@ export function DecisionsSection({
       ? "failed"
       : "idle";
   const notice = commit.isError
-    ? problemMessageOf(commit.error, t)
+    ? verdictFailure(commit.error, null, t)
     : (failure ?? (alreadyDecided ? t("decision.alreadyDecided") : null));
 
   return (

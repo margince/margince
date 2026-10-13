@@ -81,11 +81,14 @@ function withDeclaredEmpties(
   for (const band of declared) {
     if (drawn.has(band)) {
       // Every run up to and including this band's first, in the queue's order.
-      while (at < runs.length && runs[at].band !== band) {
-        out.push(runs[at++]);
+      let run = runs[at];
+      while (run !== undefined && run.band !== band) {
+        out.push(run);
+        run = runs[++at];
       }
-      while (at < runs.length && runs[at].band === band) {
-        out.push(runs[at++]);
+      while (run !== undefined && run.band === band) {
+        out.push(run);
+        run = runs[++at];
       }
       continue;
     }
@@ -131,7 +134,7 @@ export type HeadedDueGroup = "tomorrow" | "this_week" | "later";
 export type DueRun = {
   /** Absent on rows carrying no deadline, which draw under no sub-heading. */
   group?: HeadedDueGroup;
-  items: WorklistItem[];
+  items: [WorklistItem, ...WorklistItem[]];
 };
 
 /** The copy key for a run's heading, so the caller never builds one by hand. */

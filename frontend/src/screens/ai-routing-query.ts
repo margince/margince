@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The stored routing document and the ETag it was read at. One read, shared by
 // every card that shows a binding and every editor that writes one.
@@ -52,7 +52,8 @@ export function boundProviders(
 export type ProviderUse = {
   for: string[];
   baseUrls: string[];
-  // The models routing binds on this vendor, with the lane each is bound in.
+  // The models routing binds on this vendor, each model and lane once however
+  // many tiers share it.
   models: { model: string; lane: "chat" | "embeddings" | "decisions" }[];
 };
 
@@ -76,10 +77,12 @@ export function providerUsage(
       models: [],
     };
     held.for.push(role);
-    held.models.push({
-      model: binding.model,
-      lane: role === "embeddings" || role === "decisions" ? role : "chat",
-    });
+    const lane = role === "embeddings" || role === "decisions" ? role : "chat";
+    if (
+      !held.models.some((m) => m.model === binding.model && m.lane === lane)
+    ) {
+      held.models.push({ model: binding.model, lane });
+    }
     if (binding.base_url) held.baseUrls.push(binding.base_url);
     usage.set(binding.provider, held);
   };

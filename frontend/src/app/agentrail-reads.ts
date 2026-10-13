@@ -4,14 +4,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useHoldsAdminRole } from "../lib/capability";
+import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
+import { type LicensePosture, useLicensePosture } from "../lib/license-posture";
 import { usePendingApprovals } from "../screens/approvals.queries";
 import { useConnectors } from "../screens/connectors";
-import { useCan, useHoldsAdminRole } from "./capability";
-import { type CaptureProgress, liveCapture } from "./capture-progress";
-import { type LicensePosture, useLicensePosture } from "./license-posture";
 
 // WHAT THE AGENT SECTION READS. The rail's row, the state it derives and the
 // panel beside it all stand on these answers and on nothing else: approvals
@@ -120,7 +121,10 @@ export function useSignals(): Signals {
   const connections = connectors.data?.data ?? [];
   const offline = connections
     .filter((connection) => connection.status !== "connected")
-    .map((connection) => connection.account_label ?? connection.provider);
+    .map(
+      (connection) =>
+        connection.account_label ?? providerName(connection.provider, t),
+    );
   const capture = liveCapture(connections);
 
   return {
@@ -162,10 +166,9 @@ function captureLine(
  * The model the agent last actually ran on — the SERVED one, not the configured
  * one, because a fallback ladder makes those two differ exactly when it matters.
  *
- * ONE row, because the runtime facts show one model and nothing else there
- * reads the trace: the recap beside them is drawn from the AI-activity feed,
- * which is the projection that knows what each occurrence was ABOUT. Asking for
- * five would be four rows nothing renders.
+ * A short window, not one row: the newest call is often an embedding or a
+ * failure, and the panel names the newest call that answered (modelText). The
+ * recap beside it is drawn from the AI-activity feed, not from this trace.
  *
  * Operator-only, because `/ai/calls` sits behind `ai_diagnostics:read`. A seat
  * without it is told the model is not readable rather than shown one nobody on
@@ -183,7 +186,7 @@ export function useLastCall(): Readonly<{
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/calls", {
-        params: { query: { limit: 1 } },
+        params: { query: { limit: 10 } },
       });
       if (error) {
         // Chrome must not take a page down over telemetry: an unreadable log is

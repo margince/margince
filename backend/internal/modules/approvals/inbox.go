@@ -196,6 +196,8 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 		}
 		in.failedDecider = &p.UserID
 	}
+	// Kept for the in-process seams, which pass their own limit; the HTTP
+	// binder clamps before it gets here.
 	if in.Limit <= 0 || in.Limit > inboxBatch {
 		in.Limit = 50
 	}

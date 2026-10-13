@@ -5,10 +5,11 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { throwProblem, unwrap } from "../lib/problem";
 import { CoverageLine } from "./analytics.forecast.review";
-import { QueryGate, throwProblem } from "./common";
 
 type Preview = components["schemas"]["ForecastAssurancePreview"];
 
@@ -95,11 +96,7 @@ export function FirstCheck({ title }: Readonly<{ title: string }>) {
   const preview = useQuery({
     queryKey: ["forecast-assurance-preview"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/assurance/preview", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/forecast/assurance/preview", {}));
     },
   });
 

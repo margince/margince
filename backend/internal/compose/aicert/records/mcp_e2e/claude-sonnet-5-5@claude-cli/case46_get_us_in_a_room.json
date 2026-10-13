@@ -1,0 +1,25 @@
+{
+  "scenario": "case46_get_us_in_a_room",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 18,
+    "output_tokens": 3265,
+    "cache_creation_input_tokens": 47391,
+    "cache_read_input_tokens": 503307,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.2726
+  }
+}

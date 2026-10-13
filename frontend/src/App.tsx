@@ -12,29 +12,15 @@ import {
 } from "react";
 import { AskFromAddress } from "./app/askfromaddress";
 import { isPublicBookingId } from "./app/bookingroute";
+import { AuthSplash } from "./app/bootsplash";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
-import {
-  composedScreens,
-  EXTENSION_SCREEN,
-  findExtension,
-} from "./app/extensions";
-import { CREATE_ID } from "./app/nav";
+import { opensReservedPage } from "./app/nav";
 import {
   CommandPalette,
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
-import { RecordZoneProvider, useConfiguredRecordZone } from "./app/recordzone";
-import { SPA_RELEASE } from "./app/release";
-import {
-  navigate,
-  navigateReplacing,
-  parseHash,
-  routeHash,
-  routeIdentity,
-  type Screen,
-} from "./app/router";
 import { Shell, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
 import {
@@ -46,12 +32,27 @@ import {
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import {
+  composedScreens,
+  EXTENSION_SCREEN,
+  findExtension,
+} from "./lib/extensions";
+import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
+import { SPA_RELEASE } from "./lib/release";
+import {
+  navigate,
+  navigateReplacing,
+  parseHash,
+  routeHash,
+  routeIdentity,
+  type Screen,
+} from "./lib/router";
+import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
   type AuthNotice,
   AuthScreen,
   AvailabilityScreen,
   RESET_ROUTE,
 } from "./screens/auth";
-import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";
@@ -61,8 +62,8 @@ import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 import { WriteToHost } from "./screens/writeto";
 
-// Route → screen. The table below is TOTAL over `Screen` (app/router.tsx), so
-// every address the product answers has a view and an address it does not answer
+// Route → screen. The table below is total over `Screen` (lib/router.tsx), so
+// every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
 
 // The routed screens arrive as their own chunks, so a visitor who has only
@@ -302,11 +303,11 @@ function ScreenPending() {
 }
 
 // Split out of the dispatch table purely to keep the deals list/detail split in
-// one place: `#/deals/new` carries CREATE_ID and is the LIST with its form open,
-// which is the same reading the shell's layout policy takes from that segment.
+// one place: `#/deals/new` is the reserved segment that is the LIST with its form
+// open, which is the same reading the shell's layout policy takes from it.
 function DealsRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
-  if (!id || id === CREATE_ID) {
-    return <DealsScreen startCreating={id === CREATE_ID} />;
+  if (!id || opensReservedPage({ screen: "deals", id })) {
+    return <DealsScreen startCreating={id !== undefined} />;
   }
   return id2 === "room" ? <DealRoomPage dealId={id} /> : <DealScreen id={id} />;
 }
@@ -436,9 +437,9 @@ function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
 type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
 
 // One entry per address, and `Record<Screen, …>` is what makes that set
-// COMPLETE: a screen added to the union in app/router.tsx with no view here
-// fails the build instead of quietly rendering the page a hash nobody typed
-// gets. A fallback arm cannot tell an unwired screen from an unknown address.
+// complete. A screen added to the union in lib/router.tsx with no view here
+// fails the build. It does not render the page an unknown hash gets. A
+// fallback arm cannot tell an unwired screen from an unknown address.
 const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
   {
     home: () => <BriefScreen />,
@@ -446,10 +447,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
-      id ? (
-        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
+      !id || opensReservedPage({ screen: "contacts", id }) ? (
+        <ContactsScreen importing={id !== undefined} />
       ) : (
-        <ContactsScreen />
+        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ),
     companies: ({ id }) =>
       id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
@@ -509,10 +510,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // it is a different credential from the reusable preference link.
     confirm: ({ id }) => <ConfirmDetailsScreen token={id} />,
     // #/room?c=<credential> — the Deal Room's buyer, anonymous. The credential
-    // is already out of the address by the time this table is reached: the
-    // router takes it as it reads the hash (app/router.tsx), because a gate
-    // above this dispatch can render instead of the route and this screen would
-    // then never mount to scrub it.
+    // is already out of the address by the time this table is reached. The
+    // router takes it as it reads the hash (lib/router.tsx). A gate above this
+    // dispatch can render instead of the route, and then this screen would
+    // never mount to scrub it.
     room: () => <BuyerRoomScreen />,
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>) — never a rail destination.
@@ -582,7 +583,7 @@ function ScreenView({
   // it into the retry card instead of a blank frame.
   return (
     <Suspense fallback={<ScreenPending />}>
-      {/* Keyed by what the address is ABOUT (app/router.tsx's routeIdentity),
+      {/* Keyed by what the address is ABOUT (lib/router.tsx's routeIdentity),
           which makes moving to another THING a REMOUNT rather than a
           re-render. Two reasons, and the second is the load-bearing one. A
           screen carries state about the record it was opened for — an expanded
@@ -652,10 +653,9 @@ const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 export function App() {
-  // Ahead of every gate below, and that ordering is load-bearing rather than
-  // tidy: reading the address is also what takes a one-time credential out of
-  // it (app/router.tsx), and a credential must leave the bar whatever this
-  // function decides to render instead of the route.
+  // Ahead of every gate below, since reading the address also takes a one-time
+  // credential out of it (lib/router.tsx). A credential must leave the bar
+  // whatever this function renders instead.
   const route = useRoute();
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing
@@ -732,7 +732,7 @@ function UnavailableOrClaimable({
     // A successful claim provisions the installation, so the same /v1/me probe
     // that sent us here now answers — the boundary re-resolves rather than this
     // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} />;
+    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
   }
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
@@ -985,19 +985,6 @@ function RaillessFrame({ children }: Readonly<{ children: ReactNode }>) {
       <main className="main">
         <div className="scroll">{children}</div>
       </main>
-    </div>
-  );
-}
-
-function AuthSplash() {
-  const t = useT();
-  // A plain column. It used to borrow onboarding's `.ob-top`, which is that
-  // flow's sticky blurred header — so the splash drew a bar with a bottom
-  // border across a screen that has no header, and took that class's
-  // horizontal padding on top of the column's own.
-  return (
-    <div className="wrap narrow">
-      <EmptyState>{t("auth.checking")}</EmptyState>
     </div>
   );
 }

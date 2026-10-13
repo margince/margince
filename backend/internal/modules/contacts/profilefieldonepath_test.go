@@ -119,8 +119,8 @@ func importsOf(parsed moduleFile) map[string]string {
 	for _, spec := range parsed.file.Imports {
 		path := strings.Trim(spec.Path.Value, `"`)
 		name := path
-		if cut := strings.LastIndex(path, "/"); cut >= 0 {
-			name = path[cut+1:]
+		if _, after, ok := strings.CutLast(path, "/"); ok {
+			name = after
 		}
 		if spec.Name != nil {
 			name = spec.Name.Name
@@ -334,8 +334,8 @@ var predeclared = map[string]bool{
 // carries no dot is in the standard library.
 func isStandardLibrary(path string) bool {
 	first := path
-	if cut := strings.Index(path, "/"); cut >= 0 {
-		first = path[:cut]
+	if before, _, ok := strings.Cut(path, "/"); ok {
+		first = before
 	}
 	return !strings.Contains(first, ".")
 }

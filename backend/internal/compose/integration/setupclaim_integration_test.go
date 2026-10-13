@@ -19,6 +19,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -74,7 +75,7 @@ func claimStatus(t *testing.T, srv *httptest.Server, body string) int {
 // and the server refuses a claim that leaves either out.
 func claimBody(token string) string {
 	return `{"setup_token":"` + token + `","company_name":"Claimed Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","base_language":"en",` +
+		`"base_currency":"EUR","base_language":"en","country":"",` +
 		`"admin_email":"ops@claimed.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 }
 
@@ -186,12 +187,12 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 	// now asked on the form, so a claim that omits either is a client that
 	// stopped asking — and defaulting it would put this installation
 	// permanently on a currency nobody chose.
-	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noLanguage := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin","country":"",` +
 		`"base_currency":"EUR","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noLanguage); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base language answered %d, want 422", got)
 	}
-	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin",` +
+	noCurrency := `{"setup_token":"` + token + `","company_name":"Silent Co","timezone":"Europe/Berlin","country":"",` +
 		`"base_language":"en","admin_email":"ops@silent.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, noCurrency); got != http.StatusUnprocessableEntity {
 		t.Errorf("a claim naming no base currency answered %d, want 422", got)
@@ -208,7 +209,7 @@ func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 	srv, token, owner := unprovisionedServerWithOwner(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Zurich Co","timezone":"Europe/Zurich",` +
-		`"base_currency":"CHF","base_language":"de",` +
+		`"base_currency":"CHF","base_language":"de","country":"",` +
 		`"admin_email":"ops@zurich.test","admin_name":"Ops","admin_password":"a bootstrap password!"}`
 	if got := claimStatus(t, srv, body); got != http.StatusCreated {
 		t.Fatalf("claiming with CHF and German answered %d, want 201", got)
@@ -233,7 +234,7 @@ func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 	srv, token := unprovisionedServer(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Weak Co","timezone":"Europe/Berlin",` +
-		`"base_currency":"EUR","base_language":"en",` +
+		`"base_currency":"EUR","base_language":"en","country":"",` +
 		`"admin_email":"ops@weak.test","admin_name":"Ops","admin_password":""}`
 	if got := claimStatus(t, srv, body); got != http.StatusUnprocessableEntity {
 		t.Fatalf("an empty admin password answered %d, want 422 — this is the field the caller must fix, not a server fault", got)
@@ -397,7 +398,7 @@ func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T
 // the handler happened to render.
 func loggedAttr(t *testing.T, records, key string) string {
 	t.Helper()
-	for _, line := range strings.Split(strings.TrimSpace(records), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(records), "\n") {
 		if line == "" {
 			continue
 		}
@@ -410,4 +411,32 @@ func loggedAttr(t *testing.T, records, key string) string {
 		}
 	}
 	return ""
+}
+
+// The claim's jurisdiction is stored, and status offers the compiled-in packs
+// while the installation is claimable.
+func TestAClaimStoresTheChosenJurisdiction(t *testing.T) {
+	srv, token, owner := unprovisionedServerWithOwner(t)
+	status, err := srv.Client().Get(srv.URL + "/setup/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { apptest.CloseBody(t, status) })
+	var offered struct {
+		Jurisdictions []string `json:"jurisdictions"`
+	}
+	if err := json.NewDecoder(status.Body).Decode(&offered); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(offered.Jurisdictions, "zq") {
+		t.Fatalf("status offers %v, want the compiled-in zq pack", offered.Jurisdictions)
+	}
+	body := strings.Replace(claimBody(token), `"country":""`, `"country":"zq"`, 1)
+	if got := claimStatus(t, srv, body); got != http.StatusCreated {
+		t.Fatalf("claim with country zq → %d, want 201", got)
+	}
+	var stored string
+	if err := owner.QueryRow(context.Background(), `SELECT value #>> '{}' FROM setting WHERE key = 'installation.country'`).Scan(&stored); err != nil || stored != "zq" {
+		t.Fatalf("stored country = %q (%v), want zq", stored, err)
+	}
 }

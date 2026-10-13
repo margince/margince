@@ -101,12 +101,9 @@ func (s *Store) DemoteLead(
 		if err != nil {
 			return err
 		}
-		if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, storekit.LiveOnly); err != nil {
-			return fmt.Errorf("lock promoted contact: %w", err)
-		}
 		// The lead lock serializes a demote against a concurrent re-promote or
 		// second demote; the loser re-reads the state and answers 409.
-		if _, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived); err != nil {
+		if err := lockContactThenLead(ctx, tx, contactID, storekit.LiveOnly, id); err != nil {
 			return err
 		}
 		lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
@@ -116,13 +113,26 @@ func (s *Store) DemoteLead(
 		if err := stillTheLeadTheCallerDescribed(lead, contactID, options); err != nil {
 			return err
 		}
+		if err := reopenedLeadContactFree(ctx, tx, id); err != nil {
+			return err
+		}
 
 		outcome, err := promotedOutcome(ctx, tx, id)
 		if err != nil {
 			return err
 		}
+		// Asked before the unwind, while the contact still carries the tags
+		// and lists it would drop, and again after it, when a link a colleague
+		// added meanwhile is one the unwind retired.
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, false); err != nil {
+			return err
+		}
 		unwind, err := unwindContact(ctx, tx, id, contactID, outcome)
 		if err != nil {
+			return err
+		}
+		archived := unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindReversed
+		if err := refuseIfColleagueWorkedOnCreated(ctx, tx, contactID, outcome, options, archived); err != nil {
 			return err
 		}
 		setBy, err := statusSetByFor(ctx)
@@ -133,7 +143,7 @@ func (s *Store) DemoteLead(
 			`UPDATE lead SET status = 'engaged', status_set_by = $2, archived_at = NULL,
 			        promoted_contact_id = NULL, promoted_at = NULL, qualified_deal_id = NULL
 			 WHERE id = $1`, id, setBy); err != nil {
-			return fmt.Errorf("restore lead: %w", err)
+			return restoreFailure(err, lead)
 		}
 
 		auditID, err := storekit.Audit(ctx, tx, "demote", "lead", id.UUID,
@@ -371,4 +381,40 @@ func promotedContactOf(ctx context.Context, tx pgx.Tx, id ids.LeadID) (ids.Conta
 		return ids.ContactID{}, &NotPromotedError{}
 	}
 	return ids.From[ids.ContactKind](*promoted), nil
+}
+
+// refuseIfColleagueWorkedOnCreated refuses, for a caller that asked, a
+// demotion that archives a contact a colleague has worked on since: their work
+// would be archived with it.
+func refuseIfColleagueWorkedOnCreated(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, outcome promotionOutcome, options writeOptions, unwound bool,
+) error {
+	if options.untouchedSince == nil || outcome != outcomeCreated {
+		return nil
+	}
+	worked, err := ColleagueWorkedOnSince(ctx, tx, entityContact, contactID.UUID, *options.untouchedSince, options.untouchedAfter)
+	if err != nil {
+		return err
+	}
+	if !worked && unwound {
+		// The unwind archived the contact it created, and that archive's
+		// cascade is what it took down.
+		if worked, err = ArchiveDroppedColleagueWork(ctx, tx, entityContact, contactID.UUID); err != nil {
+			return err
+		}
+	}
+	if worked {
+		return &HumanTouchedError{EntityType: entityContact, EntityID: contactID.UUID}
+	}
+	return nil
+}
+
+// restoreFailure answers a failed restore of a promoted lead. Its address may
+// have been taken by a live lead while it was away, which is the same
+// duplicate-email conflict create and update answer.
+func restoreFailure(err error, lead crmcontracts.Lead) error {
+	if mapped, ok := leadUniqueViolation(err, (*string)(lead.Email)); ok {
+		return mapped
+	}
+	return fmt.Errorf("restore lead: %w", err)
 }

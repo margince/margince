@@ -1,21 +1,19 @@
-# The AI activity rail — what the AI is doing for you, while it does it
+<!-- prose:plain -->
+# The AI activity rail: what the AI is doing for you, while it does it
 
-A rep who asks the product to write a summary should see that it is being
-written. Before this existed they saw nothing for however long the model took,
-and then the answer appeared — which reads as a product that did nothing and
-then guessed.
+A rep who asks for a summary should see that it is being written. The AI activity rail shows AI work
+while it runs and after it ends. Without it, the answer shows up after a silent wait, which looks like a
+product that did nothing and then made up an answer.
 
-This page explains the rail: the one projection behind it, who reports into it,
-who an occurrence belongs to, and — separately, because it is a different
-question with a different owner — which kinds a reader is actually shown.
+The sections below cover the one projection behind the rail, who reports into it, and who an occurrence
+belongs to. Which kinds a reader sees is a separate question with a different owner, so it gets its own
+section.
 
-**The two questions this page keeps apart.** The server's obligation is a
-COMPLETE record: every AI task this build can run reports, because a task that
-reports nothing is AI work the product performed and then denied. What a reader
-is SHOWN is the client's decision, and it is narrower. Conflating them is how
-you get either a silent product or 300 strings nobody reads.
+The server must record every AI task: a task that reports nothing is AI work the product did and then
+kept from the user. The client decides which kinds to show, and it shows fewer. If one place made both choices, the
+result would be either a silent product or 300 lines of text nobody reads.
 
-## The shape at a glance
+## The shape
 
 ```
   a writer                     the bus                the projection            the read              the rail
@@ -28,365 +26,330 @@ you get either a silent product or 300 strings nobody reads.
                                                      ai_task_run
 ```
 
-Nothing outside `internal/modules/aiactivity` writes `ai_task_run`, and no
-statement in it invents a fact the bus did not carry. That is why the module
-imports no sibling: the facts it needs arrive in the envelope, and a projection
-that reached back into a source's tables would be a second reader of a truth it
-is supposed to hold. (Two exceptions, both retention: `PurgeSettledBefore` ages
-rows out and `CloseAbandonedRouterRuns` settles the ones whose source will never
-settle them. Ageing a read model is not a domain mutation, but it IS a write.)
+Nothing outside `internal/modules/aiactivity` writes `ai_task_run`, and no statement in it makes up a fact
+the bus did not bring. That is why the module imports no sibling: the facts it needs come in the envelope.
+A projection that read the tables of a source would be a second reader of a truth it is meant to hold.
+There are two exceptions, both for retention: `PurgeSettledBefore` removes old rows, and
+`CloseAbandonedRouterRuns` settles the ones whose source will never settle them. Removing old rows from a
+read model does not change domain data, but it is still a write.
 
-## Who reports — the router, a carrier, or nobody
+## Who reports: the router, a carrier, or nobody
 
-`ai.railOwners` (`internal/modules/ai/railowner.go`) answers this for every task
-in `api/ai-tasks.yaml`, and it is TOTAL over that table: a task the generator
-adds and nobody answers fails the build. Three answers:
+`ai.railOwners` (`internal/modules/ai/railowner.go`) answers this for every task in `api/ai-tasks.yaml`.
+It covers that whole table: a task the generator adds and nobody answers fails the build. The answers it
+can give:
 
 | Owner | What it means | What it can say |
 |---|---|---|
-| `SourceRouter` (`ai_router`) | The default. The router announces on the task's behalf, so a task is wired before its author has thought about the rail. | It learns of a call only once the call is over — plus a `running` line announced just before the call. Never `queued`. |
-| A **carrier** (`agent_runner`, `attachment_extraction`, `site_read`) | Work that owns a durable row reports for itself. | `queued`, `running`, and — because a carrier declares a lease — a dead attempt that can be derived as `stalled`. |
-| `SourceNoOccurrence` (`none`) | The work is a STEP inside somebody else's occurrence, not an occurrence of its own. | Nothing of its own; it is reported under the unit of work it serves. |
+| `SourceRouter` (`ai_router`) | The default. The router reports for the task, so a task is wired before its author has looked at the rail. | It learns of a call only once the call is over, plus a `running` line sent just before the call. Never `queued`. |
+| A **carrier** (`agent_runner`, `attachment_extraction`, `account_scan`, `transcript_read`, `voice_build`, `site_read`) | Work that owns a lasting row reports for itself. | `queued`, `running`, and (because a carrier declares a lease) a dead attempt that the read can show as `stalled`. |
+| `SourceNoOccurrence` (`none`) | The work is a step inside someone else's occurrence and has no occurrence of its own. | Nothing of its own; it is reported under the unit of work it serves. |
 
-`SourceNoOccurrence` is **not** an exemption from reporting, and every use owes a
-reason in `railNoOccurrenceReasons` — checked, because "reported by nobody" is
-one keystroke from the silence this registry exists to end. One task uses it
-today: `embeddings`, because every embedding call happens in service of a search,
-an enrich or a reindex, and that is the occurrence. A reason that is really an
-editorial preference ("no rep wants to see it") belongs in the CLIENT, which
-decides what to draw.
+`SourceNoOccurrence` does not free a task from reporting, and every use must give a reason in
+`railNoOccurrenceReasons`. The reasons are checked, because "reported by nobody" is one key press away
+from the silence this registry is there to end. Two groups use it today. `embeddings` does, because every
+embedding call serves a search, an enrich or a reindex, and that is the occurrence. The three website read
+passes do, because the read is the occurrence. A reason that is a matter of what looks good ("no rep wants to see
+it") belongs in the client, which decides what to draw.
 
-Where a carrier exists it is the better reporter and **the router stays silent**,
-so the two never write one occurrence between them.
+Where a carrier exists, it is the better reporter and the router stays silent. So the two never write one
+occurrence between them.
 
-The website read is the one carrier that is not a task. A deep read
-(`contacts/sitereadactivity.go`, `source=site_read`, kind `site_read`) is a crawl of
-up to a dozen pages and several model calls, and the router announces each of
-those calls under its own task (`site_triage`, `site_extract`,
-`site_fact_extract`) — settled lines, because the router learns of a call once it
-is over. The dossier row is what can say `queued` when a contact presses "read the
-site" and `running` while the crawl is in flight, so the dossier announces
-itself, one occurrence per read, keyed on its own id. The two grains do not
-collide: they are different sources with different keys, and the rail draws the
-read's line while leaving the per-call lines undisplayed.
+The website read is the one carrier that is not a task. A deep read (`contacts/sitereadactivity.go`,
+`source=site_read`, kind `site_read`) reads up to 12 pages and makes more than one model call. The
+router does not report those calls. The read reports itself as one `site_read` occurrence, keyed on its
+own id. The dossier row can say `queued` when a rep presses "read the site", and `running` while the read
+is under way. The three `site_*` kinds (`site_triage`, `site_extract`, `site_fact_extract`) stay in the
+enum only so a filter can still find old rows.
 
 ## Who an occurrence belongs to
 
-`ResolveActor` (`aiactivity/actor.go`) derives the owner FROM THE ENVELOPE, never
-from the payload. An emitter chooses its payload; it cannot choose the
-authenticated actor the write shape stamped, so it cannot attribute its work to
-somebody else by filling in a field.
+`ResolveActor` (`aiactivity/actor.go`) finds the owner from the envelope, never from the payload. A
+sender chooses its payload. It cannot choose the signed-in actor that the write shape put on the event.
+So it cannot claim its work for someone else by filling in a field.
 
 | The event's actor | Scope | `actor_user_id` |
 |---|---|---|
 | human | `personal` | that human |
-| non-human **with** `on_behalf_of` | `personal` | the human behind it |
-| non-human **without** `on_behalf_of` | `workspace` | NULL |
-| human that does not parse | *refused* | — |
+| not human, **with** `on_behalf_of` | `personal` | the human behind it |
+| not human, **without** `on_behalf_of` | `workspace` | NULL |
+| human that does not parse | *refused* | (none) |
 
-The last row is the interesting one: a human actor that does not parse is
-REFUSED rather than quietly made workspace-scoped, because quietly widening it is
-how one contact's work becomes a system sweep nobody can find and nobody notices
+A human actor that does not parse is refused; it is not given workspace scope without a trace. Making it
+wider would turn one user's work into a system sweep that nobody can find, and nobody would see that it
 is missing.
 
-Stated honestly: on a worker path `OnBehalfOf` is itself derived from the job's
-own args, so this is uniform rather than tamper-proof. Uniform is the benefit
-worth having — one rule, one place, one failure mode.
+On a worker path, `OnBehalfOf` comes from the job's own input. So this rule is the same everywhere but
+does not stop a forged value: one rule, one place, one way to fail.
 
-**The consequence that decides most of the display census below:** a
-workspace-scoped occurrence has a NULL `actor_user_id`, and the read filters
-`actor_user_id = $1`. So background work with nobody behind it reaches nobody's
-rail — not by editorial choice, but structurally.
+This decides most of the display census below. A workspace occurrence has a NULL `actor_user_id`, and
+the read filters on `actor_user_id = $1`. So background work with nobody behind it reaches nobody's rail,
+by the way it is built.
 
 ## The read
 
-`GET /me/ai-activity` (`aiactivity/read.go`), cookie-authenticated, `human-only`,
-read-only — no audit or event row.
+`GET /me/ai-activity` (`aiactivity/read.go`) needs a cookie, is `human-only`, and only reads. It writes
+no audit or event row.
 
-**The contact is taken from the bound principal and is NOT a parameter, and that
-is the whole of the authorization.** A store method that accepted a user id would
-let any in-process caller ask for somebody else's feed, and the only thing
-standing between that and a leak would be every caller remembering to pass its
-own. Here there is nothing to remember: another contact's feed cannot be
-expressed. No RBAC object gates it, because there is no wider set to withhold.
+The user comes from the bound principal and is not a parameter, and that is all the authorization there
+is. A store method with a user id parameter would let any caller in the process ask for someone else's feed.
+The only guard against a leak would then be that no caller forgets to pass its own. Here there is
+no way to ask for another user's feed. No RBAC object gates it, because there is no wider set to keep
+back.
 
-Four properties worth knowing:
+Four things to know:
 
-- **One statement, not two.** The transaction is READ COMMITTED, so two
-  statements would take two snapshots and an occurrence that settled between them
-  would appear in both — the rail saying "reading your document" and "I've read
-  your document" about one reading at once. One statement is one snapshot, so the
-  window does not exist to be closed.
-- **Two arms, each with its own ordering, bound and partial index.** `live` is
-  `queued`/`running` ordered by `queued_at`; `settled` is bounded by
-  `finished_at`, because "what the AI finished for me today" is a question about
-  when it finished — keyed on its start, a run that began 23:50 and ended 00:10
-  would fall out of `settled` AND have already left `live`, vanishing entirely.
-- **`stalled` is derived at read time and never stored.** A live occurrence past
-  the lease its own source declared is reported stalled, unconditionally, in SQL,
-  against the DATABASE clock. Nothing writes it, so nothing can forget to — which
-  is what stops a worker that died mid-run from being displayed as working
-  forever.
-- **`recent` is bounded** — since local midnight, at most 10. An unbounded
-  per-contact history is a per-contact activity ledger, which this installation
-  deliberately does not keep. `summary` and `degrade_reason` are capped on the
-  way to the wire (2000 / 500), because a model's whole output — possibly
-  inflated by a prompt injection — otherwise ships to every open tab on every
-  poll.
+- **One statement.** The transaction is READ COMMITTED, so two statements would take two snapshots. An
+  occurrence that settled between them would show up in both. The rail would then say
+  `reading your document` and `I've read your document` about one reading at once.
+ One statement is one snapshot.
+- **Two parts.** Each has its own order, bound and partial index. `live` is `queued`/`running`, in order
+  of `queued_at`. `settled` is bounded by `finished_at`, because "what the AI finished for this user today" is a
+  question about when it finished. If it were keyed on the start, a run from 23:50 to 00:10 would drop
+  out of `settled` after it had left `live`, and never show.
+- **`stalled` is worked out.** The read works out `stalled` and never stores it. A live occurrence past
+  the lease its own source declared is reported as `stalled`, always, in SQL, against the database clock.
+  Nothing writes it, so nothing can forget to. That stops a worker that died during a run from showing
+  as working forever.
+- **`recent` is bounded**: since the start of the local day, at most 10. A per-user history with no limit would be a
+  per-user activity log, which this installation does not keep. `summary` and `degrade_reason` are
+  cut to a limit on the way to the wire (2000 / 500). If they were not, a model's whole output, which a
+  prompt injection could make longer, would ship to every open tab on every poll.
 
-`degrade_reason` is server-authored prose in the SOURCE's own words, never a
-provider's or a parser's message: those carry vendor text and can echo credential
-material, and this field reaches an ordinary rep. `MarkFailed` takes a typed
-`runner.FailureReason` so a raw error **fails to compile**.
+`degrade_reason` is text the server writes in the source's own words, never a message from a provider or
+a parser. Those messages hold vendor text and can hold credential data, and this field reaches an
+ordinary rep. `MarkFailed` takes a typed `runner.FailureReason`, so a raw error does not compile.
 
-**`kinds` is how a client that draws part of the record asks for its part**, and
-it is applied BEFORE the bounds. Every task reports, so a caller that renders six
-kinds and is served the newest ten of twenty-three can be handed ten it draws
-nothing for — the bound would fall on rows the reader never sees and the rail
-would go blank while its work was reported correctly. An empty list is a 422, and
-so is an unknown name; both would otherwise come back as an empty feed, which is
-the TRUE answer for an AI at rest.
+`kinds` is how a client that draws part of the record asks for its part, and the read applies it before
+the bounds. Every task reports. So a caller that shows a few kinds, and gets the newest ten of all kinds,
+can get ten it draws nothing for. The bound would fall on rows the reader never sees, and the rail would
+go blank while its work was reported correctly. An empty list is a 422, and so is an unknown name. If not,
+both would come back as an empty feed, which is the true answer for an AI at rest.
 
-The SPA polls every **3s while something is live, 30s at rest**, and refetches
-explicitly on tab return — focus refetching is disabled app-wide, and the cached
-body is exactly the one that is wrong, because the run it shows as live is the
-run that finished while the tab was away.
+The SPA polls every **`3s` while something is live, `30s` at rest**, and fetches again when the user
+comes back to the tab. Fetching again on focus is turned off across the app. Here the cached body is the
+wrong one: the run it shows as live is the run that finished while the tab was away.
 
-## What a reader is actually shown
+## What a reader is shown
 
-`frontend/src/app/ai-activity-lines.ts` holds `ACTIVITY_LINE`: for each of the
-contract's 23 kinds, either a `(state → message key)` table or a written reason
-there is none. It is typed `Record`, not `Partial<Record>`, so **a new kind fails
-the build** until somebody either writes its copy in every locale or says, in
-code, why it is not shown. The reason lives in the source rather than in a review
-comment for the same reason: the next author reads the file, not the PR.
+`frontend/src/app/ai-activity-lines.ts` holds `ACTIVITY_LINE`. For each kind in the contract's
+`AiActivityKind` enum, it has either a `(state → message key)` table or a written reason there is none. It
+is typed `Record`, not `Partial<Record>`. So a new kind fails the build until someone writes its text in
+every locale, or says in code why it is not shown. The reason sits in the source because the next author
+reads the file, not the PR.
 
-Copy is by LITERAL key, never `t(\`agent.activity.${kind}.${state}\`)` — the
-orphan guard in `i18n/orphan-keys.test.ts` counts a key as rendered when it
-starts with a template stem, so an interpolated key would vouch for the whole
-namespace forever and a retired kind's copy would sit in three catalogs with
-nothing to flag it.
+The text uses a literal key, never `t(\`agent.activity.${kind}.${state}\`)`. The guard for keys no code uses, in
 
-**Nine kinds are narrated**, in en/de/vi, total over all six states:
+`i18n/orphan-keys.test.ts` counts a key as in use when it starts with the fixed part of a template. A
+key built from parts would count for the whole namespace forever. The text of a removed kind would then
+sit in three catalogs with nothing to flag it.
+
+**Kinds the rail tells**, in `en`, `de` and `vi`, over all six states:
 
 | Kind | Reported by | The line a rep sees |
 |---|---|---|
 | `morning_brief` | carrier (`agent_runner`) | the scheduled brief |
 | `overnight_at_risk_sweep` | carrier (`agent_runner`) | the scheduled sweep |
 | `document_extract` | carrier (`attachment_extraction`) | reading a document you attached |
-| `account_scan` | carrier (`account_scan`, the `company_scan` row) | "I'm reading Brandt Automotive's exchanges and deals." — named for the account, because the reader who opened three accounts and moved on needs to know which is ready |
+| `account_scan` | carrier (`account_scan`, the `company_scan` row) | `I'm reading Brandt Automotive's exchanges and deals.` Named for the account, so a reader who opened three accounts and moved on knows which is ready |
 | `site_read` | carrier (`site_read`) | reading a company's website, named for the company |
-| `weekly_review` | router | the weekly retrospective, under the rep's own principal |
-| `summarize` | router | "I'm writing your summary." |
-| `draft_reply` | router | "I'm drafting your reply." |
-| `offer_draft` | router | "I'm drafting your offer." |
+| `transcript_propose` | carrier (`transcript_read`) | reading a meeting transcript for its next steps |
+| `voice_build` | carrier (`voice_build`) | learning the reader's own writing voice |
+| `weekly_review` | router | the review of the week, under the rep's own principal |
+| `weekly_learnings` | router | the rep's own week, under their own principal |
+| `summarize` | router | `I'm writing your summary.` |
+| `draft_reply` | router | `I'm drafting your reply.` |
+| `offer_draft` | router | `I'm drafting your offer.` |
 
-For the three router-owned ones, `queued` copy exists and **is unreachable**: the
-router announces a call it is ABOUT to serve, never one waiting, and no carrier
-owns these tasks. The key exists because the state axis is total and the compiler
-requires it — not because a producer is missing.
+For `summarize`, `draft_reply` and `offer_draft`, `queued` text exists and is never reached. The router
+reports a call it is about to serve, never one that waits, and no carrier owns these tasks. The key exists
+because the set of states must be whole, and the compiler needs it.
 
-**Twenty-one are not narrated**, and each reason is a different kind of fact:
+**Kinds the rail does not tell**, each with its own kind of reason:
 
 | Reason | Kinds | Why |
 |---|---|---|
-| Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the company page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
-| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
-| The read narrates itself | `site_extract`, `site_fact_extract`, `site_triage` | These are the individual model calls a website read makes, and `site_read` above is the read: one occurrence for the whole crawl, announced by the dossier from queued to settled, so a line per call would tell one reading several times over. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). Attribution is a fact about the READ: a human-requested read carries that human as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. |
-| Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-contact even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-contact subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the contact record. |
-| An operator's measurement | `cert_judge` | The certification lane grading this build's own answers — not a rep's work. |
-| Declared, not built | `deal_health`, `nl_search`, `transcript` | Named in `api/ai-tasks.yaml`; no site runs them, so nothing reports them yet. |
+| Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | Shown on the surface that asked. |
+| System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `request_settlement`, `signal_extract`, `stage_evidence_extract` | Background workspace work that belongs to no single user. |
+| The read tells itself | `site_extract`, `site_fact_extract`, `site_triage` | Removed; `site_read` is the occurrence. |
+| Reaches nobody, and would not be worth showing | `enrich` | No personal owner, and one row for a whole pass. |
+| A measure for operators | `cert_judge` | Grades this build's answers; not a rep's work. |
+| Answered on screen | `nl_search` | The filter answers in the builder the reader pressed it from. |
+| Declared, not built | `deal_health`, `transcript` | Named in `api/ai-tasks.yaml`; no site runs them. |
 
-`enrich` is the one worth reading twice, because it looks visible and is not: the
-ticker's own `enrich` key names DIFFERENT work — a provider run on a contact
-(`contactprovider.tsx`), and the company page's Enrich card
-(`companies.tsx`), which POSTs `/companies/{id}/enrich` and therefore
-runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
-key, not this one.
+`growth_fit` shows the band it returns on the panel that asked. `cold_start` runs behind two product
+surfaces. One is onboarding, whose screen has no rail: `onboarding` is in `RAIL_LESS_SCREENS` in `nav.ts`,
+which `shell.tsx` reads to drop the frame. The other is the Enrich card on the company page
+(`cmd/api/modelwiring.go` wires `WithScrape` with the `cold_start` brain). There a rail exists, and the
+card itself shows the proposal. It also declares four call *sites* in `aitaskregistry.go`, which is a
+different count from the two surfaces.
 
-### Where a narrated line lands
+The three `site_*` kinds are the single model calls a website read makes. `site_read` is one occurrence
+for the whole read, reported by the dossier from queued to settled. A line per call would tell one reading
+more than once. The read owns the work: a read a human asked for holds that human as `on_behalf_of` and
+is personal to them. A domain triage read, or one that an enrich run started on its own, names no human and has
+workspace scope.
+
+`enrich` fails on reach and on worth. Its one production site is the signature enrich pass, which runs
+under a system principal with no `on_behalf_of`. So every occurrence has workspace scope with a NULL
+`actor_user_id`, and the personal feed selects on `actor_user_id`. It also could not be per contact if it
+were reached.
+
+The pass makes one correlation id for the whole run (`capture_enrich`, up to 100 candidates
+in a row), and the occurrence key is correlation plus task. Every candidate falls into one row. So a
+subject per contact would make that row flip again and again without telling anything. What a reader
+wants from it is what it found, and that lasts. It is already on the contact record as provenance: shown
+with its evidence, or left out.
+
+`enrich` looks visible and is not: the `enrich` key of the ticker names different work. That key covers a
+provider run on a contact (`contactprovider.tsx`) and the Enrich card on the company page
+(`companies.tsx`). The card sends a POST to `/companies/{id}/enrich` and so runs `cold_start`, not this
+task. The deep read has its own `site-read` ticker key.
+
+### Where a told line shows up
 
 Three places, and each answers a different question.
 
-- **The panel's running section** lists what is LIVE, and only that.
-- **The panel's recap** ("What it has done") lists what SETTLED today, newest
-  first, at most five. Same copy table, so one occurrence is told in one
-  vocabulary from start to finish — "I'm reading the Acme website" while it runs
-  and "I've read the Acme website" once it is done — and the record's name is a
-  LINK, which is the half of the row a reader can act on. It reads THIS feed
-  rather than the model-call trace deliberately: `ai_call` is telemetry and
-  carries no subject (`Call.Subject` reaches the occurrence and never the trace),
-  so a recap read from there could report that something happened and nothing
-  about what it happened to. The trace is still one click away, behind
-  "Full log".
-- **The card's resting line** rotates the newest settled occurrence among the
-  agent's other standing facts, because the rail is 235px wide and carries one
-  line.
+- **The panel's running section** lists what is live, and only that.
+- **The panel's recap** ("What it has done") lists what settled today, newest first, at most five. It
+  uses the same text table, so one occurrence is told in one vocabulary from start to end. It says
+  `I'm reading the Acme website` while it runs, and `I've read the Acme website` once it is done. The record's name is
+  a link, which is the half of the row a reader can act on.
+- The recap reads this feed, not the trace of model calls. `ai_call` is telemetry and holds no subject
+  (`Call.Subject` reaches the occurrence and never the trace). A recap read from there could report that
+  something happened, and nothing about what it happened to. The trace is still one click away, behind
+  `Full log`.
+- **The card's resting line** turns through the newest settled occurrence among the agent's other facts,
+  because the rail is `235px` wide and holds one line.
 
-A kind with no copy draws nothing in any of the three. The recap says "nothing
-has finished today" only once the feed has ANSWERED: an unread feed draws no
-sentence at all, because "nothing finished" is a claim about a day somebody
-looked at.
+A kind with no text draws nothing in any of the three. The recap says "nothing has finished today" only
+once the feed has answered. A feed not yet read draws no sentence at all, because "nothing finished" is a
+claim about a day someone looked at.
 
 ### The ask: what this tab knows before the feed does
 
-The feed arrives on a poll, so between a contact pressing "Draft with AI" and
-the next read there is a live model call nothing on screen reports. The client
-closes that window from its own end (`frontend/src/api/model-inflight.ts`): it
-counts every request it is holding open to a route whose handler calls a model
-and waits, and the rail treats a non-zero count as `working` — with no kind, no
-state and no sentence, because it knows none of those, and ranked below every
-occurrence the feed carries so the feed names the work the moment it can. The
-count also drops the poll to its live cadence and refetches on both edges of
-the request, so the feed's own line follows within seconds.
+The feed comes on a poll. So between a rep pressing "Draft with AI" and the next read, there is a live
+model call that nothing on screen reports. The client closes that window from its own end
+(`frontend/src/api/model-inflight.ts`). It counts every request it holds open to a route whose handler
+calls a model and waits. The rail treats a count above zero as `working`.
 
-**Which routes count is the contract's to say, not the client's.** An operation
-whose handler holds the request open on a model carries
-`x-waits-on-model: always` (a draft, the meeting brief — generated on every
-call) or `x-waits-on-model: on-miss` (the dossier, the contact brief, the deal
-status, the morning brief — served from a stored reading and generated only
-when there is none). The client's `MODEL_ROUTES` table (`api/client.ts`) is a
-declared mirror of the marked set, keyed by method AND path because the dossier
-is read and refreshed at one path and only the refresh generates every time;
-`backend/gates/modelroutes_test.go` fails when the two disagree in either
-direction or on the value. The list was nine path suffixes checked for POST
-only before this, and it drifted both ways with nothing failing: it named a
-route that calls a data provider and no model, and it missed every GET that
-generates — which is how the meeting brief ran two model calls per open with
-the chrome at rest.
+That state has no kind, no state and no sentence, because the client knows none of those. It comes below
+every occurrence the feed holds, so the feed names the work as soon as it can.
 
-An `on-miss` route answers from the store in well under a second and from the
-model in many, and nothing the client can see at the moment the request leaves
-tells the two apart. So it is counted only once the request has outlived
-`CACHE_ANSWER_GRACE_MS` (one second): a stored answer never lights the orb —
-that is the reader's own click — and a generation lights it a second late
-rather than not at all.
+The count also moves the poll to its live speed, and fetches again at the start and end of the request.
+So the feed's own line follows within seconds.
 
-A route that enqueues model work and answers 202 is deliberately unmarked: it
-holds nothing open, and its occurrence reaches the rail the way every
-background run does, through its carrier and the feed. A surface that starts
-one calls `watchStartedAiRun` instead, which is the other bridge.
+The contract says which routes count. An operation whose handler holds the request open on a model is
+marked `x-waits-on-model: always` (a draft, the meeting brief: made on every call) or
+`x-waits-on-model: on-miss`. The `on-miss` routes answer from a stored reading, and generate only when there is
+none. They are the dossier, the contact brief, the deal status and the morning brief.
 
-### Two surfaces, one action, no double narration
+The client's
+`MODEL_ROUTES` table (`api/client.ts`) is a declared mirror of the marked set. It is keyed by method and
+path, because the dossier is read and refreshed at one path, and only the refresh generates every time.
+`backend/gates/modelroutes_test.go` fails when the two disagree in either direction or on the value.
 
-The taskbar ticker narrates **this tab's own react-query cache**; the rail
-narrates **the server's feed**. Three ticker entries describe work the rail now
-covers, and they do not collide: the bar renders the ticker line OR the rail line
-as one `if/else` on a single span (`agentrail.tsx`), so a reader never sees one
-action twice.
+An `on-miss` route answers from the store in well under a second, and from the model in many. When the request leaves, nothing the client can see tells which of the two it is. So it is counted only once the request has
+lived past `CACHE_ANSWER_GRACE_MS` (one second). A stored answer never lights the orb, since that is the
+reader's own click, and a generated one lights it a second late.
 
-One collision was real and was fixed at the key rather than the table: removing
-the ticker's `email` entry to end a two-vocabulary clash also silenced email
-SENDS, because four mutations shared that key — two drafts and two sends. The key
-is now split (`email-draft` for the rail, `email` for the ticker), so each action
-is narrated exactly once by whichever surface actually knows about it.
+A route that queues model work and answers 202 is not marked. It holds nothing open, and its occurrence
+reaches the rail the way every background run does, through its carrier and the feed. A surface that
+starts one calls `watchStartedAiRun`, which is the other way the rail learns of it.
+
+### Two surfaces, one action, told once
+
+The taskbar ticker tells **this tab's own react-query cache**; the rail tells **the server's feed**.
+Three ticker lines describe work the rail also covers, and they do not both show. The bar shows the
+ticker line or the rail line as one `if/else` on a single span (`agentrail.tsx`). So a reader never sees
+one action twice.
+
+The ticker keys for email are split: `email-draft` for the rail and `email` for the ticker. Four
+changes (two drafts and two sends) once shared one key. The split keeps each action told once, by the
+surface that knows about it.
 
 ## The gates that hold it
 
-All of these live in the ROOT package, because the root is the only place that
-can see the task contract, the wire contract, the read's own bounds and the
-emitters at once.
+All of these are in the root package. Only the root can see the task contract, the wire contract, the
+read's own bounds and the senders at once.
 
-| Obligation | Held by |
+| Rule | Gate |
 |---|---|
-| Every task names the source that reports it, and every `SourceNoOccurrence` owes a defensible reason | `TestEveryAITaskNamesTheSourceThatReportsIt` (`backend/gates/aitaskrailcensus_test.go`) |
+| Every task names the source that reports it, and every `SourceNoOccurrence` gives a reason that holds up | `TestEveryAITaskNamesTheSourceThatReportsIt` (`backend/gates/aitaskrailcensus_test.go`) |
 | The registry names no task the contract dropped | `TestTheRailRegistryNamesNoTaskTheContractDropped` |
-| A carrier's source literal is one something really emits | `TestEveryCarrierOverrideNamesASourceThatIsReallyEmitted` |
-| Every kind something produces is one the contract enum can express | `TestEveryKindSomethingProducesIsOneTheContractCanExpress` (`backend/gates/aiactivitycatalogparity_test.go`) — its failure prints an `align:` line naming the file, the schema and exactly what to add |
-| Every contract kind has something that produces it | `TestEveryContractKindHasSomethingThatProducesIt` |
-| The read's text caps are the ones the contract publishes | `TestTheReadsTextCapsAreTheOnesTheContractPublishes` |
-| Every spec name can be a message-key segment | `TestEverySpecNameCanBeAMessageKeySegment` |
+| A carrier's source literal is one that something really sends | `TestEveryCarrierOverrideNamesASourceThatIsReallyEmitted` |
+| Every kind something makes is one the contract enum can express | `TestEveryKindSomethingProducesIsOneTheContractCanExpress` (`backend/gates/aiactivitycatalogparity_test.go`); its failure prints an `align:` line naming the file, the schema and what to add |
+| Every contract kind has something that makes it | `TestEveryContractKindHasSomethingThatProducesIt` |
+| The read's text limits are the ones the contract publishes | `TestTheReadsTextCapsAreTheOnesTheContractPublishes` |
+| Every spec name can be part of a message key | `TestEverySpecNameCanBeAMessageKeySegment` |
 | The client's table of routes that hold a model call open is the contract's `x-waits-on-model` set, in both directions and on the value | `TestTheClientsModelRouteTableIsTheContracts` (`backend/gates/modelroutes_test.go`) |
-| Every contract kind is displayed or carries a written reason | the TypeScript `Record` type — a **compile error**, not a test |
-| Every displayed kind has copy in en/de/vi, for all six states | the `LineSet` type + the i18n catalogs |
+| Every contract kind is shown or holds a written reason | the TypeScript `Record` type: a **compile error**, not a test |
+| Every shown kind has text in `en`, `de` and `vi`, for all six states | the `LineSet` type + the `i18n` catalogs |
 
-The census gate is deliberately derived rather than listed: the router announces
-for every task the registry leaves to it, and that set grows the moment somebody
-declares a task — so a hand-kept list would be one edit behind the contract
-forever. That is the exact shape of the defect that left seventeen shipped tasks
-reporting nothing at all.
+The census gate takes its subjects from the registry. The router reports for every task the registry
+leaves to it, and that set grows the moment someone declares a task. A list kept by hand would always be
+one edit behind the contract, and could miss a task that reports nothing.
 
-## Known limits
+## Limits we know of
 
-- **Five tasks report settled-only** ([#2272]). `transcript_propose`,
-  `site_extract`, `site_fact_extract`, `site_triage` and `voice_build` each
-  already have a durable, attributable row that COULD say `queued`/`running`, but
-  none is registered as a carrier. For long work, settled-only is worse than
-  silence: a rep clicks "read this site", sees nothing for forty seconds, then it
-  appears already finished.
-- **One site read files one occurrence per lane it runs** ([#2272]). Its
-  correlation id is the `site_read` row id, so the router's
-  `correlation_id + task` key produces a separate line per task under one read.
-  Only a domain-triage read reaches all three — `site_triage` fires solely for
-  `isDomainTriageRequest`, so an ordinary human-requested read does not run it.
-  Harmless while the rail narrates none of them; it becomes visible the moment
-  anybody writes the copy.
-- **A multi-call unit reopens its occurrence once per call** ([#2276]).
-  A task whose unit of work spans several LOGICAL calls under one correlation
-  id settles after each and reopens at the next call's attempt. Within one
-  logical call the occurrence is stable: `CompleteStructured` walks the ladder
-  up to three times under one start, and the lease is renewed before every
-  model call after the first.
-- **The projection admits exactly one write into a live attempt: a longer
-  lease.** `applyStateChangeSQL` guards with strict `>` on `(attempt, rank)`,
-  and beside it takes an equal-tuple event in the same live state whose
-  `stale_after` is later than the row's. That is the lease renewal the router
-  makes per model call, and it is what lets each lease be sized for ONE call —
-  `CallCeiling` plus the flush — rather than for the whole logical call, which
-  used to be forty-five minutes of a dead process displayed as working. A
-  redelivery carries an equal instant and a late renewal an earlier one, so the
-  branch refuses both; a settled row has no `stale_after`, so it refuses those
-  too. Per-step progress TICKS remain impossible without a further change.
-- **The contract has no word for two real states.** Site read's `deferred`
-  ("waiting on budget, retry at `next_attempt_at`" — not `queued`, since nothing
-  will pick it up, and not settled) and `cancelled` (terminal, but `done` and
-  `failed` would both lie). Either the enum grows or somebody rules on the
-  mapping. Two things already fit exactly: `site_read.stopped_reason` is a closed
-  vocabulary that drops straight into `degrade_reason`, and `partial` →
-  `degraded`.
-- **`subject_type` / `subject_id` are forwarded, never filtered on.** The
-  event envelope has both, `ai_task_run` has both columns, and the feed ships
-  them beside `subject_label` so the rail can make the name a link to the
-  record (a company or a contact; a document or a meeting has no page and stays
-  text). They travel on the same ground as the label — the source emitted them
-  only where the actor is the contact the record was already shown to — and
-  the read stays keyed on the contact alone. **A subject-scoped read is not a
-  to-do.** It was designed and declined: it would replace an
-  authorization that holds by construction — another contact's feed cannot be
-  expressed — with one that holds because a gate ran, and `auth.EnsureVisible`
-  alone is not that gate (it checks no object grant, and for an identity table
-  its clause is empty, so it returns success without a query). The one populated
-  subject, `attachment`, is not row-scoped at all; its authority is inherited
-  from a polymorphic parent. And a single `LIMIT` over a widened predicate lets
-  one population evict the other, which is the opposite of what a subject arm is
-  for. If it is ever built it copies `ai/feedback.go`, which already spells the
-  gate correctly.
-- **Per-contact `enrich` narration was considered and declined**, not deferred.
-  The reason is in the census entry beside the code: the pass mints one
-  correlation id for all its candidates, so they share a single occurrence that
-  no per-contact subject could describe.
+- **A unit of many calls opens again** ([#2276]). Such a unit opens its occurrence again once
+  per call.
+  - Take a task whose unit of work spans more than one model call under one correlation id. It settles
+  after each call, and opens again at the next call's attempt.
+  - Within one such call, the occurrence stays the same. `CompleteStructured` walks the ladder up to three times under one start. The lease is made
+  longer before every model call after the first.
+- **Lease renewal.** The projection admits one write into a live attempt: a longer lease.
+  `applyStateChangeSQL` guards with a strict `>` on `(attempt, rank)`. Beside that, it takes an event
+  with an equal tuple in the same live state whose `stale_after` is later than the row's.
+  - That is the lease renewal the router makes per model call. It lets each lease be sized for one call (`CallCeiling`
+  plus the flush), not for the whole unit of work. A second delivery holds an equal time and a late
+  renewal an earlier one, so the branch refuses both. A settled row has no `stale_after`, so it refuses
+  those too. A line per step to show how far a run has come stays out of reach without a further change.
+- **Two states with no name.** The contract has no word for two real states. The site read's `deferred`
+  ("waiting on budget, retry at `next_attempt_at`") is not `queued`, since nothing will pick it up, and
+  not settled. Its `cancelled` is final, but `done` and `failed` would both state it wrong. Either the
+  enum grows or someone decides the mapping.
+  - Two mappings already fit: `site_read.stopped_reason` is a closed vocabulary that drops right into
+    `degrade_reason`, and `partial` → `degraded`.
+- **Subjects are passed on, never filtered on.** The event envelope has `subject_type` and `subject_id`,
+  and `ai_task_run` has both columns. The feed ships them beside `subject_label`, so the rail can make the
+  name a link to the record. That works for a company or a contact; a document or a meeting has no page
+  and stays text.
+  - They travel on the same ground as the label. The source sent them only where the actor
+  is the user who was already shown the record. The read stays keyed on the user alone.
+- **A read by subject was turned down.** Today another user's feed cannot be asked for, so the
+  authorization holds by the way it is built. The new read would hold only because a gate has run.
+  `auth.EnsureVisible` alone is not that gate. It checks no object grant, and for an identity table its
+  clause is empty, so it returns success without a query.
+- The one subject in use, `attachment`, has no row scope at all. Its rights come from a parent record that
+  can be of more than one type. A single `LIMIT` over a wider filter would also let one group of rows push
+  out the other. If it is ever built, it copies `ai/feedback.go`, which already spells the gate correctly.
+- **`enrich` per contact was turned down.** The reason is in the census entry beside
+  the code. The pass makes one correlation id for all its candidates, so they share a single occurrence
+  that no subject per contact could describe.
 
-[#2272]: https://github.com/margince/margince/issues/2272
 [#2276]: https://github.com/margince/margince/issues/2276
 
 ## Reference
 
-| Concern | Where |
+| What | Where |
 |---|---|
 | The projection + the read | `internal/modules/aiactivity` (owns `ai_task_run`, imports no sibling) |
-| Who reports each task | `internal/modules/ai/railowner.go` — `railOwners`, `RailOwner`, `RouterReports` |
-| The router's announce/settle pair | `internal/modules/ai/railstart.go`, `railemit.go` |
-| The carriers | `internal/modules/agents/runner/activity.go`, `internal/modules/activities/extractionactivity.go` |
-| Attribution | `aiactivity/actor.go` — `ResolveActor` |
+| Who reports each task | `internal/modules/ai/railowner.go`: `railOwners`, `RailOwner`, `RouterReports` |
+| The router's start and settle pair | `internal/modules/ai/railstart.go`, `railemit.go` |
+| The carriers | `internal/modules/agents/runner/activity.go`, `internal/modules/activities/extractionactivity.go`, `internal/modules/activities/transcriptactivity.go`, `internal/modules/ai/voicebuildactivity.go`, `internal/modules/contacts/sitereadactivity.go`, `internal/compose/companyscan/` |
+| Who owns the work | `aiactivity/actor.go`: `ResolveActor` |
 | The event | `ai_task.state_changed` (`shared/kernel/events/catalog.go`; payload generated into `internalevents_gen.go`) |
 | The wire | `AiActivity` / `AiActivityKind` / `AiActivityItem` + `GET /me/ai-activity` (`backend/api/crm.yaml`) |
-| What is drawn, and what is not | `frontend/src/app/ai-activity-lines.ts` |
-| The rail component + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
+| What is shown, and what is not | `frontend/src/app/ai-activity-lines.ts` |
+| The rail part + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
 | The ask: which routes count, and the count | `x-waits-on-model` in `backend/api/crm.yaml`, `MODEL_ROUTES` in `frontend/src/api/client.ts`, `frontend/src/api/model-inflight.ts` |
 | The census gate | `backend/gates/aiactivitycatalogparity_test.go` |
 
-**Related:** [ai-runtime.md](ai-runtime.md) (the task contract and the Router
-gate) · [write-backbone.md](write-backbone.md) (the outbox the facts ride) ·
-[job-fleet.md](job-fleet.md) (the scheduled work two carriers report) ·
-[frontend-architecture.md](frontend-architecture.md) ·
-[how-to/add-an-ai-task.md](../how-to/add-an-ai-task.md).
+**See also:**
+
+- [ai-runtime.md](ai-runtime.md): the task contract and the Router gate.
+- [write-backbone.md](write-backbone.md): the outbox the facts travel on.
+- [job-fleet.md](job-fleet.md): the scheduled work two carriers report.
+- [frontend-architecture.md](frontend-architecture.md) and [how-to/add-an-ai-task.md](../how-to/add-an-ai-task.md).
+

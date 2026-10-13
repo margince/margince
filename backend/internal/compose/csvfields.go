@@ -6,12 +6,14 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -21,6 +23,14 @@ const descriptionField = "description"
 // fieldFullName is a lead's own name column, spelled once for the three places
 // that map onto it.
 const fieldFullName = "full_name"
+
+// fieldPhone is a phone number. A lead holds one in a column; a contact's
+// numbers are child rows, and the file's number becomes its primary work one.
+const fieldPhone = "phone"
+
+// fieldLinkedIn is a LinkedIn URL: a company's page, a lead's profile, or the
+// LinkedIn handle in a contact's social links.
+const fieldLinkedIn = "linkedin_url"
 
 // fieldEmail is the lead's identifying field: the natural key an import
 // recognizes a row by, and the one value the store canonicalizes on write.
@@ -45,36 +55,22 @@ const fieldTitle = "title"
 // rows as leads rather than as contacts.
 const leadStatusNew = "new"
 
-// The fields a CSV import may target, per object. A closed set, because a
-// mapping names a destination and every destination here has to be one this
-// writer knows how to both create and update — a target it can only create
-// would silently stop honouring the file on the second upload.
+// The fields a CSV import may target, per object. Each one round-trips: the
+// writer can both create and update it. A create-only target would stop
+// honouring the file on the second upload.
 //
-// `lead` and `contact` are both offered and the caller picks per run: a
-// machine-sourced list lands as leads for a human to promote, a file the
-// business already knows lands as contacts. Neither skips the identity ladder.
-//
-// Every field here round-trips: the writer can both CREATE it and UPDATE it.
-// `linkedin_url` is deliberately absent from both lists even though the stores
-// know the field — a lead's patch input has no LinkedIn member and an
-// company's CREATE input has none, so advertising it would accept a
-// column, report the row as written, and drop the value on one of the two
-// paths. A target that only half works is worse than one the screen never
-// offers.
+// The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldTitle, companyNameField, csvTargetAuthor},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, csvTargetAuthor}, recordAddressTargets...),
-	// `phone`, `social` and `owner_id` are deliberately absent. A contact's
-	// patch input carries no Phones member and no single-column spelling of
-	// Social, and an owner is a uuid a spreadsheet cannot honestly carry —
-	// storekit.OwnerOrActor already defaults it to whoever ran the import.
-	// `author` differs: a name is an honest spelling (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldTitle, csvTargetAuthor}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	// The owner is named by the seat's email (csvowners.go), never by its id.
+	// `author` is a name (csvauthor.go).
+	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -92,6 +88,14 @@ var csvTargets = map[string][]string{
 //
 // An id has none of that. It names one record or no record.
 const csvTargetID = "id"
+
+// csvTargetRef is the column holding the row's own id in the source system, the
+// one other files' links name. It is the part's source key, never a stored field.
+const csvTargetRef = "ref"
+
+// csvTargetCompanyRef names a contact's employer by the company's ref, its
+// domain, its one name or its id. Like the employer name it writes an edge.
+const csvTargetCompanyRef = migration.AssocTargetCompanyRef
 
 // recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
@@ -124,20 +128,15 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectContact: fieldEmail,
 }
 
-// importTargets is the closed set a mapping may name for one object.
-//
-// Custom-field (cf_*) columns are NOT in it, and that is a limit rather than an
-// oversight: an import lands its rows through the stores' caller-opened
-// transaction seams, which refuse custom fields by design — reading the
-// catalog is exactly the second connection those seams exist to avoid. So a
-// cf_ target would be accepted, reported as written, and dropped. Custom
-// fields arrive when the seam can carry them, not before.
-func importTargets(object string) ([]string, error) {
+// importTargets is the closed set a mapping may name for one object: its core
+// fields, then each active custom field by key, in column order.
+func importTargets(object string, cat importCatalog) ([]string, error) {
 	core, ok := csvTargets[object]
 	if !ok {
 		return nil, fmt.Errorf("import: %q has no mappable fields", object)
 	}
 	targets := append([]string(nil), core...)
+	targets = append(targets, slices.Sorted(maps.Keys(cat.byName))...)
 	if selectsByID(object) {
 		// Accepted as a column and absent from csvTargets, because those two
 		// lists answer different questions. csvTargets is what a row WRITES, and
@@ -149,9 +148,9 @@ func importTargets(object string) ([]string, error) {
 		targets = append(targets, csvTargetID)
 	}
 	if linksEmployer(object) {
-		targets = append(targets, csvEmployerName)
+		targets = append(targets, csvEmployerName, csvTargetCompanyRef)
 	}
-	return targets, nil
+	return append(targets, csvTargetRef), nil
 }
 
 // selectsByID reports whether an object's rows may name the record they are.
@@ -179,17 +178,12 @@ func linksEmployer(object string) bool {
 // isNonFieldTarget reports whether a mapped target names something other than a
 // value the record stores.
 //
-// Two targets qualify and they are different from each other, which is why this
-// is a set rather than a comparison. `id` names the RECORD the row is. The
-// employer column names an EDGE from that record to another one. Neither is a
-// column on the record, so neither may be compared against the stored JSON: the
-// lookup would find nothing, report the row as changed, and hand the update path
-// a field the store has no setter for — an update on every re-import of a file
-// nobody edited.
-//
-// Excluded in one place rather than at each caller so no path can forget one.
+// `id` and `ref` name the record, the employer columns an edge, and `tags`
+// tags added beside the write. None is a column, so a stored-JSON lookup would
+// report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
-	return field == csvTargetID || field == csvEmployerName
+	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
+		field == csvTargetCompanyRef || field == csvTargetTags
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -199,7 +193,7 @@ func isNonFieldTarget(field string) bool {
 // comparator: the wire shape and the mapping targets are the same vocabulary,
 // so a field added to the contract is compared automatically, while a
 // comparator would keep compiling and quietly stop noticing it.
-func changedFields(encoded []byte, mapped map[string]string) (map[string]string, error) {
+func changedFields(encoded []byte, mapped map[string]string, typed map[string]any) (map[string]string, error) {
 	var current map[string]json.RawMessage
 	if err := json.Unmarshal(encoded, &current); err != nil {
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
@@ -207,13 +201,25 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
-		// `id` names the record and the employer column names an edge; neither is
-		// a value the record holds (isNonFieldTarget). The author is written on
-		// create only (isCreateOnlyTarget).
+		// `id`, `ref` and the employer column are not values the record holds
+		// (isNonFieldTarget). The author is written on create only
+		// (isCreateOnlyTarget).
 		if isNonFieldTarget(field) || isCreateOnlyTarget(field) {
 			continue
 		}
-		if textOf(storedValue(current, field)) != canonicalFor(field, incoming) {
+		want := canonicalFor(field, incoming)
+		value, checked := typed[field]
+		if field == csvTargetOwner && !checked {
+			// An address no seat holds leaves the record's owner as it is.
+			continue
+		}
+		if checked {
+			var err error
+			if want, err = wireText(value); err != nil {
+				return nil, err
+			}
+		}
+		if textOf(storedValue(current, field)) != want {
 			changed[field] = incoming
 		}
 	}
@@ -231,14 +237,19 @@ func changedFields(encoded []byte, mapped map[string]string) (map[string]string,
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	parent, child, nested := strings.Cut(field, ".")
 	if !nested {
-		// Two targets name a CHILD COLLECTION rather than a column on the
-		// record, so a flat lookup finds nothing and reports them changed on
-		// every re-import of a file nobody edited.
+		// These targets may name a child collection, not a column. A flat
+		// lookup finds nothing and reports them changed on every re-import.
 		switch field {
 		case fieldEmail:
 			return storedPrimaryEmail(current)
 		case fieldDomain:
 			return storedPrimaryDomain(current)
+		case fieldPhone:
+			return storedPrimaryPhone(current)
+		case fieldLinkedIn:
+			return storedLinkedIn(current)
+		case csvTargetOwner:
+			return current["owner_id"]
 		}
 		return current[field]
 	}
@@ -268,7 +279,7 @@ func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldEmail:
-		return strings.ToLower(trimmed)
+		return correspondence.Fold(trimmed)
 	case fieldDomain:
 		// Through the store's OWN parser, not an approximation of it. A
 		// spreadsheet's website column carries "https://www.acme.com/" where the
@@ -299,28 +310,36 @@ func textOf(raw json.RawMessage) string {
 // leadCreateFrom builds the create input for one mapped row. Only mapped
 // fields are set: an absent column leaves the field absent rather than
 // clearing it, because the file said nothing about it.
-func leadCreateFrom(fields map[string]string, sourceSystem, externalID, source string) contacts.CreateLeadInput {
+func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem, externalID, source string) contacts.CreateLeadInput {
 	in := contacts.CreateLeadInput{
 		Status:       leadStatusNew,
 		SourceSystem: &sourceSystem,
 		SourceID:     &externalID,
 		Source:       source,
 		Author:       authorFrom(fields),
+		OwnerID:      ownerFrom(fields, typed),
 	}
 	in.FullName = importString(fields, fieldFullName)
 	in.Email = importString(fields, fieldEmail)
+	in.Phone = checkedString(fields, typed, fieldPhone)
+	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
+	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
-func leadUpdateFrom(changed map[string]string) contacts.UpdateLeadInput {
+func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
 	return contacts.UpdateLeadInput{
-		FullName:    importString(changed, fieldFullName),
-		Email:       importString(changed, fieldEmail),
-		Title:       importString(changed, fieldTitle),
-		CompanyName: importString(changed, "company_name"),
+		FullName:     importString(changed, fieldFullName),
+		Email:        importString(changed, fieldEmail),
+		Phone:        checkedString(changed, typed, fieldPhone),
+		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
+		Title:        importString(changed, fieldTitle),
+		CompanyName:  importString(changed, "company_name"),
+		OwnerID:      ownerFrom(changed, typed),
+		CustomFields: customFieldsFrom(changed, typed),
 	}
 }
 
@@ -359,86 +378,6 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 	return &merged, true, nil
 }
 
-// unwritableReason names why the store will refuse this row, or "" when it
-// will not. It is the one place the dry run and the commit agree about what
-// cannot be written, so a preview cannot promise a create the commit then
-// fails on.
-//
-// Today it holds one check: size_band is a closed vocabulary with a database
-// CHECK constraint behind it, and a headcount column mapped onto it ("240")
-// reached the preview as a clean create, then could only fail at write time.
-// A dry run whose whole job is to say what WILL happen may not report the
-// opposite.
-//
-// The vocabulary is read off the generated contract, not hand-copied, for the
-// same reason contacts.validSizeBands is: a band added to crm.yaml must not
-// leave a second list behind saying otherwise. That obligation is on the set
-// rather than on the spelling, so it is gated rather than stated.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
-func unwritableReason(object string, fields map[string]string) string {
-	if reason := authorUnwritableReason(fields); reason != "" {
-		return reason
-	}
-	if object == migration.ObjectContact {
-		// A contact's addresses are parsed before the write transaction opens
-		// (parseContactContacts), so a malformed one refuses the row at commit.
-		// Unchecked here, the dry run would promise a create for every bad
-		// address in the file and the commit would answer differently — the
-		// same shape as the size_band defect below, on the other object.
-		email, given := fields[fieldEmail]
-		if !given || strings.TrimSpace(email) == "" {
-			return ""
-		}
-		if _, err := values.ParseEmail(strings.TrimSpace(email)); err != nil {
-			return fmt.Sprintf("%q is not an email address that can be written", email)
-		}
-		return ""
-	}
-	if object != migration.ObjectCompany {
-		return ""
-	}
-	// A company's domains are parsed before the write transaction opens
-	// (parseCompanyDomains), so a value the parser refuses fails the row at commit.
-	// The same argument as the email arm above and the size_band one below: a dry
-	// run whose job is to say what WILL happen may not report the opposite.
-	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
-		if _, err := values.ParseDomain(domain); err != nil {
-			return fmt.Sprintf("%q is not a domain that can be written", domain)
-		}
-	}
-	band, given := fields[fieldSizeBand]
-	if !given || strings.TrimSpace(band) == "" {
-		return ""
-	}
-	if importableSizeBands[strings.TrimSpace(band)] {
-		return ""
-	}
-	return fmt.Sprintf("size_band %q is not one of %s", band, strings.Join(sizeBandVocabulary(), ", "))
-}
-
-// importableSizeBands is the closed size_band vocabulary, off the contract.
-var importableSizeBands = map[string]bool{
-	string(crmcontracts.CompanySizeBandN110):      true,
-	string(crmcontracts.CompanySizeBandN1150):     true,
-	string(crmcontracts.CompanySizeBandN51200):    true,
-	string(crmcontracts.CompanySizeBandN201500):   true,
-	string(crmcontracts.CompanySizeBandN5011000):  true,
-	string(crmcontracts.CompanySizeBandN10015000): true,
-	string(crmcontracts.CompanySizeBandN5000):     true,
-}
-
-// sizeBandVocabulary renders the bands in ascending order for a refusal to
-// carry — sorted explicitly, because a map's range order would give the user a
-// different sentence on every call.
-func sizeBandVocabulary() []string {
-	out := make([]string, 0, len(importableSizeBands))
-	for band := range importableSizeBands {
-		out = append(out, band)
-	}
-	sort.Strings(out)
-	return out
-}
-
 // addressFrom collects the mapped `address.*` columns into the one nested
 // value both the create and the patch input take. Absent when the file mapped
 // none, so a company with no address column is not handed an empty address —
@@ -457,6 +396,18 @@ func addressFrom(fields map[string]string) *crmcontracts.Address {
 		return nil
 	}
 	return &addr
+}
+
+// checkedString is a core cell in the spelling checkRow gave it, or the
+// file's text where the cell was not checked.
+func checkedString(fields map[string]string, typed map[string]any, name string) *string {
+	if _, given := fields[name]; !given {
+		return nil
+	}
+	if checked, ok := typed[name].(string); ok {
+		return &checked
+	}
+	return importString(fields, name)
 }
 
 func importString(fields map[string]string, name string) *string {

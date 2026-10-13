@@ -21,7 +21,7 @@ import (
 )
 
 // maskableCatalog is what this build can withhold, one "<object> <field>" per
-// line — the owner of this census's subject, and the only place it is named.
+// line; it owns this census's subject and is the only place it is named.
 const maskableCatalog = "migrations/testdata/maskable_fields.txt"
 
 // dealBaseAmount is the deal's money in its converted column, and no catalog
@@ -390,14 +390,9 @@ func readsADealAmount(filePath string, file *ast.File, columns *regexp.Regexp, b
 // `sum(deals.OpenDealBaseValueSQL(...))` over every open deal, with no mask and
 // nothing here to say so.
 //
-// DERIVED from the tree rather than listed, and the list is why. It was two
-// names, written down when a reviewer found the first gap; it was already
-// missing a third. `briefs.briefBaseValueSQL` is a CHARACTER-IDENTICAL second
-// spelling of compose.BaseValueSQL, held so by TestOneSpellingOfADealsBaseValue
-// because the import direction forbids the call — so this tree states that the
-// two are one expression, and a hand-kept list saw one of them. Two statements
-// selecting a deal's money sat outside the census for as long as that list was
-// the answer.
+// DERIVED from the tree rather than listed, and the list is why. A hand-kept
+// list of builder names misses the next builder somebody writes, and every
+// statement composing it then sits outside the census.
 //
 // A builder is a function whose one result is a string and whose body names an
 // amount column INSIDE A STATEMENT FRAGMENT. Both halves are load-bearing:

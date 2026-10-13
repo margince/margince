@@ -22,14 +22,12 @@ type Row = {
   rejected: number;
 };
 
-function row(kind: string, mode: "manual" | "auto", counts: number[]): Row {
-  return {
-    kind,
-    mode,
-    approved_clean: counts[0],
-    approved_edited: counts[1],
-    rejected: counts[2],
-  };
+function row(
+  kind: string,
+  mode: "manual" | "auto",
+  [approved_clean, approved_edited, rejected]: [number, number, number],
+): Row {
+  return { kind, mode, approved_clean, approved_edited, rejected };
 }
 
 function story(data: Row[]) {
@@ -81,10 +79,6 @@ export const EarnedOnOne: Story = {
   ]),
 };
 
-// A kind whose copy this catalog does not name, which is what a reader sees if
-// the server starts offering a fourth before the strings land. The row is
-// unpolished on purpose rather than hidden — a choice the reader now has is
-// worth showing badly.
 export const AKindTheCopyDoesNotKnow: Story = {
   render: story([
     row("close_date_correction", "auto", [14, 1, 0]),

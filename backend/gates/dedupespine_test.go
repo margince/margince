@@ -5,7 +5,8 @@
 
 package gates
 
-// The identity-spine fitness functions.
+// Every INSERT site for contacts, companies and leads is derived from the tree
+// and must ask the duplicate-matching engine with full inputs.
 //
 // Duplicate contacts, companies and leads do not get in through the
 // matching engine — that engine (PO-F-1/PO-F-2 in

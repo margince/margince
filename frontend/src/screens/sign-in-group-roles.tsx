@@ -5,8 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
-import { grantsAdminRole } from "../app/capability";
-import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
 import { Button, Disclosure, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -15,9 +13,12 @@ import {
   phraseMatches,
 } from "../design-system/confirmphrase";
 import { DataTable } from "../design-system/datatable";
+import { IconAction } from "../design-system/iconaction";
 import { Select, type SelectOption } from "../design-system/select";
 import { usePlural, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { grantsAdminRole } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { AUTHENTICATION_POLICY_KEY } from "./oauth-app";
 import {
   type AssignableRole,
@@ -37,12 +38,11 @@ function useSetGroupRoleMap() {
     // merging into it, so sending one entry would silently drop every other
     // grant. An empty object is the deliberate "clear" and is sent as itself.
     mutationFn: async (map: Record<string, string>) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { oidc_group_role_map: map },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { oidc_group_role_map: map },
+        }),
+      );
     },
     onSuccess: async () => {
       // The write lands on the installation aggregate, but this page reads the
@@ -203,6 +203,7 @@ function GrantEditor({
       ) : (
         <DataTable
           label={t("groupRoles.disclosure")}
+          fold
           rows={[...rows]}
           rowKey={(row) => String(row.id)}
           columns={[
@@ -228,6 +229,7 @@ function GrantEditor({
               header: t("groupRoles.role"),
               render: (row) => (
                 <Select
+                  className="group-grants-role"
                   aria-label={
                     row.group.trim() === ""
                       ? t("groupRoles.role")
@@ -243,23 +245,26 @@ function GrantEditor({
             {
               key: "remove",
               header: t("table.actions"),
+              headerHidden: true,
+              fold: "end",
+              align: "end",
               render: (row) => (
-                <Button
-                  iconOnly
-                  aria-label={
-                    row.group.trim() === ""
-                      ? t("groupRoles.remove")
-                      : t("groupRoles.removeNamed", { group: row.group })
-                  }
-                  disabled={locked}
-                  onClick={() =>
-                    setRows((current) =>
-                      current.filter((each) => each.id !== row.id),
-                    )
-                  }
-                >
-                  <X aria-hidden="true" />
-                </Button>
+                <div className="cell-actions">
+                  <IconAction
+                    icon={<X aria-hidden />}
+                    label={
+                      row.group.trim() === ""
+                        ? t("groupRoles.remove")
+                        : t("groupRoles.removeNamed", { group: row.group })
+                    }
+                    disabled={locked}
+                    onClick={() =>
+                      setRows((current) =>
+                        current.filter((each) => each.id !== row.id),
+                      )
+                    }
+                  />
+                </div>
               ),
             },
           ]}

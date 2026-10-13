@@ -71,6 +71,7 @@ var caseSurfaces = map[string]string{
 	"M06": "run_analytics_query",
 	"M07": "run_report",
 	"M08": "run_analytics_query",
+	"M11": "run_analytics_query",
 	"M12": "run_analytics_query",
 }
 
@@ -85,6 +86,7 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"M06": proveM06MedianUnderTheFloor,
 		"M07": proveM07StuckDealsUseTheSharedRule,
 		"M08": proveM08WinRateByCountAndValue,
+		"M11": proveM11LossReasonsByRecordedReason,
 		"M12": proveM12WonRevenueByLeadSource,
 	}
 }
@@ -93,10 +95,10 @@ func TestEveryCanonicalQuestionHasExecutableProof(t *testing.T) {
 	cases := canonicalCases()
 	seen := map[string]bool{}
 	for _, q := range loadCanonicalQuestions(t) {
-		// Two tools, because two surfaces answer these questions and one cannot
-		// answer all of them: the analytics schema publishes a spec's dimensions
-		// and measures, so a question turning on a report FILTER (M07's
-		// `stalled`) is reachable over HTTP and not through the typed grammar.
+		// Two tools, because two surfaces answer these questions. M07 names
+		// `run_report`, and the typed grammar now reaches its `stalled` filter
+		// too. So which surface a question is proved on is the corpus's claim
+		// to make, not a reach the grammar settles.
 		//
 		// The tool a question NAMES has to be the surface its proof drives, and
 		// that is checked below rather than assumed. Accepting the value alone

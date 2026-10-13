@@ -80,7 +80,7 @@ const (
 
 // DeepReadPriorityLive is the priority a human or agent action's own deep
 // read carries — River's default (1 of 4, highest) — so it is fetched ahead
-// of any housekeeping sweep sharing deepReadQueue's two workers.
+// of any housekeeping sweep sharing deepReadQueue's workers.
 const DeepReadPriorityLive = river.PriorityDefault
 
 // DeepReadPriorityHousekeeping is the priority a sweep-sourced deep read
@@ -191,7 +191,6 @@ type siteDeepReadWorker struct {
 	// model calls until the queue drained.
 	settings *capture.SettingsStore
 	log      *slog.Logger
-	caps     CrawlCaps
 	now      func() time.Time
 }
 
@@ -200,13 +199,12 @@ type siteDeepReadWorker struct {
 // extractor carries the same seam. brain may be nil — a picked-up read
 // then finishes failed with an actionable log rather than sitting queued
 // behind a worker that cannot extract.
-func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain completer, log *slog.Logger, caps CrawlCaps, blob blobstore.Store) *siteDeepReadWorker {
+func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain completer, log *slog.Logger, blob blobstore.Store) *siteDeepReadWorker {
 	fetcher := webread.New()
-	caps = caps.withDefaults()
 	return &siteDeepReadWorker{
 		pool:        pool,
 		contacts:    contacts.NewStore(InstallationDB(pool)),
-		crawler:     newSiteCrawler(fetcher, caps),
+		crawler:     newSiteCrawler(fetcher, crawlCeiling),
 		extract:     evidenceExtractor{fetch: fetcher, brain: brain, factBrain: factBrain},
 		triageBrain: triageBrain,
 		fetch:       fetcher,
@@ -216,7 +214,6 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 		autoEnrich:  capture.NewAutoEnrichStore(InstallationDB(pool)),
 		settings:    capture.NewSettings(NewSettingsStore(pool)),
 		log:         log,
-		caps:        caps,
 		now:         time.Now,
 	}
 }
@@ -232,33 +229,55 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 // one call would time out exactly the large sites the re-run exists for.
 const extractLaneBudget = 150 * time.Second
 
-// deepReadTimeout is the one declared timeout in the tree that cannot be a
-// number in api/jobs.yaml: the crawl wall is an operator's, so the file
-// declares {operator: DeepReadCaps} and the value is computed here and handed
-// over at registration.
+// deepReadTimeout is the job's wall clock: the longest crawl an admin may
+// configure, plus the parallel extraction budget, plus the logo lane's own
+// bounded spend, plus a minute for the staging and dossier writes. Every lane
+// that can hold the job is counted here, or a slow one silently eats the
+// allowance the terminal write depends on.
 //
-// It is the crawl wall, plus the parallel extraction budget, plus the logo
-// lane's own bounded spend, plus a minute for the staging and dossier writes —
-// floored at eight minutes so a tightened cap never squeezes the terminal
-// writes. Every lane that can hold the job is counted here, or a slow one
-// silently eats the allowance the terminal write depends on.
-//
-// It defaults the caps first, so a caller passing the zero CrawlCaps gets the
-// budget the crawler will actually spend rather than one derived from a wall
-// of zero.
-func deepReadTimeout(caps CrawlCaps) time.Duration {
-	budget := caps.withDefaults().Wall + extractLaneBudget + logoLaneBudget + time.Minute
-	if floor := 8 * time.Minute; budget < floor {
-		return floor
-	}
-	return budget
-}
+// It is sized for the CEILING because the chosen wall is a setting read when
+// a read starts, while River fixes a worker's timeout when it registers.
+// api/jobs.yaml restates the sum, and the census holds the two equal.
+const deepReadTimeout = capture.MaxSiteReadWallSeconds*time.Second + extractLaneBudget + logoLaneBudget + time.Minute
 
 // reclaimAfter leaves a terminal-write grace beyond River's work timeout.
 // A replacement worker may reclaim only after the prior worker has exceeded
-// both its configured crawl budget and the time reserved to close the dossier.
+// both its crawl budget and the time reserved to close the dossier.
 func (w *siteDeepReadWorker) reclaimAfter() time.Duration {
-	return deepReadTimeout(w.caps) + time.Minute
+	return deepReadTimeout + time.Minute
+}
+
+// errSiteReadLimitsUnread marks a read that never started because the limits
+// it runs under could not be read. It is this installation's fault, not the
+// site's, so a triage read records it as a failure rather than settling its
+// domain as unreachable.
+var errSiteReadLimitsUnread = errors.New("site deep read: the read limits could not be read")
+
+// limitedCrawler is the crawler one claimed read runs under: the limits an
+// admin set, read now so a change applies to the next read, narrowed again by
+// the automatic lane's own page ceiling. Every fetch of the crawl itself goes
+// through it, the triage seed included.
+func (w *siteDeepReadWorker) limitedCrawler(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (*siteCrawler, error) {
+	limits, err := w.settings.SiteReadLimits(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w for %s: %w", errSiteReadLimitsUnread, args.SiteReadID, err)
+	}
+	return w.crawler.within(crawlCapsFrom(limits)).withPageCeiling(w.pageCeiling(claim.RequestedBy, args.MaxPages)), nil
+}
+
+// readSite crawls and extracts one claimed read. Crawl and extraction OVERLAP
+// (crawlAndExtract): page calls launch as pages commit, so the crawl's slow
+// tail hides behind extraction, and the crawler owns the wall clock.
+func (w *siteDeepReadWorker) readSite(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (siteCrawl, siteExtraction, error) {
+	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
+		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
+	}
+	crawler, err := w.limitedCrawler(ctx, args, claim)
+	if err != nil {
+		return siteCrawl{}, siteExtraction{}, err
+	}
+	progress, publishDraft := w.progressiveCallbacks(ctx, args.SiteReadID)
+	return crawlAndExtract(ctx, crawler, w.extract, claim.SeedURL, progress, publishDraft)
 }
 
 func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) error {
@@ -289,16 +308,8 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 		return err
 	}
 
-	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, "crawling", nil); err != nil {
-		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
-	}
-	// Crawl and extraction OVERLAP (crawlAndExtract): page calls launch
-	// as pages commit, so the crawl's slow tail hides behind extraction.
-	// The crawler owns the wall clock (caps.Wall); a seed page that
-	// cannot be read at all is a failed read, not an empty one.
-	progress, publishDraft := w.progressiveCallbacks(ctx, args.SiteReadID)
-	crawler := w.crawler.withPageCeiling(w.pageCeiling(claim.RequestedBy, args.MaxPages))
-	crawl, extraction, err := crawlAndExtract(ctx, crawler, w.extract, claim.SeedURL, progress, publishDraft)
+	// A seed page that cannot be read at all is a failed read, not an empty one.
+	crawl, extraction, err := w.readSite(ctx, args, claim)
 	if err != nil {
 		if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, err); deferred {
 			return deferErr

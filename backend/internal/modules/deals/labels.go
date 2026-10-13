@@ -3,7 +3,8 @@
 
 package deals
 
-// Display names for a SET of deals, in one query.
+// Display names for a SET of deals, or of pipelines, stages or products, in one
+// query per kind.
 //
 // The attention feed names every subject on the page and the at-risk lane
 // alone can carry a hundred deals. One gated get each is a hundred round
@@ -57,6 +58,52 @@ func (s *Store) DealLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]s
 	})
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading deal names: %w", err)
+	}
+	return labels, nil
+}
+
+// PipelineLabels names the live pipelines in a set, under the grant
+// GetPipeline carries.
+func (s *Store) PipelineLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	return s.catalogLabels(ctx, "pipeline", "pipeline", want)
+}
+
+// StageLabels names the live stages in a set. A stage reads under the
+// pipeline grant, as GetStage does.
+func (s *Store) StageLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	return s.catalogLabels(ctx, "pipeline", "stage", want)
+}
+
+// ProductLabels names the live products in a set, under the grant GetProduct
+// carries.
+func (s *Store) ProductLabels(ctx context.Context, want []ids.UUID) (map[ids.UUID]string, error) {
+	return s.catalogLabels(ctx, "product", "product", want)
+}
+
+// catalogLabels reads names off a table with no owner, where the object grant
+// is the whole gate. Both names are constants from the callers above.
+func (s *Store) catalogLabels(ctx context.Context, object, table string, want []ids.UUID) (map[ids.UUID]string, error) {
+	if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	labels := map[ids.UUID]string{}
+	if len(want) == 0 {
+		return labels, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(want)
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		found, err := storekit.LabelsByID(ctx, tx, fmt.Sprintf(`
+			SELECT r.id, coalesce(r.name, '')
+			  FROM %s r
+			 WHERE r.id = ANY($%d) AND r.archived_at IS NULL`,
+			table, idsPos), args...)
+		labels = found
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading %s names: %w", table, err)
 	}
 	return labels, nil
 }

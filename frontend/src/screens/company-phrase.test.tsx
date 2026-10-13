@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { expect, it } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { LocaleProvider } from "../i18n";
 import { useCompanyPhrase } from "./company-phrase";
 

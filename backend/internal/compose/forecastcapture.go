@@ -24,9 +24,9 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		contexts = append(contexts, framework.Definition.CaptureContexts...)
 	}
 	if len(contexts) > 21 {
-		return fmt.Errorf("forecast capture context limit exceeded")
+		return errors.New("forecast capture context limit exceeded")
 	}
-	store := forecasting.NewStore(InstallationDB(w.pool))
+	store := newForecastStoreFor(w.pool)
 	attempts, err := reportingCaptureAttempts(ctx, store, contexts)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		}
 		seen[key] = true
 		if deadline, ok := ctx.Deadline(); ok && time.Until(deadline) < 20*time.Second {
-			return errors.Join(append(failures, fmt.Errorf("forecast capture paused at its time budget; the next pass resumes least-recently attempted contexts"))...)
+			return errors.Join(append(failures, errors.New("forecast capture paused at its time budget; the next pass resumes least-recently attempted contexts"))...)
 		}
 		captureCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		err := w.freezeContext(captureCtx, capture)
@@ -71,7 +71,7 @@ func reportingCaptureKey(capture crmcontracts.ReportingCaptureContext) string {
 }
 
 func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture crmcontracts.ReportingCaptureContext) error {
-	store := forecasting.NewStore(InstallationDB(w.pool))
+	store := newForecastStoreFor(w.pool)
 	at := w.now()
 	return store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		scope, err := (reportingAuthority{}).Scope(ctx, tx, capture.Scope, false)

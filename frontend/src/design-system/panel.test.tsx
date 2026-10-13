@@ -3,9 +3,18 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createPortal } from "react-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectorList, subjectsOf } from "../../scripts/lib/css-rules";
-import { PANEL_TONES, Panel, PanelBody, PanelIntro, PanelRow } from "./panel";
+import {
+  PANEL_TONES,
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+  PanelRow,
+} from "./panel";
 
 afterEach(cleanup);
 
@@ -90,6 +99,15 @@ describe("a titled panel is a region named by its title", () => {
 // reader is meant to READ told them all five were pressable. The default is
 // therefore inert, and a caller opts in only when the whole row is one press
 // target.
+describe("PanelGroupHead", () => {
+  it("puts its id on the heading, so a table in the group can be named by it", () => {
+    render(<PanelGroupHead title="Notes" level="h3" id="group-notes" />);
+    expect(screen.getByRole("heading", { name: "Notes", level: 3 }).id).toBe(
+      "group-notes",
+    );
+  });
+});
+
 describe("PanelRow separates the hairline from the press", () => {
   it("draws an inert row by default", () => {
     const { container } = render(<PanelRow>Renewal date</PanelRow>);
@@ -123,23 +141,164 @@ describe("PanelRow separates the hairline from the press", () => {
     expect(row?.classList.contains("panel-row-interactive")).toBe(true);
     expect(row?.classList.contains("panel-row-on")).toBe(true);
   });
+
+  it("marks a row of a record list apart from a press target", () => {
+    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
+    const row = container.querySelector(".panel-row");
+    expect(row?.classList.contains("panel-row-record")).toBe(true);
+    expect(row?.classList.contains("panel-row-interactive")).toBe(false);
+  });
+
+  it("leaves a plain row out of the record list", () => {
+    const { container } = render(<PanelRow>Renewal date</PanelRow>);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-record"),
+    ).toBe(false);
+  });
+});
+
+type OpeningRowProps = { opened: string[]; pressed: string[] };
+
+describe("PanelRow onOpen opens on a press that lands on no control", () => {
+  function OpeningRow({ opened, pressed }: Readonly<OpeningRowProps>) {
+    return (
+      <PanelRow record onOpen={() => opened.push("Pricing playbook")}>
+        <span>Pricing playbook</span>
+        <button type="button" onClick={() => pressed.push("menu")}>
+          Actions for Pricing playbook
+        </button>
+        {createPortal(
+          <div role="menu">
+            <span>Archive set</span>
+          </div>,
+          document.body,
+        )}
+      </PanelRow>
+    );
+  }
+
+  it("opens the row on a press on its text, and marks it with the pointer", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    const { container } = render(<OpeningRow opened={opened} pressed={[]} />);
+    await user.click(screen.getByText("Pricing playbook"));
+    expect(opened).toEqual(["Pricing playbook"]);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-opens"),
+    ).toBe(true);
+  });
+
+  it("leaves a press on a button inside the row to that button", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    const pressed: string[] = [];
+    render(<OpeningRow opened={opened} pressed={pressed} />);
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Pricing playbook" }),
+    );
+    expect(pressed).toEqual(["menu"]);
+    expect(opened).toEqual([]);
+  });
+
+  // React bubbles a portal's click through the row, though the menu is not in its DOM.
+  it("ignores a press inside a menu the row portalled out", async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+    render(<OpeningRow opened={opened} pressed={[]} />);
+    await user.click(within(screen.getByRole("menu")).getByText("Archive set"));
+    expect(opened).toEqual([]);
+  });
+
+  it("draws no pointer on a row without onOpen", () => {
+    const { container } = render(<PanelRow record>Deep tier</PanelRow>);
+    expect(
+      container
+        .querySelector(".panel-row")
+        ?.classList.contains("panel-row-opens"),
+    ).toBe(false);
+  });
 });
 
 // A deleted rule body still parses and still paints, so the stylesheet is
 // asserted on directly rather than trusting the class list above: the hover
 // fill has to exist, and it has to hang on the interactive class alone.
-describe("panel.css keeps the row's hover on the interactive variant", () => {
-  it("declares the hover fill only for an interactive row", () => {
-    const css = panelCss();
+describe("panel.css keeps the row's hover on its two variants", () => {
+  it("declares the hover fill only for an interactive row and a record row", () => {
+    const css = stripComments(panelCss());
     const hovers = [...css.matchAll(/([^{}]*:hover)\s*\{([^}]*)\}/g)].filter(
       ([, selector]) => selector.includes(".panel-row"),
     );
-    expect(hovers.length).toBe(1);
-    const [selector, body] = [hovers[0][1].trim(), hovers[0][2]];
-    expect(selector).toBe(".panel-row-interactive:hover");
+    expect(hovers.map(([, selector]) => selector.trim())).toEqual([
+      ".panel-row-interactive:hover",
+      ".panel-row-record:hover",
+    ]);
     // The body is the point of the variant. An emptied rule reads as a live
     // one to every gate that only counts selectors.
-    expect(body).toMatch(/background:\s*var\(--bgHover\)/);
+    for (const [, , body] of hovers) {
+      expect(body).toMatch(/background:\s*var\(--bgHover\)/);
+    }
+  });
+
+  // A record list reads as a table: its rows' rules reach the pane's edges, and
+  // so does the seam under its last row.
+  it("runs a record row's hairline and the seam under it edge to edge", () => {
+    const rules = cssRules(panelCss());
+    const insetOf = (selector: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, "inset"))
+        .filter((value) => value !== undefined)
+        .at(-1);
+    expect(insetOf(".panel-row-record::before")).toBe("0 0 auto");
+    for (const lead of [
+      ".panel-row-record",
+      ".panel > .settinglist-bleed",
+      ".panel > .table-scroll-bleed",
+    ]) {
+      expect(insetOf(`${lead} + .panel-body::before`)).toBe("0 0 auto");
+    }
+    expect(insetOf(".panel-body + .panel-body::before")).toBe(
+      "0 var(--padPanel) auto",
+    );
+  });
+
+  it("rules the boundary between a bleeding list and a bleeding table", () => {
+    const rules = cssRules(panelCss());
+    for (const [first, second] of [
+      [".settinglist-bleed", ".table-scroll-bleed"],
+      [".table-scroll-bleed", ".settinglist-bleed"],
+    ]) {
+      const seam = rules.find(
+        (rule) => rule.selector === `.panel > ${first} + ${second}`,
+      );
+      expect(declaredValue(seam?.block ?? "", "border-top")).toBe(
+        "1px solid var(--borderSubtle)",
+      );
+    }
+  });
+
+  // A group head renders as a `.panel-body`, so the body under it matches the
+  // body-after-body seam at equal specificity and only sheet order decides.
+  it("draws no seam between a group head and the body it names", () => {
+    const rules = cssRules(panelCss());
+    const lastContent = (selector: string): number =>
+      rules
+        .map(
+          (rule) =>
+            rule.selector === selector &&
+            declaredValue(rule.block, "content") !== undefined,
+        )
+        .lastIndexOf(true);
+    const reset = lastContent(".panel-grouphead + .panel-body::before");
+    expect(reset).toBeGreaterThanOrEqual(0);
+    expect(declaredValue(rules[reset]?.block ?? "", "content")).toBe("none");
+    expect(reset).toBeGreaterThan(
+      lastContent(".panel-body + .panel-body::before"),
+    );
   });
 
   it("leaves the bare row its hairline and nothing that suggests a press", () => {
@@ -152,10 +311,8 @@ describe("panel.css keeps the row's hover on the interactive variant", () => {
     expect(body).not.toMatch(/transition/);
 
     // The hairline is drawn as an inset pseudo-element rather than a border,
-    // because a border cannot stop at the card's padding — every rule BETWEEN
-    // two pieces of a card's content does, and only the header's and footer's
-    // run edge to edge. Asserted on the rule that draws it, so an inset that
-    // gets dropped back onto the row's own border still fails here.
+    // because a border cannot stop at the card's padding. Asserted on the rule
+    // that draws it, so an inset dropped back onto the row's border fails here.
     const line = /(?:^|\n)\.panel-row::before\s*\{([^}]*)\}/.exec(panelCss());
     expect(line).not.toBeNull();
     const drawn = line?.[1] ?? "";
@@ -376,7 +533,7 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-describe("the panel head is one band, fixed at the height every panel shares", () => {
+describe("the panel head is one band at the height every panel shares, wider than a phone", () => {
   it("takes its height from the house token rather than a floor of its own", () => {
     const head = bandRules(panelCss()).find(
       (rule) => rule.selector === ".panel-head",
@@ -394,15 +551,27 @@ describe("the panel head is one band, fixed at the height every panel shares", (
 
   // One value at every viewport, like the band it is. A touch arm that raised
   // it would give the same panel two heights on one machine.
-  it("keeps the band at one height on every viewport", () => {
+  it("declares the band's height token once, for every viewport", () => {
     const declarations = tokensCss().match(/--panel-head-h:/g) ?? [];
     expect(declarations).toHaveLength(1);
   });
 
-  // The band's height is a constant, not a function of what the head holds. A
-  // `:has()` rule is how that stops being true without anyone editing the
-  // height: the band grows for one kind of content and a page of panels goes
-  // ragged.
+  it("drops a verb under the title on a phone, and wraps a title too long to fit", () => {
+    const phone =
+      /@media \(max-width: 720px\)\s*\{\s*\.panel-head\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phone, "flex-wrap")).toBe("wrap");
+    expect(declaredValue(phone, "min-height")).toBe("var(--panel-head-h)");
+    const phoneTitle =
+      /@media \(max-width: 720px\)\s*\{[^@]*?\.panel-head \.panel-title\s*\{([^}]*)\}/.exec(
+        stripComments(panelCss()),
+      )?.[1] ?? "";
+    expect(declaredValue(phoneTitle, "white-space")).toBe("normal");
+  });
+
+  // The band's height is constant: a `:has()` rule would grow it for one kind
+  // of content, and a page of panels would go ragged.
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
   });
@@ -655,6 +824,7 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
       ".panel > .empty",
       ".panel > .pending",
+      '.panel > [role="alert"] > .empty',
     ]);
     // WHICH inset, read off the body rather than restated here: the arm stands
     // in for the rows that will replace it, so a pane retuned to a different
@@ -665,6 +835,27 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect(pane).toBeDefined();
     for (const rule of inset) {
       expect(declaredValue(rule.block, "padding")).toBe(pane);
+    }
+  });
+
+  it("reads the arm's sentence as a body's: no ground, from the left", () => {
+    const rules = cssRules(panelCss());
+    const declared = (selector: string, property: string) =>
+      rules
+        .filter((rule) => rule.selector === selector)
+        .map((rule) => declaredValue(rule.block, property))
+        .filter((value) => value !== undefined)
+        .at(-1);
+    for (const arm of [
+      ".panel > .empty:not(.empty-plate)",
+      '.panel > [role="alert"] > .empty',
+    ]) {
+      for (const property of ["background", "text-align"]) {
+        expect(declared(arm, property)).toBeDefined();
+        expect(declared(arm, property)).toBe(
+          declared(".panel-body > .empty", property),
+        );
+      }
     }
   });
 

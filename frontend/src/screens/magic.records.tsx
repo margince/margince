@@ -13,18 +13,20 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ENTITY, isEntityKind } from "../app/entity";
-import { routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { ENTITY, isEntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
+import "./brief.css";
 
 type MagicLineRecord = components["schemas"]["MagicLineRecord"];
 type MagicFieldChange = components["schemas"]["MagicFieldChange"];
@@ -39,16 +41,14 @@ function useLineRecords(lineId: string, since: string, open: boolean) {
     enabled: open,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/magic/lines/{id}/records", {
-        params: {
-          path: { id: lineId },
-          query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/magic/lines/{id}/records", {
+          params: {
+            path: { id: lineId },
+            query: { since, ...(pageParam ? { cursor: pageParam } : {}) },
+          },
+        }),
+      );
     },
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
@@ -77,12 +77,16 @@ export function LineRecordsOpener({
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={titleId}
-        size="wide"
+        intent="drawer"
       >
-        <Heading size="medium" as="h2" id={titleId} className="modal-title">
-          {t("magic.records.title")}
-        </Heading>
-        {open && <LineRecordsList line={line} since={since} />}
+        <DrawerHead>
+          <Heading size="large" id={titleId} className="t-h2 modal-title">
+            {t("magic.records.title")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          {open && <LineRecordsList line={line} since={since} />}
+        </DrawerBody>
       </Modal>
     </>
   );

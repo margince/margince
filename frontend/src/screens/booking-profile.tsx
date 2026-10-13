@@ -1,20 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
-import { QueryGate, throwProblem } from "./common";
-import { useSchedulingProfile } from "./scheduling-profile-query";
+import {
+  putSchedulingChanges,
+  useSchedulingProfile,
+} from "./scheduling-profile-query";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -56,17 +58,8 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
     remedy: t("scheduling.copyFallback"),
   });
   const save = useMutation({
-    mutationFn: async (
-      value: Partial<Pick<Profile, "enabled" | "replace_link">>,
-    ) => {
-      const latest = await api.GET("/scheduling/profile");
-      if (latest.error) throwProblem(latest.error);
-      const { data, error } = await api.PUT("/scheduling/profile", {
-        body: { ...latest.data, ...value },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
+    mutationFn: (value: Partial<Pick<Profile, "enabled" | "replace_link">>) =>
+      putSchedulingChanges(value),
     onSuccess: (value) => client.setQueryData(["scheduling-profile"], value),
   });
   return (
@@ -116,9 +109,14 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           </div>
           {copy.notice}
           <div className="book-actions">
+            {/* The refusal rides the button, so at 390 it stays beside the
+                verb it explains rather than under the next one. */}
             <Button
-              disabled={
-                save.isPending || (!profile.enabled && !profile.provider)
+              disabled={save.isPending}
+              reason={
+                !profile.enabled && !profile.provider
+                  ? t("scheduling.calendarSetupNeeded")
+                  : undefined
               }
               onClick={() => save.mutate({ enabled: !profile.enabled })}
             >
@@ -131,9 +129,6 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
               {t("scheduling.replace")}
             </Button>
           </div>
-          {!profile.enabled && !profile.provider && (
-            <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
-          )}
           <ConfirmModal
             open={replace}
             onClose={() => setReplace(false)}

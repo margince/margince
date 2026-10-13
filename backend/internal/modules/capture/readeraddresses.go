@@ -58,10 +58,10 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT value FROM capture_owner_identity
+		SELECT value, source FROM capture_owner_identity
 		 WHERE user_id = $1 AND kind = 'address'
 		 UNION
-		SELECT account_label FROM capture_connection
+		SELECT account_label, '' FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
 `, user)
 	if err != nil {
@@ -73,9 +73,12 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 		folded[strings.ToLower(login)] = true
 	}
 	for rows.Next() {
-		var label string
-		if err := rows.Scan(&label); err != nil {
+		var label, source string
+		if err := rows.Scan(&label, &source); err != nil {
 			return nil, err
+		}
+		if discoveredMachineAddress(source, label) {
+			continue
 		}
 		if address := strings.ToLower(strings.TrimSpace(bareAddress(label))); address != "" {
 			folded[address] = true

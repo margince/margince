@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -13,8 +13,12 @@ import { ownLensContext, render, reportsStub } from "./analytics.testkit";
 
 type Stage = components["schemas"]["Stage"];
 
-import { AnalyticsScreen, buildStageAggregates } from "./analytics";
-import { sectionFromAddress } from "./analytics.address";
+import {
+  AnalyticsScreen,
+  analyticsTabs,
+  buildStageAggregates,
+} from "./analytics";
+import { SECTIONS, sectionFromAddress } from "./analytics.address";
 
 afterEach(() => {
   cleanup();
@@ -24,8 +28,32 @@ afterEach(() => {
 async function openPipeline() {
   await userEvent
     .setup()
-    .click(await screen.findByRole("button", { name: "Pipeline analysis" }));
+    .click(await screen.findByRole("button", { name: "Pipeline" }));
 }
+
+// The stage table alone: the totals above it repeat a one-stage fixture's
+// figures, so a row's own cell is read inside the table that holds it.
+async function stageTable() {
+  const table = (await screen.findByText("Qualify")).closest("table");
+  if (!(table instanceof HTMLElement)) {
+    throw new Error("the stage name is drawn outside a table");
+  }
+  return within(table);
+}
+
+it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
+  expect(analyticsTabs(SECTIONS)).toEqual([
+    "performance",
+    "forecast",
+    "pipeline",
+    "outcomes",
+    "delivery",
+    "reports",
+  ]);
+  expect(analyticsTabs([...SECTIONS].reverse())).toEqual(
+    analyticsTabs(SECTIONS),
+  );
+});
 
 describe("the delivery section", () => {
   it("draws the three project reports with converted money and real links", async () => {
@@ -55,9 +83,6 @@ describe("the delivery section", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "More analysis" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
@@ -92,9 +117,6 @@ describe("the delivery section", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "More analysis" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
@@ -133,7 +155,7 @@ describe("the data coverage section", () => {
     render(<AnalyticsScreen />);
     await userEvent
       .setup()
-      .click(await screen.findByRole("button", { name: "More analysis" }));
+      .click(await screen.findByRole("button", { name: "Setup" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Data coverage" }));
@@ -148,7 +170,7 @@ describe("the data coverage section", () => {
     render(<AnalyticsScreen />);
     await userEvent
       .setup()
-      .click(await screen.findByRole("button", { name: "More analysis" }));
+      .click(await screen.findByRole("button", { name: "Setup" }));
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Data coverage" }));
@@ -163,7 +185,7 @@ describe("the data coverage section", () => {
     const fetch = reportsStub({ coverage: { status: 403 } });
     vi.stubGlobal("fetch", fetch);
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline analysis" });
+    await screen.findByRole("button", { name: "Pipeline" });
     await waitFor(() =>
       expect(
         screen.queryByRole("button", { name: "Data coverage" }),
@@ -288,7 +310,7 @@ describe("the my-outcomes section", () => {
   it("hides the tab when the lens covers more than one seat", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
-    await screen.findByRole("button", { name: "Pipeline analysis" });
+    await screen.findByRole("button", { name: "Pipeline" });
     expect(screen.queryByRole("button", { name: "My outcomes" })).toBeNull();
   });
 });
@@ -320,7 +342,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline analysis" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("Commit")).toBeTruthy());
     expect(
@@ -367,7 +389,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline analysis" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("Slipped")).toBeTruthy());
   });
@@ -403,7 +425,7 @@ describe("AnalyticsScreen", () => {
           ),
       ),
     ).toBe(true);
-    expect(await screen.findByText("€49.38")).toBeTruthy();
+    expect((await stageTable()).getByText("€49.38")).toBeTruthy();
     expect(screen.queryByText("€49.37")).toBeNull();
   });
 
@@ -423,7 +445,7 @@ describe("AnalyticsScreen", () => {
     );
     render(<AnalyticsScreen />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Pipeline analysis" }),
+      await screen.findByRole("button", { name: "Pipeline" }),
     );
     await waitFor(() => expect(screen.getByText("o1")).toBeTruthy());
   });
@@ -435,9 +457,7 @@ describe("AnalyticsScreen", () => {
   // proves the link appears would pass a version that always draws it.
   describe("a count opens exactly the deals it counted", () => {
     const openPipelineTab = async () =>
-      userEvent.click(
-        await screen.findByRole("button", { name: "Pipeline analysis" }),
-      );
+      userEvent.click(await screen.findByRole("button", { name: "Pipeline" }));
 
     it("addresses a company trading in one currency, and says the deals are open", async () => {
       vi.stubGlobal(
@@ -608,7 +628,7 @@ describe("reports never sum money across currencies", () => {
     await openPipeline();
 
     expect(
-      await screen.findByText(formatMoney(250_000, "EUR", "en")),
+      (await stageTable()).getByText(formatMoney(250_000, "EUR", "en")),
     ).toBeTruthy();
     // One stage, one row: the count cell appears once.
     expect(screen.getAllByText("Qualify")).toHaveLength(1);
@@ -632,7 +652,7 @@ describe("reports never sum money across currencies", () => {
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     // The count is real and stays; only the money is unknown.
-    expect(screen.getByText("4")).toBeTruthy();
+    expect((await stageTable()).getByText("4")).toBeTruthy();
     expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0);
     expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
   });
@@ -640,7 +660,9 @@ describe("reports never sum money across currencies", () => {
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline analysis"));
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
@@ -741,9 +763,8 @@ describe("reports never sum money across currencies", () => {
     );
     render(<AnalyticsScreen />);
     await openPipeline();
-    await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
     expect(
-      screen.getByText((text) => text.includes("1 of 2 priced")),
+      (await stageTable()).getByText((text) => text.includes("1 of 2 priced")),
     ).toBeTruthy();
   });
 
@@ -819,7 +840,9 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline analysis"));
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
       await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
@@ -862,7 +885,9 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline analysis"));
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     // Both categories, both figures, in the one base currency and compact.
     const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
@@ -906,7 +931,9 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline analysis"));
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
       await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
@@ -942,7 +969,9 @@ describe("reports never sum money across currencies", () => {
       }),
     );
     render(<AnalyticsScreen />);
-    await userEvent.setup().click(await screen.findByText("Pipeline analysis"));
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Pipeline" }));
     await waitFor(() =>
       expect(
         screen.getByText(formatMoneyCompact(1000, "EUR", "en")),

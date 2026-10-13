@@ -14,6 +14,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -70,10 +71,8 @@ func resolveScope(ctx context.Context, asked string) (string, error) {
 	if asked == "" {
 		return scopeMine, nil
 	}
-	for _, allowed := range scopeOptionsFor(ctx) {
-		if asked == allowed {
-			return asked, nil
-		}
+	if slices.Contains(scopeOptionsFor(ctx), asked) {
+		return asked, nil
 	}
 	return "", apperrors.ErrPermissionDenied
 }
@@ -286,7 +285,7 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowToScope, so a fourth caller with its own source list cannot appear
 // without that test naming it.
 func narrowedByItsOwnLane(row ranked) bool {
-	return row.item.Source == sourceNoticeCase || row.item.Source == sourceTask || row.item.Source == sourceWeeklyCommitment || row.item.Source == sourceLeadResponse ||
+	return row.item.Source == sourceNoticeCase || row.item.Source == sourceTask || row.item.Source == sourceWeeklyCommitment ||
 		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
 }
 
@@ -377,8 +376,7 @@ func (s *Service) narrowToScope(
 // "my team". resolveOwner refuses to open that same contact's queue by name,
 // so the page contradicted the door beside it.
 //
-// Membership is asked ONCE for the page rather than per row: the roster is a
-// fact about the reader, and asking per row would be a query per task.
+// Membership is the roster forNoticeTeam read for the page, never a query per row.
 //
 // It fails CLOSED. Without the membership reader there is no team to answer
 // for, and a queue that handed back every row it had read would be widening a
@@ -485,14 +483,14 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if s.teammates == nil {
 		return &narrowed, nil
 	}
-	// The cap is not reported from here. This narrows the notice lane over the
-	// SAME roster read, under the same bound, that narrowToScope reads for the
-	// page — and on scope=team the page always narrows, so the admission is
-	// already made once where every other short answer is collected.
-	roster, _, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	// The cap is not reported from here: the read rides the copy, narrowToScope
+	// and the plan lane answer from it, and the page admits the cut where every
+	// other short answer is collected.
+	roster, cut, err := s.teammates.LiveTeammatesOfCaller(ctx)
 	if err != nil {
 		return nil, err
 	}
+	narrowed.teamRoster = &rosterRead{members: roster, cut: cut}
 	for _, member := range roster {
 		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
 	}

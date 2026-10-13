@@ -25,7 +25,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The review as this modal needs it: which message, and the caution the server
 // serves for it. Taken from the generated contract rather than restated, so a
@@ -142,7 +142,7 @@ export function DirectSendModal({
     <ConfirmModal
       open={open}
       onClose={onClose}
-      size="wide"
+      intent="form"
       title={t("directSend.title")}
       confirmLabel={t("directSend.confirm")}
       confirmVariant="danger"

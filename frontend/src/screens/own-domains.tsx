@@ -3,18 +3,37 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Modal,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { IconAction } from "../design-system/iconaction";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
+import { captureValueMessage } from "./capturevalue";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
 
 // The own-domain surface (CAP-WIRE-2a, ADR-0082/A127): which domains this
 // installation treats as its own, and therefore whose mail it does not store.
@@ -53,13 +72,11 @@ function useAddOwnDomain() {
   const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { data, error } = await api.POST("/capture/email-domains", {
-        body: { domain },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/capture/email-domains", {
+          body: { domain },
+        }),
+      );
     },
     onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
@@ -68,22 +85,35 @@ function useAddOwnDomain() {
   });
 }
 
-function useRemoveOwnDomain() {
+function useRemoveOwnDomain(outcome: MutationOutcome<string | null>) {
   const queryClient = useQueryClient();
-  const toast = useToast();
-  const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
-      const { error } = await api.DELETE("/capture/email-domains/{domain}", {
-        params: { path: { domain } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/capture/email-domains/{domain}", {
+          params: { path: { domain } },
+        }),
+      );
+      return domain;
     },
+    onError: outcome.onError,
+    onSuccess: (domain) => {
+      queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
+      outcome.onSuccess(domain);
+    },
+  });
+}
+
+function useRestoreOwnDomain(outcome: MutationOutcome<string>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (domain: string) => {
+      unwrap(await api.POST("/capture/email-domains", { body: { domain } }));
+    },
+    onError: outcome.onError,
     onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
-      toast.show(t("settings.removedItem", { name: domain }));
+      outcome.onSuccess(domain);
     },
   });
 }
@@ -92,8 +122,8 @@ export function OwnDomainsCard() {
   const t = useT();
   const canManage = useCanWrite("capture_settings", "update");
   const query = useOwnDomains();
-  const remove = useRemoveOwnDomain();
   const [adding, setAdding] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   // The denial, said once and POINTED AT. A control that is refused with its
   // reason floating somewhere further down the card has told a screen reader
   // nothing: the reason is read only if the reader happens to arrive at that
@@ -104,10 +134,8 @@ export function OwnDomainsCard() {
   // permission.
   const denialId = useId();
   const refusal = canManage ? undefined : denialId;
-  // The anchor list rides on the same query the curated row gates on — one
-  // request feeds both. It stays out of the gate because a row whose whole
-  // content is a list nobody may edit has nothing to say while the read is in
-  // flight, and no row at all when the company claims no domain.
+  // One request feeds both groups. The anchors stay out of the gate: a list
+  // nobody may edit has nothing to say while the read is in flight.
   const anchors = query.data?.anchor_domains ?? [];
 
   // Panel rather than Card, and no per-card bottom margin: the settings page
@@ -122,115 +150,74 @@ export function OwnDomainsCard() {
       // button says the same thing twice a hand apart. Refused, never hidden:
       // `reasonId` names the one sentence under the rows.
       titleAction={
-        <Button reasonId={refusal} onClick={() => setAdding(true)}>
+        <Button
+          ref={addVerb}
+          reasonId={refusal}
+          onClick={() => setAdding(true)}
+        >
           {t("ownDomains.addOpen")}
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the failure Callout under
-          the rows are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("ownDomains.sub")}</PanelIntro>
-        <SettingList>
-          {anchors.length > 0 && (
-            <SettingRow
-              testId="own-domains-company-row"
-              label={t("ownDomains.companyTitle")}
-              // Copy that sends the reader somewhere has to take them there.
-              // The line says these are changed on the company profile, which
-              // is a different settings entry — so without the link the
-              // instruction was a destination the reader had to go and find,
-              // on a row whose whole point is that it cannot be edited here.
-              description={
-                <>
-                  {t("ownDomains.fromCompany")}{" "}
-                  <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
-                </>
-              }
-              layout="stack"
-              // One row per domain, in the same row language as the curated
-              // half below — it was a bulleted `<ul>` with an inline margin and
-              // an inline left padding, a third layout on a card that already
-              // had two. `control={null}` because there is nothing to press: a
-              // domain the company profile claims is changed there, and the
-              // link in the description is what takes the reader.
-              control={
-                <SettingList testId="own-domains-from-company">
-                  {anchors.map((domain) => (
-                    <SettingRow key={domain} label={domain} control={null} />
-                  ))}
-                </SettingList>
-              }
-            />
-          )}
-          {/* The irreversibility note lives on THIS row rather than beside the
-              company list, because it describes what adding and removing do —
-              the acts only this half offers. */}
-          <SettingRow
-            testId="own-domains-curated-row"
-            label={t("ownDomains.curatedTitle")}
-            description={t("ownDomains.irreversible")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("ownDomains.curatedTitle")}
-              >
-                {(list) => (
-                  <CuratedDomains
-                    list={list.data}
-                    refusal={refusal}
-                    pending={remove.isPending}
-                    onRemove={(domain) => remove.mutate(domain)}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {!canManage && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-        {remove.isError && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("ownDomains.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        )}
-        {adding && <AddOwnDomainDialog onClose={() => setAdding(false)} />}
       </PanelBody>
+      {anchors.length > 0 && (
+        <>
+          <PanelGroupHead title={t("ownDomains.companyTitle")} level="h3" />
+          <PanelBody>
+            {/* Copy that sends the reader somewhere has to take them there:
+                these rows cannot be edited here, only on the company profile. */}
+            <PanelIntro>
+              {t("ownDomains.fromCompany")}{" "}
+              <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
+            </PanelIntro>
+          </PanelBody>
+          <SettingList bleed="settings" testId="own-domains-from-company">
+            {anchors.map((domain) => (
+              <SettingRow key={domain} label={domain} control={null} />
+            ))}
+          </SettingList>
+        </>
+      )}
+      <PanelGroupHead title={t("ownDomains.curatedTitle")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("ownDomains.irreversible")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("ownDomains.curatedTitle")}>
+        {(list) => (
+          <CuratedDomains
+            list={list.data}
+            refusal={refusal}
+            landing={() => addVerb.current}
+          />
+        )}
+      </QueryGate>
+      {!canManage && (
+        <PanelBody>
+          <p id={denialId}>{t("captureSettings.adminOnly")}</p>
+        </PanelBody>
+      )}
+      {adding && <AddOwnDomainDialog onClose={() => setAdding(false)} />}
     </Panel>
   );
 }
 
-/**
- * The curated half: one row per domain, whether it is confirmed as the row's
- * answer, and the verb that takes it back at the right.
- *
- * It was a hand-rolled `<ul>` with an inline-styled `<li>` and an inline
- * `marginLeft` on the state beside each domain — the same list
- * capture-exclusions.tsx had copied, which is the signal the shape belongs to
- * the row language rather than to either screen.
- */
+/** The curated half: one row per domain, and the verb that takes it back. */
 function CuratedDomains({
   list,
   refusal,
-  pending,
-  onRemove,
+  landing,
 }: Readonly<{
   list: WorkspaceEmailDomain[];
   /** The id of the one sentence saying why removal is refused, when it is. */
   refusal: string | undefined;
-  pending: boolean;
-  onRemove: (domain: string) => void;
+  landing: () => HTMLElement | null;
 }>) {
   const t = useT();
   if (list.length === 0) {
     // `empty`, and only `empty`: no further domain is registered, which is a
-    // fact about the installation rather than a read that failed. The row caps
-    // and left-aligns it already (settingrow.css).
+    // fact about the installation rather than a read that failed.
     return (
       <EmptyState>
         <p data-testid="own-domains-empty">{t("ownDomains.empty")}</p>
@@ -238,30 +225,60 @@ function CuratedDomains({
     );
   }
   return (
-    <SettingList testId="own-domains-list">
+    <SettingList bleed="records" testId="own-domains-list">
       {list.map((domain) => (
-        <SettingRow
+        <CuratedDomain
           key={domain.domain}
-          label={domain.domain}
-          value={
-            domain.verified
-              ? t("ownDomains.confirmed")
-              : t("ownDomains.candidate")
-          }
-          control={
-            <Button
-              variant="ghost"
-              aria-label={t("ownDomains.remove", { domain: domain.domain })}
-              disabled={pending}
-              reasonId={refusal}
-              onClick={() => onRemove(domain.domain)}
-            >
-              <Trash2 aria-hidden />
-            </Button>
-          }
+          domain={domain}
+          refusal={refusal}
+          landing={landing}
         />
       ))}
     </SettingList>
+  );
+}
+
+// A confirmed domain comes back with Undo, since adding it again restores it.
+// A candidate does not: adding it again would confirm it.
+function CuratedDomain({
+  domain,
+  refusal,
+  landing,
+}: Readonly<{
+  domain: WorkspaceEmailDomain;
+  refusal: string | undefined;
+  landing: () => HTMLElement | null;
+}>) {
+  const t = useT();
+  const verbs = useRowHandoff(landing);
+  const toasts = useUndoableRemoval<string>({
+    removed: t("settings.removedItem", { name: domain.domain }),
+    restored: t("settings.addedItem", { name: domain.domain }),
+  });
+  const restore = useRestoreOwnDomain(toasts.restored);
+  const remove = useRemoveOwnDomain(
+    toasts.removed((name) => restore.mutate(name), domain.verified),
+  );
+  return (
+    <SettingRow
+      label={domain.domain}
+      description={domain.verified ? undefined : t("ownDomains.candidateNote")}
+      value={
+        domain.verified ? undefined : <Badge>{t("ownDomains.candidate")}</Badge>
+      }
+      control={
+        <span className="cell-actions" ref={verbs}>
+          <IconAction
+            variant="ghost"
+            label={t("ownDomains.remove", { domain: domain.domain })}
+            icon={<Trash2 aria-hidden />}
+            pending={remove.isPending}
+            reasonId={refusal}
+            onClick={() => remove.mutate(domain.domain)}
+          />
+        </span>
+      }
+    />
   );
 }
 
@@ -271,14 +288,16 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const add = useAddOwnDomain();
   const headingId = useId();
+  const formId = useId();
   const [draft, setDraft] = useState("");
   const domain = draft.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("ownDomains.addLabel")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -300,22 +319,23 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             tone="danger"
             title={t("ownDomains.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, "domain", t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || domain === ""}
-          >
-            {t("ownDomains.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || domain === ""}
+        >
+          {t("ownDomains.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

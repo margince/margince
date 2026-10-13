@@ -5,11 +5,18 @@
 // screen that shows a list — the library, the list page, a record's "Add to
 // Shortlist" — reads the same cache entries and invalidates them the same way.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { recordListsKey } from "./activitykeys";
-import { throwProblem, useMe } from "./common";
+import type { MutationOutcome } from "./undoableremoval";
 
 export type List = components["schemas"]["List"];
 export type ListRecordType = List["entity_type"];
@@ -35,35 +42,32 @@ export type ListQuery = Readonly<{
   entityType?: ListRecordType;
   listType?: List["list_type"];
   q?: string;
-  /** Only lists with one of these settings; absent is every one. */
-  sharing?: readonly List["sharing"][];
+  /** Archived lists too; absent is the live ones alone. */
+  includeArchived?: boolean;
 }>;
 
-/** The reader's own lists, which only they and the steward can find. */
-export const PRIVATE_LISTS: readonly List["sharing"][] = ["private"];
-
-/** The lists shared with a team or with everyone. */
-export const SHARED_LISTS: readonly List["sharing"][] = ["team", "workspace"];
-
-export function useLists(query: ListQuery, enabled = true) {
+/**
+ * The lists a query names. `keepRows` holds the rows already read on screen
+ * while a changed query is answered, for a caller that re-asks under the reader.
+ */
+export function useLists(query: ListQuery, enabled = true, keepRows = false) {
   return useQuery({
     queryKey: [LISTS_KEY, "all", query],
     enabled,
+    placeholderData: keepRows ? keepPreviousData : undefined,
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists", {
-        params: {
-          query: {
-            entity_type: query.entityType,
-            list_type: query.listType,
-            q: query.q || undefined,
-            sharing: query.sharing ? [...query.sharing] : undefined,
+      return unwrap(
+        await api.GET("/lists", {
+          params: {
+            query: {
+              entity_type: query.entityType,
+              list_type: query.listType,
+              q: query.q || undefined,
+              include_archived: query.includeArchived || undefined,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
   });
 }
@@ -73,13 +77,11 @@ export function useList(id: string, enabled = true) {
     enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/lists/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -88,13 +90,11 @@ export function useListHistory(id: string) {
   return useQuery({
     queryKey: [LISTS_KEY, "history", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/lists/{id}/history", {
-        params: { path: { id }, query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/lists/{id}/history", {
+          params: { path: { id }, query: { limit: 50 } },
+        }),
+      );
     },
   });
 }
@@ -108,13 +108,11 @@ export function useVisitList() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<ListVisit> => {
-      const { data, error } = await api.POST("/lists/{id}/visit", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/lists/{id}/visit", {
+          params: { path: { id } },
+        }),
+      );
     },
     onSuccess: (_visit, id) =>
       Promise.all([
@@ -136,14 +134,11 @@ export function useExplanation(
   return useQuery({
     queryKey: [...recordListsKey(recordType, recordId), "why", listId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/lists/{id}/members/{recordId}/why",
-        { params: { path: { id: listId, recordId } } },
+      return unwrap(
+        await api.GET("/lists/{id}/members/{recordId}/why", {
+          params: { path: { id: listId, recordId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 }
@@ -160,12 +155,11 @@ export async function listMembersAmong(
   if (recordIds.length === 0) {
     return new Map();
   }
-  const { data, error } = await api.GET("/lists/{id}/members", {
-    params: { path: { id: listId }, query: { entity_id: [...recordIds] } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/lists/{id}/members", {
+      params: { path: { id: listId }, query: { entity_id: [...recordIds] } },
+    }),
+  );
   return new Map(data.data.map((member) => [member.entity_id, member]));
 }
 
@@ -177,14 +171,11 @@ export function useRecordLists(entityType: ListedRecordType, recordId: string) {
   return useQuery({
     queryKey: recordListsKey(entityType, recordId),
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/records/{entity_type}/{entity_id}/lists",
-        { params: { path: { entity_type: entityType, entity_id: recordId } } },
+      return unwrap(
+        await api.GET("/records/{entity_type}/{entity_id}/lists", {
+          params: { path: { entity_type: entityType, entity_id: recordId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 }
@@ -215,21 +206,19 @@ export function useCreateList() {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (input: NewList) => {
-      const { data, error } = await api.POST("/lists", {
-        body: {
-          name: input.name,
-          entity_type: input.entityType,
-          list_type: input.listType,
-          definition: input.definition,
-          purpose: input.purpose || undefined,
-          sharing: input.sharing ?? "team",
-          team_id: input.teamId ?? undefined,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/lists", {
+          body: {
+            name: input.name,
+            entity_type: input.entityType,
+            list_type: input.listType,
+            definition: input.definition,
+            purpose: input.purpose || undefined,
+            sharing: input.sharing ?? "team",
+            team_id: input.teamId ?? undefined,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -252,22 +241,20 @@ export function useUpdateList() {
   const invalidate = useInvalidateLists();
   return useMutation({
     mutationFn: async (edit: ListEdit) => {
-      const { data, error } = await api.PATCH("/lists/{id}", {
-        params: { path: { id: edit.id } },
-        body: {
-          version: edit.version,
-          name: edit.name,
-          purpose: edit.purpose,
-          sharing: edit.sharing,
-          team_id: edit.teamId,
-          steward_id: edit.stewardId,
-          definition: edit.definition,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/lists/{id}", {
+          params: { path: { id: edit.id } },
+          body: {
+            version: edit.version,
+            name: edit.name,
+            purpose: edit.purpose,
+            sharing: edit.sharing,
+            team_id: edit.teamId,
+            steward_id: edit.stewardId,
+            definition: edit.definition,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -303,22 +290,69 @@ export type MemberChange = Readonly<{
 export function useChangeMember() {
   const invalidate = useInvalidateLists();
   return useMutation({
-    mutationFn: async (
-      input: MemberChange & Readonly<{ remove?: boolean }>,
-    ) => {
-      const body = {
-        entity_type: input.entityType,
-        entity_id: input.entityId,
-        note: input.note || undefined,
-      };
-      const params = { path: { id: input.listId } };
-      const { error } = input.remove
-        ? await api.POST("/lists/{id}/members/remove", { params, body })
-        : await api.POST("/lists/{id}/members", { params, body });
-      if (error) {
-        throwProblem(error);
-      }
+    mutationFn: async (input: MemberChange) => {
+      unwrap(
+        await api.POST("/lists/{id}/members", {
+          params: { path: { id: input.listId } },
+          body: {
+            entity_type: input.entityType,
+            entity_id: input.entityId,
+            note: input.note || undefined,
+          },
+        }),
+      );
     },
     onSuccess: invalidate,
+  });
+}
+
+export type MemberRestore = Readonly<{
+  listId: string;
+  undo: components["schemas"]["RemovalUndo"];
+}>;
+
+/**
+ * Take one record off a Shortlist. `onSuccess` gets the handle that puts it
+ * back, or null from a server that answered without one.
+ */
+export function useRemoveMember(
+  outcome: MutationOutcome<MemberRestore | null>,
+) {
+  const invalidate = useInvalidateLists();
+  return useMutation({
+    mutationFn: async (input: MemberChange): Promise<MemberRestore | null> => {
+      const data = unwrap(
+        await api.POST("/lists/{id}/members/remove", {
+          params: { path: { id: input.listId } },
+          body: { entity_type: input.entityType, entity_id: input.entityId },
+        }),
+      );
+      return data ? { listId: input.listId, undo: data } : null;
+    },
+    onError: outcome.onError,
+    onSuccess: async (restore) => {
+      await invalidate();
+      outcome.onSuccess(restore);
+    },
+  });
+}
+
+/** Put back a record this reader took off a Shortlist, as its author left it. */
+export function useRestoreMember(outcome: MutationOutcome<MemberRestore>) {
+  const invalidate = useInvalidateLists();
+  return useMutation({
+    mutationFn: async (input: MemberRestore) => {
+      unwrap(
+        await api.POST("/lists/{id}/members/restore", {
+          params: { path: { id: input.listId } },
+          body: input.undo,
+        }),
+      );
+    },
+    onError: outcome.onError,
+    onSuccess: async (_, input) => {
+      await invalidate();
+      outcome.onSuccess(input);
+    },
   });
 }

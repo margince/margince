@@ -98,8 +98,10 @@ type facts struct {
 	// database rather than taken off the timeline page: nil means nothing is
 	// booked at all, which the timeline could only ever suggest.
 	nextMeeting *activities.BookedMeeting
-	room        *crmcontracts.DealRoom
-	threads     []crmcontracts.DealRoomThread
+	// followUps are the reader's meetings on this deal owed a follow-up.
+	followUps []activities.AwaitingReply
+	room      *crmcontracts.DealRoom
+	threads   []crmcontracts.DealRoomThread
 	// seats are the contacts on the deal with their roles. Empty when nobody is
 	// named AND when the reader may not read the stakeholder edge — the card
 	// cannot tell those apart and says nothing about seats in either case,
@@ -229,11 +231,6 @@ func (s *Service) cardAndTimeline(
 		// transient outage permanent, because a matching fingerprint is served
 		// without ever asking again. The card would stand until some unrelated
 		// fact moved.
-		//
-		// This is reachable in a way it was not before: the language is part of
-		// the fingerprint now, so an installation that switches to German mints
-		// a new key, and a lane that happens to be down while it does would
-		// freeze the ENGLISH floor as that installation's German card.
 		return card, append(f.timeline, f.requests...), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
@@ -394,6 +391,9 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	}
 	if booked {
 		f.nextMeeting = &meeting
+	}
+	if f.followUps, err = s.activities.MeetingsAwaitingFollowUpOnDeal(ctx, f.now, dealID.UUID); err != nil {
+		return facts{}, fmt.Errorf("deal status: reading the meetings owed a follow-up: %w", err)
 	}
 	if err := s.gatherRoom(ctx, dealID, &f); err != nil {
 		return facts{}, err

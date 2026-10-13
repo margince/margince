@@ -6,7 +6,6 @@ package main
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 )
@@ -20,22 +19,21 @@ import (
 func TestTheBannerNamesTheGraphRenewalOnlyWhenItIsRegistered(t *testing.T) {
 	t.Parallel()
 	cfg := workerConfig{
-		graphClientID:      "an-app",
-		graphNotifyURL:     "https://example.test/webhooks/graph",
-		graphWatchInterval: time.Hour,
+		graphClientID:  "an-app",
+		graphNotifyURL: "https://example.test/webhooks/graph",
 	}
 	for name, tc := range map[string]struct {
 		cfg   workerConfig
 		runs  bool
 		holds string
 	}{
-		"registered": {cfg, true, "graph subscription renew every"},
+		"registered": {cfg, true, "graph subscription renew on"},
 		// The url is set and the connector is not — a role with incomplete
 		// client credentials. Nothing was registered, and the banner used to
 		// say the renewal was running.
 		"no connector for this role": {cfg, false, "no graph app configured for this role"},
 		"no url at all": {
-			workerConfig{graphClientID: "an-app", graphWatchInterval: time.Hour},
+			workerConfig{graphClientID: "an-app"},
 			false, "no notification url",
 		},
 	} {
@@ -45,7 +43,7 @@ func TestTheBannerNamesTheGraphRenewalOnlyWhenItIsRegistered(t *testing.T) {
 			if !strings.Contains(banner, tc.holds) {
 				t.Errorf("the banner reads %q, want it to say %q", banner, tc.holds)
 			}
-			if !tc.runs && strings.Contains(banner, "graph subscription renew every") {
+			if !tc.runs && strings.Contains(banner, "graph subscription renew on") {
 				t.Errorf("the banner claims the renewal lane is running when nothing registered it: %q", banner)
 			}
 		})

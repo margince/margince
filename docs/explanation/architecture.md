@@ -1,225 +1,140 @@
+<!-- prose:plain -->
 # Architecture
 
-The condensed map of how this codebase is shaped. New backend contributors
-should start at [backend-onboarding.md](backend-onboarding.md) — the
-orientation hub — and read this for the *why* behind the structure.
+The short map of how this code base is shaped. New backend developers should start at
+[backend-onboarding.md](backend-onboarding.md), the page that points the way, and read this for the
+*why* behind the structure.
 
 ## The triad DAG
 
-All Go code is one module under `backend/`, arranged as the
-`internal/{shared,platform,modules}` triad plus a composition layer and
-process roles. The dependency direction is one-way:
+All Go code is one module under `backend/`, set out as the `internal/{shared,platform,modules}` triad,
+plus a compose layer and process roles. Each layer may depend only on the ones before it:
 
 ```
 shared  →  platform  →  modules  →  compose  →  cmd
 ```
 
-- **`internal/shared/`** — Tier-0 leaves, stdlib-only:
-  `kernel/{ids,events,provenance,principal,values,diffhash}`, `apperrors`
-  (the fixed error-sentinel registry), and `ports/` (the frozen seam
-  interfaces: authz, datasource, mcp, connector, workflow, model,
-  retrieval, extraction, fieldcatalog, jurisdiction).
-- **`internal/platform/`** — technical plumbing that owns no domain:
-  `database` (pool + the `WithWorkspaceTx` workspace-transaction contract) and
-  `database/storekit` (the one spelling of the write shape), `auth` (the
-  one admission point), `events` (outbox relay/subscriber/dedupe),
-  `dbmigrate`, `httperr`, `httpserver`.
-- **`internal/modules/`** — the nineteen bounded capabilities (identity,
-  contacts, deals, activities, approvals, agents, automation, ai, search,
-  capture, comms, consent, privacy, collections, signals, customfields,
-  webhooks, migration; the `de` jurisdiction pack is an
-  extension under `extensions/`, not a module). A
-  module package starts flat (store + mapping + transport + provider in
-  one package) and earns a subpackage only under the
-  module growth policy —
-  e.g. `capture/imap` (protocol adapter), `agents/runner` (independent
-  engine), `identity/internal/policy` (hidden ruleset). A module
-  **never imports a sibling**; every cross-module edge is injected by
-  the composition layer.
-- **`internal/compose/`** — the one composition seam every process role
-  shares: the contract HTTP surface, the composite datasource provider,
-  the MCP registry, and all cross-module wiring. Cross-module
-  orchestration groups live in subpackages under the same growth policy
-  (`compose/briefs`), and the cross-module integration suites live in
-  `compose/integration`; compose subpackages coordinate modules and
-  never durably own a business entity. How it boots and where every
-  cross-module edge is wired: [composition-layer.md](composition-layer.md).
-- **`cmd/{api,worker,migrate}`** — thin process roles.
+Three tools hold the DAG, with no human in the loop: depguard (golangci-lint), go-arch-lint, and the
+fitness tests in `backend/gates/arch_test.go`. The tests take their package and module lists from the
+tree. So a new module comes under the rules as soon as its directory exists, with no list to edit.
 
-`cmd/<role>` is reserved for those **three deployable process-role
-binaries** (ADR-0054/A69 as amended; the A1 stdio `cmd/mcp` is retired
-per SCR-9 — the governed tool surface is served by `cmd/api` at `/mcp`).
-A *developer/CI harness* binary — a tool a
-human or a `make` target runs, not a role that gets deployed — does not
-belong there: it lives **beside the package it serves** (e.g. the AI
-certification report tool at `internal/compose/aicert/reportcmd`, run by
-`make e2e-ai-report`) or in the separate `backend/tools/` module (the
-codegen chain). Two reasons: a harness under `cmd/<role>` would read as
-a fifth deployment role and blur A69's pinned count, and keeping the tool
-next to the code it imports (the `aicert` internals) means it moves and
-versions with that code. The rule of thumb: if it is composed through
-`internal/compose` and meant to run as a server/job, it earns a
-`cmd/<role>`; if it is tooling around one package, it stays with that
-package.
+What each directory owns, and the rule that goes with it:
 
-The DAG is enforced three ways, and deliberately mechanically: depguard
-(golangci-lint), go-arch-lint, and the fitness tests in
-`backend/gates/arch_test.go`, which derive their package and module lists from
-the tree — a new module is enrolled in the rules the moment its
-directory exists, never by editing a list.
+- `internal/shared/`: the leaves of tier 0, which use only the standard library (a test holds this). It
+  holds `kernel/` value packages (`ids`, `events`, `provenance`, `principal`, `values`, `diffhash` and
+  others).
+  - It also holds `apperrors`, the fixed sentinel registry. Add to it only together with the error
+    contract it implements, never for one call site.
+  - And it holds a `ports/` seam interface for each seam (`authz`, `datasource`, `mcp`, `connector`,
+    `workflow`, `model` and others). It also holds the provider code that only adds to them. The `ports/`
+    directory is the list of every seam. Read it before you add one, because a second seam for a
+    question already answered is how drift starts.
+- `internal/platform/`: technical base code that owns no domain.
+  - `database` holds the `pg` pool and the `WithWorkspaceTx` contract for workspace transactions. It is a
+    transaction boundary with a check, failing closed, that a workspace is on the context. It binds no
+    database GUC, and no table has a `workspace_id` column or a policy per row.
+  - `database/storekit` is the one spelling of the audit and outbox write shape, the keyset cursor, and
+    version patches.
+  - `auth` is the one admission point: `Admit` (scope ∧ tier) + object RBAC + the row scope clauses, which
+    include the walk over activity links.
+  - Also here: `events` (outbox relay, subscriber, dedupe), `dbmigrate`, `httperr` (RFC 7807 + wire
+    helpers), `httpserver` (the frame of the server).
+- `internal/modules/`: the bounded features. The directory is the list.
+  [reference/modules.md](../reference/modules.md) describes each module's purpose, spine shape, owned
+  tables and HTTP surface. It also lists the tables compose owns, and each subpackage worth a note. Read
+  it to place a change; do not work it out from the package name.
+  - A module package starts flat (store + mapping + transport + provider in one package). It grows a
+    subpackage only when a named trigger applies, never for looks. Some examples: `capture/imap` (a
+    protocol adapter), `agents/runner` (an engine of its own), `identity/internal/policy` (a private
+    rule set).
+  - A module never imports a sibling; if feature A needs B, compose puts the edge in. A module writes
+    only the tables it owns, declared in its `doc.go` and gated by
+    `backend/gates/tableownership_test.go`. Each module follows one of
+    [the two spine shapes](#the-two-spine-shapes).
+- `internal/compose/`: the compose layer that every process role shares. It holds the contract HTTP
+  surface, the composite `datasource.SystemOfRecordProvider`, and the MCP registry + approvals adapter.
+  It also holds the tests that cross modules (in `compose/integration`, with the shared test frame).
+  - `Server` embeds every module's handler set, and checks that it is a `crmcontracts.ServerInterface`. So a
+    contract operation with no real handler fails at compile time, and does not answer 501 at runtime.
+  - Every edge between modules is put in here (identity's workspace seed ← deals; agents' staging ←
+    approvals). Groups that work across modules each sit in a subpackage under the same rule
+    (`compose/briefs`). A compose subpackage never owns a business record for good.
+  - How it boots, and where every edge is wired: [composition-layer.md](composition-layer.md).
+- `cmd/{api,worker,migrate}`: small process roles (see below).
+- `internal/contracts/`: generated from `backend/api/crm.yaml`. Never edit.
+- `backend/api/crm.yaml`: the OpenAPI 3.1 contract, which has the final word.
+- `backend/migrations/core|custom/`: the two migration folders. The migration runner loads both. `migrations/custom/` belongs to a fork, and upstream never writes there. A fork's own
+  migration goes there. A SQL file under `modules/<name>/custom/` is not in a loaded directory, so it is
+  never applied, and no error says so.
+- `backend/tools/`: the tools that generate code (`contract-overlay`, `gen-stubs`, `gen-agentpolicy`).
+  It is its own Go module, so the code those tools depend on stays out of the product module's `go.mod`.
+- `frontend/`: the Vite and React web UI. It is a static build of its own, served apart from the API
+  binary, which embeds no SPA.
+  - The surface of the API is more than `/v1`. It has the probes for operators (`/healthz`, `/readyz`,
+    `/metrics`), the first boot claim under `/setup/*`, the public buyer edge, and the webhook receivers.
+    When turned on, it also has `/mcp`, with its OAuth authorization and discovery routes.
+  - A proxy set up for `/v1` alone cuts off the rest, so build one from the router.
+    `make frontend-check` and `make dev` exist at the repo root.
+  - Working in here? Read `frontend/AGENTS.md` first, and then the file it opens with:
+    [frontend/src/design-system/README.md](../../frontend/src/design-system/README.md). That is the
+    catalog of every control that already exists (cards, buttons, inputs, fields, badges, tables,
+    menus, dialogs, empty states). Open it before you build anything visible.
+  - Every control a user acts on comes from `frontend/src/design-system/`. A built-in `<select>` fails
+    `make native-controls`, but no check can tell that a new part already exists under another
+    name.
+- `extensions/<name>/`: the stable extension tier. Each unit is its own Go module, and imports only the
+  `backend/pkg/**` surface that a marker allows. Being under `extensions/` is what turns a unit on. The
+  units are the directories under `extensions/`.
+  - `make composition` (run by every build lane) generates the ignored `build/composition/` wiring.
+    `composition/` at the root is the committed plain stub, so bare go commands resolve.
 
-## The tree, tier by tier
+`cmd/<role>` holds only the three binary roles that are deployed: api, worker and migrate. `cmd/api` serves
+the tool surface at `/mcp`. A binary for a developer or for CI sits beside the package it serves. Such a tool is one a human or a
+`make` target runs, not a role that gets deployed. One example is the AI certification
+report tool at `internal/compose/aicert/reportcmd`, run by `make e2e-ai-report`. The tools that generate code sit
+in the separate `backend/tools/` module.
 
-What each directory owns, and the rule that goes with it. The DAG above says which
-way the dependencies point; this says what lives at each level.
+A tool under `cmd/<role>` would read as another deployed role. And keeping the tool next to the code it
+imports (the inside of the `aicert` package) means it moves and versions with that code. The rule: if it is put together
+through `internal/compose` and meant to run as a server or job, it gets a `cmd/<role>`. If it is a tool
+around one package, it stays with that package.
 
-The `backend/internal/{modules,platform,shared}` triad — the DAG is
-`shared → platform → modules → compose → cmd`, enforced three ways
-(depguard, go-arch-lint, `backend/gates/arch_test.go` fitness tests):
-
-- `internal/shared/` — Tier-0 leaves, stdlib-only (test-enforced):
-  `kernel/{ids,events,provenance,principal}`, `apperrors` (the fixed
-  sentinel registry — extend it only alongside the error contract it
-  implements, never for one call site), and
-  the `ports/` seam interfaces (`authz`, `datasource`, `mcp`, `connector`,
-  `workflow`, `model`, `retrieval`, `extraction`, `fieldcatalog`, `jurisdiction`
-  at the time of writing) plus their additive provider mechanics. Read `ports/`
-  itself before adding a seam rather than trusting that list: a seam missing from
-  a page is how a second one gets written for a question already answered.
-- `internal/platform/` — technical plumbing, owns no domain:
-  `database` (pg pool + the `WithWorkspaceTx` workspace-transaction contract:
-  a transaction boundary with a fail-closed check that a workspace is on the
-  context — it binds no database GUC, and no table carries a `workspace_id`
-  column or a row-level policy) +
-  `database/storekit` (the ONE spelling of the audit+outbox write shape,
-  keyset cursors, version patches), `auth` (the ONE admission point:
-  `Admit` (scope ∧ tier) + object RBAC + row-scope clauses incl. the
-  activity link-walk), `events` (outbox relay/subscriber/dedupe),
-  `dbmigrate`, `httperr` (RFC 7807 + wire helpers), `httpserver` (chassis).
-- `internal/modules/` — the bounded capabilities, flat by default per
-  ADR-0054 §3 (store + mapping + transport + provider in one package),
-  growing subpackages only when a named trigger fires (split for a reason,
-  never symmetry). **A module NEVER imports a sibling** — if capability A
-  needs B, compose injects the edge. A module writes only the tables it
-  owns, declared in its `doc.go` and gated by
-  `backend/gates/tableownership_test.go`.
-  Which module owns what — purpose, spine shape, owned tables and HTTP
-  surface, plus the compose-owned tables and the notable subpackages — is
-  the table in [docs/reference/modules.md](../reference/modules.md). Read
-  it to place a change rather than guessing from the package name, and take
-  `internal/modules/` itself as the authority on which capabilities exist:
-  the catalog is editorial, so a directory it has not caught up with is
-  still a module.
-
-  Two sanctioned spine shapes, and ONLY two — don't invent a third. Which they
-  are, and how to choose: [The two spine shapes](#the-two-spine-shapes) below,
-  which is where they are described rather than in two places that can drift.
-- `internal/compose/` — the composition layer every process role shares:
-  the contract HTTP surface (`Server` embeds every module's handler set and
-  asserts `crmcontracts.ServerInterface` itself — a contract operation with
-  no real handler fails that assertion at compile time, not a 501 at
-  runtime), the composite `datasource.SystemOfRecordProvider`, the MCP registry +
-  approvals adapter, and the cross-module integration suites (in
-  `compose/integration`, with the shared harness). Every cross-module
-  edge is injected HERE (identity's workspace seed ← deals; agents'
-  staging ← approvals). Cross-module ORCHESTRATION groups live in
-  subpackages under the same named-trigger growth policy (`compose/briefs`
-  is the pilot); a compose subpackage never durably owns a business
-  entity.
-- `internal/contracts/` — GENERATED from `backend/api/crm.yaml`. Never edit.
-- `backend/api/crm.yaml` — the authoritative OpenAPI 3.1 contract.
-- `backend/migrations/core|custom/` — the ADR-0017 namespaces, and both are
-  directories the migration runner loads. `migrations/custom/` is the fork-owned
-  one: upstream never writes there (ADR-0054 §7). A fork's own migration goes
-  THERE — a SQL file under `modules/<name>/custom/` is not in a loaded directory
-  and is silently never applied.
-- `backend/tools/` — the codegen tool chain (contract-overlay,
-  gen-stubs, gen-agentpolicy); its own Go module so the generators'
-  dependencies stay out of the product module's go.mod.
-- `frontend/` — the Vite/React web UI: a standalone static build served
-  separately from the API binary, which embeds no SPA. The API's own surface is
-  more than `/v1`: the operational probes (`/healthz`, `/readyz`, `/metrics`),
-  first-boot claiming under `/setup/*`, the public buyer edge, the webhook
-  receivers, and — when enabled — `/mcp` with its OAuth authorization and
-  discovery routes. A proxy configured for `/v1` alone strands the rest, so build
-  one from the router rather than from this sentence.
-  `make frontend-check` / `make dev` exist at the repo root.
-  **Working in here? Read `frontend/AGENTS.md` first**, and
-  then the file it opens with:
-  **[frontend/src/design-system/README.md](../../frontend/src/design-system/README.md)
-  is the catalog of every control that already exists** — cards, buttons,
-  inputs, fields, badges, tables, menus, dialogs, empty states. Open it BEFORE
-  building anything visible. Every interactive control comes from
-  `frontend/src/design-system/`; a native `<select>` fails
-  `make native-controls`, but nothing automated can tell
-  that the component you just wrote already existed under another name, which is
-  how this tree has twice grown a second spelling of a card.
-- `extensions/<name>/` — the stable extension tier (ADR-0120): each unit
-  is its own Go module importing ONLY the marker-allowlisted
-  `backend/pkg/**` surface; presence under `extensions/` is the
-  enablement. The vanilla tree's own units are `de` (the German
-  jurisdiction pack — GoBD calendar-year retention floors) and
-  `openchannel` (the reference connector — an anonymous signed inbound
-  edge, a drain job, capture with a merge-key declaration, a transport,
-  seven served governed tools and a screen).
-  Read `extensions/` for the live list rather than trusting this sentence — a
-  list in prose goes stale the first time somebody adds a unit, and it reads
-  no differently when it has. `make composition` (run by every build lane)
-  generates the ignored `build/composition/` wiring; `composition/` at
-  the root is the committed vanilla stub so bare go commands resolve.
-
-To place a new capability: add `internal/modules/<name>/` (flat), give it a
-`doc.go` with a "Tables owned" list, follow one spine shape, and wire any
-cross-module need as a `compose` adapter — never a sibling import.
+To place a new feature: add `internal/modules/<name>/` (flat), and give it a `doc.go` with a
+"Tables owned" list. Follow one spine shape, and wire any need that crosses modules as a `compose`
+adapter, never a sibling import.
 
 ## The two spine shapes
 
-Modules follow one of two sanctioned shapes — don't invent a third:
+Modules follow one of two allowed shapes. Do not make a third:
 
-- **Handlers → Store** (CRUD modules: contacts, deals, activities, …).
-  Transport handlers map contract DTOs and call the store; the store
-  owns the transactional write shape and the RBAC gate at its entry
-  points.
-- **Handlers → Service** (engine modules: approvals, identity). A
-  service object owns multi-step domain logic (decide/redeem,
-  bootstrap/sessions) and drives stores/SQL inside it.
+- **Handlers → Store** (CRUD modules: contacts, deals, activities, …). Transport handlers map contract
+  DTO types and call the store. The store owns the write shape of the transaction, and the RBAC gate at its
+  entry points.
+- **Handlers → Service** (engine modules: approvals, identity). A service object owns domain logic of
+  many steps (decide and redeem, bootstrap and sessions), and drives stores and SQL inside it.
 
 ## The write shape
 
-Every mutation commits **domain row + `audit_log` row + `event_outbox`
-row in one transaction**, spelled once in `platform/database/storekit`
-(`Audit` + `Emit`) and called by every store. Provenance
-(`captured_by`) is stamped from the authenticated principal, never
-accepted from a request body. Publishing is always through the outbox —
-the relay ships committed rows to Redis Streams; no domain code touches
-the bus directly — and consumers wrap handlers in `events.Dedupe`
-because the bus is at-least-once. Every store entry point is RBAC-gated:
-object denial answers 403, a row-scope miss answers 404
-(existence-hiding). The full mechanism — `audit_log`, the outbox
-envelope, the relay, dedupe — is detailed in
-[write-backbone.md](write-backbone.md).
+Every change writes the domain row, an `audit_log` row and an `event_outbox` row in one transaction,
+through `platform/database/storekit` (`Audit` + `Emit`). More: [write-backbone.md](write-backbone.md).
 
 ## Tenancy as structure
 
-An installation holds ONE company (ADR-0061), so no table carries a
-row-level policy. Every module statement still goes through the one
-workspace-transaction helper — the auditable boundary a fitness function
-derived from the live tree holds — and row scope is decided by
-`platform/auth`, not by the database.
+An installation holds one company, so no table has a policy per row. Every module statement still goes
+through the workspace transaction helper. That helper is the boundary an audit can check, held by a
+fitness function that reads the live tree. `platform/auth` decides row scope, not the database.
 
 ## One governed agent surface
 
-The 🟢/🟡 autonomy tier of an action is declared once in the contract
-(`x-mcp-tool`) and enforced **below the transport**: an agent mutation
-over MCP or REST resolves the same tier, stages the same approval when
-🟡, and default-denies any mutating operation carrying no tier.
-Approving takes the authority the effect itself takes; a passport may
-answer on the authority of the human who lent it, bounded by the caps
-they lent and never on the proposal it made itself. An agent never
-exceeds the granting human's live RBAC.
+The 🟢/🟡 autonomy tier of an action is declared once in the contract (`x-mcp-tool`), and checked below
+the transport. An agent change over MCP or REST gets the same tier, and stages the same approval when
+🟡. Any operation that changes data and has no tier is refused by default.
 
-Every operation — core or extension — declares exactly one of `x-mcp-tool`
-or `x-agent-access: human-only`: the latter stays REST/UI-reachable but is
-refused for any Agent (or Buyer) principal before admission, tiering or
-staging ever runs, and never appears in an agent's tool listing. Extensions
-carry the identical vocabulary (`docs/how-to/add-an-extension.md`).
+To approve takes the same rights as the action itself. A passport may answer on the rights of the human
+who granted it. Those rights stay inside the caps that human set, and never cover the proposal the
+passport made itself. An agent never goes past the current RBAC of the human who granted it.
+
+Every operation, core or extension, declares one of `x-mcp-tool` or `x-agent-access: human-only`, never
+both. A `human-only` operation can still be reached through REST and the UI. But it is refused for any
+Agent (or Buyer) principal before admission, tier checks or staging run. It never shows up in an agent's
+tool list. Extensions use the same vocabulary (`docs/how-to/add-an-extension.md`).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Sparkles, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
@@ -10,13 +13,18 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   REVIEW_TEMPLATES_KEY,
   type ReviewQuestion,
@@ -73,7 +81,7 @@ export function ReviewTemplateEditor({
     setQuestions((current) => {
       const next = [...current];
       const [moved] = next.splice(index, 1);
-      next.splice(index + by, 0, moved);
+      if (moved) next.splice(index + by, 0, moved);
       return next;
     });
   }
@@ -92,10 +100,9 @@ export function ReviewTemplateEditor({
       open
       onClose={onClose}
       labelledBy={titleId}
-      placement="right"
-      size="wide"
+      intent="drawer"
     >
-      <div className="drawer-head">
+      <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {template.label}
         </Heading>
@@ -106,8 +113,8 @@ export function ReviewTemplateEditor({
               : "reviewTemplates.drawer.lost",
           )}
         </p>
-      </div>
-      <div className="drawer-body">
+      </DrawerHead>
+      <DrawerBody>
         <Callout tone="info" title={t("reviewTemplates.prefillCallout.title")}>
           {t("reviewTemplates.prefillCallout.body")}
         </Callout>
@@ -147,8 +154,8 @@ export function ReviewTemplateEditor({
           {t("reviewTemplates.addQuestion")}
         </Button>
         <ErrorLine error={save.error} />
-      </div>
-      <div className="drawer-foot rt-foot">
+      </DrawerBody>
+      <DrawerFoot className="rt-foot">
         <ReviewTemplateSummary questions={questions} />
         {dirty && (
           <span className="t-caption">{t("reviewTemplates.unsaved")}</span>
@@ -180,7 +187,7 @@ export function ReviewTemplateEditor({
             {t("reviewTemplates.saveQuestions")}
           </Button>
         </span>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

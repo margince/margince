@@ -19,17 +19,19 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { routeHash } from "../app/router";
 import type { BoardDeal } from "../design-system/composed";
 import { DealMailChip } from "../design-system/dealcard";
 import { EmailReference } from "../design-system/emailreference";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListColumn } from "../design-system/listtable";
+import { QueryStates } from "../design-system/querystates";
 import { formatElapsed } from "../format/now";
 import { type Translator, useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { routeHash } from "../lib/router";
 import { boardMail } from "./boarddeal";
-import { QueryStates, throwProblem } from "./common";
 import "./dealmailaside.css";
+import { useNow } from "../format/now";
 
 type Activity = components["schemas"]["Activity"];
 type Deal = components["schemas"]["Deal"];
@@ -46,20 +48,18 @@ function useDealMail(dealId: string) {
     // sent reads as a broken send.
     queryKey: ["activities", "deal", dealId, "mail-aside"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: {
-            entity_type: "deal",
-            entity_id: dealId,
-            kind: "email",
-            limit: MAIL_ASIDE_ROWS,
+      return unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: {
+              entity_type: "deal",
+              entity_id: dealId,
+              kind: "email",
+              limit: MAIL_ASIDE_ROWS,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
   });
 }
@@ -75,7 +75,7 @@ export function DealMailAside({
   const t = useT();
   const { locale } = useLocale();
   const query = useDealMail(dealId);
-  const now = Date.now();
+  const now = useNow(60_000);
   const when = (mail: Activity) => {
     const ago = formatElapsed(
       now - new Date(mail.occurred_at).getTime(),

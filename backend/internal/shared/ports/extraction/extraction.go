@@ -21,12 +21,21 @@ package extraction
 // Omitted is true. A non-omitted field always carries the evidence that grounds
 // it (SourceQuote/PageOrSection/Confidence) — GATE-AI-1's evidence-or-omit
 // invariant: never a guessed value.
+// The tags SPELL THE KEYS ALREADY STORED, which are Go's default field names:
+// `attachment_extraction.fields` is full of rows written that way, and
+// compose/dealscoutsql.go reads them by key. Tagging in lower_snake would orphan
+// every stored row.
+//
+// Explicit is the point rather than the spelling: untagged, a rename silently changed
+// what those predicates look for, with no compiler error and no failing test.
+//
+//nolint:tagliatelle // the keys are already in attachment_extraction.fields, written before anything tagged this; house style here would orphan every stored row
 type ExtractedField struct {
-	Field         string
-	Value         string
-	SourceQuote   string
-	PageOrSection string
-	Confidence    string
-	Omitted       bool
-	OmittedReason string
+	Field         string `json:"Field"`
+	Value         string `json:"Value"`
+	SourceQuote   string `json:"SourceQuote"`
+	PageOrSection string `json:"PageOrSection"`
+	Confidence    string `json:"Confidence"`
+	Omitted       bool   `json:"Omitted"`
+	OmittedReason string `json:"OmittedReason"`
 }

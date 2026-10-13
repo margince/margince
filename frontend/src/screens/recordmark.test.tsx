@@ -8,12 +8,8 @@ import { RecordShell } from "../app/testing/recordshell.testkit";
 import { meshOf, meshStyle } from "../design-system/avatarmesh";
 import { LocaleProvider } from "../i18n";
 import { CompaniesScreen, CompanyScreen } from "./companies";
-import {
-  company,
-  company360,
-  jsonResponse,
-  stubFetch,
-} from "./company.fixtures";
+import { company, company360, jsonResponse } from "./company.fixtures";
+import { stubFetch } from "./company.testkit";
 import { mount, view } from "./contactpage.testkit";
 import { WriteToHost } from "./writeto";
 

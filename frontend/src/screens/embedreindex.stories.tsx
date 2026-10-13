@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { EmbedReindexCard } from "./embedreindex";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -96,6 +96,30 @@ export const UpToDateRebuildAvailable: Story = {
         <EmbedReindexCard />
       </StoryProviders>
     );
+  },
+};
+
+// A rebuild re-embeds every record, so its confirm is the danger one.
+export const RebuildConfirm: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /embeddings/reindex/status": () => jsonResponse(STATUS_IDLE),
+      "GET /embeddings/reindex/preview": () => jsonResponse(PREVIEW),
+    });
+    return (
+      <StoryProviders>
+        <EmbedReindexCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Rebuild index",
+      }),
+    );
+    await screen.findByText(/34,500/);
   },
 };
 

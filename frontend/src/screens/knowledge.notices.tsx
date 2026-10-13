@@ -8,7 +8,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 // What the document-sets card says about ITSELF: a set being re-read, a file it
 // could not read, and the files a drop left behind. None of them is content —
 // every one is a claim about the surface. A write the server refused is the
-// shared notice in `common.tsx`, because every card in the product has one.
+// shared notice in `querystates.tsx`, because every card in the product has one.
 
 /** A set being re-read has nothing for the reader to do but wait, and saying so
  *  is different from saying it is not ready. */
@@ -17,21 +17,6 @@ export function ReindexingNotice() {
   return (
     <Callout kind="event" title={t("knowledge.reindexingTitle")}>
       {t("knowledge.reindexing")}
-    </Callout>
-  );
-}
-
-/** The reason a failed ingest carries. A set quietly short of a file nobody can
- *  name answers worse than an empty one, because it still answers. */
-export function IngestFailure({ detail }: Readonly<{ detail: string }>) {
-  const t = useT();
-  return (
-    <Callout
-      kind="event"
-      tone="danger"
-      title={t("knowledge.ingestDetailTitle")}
-    >
-      {detail}
     </Callout>
   );
 }

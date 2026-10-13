@@ -5,7 +5,7 @@
 
 package gates
 
-// What the deal-amount census's ROOTS are worth.
+// What the deal-amount census's roots are worth.
 //
 // TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict sweeps `internal` and
 // nothing else, which is a claim as much as a configuration: every statement

@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { TableScroll } from "../design-system/atoms";
+import { useState } from "react";
+import { Badge, Button, TableScroll } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { RecordTabs } from "../design-system/recordtabs";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { ImportColumn, ImportProfile } from "./importtypes";
+import { ColumnGuideButton } from "./import.guide";
+import { ImportRefusal } from "./import.notices";
+import type { ImportWizardState, WizardFile } from "./importflow";
+import type {
+  ImportColumn,
+  ImportFormat,
+  ImportFormatColumn,
+  ImportObject,
+} from "./importtypes";
 import { DONT_IMPORT } from "./importtypes";
 
 // The mapping surface (IEM-AC-OPEN-2): one row per column of the uploaded file,
@@ -21,12 +32,21 @@ import { DONT_IMPORT } from "./importtypes";
 // here as "don't import" rather than as a guess the human must first notice.
 
 export function ImportMappingTable({
-  profile,
+  columns,
+  rowsProfiled,
+  targets,
+  file,
   mapping,
   locked,
   onChange,
 }: Readonly<{
-  profile: ImportProfile;
+  columns: readonly ImportColumn[];
+  rowsProfiled: number;
+  // An option's value is the key the mapping sends (`cf_tier`); its text is
+  // the label the screen shows (`Tier`).
+  targets: readonly ImportFormatColumn[];
+  /** The file the targets belong to, named in a chosen field's guide. */
+  file: string;
   mapping: Record<string, string>;
   // While the mapping is being validated it stops accepting changes: a choice
   // made now cannot reach the request already in flight, and a table showing a
@@ -38,20 +58,17 @@ export function ImportMappingTable({
   const { locale } = useLocale();
   const options = [
     { value: DONT_IMPORT, label: t("import.dontImport") },
-    ...profile.targets.map((target) => ({ value: target, label: target })),
+    ...targets.map((target) => ({
+      value: target.name,
+      label: target.label ?? target.name,
+    })),
   ];
 
   return (
     <div className="import__mapping">
       <p className="import__hint t-sub">
-        {t("import.profiled", {
-          rows: formatNumber(profile.rows_profiled, locale),
-        })}
+        {t("import.profiled", { rows: formatNumber(rowsProfiled, locale) })}
       </p>
-      {/* The fifth screen to have written this box by hand. `.import__scroll`
-          was `overflow-x: auto` and nothing else: no tab stop and no announced
-          name, so a keyboard reader could not reach the columns past the right
-          edge at all. */}
       <TableScroll label={t("import.mappingTable")}>
         <table className="import__table">
           <thead>
@@ -63,35 +80,44 @@ export function ImportMappingTable({
             </tr>
           </thead>
           <tbody>
-            {profile.columns.map((column) => (
-              <tr key={column.header}>
-                <th scope="row" className="import__colName">
-                  {column.header}
-                </th>
-                <td className="import__fill">{fillLabel(column)}</td>
-                <td className="import__samples">
-                  {column.samples.length > 0 ? (
-                    column.samples.join(", ")
-                  ) : (
-                    <span className="import__empty">
-                      {t("import.noSamples")}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <Select
-                    options={options}
-                    value={mapping[column.header] ?? DONT_IMPORT}
-                    onChange={(target) => onChange(column.header, target)}
-                    disabled={locked}
-                    placeholder={t("import.dontImport")}
-                    aria-label={t("import.destinationFor", {
-                      column: column.header,
-                    })}
-                  />
-                </td>
-              </tr>
-            ))}
+            {columns.map((column) => {
+              const chosen = mapping[column.header] ?? DONT_IMPORT;
+              const target = targets.find((one) => one.name === chosen);
+              return (
+                <tr key={column.header}>
+                  <th scope="row" className="import__colName">
+                    {column.header}
+                  </th>
+                  <td className="import__fill">{fillLabel(column)}</td>
+                  <td className="import__samples">
+                    {column.samples.length > 0 ? (
+                      column.samples.join(", ")
+                    ) : (
+                      <span className="import__empty">
+                        {t("import.noSamples")}
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="import__target">
+                      <Select
+                        options={options}
+                        value={chosen}
+                        onChange={(next) => onChange(column.header, next)}
+                        disabled={locked}
+                        placeholder={t("import.dontImport")}
+                        aria-label={t("import.destinationFor", {
+                          column: column.header,
+                        })}
+                      />
+                      {target ? (
+                        <TargetMarks target={target} file={file} />
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </TableScroll>
@@ -99,9 +125,149 @@ export function ImportMappingTable({
   );
 }
 
+// What a chosen field is beyond its name. It may be a link to another record
+// or one of this installation's own fields, and it has a guide to its content.
+function TargetMarks({
+  target,
+  file,
+}: Readonly<{ target: ImportFormatColumn; file: string }>) {
+  const t = useT();
+  return (
+    <>
+      {isLink(target) ? (
+        <Badge tone="info">{t("import.map.link")}</Badge>
+      ) : null}
+      {target.custom ? (
+        <Badge tone="accent">{t("import.guide.custom")}</Badge>
+      ) : null}
+      <ColumnGuideButton column={target} file={file} />
+    </>
+  );
+}
+
+// A target that names another record by its ref. The file's own `ref` is its
+// key, not a link.
+function isLink(target: ImportFormatColumn): boolean {
+  return target.name !== "ref" && target.name.endsWith("_ref");
+}
+
 // fillLabel renders the rate as a percentage of the rows actually profiled.
 // Rounded to whole numbers: the decision it informs is "is this column worth
 // mapping", and nobody decides that differently at 4.2% than at 4%.
 function fillLabel(column: ImportColumn): string {
   return `${Math.round(column.fill_rate * 100)}%`;
+}
+
+type TypedFile = Readonly<{ file: WizardFile; object: ImportObject }>;
+
+// The typed files in the order the engine lands them, read from the format.
+function typedInOrder(
+  wizard: ImportWizardState,
+  order: ImportFormat["order"],
+): TypedFile[] {
+  return order.flatMap((object) =>
+    wizard.files
+      .filter((file) => wizard.objects[file.file] === object)
+      .map((file) => ({ file, object })),
+  );
+}
+
+function unmapped(file: WizardFile, mapping: Record<string, string>): number {
+  return file.columns.filter(
+    (column) => (mapping[column.header] ?? DONT_IMPORT) === DONT_IMPORT,
+  ).length;
+}
+
+/**
+ * One tab per typed file, in import order, each with the count of columns it
+ * leaves out. The targets are the format's columns for the file's type, so a
+ * custom field is offered by its label and sent by its key.
+ */
+export function MapStep({
+  wizard,
+  format,
+}: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
+  const t = useT();
+  const typed = typedInOrder(wizard, format.order);
+  const [open, setOpen] = useState(typed[0]?.file.file ?? "");
+  const current = typed.find((entry) => entry.file.file === open) ?? typed[0];
+  if (!current) return null;
+  const name = current.file.file;
+  const mapping = wizard.mapping[name] ?? {};
+  const targets =
+    format.files.find((file) => file.object === current.object)?.columns ?? [];
+  const stage = wizard.stage;
+  const refused = stage.error ?? wizard.retest.error;
+  // A test run that stopped left the run a draft, with the reason on it.
+  const stopped =
+    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
+  return (
+    <div className="import">
+      <RecordTabs
+        label={t("import.map.tabs")}
+        options={typed.map((entry) => entry.file.file)}
+        value={name}
+        onChange={setOpen}
+        labels={Object.fromEntries(
+          typed.map((entry) => [
+            entry.file.file,
+            t(`import.object.${entry.object}`),
+          ]),
+        )}
+        counts={Object.fromEntries(
+          typed.flatMap((entry) => {
+            const left = unmapped(
+              entry.file,
+              wizard.mapping[entry.file.file] ?? {},
+            );
+            return left > 0 ? [[entry.file.file, left]] : [];
+          }),
+        )}
+      />
+      <p className="import__hint t-sub">
+        {t("import.map.lead", {
+          file: name,
+          type: t(`import.object.${current.object}`),
+        })}
+      </p>
+      <ImportMappingTable
+        key={name}
+        columns={current.file.columns}
+        rowsProfiled={current.file.rowsProfiled}
+        targets={targets}
+        file={name}
+        mapping={mapping}
+        locked={stage.isPending}
+        onChange={(column, target) =>
+          wizard.setColumnTarget(name, column, target)
+        }
+      />
+      <div className="import__actions">
+        <Button variant="ghost" onClick={() => wizard.goTo("files")}>
+          {t("import.wizard.back")}
+        </Button>
+        <Button
+          variant="primary"
+          pending={stage.isPending}
+          busyLabel={t("import.map.running")}
+          onClick={() => {
+            if (wizard.profile) stage.mutate(wizard.stageInput(wizard.profile));
+          }}
+        >
+          {t("import.map.run")}
+        </Button>
+      </div>
+      {refused ? (
+        <ImportRefusal title={t("import.map.stageFailed")} error={refused} />
+      ) : stopped ? (
+        <Callout
+          tone="danger"
+          kind="standing"
+          title={t("import.map.stageFailed")}
+        >
+          {stopped}
+        </Callout>
+      ) : null}
+    </div>
+  );
 }

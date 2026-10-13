@@ -10,7 +10,7 @@ package aicert
 
 import (
 	"context"
-	"sort"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -46,7 +46,7 @@ func PresetRungs(ctx context.Context, routing ai.RoutingConfig, corpus []Scenari
 	for task := range byTask {
 		tasks = append(tasks, task)
 	}
-	sort.Slice(tasks, func(i, j int) bool { return tasks[i] < tasks[j] })
+	slices.Sort(tasks)
 	var states []PresetRungState
 	for _, task := range tasks {
 		if len(boundLadder(routing, task)) == 0 {

@@ -9,6 +9,7 @@ package attention
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -55,20 +56,55 @@ func TestACaptureConcernNamesTheConditionAndTheMailbox(t *testing.T) {
 	if first.Kind == nil || *first.Kind != "reauth_required" {
 		t.Errorf("kind = %v, want reauth_required", first.Kind)
 	}
-	// The mailbox the reader knows: the account label where one was
-	// recorded, the provider where none was.
 	if first.Detail == nil || *first.Detail != "rep@example.com" {
 		t.Errorf("detail = %v, want the account label", first.Detail)
 	}
 	if first.Id != labelled.String() {
 		t.Errorf("id = %q, want the connection id", first.Id)
 	}
-	second := (*out.CaptureHealth)[1]
-	if second.Detail == nil || *second.Detail != "imap" {
-		t.Errorf("unlabelled detail = %v, want the provider as fallback", second.Detail)
-	}
-	if len(first.Actions)+len(second.Actions) != 0 {
+	if len(first.Actions)+len((*out.CaptureHealth)[1].Actions) != 0 {
 		t.Error("a capture card promises no verbs")
+	}
+}
+
+// The client names a connection with no account label from its typed provider.
+// No field a reader is shown carries the provider id.
+func TestAnUnlabelledConnectionShowsNoProviderID(t *testing.T) {
+	item := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "sync_failing", Provider: "imap"})
+	if item.Detail != nil || item.CauseLabel != nil {
+		t.Errorf("detail = %v, cause_label = %v, want both absent so the client names the provider",
+			item.Detail, item.CauseLabel)
+	}
+	if item.Connection == nil || item.Connection.Provider != "imap" {
+		t.Fatalf("connection = %+v, want the provider id typed for the client to name", item.Connection)
+	}
+	if item.CauseRef == nil || strings.Contains(*item.CauseRef, "imap") {
+		t.Errorf("cause_ref = %v, want the connection's own identity, not its provider", item.CauseRef)
+	}
+}
+
+// Two unlabelled connections of one provider are two things to reconnect, so
+// their identities differ even though nothing a reader sees does.
+func TestTwoUnlabelledConnectionsOfOneProviderAreTwoCauses(t *testing.T) {
+	a := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "disconnected", Provider: "gmail"})
+	b := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "disconnected", Provider: "gmail"})
+	if a.CauseRef == nil || b.CauseRef == nil || *a.CauseRef == *b.CauseRef {
+		t.Errorf("cause_refs %v and %v, want two distinct identities", a.CauseRef, b.CauseRef)
+	}
+}
+
+func TestACalendarConnectionIsNeverCalledAMailbox(t *testing.T) {
+	calendar := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gcal", Calendar: true})
+	mailbox := captureItem(CaptureConcern{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"})
+	if calendar.Connection == nil || calendar.Connection.Medium != crmcontracts.AttentionConnectionFactsMediumCalendar {
+		t.Errorf("calendar connection = %+v, want medium calendar", calendar.Connection)
+	}
+	if mailbox.Connection == nil || mailbox.Connection.Medium != crmcontracts.AttentionConnectionFactsMediumMailbox {
+		t.Errorf("mail connection = %+v, want medium mailbox", mailbox.Connection)
+	}
+	row := classifySystem(calendar, fixedClock()).item
+	if row.Connection == nil || row.Connection.Medium != crmcontracts.AttentionConnectionFactsMediumCalendar {
+		t.Errorf("worklist row connection = %+v, want the attention item's facts carried", row.Connection)
 	}
 }
 

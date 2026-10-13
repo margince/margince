@@ -2,29 +2,34 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 
 // Who is answering an erasure request, on the one field that says so.
 //
-// A `Select` whose value matches no option paints its placeholder, and with no
-// placeholder a non-breaking space in placeholder styling — which is exactly
-// what the disabled unassigned em dash looks like. So a request that IS assigned
-// read as unassigned whenever the roster could not name the holder, and the next
-// officer to open it reassigned statutory work off the contact doing it.
+// A `Select` whose value matches no option paints a blank face, so an assigned
+// request whose holder could not be named read as unassigned.
 //
-// The roster fails to name an assignee in four different ways, and they are four
-// different facts: the walk has not answered yet, it failed or stopped short of
-// the workspace, it finished without them (`/users` excludes archived members),
-// or it carries them and this picker withholds them — an agent seat cannot hold
+// The roster walk still builds the picker's OFFERED list, but the assignee's
+// own name is a separate by-id read (`GET /users/names`) with its own
+// pending/settled/failed states. It owes nothing to the walk's budget, which
+// is what lets it name a holder even while the offered list is still partial.
+// Naming can still come up short in its own right: the read has not answered
+// yet, it settles on nothing for this id (archived, or never held), or it
+// names a colleague the picker still withholds: an agent seat cannot hold
 // the row scope a subject request needs.
 
 type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
@@ -43,6 +48,7 @@ function dsrAssignedTo(assigneeId: string): DataSubjectRequest {
     status: "open",
     assignee_id: assigneeId,
     due_at: "2026-08-01T00:00:00Z",
+    due_overridden: false,
     created_at: "2026-07-01T00:00:00Z",
   };
 }
@@ -86,12 +92,37 @@ function endlessRoster(): RosterServer {
   };
 }
 
-/** A read that has not answered, which is every walk for its first moments. */
-function unansweredRoster(): RosterServer {
+// What GET /users/names answers for the assignee's own id, the by-id read
+// unofferedAssignee resolves through, apart from the roster walk above. A
+// read that never answers proves the field's own loading state; an id the map
+// omits is a settled absence, same as an archived seat.
+type NameServer = () => Promise<Response>;
+
+function namesOf(byId: Readonly<Record<string, string>>): NameServer {
+  return async () =>
+    json({
+      data: Object.entries(byId).map(
+        ([id, display_name]): components["schemas"]["SeatName"] => ({
+          id,
+          display_name,
+        }),
+      ),
+    });
+}
+
+function unansweredNames(): NameServer {
   return () => new Promise<Response>(() => {});
 }
 
-function stub(dsr: DataSubjectRequest, roster: RosterServer) {
+function refusedNames(): NameServer {
+  return async () => json({ title: "Forbidden", status: 403 }, 403);
+}
+
+function stub(
+  dsr: DataSubjectRequest,
+  roster: RosterServer,
+  names: NameServer = namesOf({}),
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -101,18 +132,20 @@ function stub(dsr: DataSubjectRequest, roster: RosterServer) {
         "https://test.local",
       );
       if (url.pathname.endsWith("/me")) {
-        // The queue reads on `privacy_request:read`: its rows name the contacts
-        // who exercised an Art. 15/17 right, so a reader needs that grant to
-        // reach any of the rows this file is about.
+        // The queue reads on `privacy_request:read`, and the picker is offered
+        // only to a seat that may work the request.
         return json(
           meFixture({
             roles: ["admin"],
-            allow: { privacy_request: ["read"] },
+            allow: { privacy_request: ["read", "update"] },
           }),
         );
       }
       if (url.pathname.endsWith("/data-subject-requests")) {
         return json({ data: [dsr], page: PAGE });
+      }
+      if (url.pathname.endsWith("/users/names")) {
+        return names();
       }
       if (url.pathname.endsWith("/users")) {
         return roster(url.searchParams.get("cursor"));
@@ -158,28 +191,34 @@ afterEach(() => {
 
 describe("an assignee the picker's own list does not offer", () => {
   it("names the holder a finished roster does not carry, rather than reading as unassigned", async () => {
-    // The holder was deactivated: `/users` excludes archived members, so the id
-    // is absent even though the walk reached the end of the workspace.
+    // "u-gone" settles on nothing at `/users/names`: an archived seat, or an
+    // id this installation never held. A deactivated colleague is still named.
     stub(dsrAssignedTo("u-gone"), oneRosterPage([member("u1", "Dana DPO")]));
 
     const { user, picker } = await openAssignee();
 
     expect(picker).toHaveTextContent(en["ref.notInRoster"]);
-    // The em dash is the face of a request assigned to NOBODY. This one is
-    // assigned, and a DPO who reads it as unassigned reassigns the work off the
-    // contact doing it with the statutory clock running.
-    expect(picker).not.toHaveTextContent("—");
+    // A DPO who reads an assigned request as unassigned reassigns the work off
+    // the colleague doing it with the statutory clock running.
+    expect(picker).not.toHaveTextContent(en["notice.unassigned"]);
 
-    // Legible without being offered, exactly as the unassigned entry is:
-    // re-choosing the holder this request already has changes nothing.
+    // Legible without being offered: re-choosing the holder changes nothing.
     await user.click(picker);
     expect(
       screen.getByRole("option", { name: en["ref.notInRoster"] }),
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("says the name is still coming while the walk is still running", async () => {
-    stub(dsrAssignedTo("u-gone"), unansweredRoster());
+  it("says the name is still coming while its own read is still running", async () => {
+    // The picker's OFFERED list settles fine; it is the assignee's own by-id
+    // name read (GET /users/names) that has not answered, and that read is
+    // what this field waits on; the roster walk beside it is a separate
+    // question.
+    stub(
+      dsrAssignedTo("u-gone"),
+      oneRosterPage([member("u1", "Dana DPO")]),
+      unansweredNames(),
+    );
 
     const { picker } = await openAssignee();
 
@@ -187,31 +226,61 @@ describe("an assignee the picker's own list does not offer", () => {
     // answering a statutory request, made on the evidence of nothing having
     // arrived yet.
     expect(picker).toHaveTextContent(en["common.loading"]);
-    expect(picker).not.toHaveTextContent("—");
+    expect(picker).not.toHaveTextContent(en["notice.unassigned"]);
   });
 
-  it("says the name did not load when the walk stopped short of the workspace", async () => {
-    stub(dsrAssignedTo("u-far"), endlessRoster());
+  it("says the name failed to load, never that the holder departed, when the read is refused", async () => {
+    // A 403 excludes nobody. Reading it as a settled absence reports the
+    // holder as gone on the evidence of a refusal rather than a name that
+    // never arrived, the same confusion the unanswered-read case above
+    // guards against, on the failed-read side of it.
+    stub(
+      dsrAssignedTo("u-gone"),
+      oneRosterPage([member("u1", "Dana DPO")]),
+      refusedNames(),
+    );
 
     const { picker } = await openAssignee();
 
-    // A walk that ran out of pages has answered nothing about this id, so it may
-    // not be spelled as a departure — and the field says the list behind it is
-    // only part of one.
+    await within(screen.getByRole("dialog")).findByText(
+      en["ref.nameLoadFailed"],
+    );
     expect(picker).toHaveTextContent(en["ref.nameLoadFailed"]);
+    expect(picker).not.toHaveTextContent(en["ref.notInRoster"]);
+  });
+
+  it("names an assignee even while the offered list is still a partial one", async () => {
+    // The by-id read that names the assignee is independent of the roster walk
+    // that builds the offered list: a walk that stopped short of the workspace
+    // still leaves this field able to say who holds the request, which
+    // `state.partial` reports as a fact about the OPTIONS, not about the name
+    // above them.
+    stub(
+      dsrAssignedTo("u-far"),
+      endlessRoster(),
+      namesOf({ "u-far": "Fara Nolan" }),
+    );
+
+    const { picker } = await openAssignee();
+
+    expect(
+      await within(screen.getByRole("dialog")).findByText("Fara Nolan"),
+    ).toBeInTheDocument();
+    expect(picker).toHaveTextContent("Fara Nolan");
     expect(await screen.findByText(en["state.partial"])).toBeInTheDocument();
   });
 
   it("names an agent holder by their own name, while still refusing to offer one", async () => {
     // An agent seat cannot hold the row scope a subject request needs, so the
     // picker never offers one — but a request already assigned to one is a fact
-    // the field has to be able to state, and the roster can name it.
+    // the field has to be able to state, and the by-id read can name it.
     stub(
       dsrAssignedTo("u-bot"),
       oneRosterPage([
         member("u1", "Dana DPO"),
         member("u-bot", "Erasure Runner", true),
       ]),
+      namesOf({ "u-bot": "Erasure Runner" }),
     );
 
     const { user, picker } = await openAssignee();

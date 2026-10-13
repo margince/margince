@@ -16,7 +16,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 
 // One thread of a Deal Room's conversation, and the composer that opens
 // another: what was said, by whom and when, the reply under it, and the verbs
@@ -153,7 +153,7 @@ function ThreadRow({
               onClick={() => {
                 const run = verbs.reply;
                 if (run) {
-                  act("reply", () => run(thread.id, reply.trim()));
+                  void act("reply", () => run(thread.id, reply.trim()));
                 }
               }}
             >
@@ -166,7 +166,7 @@ function ThreadRow({
                 onClick={() => {
                   const run = verbs.resolve;
                   if (run) {
-                    act("resolve", () => run(thread.id));
+                    void act("resolve", () => run(thread.id));
                   }
                 }}
               >

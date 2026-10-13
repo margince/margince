@@ -65,8 +65,7 @@ func (e *RecordRefusedError) Unwrap() error { return e.Cause }
 // not one — so a caller reading a class never has to know which error shape it
 // was handed.
 func RefusalOf(err error) RecordRefusal {
-	var refused *RecordRefusedError
-	if errors.As(err, &refused) {
+	if refused, ok := errors.AsType[*RecordRefusedError](err); ok {
 		return refused.Refusal
 	}
 	return ""

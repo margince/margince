@@ -62,7 +62,7 @@ export function LearningsPanel({
               // index says the opposite to anybody reading it later. The first
               // citation is present on every learning — one that cites nothing
               // is refused before it is stored.
-              key={`${item.citations[0].subject_id}-${item.kind}`}
+              key={`${item.citations[0]?.subject_id}-${item.kind}`}
               learning={item}
             />
           ))

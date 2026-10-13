@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -291,5 +292,28 @@ func TestACalmInstallationReportsEmptyListsNotNull(t *testing.T) {
 	var sweeps []json.RawMessage
 	if err := json.Unmarshal(report["sweeps"], &sweeps); err != nil || len(sweeps) != len(capture.Sweeps()) {
 		t.Errorf("sweeps = %s, want one entry per pass even before any has run", report["sweeps"])
+	}
+}
+
+// The capture lane raises rows for calendars too, and a calendar row titled as
+// a mailbox sends the reader to fix the wrong thing.
+func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
+	e := integration.Setup(t)
+	for _, provider := range []string{"gmail", "gcal", "graphcal", "imap"} {
+		e.WsExec(t, `INSERT INTO capture_connection (provider, user_id, status)
+			VALUES ($1, $2, 'reauth_required')`, provider, e.Rep1)
+	}
+	seam := attentionCaptureHealth{registry: captureHealthRegistry(InstallationDB(e.Pool))}
+	concerns, err := seam.CaptureConcerns(e.As(e.Rep1, nil, principal.Permissions{}))
+	if err != nil {
+		t.Fatalf("reading capture concerns: %v", err)
+	}
+	calendars := map[string]bool{}
+	for _, concern := range concerns {
+		calendars[concern.Provider] = concern.Calendar
+	}
+	want := map[string]bool{"gmail": false, "gcal": true, "graphcal": true, "imap": false}
+	if !maps.Equal(calendars, want) {
+		t.Errorf("calendar flag by provider = %v, want %v", calendars, want)
 	}
 }

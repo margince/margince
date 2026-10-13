@@ -40,16 +40,12 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// separately files one message under three different times, and the reply
 	// event then claims to describe an activity it disagrees with. fields is a
 	// value copy, so settling it here settles it for every one of them.
-	if fields.Kind == meetingKind && s.resolveInvitation != nil {
-		id, found, err := s.resolveInvitation(ctx, tx, rec.NaturalKey, rec.Raw)
-		if err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if found {
-			return datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}, false, counterpartyDecision{}, nil
-		}
+	invited, found, err := s.invitationAlreadyFiled(ctx, tx, rec, fields)
+	if err != nil || found {
+		return invited, false, counterpartyDecision{}, err
 	}
 	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
 	// Whose credential carried this record, asked ONCE and carried to both the
 	// birth decision and this seat's import row — the two readers of it, and the
 	// same argument the birth decision makes for itself below.
@@ -174,6 +170,11 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
+		// Before this seat's own import and participant rows: the claim asks who
+		// the STORED row names as sender, and this capture is about to add itself.
+		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
@@ -223,27 +224,12 @@ func (s *Sink) finishNewActivity(
 	// when staging ran ahead of that gate. And a replayed message writes no
 	// second copy: every pull minted fresh keys and then skipped the insert, so
 	// a routine backfill left an unreferenced object per attachment per pass.
-	// A thread the classifier has already judged private stores no files at
-	// all. Decided here, before staging, because this is the last point where
-	// the bodies are still only in memory: once stageParts has run they are in
-	// the object store, and the raw original points at them rather than
-	// carrying them.
-	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
+	// A private message stores no bytes, only the files' names. Decided here,
+	// before staging, because this is the last point where the bodies are
+	// still only in memory: once stageParts has run they are in the object
+	// store, and the raw original points at them rather than carrying them.
+	rec, err := s.keepParts(ctx, tx, id, rec, fields)
 	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if private {
-		var withheld int
-		rec, withheld = stripPersonalParts(rec)
-		if err := s.personalPartsWithheld(ctx, tx, rec, withheld, verdict); err != nil {
-			return counterpartyDecision{}, err
-		}
-	}
-	staged, err := s.stageParts(ctx, rec)
-	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if err := s.recordParts(ctx, tx, id, rec, fields, staged); err != nil {
 		return counterpartyDecision{}, err
 	}
 	if err := s.logPartDrops(ctx, tx, rec); err != nil {
@@ -254,7 +240,7 @@ func (s *Sink) finishNewActivity(
 	// owner is known — every consumer downstream sees an activity whose
 	// captured_by reads `connector:gmail` and cannot recover the human behind
 	// it. The participant rows are the record of that fact.
-	if err := stampCaptureParticipants(ctx, tx, id, actorUserID(ctx), fields.Kind, fields.Direction, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, actorUserID(ctx), fields, rec.Counterparty); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// Everyone else who was in it — the CCs, the meeting's organizer and
@@ -265,6 +251,10 @@ func (s *Sink) finishNewActivity(
 	// attendees. On anything inbound it is the sender's text.
 	if err := StampFurtherParticipants(ctx, tx, id, fields.Kind, fields.ChannelProvider,
 		ParticipantListAttested(rec), rec.Participants); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := StampSeatsPastTheCap(ctx, tx, id, fields.Kind,
+		ParticipantListAttested(rec), rec.WithheldParties); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// And the names those rows just recorded, for an attendee who is ALREADY a
@@ -436,8 +426,10 @@ func (s *Sink) upsertActivity(
 // defaultOccurredAt fills a provider payload that carried no timestamp:
 // capture time is the honest fallback — better a coarse "when we saw
 // it" than a zero time sorting the record to the beginning of history.
+// A stamp outside the storable range is no timestamp either: no zone can
+// render it.
 func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() {
+	if occurredAt.IsZero() || !datasource.InstantInRange(occurredAt) {
 		return time.Now().UTC()
 	}
 	return occurredAt
@@ -449,13 +441,13 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds,
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 	}
 	placeholders := make([]string, len(args))
 	for i := range args {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method)
  VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

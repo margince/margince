@@ -8,9 +8,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
-import { ENTITY, isEntityKind } from "../../app/entity";
-import { useRecordZone } from "../../app/recordzone";
-import { navigate } from "../../app/router";
 import { Modal } from "../../design-system/atoms";
 import {
   type PickableProject,
@@ -19,7 +16,10 @@ import {
 } from "../../design-system/projectpicker";
 import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, throwProblem } from "../common";
+import { ENTITY, isEntityKind } from "../../lib/entity";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
+import { navigate } from "../../lib/router";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
 
@@ -86,16 +86,14 @@ export function ContactMeetingBrief({
     enabled: open && activityId != null,
     queryKey: ["meetingBrief", activityId, projectId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/activities/{id}/meeting-brief", {
-        params: {
-          path: { id: activityId ?? "" },
-          query: projectId ? { project_id: projectId } : undefined,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/activities/{id}/meeting-brief", {
+          params: {
+            path: { id: activityId ?? "" },
+            query: projectId ? { project_id: projectId } : undefined,
+          },
+        }),
+      );
     },
   });
   // A scope the server reports while the reader chose none is the meeting's
@@ -123,8 +121,7 @@ export function ContactMeetingBrief({
       open={open}
       onClose={onClose}
       labelledBy="contact-meeting-title"
-      size="wide"
-      placement="right"
+      intent="drawer-reading"
     >
       <MeetingBriefView
         state={state}

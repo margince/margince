@@ -60,6 +60,10 @@ func (s *Sink) noteAliasSightingTx(ctx context.Context, tx pgx.Tx, seat ids.UUID
 	if err != nil || known {
 		return err
 	}
+	refused, err := seatRefusedAliasTx(ctx, tx, seat, value)
+	if err != nil || refused {
+		return err
+	}
 	// ON CONFLICT DO NOTHING is the distinctness rule: a re-synced message, or
 	// one replayed by a push notification, is the same sighting rather than a
 	// second one. Without it the threshold could be reached by one message
@@ -105,6 +109,18 @@ func seatAlreadyKnowsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value str
 	return NewSelfSet(addresses, domains).Covers(value), nil
 }
 
+// seatRefusedAliasTx reports whether the seat withdrew this address after it
+// was learned. Their answer stands over any later delivery evidence.
+func seatRefusedAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) (bool, error) {
+	var refused bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_alias_refused WHERE user_id = $1 AND value = $2)`,
+		seat, value).Scan(&refused); err != nil {
+		return false, fmt.Errorf("capture: reading the seat's withdrawn aliases: %w", err)
+	}
+	return refused, nil
+}
+
 // foldIdentityRows collects one seat's identities into the two lists a SelfSet
 // is built from.
 func foldIdentityRows(rows pgx.Rows) (addresses, domains []string, err error) {
@@ -137,6 +153,9 @@ func foldIdentityRows(rows pgx.Rows) (addresses, domains []string, err error) {
 // from now on, and an address deferred moments earlier would still become a
 // contact through the very door this claim closes.
 func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, value string) error {
+	if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+		return err
+	}
 	var identity OwnerIdentity
 	err := tx.QueryRow(ctx, `
 		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
@@ -168,5 +187,14 @@ func (s *Sink) claimDiscoveredAliasTx(ctx context.Context, tx pgx.Tx, seat ids.U
 // a caller the chance to fail a capture over a header nobody reads.
 func storableAddress(deliveredTo string) (string, bool) {
 	value, err := ValidExclusionValue(IdentityKindAddress, deliveredTo)
-	return value, err == nil
+	return value, err == nil && !IsMachineAddress(value)
+}
+
+// discoveredMachineAddress is a delivery-discovered claim that names a machine
+// sender. Discovery no longer adopts one, and every reader of the seat's
+// addresses, the settings list included, skips one adopted before. Skipped
+// rather than deleted, so the capture path never fails over bookkeeping. A
+// claim a human declared is theirs to make and is never second-guessed.
+func discoveredMachineAddress(source, value string) bool {
+	return source == IdentitySourceDeliveredTo && IsMachineAddress(bareAddress(value))
 }

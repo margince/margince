@@ -14,7 +14,7 @@ import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
 // suites share: users-admin.test.tsx for the roster and its verbs,
-// users-admin.roles.test.tsx for the role column and the change-role dialog.
+// users-admin.roles.test.tsx for the role picker.
 
 export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -44,6 +44,9 @@ export const ROSTER: {
       is_agent: false,
       roles: ["admin"],
       allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+      team_ids: ["t-dach", "t-nordics"],
+      last_active_at: "2026-10-08T09:00:00Z",
+      created_at: "2026-01-15T10:00:00Z",
     },
     {
       id: "u-off",
@@ -92,42 +95,35 @@ export const ROSTER: {
   page: { next_cursor: null, has_more: false },
 };
 
-// What the row's role column reads: the role (or roles) held, as text, the
-// same shape on every row whoever may change it.
-export function roleShown(row: HTMLElement): string {
-  const cell = row.querySelector("tr > td:nth-child(2) .cell-stack > span");
-  if (!(cell instanceof HTMLElement)) {
-    throw new Error("the row draws no role column");
-  }
-  return cell.textContent ?? "";
-}
+export const TEAMS = [
+  { id: "t-dach", name: "DACH Sales" },
+  { id: "t-nordics", name: "Nordics" },
+];
 
-// Opens a member's "Change role" dialog from their row menu and hands back the
-// dialog and its role picker. Narrowed by instance rather than asserted, so a
-// control that stopped being the Select trigger is a named failure.
-export async function openRoleChange(
-  user: ReturnType<typeof userEvent.setup>,
-  name: string,
-) {
-  await user.click((await rowMenu(user, name)).getByText("Change role"));
-  const dialog = await screen.findByRole("dialog", {
-    name: new RegExp(`change role for ${name}`, "i"),
+// Both helpers narrow by instance rather than asserting: a cast would let the
+// suite read `.disabled` off whatever the query happened to return, so a control
+// that stopped being the Select trigger would surface as a confusing undefined
+// instead of a named failure.
+export function roleSelect(row: HTMLElement, name: string) {
+  const control = within(row).getByRole("combobox", {
+    name: new RegExp(`set role for ${name}`, "i"),
   });
-  const select = within(dialog).getByRole("combobox", { name: /new role/i });
-  if (!(select instanceof HTMLButtonElement)) {
+  if (!(control instanceof HTMLButtonElement)) {
     throw new Error(`the role control for ${name} is not a select trigger`);
   }
-  const confirm = within(dialog).getByRole("button", { name: "Change role" });
-  if (!(confirm instanceof HTMLButtonElement)) {
-    throw new Error("the dialog's confirm is not a button");
-  }
-  return { dialog: within(dialog), select, confirm };
+  return control;
 }
 
-// A member is one <tbody>: their table row and the refusal row under it. The
-// testid is what identifies it, so a query scoped to it sees both.
+// What the closed control reads. The trigger's only text is its face — the
+// chevron is aria-hidden and carries none — so this is the role an operator
+// sees on the row without opening anything.
+export function roleShown(row: HTMLElement, name: string): string {
+  return roleSelect(row, name).textContent ?? "";
+}
+
+// A member is one row of the roster table.
 export function rowFor(name: string) {
-  const row = screen.getByText(name).closest('[data-testid^="member-"]');
+  const row = screen.getByText(name).closest("tr");
   if (!(row instanceof HTMLElement)) {
     throw new Error(`no member row rendered for ${name}`);
   }
@@ -247,7 +243,7 @@ function readRoute(
   allow: Record<string, string[]>,
 ): Response | undefined {
   if (req.url.includes("/teams") && req.method === "GET") {
-    return jsonResponse({ data: [], page: { has_more: false } });
+    return jsonResponse({ data: TEAMS, page: { has_more: false } });
   }
   // The access preview is the server's own sentence about the role; this
   // suite is about the invite and the roster, so it answers a neutral rep.
@@ -294,7 +290,13 @@ function readRoute(
       data: ROSTER.data
         .filter((u) => u.status !== "deactivated")
         .map(
-          ({ roles: _withheld, allowed_actions: _computed, ...rest }) => rest,
+          ({
+            roles: _withheld,
+            allowed_actions: _computed,
+            team_ids: _teams,
+            last_active_at: _activity,
+            ...rest
+          }) => rest,
         ),
     });
   }

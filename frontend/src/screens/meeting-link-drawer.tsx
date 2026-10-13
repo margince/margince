@@ -163,8 +163,7 @@ export function MeetingLinkDrawer({
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      placement="right"
-      size="wide"
+      intent="drawer-reading"
       returnFocusTo={returnFocusTo}
     >
       <div className="drawer-head">

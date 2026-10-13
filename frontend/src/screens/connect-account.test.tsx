@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { problemCodeOf } from "../lib/problem";
 import { locationDouble } from "../testing/locationdouble";
-import { problemCodeOf } from "./common";
 import {
   type ConnectAccountInput,
   notConfiguredProvider,

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen } from "storybook/test";
 import { ReportingComparison } from "./reporting.comparison";
 import { reportingEditions } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
@@ -13,7 +14,7 @@ function Preview({ paginated = false }: Readonly<{ paginated?: boolean }>) {
   const [open, setOpen] = useState(true);
   return open ? (
     <ReportingComparison
-      editions={loaded ? reportingEditions : [reportingEditions[0]]}
+      editions={loaded ? reportingEditions : reportingEditions.slice(0, 1)}
       hasMore={!loaded}
       onLoadMore={() => setLoaded(true)}
       onClose={() => setOpen(false)}
@@ -41,6 +42,9 @@ export const Default: Story = {
         <Preview />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    await screen.findByRole("dialog");
   },
 };
 

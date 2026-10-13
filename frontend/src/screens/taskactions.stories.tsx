@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 import {
@@ -69,10 +71,30 @@ export const RowWithDueDate: Story = {
 
 export const RowUndated: Story = { render: () => <TaskRow dueAt={null} /> };
 
+const TRANSCRIPT = Array.from({ length: 40 }, (_, turn) =>
+  turn % 2 === 0
+    ? `Dana: Legal wants the renewal terms by Friday, round ${turn / 2 + 1}.`
+    : "Mira: I will send the paperwork once the discount is signed off.",
+).join("\n");
+
 function DetailModal({
   emailRequest = false,
-}: Readonly<{ emailRequest?: boolean }>) {
+  meetingSource = false,
+  filed = false,
+}: Readonly<{
+  emailRequest?: boolean;
+  meetingSource?: boolean;
+  filed?: boolean;
+}>) {
   installFetchStub({
+    "GET /activities/m-1": () =>
+      jsonResponse({
+        id: "m-1",
+        kind: "meeting",
+        subject: "Renewal call with Dana",
+        body: TRANSCRIPT,
+        occurred_at: "2026-07-27T14:00:00Z",
+      }),
     "GET /activities/a-1": () =>
       jsonResponse({
         id: "a-1",
@@ -81,12 +103,27 @@ function DetailModal({
         body: emailRequest
           ? null
           : "Draft went to legal on Tuesday; needs Dana's sign-off.",
-        source_activity_id: emailRequest ? "email-1" : null,
+        source_activity_id: emailRequest
+          ? "email-1"
+          : meetingSource
+            ? "m-1"
+            : null,
         due_at: emailRequest ? null : "2026-08-01T09:00:00Z",
         occurred_at: "2026-07-28T09:00:00Z",
         is_done: false,
         assignee_id: "u-1",
+        // The account first on the wire; the panel names the deal first.
+        links: filed
+          ? [
+              { entity_type: "company", entity_id: "o-1" },
+              { entity_type: "deal", entity_id: "d-1" },
+            ]
+          : [],
       }),
+    "GET /deals/d-1": () =>
+      jsonResponse({ id: "d-1", name: "Brandt renewal 2027" }),
+    "GET /companies/o-1": () =>
+      jsonResponse({ id: "o-1", display_name: "Brandt Automotive" }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
@@ -114,6 +151,23 @@ function DetailModalBody() {
 
 export const DetailOpen: Story = { render: () => <DetailModal /> };
 
+// Filed under a deal and its account: the deal, the more specific, leads.
+export const FiledUnderDeal: Story = {
+  render: () => <DetailModal filed />,
+};
+
 export const CapturedEmailRequest: Story = {
   render: () => <DetailModal emailRequest />,
+};
+
+// The meeting a task was read out of, opened whole over the task.
+export const SourceTranscriptOpen: Story = {
+  render: () => <DetailModal meetingSource />,
+  play: async () => {
+    const body = within(document.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: en["tasks.openSource"] }),
+    );
+    await body.findByRole("dialog", { name: "Renewal call with Dana" });
+  },
 };

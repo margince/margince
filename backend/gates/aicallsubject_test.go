@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// Every model call either NAMES the record it is about, or says why it names
+// Every model call either names the record it is about, or says why it names
 // none.
 //
 // With payload capture on, `ai_call_payload` holds the request and response of

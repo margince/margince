@@ -28,6 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -163,6 +165,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	if err := compose.EnsureInstallation(ctx, pool, logger, deployCfg); err != nil {
 		return deployconfig.Config{}, nil, err
 	}
+	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
+		return deployconfig.Config{}, nil, err
+	}
 	// After the installation binds, so an installation that cannot bind fails on
 	// that rather than on its license.
 	// The deployment posture decides which license authorities are honored: a
@@ -173,6 +178,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// keyvaultOptions wiring, because an installation that has sealed its token
 	// and dropped the declaration reads it out of the vault: the license
 	// question cannot be answered before the vault exists.
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
+		return deployconfig.Config{}, nil, err
+	}
 	license, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture, config.FromOS)
 	if err != nil {
 		return deployconfig.Config{}, nil, err
@@ -389,6 +397,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 		// the backfill surface isn't wired. Appended after baseComposeOptions'
 		// WithCaptureBackfill so the shared registry is already set.
 		opts = append(opts, compose.WithBackfillEstimator(modelPath.Router()))
+		opts = append(opts, compose.WithLaneHealthBindings(modelPath.Router()))
 	}
 	return opts, modelPath, nil
 }
@@ -449,6 +458,9 @@ func workerHandoffOptions(
 		// table. Its relay, vault and public origin arrive on their own
 		// options; whichever lands last completes the lane.
 		compose.WithControllerMail(sendInserter),
+		// An approved import commits, and an undo reverses, in the worker: the
+		// move and its job are one transaction, so the 202 means work is queued.
+		compose.WithImportJobs(sendInserter),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
@@ -462,4 +474,11 @@ func workerHandoffOptions(
 	opts = append(opts, embedReindex)
 	opts = append(opts, enqueueOpts...)
 	return opts, nil
+}
+
+// shareThroughRedis hands the Redis client to the two process-wide registries
+// that coordinate this process with the others: rate limits and provider health.
+func shareThroughRedis(ctx context.Context, rdb *redis.Client) {
+	ratelimit.ShareProcess(rdb)
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
 }

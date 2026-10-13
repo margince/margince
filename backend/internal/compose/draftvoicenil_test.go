@@ -24,6 +24,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -86,8 +87,11 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// Was 36 while the two grounded surfaces each carried their own copy of the
 	// writer: 22 in the reply lane, 7 in accountdraft, 7 in contactdraft. The
 	// copies became one, so those fourteen are now 2 + 2 in the surfaces (their
-	// own prompt assembly) plus 5 in draftcore, which every surface runs.
-	const governedCalls = 31
+	// own prompt assembly) plus 5 in draftcore, which every surface runs. The
+	// reply lane's two greeting wrappers (completeVoiced, completeFirstVoiced)
+	// add two more, and draft_email's first message leaving the reply lane for
+	// the composers' engines took one away.
+	const governedCalls = 32
 	if governed != governedCalls {
 		t.Errorf("the sweep reached %d voice-carrying calls and this gate pins %d. Fewer means it stopped "+
 			"recognising calls it used to read — most likely a voice parameter was renamed out of "+
@@ -213,12 +217,7 @@ func voiceParameterPositions(files []*ast.File) map[string]int {
 
 // isVoiceBlockParameter reports whether a parameter name is the voice block's.
 func isVoiceBlockParameter(name string) bool {
-	for _, want := range voiceBlockParameterNames {
-		if name == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(voiceBlockParameterNames, name)
 }
 
 // calledFunctionName reads the name of the function a call targets, for both a

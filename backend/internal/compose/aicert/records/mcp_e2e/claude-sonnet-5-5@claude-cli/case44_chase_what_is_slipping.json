@@ -1,0 +1,25 @@
+{
+  "scenario": "case44_chase_what_is_slipping",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 6635,
+    "cache_creation_input_tokens": 82914,
+    "cache_read_input_tokens": 702019,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.4683
+  }
+}

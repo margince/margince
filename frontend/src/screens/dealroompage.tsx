@@ -3,9 +3,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import {
   Button,
   EmptyState,
@@ -18,9 +15,13 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import {
   FINISHED_STATES,
@@ -184,12 +185,12 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
   const move = useMutation({
     mutationFn: async (verb: "pause" | "resume" | "close") => {
       const path = `/deal-rooms/{id}/${verb}` as const;
-      const { error } = await api.POST(path, {
-        params: { path: { id: room.id } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: { path: { id: room.id } },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       refresh();
@@ -272,18 +273,18 @@ function ExpiryDialog({
     // The version rides in the variables: a click between a room refresh and
     // the mutation re-arming would otherwise pin a version already gone.
     mutationFn: async (input: { day: string; version: number }) => {
-      const { error } = await api.PUT("/deal-rooms/{id}/expiry", {
-        params: { path: { id: room.id }, ...ifMatch(input.version) },
-        body: {
-          expires_at:
-            input.day === ""
-              ? null
-              : new Date(`${input.day}T23:59:59Z`).toISOString(),
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PUT("/deal-rooms/{id}/expiry", {
+          params: { path: { id: room.id }, ...ifMatch(input.version) },
+          body: {
+            expires_at:
+              input.day === ""
+                ? null
+                : new Date(`${input.day}T23:59:59Z`).toISOString(),
+          },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       refresh();
@@ -295,6 +296,7 @@ function ExpiryDialog({
       open={open}
       onClose={onClose}
       title={t("roompage.setExpiry")}
+      intent="form"
       confirmLabel={t("access.save")}
       pending={set.isPending}
       error={set.isError ? problemMessageOf(set.error, t) : null}

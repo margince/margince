@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -49,18 +50,29 @@ func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmco
 	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
 		return crmcontracts.Product{}, err
 	}
+	name, err := httperr.RequireNonBlank("name", in.Name)
+	if err != nil {
+		return crmcontracts.Product{}, err
+	}
+	in.Name = name
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Product{}, err
 	}
 
-	unit := "unit"
-	if in.Unit != nil && *in.Unit != "" {
-		unit = *in.Unit
-	}
-	taxRate := "0.00"
+	unit, _, _ := normalizeLineDefaults(in.Unit, nil, nil)
+	taxRate := zeroPct
 	if in.DefaultTaxRate != nil {
+		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
+			return crmcontracts.Product{}, err
+		}
 		taxRate = formatPct(*in.DefaultTaxRate)
+	}
+	if err := checkPrice(in.UnitPriceMinor); err != nil {
+		return crmcontracts.Product{}, err
+	}
+	if err := checkCurrency(in.Currency); err != nil {
+		return crmcontracts.Product{}, err
 	}
 	active := in.Active == nil || *in.Active
 	// Settled before the transaction opens, so a half-stated classification
@@ -115,7 +127,9 @@ type UpdateProductInput struct {
 	Classified            bool
 	BillingModel          *string
 	BillingIntervalMonths *int
-	IfVersion             *int64
+	// Clear are the fields the caller sent as an explicit null.
+	Clear     []string
+	IfVersion *int64
 }
 
 func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdateProductInput) (crmcontracts.Product, error) {
@@ -133,6 +147,9 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 			return err
 		}
 		if p.Empty() {
+			if err := storekit.EnsureIfMatch(ctx, tx, "product", id.UUID, in.IfVersion); err != nil {
+				return err
+			}
 			out = current
 			return nil
 		}
@@ -153,12 +170,40 @@ func (s *Store) UpdateProduct(ctx context.Context, id ids.ProductID, in UpdatePr
 	return out, err
 }
 
-// buildProductPatch folds the caller's sparse product edit into a patch —
-// every set field carries its before/after image for the audit trail.
+// descriptionColumn and billingIntervalColumn are named because more than one
+// writer spells each.
+const (
+	descriptionColumn     = "description"
+	billingIntervalColumn = "billing_interval_months"
+)
+
+// clearableProductColumns are the product's independently nullable columns.
+//
+// The billing classification is absent, because product_billing_shape ties
+// billing_model to billing_interval_months.
+//
+// Clearing one of them alone names a state the CHECK refuses. `not_specified`
+// moves the pair together and stays the way to say nobody has classified it.
+func clearableProductColumns(current crmcontracts.Product) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"sku":             {Column: "sku", Current: current.Sku},
+		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
+	}
+}
+
+// buildProductPatch folds the caller's sparse product edit into a patch. Every
+// set field carries its before/after image for the audit trail.
 func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := storekit.ApplyClears(p, in.Clear, clearableProductColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
-		p.Set("name", current.Name, *in.Name)
+		name, err := httperr.RequireNonBlank("name", *in.Name)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("name", current.Name, name)
 	}
 	if in.SKU != nil {
 		p.Set("sku", current.Sku, *in.SKU)
@@ -167,15 +212,28 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.Unit != nil {
-		p.Set("unit", current.Unit, *in.Unit)
+		unit, err := httperr.RequireNonBlank("unit", *in.Unit)
+		if err != nil {
+			return nil, err
+		}
+		p.Set("unit", current.Unit, unit)
 	}
 	if in.UnitPriceMinor != nil {
+		if err := checkPrice(*in.UnitPriceMinor); err != nil {
+			return nil, err
+		}
 		p.Set("unit_price_minor", current.UnitPriceMinor, *in.UnitPriceMinor)
 	}
 	if in.Currency != nil {
+		if err := checkCurrency(*in.Currency); err != nil {
+			return nil, err
+		}
 		p.Set("currency", current.Currency, *in.Currency)
 	}
 	if in.DefaultTaxRate != nil {
+		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
+			return nil, err
+		}
 		p.Set("default_tax_rate", current.DefaultTaxRate, formatPct(*in.DefaultTaxRate))
 	}
 	if in.Active != nil {
@@ -203,7 +261,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 			return nil, err
 		}
 		p.Set("billing_model", currentModel, in.BillingModel)
-		p.Set("billing_interval_months", currentMonths, in.BillingIntervalMonths)
+		p.Set(billingIntervalColumn, currentMonths, in.BillingIntervalMonths)
 	}
 	return p, nil
 }

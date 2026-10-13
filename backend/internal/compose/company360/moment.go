@@ -123,10 +123,9 @@ func accountMoment(now time.Time, tasks []crmcontracts.Company360NextStep, filed
 // Held by: TestTheAccountCardRanksBothSourcesByDateAlone (moment_test.go),
 // which fails if either source stops reaching the card.
 //
-// A UNION, NOT A JOIN. Nothing writes conversation_claim.task_activity_id, so
-// an extracted commitment and a task about the same thing are two unlinked
-// rows. A promise recorded both ways may appear as two, which is the honest
-// answer until that link is written.
+// The claims arrive without the ones that became tasks
+// (contacts.ourPromiseNotYetATask), so a promise is counted once. A task a rep
+// typed beside an extracted promise stays a second row: nothing links them.
 func accountPromises(tasks []crmcontracts.Company360NextStep, filed []time.Time, claims []contacts.CompanyCommitment) []owedwork.Item {
 	var items []owedwork.Item
 	for i, step := range tasks {
@@ -181,7 +180,7 @@ func accountClaimCard(now time.Time, claim contacts.CompanyCommitment, late bool
 	return crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_claim", openapi_types.UUID(claim.ID)),
 		Rule:                ruleFor(late),
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence),
 		Headline:            owedHeadline(claim.ContactName, claim.Body),
 		WhyNow:              owedWhyNow(now, claim.DueAt),
@@ -206,7 +205,7 @@ func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late b
 	moment := crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
 		Rule:                ruleFor(late),
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence),
 		Headline:            owedHeadline("", step.Subject),
 		WhyNow:              whyNow,
@@ -271,7 +270,7 @@ func accountNothingNeeded() crmcontracts.ContactMoment {
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:nothing_needed",
 		Rule:                crmcontracts.ContactMomentRuleNothingNeeded,
-		RuleVersion:         ptrOf(momentRuleVersion),
+		RuleVersion:         new(momentRuleVersion),
 		EvidenceFingerprint: "quiet",
 		Headline:            "Nothing is owed to this account",
 		WhyNow:              "No promise to this account is open or coming due.",
@@ -299,9 +298,6 @@ func momentKey(rung string, id openapi_types.UUID) string {
 	return rung + ":" + id.String()
 }
 
-// ptrOf is the address of a value the contract wants as a pointer.
-func ptrOf[T any](v T) *T { return &v }
-
 // accountFingerprint digests what this card fired on, through the same hash
 // the contact page's cards use.
 func accountFingerprint(evidence []crmcontracts.ContactMomentEvidence) string {
@@ -326,7 +322,7 @@ func openTheContact(contactID ids.ContactID) crmcontracts.ContactMomentAction {
 		State: crmcontracts.ContactMomentActionStateAvailable,
 		Destination: &crmcontracts.ContactMomentDestination{
 			Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
-			EntityType: entityTypeOf(crmcontracts.ContactMomentDestinationEntityTypeContact),
+			EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeContact),
 			EntityId:   &id,
 		},
 	}
@@ -345,7 +341,7 @@ func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomen
 			State: crmcontracts.ContactMomentActionStateAvailable,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface:    crmcontracts.ContactMomentDestinationSurfaceRecord,
-				EntityType: entityTypeOf(crmcontracts.ContactMomentDestinationEntityTypeDeal),
+				EntityType: new(crmcontracts.ContactMomentDestinationEntityTypeDeal),
 				EntityId:   step.LinkedDealId,
 			},
 		}
@@ -358,8 +354,4 @@ func openTheTask(step crmcontracts.Company360NextStep) crmcontracts.ContactMomen
 		Label: "Open it from the task list",
 		State: crmcontracts.ContactMomentActionStateBlocked,
 	}
-}
-
-func entityTypeOf(v crmcontracts.ContactMomentDestinationEntityType) *crmcontracts.ContactMomentDestinationEntityType {
-	return &v
 }

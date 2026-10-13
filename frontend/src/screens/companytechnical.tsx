@@ -2,15 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { factsKey } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 
@@ -67,12 +68,11 @@ export function TechnicalProfilePanel({
   const facts = useQuery({
     queryKey: factsKey(companyId),
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/facts", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/companies/{id}/facts", {
+          params: { path: { id: companyId } },
+        }),
+      );
       return data.data ?? [];
     },
   });

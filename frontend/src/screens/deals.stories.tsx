@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { DealScreen, FxLine } from "./deals";
 import {
   emptyPage,
@@ -214,8 +214,8 @@ export const WithheldReferences: Story = {
 // state this frame is not about.
 const wonDeal = { ...deal, status: "won", stage_id: "s3", writable: true };
 
-// The seat and the grant those verbs read alongside the row's own `writable`
-// — app/capability.ts asks all three, so a row flag on its own still refuses.
+// The seat and the grant those verbs read alongside the row's own `writable`.
+// lib/capability.ts asks all three, so a row flag on its own still refuses.
 const writer = meFixture({ allow: { deal: ["read", "update", "delete"] } });
 
 /**

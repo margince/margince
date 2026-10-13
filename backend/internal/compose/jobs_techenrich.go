@@ -24,10 +24,12 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -170,7 +172,10 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 		return jobs.FaultContext(ctx, w.recordNoEnricher(ctx, wsCtx, store, companyID))
 	}
 
-	read, outcomes := w.enricher.Read(wsCtx, companyID, domain)
+	// The record's own language, resolved once: these labels are stored, so
+	// they answer to the installation rather than to whoever triggered the run.
+	lang := textlang.Lang(identity.BaseLanguageForPrompt(wsCtx, w.pool))
+	read, outcomes := w.enricher.Read(wsCtx, companyID, domain, lang)
 	if err := store.ApplyTechnicalEnrichment(wsCtx, read, technicalChangeRecorder()); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -315,13 +320,4 @@ func technicalActor(ctx context.Context) context.Context {
 // technicalBackfillActor is the sweep's own reader.
 func technicalBackfillActor(ctx context.Context) context.Context {
 	return principal.SystemActing(ctx, "system:technical-backfill")
-}
-
-// TechnicalEnrichmentConfig is the sweep's cadence.
-type TechnicalEnrichmentConfig struct {
-	// BackfillInterval is how often the pass looks for companies whose
-	// technical picture is missing or stale. It runs on start too, so wiring
-	// the lookup on a database that already holds its customers begins reading
-	// them at boot rather than at the first tick.
-	BackfillInterval time.Duration
 }

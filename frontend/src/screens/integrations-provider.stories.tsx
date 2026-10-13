@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ProviderCard } from "./integrations-provider";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -204,7 +204,7 @@ export const NoProvider: Story = {
 
 // The connected card in dark, which is where this file's colour actually lives:
 // a `connected` Badge composites its tint over --bgElevated whatever it sits on,
-// and here it sits on the recessed --bgCard plate; the credit Meter's track and
+// and here it sits on the recessed --bgInset plate; the credit Meter's track and
 // fill are two greens a step apart; and the spend table separates five columns
 // with nothing but --borderSubtle hairlines. The one to check hardest is
 // .provider-held — a held figure is deliberately quieter than the charge beside

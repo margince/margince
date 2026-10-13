@@ -39,6 +39,9 @@ func answered(w http.ResponseWriter, r *http.Request, err error) bool {
 	if !unanswered(err) {
 		return false
 	}
+	if answeredProviderDown(w, r, err) {
+		return true
+	}
 	// Our own request refused is a defect the reader can do nothing about, and
 	// this answer hides it from them, so the log is where it is found.
 	if errors.Is(err, model.ErrRequestRejected) {
@@ -59,20 +62,48 @@ func answered(w http.ResponseWriter, r *http.Request, err error) bool {
 	return true
 }
 
+// answeredProviderDown answers a call the router refused because the provider
+// is known to be blocked, and reports whether it did.
+//
+// Unlike the generic answer this one knows the cause, so it names it and the
+// remedy: only the installation's administrator can top up an account, replace
+// a credential or wait out an outage. The detail carries no provider text, key
+// or host, and each code is a separate call because the client copy gate reads
+// the code at the call site.
+func answeredProviderDown(w http.ResponseWriter, r *http.Request, err error) bool {
+	var down *ai.ProviderDownError
+	if !errors.As(err, &down) {
+		return false
+	}
+	switch down.Health {
+	case model.HealthOutOfCredit:
+		httperr.Unavailable(w, r, codeProviderOutOfCredit,
+			"the AI provider has no credit left — contact your system administrator")
+	case model.HealthUnauthorized:
+		httperr.Unavailable(w, r, codeProviderUnauthorized,
+			"the AI provider refused the configured credential — contact your system administrator")
+	default:
+		httperr.Unavailable(w, r, codeProviderUnavailable,
+			"the AI provider is not answering — try again later or contact your system administrator")
+	}
+	return true
+}
+
 // unanswered reports whether err is the model lane ending without an answer
 // rather than this request being wrong.
 //
 // Matched by sentinel, never by message: ai.ErrAllTiersFailed when the walk
 // reached the end of the bound rungs, and the outcomes that stop it sooner — a
 // reply the models declined or the validator refused (ai.ModelDeclined), a
-// request rejected, an account out of budget — and the embed lane, which has no
+// request rejected, an account out of budget, a provider the router has blocked — and the embed lane, which has no
 // walk to end, failing to answer (ai.ErrEmbedLaneFailed).
 func unanswered(err error) bool {
 	return errors.Is(err, ai.ErrAllTiersFailed) ||
 		errors.Is(err, ai.ErrEmbedLaneFailed) ||
 		ai.ModelDeclined(err) ||
 		errors.Is(err, model.ErrRequestRejected) ||
-		errors.Is(err, ai.ErrProviderQuota)
+		errors.Is(err, ai.ErrProviderQuota) ||
+		errors.Is(err, ai.ErrProviderDown)
 }
 
 // codeAssistantUnavailable is the problem code the client reads to pick its
@@ -82,3 +113,13 @@ func unanswered(err error) bool {
 // Held by: TestEveryReaderFacingProblemCodeHasClientCopy
 // (backend/gates/frontendoauthoutcomes_test.go)
 const codeAssistantUnavailable = "assistant_unavailable"
+
+// The reason-specific answers for a provider the router knows is blocked; the
+// client has its own copy for each.
+//
+// Held by: TestEveryReaderFacingProblemCodeHasClientCopy
+const (
+	codeProviderOutOfCredit  = "provider_out_of_credit"
+	codeProviderUnauthorized = "provider_unauthorized"
+	codeProviderUnavailable  = "provider_unavailable"
+)

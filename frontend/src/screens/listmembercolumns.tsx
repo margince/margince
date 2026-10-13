@@ -11,6 +11,7 @@ import type { ListColumn } from "../design-system/listtable";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { EntityRef } from "./entityref";
 import {
   customColumnLabel,
   fieldLabel,
@@ -37,7 +38,7 @@ export function useMemberColumns(
       joined.has(row.id) ? (
         <span className="lists-member-name">
           {memberName(row, t)}
-          <Badge tone="accent">{t("lists.members.new")}</Badge>
+          <Badge tone="discovery">{t("lists.members.new")}</Badge>
         </span>
       ) : (
         memberName(row, t)
@@ -55,8 +56,12 @@ export function useMemberColumns(
  */
 function useFilterColumns(list: List): ListColumn<MemberRow>[] {
   const t = useT();
-  const vocabulary = useFilterVocabulary(list.entity_type);
-  const valueText = useFieldValueText(list.entity_type);
+  // Called for a Shortlist too, as hooks are; it has no filter, so asks nothing.
+  // A colleague cell names its own id through EntityRef, so no user is asked
+  // for up front here.
+  const live = list.list_type === "dynamic";
+  const vocabulary = useFilterVocabulary(list.entity_type, live);
+  const valueText = useFieldValueText(list.entity_type, [], live);
   const tree = decode(list.definition);
   const names = tree ? fieldsNamed(tree) : [];
   return names.map((field, index) => {
@@ -72,6 +77,9 @@ function useFilterColumns(list: List): ListColumn<MemberRow>[] {
         }
         if (held?.value == null) {
           return "—";
+        }
+        if (held.label == null && known?.references === "app_user") {
+          return <EntityRef kind="user" id={held.value} />;
         }
         return held.label ?? valueText(field, held.value);
       },

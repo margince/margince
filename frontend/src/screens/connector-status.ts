@@ -3,8 +3,8 @@
 
 import type { components } from "../api/schema";
 import type { ProviderRowTone } from "../design-system/providerrow";
+import type { ConnectionAccount } from "../format/connectorprovider";
 import type { MessageKey } from "../i18n/en";
-import type { ConnectionAccount } from "./connectorproviders";
 
 // The shared connector-status vocabulary: Settings (the connected-inboxes
 // card) and the Brief's digest both render connector health, and they must never

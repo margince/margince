@@ -86,10 +86,7 @@ func (s *Sink) linkResolvedMailParticipants(
 	// project ladder files the project it belongs to (sink.go). Spending the
 	// whole ceiling here would let a message with 25 resolved participants end
 	// up at 27, quietly breaking the invariant this constant exists to state.
-	budget := maxDerivedMeetingLinks - existing - postCommitLinkReservation
-	if budget < 0 {
-		budget = 0
-	}
+	budget := max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0)
 	written := 0
 	for _, contact := range contacts {
 		if written >= budget {

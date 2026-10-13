@@ -6,9 +6,9 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderList } from "../design-system/providerrow";
+import { accountsOf } from "../format/connectorprovider";
 import type { ImportWindow } from "./connect-account";
 import { ConnectionAccountRow } from "./connection-account";
-import { accountsOf } from "./connectorproviders";
 import {
   installFetchStub,
   jsonResponse,
@@ -26,6 +26,7 @@ type BackfillStatus = components["schemas"]["BackfillStatus"];
 const gmail: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   account_label: "admin@demo.test",
   scopes: [
@@ -45,6 +46,7 @@ const gcal: CaptureConnection = {
   ...gmail,
   id: "018f3a1b-0000-7000-8000-0000000000ca",
   provider: "gcal",
+  can_backfill: false,
   scopes: ["https://www.googleapis.com/auth/calendar.events.owned"],
   backfill: undefined,
 };
@@ -66,6 +68,7 @@ const reading: BackfillStatus = {
 const imap: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c3",
   provider: "imap",
+  can_backfill: false,
   status: "connected",
   account_label: "sales@example.org",
   scopes: [],

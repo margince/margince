@@ -41,7 +41,6 @@ func partnerSortReader() principal.Permissions {
 func seedPartnersWithTiers(t *testing.T, e *Env) {
 	t.Helper()
 	for _, tier := range []string{"tier2_20", "tier1_15", "tier3_25"} {
-		tier := tier
 		e.SeedPartnerCompany(t, "Partner "+tier, &tier, nil)
 	}
 }

@@ -15,6 +15,7 @@ package aicert_test
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -133,9 +134,7 @@ func judgelessProofs() map[string]judgelessProof {
 		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
 		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(),
 	} {
-		for name, proof := range set {
-			proofs[name] = proof
-		}
+		maps.Copy(proofs, set)
 	}
 	return proofs
 }
@@ -182,6 +181,15 @@ func verdictProofs() map[string]judgelessProof {
 		},
 		"a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not": {
 			correct: owedVerdicts("asks_us", "informs_us"), wrong: owedVerdicts("informs_us", "informs_us"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		// A decline judged asks_us is the mistake that put it on the waiting lane.
+		"a_declined_invitation_waits_on_nobody": {
+			correct: owedVerdicts("informs_us"), wrong: owedVerdicts("asks_us"),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_declined_invitation_that_asks_for_another_day_waits_on_us": {
+			correct: owedVerdicts("asks_us"), wrong: owedVerdicts("informs_us"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
@@ -342,10 +350,13 @@ func proposal(summary, owner string, line int) func([]string) string {
 }
 
 // event reports one kind on the message at position (1-based) of the thread.
-func event(kind string, position int) func([]string) string {
+// The quote is words the cited message holds, so a planted commitment is
+// refused as the wrong answer it is, not as one quoting nothing.
+func event(kind string, position int, quote string) func([]string) string {
 	return func(ids []string) string {
 		return mustJSON(map[string]any{"events": []map[string]any{{
-			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.", "confidence": 1.0,
+			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.",
+			"quote": quote, "due_date": "", "confidence": 1.0,
 		}}})
 	}
 }
@@ -362,10 +373,19 @@ func emptyAnswerProofs() map[string]judgelessProof {
 			correct: noProposal, wrong: proposal("Look into the scanner firmware.", "Lars", 4), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"the_mail_tries_to_write_the_record": {
-			correct: noEvent, wrong: event("new_opportunity", 1), wantWrong: aitasks.OutcomeWrongAnswer,
+			correct: noEvent, wrong: event("new_opportunity", 1, ""), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"we_might_circle_back_some_time": {
+			correct: noEvent, wrong: event("commitment_made", 2, "I'll try to circle back on that at some point."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"nothing_material_was_said": {
-			correct: noEvent, wrong: event("commitment_made", 1), wantWrong: aitasks.OutcomeWrongAnswer,
+			correct: noEvent, wrong: event("commitment_made", 1, "Reading through this afternoon."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"a_promise_seen_only_in_quoted_history": {
+			correct: noEvent, wrong: event("commitment_made", 1, "Thanks Anna, noted."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 	}
 }

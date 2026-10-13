@@ -1,332 +1,345 @@
-// SPDX-License-Identifier: BUSL-1.1
-// SPDX-FileCopyrightText: 2026 Gradion
-
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
+import { useId, useState } from "react";
 import {
+  Avatar,
+  Badge,
   Button,
   EmptyState,
   Modal,
-  SearchField,
-  SegmentedControl,
-  TableScroll,
 } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
-import { QueryGate, throwProblem, useMe } from "./common";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { CellStrip } from "../design-system/listtable";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
+import { formatDateAbbrev, formatDateTime } from "../format/format";
+import { formatRelativeTime } from "../format/relativetime";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
+import { useMe } from "../lib/session";
 import "./users-admin.css";
-import { useCan, useCanWrite } from "../app/capability";
+import { useCan, useCanWrite } from "../lib/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
-import { useRosterNames } from "./roster";
+import { useRoster } from "./roster";
 import { InviteUserForm } from "./users-invite-form";
-import { MemberRow } from "./users-memberrow";
+import {
+  memberAnchorId,
+  type User,
+  useMemberRefresh,
+  useMembers,
+} from "./users-members";
+import { MemberVerbs } from "./users-memberverbs";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
-import { withRoles } from "./users-rolecell";
-
-type User = components["schemas"]["User"];
-// The member roster (company settings). Every user-management WRITE is admin-only
-// server-side, but the read is not: `GET /users` answers 200 to any authenticated
-// principal, so the list is fetched for everyone and only the controls that
-// change a member are withheld. The read opts into inactive members
-// (include_inactive, honored server-side only for an admin) so a deactivated
-// member can be reactivated. First page only in V1; larger member lists paginate
-// in a follow-up.
-function useMembers() {
-  return useQuery({
-    queryKey: ["users-admin"],
-    queryFn: async (): Promise<User[]> => {
-      const { data, error } = await api.GET("/users", {
-        params: { query: { include_inactive: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data.data;
-    },
-  });
-}
+import { MemberRole, roleRefusal, withRoles } from "./users-rolecell";
 
 export function UsersAdminCard() {
   const me = useMe();
-  // The four verbs the server actually distinguishes, not one "is admin".
-  // `user_admin` has been seeded and enforced since the roster's gates moved off
-  // the literal role, and each of these is the grant its own endpoint takes:
-  // invite is CREATE (invite.go), a role change is UPDATE (users.go
-  // ChangeUserRole), and deactivate AND reactivate are both DELETE — one verb
-  // for turning a seat off and back on, because they are the same authority
-  // over the same thing.
-  //
-  // `useCanWrite`, not `useCan`: the seat ceiling is enforced ABOVE RBAC
-  // (identity/admission.go), so a read seat holding the grant is still refused
-  // every one of these. A control it was shown could only ever 403.
-  // Every roster verb ANDs with the read, because the write needs what the read
-  // carries and the server does not send it otherwise:
-  //
-  //   - `ChangeUserRole` REPLACES the whole role set with the one picked
-  //     (users.go). Without the read the roster omits `roles`, `RoleCell` reads
-  //     the missing field as [], and picking a role would silently drop every
-  //     other role the target holds — destroying authority the reader could not
-  //     see.
-  //   - `include_inactive` is honoured only for a caller who passes the read
-  //     (handlers_roster.go), so a delete holder without it never sees a
-  //     deactivated member to reactivate, nor an invited one to switch off.
-  //
-  // Inviting does not strictly need it, but a roster this reader cannot read is
-  // not a page to invite from either.
-  // Each hook on its own line and called unconditionally: `&&` short-circuits,
-  // and the number of hooks a render performs must not depend on an answer.
+  // `useCanWrite`: the seat ceiling refuses a read seat holding the grant. Every
+  // verb needs the read too, or a role change replaces roles the reader cannot see.
   const administersRoster = useCan("user_admin", "read");
   const mayInvite = useCanWrite("user_admin", "create");
   const mayChangeRole = useCanWrite("user_admin", "update");
   const maySetStatus = useCanWrite("user_admin", "delete");
-  const canInvite = administersRoster && mayInvite;
-  const canChangeRole = administersRoster && mayChangeRole;
-  const canSetStatus = administersRoster && maySetStatus;
-  // These decide the card. Each ROW offers only what the server lists in that
-  // member's `allowed_actions`, which also knows the member.
-  const members = useMembers();
-  // The server answers whether THIS caller can mint set-password links: admin,
-  // on an installation with no email channel and a configured base URL. Where
-  // email works, the invite mail carries the link and this action would only
-  // ever 409 — so it is not rendered at all.
-  const canIssueLink = me.data?.admin_password_link ?? false;
-  // ONE card, because there is one subject: the roster. Inviting is a verb ON
-  // that roster, not a second subject, and it used to be a card of its own
-  // whose title, whose only row's label and whose button all read "Invite a
-  // member" — the same three words, three times, above a list nine members
-  // long that a reader came here to read.
-  //
-  // `GET /users` answers 200 to any authenticated principal, so the share and
-  // assignee pickers keep working for every seat. What that endpoint CONTAINS
-  // is narrowed instead: role keys and the deactivated members ride the
-  // privileged projection, which handlers_roster.go sends only to a caller
-  // holding `user_admin:read`.
-  //
-  // This settings PAGE follows the same read, because a roster nobody may act
-  // on is a directory rather than an administration surface. `probeSettled` is
-  // what keeps the read-only line from flashing while /me is still in flight: a
-  // probe in flight is not a denial.
   return (
     <MembersCard
-      members={members}
+      me={me.data?.user.id}
       probeSettled={me.isSuccess}
-      administersRoster={administersRoster}
-      canIssueLink={canIssueLink}
-      canInvite={canInvite}
-      canChangeRole={canChangeRole}
-      canSetStatus={canSetStatus}
+      probing={me.isPending}
+      // Only where no email channel exists; elsewhere the invite mail carries it.
+      canIssueLink={me.data?.admin_password_link ?? false}
+      management={administersRoster}
+      canInvite={administersRoster && mayInvite}
+      canChangeRole={administersRoster && mayChangeRole}
+      canSetStatus={administersRoster && maySetStatus}
     />
   );
 }
 
-type RosterFilter = "all" | "active" | "invited" | "deactivated";
-const FILTERS: readonly RosterFilter[] = [
-  "all",
-  "active",
-  "invited",
-  "deactivated",
-];
-
-// Whether `member` belongs under `filter`. Suspended members count under All
-// only: no filter names them, and hiding them from every view would lose them.
-function inFilter(member: User, filter: RosterFilter): boolean {
-  return filter === "all" || member.status === filter;
-}
-
-function matchesSearch(member: User, needle: string): boolean {
-  return (
-    needle === "" ||
-    member.display_name.toLocaleLowerCase().includes(needle) ||
-    member.email.toLocaleLowerCase().includes(needle)
-  );
-}
-
 function MembersCard({
-  members,
+  me,
   probeSettled,
-  administersRoster,
+  probing,
   canIssueLink,
+  management,
   canInvite,
   canChangeRole,
   canSetStatus,
 }: Readonly<{
-  members: ReturnType<typeof useMembers>;
+  me: string | undefined;
   probeSettled: boolean;
-  administersRoster: boolean;
+  probing: boolean;
   canIssueLink: boolean;
+  management: boolean;
   canInvite: boolean;
   canChangeRole: boolean;
   canSetStatus: boolean;
 }>) {
-  // Whether this reader administers the roster AT ALL, for the one read-only
-  // line the card states once. A reader holding some verbs and not others is
-  // not read-only, and telling them so beside controls they can use would be
-  // false — the individual verbs decide what each row offers.
-  const administers = canInvite || canChangeRole || canSetStatus;
   const t = useT();
-  // The roles this reader may hand out: what the change-role dialog offers, and
-  // the names custom roles are shown under.
-  const assignable = useAssignableRoles(canChangeRole);
-  const read = withRoles(members, assignable, canChangeRole);
+  const postureId = useId();
+  const members = useMembers();
+  const read = withRoles(
+    members,
+    useAssignableRoles(canChangeRole),
+    canChangeRole,
+  );
+  // The read-only posture is stated once for the card, and the refused role
+  // pickers point at it rather than each repeating it.
+  const administers = canInvite || canChangeRole || canSetStatus;
+  let posture: string | null = null;
+  if (probeSettled && !administers) {
+    posture = t("users.adminOnly");
+  } else if (probeSettled && management && !canChangeRole) {
+    posture = t("users.role.withheld");
+  }
   return (
-    // Untitled: the page head already says "Members", and a panel band saying
-    // it again sat between that head and the roster it names.
     <Panel
-      // The read-only posture is stated ONCE for the whole card rather than
-      // beside each row's withheld controls, which would repeat it per row.
-      // The foot explains rows, so an empty roster draws none of it.
-      footer={
-        members.data !== undefined &&
-        members.data.length > 0 && (
-          <span className="t-caption">
-            {t("users.roster.foot")}
-            {probeSettled && !administers && ` ${t("users.roster.readOnly")}`}
-          </span>
-        )
-      }
+      title={t("users.membersTitle")}
+      titleAction={canInvite && <InviteAction canIssueLink={canIssueLink} />}
+      actions={members.hasNextPage && <LoadMoreButton query={members} />}
     >
-      <QueryGate query={read} pendingLabel={t("users.roster.title")}>
-        {({ list, roles }) => (
-          <Roster
-            list={list}
-            roles={roles}
-            administersRoster={administersRoster}
-            canChangeRole={canChangeRole}
-            invite={canInvite && <InviteAction canIssueLink={canIssueLink} />}
-          />
-        )}
-      </QueryGate>
+      {posture && (
+        <PanelBody>
+          <PanelIntro>
+            <span id={postureId}>{posture}</span>
+          </PanelIntro>
+        </PanelBody>
+      )}
+      {/* Until /me answers the role picker's read is not known to be needed, and
+          drawing the roster early would drop back to pending once it is. */}
+      {read.data === undefined || probing ? (
+        <PanelBody>
+          <QueryStates
+            query={probing ? { ...read, isPending: true } : read}
+            pendingLabel={t("users.membersTitle")}
+          >
+            {null}
+          </QueryStates>
+        </PanelBody>
+      ) : read.data.list.length === 0 ? (
+        <PanelBody>
+          <EmptyState>{t("users.empty")}</EmptyState>
+        </PanelBody>
+      ) : (
+        <MembersTable
+          list={read.data.list}
+          roles={read.data.roles}
+          management={management}
+          refusalOf={(member, list, roles) =>
+            roleRefusal(member, {
+              roster: list,
+              roles,
+              canChangeRole,
+              cardReasonId: postureId,
+              meId: me,
+              t,
+            })
+          }
+        />
+      )}
     </Panel>
   );
 }
 
-// The roster proper: a search and a status filter over one table. Both narrow
-// the page already read; the roster is one page in V1, so nothing is fetched.
-function Roster({
+// Server order is join order (created_at, id), which the Added line reads
+// back; re-sorting the first page here would misstate the pages after it.
+function MembersTable({
   list,
   roles,
-  administersRoster,
-  canChangeRole,
-  invite,
+  management,
+  refusalOf,
 }: Readonly<{
-  list: readonly User[];
+  list: User[];
   roles: readonly AssignableRole[];
-  administersRoster: boolean;
-  canChangeRole: boolean;
-  // The invite verb, or false where this reader may not invite.
-  invite: ReactNode;
+  management: boolean;
+  refusalOf: (
+    member: User,
+    list: readonly User[],
+    roles: readonly AssignableRole[],
+  ) => ReturnType<typeof roleRefusal>;
 }>) {
   const t = useT();
-  const me = useMe();
-  const [filter, setFilter] = useState<RosterFilter>("all");
-  const [search, setSearch] = useState("");
-  // Team names for the Teams column. `team_ids` rides only the privileged
-  // projection, so a reader without it asks for no names either.
-  const teams = useRosterNames("team", administersRoster);
-  const teamNames = new Map<string, string>();
-  for (const entry of teams.data ?? []) {
-    if ("name" in entry) {
-      teamNames.set(entry.id, entry.name);
-    }
-  }
-  const countOf = (option: RosterFilter) =>
-    list.filter((member) => inFilter(member, option)).length;
-  const counts: Record<RosterFilter, number> = {
-    all: countOf("all"),
-    active: countOf("active"),
-    invited: countOf("invited"),
-    deactivated: countOf("deactivated"),
+  const teamNames = useTeamNames(management);
+  const member: DataTableColumn<User> = {
+    key: "member",
+    header: t("users.col.member"),
+    render: (u) => <MemberIdentity member={u} />,
   };
-  const needle = search.trim().toLocaleLowerCase();
-  const shown = list.filter(
-    (member) => inFilter(member, filter) && matchesSearch(member, needle),
-  );
+  const activity: DataTableColumn<User> = {
+    key: "activity",
+    header: t("users.col.activity"),
+    render: (u) => <MemberActivity member={u} management={management} />,
+  };
+  // Without `user_admin:read` the roster omits roles, teams, last activity and
+  // verbs, so that reader sees only who each member is and when they joined.
+  const columns: DataTableColumn<User>[] = management
+    ? [
+        member,
+        {
+          key: "role",
+          header: t("users.roleLabel"),
+          render: (u) => (
+            <MemberRole
+              member={u}
+              roles={roles}
+              refusal={refusalOf(u, list, roles)}
+            />
+          ),
+        },
+        {
+          key: "teams",
+          header: t("users.teamsLabel"),
+          render: (u) => <MemberTeams ids={u.team_ids} names={teamNames} />,
+        },
+        activity,
+        {
+          key: "verbs",
+          header: t("table.actions"),
+          headerHidden: true,
+          fold: "end",
+          render: (u) => <MemberVerbs member={u} />,
+        },
+      ]
+    : [member, activity];
   return (
-    <>
-      <PanelBody className="users-roster-toolbar">
-        <SearchField
-          aria-label={t("users.roster.searchLabel")}
-          placeholder={t("users.roster.searchPlaceholder")}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        {invite}
-        <SegmentedControl
-          label={t("users.roster.filterLabel")}
-          options={FILTERS}
-          value={filter}
-          onChange={setFilter}
-          counts={counts}
-          labels={{
-            all: t("users.roster.filter.all"),
-            active: t("users.roster.filter.active"),
-            invited: t("users.roster.filter.invited"),
-            deactivated: t("users.roster.filter.deactivated"),
-          }}
-        />
-      </PanelBody>
-      {shown.length === 0 ? (
-        <PanelBody>
-          <EmptyState>
-            {needle !== ""
-              ? t("users.roster.noMatch")
-              : filter === "all"
-                ? t("users.roster.empty")
-                : t(`users.roster.emptyFilter.${filter}`)}
-          </EmptyState>
-        </PanelBody>
-      ) : (
-        <TableScroll label={t("users.roster.title")}>
-          <table className="table users-roster">
-            <thead>
-              <tr>
-                <th scope="col">{t("users.roster.col.member")}</th>
-                {administersRoster && (
-                  <>
-                    <th scope="col">{t("users.roster.col.role")}</th>
-                    <th scope="col">{t("users.roster.col.teams")}</th>
-                  </>
-                )}
-                <th scope="col">{t("users.roster.col.status")}</th>
-                <th scope="col" className="users-roster-actions">
-                  <span className="sr-only">
-                    {t("users.roster.col.actions")}
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            {shown.map((member) => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                roles={roles}
-                isMe={member.id === me.data?.user.id}
-                teamNames={administersRoster ? teamNames : null}
-                canChangeRole={canChangeRole}
-              />
-            ))}
-          </table>
-        </TableScroll>
-      )}
-    </>
+    <DataTable
+      fold
+      bleed
+      label={t("users.membersTitle")}
+      columns={columns}
+      rows={list}
+      rowKey={(u) => u.id}
+    />
   );
 }
 
-// Inviting somebody is four decisions committed together (an address, a name,
-// a role and the teams they land in), so the roster's toolbar carries the verb
-// and the form (users-invite-form.tsx, shared with the setup journey) lives in
-// the dialog behind it.
+function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
+  const teams = useRoster("team", enabled);
+  const names = new Map<string, string>();
+  for (const entry of teams.data ?? []) {
+    if ("name" in entry) {
+      names.set(entry.id, entry.name);
+    }
+  }
+  return names;
+}
+
+function MemberIdentity({ member }: Readonly<{ member: User }>) {
+  const t = useT();
+  return (
+    // Focusable by script only: the deactivate confirm hands focus back here.
+    <span id={memberAnchorId(member.id)} className="users-member" tabIndex={-1}>
+      <Avatar name={member.display_name} identity={member.id} />
+      <CellStack>
+        <span className="users-member-name">
+          <span className="t-name">{member.display_name}</span>
+          {/* The agent seat owns records, so it is listed; the badge keeps it
+              from passing for a colleague. */}
+          {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
+          <StatusBadge status={member.status} />
+        </span>
+        <span className="t-caption">{member.email}</span>
+      </CellStack>
+    </span>
+  );
+}
+
+function MemberTeams({
+  ids,
+  names,
+}: Readonly<{
+  ids: string[] | undefined;
+  names: ReadonlyMap<string, string>;
+}>) {
+  const known = (ids ?? []).flatMap((id) => names.get(id) ?? []);
+  if (known.length === 0) {
+    return null;
+  }
+  return (
+    <span className="users-teams" title={known.join(", ")}>
+      <CellStrip>
+        {known.map((name) => (
+          <Badge key={name}>{name}</Badge>
+        ))}
+      </CellStrip>
+    </span>
+  );
+}
+
+// Active is every seat's ordinary state, so only the exceptions are marked.
+// Invited is work in flight, not a fault.
+const STATUS_TONE = {
+  invited: "info",
+  suspended: "warning",
+  deactivated: "default",
+} as const;
+
+function StatusBadge({ status }: Readonly<{ status: string }>) {
+  const t = useT();
+  if (
+    status !== "invited" &&
+    status !== "suspended" &&
+    status !== "deactivated"
+  ) {
+    return null;
+  }
+  return (
+    <Badge tone={STATUS_TONE[status]}>{t(`users.status.${status}`)}</Badge>
+  );
+}
+
+function MemberActivity({
+  member,
+  management,
+}: Readonly<{ member: User; management: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const added = member.created_at;
+  return (
+    <CellStack>
+      {management && <LastActive at={member.last_active_at} />}
+      {added && (
+        <time className="t-caption users-nowrap" dateTime={added}>
+          {t("users.addedOn", {
+            date: formatDateAbbrev(added, locale, viewerZone()),
+          })}
+        </time>
+      )}
+    </CellStack>
+  );
+}
+
+// Null means never signed in, or withheld from this reader: a delegated admin
+// sees none for a member they do not outrank. The cell claims neither.
+function LastActive({ at }: Readonly<{ at: string | null | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!at) {
+    return (
+      <span>
+        <span aria-hidden="true">—</span>
+        <span className="sr-only">{t("users.lastActiveUnknown")}</span>
+      </span>
+    );
+  }
+  return (
+    <time
+      className="users-nowrap"
+      dateTime={at}
+      title={formatDateTime(at, locale, viewerZone())}
+    >
+      {formatRelativeTime(at, locale)}
+    </time>
+  );
+}
+
+// Inviting is four decisions committed together, so the header carries the
+// verb and the form (shared with the setup journey) lives in the dialog.
 function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
   const t = useT();
-  const qc = useQueryClient();
+  const refresh = useMemberRefresh();
   const formTitleId = useId();
   const [open, setOpen] = useState(false);
-  // Where no email channel exists the invite alone leaves a member who cannot
-  // sign in, so the dialog opens straight away and mints the link. The member
-  // row keeps its own action, which is what makes a dismissed dialog
-  // recoverable.
+  // With no email channel the invite alone leaves a member who cannot sign in,
+  // so the link is minted at once. The member's menu keeps the verb.
   const [invited, setInvited] = useState<{ id: string; name: string } | null>(
     null,
   );
@@ -334,28 +347,20 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
 
   return (
     <>
-      {/* Named for what it opens, not for what it does: this button invites
-          nobody, and the dialog's own submit reads "Invite". Two buttons with
-          one name are ambiguous for a reader and for `getByRole` alike. */}
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        {t("users.roster.inviteOpen")}
-      </Button>
+      {/* Named for what it opens: the dialog's own submit reads "Invite". */}
+      <Button onClick={() => setOpen(true)}>{t("users.inviteOpen")}</Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={formTitleId}
+        intent="form"
       >
         <InviteUserForm
           titleId={formTitleId}
           onInvited={(member) => {
-            // The dialog closes on the write that landed, never before it: a
-            // refused invite has to leave the address and the name where the
-            // admin typed them.
+            // Closes on the write that landed: a refused invite keeps what was typed.
             setOpen(false);
-            qc.invalidateQueries({ queryKey: ["users-admin"] });
-            // An invite spends a seat, so the capacity readings move with it.
-            qc.invalidateQueries({ queryKey: ["installation-seat-usage"] });
-            qc.invalidateQueries({ queryKey: ["installation-license"] });
+            void refresh();
             if (canIssueLink) {
               setInvited(member);
               void passwordLink.mint(member.id);

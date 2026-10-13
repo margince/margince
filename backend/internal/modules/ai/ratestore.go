@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // RateStore is the ai_model_rate price sheet — the fx_rate-style
@@ -60,13 +59,12 @@ func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day t
 
 func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day time.Time) (*ModelRate, error) {
 	var rate ModelRate
+	from, to := rateFallbacks()
 	err := tx.QueryRow(ctx, `
-		SELECT provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
-		       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date
-		FROM ai_model_rate
-		WHERE provider = $1 AND model_id = $2 AND effective_date <= $3
-		ORDER BY effective_date DESC LIMIT 1`,
-		provider, modelID, day).Scan(
+		SELECT r.provider, r.model_id, r.input_per_mtok_microusd, r.output_per_mtok_microusd,
+		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.effective_date
+		FROM (`+rateMatch("$1", "$2", "$3", 4, 5)+`) r`,
+		provider, modelID, day, from, to).Scan(
 		&rate.Provider, &rate.ModelID, &rate.InputPerMTokMicroUSD, &rate.OutputPerMTokMicroUSD,
 		&rate.CacheReadPerMTokMicroUSD, &rate.CacheWritePerMTokMicroUSD, &rate.EffectiveDate,
 	)
@@ -78,34 +76,6 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 	}
 	return &rate, nil
 }
-
-// The per-attempt pricing fragments over an ai_call row aliased `ac`. CostReport
-// sums them per day and the call trace sums them per logical call, so the trace's
-// per-call cost adds up to the usage report's total by construction.
-//
-// attemptRateJoin binds `r` to the attempt's as-of-date rate, RateFor's resolution.
-const attemptRateJoin = `LEFT JOIN LATERAL (
-	  SELECT mr.id, mr.input_per_mtok_microusd, mr.output_per_mtok_microusd,
-	         mr.cache_read_per_mtok_microusd, mr.cache_write_per_mtok_microusd
-	  FROM ai_model_rate mr
-	  WHERE mr.provider = ac.provider AND mr.model_id = ac.model_id
-	    AND mr.effective_date <= ac.occurred_at::date
-	  ORDER BY mr.effective_date DESC
-	  LIMIT 1
-	) r ON true`
-
-// attemptCostMicroUSD is PriceCall's four-bucket arithmetic in SQL.
-const attemptCostMicroUSD = `CASE
-	  WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
-	  WHEN r.id IS NULL THEN 0
-	  ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
-	       + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-	       + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-	       + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
-	END`
-
-// attemptUnpriced is an attempt that spent tokens with no rate to price them.
-const attemptUnpriced = `NOT ac.cache_hit AND NOT (ac.tokens_in = 0 AND ac.tokens_out = 0) AND r.id IS NULL`
 
 // CostReport prices the [from, to) window's ai_call rows against their
 // as-of-date rate and sums per (calendar day, task, tier) — THE one
@@ -133,17 +103,21 @@ const attemptUnpriced = `NOT ac.cache_hit AND NOT (ac.tokens_in = 0 AND ac.token
 // transparency, never a gate).
 func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCost, error) {
 	var report []DayCost
+	fallbackFrom, fallbackTo := rateFallbacks()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT ac.occurred_at::date AS day, ac.task, ac.tier,
-			  COALESCE(SUM(%s), 0) AS cost_microusd,
-			  COUNT(*) FILTER (WHERE %s) AS unpriced_calls
-			FROM ai_call ac %s
+		rows, err := tx.Query(ctx, `
+			SELECT
+			  ac.occurred_at::date AS day,
+			  ac.task,
+			  ac.tier,
+			  COALESCE(SUM(`+callCostMicroUSD("ac")+`), 0) AS cost_microusd,
+			  COUNT(*) FILTER (WHERE `+callUnpriced("ac")+`) AS unpriced_calls
+			FROM ai_call ac
+			LEFT JOIN LATERAL (`+rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date", 3, 4)+`) r ON true
 			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
 			GROUP BY ac.occurred_at::date, ac.task, ac.tier
 			ORDER BY day, ac.task, ac.tier`,
-			attemptCostMicroUSD, attemptUnpriced, attemptRateJoin),
-			from, to)
+			from, to, fallbackFrom, fallbackTo)
 		if err != nil {
 			return err
 		}
@@ -164,4 +138,24 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 		return nil, fmt.Errorf("ai: cost report: %w", err)
 	}
 	return report, nil
+}
+
+// callCostMicroUSD is what one ai_call row (aliased alias, joined to its rate
+// as r through rateMatch) cost, in micro-USD. Every reader that prices a call
+// in SQL takes it from here, so they price alike.
+func callCostMicroUSD(alias string) string {
+	return fmt.Sprintf(`CASE
+	      WHEN %[1]s.cache_hit OR (%[1]s.tokens_in = 0 AND %[1]s.tokens_out = 0) THEN 0
+	      WHEN r.id IS NULL THEN 0
+	      ELSE (GREATEST(%[1]s.tokens_in - %[1]s.cached_tokens - %[1]s.cache_write_tokens, 0) * r.input_per_mtok_microusd
+	           + %[1]s.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	           + %[1]s.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	           + %[1]s.tokens_out * r.output_per_mtok_microusd) / 1000000
+	    END`, alias)
+}
+
+// callUnpriced is whether a row spent something no rate prices. A cache hit and
+// a call that reached no provider are free by construction, never unpriced.
+func callUnpriced(alias string) string {
+	return fmt.Sprintf(`NOT %[1]s.cache_hit AND NOT (%[1]s.tokens_in = 0 AND %[1]s.tokens_out = 0) AND r.id IS NULL`, alias)
 }

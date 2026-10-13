@@ -92,6 +92,10 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("webread: %s answered %d", e.URL, e.Status)
 }
 
+// HTTPStatus is the status the site answered, for a caller that classifies a
+// failure by its shape without importing this package.
+func (e *StatusError) HTTPStatus() int { return e.Status }
+
 // Retryable reports whether the status is one that commonly changes on its own.
 // Bot protection (403, 429) and server faults (5xx) do; a 404 does not.
 func (e *StatusError) Retryable() bool {

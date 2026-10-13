@@ -5,7 +5,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { ProblemError, problemMessageOf, throwProblem } from "../common";
+import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, prefill } from "../onboarding";
 import { defaultSelectedFactKeys } from "../onboarding-facts";
@@ -69,6 +69,8 @@ type UseCompanyReadArgs = Readonly<{
   dispatch: Dispatch<ConversationEvent>;
   /** Live view of the machine, for the deferred-resume re-arm. */
   machine: Readonly<{ current: ConversationState }>;
+  /** The machine's active run at mount, which this hook adopts. */
+  activeReadId: string | null;
   setDraft: (update: SetStateAction<CompanyDraft>) => void;
   setSelectedFactKeys: (keys: string[]) => void;
   answers: readonly ClarifyAnswer[];
@@ -96,7 +98,8 @@ export const READ_POLL_MS = 800;
 
 export function useCompanyRead({
   dispatch,
-  machine,
+  machine: machineRef,
+  activeReadId,
   setDraft,
   setSelectedFactKeys,
   answers,
@@ -108,12 +111,10 @@ export function useCompanyRead({
   // A run the machine already owns at mount (a restore, or this act
   // remounting mid-read) is adopted: polling resumes for the machine's
   // active run instead of stranding it with no poller.
-  const [readId, setReadId] = useState<string | null>(
-    machine.current.activeReadId,
-  );
+  const [readId, setReadId] = useState<string | null>(activeReadId);
   // Mirrors the readId state for callbacks: the poll effect must ignore
   // snapshots of a run this hook no longer intends (a superseded URL).
-  const readIdRef = useRef<string | null>(machine.current.activeReadId);
+  const readIdRef = useRef<string | null>(activeReadId);
   const [proposalArmed, setProposalArmed] = useState(false);
   const prevSnapshot = useRef<CompanySiteRead | null>(null);
   const appliedReadVersion = useRef(0);
@@ -170,7 +171,7 @@ export function useCompanyRead({
       // that jumped straight to a NEW terminal between the slow polls —
       // without READ_STARTED the machine would drop that outcome as stale.
       if (
-        machine.current.activeReadId !== next.id &&
+        machineRef.current.activeReadId !== next.id &&
         (next.status === "queued" || next.status === "reading" || freshTerminal)
       ) {
         dispatch({ type: "READ_STARTED", readId: next.id });
@@ -196,7 +197,7 @@ export function useCompanyRead({
     [
       concludeFreshTerminal,
       dispatch,
-      machine,
+      machineRef,
       locale,
       queue,
       setDraft,
@@ -283,13 +284,11 @@ export function useCompanyRead({
     queryKey: ["company-site-read", readId],
     enabled: readId !== null,
     queryFn: async (): Promise<CompanySiteRead> => {
-      const { data, error } = await api.GET("/company/site-reads/{readId}", {
-        params: { path: { readId: readId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/company/site-reads/{readId}", {
+          params: { path: { readId: readId ?? "" } },
+        }),
+      );
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -315,7 +314,7 @@ export function useCompanyRead({
     if (!siteRead.isError) {
       return;
     }
-    const activeReadId = machine.current.activeReadId;
+    const activeReadId = machineRef.current.activeReadId;
     if (activeReadId === null || pendingTerminal.current !== null) {
       return;
     }
@@ -333,7 +332,7 @@ export function useCompanyRead({
       readId: activeReadId,
       status: "failed",
     });
-  }, [siteRead.isError, dispatch, machine]);
+  }, [siteRead.isError, dispatch, machineRef]);
 
   const promptLocale = onboardingLocale(locale);
   const proposal = useQuery({
@@ -342,13 +341,11 @@ export function useCompanyRead({
     queryFn: async (): Promise<Proposal> => {
       // The open questions' copy speaks the user's language; option values
       // stay locale-invariant server-side.
-      const { data, error } = await api.GET("/onboarding/company/proposal", {
-        params: { query: { locale: promptLocale } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/onboarding/company/proposal", {
+          params: { query: { locale: promptLocale } },
+        }),
+      );
     },
   });
 
@@ -440,8 +437,8 @@ export function useCompanyRead({
   // while another read is active, so this can never ask about a stale run.
   useEffect(() => {
     if (
-      machine.current.phase !== "co.review" ||
-      machine.current.pendingQuestion !== null
+      machineRef.current.phase !== "co.review" ||
+      machineRef.current.pendingQuestion !== null
     ) {
       return;
     }
@@ -462,7 +459,7 @@ export function useCompanyRead({
         question: toMachineQuestion(next, prevSnapshot.current?.comparisons),
       });
     }
-  }, [proposal.data, answers, dispatch, machine]);
+  }, [proposal.data, answers, dispatch, machineRef]);
 
   return { startRead, siteRead, proposal, prevSnapshot };
 }

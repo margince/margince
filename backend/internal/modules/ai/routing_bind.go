@@ -5,6 +5,8 @@ package ai
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -167,6 +169,15 @@ func (r *Router) CurrentModelForTier(tier Tier) (ModelRef, bool) {
 	return ModelRef{Provider: m.provider, Model: m.model}, true
 }
 
+// BoundModels is the (provider, model) every lane serves under the binding
+// this Router holds now, the embed and decision lanes included. It is keyed by
+// the tier its calls are recorded under. Unlike CurrentModelForTier it keeps a
+// lane with no model id: the question is which calls that lane made, not what
+// they cost.
+func (r *Router) BoundModels() map[Tier]ModelRef {
+	return r.binding().boundModels()
+}
+
 // buildClients turns validated bindings into live Clients via
 // SelectBrain. Construction errors (missing BYOK key, unknown provider)
 // surface here — still startup, still loud.
@@ -179,11 +190,24 @@ func (cfg RoutingConfig) buildClients() (map[Tier]model.Client, model.Client, er
 		if err != nil {
 			return nil, nil, fmt.Errorf("ai: tier %s: %w", tier, err)
 		}
-		clients[tier] = client
+		clients[tier] = trackClient(client, binding.Provider, sharedProviderHealth)
 	}
 	embedder, err := SelectBrain(cfg.Embeddings.ProviderConfig, cfg.keys)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ai: embeddings lane: %w", err)
 	}
-	return clients, embedder, nil
+	return clients, trackClient(embedder, cfg.Embeddings.Provider, sharedProviderHealth), nil
+}
+
+// providers names every provider this config binds: tiers, embeddings and the
+// decisions lane.
+func (cfg RoutingConfig) providers() []string {
+	seen := map[string]bool{cfg.Embeddings.Provider: true}
+	for _, binding := range cfg.Tiers {
+		seen[binding.Provider] = true
+	}
+	if cfg.Decisions != nil {
+		seen[cfg.Decisions.Provider] = true
+	}
+	return slices.Sorted(maps.Keys(seen))
 }

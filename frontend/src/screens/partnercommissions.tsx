@@ -1,18 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import { StatStrip } from "../design-system/statstrip";
 import { stable } from "../format/collate";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
-import { QueryGate, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
 import "./partnercommissions.css";
 
@@ -57,14 +58,13 @@ async function fetchPartnerCommissions(
   const entries: CommissionEntry[] = [];
   let cursor: string | undefined;
   do {
-    const { data, error } = await api.GET("/commissions", {
-      params: {
-        query: { partner_company_id: companyId, limit: 50, cursor },
-      },
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    const data = unwrap(
+      await api.GET("/commissions", {
+        params: {
+          query: { partner_company_id: companyId, limit: 50, cursor },
+        },
+      }),
+    );
     entries.push(...(data?.data ?? []));
     cursor = data?.page?.has_more
       ? (data.page.next_cursor ?? undefined)

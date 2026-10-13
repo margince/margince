@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
+import { consequenceText } from "./worklist.connection";
 import {
   comparisonText,
   itemTitle,
@@ -325,6 +326,35 @@ describe("reasonText — the lead's own deadline", () => {
   });
 });
 
+// One card per conversation: the earlier requests ride the card as a reason,
+// dated from the first. A reason this census does not list is dropped.
+describe("reasonText — a thread's earlier requests", () => {
+  it("counts them in the reader's plural", () => {
+    const one: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 1 },
+    };
+    const two: WorklistReason = {
+      kind: "earlier_requests",
+      value: { kind: "count", count: 2 },
+    };
+    expect(reasonText(one, t, "en", zone)).toBe(
+      "1 earlier request in this thread",
+    );
+    expect(reasonText(two, t, "en", zone)).toBe(
+      "2 earlier requests in this thread",
+    );
+  });
+
+  it("names when the first was asked", () => {
+    const reason: WorklistReason = {
+      kind: "first_asked",
+      value: { kind: "date", date: "2026-09-03T14:30:00Z" },
+    };
+    expect(reasonText(reason, t, "en", zone)).toMatch(/^first asked .*2026/);
+  });
+});
+
 describe("itemTitle — an incident names what broke, never an internal id", () => {
   // `cause` and `label` are two halves of one contract and the fixture supplies
   // both: `cause` is the identity the group was formed on, opaque and never
@@ -380,6 +410,69 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
     const title = itemTitle(incident({}), t, "en");
     expect(title).not.toContain("automation_run");
     expect(title).toContain("8 times");
+  });
+});
+
+describe("itemTitle — a capture connection says which kind it is", () => {
+  const health = (over: Partial<WorklistItem>): WorklistItem => ({
+    id: "c-1",
+    source: "capture_health",
+    level: 3,
+    category: "system",
+    because: [],
+    consequence: "mailbox_blind",
+    actions: [],
+    ...over,
+  });
+
+  it("calls a broken calendar a calendar", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gcal", medium: "calendar" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Calendar connection needs attention");
+  });
+
+  it("calls a broken mailbox a mailbox", () => {
+    const title = itemTitle(
+      health({ connection: { provider: "gmail", medium: "mailbox" } }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Mailbox connection needs attention");
+  });
+
+  it("says what a broken calendar costs, not what a mailbox does", () => {
+    const calendar = health({
+      connection: { provider: "gcal", medium: "calendar" },
+    });
+    const mailbox = health({
+      connection: { provider: "gmail", medium: "mailbox" },
+    });
+    const unsure = health({ source: "batch" });
+    expect(consequenceText(calendar, t)).toBe(
+      t("worklist.consequence.calendar_blind"),
+    );
+    expect(consequenceText(mailbox, t)).toBe(
+      t("worklist.consequence.mailbox_blind"),
+    );
+    expect(consequenceText(unsure, t)).toBe(
+      t("worklist.consequence.connection_blind"),
+    );
+  });
+
+  it("names a folded connection with no account by its provider", () => {
+    const title = itemTitle(
+      health({
+        source: "batch",
+        connection: { provider: "graphcal", medium: "calendar" },
+        batch: { key: "system_incident", count: 3, cause: "capture_health:x" },
+      }),
+      t,
+      "en",
+    );
+    expect(title).toBe("Outlook Calendar failed 3 times");
   });
 });
 
@@ -478,6 +571,24 @@ describe("an unavailable source", () => {
       }
     }
   });
+
+  // The meetings lane's side reads rank no rows, so `KNOWN_SOURCES` never
+  // lists them; they still fail on their own and must be named, not "other".
+  it.each(["calendar", "next_meeting"])(
+    "names the meetings lane's %s read",
+    (source) => {
+      for (const locale of LOCALES) {
+        const t: Translator = (key, vars) => translate(locale, key, vars);
+        const name = sourceName(source, t);
+        expect(name, locale).not.toBe(
+          translate(locale, "brief.coverage.source.generic"),
+        );
+        const text = sourceUnavailableText({ source, reason: "failed" }, t);
+        expect(text, locale).toContain(name);
+        expect(text.startsWith(name), locale).toBe(false);
+      }
+    },
+  );
 
   it("says which of the two reasons it is, because only one is anybody's to fix", () => {
     // A withheld source is the reader's own grants; a failed one is an outage.

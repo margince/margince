@@ -70,7 +70,7 @@ func seedTrace(ctx context.Context, t *testing.T, env *rateEnv, meter *CallMeter
 	recordLogical(ctx, t, meter, traceCall("", 10, 10, traceUnpricedModel))
 }
 
-func listTrace(t *testing.T, store *CallReadStore, reader context.Context, filter CallFilter) []CallSummary {
+func listTrace(t *testing.T, store *CallReadStore, reader context.Context, filter CallListFilter) []CallSummary {
 	t.Helper()
 	page, err := store.ListCalls(reader, nil, nil, filter)
 	if err != nil {
@@ -96,9 +96,9 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 		"failed":   0,
 	}
 	for outcome, want := range wantCost {
-		got := listTrace(t, store, reader, CallFilter{Outcome: outcome, Model: tracePricedModel})
+		got := listTrace(t, store, reader, CallListFilter{Outcome: outcome, Model: tracePricedModel})
 		if outcome == "answered" {
-			got = listTrace(t, store, reader, CallFilter{Outcome: outcome, Model: traceServedModel})
+			got = listTrace(t, store, reader, CallListFilter{Outcome: outcome, Model: traceServedModel})
 		}
 		if len(got) != 1 {
 			t.Fatalf("outcome %s: %d calls, want exactly the one seeded", outcome, len(got))
@@ -111,13 +111,13 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 		}
 	}
 
-	unpriced := listTrace(t, store, reader, CallFilter{Model: traceUnpricedModel})
+	unpriced := listTrace(t, store, reader, CallListFilter{Model: traceUnpricedModel})
 	if len(unpriced) != 1 || unpriced[0].CostMicroUSD != nil {
 		t.Fatalf("a call with no rate must carry no cost, never a 0: %+v", unpriced)
 	}
 
 	// The per-call costs are the usage report's own numbers: they sum to it.
-	all := listTrace(t, store, reader, CallFilter{})
+	all := listTrace(t, store, reader, CallListFilter{})
 	var listed int64
 	for _, call := range all {
 		if call.CostMicroUSD != nil {
@@ -146,11 +146,11 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	seedTrace(ctx, t, env, NewCallMeter(db))
 	store, reader := NewCallReadStore(db), diagnosticsReader(ws)
 
-	all := listTrace(t, store, reader, CallFilter{})
+	all := listTrace(t, store, reader, CallListFilter{})
 	if len(all) != 5 {
 		t.Fatalf("trace lists %d terminal calls, want the 5 seeded", len(all))
 	}
-	page, err := store.ListCalls(reader, nil, nil, CallFilter{Outcome: "failed"})
+	page, err := store.ListCalls(reader, nil, nil, CallListFilter{Outcome: "failed"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,15 +158,16 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	assertSetEqual(t, "model facets under a filter", page.Models, wantModels)
 
 	cases := map[string]struct {
-		filter CallFilter
+		filter CallListFilter
 		want   int
 	}{
-		"search by error code":         {CallFilter{Query: "QUOTA"}, 1},
-		"search by task in words":      {CallFilter{Query: "summar"}, 5},
-		"search treats % as a literal": {CallFilter{Query: "%"}, 0},
-		"model and outcome combine":    {CallFilter{Model: tracePricedModel, Outcome: "answered"}, 0},
-		"configured model":             {CallFilter{Model: tracePricedModel}, 3},
-		"task that ran nothing":        {CallFilter{Task: string(TaskEnrich)}, 0},
+		"search by error code":         {CallListFilter{Query: "QUOTA"}, 1},
+		"search by task in words":      {CallListFilter{Query: "summar"}, 5},
+		"search treats % as a literal": {CallListFilter{Query: "%"}, 0},
+		"model and outcome combine":    {CallListFilter{Model: traceServedModel, Outcome: "failed"}, 0},
+		"configured model":             {CallListFilter{Model: tracePricedModel}, 4},
+		"served model":                 {CallListFilter{Model: traceServedModel}, 1},
+		"task that ran nothing":        {CallListFilter{Task: string(TaskEnrich)}, 0},
 	}
 	for name, tc := range cases {
 		if got := listTrace(t, store, reader, tc.filter); len(got) != tc.want {
@@ -179,10 +180,10 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	if !oldest.Before(newest) {
 		t.Fatalf("seeded calls share one instant (%s); the window cannot be told apart", oldest)
 	}
-	if got := listTrace(t, store, reader, CallFilter{From: &newest}); len(got) == 0 || got[0].ID != all[0].ID {
+	if got := listTrace(t, store, reader, CallListFilter{From: &newest}); len(got) == 0 || got[0].ID != all[0].ID {
 		t.Errorf("from the newest instant lists %d calls, want it first", len(got))
 	}
-	if got := listTrace(t, store, reader, CallFilter{To: &newest}); len(got) != len(all)-countAt(all, newest) {
+	if got := listTrace(t, store, reader, CallListFilter{To: &newest}); len(got) != len(all)-countAt(all, newest) {
 		t.Errorf("to is exclusive: %d calls before the newest, want %d", len(got), len(all)-countAt(all, newest))
 	}
 }

@@ -21,8 +21,8 @@ import (
 // subjectAttachmentsWhere selects the attachments Art. 17 erasure removes for
 // a contact: those hung off the contact and those on the contact's destroyable
 // subject-only activities (floor-shielded correspondence keeps its
-// attachments too). $1 is the contact id; $2/$3 are the statutory floor's
-// interval and calendar-year-end anchor.
+// attachments too). $1 is the contact id; $2/$3 are the statutory floor policy
+// (FloorPolicy.sqlArgs).
 var subjectAttachmentsWhere = `(entity_type = 'contact' AND entity_id = $1)
 	   OR (entity_type = 'activity' AND entity_id IN (` + subjectOnlyDestroyable + `))`
 
@@ -35,7 +35,8 @@ var subjectAttachmentsWhere = `(entity_type = 'contact' AND entity_id = $1)
 // so the brief object-store I/O held under the transaction is an acceptable
 // trade for that durability guarantee.
 func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause, where string, args ...any) error {
-	rows, err := tx.Query(ctx, `SELECT storage_key FROM attachment WHERE `+where, args...)
+	// A withheld file's row has no object to purge; the DELETE below takes it.
+	rows, err := tx.Query(ctx, `SELECT storage_key FROM attachment WHERE NOT bytes_withheld AND (`+where+`)`, args...)
 	if err != nil {
 		return err
 	}

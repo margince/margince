@@ -135,15 +135,20 @@ function StageBand({
         {/* What the reader is doing here at all, beside whose software it is.
             The stop and the sub-step trail it muted: a masthead names the place
             first and the position second, and the position is also what the
-            dashes are for. */}
+            dashes are for. The separator is held to its name, so a band that
+            wraps never strands a dot on a line of its own. */}
         <span className="ob-stage-flow">{flow}</span>
         {progress === undefined && step === undefined ? null : (
           <span className="ob-stage-step">
-            · {step ?? progress?.steps[progress.at]}
+            ·{"\u00a0"}
+            {step ?? progress?.steps[progress.at]}
           </span>
         )}
         {where === undefined ? null : (
-          <span className="ob-stage-where">· {where}</span>
+          <span className="ob-stage-where">
+            ·{"\u00a0"}
+            {where}
+          </span>
         )}
       </p>
       {progress === undefined ? null : (

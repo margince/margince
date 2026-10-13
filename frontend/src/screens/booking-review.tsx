@@ -1,9 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Button,
   Disclosure,
@@ -20,11 +19,13 @@ import { Switch } from "../design-system/switch";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useBookingIntent } from "./booking-common";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
-import { throwProblem } from "./common";
 import { ComposeModal } from "./compose";
+import { refreshContactMeetings } from "./contactmeetings.waiting";
 
 type Invitation = components["schemas"]["MeetingInvitationRequest"];
 type Proposal = components["schemas"]["MeetingProposalRequest"];
@@ -98,9 +99,10 @@ export function BookingReview({
       return plural("scheduling.reviewTimes", picks.length, {
         count: formatNumber(picks.length, locale),
       });
-    if (mode === "invite")
+    const [firstPick] = picks;
+    if (mode === "invite" && firstPick)
       return t("scheduling.sendInviteAt", {
-        time: formatDateTime(picks[0].start, locale, zone),
+        time: formatDateTime(firstPick.start, locale, zone),
       });
     return t("scheduling.createLinkReview");
   })();
@@ -168,7 +170,9 @@ export function BookingReview({
             )}
           </div>
         </Disclosure>
-        {mode !== "link" && (
+        {mode === "link" ? (
+          <GuestPicks name={draft.contactName} />
+        ) : (
           <PickTray
             mode={mode}
             picks={picks}
@@ -206,6 +210,22 @@ export function BookingReview({
         <p className="t-caption">{t(NOTES[mode])}</p>
       </PanelBody>
     </Panel>
+  );
+}
+
+// Where the other modes list the times picked, a personal link says who picks,
+// in the same place and at the same height.
+function GuestPicks({ name }: Readonly<{ name?: string }>) {
+  const t = useT();
+  return (
+    <section className="book-picks">
+      <span className="t-name">
+        {t("scheduling.guestPicks", {
+          name: name?.trim() || t("scheduling.guest"),
+        })}
+      </span>
+      <p className="t-caption">{t("scheduling.guestPicksOne")}</p>
+    </section>
   );
 }
 
@@ -281,17 +301,20 @@ function InviteSend({
   request,
 }: Readonly<{ label: string; disabled: boolean; request?: Invitation }>) {
   const intent = useBookingIntent();
+  const client = useQueryClient();
   const send = useMutation({
     mutationFn: async (body: Invitation) => {
-      const { data, error } = await api.POST("/scheduling/invitations", {
-        body,
-        params: { header: { "Idempotency-Key": intent(body) } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/scheduling/invitations", {
+          body,
+          params: { header: { "Idempotency-Key": intent(body) } },
+        }),
+      );
     },
-    onSuccess: (value) =>
-      navigate({ screen: "book", id: `meeting-${value.id}` }),
+    onSuccess: async (value, body) => {
+      await refreshContactMeetings(client, body.contact_id);
+      navigate({ screen: "book", id: `meeting-${value.id}` });
+    },
   });
   return (
     <div className="book-form">
@@ -324,17 +347,21 @@ function ProposalSend({
   const t = useT();
   const { locale } = useLocale();
   const intent = useBookingIntent();
+  const client = useQueryClient();
   const [review, setReview] = useState(false);
   const create = useMutation({
     mutationFn: async (body: Proposal) => {
-      const { data, error } = await api.POST("/scheduling/proposals", {
-        params: { header: { "Idempotency-Key": intent(body) } },
-        body,
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.POST("/scheduling/proposals", {
+          params: { header: { "Idempotency-Key": intent(body) } },
+          body,
+        }),
+      );
     },
-    onSuccess: () => setReview(true),
+    onSuccess: async (_proposal, body) => {
+      setReview(true);
+      await refreshContactMeetings(client, body.contact_id);
+    },
   });
   const current =
     create.data && JSON.stringify(create.variables) === JSON.stringify(request);

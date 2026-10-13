@@ -69,6 +69,11 @@ func TestDeferralDeadlineHonorsTheTypedWindow(t *testing.T) {
 	if got := worker.deferralDeadline(ai.ErrBudgetDeferred); !got.Equal(now.Add(voiceBuildDeferral)) {
 		t.Fatalf("bare sentinel = %v, want the fixed fallback", got)
 	}
+	probe := now.Add(5 * time.Minute)
+	down := &ai.ProviderDownError{Provider: "acme", Health: model.HealthDown, RetryAfter: probe}
+	if got := worker.deferralDeadline(down); !got.Equal(probe) {
+		t.Fatalf("provider outage = %v, want the provider's own probe time %v", got, probe)
+	}
 	stale := &ai.BudgetDeferralError{Task: ai.TaskVoiceBuild, NextAttemptAt: now.Add(-time.Hour)}
 	if got := worker.deferralDeadline(stale); !got.Equal(now.Add(voiceBuildDeferral)) {
 		t.Fatalf("past window = %v, want the fixed fallback", got)

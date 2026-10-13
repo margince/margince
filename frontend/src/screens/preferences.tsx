@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import { Button, Card, EmptyState, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
@@ -8,7 +8,7 @@ import { SaveBar } from "../design-system/savebar";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { PreferenceRow } from "./preferencerow";
 import {
   type Draft,
@@ -112,20 +112,17 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   // Whether this subject may take a grant at all — see subjectMayGrant.
   const mayGrant = subjectMayGrant(purposes);
 
-  // The wording rendered at each toggle IS the wording submitted for it —
-  // one map, computed once per data load, read both for display and for the
-  // save payload. An independent re-derivation at submit time would break
-  // the passthrough invariant the moment the two computations drifted.
-  const wordingByKey = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const purpose of purposes) {
+  // The wording rendered at each toggle is the wording submitted for it: one
+  // function, read both for display and for the save payload.
+  const wordingOf = useCallback(
+    (purpose: PurposeView) => {
       const wordingKey = WORDING_KEYS[purpose.key];
-      map[purpose.key] = wordingKey
+      return wordingKey
         ? t(wordingKey)
         : t("prefs.wordingGeneric", { label: labelOf(t, purpose) });
-    }
-    return map;
-  }, [purposes, t]);
+    },
+    [t],
+  );
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [partialSave, setPartialSave] = useState(false);
@@ -166,16 +163,14 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
   // reported was false: the subject's choices were on the screen.
   const save = useMutation({
     mutationFn: async (choices: Draft) => {
-      const { data, error } = await api.PUT("/public/preferences/{token}", {
-        params: { path: { token } },
-        body: {
-          choices: toChoices(purposes, choices, (key) => wordingByKey[key]),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/public/preferences/{token}", {
+          params: { path: { token } },
+          body: {
+            choices: toChoices(purposes, choices, wordingOf),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       // The server's latest body is authoritative — never the draft that
@@ -347,7 +342,7 @@ function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
             key={purpose.key}
             purpose={purpose}
             on={rowIsOn(purpose, draft)}
-            wording={wordingByKey[purpose.key]}
+            wording={wordingOf(purpose)}
             t={t}
             disabled={writePending}
             mayGrant={mayGrant}

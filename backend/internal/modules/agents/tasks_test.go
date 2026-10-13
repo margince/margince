@@ -494,6 +494,8 @@ func (a *fakeApprovals) StageVolumeRelease(context.Context, VolumeReleaseRequest
 	return ids.ApprovalID{}, false, errors.New("no step-up in this fixture")
 }
 
+func (a *fakeApprovals) ReleasableByCaller(context.Context, StageRequest) bool { return false }
+
 func (a *fakeApprovals) Redeem(_ context.Context, id ids.ApprovalID, _, _ string) (int64, bool, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

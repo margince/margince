@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type QueryKey,
   skipToken,
   useMutation,
   useQuery,
@@ -69,26 +70,27 @@ export type Translate = ReturnType<typeof useT>;
 
 /**
  * Opens the undo of a change that just ran. The undo is its own press of the
- * same dialog — previewed, shown, confirmed — so it needs a host that outlives
- * the list's selection, whose bulk bar leaves the page once the change clears
- * it. `BulkUndoProvider` is that host.
+ * same dialog: previewed, shown, confirmed. So it needs a host that outlives
+ * the list's selection, whose bulk bar leaves once the change clears it.
+ * `BulkUndoProvider` is that host. A change run as several batches is undone
+ * batch by batch, one dialog after the other.
  */
 const BulkUndoContext = createContext<
-  ((request: BulkChangeRequest) => void) | null
+  ((requests: readonly BulkChangeRequest[]) => void) | null
 >(null);
 
 /** The one place an undo's dialog is drawn, mounted beside the app. */
 export function BulkUndoProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [request, setRequest] = useState<BulkChangeRequest | null>(null);
+  const [queue, setQueue] = useState<readonly BulkChangeRequest[]>([]);
   return (
-    <BulkUndoContext.Provider value={setRequest}>
+    <BulkUndoContext.Provider value={setQueue}>
       {children}
       <BulkChangeDialog
-        request={request}
-        onClose={() => setRequest(null)}
-        onDone={() => setRequest(null)}
+        request={queue[0] ?? null}
+        onClose={() => setQueue([])}
+        onDone={() => setQueue((waiting) => waiting.slice(1))}
       />
     </BulkUndoContext.Provider>
   );
@@ -106,6 +108,19 @@ function undoOf(
     openId: crypto.randomUUID(),
     undoOf: result.batch_id,
   };
+}
+
+// A tag verb changes each record's tags panel and the tag's own page, the same
+// reads a single apply refreshes (useApplyTag).
+function tagKeys(request: BulkChangeRequest): QueryKey[] {
+  if (request.verb !== "add_tag" && request.verb !== "remove_tag") {
+    return [];
+  }
+  return [
+    ...request.rows.map((row) => ["record-tags", request.recordType, row.id]),
+    ["tag"],
+    ["tag-records"],
+  ];
 }
 
 function recordKeysOf(kind: RecordKind, id: string) {
@@ -204,47 +219,34 @@ function PreviewBody({
   );
 }
 
+/** One batch of a change: what was asked, and what the server did. */
+export type BulkBatch = Readonly<{
+  request: BulkChangeRequest;
+  result: BulkChangeResult;
+}>;
+
+// The batches of one change, counted as the one change the reader asked for.
+function combined(runs: readonly BulkBatch[]): BulkChangeResult {
+  return {
+    batch_id: runs[0]?.result.batch_id ?? "",
+    changed: runs.reduce((sum, run) => sum + run.result.changed, 0),
+    skipped: runs.flatMap((run) => run.result.skipped),
+    left_behind: runs.flatMap((run) => run.result.left_behind ?? []),
+  };
+}
+
 /**
- * What a bulk verb would do, asked of the server before anything is written,
- * and the one button that does it.
- *
- * A bare `Modal` rather than `ConfirmModal`: when nothing would change, or the
- * preview failed, there is nothing to confirm and the only verb is Close.
+ * Reports a bulk change or its undo once it ran, as one or more batches. It
+ * refreshes the reads they made stale and shows one note, with Undo for a change. The dialog and
+ * a verb that runs a change without one share it, so both report alike.
  */
-export function BulkChangeDialog({
-  request,
-  onClose,
-  onDone,
-}: Readonly<{
-  /** The press to preview; null while the dialog is closed. */
-  request: BulkChangeRequest | null;
-  onClose: () => void;
-  /** Called once the change ran — the caller clears its selection. */
-  onDone: (result: BulkChangeResult) => void;
-}>) {
+export function useBulkOutcome() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const headingId = useId();
   const openUndo = useContext(BulkUndoContext);
-  // Kept after close so the dialog still has its words while it animates out.
-  const [shown, setShown] = useState(request);
-  if (request !== null && request !== shown) {
-    setShown(request);
-  }
-
-  const preview = useQuery({
-    queryKey: ["bulk-preview", shown?.openId],
-    queryFn: request ? () => previewBulkChange(request, t) : skipToken,
-    // Each press is its own question; a cached answer would carry a token
-    // somebody may already have spent.
-    gcTime: 0,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
 
   const refresh = async (request: BulkChangeRequest) => {
     const kind = RECORD_KINDS[request.recordType];
@@ -255,8 +257,15 @@ export function BulkChangeDialog({
     }
     // A list page reads its members from the record list, and a task lands
     // on the task lists: both go stale with the change.
+    const lists: QueryKey[] = [
+      [kind.list],
+      [LISTS_KEY],
+      ["tasks"],
+      ["activities"],
+      ...tagKeys(request),
+    ];
     await Promise.all(
-      [[kind.list], [LISTS_KEY], ["tasks"], ["activities"]].map((queryKey) =>
+      [...lists, ...(kind.stale ?? [])].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey }),
       ),
     );
@@ -281,27 +290,81 @@ export function BulkChangeDialog({
       .join(" ");
   };
 
+  return async (runs: readonly BulkBatch[]) => {
+    const first = runs[0];
+    if (!first) {
+      return;
+    }
+    await Promise.all(runs.map((run) => refresh(run.request)));
+    const result = combined(runs);
+    const kind = RECORD_KINDS[first.request.recordType];
+    const undoable =
+      openUndo !== null &&
+      first.request.undoOf === undefined &&
+      result.changed > 0;
+    toast.show(
+      outcome(first.request.undoOf ? kind.undone : kind.done, result),
+      {
+        tone: result.changed > 0 ? "success" : "warning",
+        action: undoable
+          ? {
+              kind: "undo",
+              label: t("common.undo"),
+              onAct: () =>
+                openUndo(
+                  runs
+                    .filter((run) => run.result.changed > 0)
+                    .map((run) => undoOf(run.request, run.result)),
+                ),
+            }
+          : undefined,
+      },
+    );
+  };
+}
+
+/**
+ * What a bulk verb would do, asked of the server before anything is written,
+ * and the one button that does it.
+ *
+ * A bare `Modal` rather than `ConfirmModal`: when nothing would change, or the
+ * preview failed, there is nothing to confirm and the only verb is Close.
+ */
+export function BulkChangeDialog({
+  request,
+  onClose,
+  onDone,
+}: Readonly<{
+  /** The press to preview; null while the dialog is closed. */
+  request: BulkChangeRequest | null;
+  onClose: () => void;
+  /** Called once the change ran; the caller clears its selection. */
+  onDone: (result: BulkChangeResult) => void;
+}>) {
+  const t = useT();
+  const headingId = useId();
+  const report = useBulkOutcome();
+  // Kept after close so the dialog still has its words while it animates out.
+  const [shown, setShown] = useState(request);
+  if (request !== null && request !== shown) {
+    setShown(request);
+  }
+
+  const preview = useQuery({
+    queryKey: ["bulk-preview", shown?.openId],
+    queryFn: request ? () => previewBulkChange(request, t) : skipToken,
+    // Each press is its own question; a cached answer would carry a token
+    // somebody may already have spent.
+    gcTime: 0,
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const execute = useMutation({
     mutationFn: executeBulkChange,
     onSuccess: async (result, run) => {
-      await refresh(run.request);
-      const kind = RECORD_KINDS[run.request.recordType];
-      const undoable =
-        openUndo !== null &&
-        run.request.undoOf === undefined &&
-        result.changed > 0;
-      toast.show(
-        outcome(run.request.undoOf ? kind.undone : kind.done, result),
-        {
-          tone: result.changed > 0 ? "success" : "warning",
-          action: undoable
-            ? {
-                label: t("common.undo"),
-                onAct: () => openUndo(undoOf(run.request, result)),
-              }
-            : undefined,
-        },
-      );
+      await report([{ request: run.request, result }]);
       onDone(result);
     },
   });
@@ -328,12 +391,19 @@ export function BulkChangeDialog({
   }
 
   return (
-    <Modal open={request !== null} onClose={close} labelledBy={headingId}>
+    <Modal
+      open={request !== null}
+      onClose={close}
+      labelledBy={headingId}
+      intent="confirm"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {words.title}
       </Heading>
-      <div className="form-stack">{body}</div>
-      <ErrorLine error={execute.error} />
+      <div className="form-stack">
+        {body}
+        <ErrorLine error={execute.error} />
+      </div>
       <div className="actions">
         {runnable ? (
           <>

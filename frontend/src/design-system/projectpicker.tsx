@@ -51,7 +51,7 @@ export function useSoleProjectDefault(
   scope = "",
 ) {
   const defaultedFor = useRef(new Map<string, string>());
-  const sole = projects.length === 1 ? projects[0].project_id : "";
+  const sole = projects.length === 1 ? (projects[0]?.project_id ?? "") : "";
   // A choice the list still offers stands, and counts as this sole project's
   // default having been settled. A choice it no longer offers is about to be
   // cleared (useClearVanishedChoice), and the default applies to the empty

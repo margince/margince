@@ -114,6 +114,7 @@ function LinkedinRow({
           }
         }}
         labelledBy={titleId}
+        intent="form"
       >
         <Heading size="large" className="t-h3 modal-title" id={titleId}>
           {t("ob.conv.linkedin.dialogHeadline")}
@@ -153,24 +154,27 @@ function LinkedinPanel({
   const trimmed = profile.trim();
 
   return (
-    <div className="form-stack">
-      <Field label={t("ob.conv.linkedin.profileLabel")}>
-        {(control) => (
-          <input
-            {...control}
-            className="input"
-            type="url"
-            inputMode="url"
-            placeholder={t("ob.conv.linkedin.profilePlaceholder")}
-            value={profile}
-            onChange={(event) => setProfile(event.target.value)}
-          />
-        )}
-      </Field>
-      <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
-      {error !== null && <ErrorLine>{error}</ErrorLine>}
-      <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
+    <>
+      <div className="form-stack">
+        <Field label={t("ob.conv.linkedin.profileLabel")}>
+          {(control) => (
+            <input
+              {...control}
+              className="input"
+              type="url"
+              inputMode="url"
+              placeholder={t("ob.conv.linkedin.profilePlaceholder")}
+              value={profile}
+              onChange={(event) => setProfile(event.target.value)}
+            />
+          )}
+        </Field>
+        <p className="t-sub">{t("ob.conv.linkedin.profileWhy")}</p>
+        {error !== null && <ErrorLine>{error}</ErrorLine>}
+        <p className="t-sub">{t("ob.conv.linkedin.importLater")}</p>
+      </div>
       <ActionRow
+        className="actions"
         primary={
           <Button
             variant="primary"
@@ -188,6 +192,6 @@ function LinkedinPanel({
           {t("ob.conv.linkedin.skip")}
         </Button>
       </ActionRow>
-    </div>
+    </>
   );
 }

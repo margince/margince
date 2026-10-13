@@ -49,7 +49,7 @@ type embedWire struct {
 	Dimensions int      `json:"dimensions,omitempty"`
 	// Provider is the broker's upstream selection, nil on every wire but a
 	// broker binding that declared one — the EU preset's residency pin rides here.
-	Provider *openAICompatProviderWire `json:"provider,omitempty"`
+	Provider *OpenRouterProvider `json:"provider,omitempty"`
 }
 
 // openAIWireEmbed runs the shared OpenAI /v1/embeddings round-trip: a
@@ -57,7 +57,7 @@ type embedWire struct {
 // adapter and the openai_compatible transport speak the identical wire, so the
 // request build + decode lives here once (each passes its own authenticated
 // POST). Providers with a different embeddings shape (ollama, gemini) do not use it.
-func openAIWireEmbed(ctx context.Context, post func(context.Context, string, []byte) (io.ReadCloser, error), defaultModel string, req model.EmbedRequest, provider *openAICompatProviderWire) (model.Embeddings, error) {
+func openAIWireEmbed(ctx context.Context, post func(context.Context, string, []byte) (io.ReadCloser, error), defaultModel string, req model.EmbedRequest, provider *OpenRouterProvider) (model.Embeddings, error) {
 	embedModel := req.Model
 	if embedModel == "" {
 		embedModel = defaultModel

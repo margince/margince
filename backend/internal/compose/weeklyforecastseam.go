@@ -68,29 +68,9 @@ func (w *WeeklyForecast) CloseWeek(
 		return nil, nil, nil, apperrors.ErrPermissionDenied
 	}
 	owner := ids.UUID(actor.UserID)
-	return w.closeHorizons(ctx, tx,
+	closed, err := w.closeHorizons(ctx, tx,
 		forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &owner}, weekStart, weekEnd)
-}
-
-// CloseTeamWeek is CloseWeek over the TEAM's book.
-//
-// A separate entry point and not a flag, because the scope is the whole
-// difference and it is the part that can be refused: forecasting's scope
-// authority admits ScopeTeam only to a caller who is IN the team
-// (scopeauthority.go), so the lead the weekly job binds passes and anybody else
-// gets ErrNotFound.
-//
-// The team's landing is NOT the sum of its members'. A deal owned by nobody on
-// the team is in neither, and one the team works but a member owns is in both —
-// so summing six personal outlooks would answer a question nobody asked.
-func (w *WeeklyForecast) CloseTeamWeek(
-	ctx context.Context, tx pgx.Tx, teamID ids.UUID, weekStart, weekEnd time.Time,
-) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
-	if teamID.IsZero() {
-		return nil, nil, nil, apperrors.ErrNotFound
-	}
-	return w.closeHorizons(ctx, tx,
-		forecasting.Scope{Kind: forecasting.ScopeTeam, ID: &teamID}, weekStart, weekEnd)
+	return closed.outlooks, closed.movements, closed.drivers, err
 }
 
 // closeHorizons freezes every window this review reports, over one book.
@@ -100,28 +80,26 @@ func (w *WeeklyForecast) CloseTeamWeek(
 // team's outlook quietly report two windows where a rep's reports three.
 func (w *WeeklyForecast) closeHorizons(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, weekStart, weekEnd time.Time,
-) ([]weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
-	var outlooks []weekly.Outlook
-	var movements []weekly.Movement
-	var drivers []weekly.Driver
-
+) (closedHorizons, error) {
+	var out closedHorizons
 	for _, kind := range weeklyHorizons {
-		outlook, bars, deals, err := w.closeHorizon(ctx, tx, kind, scope, weekStart, weekEnd)
+		outlook, bars, deals, horizon, err := w.closeHorizon(ctx, tx, kind, scope, weekStart, weekEnd)
 		if err != nil {
-			return nil, nil, nil, err
+			return closedHorizons{}, err
 		}
-		outlooks = append(outlooks, outlook)
-		movements = append(movements, bars...)
-		drivers = append(drivers, deals...)
+		out.outlooks = append(out.outlooks, outlook)
+		out.movements = append(out.movements, bars...)
+		out.drivers = append(out.drivers, deals...)
+		out.horizons = append(out.horizons, horizon)
 	}
-	return outlooks, movements, drivers, nil
+	return out, nil
 }
 
 // closeHorizon freezes one window.
 func (w *WeeklyForecast) closeHorizon(
 	ctx context.Context, tx pgx.Tx, kind forecasting.PeriodKind,
 	scope forecasting.Scope, weekStart, weekEnd time.Time,
-) (weekly.Outlook, []weekly.Movement, []weekly.Driver, error) {
+) (weekly.Outlook, []weekly.Movement, []weekly.Driver, closedHorizon, error) {
 	// The week's LAST INSTANT, not weekEnd. weekEnd is the exclusive bound —
 	// the following Monday's midnight — so resolving a period at it lands in
 	// the NEXT week, and for a month or quarter whose window ends on that
@@ -130,13 +108,14 @@ func (w *WeeklyForecast) closeHorizon(
 	at := weekEnd.Add(-time.Nanosecond)
 	period, baseCurrency, err := ForecastPeriodAt(ctx, tx, kind, at)
 	if err != nil {
-		return weekly.Outlook{}, nil, nil, err
+		return weekly.Outlook{}, nil, nil, closedHorizon{}, err
 	}
 
 	closing, readings, measure, err := w.freezeClosing(ctx, tx, period, scope, at, baseCurrency)
 	if err != nil {
-		return weekly.Outlook{}, nil, nil, err
+		return weekly.Outlook{}, nil, nil, closedHorizon{}, err
 	}
+	horizon := closedHorizon{kind: kind, period: period, readings: readings.full, at: at, baseCurrency: baseCurrency}
 
 	outlook := weekly.Outlook{
 		PeriodKind:     string(kind),
@@ -157,10 +136,10 @@ func (w *WeeklyForecast) closeHorizon(
 	// and made everything.
 	opening, found, err := w.openingSnapshot(ctx, tx, period, scope, weekStart)
 	if err != nil {
-		return weekly.Outlook{}, nil, nil, err
+		return weekly.Outlook{}, nil, nil, closedHorizon{}, err
 	}
 	if !found {
-		return outlook, nil, nil, nil
+		return outlook, nil, nil, horizon, nil
 	}
 
 	// The bridge explains the reading the LANDING was built from, not a fixed
@@ -169,7 +148,7 @@ func (w *WeeklyForecast) closeHorizon(
 	// above them.
 	movement, err := w.store.MovementTx(ctx, tx, movementReadingFor(measure), opening, closing)
 	if err != nil {
-		return weekly.Outlook{}, nil, nil, err
+		return weekly.Outlook{}, nil, nil, closedHorizon{}, err
 	}
 	outlook.Opening = weekly.OutlookSide{
 		Known: true, SnapshotID: opening, LandingMinor: movement.OpeningMinor,
@@ -177,9 +156,9 @@ func (w *WeeklyForecast) closeHorizon(
 
 	bars, deals, err := foldMovement(ctx, tx, string(kind), movement)
 	if err != nil {
-		return weekly.Outlook{}, nil, nil, err
+		return weekly.Outlook{}, nil, nil, closedHorizon{}, err
 	}
-	return outlook, bars, deals, nil
+	return outlook, bars, deals, horizon, nil
 }
 
 // movementReadingFor says which of the four money answers the bridge explains.
@@ -349,6 +328,8 @@ func magnitude(v int64) int64 {
 // closingReadings are the figures a frozen outlook copies.
 type closingReadings struct {
 	landing, won, commit, bestCase, weighted int64
+	// full is the whole computation, kept so coverage reads the same one.
+	full forecasting.Readings
 }
 
 // freezeClosing takes the period-close snapshot and reports what it said.
@@ -394,6 +375,7 @@ func (w *WeeklyForecast) freezeClosing(
 		commit:   readings.EvidenceMinor,
 		bestCase: readings.BestCaseMinor,
 		weighted: readings.WeightedMinor,
+		full:     readings,
 	}, landing.Measure, nil
 }
 
@@ -402,6 +384,9 @@ func (w *WeeklyForecast) openingSnapshot(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	weekStart time.Time,
 ) (ids.UUID, bool, error) {
+	// pipeline_id IS NULL and no fingerprint filter, as the snapshot listing: a
+	// whole-pipeline capture carries a population fingerprint, so requiring it
+	// empty would find no opening at all.
 	args := []any{period.StartDate, period.EndDate, string(scope.Kind), scope.ID}
 	args = append(args, weekStart)
 	var id ids.UUID
@@ -409,7 +394,7 @@ func (w *WeeklyForecast) openingSnapshot(
 		SELECT id FROM forecast_snapshot
 		 WHERE period_start = $1 AND period_end = $2
 		   AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
-           AND pipeline_id IS NULL
+		   AND pipeline_id IS NULL
 		   AND local_day = $%d
 		 ORDER BY taken_at DESC
 		 LIMIT 1`, len(args)), args...).Scan(&id)

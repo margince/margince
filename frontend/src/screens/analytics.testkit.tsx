@@ -13,8 +13,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -47,6 +47,12 @@ export type ReportsStubOpts = {
   // it between two runs of one report, as a reconfigured installation does.
   baseCurrency?: string;
   stageRows?: Record<string, unknown>[];
+  // The pipelines list the screen reads stage names from.
+  pipelines?: unknown;
+  // Pipelines the default list adds only when `include_archived=true` asks.
+  archivedPipelines?: readonly unknown[];
+  // Groups each report matched, keyed by report; absent, no total is sent.
+  totalRows?: Readonly<Record<string, number>>;
   forecastRows?: Record<string, unknown>[];
   companyRows?: Record<string, unknown>[];
   meetingRows?: Record<string, unknown>[];
@@ -160,6 +166,17 @@ const PIPELINES = {
   page: { next_cursor: null },
 };
 
+function pipelinesAnswer(url: string, opts: ReportsStubOpts) {
+  if (opts.pipelines !== undefined) return opts.pipelines;
+  const asked = new URL(url, "http://localhost").searchParams;
+  return asked.get("include_archived") === "true"
+    ? {
+        ...PIPELINES,
+        data: [...PIPELINES.data, ...(opts.archivedPipelines ?? [])],
+      }
+    : PIPELINES;
+}
+
 // One report result, in the shape the endpoint answers with.
 function reportAnswer(key: string, opts: ReportsStubOpts) {
   // The frame the server sends with every result. A fixture that omits it
@@ -178,6 +195,9 @@ function reportAnswer(key: string, opts: ReportsStubOpts) {
     plan: {},
     columns: [],
     rows: reportRows(key, opts),
+    ...(opts.totalRows?.[key] == null
+      ? {}
+      : { total_rows: opts.totalRows[key] }),
     as_of: "2026-03-04T09:00:00Z",
     ...frame,
     derivation_url: `/v1/reports/${key}/derivation?by=stage_id&agg=sum:amount_minor:raw_minor&stage_id=pl-s1`,
@@ -229,7 +249,7 @@ const ROUTES: readonly Route[] = [
   },
   {
     when: ({ url }) => url.includes("/pipelines"),
-    answer: () => jsonResponse(PIPELINES),
+    answer: ({ url }, opts) => jsonResponse(pipelinesAnswer(url, opts)),
   },
   {
     when: ({ url, method }) => method === "POST" && url.includes("/reports/"),

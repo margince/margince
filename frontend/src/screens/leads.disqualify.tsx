@@ -7,7 +7,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { leadWriteKeys } from "./leadkeys";
 import { useLeadDisqualifyReasons } from "./leadsources";
 
@@ -48,14 +48,13 @@ export function DisqualifyDialog({
       reasonId: string;
       note: string | null;
     }) => {
-      const { data, error } = await api.DELETE("/leads/{id}", {
-        params: { path: { id: closure.leadId } },
-        body: { reason_id: closure.reasonId, note: closure.note },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.DELETE("/leads/{id}", {
+          params: { path: { id: closure.leadId } },
+          body: { reason_id: closure.reasonId, note: closure.note },
+        }),
+        t,
+      );
     },
     onSuccess: (closed, closure) => {
       for (const key of leadWriteKeys(closure.leadId)) {
@@ -65,10 +64,7 @@ export function DisqualifyDialog({
     },
   });
 
-  // A close in flight is not something to walk away from: the dialog stays
-  // until the server has answered.
   const close = () => {
-    if (disqualify.isPending) return;
     disqualify.reset();
     onClose();
   };
@@ -96,31 +92,29 @@ export function DisqualifyDialog({
         disqualify.isError ? problemMessageOf(disqualify.error, t) : undefined
       }
     >
-      <div className="lead-qualify">
-        <Field label={t("lead.disqualify.reason")} required>
-          {(control) => (
-            <Select
-              {...control}
-              value={reasonId}
-              placeholder={t("lead.disqualify.pickReason")}
-              onChange={setReasonId}
-              options={active.map((reason) => ({
-                value: reason.id,
-                label: reason.label,
-              }))}
-            />
-          )}
-        </Field>
-        <Field label={t("lead.disqualify.note")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
-      </div>
+      <Field label={t("lead.disqualify.reason")} required>
+        {(control) => (
+          <Select
+            {...control}
+            value={reasonId}
+            placeholder={t("lead.disqualify.pickReason")}
+            onChange={setReasonId}
+            options={active.map((reason) => ({
+              value: reason.id,
+              label: reason.label,
+            }))}
+          />
+        )}
+      </Field>
+      <Field label={t("lead.disqualify.note")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
     </ConfirmModal>
   );
 }

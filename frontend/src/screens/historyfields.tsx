@@ -6,8 +6,6 @@ import {
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Card,
@@ -15,21 +13,19 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Row } from "../design-system/stack";
 import {
   EvidenceChip,
-  PassportChip,
   ProvenanceTag,
   toEvidence,
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import {
-  LoadMoreButton,
-  QueryStates,
-  throwProblem,
-  useViewerId,
-} from "./common";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
 import {
   type ActorFacet,
   distinctFields,
@@ -40,6 +36,7 @@ import {
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import type { HistoryValueCtx } from "./historyvalues";
+import { ResolvedPassportChip } from "./passportchip";
 import "./history.css";
 import "./historyfields.css";
 
@@ -73,22 +70,20 @@ export function useFieldHistory(
     enabled: enabled ?? true,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/field-history", {
-        params: {
-          query: {
-            entity_type: kind,
-            entity_id: id,
-            limit: 20,
-            ...(pageParam ? { cursor: pageParam } : {}),
-            ...(field ? { field } : {}),
-            ...(actorType ? { actor_type: actorType } : {}),
+      return unwrap(
+        await api.GET("/field-history", {
+          params: {
+            query: {
+              entity_type: kind,
+              entity_id: id,
+              limit: 20,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(field ? { field } : {}),
+              ...(actorType ? { actor_type: actorType } : {}),
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     getNextPageParam: (last) => last?.page?.next_cursor ?? null,
   });
@@ -127,7 +122,12 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   }
   return (
     <>
-      {change.passport_id && <PassportChip id={change.passport_id} />}
+      {change.passport_id && (
+        <ResolvedPassportChip
+          passportId={change.passport_id}
+          agentClient={change.agent_client}
+        />
+      )}
       {evidence && <EvidenceChip evidence={evidence} />}
     </>
   );

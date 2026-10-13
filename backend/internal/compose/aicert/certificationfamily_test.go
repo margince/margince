@@ -288,7 +288,7 @@ func familyModelNames(fam aiCertFamily) string {
 // words preset, tier or provider.
 func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 	page.WriteString("## Which model family should I use?\n\n")
-	page.WriteString("**\"I want to run Margince on Gemini — can I trust it?\"** This is the answer for each\n")
+	page.WriteString("*\"I want to run Margince on Gemini. Can I trust it?\"* This is the answer for each\n")
 	page.WriteString("family of AI models, across everything Margince does with AI. To start from a ready-made\n")
 	page.WriteString("setup instead, go to [Can I use this preset?](#can-i-use-this-preset).\n\n")
 	page.WriteString("| Family | Models we tested | Can I trust it? | In plain words |\n|---|---|---|---|\n")
@@ -296,9 +296,9 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 		fmt.Fprintf(page, "| %s | %s | %s | %s |\n", fam.Name, familyModelNames(fam), familyAnswerWords(fam.Answer), familyPlainWords(fam))
 	}
 	page.WriteString("\n")
-	fmt.Fprintf(page, "**Yes** means ready for every feature we tested. **Mostly** means at least %d in every 100 "+
-		"tested features are ready or work with a check. **Not yet** means fewer. **Not enough tested yet** "+
-		"means we tested it on under half of the features, so we do not say. A family is judged on its best "+
+	fmt.Fprintf(page, "A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least %d in every 100 "+
+		"tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
+		"when we tested it on under half of the features. A family is judged on its best "+
 		"model for each feature, and only on the models a preset uses, each on the features that preset "+
 		"sends to it.\n\n", familyMostlyPercent)
 }
@@ -318,7 +318,7 @@ func writeAICertFamilyDetail(page *strings.Builder, families []aiCertFamily) {
 
 func writeAICertFamilySection(page *strings.Builder, fam aiCertFamily) {
 	fmt.Fprintf(page, "### %s\n\n", fam.Name)
-	fmt.Fprintf(page, "%s — %s\n\n", familyAnswerWords(fam.Answer), familyPlainWords(fam))
+	fmt.Fprintf(page, "%s: %s\n\n", familyAnswerWords(fam.Answer), familyPlainWords(fam))
 	if fam.RecheckPending > 0 {
 		fmt.Fprintf(page, "%d of these results were measured on an older version of the product and are re-check pending.\n\n",
 			fam.RecheckPending)

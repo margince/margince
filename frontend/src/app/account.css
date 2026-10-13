@@ -209,6 +209,15 @@
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
+/* The release at the foot of the menu. It takes the rows' inset so it stands on
+   their left edge, and like the identity block it sits outside the row rule — no
+   hover and no pointer, because it goes nowhere. */
+.acctversion {
+  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
+  color: var(--textSecondary);
+  overflow-wrap: anywhere;
+}
+
 /* ===== the theme flyout =====
    The seat is what the flyout is measured against; it is `role="none"` in the
    markup and draws nothing of its own. */
@@ -287,7 +296,7 @@
    the menu's own left edge is already close to the window's, and there is no
    scrollbar to recover what falls off it. It is also the only appearance control
    at that width, so it may not be the one that goes off screen.
-   Below the sheet's breakpoint (PHONE_MAX_WIDTH in app/viewport.ts) it stops
+   Below the sheet's breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
    being a popover and becomes an indented group inside the menu: in the flow, no
    surface of its own, its rows stepped in so they read as belonging to the row
    that opened them. */

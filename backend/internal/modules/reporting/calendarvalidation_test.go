@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,5 +63,28 @@ func TestReportingSchedulesRejectInvalidCivilTimesAndCadences(t *testing.T) {
 	}
 	if _, err := NextDue(crmcontracts.ReportingScheduleInput{Frequency: "weekly", Day: 1, LocalTime: "09:00"}, "unknown", at); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("invalid timezone: %v", err)
+	}
+}
+
+func TestAnUnsupportedPeriodOrTargetBasisNamesWhatIsAccepted(t *testing.T) {
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	calendar := Calendar{Timezone: "Europe/Berlin", FiscalStartMonth: 4}
+	_, periodErr := Interval(crmcontracts.ReportingSelection{Period: "fiscal_quarter"}, calendar, at)
+	_, basisErr := TargetWindow(crmcontracts.ReportingWindow{StartAt: at.Add(-time.Hour), EndAt: at}, "none", calendar)
+	for _, c := range []struct {
+		err      error
+		accepted []string
+	}{
+		{periodErr, []string{"this_month", "last_month", "last_week", "this_quarter", "custom"}},
+		{basisErr, []string{"month", "fiscal_quarter"}},
+	} {
+		if !errors.Is(c.err, apperrors.ErrInvalidArgument) {
+			t.Fatalf("not an invalid-argument refusal: %v", c.err)
+		}
+		for _, name := range c.accepted {
+			if !strings.Contains(c.err.Error(), name) {
+				t.Errorf("the refusal does not name %q, so an assistant must guess it: %v", name, c.err)
+			}
+		}
 	}
 }

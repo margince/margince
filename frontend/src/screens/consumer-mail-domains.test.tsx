@@ -9,9 +9,9 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
@@ -77,9 +77,10 @@ const addButton = () =>
     name: en["consumerMail.addOpen"],
   }) as HTMLButtonElement;
 
-// The per-row remove control is icon-only; its accessible name is the label.
+// The per-row remove control is icon-only, so its name says which domain it
+// takes back: a list of identical "Remove" buttons names nothing.
 const removeButton = () =>
-  screen.getByRole("button", { name: "Remove" }) as HTMLButtonElement;
+  screen.getByRole("button", { name: "Remove gmx.test" }) as HTMLButtonElement;
 
 describe("ConsumerMailDomainsCard", () => {
   it("enables add and remove on capture_settings:update", async () => {

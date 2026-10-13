@@ -1,42 +1,43 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanUpsert, useCanWrite } from "../app/capability";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
+import { ProviderRecentCalls } from "./ai-call-figures";
+import { useProviderHealth } from "./ai-provider-health";
 import {
-  type CredentialKind,
   credentialKindOf,
   KeyEntry,
   keyStateLabel,
   keyStateTone,
 } from "./ai-provider-key-entry";
 import {
+  useProviderKeys,
+  useRemoveProviderKey,
+  useSetProviderKey,
+} from "./ai-provider-key-hooks";
+import {
   KeyTestButton,
   KeyTestOutcome,
   useTestProviderKey,
 } from "./ai-provider-key-test";
+import { isOpenRouter } from "./ai-provider-links";
+import { providerName } from "./ai-provider-names";
 import {
-  ProviderSheet,
-  type ProviderUsage,
-  providerState,
-  STATE_LABEL,
-  STATE_TONE,
-} from "./ai-provider-sheet";
+  hasProviderSettings,
+  ProviderSettingsForm,
+} from "./ai-provider-settings";
+import { ProviderSheet } from "./ai-provider-sheet";
+import { ProviderTable } from "./ai-provider-table";
 import { providerUsage, useRouting } from "./ai-routing-query";
 import { PanelTitle } from "./ai-terms";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import {
-  RefreshModelPricesButton,
-  RefreshSummary,
-  useRefreshModelPrices,
-} from "./rate-catalogue-refresh";
 import "./ai-settings.css";
 
 // The vendor credentials this installation calls models with.
@@ -55,87 +56,6 @@ import "./ai-settings.css";
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
 
-export function useProviderKeys(enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["ai-provider-keys"],
-    queryFn: async () => {
-      const { data, error, response } = await api.GET("/ai/provider-keys");
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-// Exported for onboarding's AI step, which writes the same credential through
-// the same endpoint. A second mutation there would be a second set of rules
-// about how long a key lives in memory, and the ones below are not obvious
-// enough to expect anybody to rediscover them.
-export function useSetProviderKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Collected the moment nothing observes it, because what this mutation's
-    // `variables` hold is a credential rather than a form field.
-    gcTime: 0,
-    // The provider AND the key travel as variables rather than closing over
-    // render state: a click belongs to the render that drew it, so a value it
-    // carries cannot be older than the button.
-    //
-    // That is also why the caller RESETS this mutation once it settles. React
-    // Query keeps `variables` in the mutation's state after success, and for
-    // this one mutation the variables are a credential — so what is convenient
-    // for every other form is a secret held in memory, readable through the
-    // observer and the devtools, until garbage collection gets to it. Passing
-    // the key some other way would trade that for a stale-closure refusal,
-    // which is the defect the variables rule exists to prevent, so the answer
-    // is to keep the variable and drop it early.
-    mutationFn: async (vars: {
-      provider: string;
-      kind: CredentialKind;
-      secret: string;
-    }) => {
-      // The server refuses the field the vendor does not take, so the kind
-      // decides which one carries the secret.
-      const body =
-        vars.kind === "service_account"
-          ? { service_account_json: vars.secret }
-          : { api_key: vars.secret };
-      const { error } = await api.PUT("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      // The locations a key reaches are asked with that key.
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-    },
-  });
-}
-
-function useRemoveProviderKey() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: { provider: string }) => {
-      const { error } = await api.DELETE("/ai/provider-keys/{provider}", {
-        params: { path: { provider: vars.provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-keys"] });
-      queryClient.invalidateQueries({ queryKey: ["ai-provider-locations"] });
-    },
-  });
-}
-
 export function AiProviderKeysCard() {
   const t = useT();
   // Two grants, two questions. `read` decides whether the list is this reader's
@@ -148,16 +68,19 @@ export function AiProviderKeysCard() {
   const canManage = useCanWrite("ai_routing", "update");
   const query = useProviderKeys(canSee);
   const routing = useRouting(canSee);
+  // A separate grant from the list's: health is a diagnostic, so a reader who
+  // may see the keys but not diagnostics gets the rows without the notice.
+  const canDiagnose = useCan("ai_diagnostics", "read");
+  // Gated again at the read: a revoked grant disables the query but leaves its
+  // cached answer, which would keep drawing a diagnostic the reader may no
+  // longer see.
+  const health = useProviderHealth(canDiagnose).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
-  const refresh = useRefreshModelPrices();
-  // The refresh reads the sheet before it writes it, so the server asks for
-  // both grants; a writer without the read would press it into a refusal.
-  const canReadPrices = useCan("ai_model_rate", "read");
-  const canWritePrices = useCanUpsert("ai_model_rate");
-  const canPrice = canReadPrices && canWritePrices;
+  // The host the open sheet's form would save; null until it reports one.
+  const [draftHost, setDraftHost] = useState<string | null>(null);
 
   if (!canSee) {
     // Withheld, not absent. An absent key card would say this installation has
@@ -185,36 +108,76 @@ export function AiProviderKeysCard() {
       title={
         <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
       }
-      titleAction={
-        canPrice ? <RefreshModelPricesButton refresh={refresh} /> : undefined
-      }
     >
       <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
         {(list) => {
           const openStatus = list.providers.find((p) => p.provider === opened);
           return (
             <>
-              <RefreshSummary refresh={refresh} />
-              {list.providers.map((p) => (
-                <ProviderRow
-                  key={p.provider}
-                  status={p}
-                  usage={usage?.get(p.provider)}
-                  onOpen={() => setOpened(p.provider)}
-                />
-              ))}
+              <ProviderTable
+                providers={list.providers}
+                canManage={canManage}
+                usage={usage}
+                health={canDiagnose ? health?.providers : undefined}
+                onOpen={(provider) => {
+                  setDraftHost(null);
+                  setOpened(provider);
+                  // The list stays mounted while sheets open and close, so
+                  // a key set elsewhere shows only if opening reads again.
+                  query.refetch();
+                }}
+              />
               {openStatus ? (
                 <ProviderSheet
                   status={openStatus}
                   usage={usage?.get(openStatus.provider)}
-                  refresh={refresh}
+                  health={
+                    canDiagnose
+                      ? health?.providers.find(
+                          (h) => h.provider === openStatus.provider,
+                        )
+                      : undefined
+                  }
                   connection={
-                    <ProviderConnection
-                      status={openStatus}
-                      canManage={canManage}
+                    <>
+                      <ProviderConnection
+                        status={openStatus}
+                        canManage={canManage}
+                      />
+                      {/* Drawn once the stored settings are read: the form
+                          starts from them, and one started empty would save
+                          an empty entry over what is stored. */}
+                      {hasProviderSettings(openStatus.provider) &&
+                        routing.data && (
+                          <ProviderSettingsForm
+                            key={openStatus.provider}
+                            provider={openStatus.provider}
+                            routing={routing.data.routing}
+                            canManage={canManage}
+                            onHostChange={setDraftHost}
+                          />
+                        )}
+                    </>
+                  }
+                  figures={
+                    <ProviderRecentCalls
+                      provider={openStatus.provider}
+                      broker={
+                        openStatus.provider === "openai_compatible" &&
+                        isOpenRouter(
+                          draftHost ??
+                            routing.data?.routing.providers?.[
+                              openStatus.provider
+                            ]?.base_url ??
+                            "",
+                        )
+                      }
                     />
                   }
-                  onClose={() => setOpened(null)}
+                  onClose={() => {
+                    setDraftHost(null);
+                    setOpened(null);
+                  }}
                 />
               ) : null}
             </>
@@ -225,47 +188,18 @@ export function AiProviderKeysCard() {
   );
 }
 
-// One vendor as a reading: its name, the variable its key rides in, whether it
-// can be called and what routing uses it for — and the way into its sheet.
-function ProviderRow({
-  status,
-  usage,
-  onOpen,
-}: {
-  status: ProviderStatus;
-  usage: ProviderUsage | undefined;
-  onOpen: () => void;
-}) {
-  const t = useT();
-  const state = providerState(status, usage);
-  return (
-    <PanelRow>
-      <div
-        className="ai-provider-line"
-        data-testid={`ai-provider-row-${status.provider}`}
-      >
-        <span className="ai-provider-who">
-          <span>{status.provider}</span>
-          <span className="ai-provider-env">
-            {status.env_var === "" ? "\u2014" : status.env_var}
-          </span>
-        </span>
-        <span
-          className="t-caption ai-provider-used"
-          title={usage?.for.join(", ")}
-        >
-          {usage
-            ? t("aiProviders.usedBy", { roles: usage.for.join(", ") })
-            : t("aiProviders.notUsed")}
-        </span>
-        <Badge tone={STATE_TONE[state]}>{t(STATE_LABEL[state])}</Badge>
-        <Button onClick={onOpen}>
-          {t("aiProviders.manage")}
-          <span className="sr-only"> {status.provider}</span>
-        </Button>
-      </div>
-    </PanelRow>
-  );
+// What the paste field says about the key it holds. A Vertex key is only as good
+// as its account's role, which no paste can show, so its hint names the role.
+function keyEntryHint(
+  status: ProviderStatus,
+  t: ReturnType<typeof useT>,
+): string {
+  const stored = status.configured
+    ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
+    : t("aiProviderKeys.absentHint", { envVar: status.env_var });
+  return status.provider === "gemini_vertex"
+    ? `${stored} ${t("aiProviderKeys.vertexRoleHint")}`
+    : stored;
 }
 
 // The credential controls for ONE vendor, drawn inside its sheet: whether it is
@@ -327,9 +261,7 @@ function ProviderConnection({
   // about it would report a gap that is not one.
   const keyless = status.env_var === "";
 
-  const entryHint = status.configured
-    ? t("aiProviderKeys.configuredHint", { envVar: status.env_var })
-    : t("aiProviderKeys.absentHint", { envVar: status.env_var });
+  const entryHint = keyEntryHint(status, t);
   // Save and Remove, the same pair whichever field holds the secret.
   const verbs = (
     <>
@@ -394,7 +326,10 @@ function ProviderConnection({
 
   return (
     <div>
-      <div data-testid={`ai-provider-key-${status.provider}`}>
+      <div
+        className="form-stack"
+        data-testid={`ai-provider-key-${status.provider}`}
+      >
         <div className="ai-provider">
           <span className="ai-provider-who">
             {/* The variable is the only thing that says HOW a key reached the
@@ -464,7 +399,7 @@ function ProviderConnection({
         open={confirming}
         onClose={() => setConfirming(false)}
         title={t("aiProviderKeys.removeConfirmTitle", {
-          provider: status.provider,
+          provider: providerName(status.provider, t),
         })}
         confirmLabel={t("aiProviderKeys.remove")}
         confirmVariant="danger"

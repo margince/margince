@@ -28,7 +28,7 @@ type ReportingRead struct {
 	EvaluatedAt       time.Time                         `json:"evaluated_at,omitempty"`
 	FrameworkRevision int64                             `json:"framework_revision,omitempty"`
 	Cursor            *string                           `json:"cursor,omitempty"`
-	Limit             int                               `json:"limit,omitempty"`
+	Limit             int                               `json:"limit,omitempty" minimum:"1" maximum:"100"`
 }
 
 // ReportingAnswer preserves typed results across the MCP boundary.
@@ -56,7 +56,7 @@ type readReporting struct{ read ReportingReader }
 var reportingReadCopy = toolCopy{
 	Purpose: "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions.",
 	Limits:  "Read only. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
-	Instead: "Use list_pipelines to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
+	Instead: "Use " + pipelinesSource + " to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
 }
 
 func (t readReporting) Spec() mcp.ToolSpec {
@@ -66,6 +66,9 @@ func (t readReporting) Spec() mcp.ToolSpec {
 func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var request ReportingRead
 	if err := decodeArgs(in, &request); err != nil {
+		return nil, err
+	}
+	if err := requireReportingIDs(request); err != nil {
 		return nil, err
 	}
 	noteDerivedContent(ctx)

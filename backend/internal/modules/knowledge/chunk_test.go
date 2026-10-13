@@ -168,7 +168,7 @@ func TestNoSpanBoundaryEverSplitsARune(t *testing.T) {
 	// Many documents rather than one: the offset that splits a rune depends on
 	// how the bytes fall, so one document that happens to fall well proves
 	// nothing about the next.
-	for doc := 0; doc < 50; doc++ {
+	for doc := range 50 {
 		var b strings.Builder
 		for b.Len() < 6000 {
 			b.WriteString(words[rng.IntN(len(words))])
@@ -266,7 +266,7 @@ func TestEachChunkKnowsTheLineItStartsOn(t *testing.T) {
 		// `column` exists: a span cut at the width ceiling starts in the MIDDLE
 		// of a long line, so the line it points at legitimately begins earlier
 		// than the span does.
-		first := strings.SplitN(c.Text, "\n", 2)[0]
+		first, _, _ := strings.Cut(c.Text, "\n")
 		probe := first[:min(len(first), 20)]
 		if !strings.Contains(lines[c.StartLine-1], probe) {
 			t.Fatalf("chunk %d claims line %d (%q), which does not contain %q",

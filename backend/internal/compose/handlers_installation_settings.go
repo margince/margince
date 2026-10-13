@@ -12,6 +12,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -20,6 +22,9 @@ import (
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// pool reads the jurisdiction page in one transaction
+	// (handlers_installation_jurisdiction.go).
+	pool *pgxpool.Pool
 	// configuredProviders carries the external sign-in providers this DEPLOYMENT
 	// mounted, injected by the option that wires them. Empty is the honest
 	// answer for a deployment that composed none, and the screen then offers
@@ -129,6 +134,9 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		Name:         req.Name,
 		Timezone:     req.Timezone,
 		BaseCurrency: req.BaseCurrency,
+		// The entry refuses a code no compiled-in pack answers; the store runs
+		// the floor carry in the same transaction.
+		Country: req.Country,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)
@@ -161,6 +169,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// Same again: the entry's own validator holds the 1..168 bound and names
 	// this field when it refuses, so a second check here would say less.
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
+	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
 	// kernel's set, so an unknown measure comes back naming this field and
 	// quoting the value. Converted to a plain string because the patch carries
@@ -185,6 +194,24 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// refusal names the setting and quotes the group or role it refused —
 	// the same division of labour as the fiscal month above.
 	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
+	// Each entry's validator holds its range and names the field it refuses.
+	patch.Operations = identity.OperationPatch{
+		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,
+		CloseDateSweepIntervalSeconds:    req.CloseDateSweepIntervalSeconds,
+		FollowUpReconcileIntervalSeconds: req.FollowUpReconcileIntervalSeconds,
+		GeocodeBackfillIntervalSeconds:   req.GeocodeBackfillIntervalSeconds,
+		GmailWatchRenewWithinHours:       req.GmailWatchRenewWithinHours,
+		GmailWatchScanIntervalSeconds:    req.GmailWatchScanIntervalSeconds,
+		GraphWatchRenewWithinHours:       req.GraphWatchRenewWithinHours,
+		GraphWatchScanIntervalSeconds:    req.GraphWatchScanIntervalSeconds,
+		RetentionSweepIntervalSeconds:    req.RetentionSweepIntervalSeconds,
+		SendMaxAgeHours:                  req.SendMaxAgeHours,
+		SendRateLimit:                    req.SendRateLimit,
+		SendRateWindowSeconds:            req.SendRateWindowSeconds,
+		TechnicalBackfillIntervalSeconds: req.TechnicalBackfillIntervalSeconds,
+		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
+		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -210,9 +237,11 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		DeadWorkBannerHours:  s.DeadWorkBannerHours,
 		ForecastForwardMeasure: crmcontracts.InstallationSettingsForecastForwardMeasure(
 			s.ForecastForwardMeasure),
-		BaseCurrencyLocked: s.BaseCurrencyLocked,
-		MaxUploadBytes:     h.maxUploadBytes,
-		SignInProviders:    h.signInProviders(s.EnabledOidcProviders),
+		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
+		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		MaxUploadBytes:             h.maxUploadBytes,
+		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
+		Operations:                 crmcontracts.OperationSettings(s.Operations),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)

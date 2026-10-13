@@ -189,14 +189,15 @@ func DetectFirst(texts ...string) Lang {
 //
 // A fallback that names no language the product ships is skipped rather than
 // trusted: it would otherwise reach a prompt as an instruction to write in a
-// language nothing else can render.
-func FirstKnown(texts []string, fallbacks ...string) Lang {
+// language nothing else can render. Fallbacks are functions because each one
+// is a settings read, and a text that decides the language should cost none.
+func FirstKnown(texts []string, fallbacks ...func() string) Lang {
 	if lang := DetectFirst(texts...); lang != Unknown {
 		return lang
 	}
 	for _, fallback := range fallbacks {
-		if Known(fallback) {
-			return Lang(fallback)
+		if code := fallback(); Known(code) {
+			return Lang(code)
 		}
 	}
 	return English

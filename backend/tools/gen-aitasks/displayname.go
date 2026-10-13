@@ -63,3 +63,18 @@ func keyShape(s string) string {
 	}
 	return b.String()
 }
+
+// checkSummary holds the sentence a reader is shown to learn what a task does:
+// required, because a task named on a settings screen with nothing behind it
+// leaves the reader to guess, and short, because it sits in a tooltip.
+func checkSummary(name, summary string) error {
+	switch {
+	case summary == "":
+		return fmt.Errorf("task %q: summary is required — a short plain sentence saying what the task does", name)
+	case summary != strings.TrimSpace(summary):
+		return fmt.Errorf("task %q: summary has surrounding whitespace", name)
+	case !strings.HasSuffix(summary, "."):
+		return fmt.Errorf("task %q: summary %q ends with a full stop", name, summary)
+	}
+	return nil
+}

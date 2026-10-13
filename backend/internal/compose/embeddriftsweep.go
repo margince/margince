@@ -105,19 +105,14 @@ func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace id
 // (NewJobRunner appends what it returns — addGraphJobs' self-registration
 // shape).
 //
-// The guard here is STRICTER than the declaration's when: [Embedder], and
-// deliberately so. A configured embed lane with an empty identity — what
-// --ai-fake leaves behind — seeds no binding marker, so there is nothing for
-// the sweep to compare a row against and no store to heal; that is a property
-// of the bound lane rather than of the configuration, so no config field can
-// express it. periodicFor still resolves the cadence and the nil-embedder
-// posture, which is what keeps this to ONE extra condition.
+// Registered whatever the lane is bound to at boot, because RoutingWatcher
+// binds one on a running process and nothing re-runs this.
+//
+// An unbound lane costs a tick and no query: the store answers an empty
+// identity with nothing to do before it reads anything.
 func addEmbedDriftSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	embedder := cfg.Embedder
 	if embedder == nil {
-		return nil
-	}
-	if identity, _ := embedder.EmbedIdentity(); identity == "" {
 		return nil
 	}
 	addDeclaredWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{

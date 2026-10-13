@@ -191,7 +191,7 @@ func TestOnlyAnUncheckedNumberIsWorthConsulting(t *testing.T) {
 	// about the number it replaced.
 	const corrected = "DE987654321"
 	if _, err := e.store.UpdateCompanyProfileField(ctx, companyID, fieldRegisterVat,
-		ProfileFieldWriteInput{Value: strPtr(corrected)}); err != nil {
+		ProfileFieldWriteInput{Value: new(corrected)}); err != nil {
 		t.Fatalf("correcting the VAT number: %v", err)
 	}
 	number, worth, err = e.store.VatNumberForCheck(ctx, companyID)

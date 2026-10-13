@@ -205,9 +205,11 @@ func TestTheWorkerSurfaceSetsTheSameBrowserFacingHeadersAsTheApi(t *testing.T) {
 			t.Errorf("closing the response body: %v", err)
 		}
 		for header, want := range map[string]string{
-			"X-Content-Type-Options": "nosniff",
-			"X-Frame-Options":        "DENY",
-			"Referrer-Policy":        "no-referrer",
+			"X-Content-Type-Options":       "nosniff",
+			"X-Frame-Options":              "DENY",
+			"Referrer-Policy":              "no-referrer",
+			"Cross-Origin-Opener-Policy":   "same-origin",
+			"Cross-Origin-Resource-Policy": "same-origin",
 		} {
 			if got := resp.Header.Get(header); got != want {
 				t.Errorf("GET %s: %s = %q, want %q", path, header, got, want)
@@ -258,7 +260,7 @@ func TestTheWorkerServesItsOwnAICounters(t *testing.T) {
 func TestTheWorkerServesNoAISampleBeforeAnyCallIsRouted(t *testing.T) {
 	_, body := get(t, startForTest(t)+"/metrics")
 
-	for _, line := range strings.Split(body, "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		if strings.HasPrefix(line, "margince_ai_") {
 			t.Errorf("a worker that has routed no call served an AI sample, which a rate reads as a "+
 				"healthy tier: %s", line)

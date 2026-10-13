@@ -5,7 +5,9 @@ package weeklyplan
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
+	"slices"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -14,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Handlers is the plan's HTTP surface.
@@ -172,7 +175,7 @@ func parseEditDate(raw json.RawMessage) (*time.Time, bool, error) {
 		return nil, false, badDate
 	}
 	day, err := time.Parse(time.DateOnly, text)
-	if err != nil {
+	if err != nil || !datasource.InstantInRange(day) {
 		return nil, false, badDate
 	}
 	return &day, true, nil
@@ -221,6 +224,13 @@ func (h Handlers) AskForWeeklyPlanHelp(
 		HelpRequested string `json:"help_requested"`
 	}
 	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	// An absent key is a client that forgot the field, not one withdrawing the
+	// ask: a withdrawal is spelled `""`. The field is a string, so null is not.
+	if raw, sent := httperr.PresentField(r, "help_requested"); !sent || raw == nil {
+		httperr.Write(w, r, httperr.Validation("help_requested", "required",
+			"send help_requested as text; an empty string withdraws the request"))
 		return
 	}
 	if err := h.store.AskForHelp(r.Context(), ids.UUID(id), body.HelpRequested); err != nil {
@@ -322,6 +332,18 @@ func (h Handlers) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) 
 	var body map[string]json.RawMessage
 	if !httperr.Decode(w, r, &body) {
 		return
+	}
+	if len(body) == 0 {
+		httperr.Write(w, r, httperr.Validation("body", "required",
+			"send "+fieldRisks+", "+fieldCapacityNote+" or both"))
+		return
+	}
+	for _, key := range slices.Sorted(maps.Keys(body)) {
+		if key != fieldRisks && key != fieldCapacityNote {
+			httperr.Write(w, r, httperr.Validation("body", "unknown_field",
+				"unknown field \""+key+"\"; the contract has "+fieldRisks+" and "+fieldCapacityNote))
+			return
+		}
 	}
 	edit := ContractEdit{}
 	var err error

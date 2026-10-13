@@ -45,7 +45,7 @@ func TestTheOwesAReplyPredicateHasOneSpelling(t *testing.T) {
 		scanned++
 		for _, hit := range handWritten.FindAllString(string(body), -1) {
 			// The constant's own declaration is the one permitted spelling.
-			if strings.Contains(hit, leadOwesAReplySQL) && name == "leadsla.go" {
+			if strings.HasPrefix(leadOwesAReplySQL, hit) && name == "leadsla.go" {
 				continue
 			}
 			t.Errorf("%s writes the owes-a-reply predicate by hand (%q) — "+

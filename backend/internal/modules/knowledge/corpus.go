@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,29 +37,12 @@ const defaultAskColumn = "default_ask"
 // names do not read as a record changing; they read as two records.
 const (
 	filenameKey      = "filename"
+	checksumKey      = "checksum"
 	contentTypeKey   = "content_type"
 	managedSourceKey = "managed_source"
 	byteSizeKey      = "byte_size"
 	corpusIDKey      = "corpus_id"
 )
-
-// DefaultMinSimilarity is the grounding floor a corpus starts life with: the
-// cosine a passage must reach before it may be cited at all.
-//
-// It is a starting point rather than a tuned value, and nothing in this build
-// records which binding a floor WAS tuned against — the surface that would use
-// such a record does not exist, so neither does the column. That gap is why the
-// floor is not asked to do more than it can: 0.35 sits below every score both
-// currently bound embedding models produce for any prose pair, so under those
-// bindings it removes nothing.
-//
-// Raising it does not fix that. Cosine is not calibrated across embedding
-// models, and under mistral-embed-2312 the covered and uncovered ranges overlap
-// on the same corpus, so no value of this number separates them. What refuses
-// an uncovered question is the writer that READS the passages, and an ask that
-// reached no writer says so with the unreviewed outcome rather than claiming an
-// answer.
-const DefaultMinSimilarity = 0.35
 
 // Store owns the knowledge tables. Handlers→Store, the CRUD spine: the store
 // holds the transactional write shape and nothing above it writes SQL.
@@ -70,6 +54,25 @@ type Store struct {
 	// installation with no object storage — and the upload says so rather than
 	// blaming the file; every other path works without it.
 	blob blobstore.Store
+	// identity names the embedding binding in force, so a corpus can report the
+	// floor measured for it. Nil is a role with no embed lane: no floor.
+	identity func() string
+}
+
+// WithEmbedIdentity binds the live embedding identity corpora resolve their
+// floor against. It is a function because the binding can be re-bound while
+// the process runs.
+func (s *Store) WithEmbedIdentity(identity func() string) *Store {
+	clone := *s
+	clone.identity = identity
+	return &clone
+}
+
+func (s *Store) embedIdentity() string {
+	if s.identity == nil {
+		return ""
+	}
+	return s.identity()
 }
 
 // NewStore wires the store over the workspace-bound app pool. It carries no
@@ -87,9 +90,8 @@ func (s *Store) WithBlobstore(blob blobstore.Store) *Store {
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error { return s.db.Tx(ctx, fn) }
 
-// NewCorpus defines a corpus. MinSimilarity nil takes DefaultMinSimilarity —
-// the transport never defaults it, so "the caller said 0.35" and "the caller
-// said nothing" stay distinguishable up to the store that decides.
+// NewCorpus defines a corpus. MinSimilarity nil leaves the corpus on its
+// binding's measured floor; a number overrides it for this corpus alone.
 type NewCorpus struct {
 	Name           string
 	Description    *string
@@ -103,9 +105,18 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionCreate); err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
-	floor := DefaultMinSimilarity
-	if in.MinSimilarity != nil {
-		floor = *in.MinSimilarity
+	name, err := requireCorpusText("name", in.Name, maxCorpusName)
+	if err != nil {
+		return crmcontracts.KnowledgeCorpus{}, err
+	}
+	in.Name = name
+	if in.TopicStatement, err = requireCorpusText("topic_statement", in.TopicStatement, maxCorpusTopic); err != nil {
+		return crmcontracts.KnowledgeCorpus{}, err
+	}
+	if in.Description != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -122,19 +133,19 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_corpus (id, name, description, topic_statement, min_similarity, default_ask, captured_by)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			id, in.Name, in.Description, in.TopicStatement, floor, in.DefaultAsk, by); err != nil {
+			id, in.Name, in.Description, in.TopicStatement, in.MinSimilarity, in.DefaultAsk, by); err != nil {
 			return fmt.Errorf("insert knowledge corpus: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "knowledge_corpus", id, nil, map[string]any{
 			"name":            in.Name,
 			"topic_statement": in.TopicStatement,
-			"min_similarity":  floor,
+			"min_similarity":  in.MinSimilarity,
 			defaultAskColumn:  in.DefaultAsk,
 		}); err != nil {
 			return fmt.Errorf("audit knowledge corpus create: %w", err)
 		}
 		row, err := readCorpus(ctx, tx, id, storekit.LiveOnly)
-		out = row.wire()
+		out = row.wire(s.embedIdentity())
 		return err
 	})
 	return out, err
@@ -156,6 +167,25 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionUpdate); err != nil {
 		return crmcontracts.KnowledgeCorpus{}, err
 	}
+	if in.Name != nil {
+		name, err := requireCorpusText("name", *in.Name, maxCorpusName)
+		if err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
+		in.Name = &name
+	}
+	if in.TopicStatement != nil {
+		topic, err := requireCorpusText("topic_statement", *in.TopicStatement, maxCorpusTopic)
+		if err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
+		in.TopicStatement = &topic
+	}
+	if in.Description != nil {
+		if err := httperr.RequireWithin("description", *in.Description, maxCorpusDescription); err != nil {
+			return crmcontracts.KnowledgeCorpus{}, err
+		}
+	}
 	var out crmcontracts.KnowledgeCorpus
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		lock, err := storekit.LockRow(ctx, tx, "knowledge_corpus", id, storekit.LiveOnly)
@@ -166,13 +196,13 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 		if err != nil {
 			return err
 		}
-		current := row.wire()
+		current := row.wire(s.embedIdentity())
 		if in.DefaultAsk != nil && *in.DefaultAsk {
 			if err := clearDefaultAsk(ctx, tx, id); err != nil {
 				return err
 			}
 		}
-		p := buildCorpusPatch(current, in)
+		p := buildCorpusPatch(current, row.override, in)
 		if p.Empty() {
 			out = current
 			return nil
@@ -184,7 +214,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 			return fmt.Errorf("audit knowledge corpus update: %w", err)
 		}
 		updated, err := readCorpus(ctx, tx, id, storekit.LiveOnly)
-		out = updated.wire()
+		out = updated.wire(s.embedIdentity())
 		return err
 	})
 	return out, err
@@ -194,7 +224,7 @@ func (s *Store) EditCorpus(ctx context.Context, id ids.UUID, in UpdateCorpus) (c
 // field's before/after image. updated_at is absent on purpose: the table's
 // BEFORE UPDATE trigger owns it, so a patch that named it would be the second
 // writer of one value.
-func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, in UpdateCorpus) *storekit.Patch {
+func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, override *float64, in UpdateCorpus) *storekit.Patch {
 	p := storekit.NewPatch()
 	if in.Name != nil {
 		p.Set("name", current.Name, *in.Name)
@@ -206,7 +236,7 @@ func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, in UpdateCorpus) *st
 		p.Set("topic_statement", current.TopicStatement, *in.TopicStatement)
 	}
 	if in.MinSimilarity != nil {
-		p.Set("min_similarity", current.MinSimilarity, *in.MinSimilarity)
+		p.Set("min_similarity", override, *in.MinSimilarity)
 	}
 	if in.DefaultAsk != nil {
 		p.Set(defaultAskColumn, current.DefaultAsk, *in.DefaultAsk)
@@ -262,6 +292,15 @@ func clearDefaultAsk(ctx context.Context, tx pgx.Tx, keep ids.UUID) error {
 	return nil
 }
 
+// ErrCorpusShipped is a write to the set that ships with Margince which the
+// boot reconciliation would undo or break. Its edits are honoured and not refused.
+var ErrCorpusShipped = errors.New("this set ships with Margince")
+
+var (
+	errArchiveShippedCorpus = fmt.Errorf("%w, so it cannot be archived; it comes back with every update", ErrCorpusShipped)
+	errUploadShippedCorpus  = fmt.Errorf("%w, and only Margince files pages in it; upload into a set of your own", ErrCorpusShipped)
+)
+
 // ArchiveCorpus archives the corpus and everything filed in it, in one
 // transaction: the documents, and their chunks with them.
 //
@@ -282,6 +321,9 @@ func (s *Store) ArchiveCorpus(ctx context.Context, id ids.UUID) error {
 		}
 		if current.ArchivedAt() != nil {
 			return nil
+		}
+		if current.corpus.Shipped {
+			return errArchiveShippedCorpus
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE knowledge_chunk SET archived_at = now()
@@ -313,7 +355,7 @@ func (s *Store) ReadCorpus(ctx context.Context, id ids.UUID) (crmcontracts.Knowl
 	var out crmcontracts.KnowledgeCorpus
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		row, err := readCorpus(ctx, tx, id, storekit.LiveOnly)
-		out = row.wire()
+		out = row.wire(s.embedIdentity())
 		return err
 	})
 	return out, err
@@ -329,6 +371,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 		return nil, err
 	}
 	out := []crmcontracts.KnowledgeCorpus{}
+	identity := s.embedIdentity()
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+corpusColumns+` FROM knowledge_corpus c
@@ -342,7 +385,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 			if err != nil {
 				return err
 			}
-			out = append(out, c.wire())
+			out = append(out, c.wire(identity))
 		}
 		return rows.Err()
 	})
@@ -351,15 +394,14 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 
 // corpusColumns is the read shape, coverage included.
 //
-// The three counts are correlated subqueries rather than a GROUP BY join: a
-// corpus with no documents must report zeros and stay in the list, and an
-// aggregate join drops exactly that row unless it is spelled as an outer join
-// whose COUNT then has to be coalesced anyway.
-const corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at,
+// Not a GROUP BY join: it drops a corpus with no documents, which must stay in
+// the list reporting zeros.
+var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
-	(SELECT count(*) FROM knowledge_chunk k WHERE k.corpus_id = c.id AND k.archived_at IS NULL),
-	(SELECT count(*) FROM knowledge_chunk k WHERE k.corpus_id = c.id AND k.archived_at IS NULL AND k.embed_identity IS NOT NULL)`
+	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
+	    AND ` + ingestInFlight + `),
+	` + passageColumns(corpusChunks)
 
 // corpusRow is the scanned row. It exists because the contract type carries no
 // archived_at and the archive path needs to know — an already-archived corpus
@@ -367,9 +409,21 @@ const corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_sim
 type corpusRow struct {
 	corpus     crmcontracts.KnowledgeCorpus
 	archivedAt *time.Time
+	// override is the stored min_similarity: nil takes the binding's floor.
+	override *float64
+	passages passageCoverage
 }
 
-func (r corpusRow) wire() crmcontracts.KnowledgeCorpus { return r.corpus }
+// wire resolves the floor and the embed state in force under the binding
+// named by identity.
+func (r corpusRow) wire(identity string) crmcontracts.KnowledgeCorpus {
+	out := r.corpus
+	out.MinSimilarity = EffectiveFloor(r.override, identity)
+	overridden := r.override != nil
+	out.MinSimilarityOverridden = &overridden
+	out.Coverage.EmbedState = r.passages.state(identity)
+	return out
+}
 
 // ArchivedAt reports when the corpus was archived, or nil while it is live.
 func (r corpusRow) ArchivedAt() *time.Time { return r.archivedAt }
@@ -389,18 +443,22 @@ func readCorpus(ctx context.Context, tx pgx.Tx, id ids.UUID, archived storekit.A
 func scanCorpus(row pgx.Row) (corpusRow, error) {
 	var out corpusRow
 	var id ids.UUID
-	var reindexing bool
-	var coverage crmcontracts.KnowledgeCoverage
+	var documentsInFlight int
+	p := &out.passages
 	if err := row.Scan(
 		&id, &out.corpus.Name, &out.corpus.Description, &out.corpus.TopicStatement,
-		&out.corpus.MinSimilarity, &out.corpus.DefaultAsk, &reindexing,
-		&out.corpus.CreatedAt, &out.archivedAt,
-		&coverage.DocumentsTotal, &coverage.ChunksTotal, &coverage.ChunksEmbedded,
+		&out.override, &out.corpus.DefaultAsk, &p.reindexing,
+		&out.corpus.CreatedAt, &out.archivedAt, &out.corpus.Shipped,
+		&out.corpus.Coverage.DocumentsTotal, &documentsInFlight,
+		&p.total, &p.embedded, &p.identities,
 	); err != nil {
 		return corpusRow{}, err
 	}
+	p.inFlight = documentsInFlight > 0
 	out.corpus.Id = openapi_types.UUID(id)
-	out.corpus.Coverage = coverage
+	out.corpus.Coverage.ChunksTotal = p.total
+	out.corpus.Coverage.ChunksEmbedded = p.embedded
+	reindexing := p.reindexing
 	out.corpus.Reindexing = &reindexing
 	return out, nil
 }

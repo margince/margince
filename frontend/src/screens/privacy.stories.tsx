@@ -2,9 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
+import {
+  expect,
+  fireEvent,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "storybook/test";
 import { en } from "../i18n/en";
+import type { GrantSpec } from "../testing/mefixture";
 import { PrivacyInboxCard } from "./privacy";
 import {
   jsonResponse,
@@ -13,13 +20,8 @@ import {
   stubWithSession,
 } from "./story-utils";
 
-// The DSR inbox (the settings/privacy tab's PrivacyInboxCard): the G-2 open
-// form, the G-9/case-work row expansion, and the single most destructive
-// action in the product — fulfilling an erasure. Fixtures mirror
-// privacy.test.tsx's DSRS shape exactly; the legal-hold 409 in particular
-// carries no `retain_until` — the server's ErrConflict wraps a bare
-// `legal_hold` boolean (erasure.go:86-93), never a retention date, and this
-// story must not invent one.
+// The DSR inbox: the open form, a request worked in its drawer, and fulfilling
+// an erasure. A legal-hold 409 never carries a retention date; nor does a story.
 
 const DSRS = {
   data: [
@@ -29,6 +31,7 @@ const DSRS = {
       subject_ref: "8f3a-contact-uuid",
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
+      due_overridden: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -38,7 +41,50 @@ const DSRS = {
       status: "fulfilled",
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
+      due_overridden: false,
       created_at: "2026-06-01T00:00:00Z",
+    },
+    {
+      id: "d3",
+      kind: "rectify",
+      subject_ref: "00000000-0000-4000-8000-0000000000c3",
+      subject_label: "Lena Hoffmann",
+      status: "in_progress",
+      assignee_id: "u-1",
+      due_at: "2099-11-30T00:00:00Z",
+      due_overridden: false,
+      created_at: "2026-06-01T00:00:00Z",
+    },
+    {
+      id: "d4",
+      kind: "access",
+      subject_ref: "00000000-0000-4000-8000-0000000000c4",
+      subject_label: null,
+      status: "rejected",
+      resolution: "No record of this address",
+      due_at: "2026-05-01T00:00:00Z",
+      due_overridden: false,
+      created_at: "2026-04-01T00:00:00Z",
+    },
+  ],
+  page: { next_cursor: null, has_more: false },
+};
+
+// The longest a subject runs: a partner's own reference typed in by hand, and a
+// contact whose name fills a phone's width on its own.
+const LONG = {
+  data: [
+    {
+      ...DSRS.data[0],
+      id: "d5",
+      subject_ref:
+        "partner-escalation-reference-2026-0001234567@subsidiary.example-holdings.test",
+    },
+    {
+      ...DSRS.data[2],
+      id: "d6",
+      subject_label:
+        "Maximiliane Theodora von Hohenzollern-Sigmaringen-Wittelsbach",
     },
   ],
   page: { next_cursor: null, has_more: false },
@@ -62,9 +108,37 @@ const WORKS_SUBJECT_REQUESTS: GrantSpec = {
   contact: ["update"],
 };
 
+// The one assignee the fixtures name, and the roster the drawer's picker offers.
+const SEATS: RouteMap = {
+  "GET /users/names": () =>
+    jsonResponse({ data: [{ id: "u-1", display_name: "Anna Weber" }] }),
+  "GET /users": () =>
+    jsonResponse({
+      data: [
+        {
+          id: "u-1",
+          email: "anna@margince.test",
+          display_name: "Anna Weber",
+          status: "active",
+          is_agent: false,
+        },
+      ],
+      page: { next_cursor: null, has_more: false },
+    }),
+};
+
+// After 2026-08-01, the day the erasure play picks: a pick past this is refused.
+const DEADLINE: RouteMap = {
+  "GET /data-subject-requests/deadline": () =>
+    jsonResponse({ due_at: "2026-08-15T14:00:00Z", rule: "gdpr" }),
+};
+
 function inbox(routes: RouteMap) {
   return () => {
-    stubWithSession(routes, WORKS_SUBJECT_REQUESTS);
+    stubWithSession(
+      { ...SEATS, ...DEADLINE, ...routes },
+      WORKS_SUBJECT_REQUESTS,
+    );
     return (
       <StoryProviders>
         <PrivacyInboxCard />
@@ -80,20 +154,10 @@ async function expandRow(canvasElement: HTMLElement, subjectRef: string) {
   );
 }
 
-// The facet bar's "Fulfilled" filter button substring-matches /fulfil/i too —
-// scope every row-only control lookup to the expanded row itself, same
-// findDsrRow idiom privacy.test.tsx uses.
-async function findRow(
-  canvasElement: HTMLElement,
-  subjectRef: string,
-): Promise<HTMLElement> {
-  const canvas = within(canvasElement);
-  const [match] = await canvas.findAllByText(subjectRef);
-  const row = match.closest(".dsr-row");
-  if (!(row instanceof HTMLElement)) {
-    throw new Error(`dsr row for "${subjectRef}" not found`);
-  }
-  return row;
+// The facet bar's "Fulfilled" substring-matches /fulfil/i too, so a request's
+// verbs are looked up in its drawer, which portals to the body.
+function findRow(subjectRef: string): Promise<HTMLElement> {
+  return screen.findByRole("dialog", { name: subjectRef });
 }
 
 const meta: Meta<typeof PrivacyInboxCard> = {
@@ -104,34 +168,81 @@ export default meta;
 
 type Story = StoryObj<typeof PrivacyInboxCard>;
 
-// One open erasure + one fulfilled access request, collapsed.
+// An overdue erasure, a fulfilled access request, a named correction in
+// progress and a rejected request whose contact this reader cannot see.
 export const Inbox: Story = {
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
 };
 
-// The case-work panel for a still-open request: subject, assignee, and only
-// the transitions the server's closed status machine would accept.
-export const RowExpanded: Story = {
+// A still-open request in its drawer: subject, assignee, and only the
+// transitions the server's status machine would accept.
+export const RequestOpen: Story = {
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
     await expandRow(canvasElement, "8f3a-contact-uuid");
   },
 };
 
-// The narrow render of the row privacy.css's `.dsr-row-toggle` rule exists for:
-// a kind badge, a subject reference, a status badge, a due date and an
-// overdue badge are five nowrap children in one flex line, and before the wrap
-// they pushed the card's scroll width past the phone viewport. That comment
-// describes a fix no story has ever pictured. Expanded, because the case-work
-// panel underneath adds the status SegmentedControl and the transition verbs to
-// the same 390px column, and the facet bar above it is in frame either way.
-export const RowExpandedPhone: Story = {
+// The folded table at 390px: subject and status on line one, the rest below.
+export const InboxPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
+};
+
+// The drawer is a full-screen sheet on a phone.
+export const RequestOpenPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
   play: async ({ canvasElement }) => {
     await expandRow(canvasElement, "8f3a-contact-uuid");
   },
+};
+
+export const LongSubjects: Story = {
+  render: inbox({ "GET /data-subject-requests": () => jsonResponse(LONG) }),
+};
+
+export const LongSubjectsPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: inbox({ "GET /data-subject-requests": () => jsonResponse(LONG) }),
+};
+
+// A refused transition says so in the drawer; the badges stay where they were.
+export const RefusedWrite: Story = {
+  render: inbox({
+    "GET /data-subject-requests": () => jsonResponse(DSRS),
+    "PATCH /data-subject-requests/d3": () =>
+      jsonResponse(
+        { title: "Forbidden", status: 403, code: "permission_denied" },
+        403,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    await expandRow(canvasElement, "Lena Hoffmann");
+    const drawer = await findRow("Lena Hoffmann");
+    await userEvent.type(within(drawer).getByLabelText(/resolution/i), "done");
+    await userEvent.click(
+      within(drawer).getByRole("button", { name: /reject/i }),
+    );
+    await within(drawer).findByRole("alert");
+  },
+};
+
+export const Loading: Story = {
+  render: inbox({ "GET /data-subject-requests": () => new Promise(() => {}) }),
+};
+
+export const ReadFailed: Story = {
+  render: inbox({
+    "GET /data-subject-requests": () =>
+      jsonResponse(
+        { title: "Internal Server Error", status: 500, code: "internal" },
+        500,
+      ),
+  }),
 };
 
 // G-2: the inline open-request form (kind defaults to access — the
@@ -146,19 +257,62 @@ export const NewRequestForm: Story = {
   },
 };
 
-// Opens the fulfil confirm on the erasure row and types the word that arms it.
-// The resolution field and the row's own Fulfil verb are canvas-scoped because
-// they are in the card; the ERASE field is NOT — ConfirmModal portals to
-// document.body, outside canvasElement, so that one lookup goes through `screen`.
-// Looking for it on the canvas is why both stories below stopped at an un-armed
-// dialog: the query rejected, the play aborted, and the capture showed a confirm
-// nobody had confirmed. webhooks.stories.tsx carries the same note over its own
-// clickTestIds for the same reason.
+// Enter in the contact search, once a contact is picked and the form is
+// complete, opens nothing: a submitting Enter would file the request for the
+// earlier contact while the officer was looking for another. A scripted key
+// never submits a form, so the play asserts the browser's own Enter action is
+// cancelled, then that the form was complete enough for it to have submitted.
+const openedRequests: unknown[] = [];
+export const ErasureSearchEnter: Story = {
+  render: inbox({
+    "GET /data-subject-requests": () => jsonResponse(DSRS),
+    "GET /contacts": () =>
+      jsonResponse({
+        data: [
+          { id: "c-anna", full_name: "Anna Weber" },
+          { id: "c-ben", full_name: "Ben Ostrowski" },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    "POST /data-subject-requests": (body) => {
+      openedRequests.push(body);
+      return jsonResponse({ ...DSRS.data[0], subject_ref: "c-anna" }, 201);
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    openedRequests.length = 0;
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("button", {
+        name: /new request/i,
+      }),
+    );
+    await user.click(await screen.findByRole("combobox", { name: "Kind" }));
+    await user.click(await screen.findByRole("option", { name: "Erasure" }));
+    const search = await screen.findByRole("searchbox", { name: "Contact" });
+    await user.type(search, "anna");
+    await user.click(await screen.findByRole("button", { name: "Anna Weber" }));
+    fireEvent.change(screen.getByLabelText(/^Earlier deadline/), {
+      target: { value: "2026-08-01" },
+    });
+    await user.type(search, "ben");
+    const enter = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    await expect(search.dispatchEvent(enter)).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Open request" }));
+    await waitFor(() => expect(openedRequests).toHaveLength(1));
+  },
+};
+
+// Opens the fulfil confirm on the erasure request and types the word that arms
+// it. The drawer and the confirm both portal to the body, outside the canvas.
 async function armErasureConfirm(canvasElement: HTMLElement) {
   await expandRow(canvasElement, "8f3a-contact-uuid");
-  const canvas = within(canvasElement);
-  await userEvent.type(await canvas.findByLabelText(/resolution/i), "verified");
-  const row = await findRow(canvasElement, "8f3a-contact-uuid");
+  const row = await findRow("8f3a-contact-uuid");
+  await userEvent.type(within(row).getByLabelText(/resolution/i), "verified");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
   await userEvent.type(
     await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),
@@ -211,12 +365,8 @@ export const LegalHoldBlocked: Story = {
   play: driveToLegalHold,
 };
 
-// The lawful refusal in dark. A `Callout tone="danger"` is a tinted surface, a
-// border and body text that all have to stay separable — the tone IS the claim
-// that this is a documented refusal and not a routine note, so if the danger
-// surface flattens into the card behind it the refusal stops reading as one. The
-// row underneath is still expanded, so the callout is judged against the panel,
-// the transition verbs and the subject reference it interrupts.
+// The lawful refusal in dark: the danger callout's tint, border and text must
+// stay separable from the drawer behind it.
 export const LegalHoldBlockedDark: Story = {
   globals: { theme: "dark" },
   render: inbox(legalHoldRoutes),
@@ -231,6 +381,11 @@ export const Forbidden: Story = {
         403,
       ),
   }),
+};
+
+export const InboxDark: Story = {
+  globals: { theme: "dark" },
+  render: inbox({ "GET /data-subject-requests": () => jsonResponse(DSRS) }),
 };
 
 export const Empty: Story = {

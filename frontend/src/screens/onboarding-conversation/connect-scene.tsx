@@ -6,13 +6,13 @@ import { Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { StageActions } from "../../design-system/onboarding-stage";
 import { providerBrandName } from "../../design-system/provider-mark";
-import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import {
   type AccountVendor,
   accountsOf,
   type ConnectionAccount,
-} from "../connectorproviders";
+} from "../../format/connectorprovider";
+import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useConnectors } from "../connectors";
 import { AlsoWorthDoing, type AlsoWorthDoingProps } from "./connect-also";
 import { AppWaitingPanel } from "./connect-app-missing";

@@ -3,7 +3,6 @@
 
 import { Clock, ExternalLink, MapPin, Video } from "lucide-react";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { ErrorLine } from "../design-system/errorline";
@@ -13,8 +12,9 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { navigate } from "../lib/router";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "./booking-video";
-import { isMailbox } from "./connectorproviders";
+import { isMailbox } from "../format/connectorprovider";
 import { useConnectors } from "./connectors";
 import { videoOf } from "./meeting-link-drawer";
 import { usePatchSchedulingProfile } from "./scheduling-profile-query";

@@ -61,7 +61,7 @@ const company: Company = {
 const populated: View = {
   ...company360,
   as_of: "2026-06-01T09:00:00Z",
-  company: company,
+  company,
   sections_omitted: [],
   contacts: {
     data: [
@@ -125,7 +125,7 @@ const withheld: View = {
   sections_omitted: ["health", "contacts"],
 };
 
-function Rail({ view }: Readonly<{ view: View }>) {
+function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
   installFetchStub({
     // Without a routed session useCan("company","update") fails closed
     // (useMe's no-authorization fallback) and canEdit is false for every field
@@ -160,6 +160,7 @@ function Rail({ view }: Readonly<{ view: View }>) {
       <div style={{ maxWidth: 340 }}>
         <CompanyRail
           companyId="o-1"
+          company={row}
           view={view}
           loading={false}
           onTab={() => {}}
@@ -173,4 +174,14 @@ export const Populated: Story = { render: () => <Rail view={populated} /> };
 
 export const SectionWithheld: Story = {
   render: () => <Rail view={withheld} />,
+};
+
+// The server refuses an archived account's 360 and lists, so the rail keeps
+// the row's own sections and draws none that would read as failed.
+export const Archived: Story = {
+  render: () => (
+    <Rail
+      row={{ ...company, writable: false, archived_at: "2026-08-14T09:00:00Z" }}
+    />
+  ),
 };

@@ -128,8 +128,8 @@ export function groupChronology(
   // single row that arrived after it. Marking the last group would offer to
   // continue a conversation that is already complete and stay silent about the
   // one that is actually cut.
-  if (hasMore && entries.length > 0) {
-    const oldest = entries[entries.length - 1];
+  const oldest = entries.at(-1);
+  if (hasMore && oldest !== undefined) {
     const cut = groups.find((group) => group.entries.includes(oldest));
     if (cut) {
       cut.partial = true;

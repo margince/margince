@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Field,
@@ -13,12 +11,15 @@ import {
 import { DataTable } from "../design-system/datatable";
 import { isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import { QueryGate, throwProblem } from "./common";
 import {
   metricLabel,
   reportingAmount,
@@ -45,20 +46,20 @@ export function ReportingTargets() {
   const query = useQuery({
     queryKey: ["reporting-targets", cursor, status, periodFilter],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/targets", {
-        params: {
-          query: {
-            cursor,
-            limit: 50,
-            retired: status === "all" ? undefined : status === "retired",
-            period_start: isISODate(`${periodFilter}-01`)
-              ? `${periodFilter}-01`
-              : undefined,
+      return unwrap(
+        await api.GET("/analytics/targets", {
+          params: {
+            query: {
+              cursor,
+              limit: 50,
+              retired: status === "all" ? undefined : status === "retired",
+              period_start: isISODate(`${periodFilter}-01`)
+                ? `${periodFilter}-01`
+                : undefined,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
   });
   return (

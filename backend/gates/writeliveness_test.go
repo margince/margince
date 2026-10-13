@@ -5,9 +5,9 @@
 
 package gates
 
-// The LIVENESS obligation as a fitness function: a write that targets one
-// standing row of a table which can be archived either REFUSES an archived row,
-// DECLARES that it deliberately reaches one, or is ratified with a reason.
+// A write that targets one standing row of a table which can be archived either
+// refuses an archived row, declares that it reaches one by design, or is
+// ratified with a reason.
 //
 // It is the fourth of the four obligations a write in this tree owes, and it was
 // the only one with no gate. The other three each have theirs — tableownership
@@ -126,9 +126,13 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:RestoreContactTx": "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
-	"internal/modules/contacts:RestoreCompanyTx": "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
-	"internal/modules/deals:RestoreDealTx":       "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
+	"internal/modules/privacy:deleteNoticeActivities":   "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
+	"internal/modules/privacy:deleteLeadRecordsTx":      "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
+	"internal/modules/contacts:RestoreContactTx":        "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
+	"internal/modules/contacts:RestoreCompanyTx":        "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
+	"internal/modules/activities:SetCalendarMethodTx":   "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
+	"internal/modules/activities:WithholdStoredFilesTx": "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
+	"internal/modules/deals:RestoreDealTx":              "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
@@ -148,7 +152,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// THE RETIREMENT TRANSITION ITSELF. Each is idempotent by construction: the
 	// write sets the retired state absolutely rather than deriving it from a
 	// pre-read, so a second attempt converges on the same row instead of racing.
-	"internal/modules/activities:ArchiveAttachment":   "the archive transition for a filed document. Refusing an archived row would turn a repeated archive into an error where it is the same answer, and the parent's authority is probed above through resolveAttachmentParent",
 	"internal/modules/activities:archiveAbsorbedEcho": "folding a duplicate capture into its survivor, which takes the echo off the timeline. archived_at is coalesced so a row a noise disposition already hid keeps the instant its undo window is measured from — a filter here would refuse exactly that row",
 	"internal/modules/capture:withdrawConnection":     "disconnecting a mailbox, and the retry that re-drives the cleanup a previous call left unfinished. The already-withdrawn arm is the one that must reach a retired row, and it is what makes the withdrawal recoverable rather than half-done",
 	"internal/modules/customfields:Retire":            "the catalog field's own retirement, which moves `status` and not archived_at; lockField holds the row from before the decision read, and a repeat converges on the same status",
@@ -193,7 +196,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several companies are plausible, on a row from the same pass. It links nobody and resolves nothing",
 	"internal/modules/contacts:setDedupeDispositionTx":          "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
 	"internal/modules/contacts:reopenDedupeCandidateTx":         "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
-	"internal/modules/contacts:RefreshDisplayNameTx":            "showing the name a contact's own first and last columns already carry. It refuses a name a human set, and an erasure NULLs both halves — so an erased subject fails the both-halves check before any write is attempted",
+	"internal/modules/contacts:RefreshDisplayNameTx":            "showing the name a contact's own first and last columns already carry. It refuses a name anyone but capture chose, and an erasure NULLs both halves — so an erased subject fails the both-halves check before any write is attempted",
 	"internal/modules/contacts:completeContactName":             "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
 	"internal/modules/contacts:absorbCompanyReferences":         "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
 	"internal/modules/ai:persistBuildVersion":                   "recording the artifact a voice build produced, on the profile that build was raised for. The build row carries the profile id and the build itself is the selection; nothing in the tree writes voice_profile.archived_at",
@@ -224,7 +227,7 @@ func retirableTables(t *testing.T) map[string]bool {
 				return err
 			}
 			current := ""
-			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
+			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					current = m[1]
 					continue

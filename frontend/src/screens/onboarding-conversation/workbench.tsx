@@ -1,9 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useCan } from "../../app/capability";
 import { AiRuntimeChip } from "../../design-system/airuntimechip";
 import type { MarginceCoreState } from "../../design-system/margince-core";
 import {
@@ -11,7 +10,8 @@ import {
   type StageProgress,
 } from "../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { throwProblem } from "../common";
+import { useCan } from "../../lib/capability";
+import { throwProblem, unwrap } from "../../lib/problem";
 import { loadWizardState } from "../onboarding";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
@@ -64,11 +64,7 @@ export function useConfiguredModel(): string {
     queryKey: ["ai-profile"],
     enabled: canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
-      const { data, error } = await api.GET("/ai/profile");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/ai/profile"));
     },
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -98,24 +94,38 @@ function useSetupRuntime(): AiRunSummary | undefined {
   const readId = wizard.data?.site_read_id ?? null;
   const read = useQuery({
     queryKey: ["onboarding-conv-read", readId],
-    enabled: readId !== null,
-    queryFn: async (): Promise<CompanySiteRead | null> => {
-      const { data, error, response } = await api.GET(
-        "/company/site-reads/{readId}",
-        { params: { path: { readId: readId ?? "" } } },
-      );
-      if (error) {
-        // A read the server no longer serves costs the band its figure, not
-        // the screen: the chip says it has nothing, nothing throws.
-        if (response.status === 404) {
-          return null;
-        }
-        throwProblem(error);
-      }
-      return data;
-    },
+    queryFn:
+      readId !== null
+        ? async (): Promise<CompanySiteRead | null> => {
+            const { data, error, response } = await api.GET(
+              "/company/site-reads/{readId}",
+              { params: { path: { readId } } },
+            );
+            if (error) {
+              // A read the server no longer serves costs the band its figure,
+              // not the screen: the chip says it has nothing, nothing throws.
+              if (response.status === 404) {
+                return null;
+              }
+              throwProblem(error);
+            }
+            return data;
+          }
+        : skipToken,
   });
   return read.data?.ai_runtime;
+}
+
+type ShownStore = Readonly<{ seen: () => boolean; markSeen: () => void }>;
+
+function shownStore(): ShownStore {
+  let shown = false;
+  return {
+    seen: () => shown,
+    markSeen: () => {
+      shown = true;
+    },
+  };
 }
 
 /**
@@ -126,17 +136,16 @@ function useSetupRuntime(): AiRunSummary | undefined {
  * are meant to be the stable frame — faded and rose again each time the reader
  * moved forward. The shell cannot remember this itself, because it is exactly
  * what unmounts; the scope sits above the act switch, which does not.
- * What is shared is a mutable box, not a boolean: the answer has to flip when a
- * SHELL appears, and the company act opens on the full-screen gate, so anything
- * keyed on the scope's own mount would already have flipped before the first
- * workbench ever rendered.
+ * What is shared is a store, not a boolean, because the answer flips when a
+ * shell appears. The company act opens on the full-screen gate, so a flag set
+ * at the scope's own mount would flip before the first workbench rendered.
  */
-const WorkbenchShown = createContext<{ current: boolean }>({ current: false });
+const WorkbenchShown = createContext<ShownStore>(shownStore());
 
 export function WorkbenchEntranceScope({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const shown = useRef(false);
+  const [shown] = useState(shownStore);
   return (
     <WorkbenchShown.Provider value={shown}>{children}</WorkbenchShown.Provider>
   );
@@ -147,9 +156,9 @@ export function WorkbenchEntranceScope({
 // mid-animation.
 function useFirstWorkbench(): boolean {
   const shown = useContext(WorkbenchShown);
-  const [first] = useState(() => !shown.current);
+  const [first] = useState(() => !shown.seen());
   useEffect(() => {
-    shown.current = true;
+    shown.markSeen();
   }, [shown]);
   return first;
 }

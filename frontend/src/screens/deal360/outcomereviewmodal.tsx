@@ -13,7 +13,7 @@ import {
   type ReviewTemplate,
   useCreateOutcomeReview,
 } from "../outcomereview.queries";
-import "../common.css";
+import "../../design-system/querystates.css";
 
 /**
  * Writing a review of how the deal went.
@@ -145,7 +145,7 @@ export function OutcomeReviewModal({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {draftTemplate.label}
       </Heading>
@@ -214,17 +214,17 @@ export function OutcomeReviewModal({
           )}
         </Field>
         <ErrorLine error={create.error} />
-        <div className="actions">
-          <Button variant="ghost" onClick={close} disabled={create.isPending}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={create.isPending || missing.length > 0}
-          >
-            {t("outcomeReview.save")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={close} disabled={create.isPending}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          onClick={() => void submit()}
+          disabled={create.isPending || missing.length > 0}
+        >
+          {t("outcomeReview.save")}
+        </Button>
       </div>
     </Modal>
   );

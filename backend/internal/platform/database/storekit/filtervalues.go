@@ -30,23 +30,31 @@ type FieldValue struct {
 	Label *string
 }
 
+// Leaves is the comparison leaves of a filter tree, in the order the tree
+// first reaches them.
+func Leaves(p Predicate) []Predicate {
+	var out []Predicate
+	for _, branch := range p.And {
+		out = append(out, Leaves(branch)...)
+	}
+	for _, branch := range p.Or {
+		out = append(out, Leaves(branch)...)
+	}
+	if p.Field != "" {
+		out = append(out, p)
+	}
+	return out
+}
+
 // FieldsNamed is the fields a filter tree's leaves name, once each, in the
 // order the tree first names them.
 func FieldsNamed(p Predicate) []string {
 	var out []string
-	var walk func(Predicate)
-	walk = func(node Predicate) {
-		for _, branch := range node.And {
-			walk(branch)
-		}
-		for _, branch := range node.Or {
-			walk(branch)
-		}
-		if node.Field != "" && !slices.Contains(out, node.Field) {
-			out = append(out, node.Field)
+	for _, leaf := range Leaves(p) {
+		if !slices.Contains(out, leaf.Field) {
+			out = append(out, leaf.Field)
 		}
 	}
-	walk(p)
 	return out
 }
 

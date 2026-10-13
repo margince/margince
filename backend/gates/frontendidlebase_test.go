@@ -5,7 +5,7 @@
 
 package gates
 
-// The deal board and the server must measure silence from the SAME timestamp,
+// The deal board and the server must measure silence from the same timestamp,
 // or a card ages differently from the list that filed the deal stalled.
 //
 // Both sides fall back from the newest activity to the creation instant, and
@@ -87,7 +87,7 @@ func idleBaseColumnOrder(t *testing.T) []string {
 		t.Fatalf("idlebase.SQL no longer renders a call with arguments (%q), so its order cannot be read", expression)
 	}
 	var columns []string
-	for _, argument := range strings.Split(expression[open+1:closed], ",") {
+	for argument := range strings.SplitSeq(expression[open+1:closed], ",") {
 		columns = append(columns, strings.TrimSpace(argument))
 	}
 	if len(columns) < 2 {

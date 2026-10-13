@@ -65,6 +65,9 @@ type RestoreSeam struct {
 	// reach it. Without it a race test only proves whatever the scheduler happened
 	// to do that run, which is the same as proving nothing.
 	afterEdgeDecision func()
+	// inverses perform the module verbs that undo a create, an archive, a
+	// promotion and a machine fill (recordinversewrite.go).
+	inverses recordInverses
 }
 
 // Restore puts the named audit row's before-image back.
@@ -101,6 +104,9 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	// all.
 	if entry, decided, err := s.reverseCorrection(ctx, entityType, id, row, ifVersion); err != nil || decided {
 		return entry, err
+	}
+	if kind := inverseOf(row); kind != inverseNone {
+		return s.reverseByVerb(ctx, entityType, id, row, kind, ifVersion)
 	}
 	patch, err := s.decide(ctx, row)
 	if err != nil {
@@ -153,8 +159,7 @@ func (s RestoreSeam) reverseCorrection(
 		// of history) are a 409 on every other route this seam serves — the
 		// receipt read this line as undoable, so a plain 500 here would be a
 		// harder disagreement between the two than the refusal itself is.
-		var conflict *deals.CorrectionReversalError
-		if errors.As(err, &conflict) {
+		if conflict, ok := errors.AsType[*deals.CorrectionReversalError](err); ok {
 			return privacy.RecordHistoryEntry{}, true,
 				RefusedRestore{Reason: ReasonNotRestorableByThisPath, Detail: conflict.Reason}
 		}
@@ -195,10 +200,10 @@ func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID
 		}
 		return tx.QueryRow(
 			ctx, `
-			SELECT id, entity_type, entity_id, action, before, after, occurred_at
+			SELECT id, entity_type, entity_id, action, before, after, evidence, occurred_at
 			FROM audit_log
 			WHERE id = $1`, auditID,
-		).Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &row.Before, &row.After, &row.OccurredAt)
+		).Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &row.Before, &row.After, &row.Evidence, &row.OccurredAt)
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

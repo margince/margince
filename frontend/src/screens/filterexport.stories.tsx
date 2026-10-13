@@ -3,22 +3,19 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ExportFilterMenu } from "./filterexport";
+import { OverflowMenu } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
+import { useT } from "../i18n";
+import { ExportFilterItems, useFilterExport } from "./filterexport";
 import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// Exporting what a filter selects. Two labelled buttons rather than a menu,
-// because there are exactly two formats and hiding a two-item list behind a
-// click costs a reader more than it saves — and the header this sits under
-// already spends its one unlabelled "…" on the saved-view rail.
-//
-// A success hands the browser a file and leaves the page looking exactly as it
-// did, so there is nothing to screenshot in it. The states worth capturing are
-// the two where something is visibly different: the export withheld, and the
-// export refused.
-const meta: Meta<typeof ExportFilterMenu> = {
+// Exporting what a filter selects: one item per format, in the menu of the
+// band the filter is kept from. A success hands the browser a file and leaves
+// the page looking exactly as it did, so the states worth capturing are the
+// items on offer and the export refused.
+const meta: Meta = {
   title: "Patterns/Filter export",
-  component: ExportFilterMenu,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -30,37 +27,51 @@ const meta: Meta<typeof ExportFilterMenu> = {
 };
 export default meta;
 
+type Story = StoryObj;
+
 const COMPLETE = newGroup("and", [newLeaf("city", "eq", "Berlin")]);
 
-type Story = StoryObj<typeof ExportFilterMenu>;
+/** The items as a page holds them: the run outlives the menu that closes. */
+function ExportMenu() {
+  const t = useT();
+  const run = useFilterExport();
+  return (
+    <>
+      <OverflowMenu label={t("filters.footMore")}>
+        <ExportFilterItems run={run} resource="contact" tree={COMPLETE} />
+      </OverflowMenu>
+      <ErrorLine inline error={run.error} />
+    </>
+  );
+}
+
+type User = ReturnType<typeof userEvent.setup>;
+
+/** The menu's items are portalled to the body, outside the story's root. */
+async function openMenu(user: User, canvasElement: HTMLElement) {
+  await user.click(
+    within(canvasElement).getByRole("button", {
+      name: "More for this filter",
+    }),
+  );
+  return within(canvasElement.ownerDocument.body);
+}
 
 export const Offered: Story = {
   render: () => {
     installFetchStub({});
-    return <ExportFilterMenu resource="contact" tree={COMPLETE} />;
+    return <ExportMenu />;
   },
-};
-
-export const WithheldForAnIncompleteFilter: Story = {
-  // A clause with nothing typed in it is refused per-leaf by the engine, so an
-  // export button here would answer 422 and tell the reader nothing they could
-  // not have been spared. Deliberately an empty capture — that IS the behaviour.
-  render: () => {
-    installFetchStub({});
-    return (
-      <ExportFilterMenu
-        resource="contact"
-        tree={newGroup("and", [newLeaf("city", "eq", "")])}
-      />
-    );
+  play: async ({ canvasElement }) => {
+    await openMenu(userEvent.setup(), canvasElement);
   },
 };
 
 export const Refused: Story = {
-  // The server's own reason, beside the button that failed. Not "request
-  // failed": a bulk read can be refused for something a reader can act on, and
-  // the refusal has to land somewhere or somebody waits for a file that is
-  // never coming.
+  // The server's own reason, beside the menu that asked. Not "request
+  // failed": a bulk read can be refused for something a reader can act on,
+  // and the refusal has to land somewhere or somebody waits for a file that
+  // is never coming.
   render: () => {
     installFetchStub({
       "POST /exports": () =>
@@ -73,11 +84,12 @@ export const Refused: Story = {
           403,
         ),
     });
-    return <ExportFilterMenu resource="contact" tree={COMPLETE} />;
+    return <ExportMenu />;
   },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Export CSV" }));
-    await canvas.findByRole("alert");
+    const user = userEvent.setup();
+    const page = await openMenu(user, canvasElement);
+    await user.click(page.getByRole("button", { name: "Export CSV" }));
+    await within(canvasElement).findByRole("alert");
   },
 };

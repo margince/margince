@@ -49,7 +49,7 @@ func TestFxRateAppendForward(t *testing.T) {
 		t.Fatalf("got %+v, want USD→EUR", r1)
 	}
 
-	// Same UTC day → corrects the row in place (one row survives).
+	// Same installation-zone day → corrects the row in place (one row survives).
 	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9200", EffectiveDate: today}); err != nil {
 		t.Fatalf("correct USD: %v", err)
 	}
@@ -85,8 +85,7 @@ func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 
 	assertInvalid := func(t *testing.T, err error) {
 		t.Helper()
-		var v *deals.FxRateValidationError
-		if !errors.As(err, &v) {
+		if _, ok := errors.AsType[*deals.FxRateValidationError](err); !ok {
 			t.Fatalf("expected FxRateValidationError, got %v", err)
 		}
 	}

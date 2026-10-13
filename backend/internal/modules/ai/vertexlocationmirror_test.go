@@ -24,8 +24,8 @@ func TestEveryLocationPatternIsTheParsersShape(t *testing.T) {
 		decode func([]byte, any) error
 		copies int
 	}{
-		{"../../../api/crm.yaml", yaml.Unmarshal, 2},
-		{"../../../../config/margince.schema.json", json.Unmarshal, 2},
+		{"../../../api/crm.yaml", yaml.Unmarshal, 3},
+		{"../../../../config/margince.schema.json", json.Unmarshal, 3},
 	} {
 		raw, err := os.ReadFile(doc.path)
 		if err != nil {

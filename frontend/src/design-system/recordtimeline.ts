@@ -5,11 +5,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { startOfDayInZone } from "../format/timezone";
-import { entityTimelineKeys } from "../screens/activitykeys";
-import { throwProblem } from "../screens/common";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { timelineBaseKey } from "../screens/activitykeys";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -120,9 +120,9 @@ export function useTimelineFilters(
 }
 
 /**
- * RecordTimeline is what a page renders a timeline from: every row loaded so
- * far, whether the server holds older ones, and the one verb that fetches
- * them. `LoadMoreButton` in screens/common takes it as-is.
+ * RecordTimeline is what a page renders a timeline from. It holds every row
+ * loaded so far, whether the server holds older ones, and the one verb that
+ * fetches them. `LoadMoreButton` in `querystates.tsx` takes it as-is.
  */
 export type RecordTimeline = Readonly<{
   activities: Activity[];
@@ -165,6 +165,9 @@ export function useRecordTimeline(
   options: Readonly<{
     filters?: TimelineFilters;
     firstPage?: ActivityPage;
+    // False while the record's own read has not yet said the reader may see
+    // its activities: a read asked before that only collects a refusal.
+    enabled?: boolean;
   }> = {},
 ): RecordTimeline {
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
@@ -182,7 +185,7 @@ export function useRecordTimeline(
     // admin moved it, and the rows it returns are cut at day boundaries that
     // have moved with it.
     queryKey: [
-      ...entityTimelineKeys(entityType, id)[0],
+      ...timelineBaseKey(entityType, id),
       filters,
       // `seeded` as well as the edge, and NOT because the edge is usually
       // enough. A seed whose page is the whole history has no next cursor, so
@@ -194,19 +197,24 @@ export function useRecordTimeline(
     ],
     // With a seed the first page is already on screen: nothing is fetched
     // until the reader asks, and `fetchNextPage` fetches regardless of this.
-    enabled: !seed,
+    enabled: !seed && (options.enabled ?? true),
     initialPageParam: seedCursor,
     getNextPageParam: (last: ActivityPage) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await api.GET("/activities", {
-        params: {
-          query: timelineQueryParams(entityType, id, filters, zone, pageParam),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/activities", {
+          params: {
+            query: timelineQueryParams(
+              entityType,
+              id,
+              filters,
+              zone,
+              pageParam,
+            ),
+          },
+        }),
+      );
       // A 200 with no body is a page with no rows and no edge. `isSuccess`
       // says nothing about whether the body arrived, and a page read off an
       // absent one crashed the record before any row was drawn.
@@ -217,23 +225,26 @@ export function useRecordTimeline(
       return page;
     },
   });
+  // A read the caller has switched off answers nothing, cached pages included:
+  // what was readable a moment ago may since have been withheld.
+  const on = options.enabled ?? true;
   const fetched = query.data?.pages ?? [];
-  const activities = [
-    ...(seed?.data ?? []),
-    ...fetched.flatMap((page) => page.data),
-  ];
+  const activities = on
+    ? [...(seed?.data ?? []), ...fetched.flatMap((page) => page.data)]
+    : [];
   // Before the first Load more there is no fetched page to ask, so the seed
   // answers for the edge; the query's own flag is false while it holds no data.
   const hasNextPage =
-    fetched.length > 0 ? query.hasNextPage : Boolean(seed?.page.has_more);
+    on &&
+    (fetched.length > 0 ? query.hasNextPage : Boolean(seed?.page.has_more));
   return {
     activities,
     hasNextPage,
     isFetchingNextPage: query.isFetching,
-    fetchNextPage: () => query.fetchNextPage(),
+    fetchNextPage: () => (on ? query.fetchNextPage() : undefined),
     isPending: seed ? false : query.isPending,
     isSuccess: seed ? true : query.isSuccess,
     isError: query.isError,
-    refetch: () => query.refetch(),
+    refetch: () => (on ? query.refetch() : undefined),
   };
 }

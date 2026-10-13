@@ -44,8 +44,10 @@ export function KeyEntry({
 }>) {
   const t = useT();
   if (kind === "service_account") {
+    // One column with one rhythm: the field, its file box and the verbs each
+    // carry their own label or hint, and stacked bare they ran into each other.
     return (
-      <>
+      <div className="ai-key-stack">
         <ServiceAccountKeyField
           value={value}
           disabled={disabled}
@@ -54,7 +56,7 @@ export function KeyEntry({
           onChange={onChange}
         />
         <div className="ai-key-verbs">{verbs}</div>
-      </>
+      </div>
     );
   }
   return (

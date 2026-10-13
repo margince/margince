@@ -132,6 +132,7 @@ function service(
   return {
     id: provider,
     provider,
+    can_backfill: true,
     status: "connected",
     scopes: FULL_GRANT,
     ...facts,

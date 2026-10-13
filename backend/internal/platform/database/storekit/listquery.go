@@ -22,6 +22,7 @@ package storekit
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,14 +34,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// KindTimestamp and KindUUID type the core vocabulary entries the six
-// fieldcatalog custom-column types do not cover: the timestamptz columns
-// (created_at, updated_at, last_activity_at) and the uuid references the
-// spec's sort tables name (owner_id, DM-VOCAB-1/2).
-const (
-	KindTimestamp = "timestamptz"
-	KindUUID      = "uuid"
-)
+// KindTimestamp types the core vocabulary entries the six fieldcatalog
+// custom-column types do not cover: the timestamptz columns (created_at,
+// updated_at, last_activity_at).
+const KindTimestamp = "timestamptz"
 
 // defaultSortSpelling is the contract's documented default sort. It IS
 // the default, so the spelling is accepted and normalized to it — the
@@ -82,20 +79,27 @@ type SortField struct {
 	// continuation, so a page cannot be ordered by one expression and
 	// continued by another.
 	Expr func(ctx context.Context, arg func(any) int) (string, error)
+	// CursorField is what a page cursor records this sort as, when the wire
+	// name once ordered by something else. A cursor minted under the old
+	// ordering then names a different field and is refused. Comparing its key
+	// against the new values would skip or repeat rows.
+	CursorField string
 }
 
 // Column is the ordinary sortable field: the row's own column of that name.
 func Column(kind string) SortField { return SortField{Kind: kind} }
 
 // SortVocabulary merges a resource's fixed core sortable fields with the
-// workspace's active custom columns. Retired columns left ActiveColumns, so
+// workspace's active custom columns, less a multiselect: its value is an array,
+// which a one-value keyset cursor cannot continue. Retired columns left ActiveColumns, so
 // they leave the vocabulary — and its 422 — for free.
 func SortVocabulary(core map[string]SortField, active []fieldcatalog.Column) map[string]SortField {
 	vocab := make(map[string]SortField, len(core)+len(active))
-	for name, field := range core {
-		vocab[name] = field
-	}
+	maps.Copy(vocab, core)
 	for _, c := range active {
+		if c.Type == fieldcatalog.TypeMultiselect {
+			continue
+		}
 		vocab[c.Name] = Column(c.Type)
 	}
 	return vocab
@@ -109,6 +113,9 @@ type ListSort struct {
 	name string
 	kind string
 	desc bool
+	// cursorField is the name page cursors carry (SortField.CursorField, or
+	// the wire name).
+	cursorField string
 	// expr is the rendered ordering expression, empty for a plain column.
 	// Rendered ONCE, at parse time, because it may bind parameters and every
 	// clause that orders or continues this page has to name the same ones.
@@ -143,7 +150,10 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 			Message: fmt.Sprintf("field %q is not sortable on this resource", name),
 		}
 	}
-	sorted := &ListSort{name: name, kind: field.Kind, desc: strings.HasPrefix(raw, "-")}
+	sorted := &ListSort{name: name, kind: field.Kind, desc: strings.HasPrefix(raw, "-"), cursorField: name}
+	if field.CursorField != "" {
+		sorted.cursorField = field.CursorField
+	}
 	if field.Expr != nil {
 		// A caller with no binder is one whose vocabulary is plain columns —
 		// a fixed internal sort, not a client's. Reaching an expression there
@@ -160,13 +170,25 @@ func ParseListSort(ctx context.Context, spec *string, vocab map[string]SortField
 	return sorted, nil
 }
 
+// sortKeyPrefixChars bounds a text sort's key. The cursor carries the last
+// row's key and travels in a URL, so an unbounded one makes a long value's next
+// page unrequestable. The ordering itself uses the bounded key, so the page and
+// its continuation still agree exactly; rows that share this many leading
+// characters order among themselves by the (created_at, id) tie-breaker.
+const sortKeyPrefixChars = 256
+
 // orderExpr is what this sort orders and continues by: the field's own
-// expression, or the column of its name.
+// expression, or the column of its name, cut to sortKeyPrefixChars when it is
+// a single text value (an array or another kind is left whole).
 func (s *ListSort) orderExpr() string {
-	if s.expr != "" {
-		return s.expr
+	expr := s.expr
+	if expr == "" {
+		expr = quoteColumnIdentifier(s.name)
 	}
-	return quoteColumnIdentifier(s.name)
+	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist {
+		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
+	}
+	return expr
 }
 
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST
@@ -206,7 +228,7 @@ func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids
 	if s == nil {
 		return EncodeCursor(createdAt, id)
 	}
-	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.name, SortDesc: s.desc, SortKey: sortKey})
+	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.cursorField, SortDesc: s.desc, SortKey: sortKey})
 }
 
 // KeysetClause renders the WHERE fragment that continues the page after
@@ -230,7 +252,7 @@ func (s *ListSort) KeysetClause(token string, arg func(any) int) (string, error)
 		}
 		return SQLf("(created_at, id) < ($%d, $%d)", arg(c.CreatedAt), arg(c.ID)), nil
 	}
-	if c.SortField != s.name || c.SortDesc != s.desc {
+	if c.SortField != s.cursorField || c.SortDesc != s.desc {
 		return "", &CursorSortMismatchError{}
 	}
 
@@ -316,13 +338,9 @@ func parsesAsKind(kind, value string) bool {
 		_, err := strconv.ParseInt(value, 10, 64)
 		return err == nil
 	case fieldcatalog.TypeDate:
-		_, err := time.Parse("2006-01-02", value)
-		return err == nil
+		return isStorableCalendarDay(value)
 	case fieldcatalog.TypeBoolean:
 		return value == "true" || value == "false"
-	case KindUUID:
-		_, err := ids.Parse(value)
-		return err == nil
 	case KindTimestamp:
 		return parsesAsTimestamptz(value)
 	default: // text, picklist
@@ -361,8 +379,6 @@ func kindOperandShape(kind string) string {
 		return "an ISO date (YYYY-MM-DD)"
 	case fieldcatalog.TypeBoolean:
 		return "true or false"
-	case KindUUID:
-		return "a UUID"
 	case KindTimestamp:
 		return "a timestamp"
 	default: // text, picklist
@@ -385,8 +401,6 @@ func listBindCast(kind string) string {
 		return "::bigint"
 	case KindTimestamp:
 		return "::timestamptz"
-	case KindUUID:
-		return "::uuid"
 	default: // text, picklist
 		return "::text"
 	}

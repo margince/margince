@@ -8,12 +8,15 @@ package compose
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -94,6 +97,10 @@ func TestReportingBookingsFollowCurrentOwnerAfterTransfer(t *testing.T) {
 	_, err = service.Evidence(reportingActor(e), selection, "bookings_won", "interval", "", nil, nil, 50, reporting.EvidenceExpectation{Key: result.EvaluationKey, At: result.Context.EvaluatedAt, FrameworkRevision: result.Context.FrameworkRevision})
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("changed evidence must refresh the reading: %v", err)
+	}
+	if fault, ok := httperr.Classify(err); !ok || fault.Status != http.StatusConflict ||
+		!strings.Contains(fault.Detail, "Reload the report") {
+		t.Fatalf("a stale evidence read answered %+v, want a 409 telling the reader to reload the report", fault)
 	}
 }
 

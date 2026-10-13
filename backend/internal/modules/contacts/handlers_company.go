@@ -28,7 +28,11 @@ func (h Handlers) MergeCompany(w http.ResponseWriter, r *http.Request, id crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	survivor, err := h.store.MergeCompany(r.Context(), pathID[ids.CompanyKind](id), ids.From[ids.CompanyKind](ids.UUID(req.TargetId)))
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	survivor, err := h.store.MergeCompany(r.Context(), pathID[ids.CompanyKind](id), ids.From[ids.CompanyKind](ids.UUID(req.TargetId)), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

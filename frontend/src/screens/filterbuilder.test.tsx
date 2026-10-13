@@ -6,12 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { FilterBuilder } from "./filterbuilder";
 import type { VocabularyField } from "./filterdata";
 import {
   encode,
+  isGroup,
   type Node,
   newGroup,
   newLeaf,
@@ -23,7 +24,13 @@ import {
 // an operator in a list the field's type does not admit is a clause the engine
 // will refuse, and that is the failure this screen exists to prevent.
 
-afterEach(cleanup);
+// A new clause starts on owner_id, whose picker reads the seat roster, so
+// every test owns its fetch: none reaches the network or a neighbour's stub.
+beforeEach(stubSeats);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const VOCAB: VocabularyField[] = [
   {
@@ -71,6 +78,12 @@ const VOCAB: VocabularyField[] = [
     operators: ["eq", "neq", "gt", "gte", "lt", "lte", "in", "exists"],
     custom: true,
   },
+  {
+    name: "cf_partner",
+    type: "boolean",
+    operators: ["eq", "exists"],
+    custom: true,
+  },
 ];
 
 /** Controlled, because a builder that never receives its own edits back proves
@@ -88,6 +101,9 @@ function Harness({ start }: Readonly<{ start: Node }>) {
       {/* The encoded tree is the thing the server would receive, so the test
           asserts against that rather than against the DOM's rendering of it. */}
       <pre data-testid="wire">{JSON.stringify(encode(tree))}</pre>
+      {/* The proposed marks, which the wire never carries: one per clause, in
+          reading order. */}
+      <pre data-testid="marks">{JSON.stringify(marksOf(tree))}</pre>
     </QueryClientProvider>
   );
 }
@@ -151,6 +167,25 @@ function wire() {
   return JSON.parse(screen.getByTestId("wire").textContent ?? "{}");
 }
 
+function marksOf(node: Node): boolean[] {
+  return isGroup(node)
+    ? node.children.flatMap(marksOf)
+    : [node.proposed === true];
+}
+
+function marks(): boolean[] {
+  return JSON.parse(screen.getByTestId("marks").textContent ?? "[]");
+}
+
+/** A clause a model proposed and the reader has not touched. */
+function proposedLeaf(
+  field: string,
+  op: Parameters<typeof newLeaf>[1],
+  value: Parameters<typeof newLeaf>[2],
+): Node {
+  return { ...newLeaf(field, op, value), proposed: true };
+}
+
 describe("what the builder offers", () => {
   it("offers a field's operators and no others", async () => {
     resetIDsForTest();
@@ -194,8 +229,10 @@ describe("what the builder offers", () => {
     );
 
     // The badge is what tells a reader this column is theirs rather than the
-    // product's — AC-filters-and-views-3 asks for it by name.
-    expect(screen.getByText("Custom field")).toBeTruthy();
+    // product's — AC-filters-and-views-3 asks for it by name. Neutral: emerald
+    // is the page's one primary action.
+    const badge = screen.getByText("Custom field").closest(".badge");
+    expect(badge?.className).not.toContain("badge-accent");
     expect(screen.queryByText("owner id")).toBeNull();
   });
 
@@ -212,7 +249,6 @@ describe("what the builder offers", () => {
 describe("an id clause names a record, not a uuid", () => {
   it("offers the records the vocabulary's target points at", async () => {
     resetIDsForTest();
-    stubSeats();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "")])} />,
@@ -287,7 +323,6 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("names records one at a time for a list clause, and never as free text", async () => {
     resetIDsForTest();
-    stubSeats();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "in", [])])} />,
@@ -349,7 +384,6 @@ describe("an id clause names a record, not a uuid", () => {
 
   it("asks nothing of a reader when the operator already answered", async () => {
     resetIDsForTest();
-    stubSeats();
     render(
       <Harness
         start={newGroup("and", [newLeaf("owner_id", "exists", true)])}
@@ -447,12 +481,12 @@ describe("a closed set is picked, not typed", () => {
 });
 
 describe("editing the tree", () => {
-  it("adds a clause to the group whose button was pressed", async () => {
+  it("adds a condition to the group whose button was pressed", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(<Harness start={newGroup("and", [])} />);
 
-    await user.click(screen.getByRole("button", { name: "Add clause" }));
+    await user.click(screen.getByRole("button", { name: "Add condition" }));
 
     // The first field the picker would offer, with its first admitted operator.
     expect(wire()).toEqual({
@@ -460,21 +494,7 @@ describe("editing the tree", () => {
     });
   });
 
-  it("flips a group between ALL and ANY", async () => {
-    resetIDsForTest();
-    const user = userEvent.setup();
-    render(
-      <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Any (OR)" }));
-
-    expect(wire()).toEqual({
-      or: [{ field: "owner_id", op: "eq", value: "u1" }],
-    });
-  });
-
-  it("removes the clause whose control was pressed, not the last one", async () => {
+  it("removes the condition whose control was pressed, not the last one", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
@@ -487,7 +507,7 @@ describe("editing the tree", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Remove Owner clause" }),
+      screen.getByRole("button", { name: "Remove Owner condition" }),
     );
 
     expect(wire()).toEqual({
@@ -518,6 +538,29 @@ describe("editing the tree", () => {
     expect(after.and[0].value).toBe("");
   });
 
+  it("starts a yes/no field on the arm its control shows", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness start={newGroup("and", [newLeaf("full_name", "eq", "ann")])} />,
+    );
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Field" }),
+      "partner",
+    );
+
+    // A two-way choice always shows one arm pressed, so the clause holds that
+    // arm: a blank behind a pressed "yes" would hold the preview back unseen.
+    expect(wire()).toEqual({
+      and: [{ field: "cf_partner", op: "eq", value: true }],
+    });
+    expect(
+      screen.getByRole("button", { name: "yes" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
   it("keeps half-typed numeric input rather than coercing it", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
@@ -535,6 +578,132 @@ describe("editing the tree", () => {
 
     await user.type(screen.getByLabelText("Value"), "12");
     expect(wire().and[0].value).toBe(-12);
+  });
+});
+
+describe("the join between conditions", () => {
+  const MATCH_ALL = "and: match all of these. Press to match any.";
+
+  it("draws no connector until there are two conditions", () => {
+    resetIDsForTest();
+    render(
+      <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
+    );
+
+    expect(screen.queryByRole("button", { name: MATCH_ALL })).toBeNull();
+  });
+
+  it("flips the whole group from either connector", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [
+          newLeaf("owner_id", "eq", "u1"),
+          newLeaf("full_name", "eq", "ann"),
+          newLeaf("cf_deal_score", "gt", 3),
+        ])}
+      />,
+    );
+
+    const connectors = screen.getAllByRole("button", { name: MATCH_ALL });
+    expect(connectors.map((button) => button.textContent)).toEqual([
+      "and",
+      "and",
+    ]);
+    await user.click(connectors[1]);
+
+    // One group has one join, so every word between its rows changes at once.
+    expect(wire()).toEqual({
+      or: [
+        { field: "owner_id", op: "eq", value: "u1" },
+        { field: "full_name", op: "eq", value: "ann" },
+        { field: "cf_deal_score", op: "gt", value: 3 },
+      ],
+    });
+    const flipped = screen.getAllByRole("button", {
+      name: "or: match any of these. Press to match all.",
+    });
+    expect(flipped.map((button) => button.textContent)).toEqual(["or", "or"]);
+  });
+});
+
+describe("groups", () => {
+  it("offers a group only from two conditions, and seeds it with one", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "More for these conditions" }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Add condition" }));
+    await user.click(
+      screen.getByRole("button", { name: "More for these conditions" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add a group" }));
+
+    // The opposite join, holding a condition: an empty group would stop the
+    // count until it was filled.
+    expect(wire()).toEqual({
+      and: [
+        { field: "owner_id", op: "eq", value: "u1" },
+        { field: "owner_id", op: "eq", value: "" },
+        { or: [{ field: "owner_id", op: "eq", value: "" }] },
+      ],
+    });
+    expect(screen.getByRole("group", { name: "Any of these" })).toBeTruthy();
+  });
+
+  it("grows a nested group from its own foot and its own menu", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [
+          newLeaf("owner_id", "eq", "u1"),
+          newGroup("or", [newLeaf("full_name", "contains", "ann")]),
+        ])}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Add condition to group" }),
+    );
+    expect(wire().and[1]).toEqual({
+      or: [
+        { field: "full_name", op: "contains", value: "ann" },
+        { field: "owner_id", op: "eq", value: "" },
+      ],
+    });
+    // The group's own menu, named apart from the root's.
+    expect(
+      screen.getByRole("button", { name: "More for this group" }),
+    ).toBeTruthy();
+  });
+
+  it("says a group the reader emptied matches nothing", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [
+          newLeaf("owner_id", "eq", "u1"),
+          newGroup("or", [newLeaf("full_name", "contains", "ann")]),
+        ])}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove Name condition" }),
+    );
+
+    expect(screen.getByText("An empty group matches nothing.")).toBeTruthy();
+    expect(wire()).toEqual({
+      and: [{ field: "owner_id", op: "eq", value: "u1" }, { or: [] }],
+    });
   });
 
   it("removes a nested group without touching its siblings", async () => {
@@ -559,20 +728,103 @@ describe("editing the tree", () => {
     expect(screen.queryByRole("button", { name: "Remove group" })).toBeNull();
   });
 
-  it("nests a group, and the nested one joins the other way", async () => {
+  it("stops offering a group at the engine's nesting bound", () => {
     resetIDsForTest();
-    const user = userEvent.setup();
+    const two = (a: string, nested: Node) =>
+      [newLeaf("owner_id", "eq", a), nested] as const;
     render(
-      <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
+      <Harness
+        start={newGroup("and", [
+          ...two(
+            "u1",
+            newGroup("or", [
+              ...two(
+                "u2",
+                newGroup("and", [
+                  ...two(
+                    "u3",
+                    newGroup("or", [
+                      ...two("u4", newLeaf("owner_id", "eq", "u5")),
+                    ]),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+        ])}
+      />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Add group" }));
+    // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
+    // may not, or the tree is one the server refuses as filter_too_deep.
+    expect(
+      screen.getAllByRole("button", { name: "More for this group" }),
+    ).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "More for these conditions" }),
+    ).toBeTruthy();
+  });
+});
 
-    // The nested group defaults to the opposite join, because a group that joins
-    // the same way as its parent adds nesting without adding meaning.
-    expect(wire()).toEqual({
-      and: [{ field: "owner_id", op: "eq", value: "u1" }, { or: [] }],
-    });
+describe("a proposed condition", () => {
+  function proposedPair() {
+    return newGroup("and", [
+      proposedLeaf("full_name", "eq", "Lee"),
+      proposedLeaf("cf_deal_score", "gt", 3),
+    ]);
+  }
+
+  it("is drawn as proposed until the reader changes it", () => {
+    resetIDsForTest();
+    render(<Harness start={proposedPair()} />);
+
+    expect(document.querySelectorAll("[data-proposed]")).toHaveLength(2);
+    expect(screen.getAllByText("Proposed")).toHaveLength(2);
+    // The mark is the editor's alone: the wire is the same filter unmarked.
+    expect(JSON.stringify(wire())).not.toContain("proposed");
+  });
+
+  it("becomes the reader's own on a changed value, and only that row does", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={proposedPair()} />);
+
+    await user.type(screen.getAllByLabelText("Value")[0], "s");
+
+    expect(marks()).toEqual([false, true]);
+    expect(document.querySelectorAll("[data-proposed]")).toHaveLength(1);
+  });
+
+  it("becomes the reader's own on a changed field or operator", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={proposedPair()} />);
+
+    await pickOption(
+      user,
+      screen.getAllByRole("combobox", { name: "Operator" })[1],
+      "is at least",
+    );
+    expect(marks()).toEqual([true, false]);
+
+    await pickOption(
+      user,
+      screen.getAllByRole("combobox", { name: "Field" })[0],
+      "Created",
+    );
+    expect(marks()).toEqual([false, false]);
+  });
+
+  it("leaves the other marks alone when one is removed", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={proposedPair()} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove Name condition" }),
+    );
+
+    expect(marks()).toEqual([true]);
   });
 });
 

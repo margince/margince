@@ -87,11 +87,11 @@ const callRow: Activity = {
 
 function renderList(
   activities: Activity[],
-  onOpenRecord?: (entityType: string, entityId: string) => void,
+  onOpenEmail?: (activityId: string) => void,
 ) {
   return render(
     <LocaleProvider initial="en">
-      <CompanyRecentList activities={activities} onOpenRecord={onOpenRecord} />
+      <CompanyRecentList activities={activities} onOpenEmail={onOpenEmail} />
     </LocaleProvider>,
   );
 }
@@ -109,18 +109,16 @@ describe("the account's recent exchanges", () => {
     expect(screen.getByText("Team")).toBeTruthy();
   });
 
-  it("opens the message through the page's own router", async () => {
+  it("opens the message through the host's email door", async () => {
     const user = userEvent.setup();
-    const onOpenRecord = vi.fn();
-    renderList([emailRow()], onOpenRecord);
+    const onOpenEmail = vi.fn();
+    renderList([emailRow()], onOpenEmail);
 
     await user.click(
       screen.getByRole("button", { name: /Re: the renewal quote/ }),
     );
 
-    // "activity", not "email": the page's citation router already sends an
-    // activity to the drawer, and a second vocabulary would be a second router.
-    expect(onOpenRecord).toHaveBeenCalledWith("activity", EMAIL_ID);
+    expect(onOpenEmail).toHaveBeenCalledWith(EMAIL_ID);
   });
 
   it("discloses nothing from a withheld message", () => {

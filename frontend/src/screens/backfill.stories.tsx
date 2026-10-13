@@ -226,9 +226,9 @@ export const Narrowing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Start the import/ }),
+      await canvas.findByRole("button", { name: "Start import" }),
     );
-    await canvas.findByText(/only be widened/i);
+    await canvas.findByText(/already went back further/i);
   },
 };
 

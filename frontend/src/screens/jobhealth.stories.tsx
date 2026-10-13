@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { JobHealthCard } from "./jobhealth";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -17,6 +17,19 @@ const CLASSIFY = {
   oldest_waiting_age_seconds: 4_500,
 };
 
+// A long name over a long key, for the width of the pinned first column.
+const CONFIDENTIALITY = {
+  kind: "capture_confidentiality_verdict",
+  queue: "default",
+  fleet_wide: true,
+  waiting: 3,
+  running: 0,
+  retrying: 0,
+  dead: 0,
+  oldest_waiting_age_seconds: 600,
+};
+
+// A kind this build has no name for shows its key once.
 const DISPATCHER = {
   kind: "retention_sweep_dispatch",
   queue: "periodic",
@@ -73,7 +86,7 @@ function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
 
 const HEALTHY = {
   generated_at: "2026-08-13T09:30:00Z",
-  kinds: [CLASSIFY, DISPATCHER],
+  kinds: [CLASSIFY, CONFIDENTIALITY, DISPATCHER],
   recent_failures: [FAILURE],
 };
 
@@ -132,7 +145,7 @@ export const Withheld: Story = { render: story(HEALTHY, ["ops"]) };
 // once: the danger Callout an operator must not scroll past, the danger `dead`
 // pill and the warning `retrying` one beside it, and — the pairing that actually
 // needs looking at — the two UNTONED pills for waiting and running. An untoned
-// Badge is filled with --bgCard flat (atoms.css), one step off the card ground it
+// Badge is filled with --bgInset flat (atoms.css), one step off the card ground it
 // sits on, so in dark a count of zero either still reads as a pill or stops
 // looking like one while its toned neighbours shout.
 export const DeadWorkDark: Story = {

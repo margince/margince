@@ -87,7 +87,7 @@ const GRAPH_URIS = [
 const noop = () => undefined;
 
 /** The setup drawer on an installation with no Google app: three steps, the
- * redirect table with Copy all, and Save waiting for both halves of the pair. */
+ * redirect table, and Save waiting for both halves of the pair. */
 export const SetupDrawerGoogle: Story = {
   render: () => (
     <Served

@@ -106,10 +106,9 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 
 // ADR-0055: agent REST writes are governed, not blocked. A write-scoped
 // passport's 🟢 mutation lands (with server-stamped agent provenance); a
-// 🟡 mutation stages an approval and only a HUMAN decision releases it —
-// the agent's own attempt to approve is the self-approval bypass and is
-// rejected on principal type; human-only config ops reject the agent
-// outright.
+// 🟡 mutation that opens a channel out stages an approval only a HUMAN
+// releases — the agent's own attempt to approve it is refused; human-only
+// config ops reject the agent outright.
 func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -177,10 +176,9 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
-	// The agent may STAGE but never release ITS OWN proposal: the confirm-first
-	// tier exists so somebody other than the caller sees the call first, and a
-	// credential that could approve the row it just staged would have performed
-	// that confirmation on itself.
+	// The agent may STAGE but not release this proposal of its own: a webhook
+	// sends every later event to an address the agent chose, and what has been
+	// delivered cannot be called back, so the human releases it in the CRM.
 	var denyBody struct {
 		Code string `json:"code"`
 	}

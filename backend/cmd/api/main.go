@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -38,8 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
-	"github.com/margince/margince/backend/internal/platform/mailer"
-	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func main() {
@@ -122,7 +121,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// built, not because construction order matters — the registry reaches
 	// limiters made either side of this line — but because the line belongs
 	// where the client it shares is opened.
-	ratelimit.ShareProcess(rdb)
+	shareThroughRedis(ctx, rdb)
 
 	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
@@ -157,6 +156,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	opts = append(opts, modelOpts...)
 	opts = append(opts, compose.WithCompanyContextRollout(string(deployCfg.CompanyContext.EffectiveRollout())))
 	opts = append(opts, compose.WithListsEnabled(deployCfg.Lists.Enabled))
+	opts = append(opts, compose.SecurityTxtOption(deployCfg.Web, time.Now(), logger))
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, deployCfg, logger)
 	if err != nil {
@@ -311,6 +311,9 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	case cfg.metricsToken == "":
 		logger.Info("api: /metrics refuses every scrape — set MARGINCE_METRICS_TOKEN to require a Bearer credential, or MARGINCE_METRICS_ACCESS=open where the port is already contained")
 	}
+	if cfg.apiBaseURL != "" {
+		opts = append(opts, compose.WithAPIBaseURL(cfg.apiBaseURL))
+	}
 	if cfg.publicBaseURL != "" {
 		opts = append(opts, compose.WithPublicBaseURL(cfg.publicBaseURL))
 		// The canonical MCP resource (RFC 9728) is the same configured
@@ -318,12 +321,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 		// bindInstallation that requires this flag once the connector
 		// gate is on.
 		opts = append(opts, compose.WithMCPResource(strings.TrimSuffix(cfg.publicBaseURL, "/")+"/mcp"))
-	}
-	// An operator-shortened access token, applied to both mints of a
-	// connection's life. Zero is "not configured", which keeps the passport
-	// default — declared by omission, never a silent guess.
-	if cfg.oauthAccessTokenTTL != 0 {
-		opts = append(opts, compose.WithOAuthAccessTokenTTL(cfg.oauthAccessTokenTTL))
 	}
 	// The channel-connection surface needs no public origin of its own: Telegram
 	// ingress polls, so nothing is ever told where to reach this installation.
@@ -340,13 +337,6 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	}
 	opts = append(opts, blobOpts...)
 
-	// The refusal half of the auto-enrich daily cap: this role spends it too
-	// (an approval accept can queue a domain-triage read), so a typo fails the
-	// boot here; compose resolves the value where it is spent, from the same
-	// process environment, which is fixed at exec.
-	if _, err := compose.AutoEnrichDailyCapFromEnv(config.FromOS); err != nil {
-		return nil, nil, nil, fmt.Errorf("api: %w", err)
-	}
 	kvOpts, err := keyvaultOptions(pool, vault, stdout)
 	if err != nil {
 		return nil, nil, nil, err
@@ -401,16 +391,9 @@ func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, po
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.
-	smtpPassword, err := compose.SealedSMTPPassword(ctx, pool, vault, deployCfg, config.FromOS, logger)
+	m, err := compose.OperatorMailer(ctx, pool, vault, deployCfg, config.FromOS, logger)
 	if err != nil {
 		return nil, err
-	}
-	m := mailer.SMTP{
-		Host:        deployCfg.Email.SMTP.Host,
-		Port:        deployCfg.Email.SMTP.Port,
-		Username:    deployCfg.Email.SMTP.Username,
-		Password:    smtpPassword,
-		FromAddress: deployCfg.Email.FromAddress,
 	}
 	_, _ = fmt.Fprintln(stdout, "api operator mail enabled (password reset, invites)")
 	// The link base rides compose.WithPublicBaseURL, assembled with the base

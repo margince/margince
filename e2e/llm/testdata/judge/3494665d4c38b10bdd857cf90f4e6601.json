@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer quotes the bookings figure (EUR 97,600) explicitly attributed to the standard bookings reading with both period (this quarter) and coverage (11 of 12 deals priced), and does not present a self-computed number as official.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer quotes the bookings figure from the standard reporting reading it made, with its period or coverage, and does not present a figure it computed itself as the official one. Answer no if it gives a number with no reading behind it, or says it could not read the reporting figure without having tried.",
+  "answer": "Booked this quarter: EUR 97,600 per the standard bookings reading (coverage: 11 of 12 deals priced). Thin or cold open deals: Körber Sensorik Rollout and Reply Deutschland Verlängerung. On price: one logged inbound mail supports it — Körber's 'Re: Angebot Sensorik', where the customer calls price the biggest obstacle; the tool states no share, so I will not quote one. Nordwind Armaturen: Sofia Meier knows Heike Brandt there and could make the introduction."
+}

@@ -15,11 +15,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CaptureActivityTab } from "./capture-activity";
 
 // What this surface must never do is state a fact it does not have. Every test
@@ -215,27 +215,10 @@ function renderTab(
   return rtlRender(ui);
 }
 
-// The per-message log is behind a disclosure, so a test that wants a row has to
-// open it the way a reader does. jsdom renders `<details>` children whether or
-// not it is open, so reaching straight for a row would assert about markup a
-// reader cannot see — the exact confusion this surface exists to avoid.
-async function logDisclosure(): Promise<HTMLDetailsElement> {
-  // `find`, not `get`: the summary is drawn by the window query, so a helper
-  // that read synchronously would race the fetch every caller has just started.
-  const summary = await screen.findByText("Messages");
-  const details = summary.closest("details");
-  if (!(details instanceof HTMLDetailsElement)) {
-    throw new Error("the per-message log is not inside a disclosure");
-  }
-  return details;
-}
-
-async function openLog(): Promise<HTMLDetailsElement> {
-  const details = await logDisclosure();
-  if (!details.open) {
-    await userEvent.click(await screen.findByText("Messages"));
-  }
-  return details;
+// The per-message log, found by the name a screen reader hears. `find`: the
+// table is drawn by the window query every caller has just started.
+async function messagesTable(): Promise<HTMLElement> {
+  return screen.findByRole("table", { name: "Messages" });
 }
 
 afterEach(() => {
@@ -258,7 +241,7 @@ describe("capture activity", () => {
     // It is the deployment having stored an address for none of them, so it is
     // said once, above the rows, about the installation.
     renderTab(windowBody({ data: [ROW, { ...ROW, id: "row-2" }] }));
-    await openLog();
+    await messagesTable();
     const note = await screen.findAllByText(/does not record message senders/i);
     expect(note).toHaveLength(1);
   });
@@ -269,7 +252,7 @@ describe("capture activity", () => {
     // installation-wide note must not appear to blame the operator's posture
     // for a deletion somebody requested.
     renderTab(windowBody({ payload_capture_enabled: true }));
-    await openLog();
+    await messagesTable();
     expect(await screen.findByText(/no sender recorded/i)).toBeInTheDocument();
     expect(
       screen.queryByText(/does not record message senders/i),
@@ -346,7 +329,7 @@ describe("capture activity", () => {
         ],
       }),
     );
-    await openLog();
+    await messagesTable();
     expect(screen.queryByText(/teleported/)).not.toBeInTheDocument();
   });
 
@@ -366,7 +349,7 @@ describe("capture activity", () => {
         ],
       }),
     );
-    const row = within(await screen.findByRole("list"));
+    const row = within(await messagesTable());
     expect(row.getByText(/not queued/i)).toBeInTheDocument();
     expect(row.queryByText(/awaiting sender check/i)).not.toBeInTheDocument();
   });
@@ -611,20 +594,17 @@ describe("capture activity", () => {
         ],
       }),
     );
-    await openLog();
+    await messagesTable();
     await user.click(screen.getByRole("button", { name: /^no contact/i }));
     expect(
       await screen.findByText(/showing 1 of 1 no contact created/i),
     ).toBeInTheDocument();
-    // TWO vocabularies for one bucket, and each earns its own. A slot compared
-    // across a row of five carries a NAME; a sentence a reader meets one at a
-    // time — the filter line above, the chip on the row — carries the whole
-    // claim. The tile must not have taken the sentence's place.
+    // The tile and the rows name the bucket in the same words. The pressed tile
+    // and the badge it filters to read as one thing.
     const funnel = within(screen.getByTestId("capture-activity-funnel"));
     expect(
-      funnel.getByText(en["captureActivity.funnel.suppressed"]),
+      funnel.getByText(en["captureActivity.outcome.suppressed"]),
     ).toBeInTheDocument();
-    expect(funnel.queryByText(/no contact created/i)).not.toBeInTheDocument();
   });
 
   it("does not say a settled deferral is still waiting for its verdict", async () => {
@@ -648,7 +628,7 @@ describe("capture activity", () => {
         ],
       }),
     );
-    const row = within(await screen.findByRole("list"));
+    const row = within(await messagesTable());
     expect(row.getByText(/sent for a sender check/i)).toBeInTheDocument();
     expect(row.getByText(/judged a real person/i)).toBeInTheDocument();
     expect(row.queryByText(/awaiting sender check/i)).not.toBeInTheDocument();
@@ -670,18 +650,14 @@ describe("capture activity", () => {
         ],
       }),
     );
-    const row = within(await screen.findByRole("list"));
+    const row = within(await messagesTable());
     // And it names WHICH verdict. Two run on this pipeline, ten minutes and an
     // hour apart, and "waiting on a verdict" named neither.
     expect(row.getByText(/awaiting sender check/i)).toBeInTheDocument();
   });
 
-  // What a rep meets on this page, in order. The block list is the one control
-  // they came for; the counters say what the window did; the per-message log is
-  // a diagnostic and sits behind a disclosure so it is available without being
-  // the first thing on the page. Closed is the default and is the assertion:
-  // `<details>` renders its children either way, so a test that merely FINDS a
-  // row proves nothing about whether a reader can see it.
+  // What a rep meets on this page, in order: the block list they came for, the
+  // counters, then the per-message log the counters filter.
   it("puts the block list and the counters ahead of the per-message log", async () => {
     renderTab(windowBody());
     const counters = (await screen.findByText("Outcomes")).closest(
@@ -696,16 +672,24 @@ describe("capture activity", () => {
         within(counters).getByText(/filtered on its own side/i),
       ).toBeInTheDocument();
     }
-    // The block list is on this page at all — it used to live two tabs away
-    // under Company, behind a door most seats cannot open.
+    // The block list a rep reaches for sits on this page.
     expect(await screen.findByText("Capture exclusions")).toBeInTheDocument();
-    // And the log is closed, so nothing about one message is on screen until
-    // somebody asks for it.
-    const log = await logDisclosure();
-    expect(log.open).toBe(false);
-    await openLog();
-    expect(log.open).toBe(true);
-    expect(within(log).getByRole("list")).toBeInTheDocument();
+    const log = await messagesTable();
+    const position = counters?.compareDocumentPosition(log) ?? 0;
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // The settings page already carries "Capture activity" as its title.
+  it("names its panel for the window rather than repeating the page title", async () => {
+    renderTab(windowBody());
+    expect(
+      await screen.findByRole("heading", {
+        name: en["captureActivity.windowTitle"],
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: en["captureActivity.title"] }),
+    ).toBeNull();
   });
 
   it("reports an empty window as empty rather than as a failure", async () => {
@@ -731,7 +715,7 @@ describe("the pipeline drill-down", () => {
     // count under a counter reading 3 would look like the counter was wrong.
     const user = userEvent.setup();
     renderTab(windowBody());
-    await openLog();
+    await messagesTable();
     await user.click(screen.getByRole("button", { name: /^internal/i }));
     expect(await screen.findByText(/showing 1 of 3/i)).toBeInTheDocument();
   });
@@ -752,20 +736,36 @@ describe("the pipeline drill-down", () => {
         ],
       }),
     );
-    await openLog();
+    await messagesTable();
     await user.click(screen.getByRole("button", { name: /^captured/i }));
-    const list = within(await screen.findByRole("list"));
+    const list = within(await messagesTable());
     expect(list.getByText("Captured")).toBeInTheDocument();
     expect(list.queryByText("Dropped as internal")).not.toBeInTheDocument();
+  });
+
+  // Every row's chevron would read alike, so each names its sender and time.
+  it("names each row's trace verb by the message it opens", async () => {
+    renderTab(
+      windowBody({
+        payload_capture_enabled: true,
+        data: [{ ...ROW, counterparty: "anna@kunde.example" }],
+      }),
+    );
+    await messagesTable();
+    expect(
+      screen.getByRole("button", {
+        name: /every processing step for the message from anna@kunde\.example at \S/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("opens one message's whole path from its row", async () => {
     const user = userEvent.setup();
     renderTab(windowBody());
-    await openLog();
+    await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(
@@ -783,10 +783,10 @@ describe("the pipeline drill-down", () => {
     // surface exists to end.
     const user = userEvent.setup();
     renderTab(windowBody());
-    await openLog();
+    await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(await screen.findByText("Sentiment scoring")).toBeInTheDocument();
@@ -798,10 +798,10 @@ describe("the pipeline drill-down", () => {
   it("says once that no step stored content, rather than per step", async () => {
     const user = userEvent.setup();
     renderTab(windowBody());
-    await openLog();
+    await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message at/i,
       }),
     );
     expect(
@@ -830,10 +830,10 @@ describe("the pipeline drill-down", () => {
         ],
       }),
     );
-    await openLog();
+    await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message from dana@acme\.test at \S/i,
       }),
     );
 
@@ -871,10 +871,10 @@ describe("the pipeline drill-down", () => {
         ],
       }),
     );
-    await openLog();
+    await messagesTable();
     await user.click(
       screen.getByRole("button", {
-        name: /every processing step for this message/i,
+        name: /every processing step for the message from dana@acme\.test at \S/i,
       }),
     );
 

@@ -9,9 +9,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
 const summary = {
@@ -19,6 +19,7 @@ const summary = {
   occurred_at: "2026-07-20T10:00:00Z",
   kind: "completion",
   task: "capture_classify",
+  task_display_name: "Message classification",
   tier: "cheap_cloud",
   provider: "gemini",
   model_id: "configured",
@@ -174,6 +175,9 @@ function mount(
               page: { has_more: false },
               payload_capture_enabled: captureEnabled,
               tasks: [summary.task],
+              task_options: [
+                { task: summary.task, display_name: summary.task_display_name },
+              ],
               models: [summary.served_model],
             };
       return new Response(JSON.stringify(body), {
@@ -248,6 +252,7 @@ function tracePage(rows: unknown[]) {
         data: rows,
         page: { has_more: false },
         tasks: [],
+        task_options: [],
         models: [],
         payload_capture_enabled: false,
       }),
@@ -317,22 +322,22 @@ it("says never called only when the trace answered and held no row", async () =>
 async function openCall(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("button", {
-      name: /^Open the Capture classify call/,
+      name: /^Open the Message classification call/,
     }),
   );
   return screen.findByRole("dialog");
 }
 
-it("reads each call in words: the feature, an outcome, and its figures", async () => {
+it("reads each call in words: the task, an outcome, and its figures", async () => {
   mount();
-  const row = (await screen.findByText("Capture classify")).closest("tr");
-  expect(row?.textContent).toContain("Failed");
-  expect(row?.textContent).toContain("120");
-  expect(row?.textContent).toContain("900 ms");
-  expect(row?.textContent).toContain("$0.0043");
-  // No wire key reaches the table: not the task, not the failure code.
-  expect(screen.queryByText("capture_classify")).toBeNull();
-  expect(screen.queryByText(/provider_unavailable/)).toBeNull();
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(within(row).getByText("Message classification")).toBeTruthy();
+  expect(row.textContent).toContain("Failed");
+  expect(row.textContent).toContain("100 / 20");
+  expect(row.textContent).toContain("900 ms");
+  expect(row.textContent).toContain("$0.0043");
+  // A code this screen has no words for keeps its key, under its badge.
+  expect(within(row).getByText("provider_unavailable")).toBeTruthy();
 });
 
 it("opens a call in a drawer and leaves the table exactly as it was", async () => {
@@ -344,7 +349,7 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
   const drawer = await openCall(user);
   // Nothing is inserted under the row: the detail lives beside the table.
   expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
-  expect(within(drawer).getByText("Capture classify")).toBeTruthy();
+  expect(within(drawer).getByText("Message classification")).toBeTruthy();
   expect(
     await within(drawer).findByText(/Answer before|retry on 5xx/i),
   ).toBeTruthy();
@@ -377,7 +382,13 @@ it("copies a payload and says Copied on that block alone", async () => {
 it("steps to the next call from inside the drawer", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, RETRIED, [
-    { ...summary, id: "second-call", task: "enrich", error_sentinel: null },
+    {
+      ...summary,
+      id: "second-call",
+      task: "enrich",
+      task_display_name: "Enrichment",
+      error_sentinel: null,
+    },
   ]);
   const drawer = await openCall(user);
   expect(
@@ -385,7 +396,7 @@ it("steps to the next call from inside the drawer", async () => {
   ).toHaveProperty("disabled", true);
   await user.click(within(drawer).getByRole("button", { name: "Next call" }));
   expect(
-    await within(drawer).findByRole("heading", { name: "Enrich" }),
+    await within(drawer).findByRole("heading", { name: "Enrichment" }),
   ).toBeTruthy();
   expect(
     within(drawer).getByRole("button", { name: "Next call" }),
@@ -400,7 +411,7 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
   mount();
   const filter = await screen.findByRole("combobox", { name: "Feature" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("Account scan");
+  expect(filter.textContent).toContain("account_scan");
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>
@@ -410,7 +421,7 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
 
   await user.click(filter);
   await user.click(
-    await screen.findByRole("option", { name: "Capture classify" }),
+    await screen.findByRole("option", { name: "Message classification" }),
   );
   expect(globalThis.location.hash).toBe(
     `#/settings/model-calls?task=${summary.task}`,
@@ -457,7 +468,7 @@ it("asks the server for the outcome and search picked, and clears both", async (
   expect(searched.map((q) => q.get("q"))).toEqual(["quota"]);
 
   await user.click(screen.getByRole("button", { name: "Clear filters" }));
-  expect(await screen.findByText("Capture classify")).toBeTruthy();
+  expect(await screen.findByTestId(`call-${summary.id}`)).toBeTruthy();
   expect(globalThis.location.hash).not.toContain("outcome");
   expect(
     (
@@ -474,9 +485,9 @@ it("says a call the price sheet cannot price is not priced, never free", async (
     call: { ...summary, estimated_cost_microusd: undefined },
     attempts: RETRIED.attempts,
   });
-  const row = (await screen.findByText("Capture classify")).closest("tr");
-  expect(row?.textContent).toContain("Not priced");
-  expect(row?.textContent).not.toContain("$0.00");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).toContain("Not priced");
+  expect(row.textContent).not.toContain("$0.00");
 });
 
 it("distinguishes capture disabled from a call without payload", async () => {
@@ -519,16 +530,18 @@ it("names the decision lane in words, never as the rung key", async () => {
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
-// The terminal row of a fallback is the completion, so the outcome reads the
+// The terminal row of a fallback is the completion, so the row reads the
 // logical call's flag rather than its own kind: a decision model that was asked
 // and overruled shows on the row before it is opened.
 it("marks a call the decision model fell back from on its row", async () => {
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-  const row = (await screen.findByText("Capture classify")).closest("tr");
-  expect(row?.textContent).toContain("Fallback");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).toContain("Decision model, then Everyday cloud");
+  // The fall back is a second model asked, not a retry of the first.
+  expect(row.textContent).not.toContain("Retried");
 });
 
-it("reads a first-try answer as answered, with no decision mark", async () => {
+it("draws no outcome badge on a first-try answer, and no decision mark", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, {
     call: {
@@ -540,10 +553,91 @@ it("reads a first-try answer as answered, with no decision mark", async () => {
     },
     attempts: [RETRIED.attempts[1]],
   });
-  const row = (await screen.findByText("Capture classify")).closest("tr");
-  expect(row?.textContent).toContain("Answered");
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.querySelector(".badge")).toBeNull();
   const drawer = await openCall(user);
   expect(within(drawer).queryByText("Decision model")).toBeNull();
+});
+
+it("marks a call that answered after a failed attempt as a warning", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: null },
+    attempts: RETRIED.attempts,
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(
+    within(row).getByText("Retried").closest(".badge")?.className,
+  ).toContain("badge-warning");
+});
+
+it("names a failure code on the row and in the attempt that hit it", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, {
+    call: { ...summary, degraded: false, error_sentinel: "output_rejected" },
+    attempts: [
+      { ...RETRIED.attempts[0] },
+      { ...RETRIED.attempts[1], error_sentinel: "output_rejected" },
+    ],
+  });
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(within(row).getByText("Answer rejected")).toBeTruthy();
+  expect(within(row).queryByText("output_rejected")).toBeNull();
+  const drawer = await openCall(user);
+  const second = (await within(drawer).findByText("#2")).closest("li");
+  expect(second?.textContent).toContain("Answer rejected");
+});
+
+it("narrows the trace to where a figure's calls ended, and lets the reader clear it", async () => {
+  const user = userEvent.setup();
+  globalThis.location.hash =
+    "#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras";
+  mount();
+  expect(
+    await screen.findByText(
+      "Showing calls that ended on Provider: OpenAI-compatible · Served by: Cerebras.",
+    ),
+  ).toBeTruthy();
+  expect(
+    askedQueries().some(
+      (q) =>
+        q.get("provider") === "openai_compatible" &&
+        q.get("served_provider") === "Cerebras",
+    ),
+  ).toBe(true);
+
+  await user.click(screen.getByRole("button", { name: "Show all calls" }));
+  expect(globalThis.location.hash).toBe("#/settings/model-calls");
+  globalThis.location.hash = "";
+});
+
+it("shows the request settings the attempts were sent with, and the host that served one", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, {
+    call: {
+      ...summary,
+      config: {
+        task_contract_hash: "c",
+        routing_config_hash: "r",
+        prompt_version: "p",
+        provider_params: { provider: { sort: "latency" }, deadline_ms: 30000 },
+      },
+    },
+    attempts: [
+      { ...RETRIED.attempts[0] },
+      {
+        ...RETRIED.attempts[1],
+        attempt_reason: "timeout",
+        served_provider: "Cerebras",
+      },
+    ],
+  });
+  const drawer = await openCall(user);
+  expect(await within(drawer).findByText("Request settings sent")).toBeTruthy();
+  expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
+  expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
+  expect(
+    within(drawer).getByText(/The attempt before ran out of time/),
+  ).toBeTruthy();
 });
 
 it("says why the ladder answered after the decision model, and where it went", async () => {
@@ -555,13 +649,13 @@ it("says why the ladder answered after the decision model, and where it went", a
   // wire code, and no number: the floor is not stored on the call.
   expect(
     await within(drawer).findByText(
-      /cheap_cloud · Decision model below its confidence floor/,
+      /Everyday cloud · Decision model below its confidence floor/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/decision_below_floor/)).toBeNull();
   const first = within(drawer).getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify");
+  expect(first?.textContent).toContain("jev-classify · Jev-compatible");
 });
 
 // The answer that did not stand is the one a floor is tuned from, so the
@@ -598,7 +692,9 @@ it("leaves the reason out of an attempt that had none", async () => {
   const drawer = await openCall(user);
 
   const first = (await within(drawer).findByText("#1")).closest("li");
-  expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
+  expect(first?.textContent).toContain(
+    "jev-classify · Jev-compatible · 600 ms",
+  );
   expect(first?.textContent).not.toContain("\u2014");
 });
 

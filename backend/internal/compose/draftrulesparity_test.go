@@ -359,6 +359,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	envelope := draftfloor.Envelope{
 		Language:          "en",
 		ConversationState: "fresh",
+		SilenceDays:       "10",
 		Now:               "2026-08-11T09:00:00Z",
 		SenderName:        "Lars Jankowfsky",
 		SenderEmail:       "lars@example.com",
@@ -379,6 +380,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	named := map[string]struct{ block, instruction string }{
 		"the language to write in": {"LANGUAGE", "in the language named by the\noutput_language field"},
 		"who the draft is from":    {"WHO IS WRITING", "named by the sender_name and sender_email fields"},
+		"how long the gap is":      {"TIME", "Size every time reference from silence_days"},
 	}
 	for what, rule := range named {
 		if !strings.Contains(blockOf(draftrules.Shared, rule.block), rule.instruction) {
@@ -398,7 +400,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 		if err := json.Unmarshal(encoded, &decoded); err != nil {
 			t.Fatalf("%s: decode: %v", surface, err)
 		}
-		for _, field := range []string{"output_language", "sender_name", "sender_email"} {
+		for _, field := range []string{"output_language", "sender_name", "sender_email", "silence_days"} {
 			if value, ok := fieldOnSurface(decoded, field); !ok || value == "" {
 				t.Errorf("the shared rules tell the model to read %q, but the %s payload carries no such field — "+
 					"an instruction pointing at nothing is what let a German corpus answer an English thread",
@@ -411,11 +413,11 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 // blockOf returns one ALL-CAPS section of the rules, so a check about the
 // language rule reads the language rule rather than the whole document.
 func blockOf(rules, heading string) string {
-	start := strings.Index(rules, heading)
-	if start < 0 {
+	_, after, ok := strings.Cut(rules, heading)
+	if !ok {
 		return ""
 	}
-	rest := rules[start+len(heading):]
+	rest := after
 	// Cut at the NEAREST following heading, not the first one that happens to
 	// appear in a list: a block truncated at a later heading still contains
 	// every block between, and a check "about" one rule would read them all.
@@ -450,17 +452,15 @@ func fieldOnSurface(payload map[string]any, field string) (string, bool) {
 // string map, so one nested value refuses every draft case at Prepare.
 func TestTheReplyPayloadStaysAFlatStringMap(t *testing.T) {
 	payload, err := json.Marshal(replyActivityData{
-		Envelope: draftfloor.Envelope{
-			Language:          "de",
-			ConversationState: "months",
-			SilenceDays:       "240",
-			Now:               "2026-08-11T09:00:00Z",
-			SenderName:        "Lars Jankowfsky",
-			SenderEmail:       "lars@example.com",
-		},
-		Subject: "Angebot",
-		Body:    "Guten Tag,",
-		Intent:  "Nachfassen",
+		Language:          "de",
+		ConversationState: "months",
+		SilenceDays:       "240",
+		Now:               "2026-08-11T09:00:00Z",
+		SenderName:        "Lars Jankowfsky",
+		SenderEmail:       "lars@example.com",
+		Subject:           "Angebot",
+		Body:              "Guten Tag,",
+		Intent:            "Nachfassen",
 	})
 	if err != nil {
 		t.Fatalf("encoding the reply payload failed: %v", err)

@@ -90,7 +90,7 @@ func typeParam(params []string) string {
 			}
 			continue
 		}
-		for _, raw := range strings.Split(p[len("TYPE="):], ",") {
+		for raw := range strings.SplitSeq(p[len("TYPE="):], ",") {
 			if kind, aux := classifyVCardType(raw); kind != "" {
 				return kind
 			} else if aux != "" && auxiliary == "" {

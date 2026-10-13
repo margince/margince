@@ -35,6 +35,7 @@ var (
 	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
 	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
 	outEgressDoc = flag.String("out-egress", "../docs/reference/ai-egress.md", "generated egress table destination")
+	outOutageDoc = flag.String("out-outage", "../docs/reference/ai-provider-outages.md", "generated outage table destination")
 )
 
 func main() {
@@ -65,6 +66,10 @@ func main() {
 	// in the direction of claiming more privacy than the product delivers.
 	if err := os.WriteFile(*outEgressDoc, emitEgressDoc(c), 0o600); err != nil {
 		log.Fatalf("gen-aitasks: writing %s: %v", *outEgressDoc, err)
+	}
+
+	if err := os.WriteFile(*outOutageDoc, emitOutageDoc(c), 0o600); err != nil {
+		log.Fatalf("gen-aitasks: writing %s: %v", *outOutageDoc, err)
 	}
 
 	fmt.Printf("%d tasks, %d tiers generated\n", len(c.Tasks), len(c.Tiers))
@@ -186,18 +191,24 @@ type embedDef struct {
 // cost-unit rule name), and an optional doc string carried through
 // to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string           `yaml:"ladder"`
-	ExecutionMode     string             `yaml:"execution_mode"`
-	OnBudgetExhausted string             `yaml:"on_budget_exhausted"`
-	Status            string             `yaml:"status"`
-	Sites             []siteDef          `yaml:"sites"`
-	NoPayload         bool               `yaml:"no_payload"`
-	LocalOnly         bool               `yaml:"local_only"`
-	Decision          bool               `yaml:"decision"`
-	CompanyContext    *companyContextDef `yaml:"company_context"`
-	CostUnit          string             `yaml:"cost_unit"`
-	Doc               string             `yaml:"doc"`
-	DisplayName       string             `yaml:"display_name"`
+	Ladder            []string `yaml:"ladder"`
+	ExecutionMode     string   `yaml:"execution_mode"`
+	OnBudgetExhausted string   `yaml:"on_budget_exhausted"`
+	// OnOutage is what an interactive task does once no model can answer:
+	// "degrades" says it answers from the record's own facts and reports so,
+	// and absent means it fails fast. A background task waits, so it declares
+	// nothing.
+	OnOutage       string             `yaml:"on_outage"`
+	Status         string             `yaml:"status"`
+	Sites          []siteDef          `yaml:"sites"`
+	NoPayload      bool               `yaml:"no_payload"`
+	LocalOnly      bool               `yaml:"local_only"`
+	Decision       bool               `yaml:"decision"`
+	CompanyContext *companyContextDef `yaml:"company_context"`
+	CostUnit       string             `yaml:"cost_unit"`
+	Doc            string             `yaml:"doc"`
+	DisplayName    string             `yaml:"display_name"`
+	Summary        string             `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -278,7 +289,7 @@ func (c contract) sortedTaskNames() []string {
 // every Task/Tier constant uses (cert_judge -> CertJudge).
 func pascalCase(snake string) string {
 	var b strings.Builder
-	for _, part := range strings.Split(snake, "_") {
+	for part := range strings.SplitSeq(snake, "_") {
 		if part == "" {
 			continue
 		}
@@ -316,22 +327,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	}
 	b.WriteString(")\n\n")
 
-	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
-	b.WriteString("// name one to a contact. The constant is vocabulary — a reader shown\n")
-	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
-	b.WriteString("//\n")
-	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
-	b.WriteString("// be added without a name and the two cannot drift.\n")
-	b.WriteString("var taskDisplayNames = map[Task]string{\n")
-	for _, name := range taskNames {
-		fmt.Fprintf(&b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].DisplayName)
-	}
-	b.WriteString("}\n\n")
-
-	b.WriteString("// DisplayName is what to call this task in front of a contact. An unknown\n")
-	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
-	b.WriteString("// served saying nothing than showing the key it was handed.\n")
-	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
+	writeTaskTexts(&b, c, taskNames)
 
 	b.WriteString("// ExecutionMode distinguishes request-bound work from work carried by a\n")
 	b.WriteString("// durable background job. Budget exhaustion degrades the former and\n")
@@ -376,6 +372,38 @@ func emitGo(c contract, contractHash string) (string, error) {
 	return string(formatted), nil
 }
 
+// writeTaskTexts appends what each task is called and what it does, both
+// read from the contract so neither can be missing for a new task.
+func writeTaskTexts(b *strings.Builder, c contract, taskNames []string) {
+	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
+	b.WriteString("// name one to a contact. The constant is vocabulary — a reader shown\n")
+	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
+	b.WriteString("//\n")
+	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
+	b.WriteString("// be added without a name and the two cannot drift.\n")
+	b.WriteString("var taskDisplayNames = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].DisplayName)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// DisplayName is what to call this task in front of a contact. An unknown\n")
+	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
+	b.WriteString("// served saying nothing than showing the key it was handed.\n")
+	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")
+
+	b.WriteString("// taskSummaries say in plain words what each task does, for a reader\n")
+	b.WriteString("// deciding which model should serve it.\n")
+	b.WriteString("var taskSummaries = map[Task]string{\n")
+	for _, name := range taskNames {
+		fmt.Fprintf(b, "\t%s: %q,\n", taskConst(name), c.Tasks[name].Summary)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// Summary is what this task does, in plain words; empty for an unknown task.\n")
+	b.WriteString("func Summary(t Task) string { return taskSummaries[t] }\n\n")
+}
+
 // writeRoutingTables appends the routing half of tasks_gen.go: the per-task
 // ladder, the economy-mode degrade move, the execution-mode table, and the
 // tier-name validation set.
@@ -413,6 +441,17 @@ func writeRoutingTables(b *strings.Builder, c contract, taskNames []string) {
 	for _, name := range taskNames {
 		mode := "ExecutionMode" + pascalCase(c.Tasks[name].ExecutionMode)
 		fmt.Fprintf(b, "\t%s: %s,\n", taskConst(name), mode)
+	}
+	b.WriteString("}\n\n")
+
+	b.WriteString("// taskDegradesOnOutage lists the interactive tasks that answer from the record's\n")
+	b.WriteString("// own facts once no model can, compiled from on_outage. Every other interactive\n")
+	b.WriteString("// task fails fast, and a background task waits.\n")
+	b.WriteString("var taskDegradesOnOutage = map[Task]bool{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].OnOutage == "degrades" {
+			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
+		}
 	}
 	b.WriteString("}\n\n")
 

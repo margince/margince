@@ -6,7 +6,7 @@
 package gates
 
 // The page that names a deletion date and the sweep that carries it out must
-// read ONE window, or the product promises a date it does not keep.
+// read the same window, or the product promises a date it does not keep.
 //
 // Two callers ask about the same window at different moments. The Senders page
 // asks "when does this sender's mail go", so an owner can object; the sweep asks

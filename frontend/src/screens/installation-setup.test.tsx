@@ -11,9 +11,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "./company.fixtures";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
 import { forgetPlatformDeclines } from "./installation-setup.decline";
@@ -272,11 +272,11 @@ describe("the first-run setup gate", () => {
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("Still needed: Directory ID")).toBeTruthy();
+    expect(screen.getByText("Still needed: Directory (tenant) ID")).toBeTruthy();
     expect(writes.length).toBe(0);
 
     await user.type(
-      screen.getByLabelText("Directory ID"),
+      screen.getByLabelText("Directory (tenant) ID"),
       "00000000-0000-0000-0000-000000000000",
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -297,7 +297,7 @@ describe("the first-run setup gate", () => {
     mount(setupReport(true, false));
     const user = userEvent.setup();
     await screen.findByRole("radio", { name: /Google Workspace/ });
-    expect(screen.queryByLabelText("Directory ID")).toBeNull();
+    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
     await user.type(screen.getByLabelText("Client ID"), "google-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -663,6 +663,26 @@ describe("the first-run setup gate", () => {
     expect(
       screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
     ).toBeNull();
+  });
+
+  it("holds no copy of a stored key in the mutation cache when the binding fails", async () => {
+    const user = userEvent.setup();
+    const { writes, qc } = mount(setupReport(false, false), ["/ai/routing"]);
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+
+    await waitFor(() =>
+      expect(
+        JSON.stringify(
+          qc
+            .getMutationCache()
+            .getAll()
+            .map((m) => m.state.variables),
+        ),
+      ).not.toContain("AIza-secret"),
+    );
   });
 
   // A first-time admin should not have to know a model id by heart. The sheet

@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // InteractionEdge is one colleague's relationship with one contact, as the
@@ -176,6 +177,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -210,6 +212,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
 		users, contacts); err != nil {
@@ -227,25 +230,13 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
 const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// liveMemberJoin carries a COPY of identity.LiveMemberSQL, not a second
-// opinion. A module never imports a sibling (ADR-0054 §3) and identity owns
-// app_user, so this read cannot ask the owner what "still works here" means; it
-// is ratified by name in TestOnlyOneSpellingOfALiveMember, which fails if the
-// two ever disagree.
-//
-// Both halves are load-bearing: deactivation sets status and leaves
-// archived_at NULL, so filtering on archived_at alone goes on offering a
-// departed colleague as a route in.
-const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'active' AND u.archived_at IS NULL`
-
-// laterMemberJoin is the same rule asked about a SECOND edge in one statement:
-// has any live colleague spoken to this contact since. It is spelled out rather
-// than derived from liveMemberJoin because TestOnlyOneSpellingOfALiveMember
-// reads source text, and a predicate assembled at runtime is a predicate that
-// census cannot see — under-recognition being the one way that gate must not
-// break. Both spellings are ratified there by name, and it fails if either
-// stops naming both halves.
-const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status = 'active' AND lu.archived_at IS NULL`
+// liveMemberJoin and laterMemberJoin join app_user on the shared definition of
+// "still works here". laterMemberJoin asks it of a SECOND edge in one
+// statement: has any live colleague spoken to this contact since.
+var (
+	liveMemberJoin  = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")
+	laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND ` + workforce.LiveMemberSQL("lu")
+)
 
 // EdgesForContact answers "who on our team knows this contact".
 //
@@ -368,10 +359,14 @@ func scanEdges(rows pgx.Rows) ([]InteractionEdge, error) {
 // relstrength.InteractionUnitSQL. Every fold in this file and its contact half
 // aliases activity as `a`, so one rendering serves them all.
 //
-// It matters most here: these folds carry no kind filter, so a channel message
-// reaches them through activity_participant, and per-row counting would let a
-// day of chat outweigh a quarter of meetings on the colleague edge alone.
+// It matters most here: a channel message reaches these folds through
+// activity_participant, and per-row counting would let a day of chat outweigh
+// a quarter of meetings on the colleague edge alone.
 var graphInteractionUnit = relstrength.InteractionUnitSQL("a")
+
+// graphCountedActivity is which activity counts at all: a canceled or no-show
+// meeting is no edge's evidence, and never its last_at.
+var graphCountedActivity = relstrength.InteractionCountsSQL("a")
 
 func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
@@ -404,6 +399,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.contact_id`); err != nil {
@@ -432,6 +428,7 @@ func rebuildContactEdges(ctx context.Context, tx pgx.Tx, window string) error {
 		  JOIN activity_participant pb
 		    ON pb.activity_id = pa.activity_id AND pb.contact_id > pa.contact_id
 		  JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		 WHERE pa.contact_id IS NOT NULL AND pa.role IN `+interactionRoles+`
 		   AND pb.role IN `+interactionRoles+`
 		 GROUP BY pa.contact_id, pb.contact_id`); err != nil {

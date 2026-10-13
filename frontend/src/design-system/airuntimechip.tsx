@@ -12,7 +12,8 @@ import {
   useState,
 } from "react";
 import type { components } from "../api/schema";
-import { formatMicroUSD, formatNumber } from "../format/format";
+import { formatAiRunCost } from "../format/aicost";
+import { formatNumber } from "../format/format";
 import type { Locale } from "../i18n";
 import "./airuntimechip.css";
 import { coveredByDialog } from "./dialogfocus";
@@ -158,7 +159,7 @@ export function AiRuntimeChip({
   }, [open]);
 
   const spend = runtime
-    ? formatMicroUSD(runtime.estimated_cost_microusd, locale)
+    ? formatAiRunCost(runtime.estimated_cost_microusd, locale)
     : labels.awaiting;
 
   return (

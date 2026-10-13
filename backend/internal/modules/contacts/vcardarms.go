@@ -88,7 +88,7 @@ func (s *Store) createFromCard(
 	ctx context.Context, tx pgx.Tx, entry VCardEntry,
 	source ids.UUID, result *VCardResult,
 ) error {
-	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry))
+	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry), CustomColumns{})
 	if err != nil {
 		return err
 	}

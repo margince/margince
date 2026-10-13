@@ -108,3 +108,20 @@ func TestFromEnvPrefersTheEndpointOverAPath(t *testing.T) {
 		t.Fatal("the invalid endpoint was not used, so the path took precedence over it")
 	}
 }
+
+// A TLS switch the store cannot read is refused rather than read as off: an
+// operator who wrote "yes" asked for encryption, and dropping it quietly is the
+// one outcome nobody would choose.
+func TestFromEnvRefusesAnUnreadableTLSSwitch(t *testing.T) {
+	_, configured, err := blobstore.FromEnv(t.Context(), config.Static(map[string]string{
+		blobstore.EnvEndpoint: "not a valid host",
+		blobstore.EnvRegion:   "eu-central-1",
+		blobstore.EnvUseSSL:   "yes",
+	}))
+	if err == nil || !strings.Contains(err.Error(), blobstore.EnvUseSSL) {
+		t.Fatalf("%s=yes gave %v, want a refusal naming the variable", blobstore.EnvUseSSL, err)
+	}
+	if configured {
+		t.Error("a refused configuration still reported configured")
+	}
+}

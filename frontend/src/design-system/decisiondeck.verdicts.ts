@@ -73,10 +73,11 @@ export function representative(
   if (item.kind === "single") {
     return item.approval;
   }
-  return (
-    item.members.find((member) => !decisionLapsed(member, now)) ??
-    item.members[0]
-  );
+  const [first] = item.members;
+  if (first === undefined) {
+    throw new Error("a decision bundle holds no members");
+  }
+  return item.members.find((member) => !decisionLapsed(member, now)) ?? first;
 }
 
 /** Whether there is anything left on this item to accept. */

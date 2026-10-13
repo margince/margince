@@ -41,6 +41,9 @@ type Handlers struct {
 	// holds places and lifts a litigation hold. Nil until compose wires the
 	// seam, and the routes refuse rather than half-serving without it.
 	holds LegalHoldWriter
+	// labels names the record each audit row is about. Nil until compose wires
+	// the seam, and every entity_label then reads null.
+	labels RecordLabeler
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the
@@ -76,6 +79,13 @@ func (h Handlers) WithRawCapturePurger(purge RawCapturePurger) Handlers {
 	return h
 }
 
+// WithCountry gives the controller's pin the selected jurisdiction, so it pins
+// to the floor that jurisdiction puts in force.
+func (h Handlers) WithCountry(country CountryReader) Handlers {
+	h.eraser = h.eraser.WithCountry(country)
+	return h
+}
+
 // ListAuditLog implements (GET /audit-log).
 func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params crmcontracts.ListAuditLogParams) {
 	f := AuditFilter{
@@ -101,6 +111,7 @@ func (h Handlers) ListAuditLog(w http.ResponseWriter, r *http.Request, params cr
 		httperr.Write(w, r, err)
 		return
 	}
+	labelAuditPage(r.Context(), h.labels, page.Entries)
 
 	data := make([]crmcontracts.AuditLogEntry, 0, len(page.Entries))
 	for _, e := range page.Entries {
@@ -128,8 +139,10 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 		ActorId:           e.ActorID,
 		ActorName:         e.ActorName,
 		OnBehalfOfName:    e.OnBehalfOfName,
+		AgentClient:       e.AgentClient,
 		Action:            crmcontracts.AuditLogEntryAction(e.Action),
 		EntityType:        e.EntityType,
+		EntityLabel:       e.EntityLabel,
 		AuthorizationRule: e.AuthorizationRule,
 		OccurredAt:        e.OccurredAt,
 	}
@@ -166,11 +179,11 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 
 // decodeJSONObject renders a stored jsonb image for the wire; a NULL
 // column stays absent.
-func decodeJSONObject(raw []byte) (*map[string]interface{}, error) {
+func decodeJSONObject(raw []byte) (*map[string]any, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return nil, err
 	}

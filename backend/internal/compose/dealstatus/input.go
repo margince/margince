@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -62,10 +63,26 @@ func moveKey(move crmcontracts.DealStatusCardMove) string {
 	if id, ok := operandActivity(move); ok {
 		key += " [activity:" + id.String() + "]"
 	}
+	var keySb65 strings.Builder
 	for _, id := range NamedContacts(move) {
-		key += " [contact:" + id.String() + "]"
+		keySb65.WriteString(" [contact:" + id.String() + "]")
 	}
-	return key
+	key += keySb65.String()
+	return key + evidenceKey(move.Evidence)
+}
+
+// evidenceKey is what each cited record says and when it happened. A meeting
+// renamed or moved keeps its id, and the card naming it must still be rewritten.
+func evidenceKey(evidence []crmcontracts.DealNextBestActionEvidence) string {
+	var key strings.Builder
+	for _, cited := range evidence {
+		key.WriteString(" [evidence:" + cited.Text)
+		if cited.OccurredAt != nil {
+			key.WriteString(" @" + cited.OccurredAt.UTC().Format(time.RFC3339))
+		}
+		key.WriteString("]")
+	}
+	return key.String()
 }
 
 // operandActivity is NamedActivity over a move that has NOT been through JSON.

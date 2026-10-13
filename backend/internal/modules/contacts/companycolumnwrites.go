@@ -32,10 +32,14 @@ package contacts
 // cannot be skipped: between a probe and its write there is a window, and the
 // column set below is the most contended in the product.
 
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+)
+
 // companyWriteAuthority says what a writer may do to a column somebody has already
 // answered. It has no zero value on purpose — a writer states which it holds.
-import "strings"
-
 type companyWriteAuthority uint8
 
 const (
@@ -104,12 +108,10 @@ var companyColumnWrites = map[string]companyColumnWrite{
 	},
 }
 
-// companyDescriptionMax is what company_description_length admits — the CHECK
-// bounding the header line the company view renders. Held by the schema itself:
-// a write over this length is refused by the column, which is why the value is
-// bounded before it gets there rather than tested once it arrives.
-
-const companyDescriptionMax = 500
+// CompanyDescriptionMax is what company_description_length admits, in
+// characters. The column refuses a longer write, so every writer bounds or
+// refuses the value before it gets there.
+const CompanyDescriptionMax = 500
 
 // headerLine renders a profile value as the display line the description
 // column can hold.
@@ -140,11 +142,10 @@ const companyDescriptionMax = 500
 // byte cut would both refuse text the column accepts and split a multi-byte
 // character.
 func headerLine(value string) string {
-	runes := []rune(value)
-	if len(runes) <= companyDescriptionMax {
+	cut := textcut.Runes(value, CompanyDescriptionMax)
+	if cut == value {
 		return value
 	}
-	cut := string(runes[:companyDescriptionMax])
 	if at := strings.LastIndexAny(cut, " \t\n"); at > 0 {
 		return strings.TrimRight(cut[:at], " \t\n")
 	}

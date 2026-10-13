@@ -27,17 +27,17 @@ func TestVanillaFrontendRegistryMatchesTheCommittedStub(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(stub, frontendGen(nil, nil)) {
-		t.Fatalf("%s differs from the generator's vanilla output:\n--- stub ---\n%s\n--- generated ---\n%s", frontendVanillaStub, stub, frontendGen(nil, nil))
+	if !bytes.Equal(stub, frontendGen(nil, nil, nil)) {
+		t.Fatalf("%s differs from the generator's vanilla output:\n--- stub ---\n%s\n--- generated ---\n%s", frontendVanillaStub, stub, frontendGen(nil, nil, nil))
 	}
 }
 
-// The empty registry is a value the SPA reads, not merely a file that exists:
-// `extensions` has to be an empty ARRAY, because app/extensions.ts calls .find
-// on it unconditionally and a `null`, `{}` or `as const` tuple would crash the
-// vanilla lane at its first unit route.
+// The empty registry is a value the SPA reads, not only a file that exists.
+// `extensions` must be an empty array: lib/extensions.ts calls .find on it with
+// no check. A `null`, `{}` or `as const` tuple would crash the vanilla lane at
+// its first unit route.
 func TestVanillaFrontendRegistryIsAnEmptyArray(t *testing.T) {
-	got := string(frontendGen(nil, nil))
+	got := string(frontendGen(nil, nil, nil))
 	if !strings.HasSuffix(got, "export const extensions: readonly ExtensionDescriptor[] = [];\n") {
 		t.Fatalf("vanilla registry does not end in an empty array literal:\n%s", got)
 	}
@@ -64,7 +64,8 @@ func composedFixture() ([]derivedManifest, []declaredVerb) {
 }
 
 func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
-	got := string(frontendGen(composedFixture()))
+	units, verbs := composedFixture()
+	got := string(frontendGen(units, verbs, nil))
 	for _, want := range []string{
 		`    name: "alpha",`,
 		`        operationId: "alphaSync",`,
@@ -76,9 +77,9 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 		`    name: "beta",`,
 		`        operationId: "betaPing",`,
 		// A verb declaring no object emits the empty string rather than
-		// omitting the field: the descriptor type has no optional member, and
-		// app/extensions.ts reads it unconditionally to decide whether the
-		// screen has a capability gate at all.
+		// omitting the field. The descriptor type has no optional member, and
+		// lib/extensions.ts reads the field to decide whether the screen has a
+		// capability gate at all.
 		`        rbacObject: "",`,
 	} {
 		if !strings.Contains(got, want) {
@@ -105,9 +106,33 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 // SPA's not-found card is a claim that the unit is not ENABLED, and it would
 // be a lie for a unit that is.
 func TestAUnitWithNoVerbsStillReachesTheRegistry(t *testing.T) {
-	got := string(frontendGen([]derivedManifest{{Unit: extensionUnit{Name: "de"}}}, nil))
-	if !strings.Contains(got, "    name: \"de\",\n    secretScope: \"\",\n    verbs: [\n    ],\n") {
+	got := string(frontendGen([]derivedManifest{{Unit: extensionUnit{Name: "de"}}}, nil, nil))
+	if !strings.Contains(got, "    name: \"de\",\n    secretScope: \"\",\n    title: \"\",\n    verbs: [\n    ],\n") {
 		t.Fatalf("a verb-less unit is missing or malformed:\n%s", got)
+	}
+}
+
+// A unit whose copy names it in every locale publishes that key as its title.
+// A unit without one publishes "", and the screen falls back to its name.
+func TestFrontendRegistryCarriesTheUnitTitleKeyOnlyWhenEveryLocaleHasIt(t *testing.T) {
+	merged := map[string]map[string]string{}
+	for _, locale := range composedLocales {
+		merged[locale] = map[string]string{"extNotes.title": "Notes " + locale, "extHalf.body": "Body"}
+	}
+	merged["en"]["extHalf.title"] = "Half"
+	got := string(frontendGen([]derivedManifest{
+		{Unit: extensionUnit{Name: "half"}},
+		{Unit: extensionUnit{Name: "notes"}},
+		{Unit: extensionUnit{Name: "vn"}},
+	}, nil, merged))
+	for _, want := range []string{
+		"    name: \"half\",\n    secretScope: \"\",\n    title: \"\",\n",
+		"    name: \"notes\",\n    secretScope: \"\",\n    title: \"extNotes.title\",\n",
+		"    name: \"vn\",\n    secretScope: \"\",\n    title: \"\",\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in:\n%s", want, got)
+		}
 	}
 }
 
@@ -127,7 +152,7 @@ func TestFrontendRegistryCarriesTheDeclaredSecretScope(t *testing.T) {
 			Manifest: unitManifest{Secrets: []secretsRequest{{Key: "signing", Scope: "workspace"}}},
 		},
 		{Unit: extensionUnit{Name: "yogi"}},
-	}, nil))
+	}, nil, nil))
 	for _, want := range []string{
 		"    name: \"dispact-connector\",\n    secretScope: \"user\",\n",
 		"    name: \"notes\",\n    secretScope: \"workspace\",\n",
@@ -149,6 +174,7 @@ func TestFrontendRegistryEscapesDeclaredText(t *testing.T) {
 	got := string(frontendGen(
 		[]derivedManifest{{Unit: extensionUnit{Name: "alpha"}}},
 		[]declaredVerb{{verb: extension.Verb{Unit: "alpha", Title: hostile}}},
+		nil,
 	))
 	encoded, err := json.Marshal(hostile)
 	if err != nil {
@@ -159,7 +185,7 @@ func TestFrontendRegistryEscapesDeclaredText(t *testing.T) {
 	}
 	// The literal must stay on ONE line — an unescaped newline would make the
 	// emitted file a syntax error at best and a second statement at worst.
-	for _, line := range strings.Split(got, "\n") {
+	for line := range strings.SplitSeq(got, "\n") {
 		if strings.Contains(line, "fetch") && !strings.HasPrefix(strings.TrimSpace(line), "title:") {
 			t.Fatalf("the hostile string escaped its own literal on line %q", line)
 		}
@@ -240,7 +266,7 @@ func TestEmitsAComposedFrontendWorkspace(t *testing.T) {
 	// The host SPA must NOT be a member: pnpm installs beside each member, so a
 	// workspace naming ../../../frontend would write the same frontend/node_modules
 	// the root workspace owns and installs with --frozen-lockfile.
-	for _, line := range strings.Split(string(ws), "\n") {
+	for line := range strings.SplitSeq(string(ws), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- ") && strings.HasSuffix(strings.TrimSpace(line), "/frontend") &&
 			!strings.Contains(line, "/extensions/") {
 			t.Errorf("the host SPA is a member (%q) — its node_modules is the root workspace's to own", strings.TrimSpace(line))
@@ -281,7 +307,7 @@ func TestTheWorkspaceNamesOnlyTheUnitsItWasGiven(t *testing.T) {
 		t.Fatal(err)
 	}
 	var members int
-	for _, line := range strings.Split(string(ws), "\n") {
+	for line := range strings.SplitSeq(string(ws), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "- ") {
 			members++
 		}
@@ -363,7 +389,7 @@ func TestNoOverrideTargetClimbsOutOfTheWorkspace(t *testing.T) {
 		t.Fatalf("the emitted workspace declares no overrides:\n%s", ws)
 	}
 	var checked int
-	for _, line := range strings.Split(overrides, "\n") {
+	for line := range strings.SplitSeq(overrides, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

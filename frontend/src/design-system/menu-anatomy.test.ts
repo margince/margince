@@ -76,6 +76,12 @@ type Surface = Readonly<{
   head?: Readonly<{ selector: string; labelled: boolean }>;
   floor: Exemption;
   ceiling: Exemption;
+  /** What an exemption's reason says is declared instead, read back. */
+  instead?: readonly Readonly<{
+    selector: string;
+    property: string;
+    value: string;
+  }>[];
   /**
    * Set where the sheet is owned by work landing separately. The surface still
    * belongs to the roster — leaving it out would be a gate that reads a smaller
@@ -139,6 +145,27 @@ const SURFACES: readonly Surface[] = [
     floor: null,
     ceiling:
       "the component caps the height to the room on the side it opened toward, inline",
+  },
+  {
+    selector: ".popover-panel.listpopover-panel",
+    sheet: "design-system/listpopover.css",
+    rows: [],
+    floor:
+      "a fixed 20rem, so the panel holds still while a server search answers under it",
+    ceiling:
+      "the list inside it scrolls at the ceiling, so the search box above the rows stays in view",
+    instead: [
+      {
+        selector: ".popover-panel.listpopover-panel",
+        property: "inline-size",
+        value: "20rem",
+      },
+      {
+        selector: ".listpopover-panel .listpopover-list",
+        property: "max-block-size",
+        value: CEILING,
+      },
+    ],
   },
   {
     selector: ".settingssearch-list",
@@ -269,6 +296,15 @@ describe("one menu anatomy", () => {
         expect(ceiling).not.toBe(CEILING);
       }
     });
+
+    it.each(surface.instead ?? [])(
+      "$selector declares $property: $value",
+      ({ selector, property, value }) => {
+        expect(declaredValue(ruleFor(surface.sheet, selector), property)).toBe(
+          value,
+        );
+      },
+    );
 
     it.each(surface.rows)("%s is one --controlHeight tall", (row) => {
       const rowRule = ruleFor(surface.sheet, row);

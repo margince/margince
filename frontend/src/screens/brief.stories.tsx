@@ -173,7 +173,7 @@ export const DecisionsInToday: Story = {
 };
 
 export const OneDecision: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
 };
 
 async function openDecision(canvasElement: HTMLElement) {
@@ -187,7 +187,7 @@ async function openDecision(canvasElement: HTMLElement) {
 }
 
 export const DecisionOpened: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await drawer.findByRole("button", { name: en["brief.approval.approve"] });
@@ -195,7 +195,7 @@ export const DecisionOpened: Story = {
 };
 
 export const DecisionApproved: Story = {
-  render: brief({ approvals: [singles[1]] }),
+  render: brief({ approvals: singles.slice(1, 2) }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await userEvent.click(
@@ -328,6 +328,23 @@ const SixPrioritiesDay = readingsDay({}, [
 export const SixPriorities: Story = {
   render: brief({ approvals: [], day: SixPrioritiesDay }),
 };
+// A row that is not an activity opens its details in the drawer beside the
+// queue; its close is the way back to Focus.
+export const RowDetailsOpen: Story = {
+  render: brief({ approvals: [], day: SixPrioritiesDay }),
+  play: async ({ canvasElement }) => {
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
+    await within(document.body).findByRole("dialog", {
+      name: en["brief.focus.context"],
+    });
+  },
+};
 // The same morning read by a seat whose row scope REACHES A TEAM. The
 // Mine/Team dial is drawn from the worklist's own `scope_options`, so a seat
 // that reaches nobody else never sees it — which is why the frame above cannot
@@ -359,13 +376,13 @@ export const TaskEvidence: Story = {
     },
   }),
   play: async ({ canvasElement }) => {
-    await userEvent.click(
-      (
-        await within(canvasElement).findAllByRole("button", {
-          name: en["brief.focus.context"],
-        })
-      )[0],
-    );
+    const [context] = await within(canvasElement).findAllByRole("button", {
+      name: en["brief.focus.context"],
+    });
+    if (!context) {
+      throw new Error("Focus shows no context button to open");
+    }
+    await userEvent.click(context);
   },
 };
 export const SixPrioritiesPhone: Story = {

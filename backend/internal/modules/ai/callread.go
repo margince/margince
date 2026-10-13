@@ -23,10 +23,13 @@ import (
 
 // CallReadStore serves the admin-only AI trace without loading payload
 // content into list responses.
-type CallReadStore struct{ db *database.DB }
+type CallReadStore struct {
+	db  *database.DB
+	now func() time.Time
+}
 
 // NewCallReadStore constructs the workspace-bound AI trace read store.
-func NewCallReadStore(db *database.DB) *CallReadStore { return &CallReadStore{db: db} }
+func NewCallReadStore(db *database.DB) *CallReadStore { return &CallReadStore{db: db, now: time.Now} }
 
 // CallSummary is one terminal attempt in the newest-first trace list.
 type CallSummary struct {
@@ -118,18 +121,24 @@ type CallPage struct {
 
 // callSummaryFrom joins each terminal row `c` to two aggregates over its
 // logical call's attempts on ai_call_logical_idx: `lc`, whether a decision model
-// was asked, and `lp`, the attempts' price-on-read cost. They are apart so an
-// outcome filter, which reads only `lc`, prices just the rows it keeps.
-var callSummaryFrom = storekit.SQLf(`ai_call c
+// was asked, and `lp`, the attempts' price-on-read cost, priced as CostReport
+// prices them so the two sum alike. They are apart so an outcome filter, which
+// reads only `lc`, prices just the rows it keeps.
+func callSummaryFrom(query *callQuery) string {
+	fallbackFrom, fallbackTo := rateFallbacks()
+	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date",
+		query.arg(fallbackFrom), query.arg(fallbackTo))
+	return storekit.SQLf(`ai_call c
 	CROSS JOIN LATERAL (
 	SELECT COALESCE(bool_or(la.kind = 'decision'), false) AS decision_attempted
 	FROM ai_call la WHERE la.logical_call_id = c.logical_call_id) lc
 	CROSS JOIN LATERAL (
 	SELECT COALESCE(SUM(%s), 0) AS cost_microusd,
 	       COUNT(*) FILTER (WHERE %s) AS unpriced_attempts
-	FROM ai_call ac %s
+	FROM ai_call ac LEFT JOIN LATERAL (%s) r ON true
 	WHERE ac.logical_call_id = c.logical_call_id) lp`,
-	attemptCostMicroUSD, attemptUnpriced, attemptRateJoin)
+		callCostMicroUSD("ac"), callUnpriced("ac"), rate)
+}
 
 // callSummarySelect is the summary column list. The payload probe is an
 // existence check so a list read never loads captured content.
@@ -203,13 +212,14 @@ func (s *CallReadStore) ListCalls(
 	ctx context.Context,
 	cursor *string,
 	limit *int,
-	filter CallFilter,
+	filter CallListFilter,
 ) (CallPage, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return CallPage{}, err
 	}
 	n := storekit.ClampLimit(limit)
 	query := newCallQuery()
+	from := callSummaryFrom(query)
 	where := filter.where(query)
 	if cursor != nil && *cursor != "" {
 		decoded, err := storekit.DecodeCursor(*cursor)
@@ -227,7 +237,7 @@ func (s *CallReadStore) ListCalls(
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, storekit.SQLf(
 			`SELECT %s FROM %s WHERE %s ORDER BY c.occurred_at DESC, c.id DESC LIMIT %d`,
-			callSummarySelect(query.outcome), callSummaryFrom, where, n+1,
+			callSummarySelect(query.outcome), from, where, n+1,
 		), query.args...)
 		if err != nil {
 			return err
@@ -307,6 +317,7 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 	}
 	var detail CallDetail
 	query := newCallQuery()
+	from := callSummaryFrom(query)
 	idArg := query.arg(id)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, storekit.SQLf(
@@ -320,7 +331,7 @@ func (s *CallReadStore) GetCall(ctx context.Context, id ids.UUID) (CallDetail, e
 			 -- NULLABLE, not because a row might be missing: ai_call_config_fk
 			 -- makes a hash that IS set always have one behind it.
 			 LEFT JOIN ai_call_config cfg ON cfg.hash = c.config_hash
-			 WHERE c.is_terminal AND c.id = $%d`, callSummarySelect(query.outcome), callSummaryFrom, idArg,
+			 WHERE c.is_terminal AND c.id = $%d`, callSummarySelect(query.outcome), from, idArg,
 		), query.args...)
 		var logicalID ids.UUID
 		var err error

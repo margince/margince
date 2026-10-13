@@ -245,3 +245,19 @@ export const FirstResponseOwed: Story = {
     sla_state: "within_target",
   }),
 };
+
+export const ImportedWithoutResponse: Story = {
+  render: readings({
+    ...lead,
+    source: "import",
+    source_system: "mirror:hubspot",
+    status: "new",
+    first_response_at: null,
+    sla_state: null,
+    sla_deadline_at: null,
+  }),
+};
+export const ImportedWithoutResponseDark: Story = {
+  ...ImportedWithoutResponse,
+  globals: { theme: "dark" },
+};

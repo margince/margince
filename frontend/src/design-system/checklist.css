@@ -71,10 +71,6 @@
   min-block-size: 24px;
 }
 
-.checklist-body {
-  margin-top: var(--space-2);
-}
-
 .checklist-action {
   display: flex;
   align-items: center;

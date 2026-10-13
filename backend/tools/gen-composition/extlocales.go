@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -110,13 +111,34 @@ func localeKeyPrefix(unit string) string {
 	return "ext" + unitCamel(unit) + "."
 }
 
+// coreCopyNamespaces are en.ts's own prefixes a unit name can derive (access maps
+// to extAccess.). Core wins a lookup, so that unit's copy would render core's
+// strings. Held by TestCoreCopyNamespacesMatchTheCatalogue.
+var coreCopyNamespaces = []string{"extAccess.", "extIngest.", "extUnits."}
+
+// unitTitleKey is the copy key naming the unit, or "" when its copy does not
+// carry one in every locale the installation ships.
+func unitTitleKey(unit string, merged map[string]map[string]string) string {
+	key := localeKeyPrefix(unit) + "title"
+	for _, locale := range composedLocales {
+		if _, ok := merged[locale][key]; !ok {
+			return ""
+		}
+	}
+	return key
+}
+
 // mergeUnitLocales folds every unit's copy into one map per locale, refusing
-// the two shapes a silent merge would resolve arbitrarily.
+// the shapes a silent merge would resolve arbitrarily.
 func mergeUnitLocales(locales []unitLocale) (map[string]map[string]string, error) {
 	merged := map[string]map[string]string{}
 	claimedBy := map[string]string{}
 	for _, l := range locales {
 		prefix := localeKeyPrefix(l.Unit)
+		if slices.Contains(coreCopyNamespaces, prefix) {
+			return nil, fmt.Errorf("extensions/%s: its copy namespace %q is the core catalogue's own, so every key it ships would render core's string; rename the unit",
+				l.Unit, prefix)
+		}
 		for _, key := range sortedKeys(l.Keys) {
 			// A unit rewriting `nav.contacts` would change core copy from a
 			// directory, which is not a capability this tier grants.
@@ -143,12 +165,7 @@ func mergeUnitLocales(locales []unitLocale) (map[string]map[string]string, error
 }
 
 func contains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 func sortedKeys(m map[string]string) []string {

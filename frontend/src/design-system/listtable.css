@@ -516,7 +516,7 @@
 }
 
 /* THE VIEW RAIL SCROLLS from the width the header stops holding its row — the
-   same 1100px at which the verbs fold into one menu (app/viewport.ts
+   same 1100px at which the verbs fold into one menu (lib/viewport.ts
    NARROW_MAX_WIDTH), not the phone breakpoint. It used to be the phone block's
    alone, so between the two the rail kept its full intrinsic width on a row
    that does not wrap: the lead queue's eight tabs pushed the count and the
@@ -761,6 +761,12 @@
 .lt-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* A row's "…" menu column: the cell lets the trigger's focus ring past its
+ * exact-fit edge. */
+.lt-table td.lt-rowmenu {
+  overflow: visible;
 }
 
 /* The identity column stays put while the rest scrolls sideways: with enough
@@ -1138,6 +1144,23 @@
     text-align: left;
   }
 
+  /* The "…" sits beside the card's heading rather than on a labelled line. */
+  .lt-table tbody tr:has(> td.lt-rowmenu) {
+    position: relative;
+  }
+  .lt-table tbody td.lt-rowmenu {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    padding: 0;
+  }
+  .lt-table td.lt-rowmenu::before {
+    content: none;
+  }
+  .lt-table tr:has(> td.lt-rowmenu) td.lt-identity {
+    padding-right: calc(var(--controlHeight) + var(--space-2));
+  }
+
   /* Cards are already tight; the density control governs the desktop grid. */
   .lt-table.dense td {
     padding: var(--space-1) 0;
@@ -1425,6 +1448,6 @@
 .lt-frow-seg:active,
 .lt-frow-more:active,
 .lt-pager button:active:not(:disabled) {
-  background-color: var(--bgCard);
+  background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
 }

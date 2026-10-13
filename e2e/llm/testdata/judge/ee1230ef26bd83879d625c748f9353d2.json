@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states that eleven people who stayed on the list plus Jens Falk were handed to Sofia Meier, and explicitly excludes Mara Voigt by name.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over.",
+  "answer": "Mara Voigt and eleven others were on the Messe Hannover 2026 list. Mara's conversion is undone: she is a lead again and she is no longer on the list. Jens Falk is added. After a preview I handed the eleven who stayed plus Jens Falk — not Mara — to Sofia Meier."
+}

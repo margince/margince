@@ -205,6 +205,16 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 				Args: VoiceBuildArgs{RequestedBy: ids.NewV7().String()},
 			})
 		},
+		ImportCommitArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importCommitWorker{}).Work(ctx, &river.Job[ImportCommitArgs]{
+				Args: ImportCommitArgs{RunID: ids.NewV7(), Attempt: 1},
+			})
+		},
+		ImportUndoArgs{}.Kind(): func(ctx context.Context) error {
+			return (&importUndoWorker{}).Work(ctx, &river.Job[ImportUndoArgs]{
+				Args: ImportUndoArgs{RunID: ids.NewV7(), Attempt: 1},
+			})
+		},
 		SiteDeepReadArgs{}.Kind(): func(ctx context.Context) error {
 			return (&siteDeepReadWorker{}).Work(ctx, &river.Job[SiteDeepReadArgs]{
 				Args: SiteDeepReadArgs{SiteReadID: ids.NewV7()},

@@ -5,7 +5,7 @@
 
 package gates
 
-// Both bench harnesses ask the SAME variable whether to publish a record, and
+// Both bench harnesses ask the same variable whether to publish a record, and
 // both answer only to the same value.
 //
 // "A record is a human's to publish" is one rule, and it is now enforced in two

@@ -87,19 +87,20 @@ type Service struct {
 	duplicates Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
-	tasks       Tasks
-	receipts    Receipts
-	briefing    Briefing
-	// commitments is OPTIONAL: nil means this feed serves no commitments lane,
-	// and Assemble then leaves the field unset rather than sending an empty
-	// array. The contract makes the lane optional for exactly that reason.
+	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
+	tagSuggestions TagSuggestions
+	tasks          Tasks
+	receipts       Receipts
+	briefing       Briefing
+	// commitments is OPTIONAL: nil means no commitments lane, and Assemble
+	// leaves the field unset rather than sending an empty array.
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
 	atRisk AtRisk
-	// waiting is OPTIONAL like the lanes above it: an installation that does
-	// not read the mail stream cannot say who is waiting, which is different
-	// from saying nobody is.
-	waiting Waiting
+	// waiting and its mirror awaiting are OPTIONAL: without the mail stream
+	// nobody can say who is waiting, which differs from saying nobody is.
+	waiting  Waiting
+	awaiting Awaiting
 	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
@@ -108,6 +109,7 @@ type Service struct {
 	// an installation can prepare a rep for their day without asking them to
 	// close off what already happened.
 	meetingsAwaitingOutcome MeetingsAwaitingOutcome
+	horizon                 MeetingHorizon
 	// zone resolves the installation timezone the day boundary is measured in;
 	// nil is UTC, for the reason WithZone gives.
 	zone   Zone
@@ -162,6 +164,11 @@ type Service struct {
 	// contactTouch is OPTIONAL in the same way: nil means a row names its
 	// contact and not when either side last wrote.
 	contactTouch ContactTouch
+	// companyTouch is OPTIONAL in the same way, for a row about an account.
+	companyTouch CompanyTouch
+	// employers is OPTIONAL in the same way: nil means a meeting row names who
+	// it was with and not which account they work for.
+	employers ContactEmployers
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves DealMoves
@@ -198,10 +205,9 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
-	// leads is the inbound leads still owed a first reply. Optional in the
-	// ordinary way: nil is a feed that does not read leads at all, which the
-	// queue reports as an absent source rather than as an empty one.
-	leads LeadResponses
+	followUps   followUpRead
+	// planCoverage is whose plans a team read looked at; nil under every other scope.
+	planCoverage *crmcontracts.WorklistPlanCoverage
 	// overdueLoad is the team board's COUNTING reader for tasks, beside the
 	// bounded listing reader the ranked queue uses. Required BY THE BOARD —
 	// teamLoad refuses without it — and read by nothing else, so a feed
@@ -229,6 +235,9 @@ type Service struct {
 	taskOwner ids.UUID
 	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
 	noticeOwners []ids.UUID
+	// teamRoster is the roster scope=team resolved with, which degradableRoster
+	// answers from rather than asking again; nil under every other scope.
+	teamRoster *rosterRead
 }
 
 // forOwner returns a copy that reads one named contact's queue. Same
@@ -342,8 +351,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 			out.Counts.DuplicatesOpen = &open
 		}
 		out.Counts.DealSuggestionsOpen = count.suggestions
+		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed}
+	beside := besideDay{failed: count.failed, until: until}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -390,8 +400,8 @@ type laneCount struct {
 	duplicates int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
-	suggestions *int
-	failed      []*crmcontracts.WorklistSourceUnavailable
+	suggestions, tagSuggestions *int
+	failed                      []*crmcontracts.WorklistSourceUnavailable
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -462,15 +472,9 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	suggestions, openSuggested, failed := s.openSuggestionItems(ctx, depth)
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs, suggestions: openSuggested}
-	if failed != nil {
-		count.failed = append(count.failed, failed)
-	}
-	if openSuggested != nil {
-		count.items += *openSuggested
-	}
-	return interleave(depth, duplicates, approvals, suggestions), count, nil
+	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
+	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

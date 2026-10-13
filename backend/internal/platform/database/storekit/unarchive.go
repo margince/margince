@@ -18,8 +18,8 @@ package storekit
 // indexes would refuse anyway.
 //
 // The flow is here, once; every statement it runs is the owning module's, in
-// its UnarchiveShape, so each write stays a literal in the module that owns
-// the table.
+// its UnarchiveShape or its LinkRestore, so each write stays a literal in the
+// module that owns the table.
 
 import (
 	"context"
@@ -46,11 +46,14 @@ type UnarchiveShape struct {
 	Taken, TakenFrom, TakenField string
 	// Children restore one retired row ($1) retired at $2, in this order.
 	Children []ChildRestore
-	// Membership re-inserts one list_member row (@list_id, @entity_type,
-	// @entity_id, @added_by, @created_at, @note) and records it in
-	// list_member_event as restored by @actor; Tag re-inserts one taggable row.
-	Membership, Tag string
-	Restored        events.Payload
+	Restored events.Payload
+}
+
+// LinkRestore answers false for a link whose list or tag is retired or already
+// back. Both tables are collections', so compose supplies it.
+type LinkRestore struct {
+	Membership func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, kept ListMembership) (bool, error)
+	Tag        func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, kept TagAssignment) (bool, error)
 }
 
 // ChildRestore is the statement that brings back one row of Table.
@@ -61,6 +64,8 @@ type RestoreWith struct {
 	// Erased is required: restoring from behind an erasure would bring back
 	// what the erasure certified gone.
 	Erased ErasedSince
+	// Links is required: the archive cascade removed memberships and tags the un-archive must put back.
+	Links LinkRestore
 	// PendingLinks are links an earlier restore of the same change left
 	// behind because this record was still archived. Each is tried again once
 	// this record is live, and one that comes back is credited to it.
@@ -76,6 +81,9 @@ func Unarchive(
 	erased := with.Erased
 	if erased == nil {
 		return RestoreReport{}, errors.New("store: an un-archive needs the erasure boundary to ask")
+	}
+	if with.Links.Membership == nil || with.Links.Tag == nil {
+		return RestoreReport{}, errors.New("store: an un-archive needs the list and tag restores to put links back")
 	}
 	var report RestoreReport
 	var archivedAt *time.Time
@@ -103,7 +111,7 @@ func Unarchive(
 	if err := p.ApplyGuardedIn(ctx, tx, shape.Table, id, ifVersion, IncludeArchived); err != nil {
 		return RestoreReport{}, err
 	}
-	if report.LeftBehind, err = restoreCascade(ctx, tx, shape, id, archive.Cascade, *archivedAt); err != nil {
+	if report.LeftBehind, err = restoreCascade(ctx, tx, shape, with.Links, id, archive.Cascade, *archivedAt); err != nil {
 		return RestoreReport{}, err
 	}
 	if report.Relinked, err = relink(ctx, tx, shape, with.PendingLinks); err != nil {
@@ -167,7 +175,7 @@ func refuseTakenValue(ctx context.Context, tx pgx.Tx, shape UnarchiveShape, casc
 // restoreCascade puts back each retired row, membership and tag that can still
 // come back, and answers the ones that cannot.
 func restoreCascade(
-	ctx context.Context, tx pgx.Tx, shape UnarchiveShape, id ids.UUID, cascade ArchiveCascade, archivedAt time.Time,
+	ctx context.Context, tx pgx.Tx, shape UnarchiveShape, links LinkRestore, id ids.UUID, cascade ArchiveCascade, archivedAt time.Time,
 ) ([]LeftBehind, error) {
 	var left []LeftBehind
 	for _, child := range shape.Children {
@@ -187,15 +195,8 @@ func restoreCascade(
 			}
 		}
 	}
-	actor, err := CapturedBy(ctx)
-	if err != nil {
-		return nil, err
-	}
 	for _, m := range cascade.Memberships {
-		back, err := TryInSavepoint(ctx, tx, shape.Membership, pgx.StrictNamedArgs{
-			"list_id": m.ListID, "entity_type": shape.Table, "entity_id": id,
-			"added_by": m.AddedBy, "created_at": m.CreatedAt, "note": m.Note, "actor": actor,
-		})
+		back, err := links.Membership(ctx, tx, shape.Table, id, m)
 		if err != nil {
 			return nil, fmt.Errorf("restore the membership of list %s: %w", m.ListID, err)
 		}
@@ -204,8 +205,7 @@ func restoreCascade(
 		}
 	}
 	for _, tag := range cascade.Tags {
-		back, err := TryInSavepoint(ctx, tx, shape.Tag,
-			tag.TagID, shape.Table, id, tag.AssignedBy, tag.AssignedByKind, tag.AssignedAt)
+		back, err := links.Tag(ctx, tx, shape.Table, id, tag)
 		if err != nil {
 			return nil, fmt.Errorf("restore tag %s: %w", tag.TagID, err)
 		}

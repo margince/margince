@@ -6,12 +6,12 @@ import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { Meter } from "../design-system/readings";
+import { accountNameOf } from "../format/connectorprovider";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { accountNameOf } from "../screens/connectorproviders";
+import { navigate } from "../lib/router";
 import { useSettingsReach } from "../screens/settingsnav";
 import { settingsHref } from "../screens/settingsrouting";
-import { navigate } from "./router";
 import {
   type SetupStep,
   type SetupStepId,

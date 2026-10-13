@@ -1,53 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/**
- * What a `className` attribute PRODUCES, for the gates that census the markup.
- *
- * There are two of them now — classcoverage.test.ts asks whether every class an
- * element carries is declared by a sheet, controlheight.test.ts asks which
- * classes stand on a `<button>` — and both have to answer the same question
- * first: given the expression in a `className`, which class names can it be
- * shown to produce? A second answer to that is two readers that drift, and a
- * reader whose reach is narrower reads a smaller tree and reports the same
- * word, PASS. Same reason `./css.ts` exists.
- */
+// One reader of what a `className` produces for every markup gate: a second,
+// narrower one would read a smaller tree and still report PASS.
 
 import ts from "typescript";
 
 /** One class name a module puts on an element, and the node that carries it. */
 export type ClassName = { name: string; at: ts.Node };
 
-/**
- * The class names the `className` attributes in one module can be shown to
- * produce, in source order. `on` narrows to one intrinsic element — `"button"`
- * reads the classes that stand on a button and nothing else; omitted, every
- * className in the module is read.
- *
- * Read as VALUES rather than as every string in the subtree, which is the
- * difference between auditing a class list and auditing the code around it.
- * `` `lt-arrow${state === "asc" ? " up" : ""}` `` produces `lt-arrow` and
- * sometimes `up`; `asc` is a column state being compared, and a gate that
- * counted it would report a class nobody wrote. So a conditional contributes
- * its two branches and not its question, a comparison contributes nothing, and
- * a template's interpolations are not descended into at all.
- *
- * What IS read: literals, both branches of a conditional, both sides of `&&`,
- * `||`, `??` and `+`, every argument of a call (`cx("row", open && "row-open")`)
- * and every element of an array that is joined into one. The ordinary dynamic
- * class list is covered rather than waved past.
- *
- * THE ONE BLIND SPOT is a name whose own text is computed — the `tone-` of
- * `` `tone-${level}` ``. It is not a class this can look up, and guessing at the
- * variants would make a gate report names that exist and miss names that do
- * not. So the token touching an interpolation is dropped rather than half-read,
- * and what remains of such a template — every whole token in it — is still
- * read. The base class of a variant pair is nearly always one of those, so the
- * shape the blind spot hides is a suffix on a base the caller has seen.
- */
+/** Class names the module's `className`s can produce, in source order, on `on`
+ * alone when given; a token with a computed part (`tone-${level}`) is dropped. */
 export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
   const out: ClassName[] = [];
-  const bound = bindingsIn(source);
+  const read = readerFor(source);
   const following = new Set<ts.Node>();
   const add = (text: string, node: ts.Node) => {
     for (const name of text.split(/\s+/).filter(Boolean)) {
@@ -59,26 +25,18 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
       add(node.text, node);
       return;
     }
-    if (ts.isTemplateExpression(node)) {
-      // `head` runs up to the first `${`, and each span's literal runs from one
-      // interpolation to the next. A piece flush against an interpolation ends
-      // in a PREFIX rather than a name, or begins with a suffix — both are
-      // dropped, leaving the whole tokens between them.
-      add(whole(node.head.text, false, true), node.head);
-      node.templateSpans.forEach((span, index) => {
-        const last = index === node.templateSpans.length - 1;
-        add(whole(span.literal.text, true, !last), span.literal);
-      });
+    const concatenated =
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.PlusToken;
+    if (ts.isTemplateExpression(node) || concatenated) {
+      const names = read.texts(node).flatMap((t) => tokensOf(t, false));
+      add([...new Set(names)].join(" "), node);
       return;
     }
-    // A LOCAL BINDING IS FOLLOWED. `const classes = [...].join(" ")` and then
-    // `className={classes}` is the ordinary way a component with three or four
-    // conditional classes is written, and a reader that stopped at the
-    // identifier recorded nothing for it — an orphan in one of those was
-    // invisible. Followed ONCE per name, because a binding that refers to
-    // itself would otherwise be walked forever.
+    // Stopping at a bound name would hide an orphan in it; an initializer is
+    // not re-entered while read, so a self-reference ends.
     if (ts.isIdentifier(node)) {
-      const initializer = bound.get(node.text);
+      const initializer = boundTo(node);
       if (initializer && !following.has(initializer)) {
         following.add(initializer);
         value(initializer);
@@ -106,13 +64,164 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
   return out;
 }
 
+/** The values a prop the expression reads (`size`, `props.size`) can hold,
+ * where the caller knows them: a component's props as one call hands them. */
+export type Given = (
+  read: ts.Expression,
+) => readonly (string | undefined)[] | undefined;
+
+/** One class list per branch; a token with an unread part comes back as a
+ * pattern (`ds-gap-*`). Throws past `cap` branches. */
+export function classVariants(
+  source: ts.SourceFile,
+  node: ts.Node | undefined,
+  cap = 16,
+  given?: Given,
+): string[][] {
+  if (!node) return [[]];
+  const lists = readerFor(source, node, cap, given).lists(node);
+  return [...new Map(lists.map((v) => [v.join(" "), v])).values()];
+}
+
+// Where an interpolation could not be read, in a template's rendered text.
+const CUT = "\0";
+
+function tokensOf(text: string, keepCut: boolean): string[] {
+  return text.split(/\s+/).flatMap((token) => {
+    if (!token.includes(CUT)) return token ? [token] : [];
+    const pattern = token.replaceAll(/\0+/g, "*");
+    return keepCut && pattern !== "*" ? [pattern] : [];
+  });
+}
+
+// A class expression read for both entry points above: as the class lists it
+// can produce, and, inside a template, as the texts it renders.
+function readerFor(
+  source: ts.SourceFile,
+  root?: ts.Node,
+  cap = Infinity,
+  given?: Given,
+) {
+  const handed = (n: ts.Node) => {
+    if (ts.isIdentifier(n)) return boundTo(n) ? undefined : given?.(n);
+    return ts.isPropertyAccessExpression(n) ? given?.(n) : undefined;
+  };
+  // Which way a test can go: both, unless it names a handed value.
+  const ways = (test: ts.Expression) => {
+    const values = handed(test);
+    if (!values) return { yes: true, no: true };
+    return { yes: values.some(Boolean), no: values.some((v) => !v) };
+  };
+  const following = new Set<ts.Node>();
+  const capped = <T>(all: T[]): T[] => {
+    if (all.length <= cap) return all;
+    const at = root ?? source;
+    const { line } = source.getLineAndCharacterOfPosition(at.getStart(source));
+    throw new Error(
+      `${source.fileName}:${line + 1}: \`${at.getText(source)}\` has more than ${cap} class branches; name the branches as consts and join one`,
+    );
+  };
+  const product = <T>(parts: T[][], join: (a: T, b: T) => T, unit: T) =>
+    parts.reduce<T[]>(
+      (all, part) => capped(all.flatMap((a) => part.map((b) => join(a, b)))),
+      [unit],
+    );
+  const followed = <T>(
+    n: ts.Identifier | ts.PropertyAccessExpression,
+    read: (e: ts.Node) => T[],
+    none: T[],
+    value: (v: string) => T,
+  ) => {
+    const values = handed(n);
+    if (values) return values.map((v) => value(v ?? ""));
+    const initializer = ts.isIdentifier(n) ? boundTo(n) : undefined;
+    if (!initializer || following.has(initializer)) return none;
+    following.add(initializer);
+    const out = read(initializer);
+    following.delete(initializer);
+    return out;
+  };
+  const texts = (n: ts.Node): string[] => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
+      return [n.text];
+    }
+    if (ts.isTemplateExpression(n)) {
+      const spans = n.templateSpans.flatMap((s) => [
+        texts(s.expression),
+        [s.literal.text],
+      ]);
+      return product([[n.head.text], ...spans], (a, b) => a + b, "");
+    }
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, texts, [CUT], (v) => v);
+    }
+    if (ts.isConditionalExpression(n)) return chosen(n).flatMap(texts);
+    if (ts.isParenthesizedExpression(n)) return texts(n.expression);
+    return ts.isBinaryExpression(n) ? binaryTexts(n) : listTexts(n);
+  };
+  // An empty list may be a call that computes a string (`look(state)`): unread.
+  // Not a raw array: it renders comma-joined, which is no class list.
+  const listTexts = (n: ts.Node): string[] =>
+    ts.isCallExpression(n)
+      ? lists(n).map((l) => l.join(" ").replaceAll("*", CUT) || CUT)
+      : [CUT];
+  const binaryTexts = (n: ts.BinaryExpression): string[] => {
+    const kind = n.operatorToken.kind;
+    if (kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      const { yes, no } = ways(n.left);
+      return [...(no ? [""] : []), ...(yes ? texts(n.right) : [])];
+    }
+    if (kind === ts.SyntaxKind.PlusToken) {
+      return product([texts(n.left), texts(n.right)], (a, b) => a + b, "");
+    }
+    return joins(kind) ? [...texts(n.left), ...texts(n.right)] : [CUT];
+  };
+  const chosen = (n: ts.ConditionalExpression) => {
+    const { yes, no } = ways(n.condition);
+    return [...(yes ? [n.whenTrue] : []), ...(no ? [n.whenFalse] : [])];
+  };
+  const join = (a: string[], b: string[]) => [...a, ...b];
+  const binary = (n: ts.BinaryExpression): string[][] => {
+    const kind = n.operatorToken.kind;
+    if (kind === ts.SyntaxKind.AmpersandAmpersandToken) {
+      const { yes, no } = ways(n.left);
+      return capped([...(no ? [[]] : []), ...(yes ? lists(n.right) : [])]);
+    }
+    if (kind === ts.SyntaxKind.PlusToken) {
+      return texts(n).map((t) => tokensOf(t, true));
+    }
+    return joins(kind) ? capped([...lists(n.left), ...lists(n.right)]) : [[]];
+  };
+  // A conditional is the union of its branches, as is a wrapper of one part.
+  const words = (v: string) => v.split(/\s+/).filter(Boolean);
+  const lists = (n: ts.Node): string[][] => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
+      return [words(n.text)];
+    }
+    if (ts.isTemplateExpression(n)) {
+      return texts(n).map((t) => tokensOf(t, true));
+    }
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, lists, [[]], words);
+    }
+    return ts.isBinaryExpression(n) ? binary(n) : compound(n);
+  };
+  const compound = (n: ts.Node): string[][] => {
+    if (ts.isConditionalExpression(n)) return capped(chosen(n).flatMap(lists));
+    if (ts.isCallExpression(n) || ts.isArrayLiteralExpression(n)) {
+      return product(partsOf(n).map(lists), join, []);
+    }
+    const branches = capped(partsOf(n).flatMap(lists));
+    return branches.length > 0 ? branches : [[]];
+  };
+  return { texts, lists };
+}
+
 /**
  * The sub-expressions of a class list that are themselves class lists.
  *
- * A comparison contributes nothing and an interpolation is not descended into:
- * `` `lt-arrow${state === "asc" ? " up" : ""}` `` produces `lt-arrow` and
- * sometimes `up`, and `asc` is a column state rather than a class anybody
- * wrote.
+ * A comparison contributes nothing: in `state === "asc" ? " up" : ""`, `asc`
+ * is a column state rather than a class anybody wrote.
  */
 function partsOf(node: ts.Node): readonly ts.Node[] {
   if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) {
@@ -162,39 +271,94 @@ function tagOf(attribute: ts.JsxAttribute): string | undefined {
     : undefined;
 }
 
-/**
- * Every `const` in the module, by name, with what it was assigned.
- *
- * Read once per file rather than resolved through the checker: what a class
- * list is assembled from is nearly always a literal in the same module, and a
- * name shadowed in an inner scope resolves to whichever the walk saw last —
- * which over-reads rather than under-reads, the direction a census is allowed
- * to be wrong in.
- */
-function bindingsIn(source: ts.SourceFile): Map<string, ts.Expression> {
-  const out = new Map<string, ts.Expression>();
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      out.set(node.name.text, node.initializer);
+function boundTo(name: ts.Identifier): ts.Expression | undefined {
+  const declared = declarationOf(name);
+  return declared && ts.isVariableDeclaration(declared)
+    ? declared.initializer
+    : undefined;
+}
+
+type Declared =
+  | ts.VariableDeclaration
+  | ts.ParameterDeclaration
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ClassDeclaration
+  | ts.EnumDeclaration;
+
+/** The variable or function an identifier reads in its own scope. Nothing when
+ * its nearest binding is a parameter, a destructured name, a class or an enum. */
+export function declarationOf(
+  name: ts.Identifier,
+):
+  | ts.VariableDeclaration
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | undefined {
+  for (let scope = name.parent; scope; scope = scope.parent) {
+    const found = bindingsOf(scope).get(name.text);
+    if (!found) continue;
+    if (ts.isVariableDeclaration(found)) {
+      return ts.isIdentifier(found.name) ? found : undefined;
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
+    const fn =
+      ts.isFunctionDeclaration(found) || ts.isFunctionExpression(found);
+    return fn ? found : undefined;
+  }
+  return undefined;
+}
+
+const scopes = new WeakMap<ts.Node, Map<string, Declared>>();
+function bindingsOf(scope: ts.Node): Map<string, Declared> {
+  const known = scopes.get(scope);
+  if (known) return known;
+  const out = new Map<string, Declared>();
+  for (const declared of declaredIn(scope)) {
+    for (const name of declared.name ? namesOf(declared.name) : []) {
+      if (!out.has(name)) out.set(name, declared);
+    }
+  }
+  scopes.set(scope, out);
   return out;
 }
 
-/** A template piece with the partial token at either flush end removed. */
-function whole(text: string, dropFirst: boolean, dropLast: boolean): string {
-  const tokens = text.split(/\s+/);
-  if (dropFirst && !/^\s/.test(text)) {
-    tokens.shift();
+// Parameters first: one sharing a function expression's name shadows it.
+function declaredIn(scope: ts.Node): readonly Declared[] {
+  if (ts.isFunctionLike(scope)) {
+    const named = ts.isFunctionExpression(scope) && scope.name ? [scope] : [];
+    return [...scope.parameters, ...named];
   }
-  if (dropLast && !/\s$/.test(text)) {
-    tokens.pop();
+  if (ts.isBlock(scope) || ts.isSourceFile(scope) || ts.isModuleBlock(scope)) {
+    return scope.statements.flatMap(declaredBy);
   }
-  return tokens.join(" ");
+  if (ts.isCaseBlock(scope)) {
+    return scope.clauses.flatMap((c) => c.statements.flatMap(declaredBy));
+  }
+  if (ts.isCatchClause(scope)) {
+    return scope.variableDeclaration ? [scope.variableDeclaration] : [];
+  }
+  const loop =
+    ts.isForStatement(scope) ||
+    ts.isForInStatement(scope) ||
+    ts.isForOfStatement(scope);
+  const head = loop ? scope.initializer : undefined;
+  return head && ts.isVariableDeclarationList(head) ? head.declarations : [];
+}
+
+function declaredBy(statement: ts.Statement): readonly Declared[] {
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations;
+  }
+  const named =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement);
+  return named ? [statement] : [];
+}
+
+function namesOf(binding: ts.BindingName): string[] {
+  if (ts.isIdentifier(binding)) return [binding.text];
+  return binding.elements.flatMap((e) =>
+    ts.isBindingElement(e) ? namesOf(e.name) : [],
+  );
 }

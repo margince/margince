@@ -15,11 +15,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { accountsOf } from "../format/connectorprovider";
 import { LocaleProvider } from "../i18n";
 import { locationDouble } from "../testing/locationdouble";
 import type { ImportWindow } from "./connect-account";
 import { ConnectionAccountRow } from "./connection-account";
-import { accountsOf } from "./connectorproviders";
 
 // One account on Connections: its services each say how they are doing and
 // carry their own verb, and the verbs about the whole account sit in its menu.
@@ -30,6 +30,7 @@ type BackfillStatus = components["schemas"]["BackfillStatus"];
 const gmail: CaptureConnection = {
   id: "018f3a1b-0000-7000-8000-0000000000c1",
   provider: "gmail",
+  can_backfill: true,
   status: "connected",
   account_label: "lars@example.de",
   scopes: [
@@ -44,6 +45,7 @@ const gcal: CaptureConnection = {
   ...gmail,
   id: "018f3a1b-0000-7000-8000-0000000000ca",
   provider: "gcal",
+  can_backfill: false,
   scopes: ["https://www.googleapis.com/auth/calendar.events.owned"],
   backfill: undefined,
 };

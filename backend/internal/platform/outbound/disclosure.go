@@ -76,8 +76,8 @@ func Disclosures() []Disclosure {
 			Control: "the domain-discovery setting",
 		},
 		{
-			Product: ModelCatalogueProduct, Endpoint: "a model vendor's public catalogue", Personal: false,
-			Control: "asked once per installation during setup",
+			Product: ModelCatalogueProduct, Endpoint: "OpenRouter's and models.dev's public model catalogues", Personal: false,
+			Control: "Settings → AI → Model prices: turning Auto-sync daily off stops the daily read; Refresh model prices still reads on demand",
 		},
 		{
 			Product: WebhooksProduct, Endpoint: "the customer's own webhook endpoint", Personal: true,

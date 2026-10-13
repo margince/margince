@@ -173,8 +173,13 @@ func (e *FilterValueNotAllowedError) MessageFault() (code, message string) {
 //
 //craft:ignore naked-any a filter value arrives from caller JSON — deciding what it may be is this function's whole job
 func reportFilterValue(filter string, value any) (any, error) {
-	switch value.(type) {
-	case string, bool:
+	switch v := value.(type) {
+	case string:
+		if err := checkPeriodValue(filter, v); err != nil {
+			return nil, err
+		}
+		return value, nil
+	case bool:
 		return value, nil
 	default:
 		return nil, &FilterValueNotAllowedError{Filter: filter, Kind: analyticsquery.JSONShapeOf(value)}

@@ -2,7 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { createdColumn, ownerColumn, standardViews } from "./recordlist";
+import type { ListQuery, ListState } from "./listquery";
+import {
+  createdColumn,
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+} from "./recordlist";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -56,5 +62,45 @@ describe("one record list, three record types", () => {
       { label: "list.viewMine", sort: "" },
       { label: "list.viewAll", sort: "" },
     ]);
+  });
+});
+
+describe("the Mine empty note", () => {
+  const t = ((key: string) => key) as Parameters<typeof mineEmptyNote>[0]["t"];
+  const listOn = (query: Partial<ListQuery>): ListState<{ id: string }> => ({
+    rows: [],
+    query: {
+      q: "",
+      sort: "",
+      includeArchived: false,
+      perPage: 25,
+      filters: {},
+      ...query,
+    },
+    setQuery: () => {},
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: () => {},
+    hasMore: false,
+    loadMore: () => {},
+  });
+  const note = (query: Partial<ListQuery>) =>
+    mineEmptyNote({
+      t,
+      state: listOn(query),
+      viewerId: "u-1",
+      unit: "unit.deals",
+    });
+
+  it("names ownership when Mine is the only narrowing", () => {
+    expect(note({ filters: { owner_id: "u-1" } })).toBeDefined();
+  });
+
+  it("leaves a search or another filter to the table's own line", () => {
+    expect(note({ q: "acme", filters: { owner_id: "u-1" } })).toBeUndefined();
+    expect(
+      note({ filters: { owner_id: "u-1", stage_id: "s-1" } }),
+    ).toBeUndefined();
   });
 });

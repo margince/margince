@@ -6,7 +6,6 @@ import { RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -14,7 +13,14 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemCode, problemMessageOf, throwProblem, useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import {
+  problemCode,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../lib/problem";
+import { useMe } from "../lib/session";
 import { statusLabel, statusTone } from "./connector-status";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
@@ -82,12 +88,16 @@ function TelegramConnectionRow({
           onEdit || onDisconnect ? (
             <>
               {onEdit && (
-                <Button onClick={onEdit}>
+                <Button aria-haspopup="dialog" onClick={onEdit}>
                   <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
                 </Button>
               )}
               {onDisconnect && (
-                <Button variant="ghost" onClick={onDisconnect}>
+                <Button
+                  variant="ghost"
+                  aria-haspopup="dialog"
+                  onClick={onDisconnect}
+                >
                   {t("connectors.disconnect")}
                 </Button>
               )}
@@ -150,12 +160,11 @@ export function TelegramConnectorsPanel() {
 
   const disconnect = useMutation({
     mutationFn: async (connection: ChannelConnection) => {
-      const { error } = await api.DELETE("/channel-connections/{id}", {
-        params: { path: { id: connection.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/channel-connections/{id}", {
+          params: { path: { id: connection.id } },
+        }),
+      );
     },
     onSuccess: () => {
       setDisconnecting(null);

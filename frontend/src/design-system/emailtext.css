@@ -1,3 +1,11 @@
+/* The message keeps its own rhythm wherever it lands: a host stack spaces it as
+ * one row, never its sign-off or quoted history apart from it. */
+.emailtext {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .emailtext__main {
   margin: 0;
   white-space: pre-wrap;
@@ -9,7 +17,7 @@
  * it, but SHOWN — it used to sit behind a control promising quoted history,
  * which is not what a sign-off is. */
 .emailtext__signoff {
-  margin: var(--space-3) 0 0;
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

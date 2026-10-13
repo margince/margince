@@ -97,13 +97,7 @@ func (s LeadScoring) withManual(manual []ScoreFactor) LeadScoring {
 		sum += f.Points
 	}
 	rounded := int(math.Floor(sum + 0.5))
-	score := rounded
-	if score < 0 {
-		score = 0
-	}
-	if score > leadScoreMax {
-		score = leadScoreMax
-	}
+	score := min(max(rounded, 0), leadScoreMax)
 	return LeadScoring{Score: score, RoundedSum: rounded, RawSum: sum, Factors: factors}
 }
 
@@ -164,12 +158,6 @@ func ScoreLeadDetail(title string, intent SourceIntent, signals []BehavioralSign
 		sum += f.Points
 	}
 	rounded := int(math.Floor(sum + 0.5)) // round half-up per the worked example
-	score := rounded
-	if score < 0 {
-		score = 0
-	}
-	if score > leadScoreMax {
-		score = leadScoreMax
-	}
+	score := min(max(rounded, 0), leadScoreMax)
 	return LeadScoring{Score: score, RoundedSum: rounded, RawSum: sum, Factors: factors}
 }

@@ -5,9 +5,9 @@
 
 package gates
 
-// What the concurrency-guard census judges a function on, driven with SYNTHETIC
-// source rather than the tree — the same reason retainedcolumncases_test.go
-// gives for its own cases. That census is supposed to pass, so a reader proven
+// What the concurrency-guard census judges a function on, driven with synthetic
+// source rather than the tree, for the reason retainedcolumncases_test.go gives
+// for its own cases. That census is supposed to pass, so a reader proven
 // only by "the tree is clean" is one that keeps passing after it stops working:
 // a statement it stops seeing produces no finding, only a smaller silence.
 //

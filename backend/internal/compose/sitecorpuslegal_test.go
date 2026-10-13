@@ -42,6 +42,45 @@ func TestDedupeLegalEntitiesFoldsOnTheRegisterNumber(t *testing.T) {
 	}
 }
 
+// A VAT group holds one number across several legal entities, so two companies
+// print the same one. Folding on it reported one entity and took the second out
+// of the choice a human is offered, with nothing saying it had been there.
+func TestDedupeLegalEntitiesKeepsTwoCompaniesSharingOneVatNumber(t *testing.T) {
+	entities := []corpusLegalEntity{
+		{
+			Name: "Gradion Pte. Ltd.", RegisterNumber: "201629357M",
+			VatNumber: "DE123456789", SourceURL: seedURL + "/imprint",
+		},
+		// A fellow member of the same VAT group: its own court registration,
+		// the group's shared tax identifier.
+		{
+			Name: "Gradion Services GmbH", RegisterNumber: "HRB 98765",
+			VatNumber: "DE123456789", SourceURL: seedURL + "/de/impressum",
+		},
+	}
+	got := dedupeLegalEntities(entities)
+	if len(got) != 2 {
+		t.Fatalf("a shared VAT number is not a shared identity — a VAT group has one between "+
+			"its members, and folding on it loses a company: %+v", got)
+	}
+}
+
+// The other direction, which the fix must not break. The registry number is
+// still decisive. A VAT printed on one sighting and not the other does not
+// split a company in two.
+func TestDedupeLegalEntitiesFoldsOnTheRegisterNumberWhenOnlyOneSightingPrintsAVat(t *testing.T) {
+	entities := []corpusLegalEntity{
+		{Name: "Acme Pte. Ltd.", RegisterNumber: "201629357M", SourceURL: seedURL + "/imprint"},
+		{
+			Name: "Acme Pte. Ltd.", RegisterNumber: "201629357M",
+			VatNumber: "DE123456789", SourceURL: seedURL + "/de/imprint",
+		},
+	}
+	if got := dedupeLegalEntities(entities); len(got) != 1 {
+		t.Fatalf("one registry identity is one company whatever else a locale printed: %+v", got)
+	}
+}
+
 func TestDedupeLegalEntitiesKeepsSameNameWithDistinctRegisters(t *testing.T) {
 	entities := []corpusLegalEntity{
 		{Name: "Acme Ltd", RegisterNumber: "SG-1", SourceURL: seedURL + "/imprint"},
@@ -234,22 +273,30 @@ func TestCensusFillsTheAddressTheProfileLaneMissed(t *testing.T) {
 	}
 }
 
-// A VAT ID is an identity when no register number is printed.
+// A VAT ID reads in one direction only: it separates, and it does not join.
 //
-// A tax office issues one per company, so two sightings sharing one are the
-// same company however their locales name it, and two carrying different ones
-// are two companies however alike their names read. Without this a notice
-// printing only VAT IDs had no identity at all: one entity split under its
-// locale names and could trip the multi-entity abstention, and two companies
-// under one name merged into whichever the crawl saw first.
-func TestAVatNumberIsAnIdentityWhereNoRegisterNumberIs(t *testing.T) {
+// It used to join. The reasoning was that a tax office issues one per company,
+// so a notice printing only VAT IDs had something to fold on. A VAT group
+// breaks that. Its members share one number, so two companies print the same
+// one, and folding took the second out of the choice a human is offered.
+//
+// What this costs is here as the first case. A company whose locales print
+// only its VAT now reads as two sightings, which can trip the multi-entity
+// abstention. That is the better failure of the two. An abstention asks a
+// human which company they meant; a fold answered for them and lost one.
+//
+// A DIFFERING VAT still separates, which is the second case and unchanged.
+// Disagreement is evidence either way: two numbers cannot be one company,
+// while one number need not be one company.
+func TestAVatNumberSeparatesButDoesNotJoin(t *testing.T) {
 	const imprint = "https://example.com/impressum"
 	same := dedupeLegalEntities([]corpusLegalEntity{
 		{Name: "Acme GmbH", VatNumber: "DE111111111", SourceURL: imprint},
 		{Name: "Acme Deutschland", VatNumber: "DE111111111", SourceURL: imprint},
 	})
-	if len(same) != 1 {
-		t.Errorf("one VAT ID under two locale names folded to %d entities, want 1: %+v", len(same), same)
+	if len(same) != 2 {
+		t.Errorf("one VAT ID under two locale names folded to %d entities, want 2 — a VAT group "+
+			"shares a number, so agreeing on one is not being one company: %+v", len(same), same)
 	}
 
 	distinct := dedupeLegalEntities([]corpusLegalEntity{
@@ -563,5 +610,28 @@ func TestARepeatedSightingWithNoIdentifierStillFolds(t *testing.T) {
 	if headings != 1 {
 		t.Errorf("a repeated heading became %d entities; sightings carrying nothing to tell apart fold: %+v",
 			headings, got)
+	}
+}
+
+// A field the profile cannot hold without printed evidence is never filled
+// without it: the database refuses a site-read row with an empty snippet, and
+// that refusal rolls back the whole deep read.
+func TestCensusFillSkipsAnEntityWhoseEvidenceBlockWasRefused(t *testing.T) {
+	const impressum = "https://example.com/impressum"
+	kinds := map[string]crmcontracts.SiteReadPageKind{impressum: crmcontracts.SiteReadPageKindImpressum}
+	entities := []corpusLegalEntity{{
+		Name:           "Acme GmbH",
+		RegisterNumber: "HRB 12345 B",
+		SourceURL:      impressum,
+	}}
+
+	if got := fillLegalTrioFromCensus(nil, entities, kinds, false); len(got) != 0 {
+		t.Errorf("filled %d field(s) from an entity with no evidence snippet: %+v", len(got), got)
+	}
+
+	// The same entity with its evidence block is still filled.
+	entities[0].EvidenceSnippet = "Acme GmbH, HRB 12345 B"
+	if got := fillLegalTrioFromCensus(nil, entities, kinds, false); len(got) == 0 {
+		t.Error("an entity with its evidence block was refused too")
 	}
 }

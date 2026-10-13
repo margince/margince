@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import {
   installFetchStub,
@@ -75,4 +76,16 @@ export const PopulatedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story([ADDED, CARVED_OUT], OPS),
+};
+
+export const Adding: Story = {
+  render: story([ADDED, CARVED_OUT], OPS),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const open = await body.findByRole("button", { name: "Add domain" });
+    // Refused until /me answers, and a click on a refused button opens nothing.
+    await waitFor(() => expect(open).toBeEnabled());
+    await userEvent.click(open);
+    await body.findByRole("dialog");
+  },
 };

@@ -75,6 +75,16 @@
       "description": "TypeScript stays below 7 until the native compiler ships a stable JS API. The frontend's design-system and contract gates parse source through the `typescript` module's compiler API (createSourceFile, forEachChild, SyntaxKind); 7.x exports only a version stub plus `unstable/*` entry points, so taking it fails every one of those gates rather than the typecheck. Lift this cap in the same change that moves the gates onto 7's API once it is stable.",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
+    },
+    {
+      "description": "A Docker digest carries no release date, so the seven-day floor has nothing to count from. Under Renovate's default `timestamp-required` that update is never old enough: its `renovate/stability-days` status stays pending forever, its PR never automerges, and it holds a `prConcurrentLimit` slot for good. Five such PRs filled the limit and stopped every other update for two weeks, lockFileMaintenance included. `timestamp-optional` lets an undated update through. The floor never measured these updates, it only ever blocked them, and a digest moves only inside a tag this tree already pins.",
+      "matchUpdateTypes": ["digest", "pinDigest"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "A GitHub runner image carries no release date either, for the reason the digest rule above gives.",
+      "matchDatasources": ["github-runners"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
     }
   ],
   "vulnerabilityAlerts": {

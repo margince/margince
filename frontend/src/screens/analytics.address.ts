@@ -9,8 +9,8 @@
 // from, and reaching `analytics.tsx` for that one function would pull every
 // report card and its queries into the morning's bundle.
 
-import { navigate } from "../app/router";
-import { currentParams } from "../app/urlstate";
+import { navigate } from "../lib/router";
+import { currentParams } from "../lib/urlstate";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -67,7 +67,7 @@ export function sectionFromAddress(
     return segment;
   }
   if (segment && segment in SECTION_OF_REPORT) {
-    return SECTION_OF_REPORT[segment];
+    return SECTION_OF_REPORT[segment] ?? fallback;
   }
   return fallback;
 }

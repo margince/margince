@@ -20,7 +20,8 @@ import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { postMultipart } from "../lib/multipart";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { LinkedInReachSection } from "./linkedin-reach";
 import {
   LINKEDIN_ACCOUNT_KEY,
@@ -45,21 +46,9 @@ function useImportConnections() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (file: File): Promise<ImportSummary> => {
-      // Sent as multipart by hand rather than through the typed client: the
-      // generated client serializes JSON bodies, and this endpoint takes a
-      // file part.
-      const body = new FormData();
-      body.append("file", file);
-      // contract-fetch:allow multipart: see the note above
-      const response = await fetch("/v1/me/linkedin-connections", {
-        method: "POST",
-        body,
-        credentials: "include",
+      const payload = await postMultipart("/v1/me/linkedin-connections", {
+        file,
       });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
       return payload as ImportSummary;
     },
     // An import changes the account count, the connections and the reach, which
@@ -78,11 +67,7 @@ function useLinkedInAccount() {
   return useQuery({
     queryKey: LINKEDIN_ACCOUNT_KEY,
     queryFn: async (): Promise<LinkedInAccount> => {
-      const { data, error } = await api.GET("/me/linkedin-account", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/me/linkedin-account", {}));
     },
   });
 }
@@ -97,6 +82,7 @@ function LinkedInProfileRow() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const headingId = useId();
+  const formId = useId();
 
   const stored = account.data?.profile_url ?? "";
   // Adopt the server value until the member starts typing, so a save or a
@@ -154,11 +140,17 @@ function LinkedInProfileRow() {
           </Button>
         }
       />
-      <Modal open={editing} onClose={close} labelledBy={headingId}>
+      <Modal
+        open={editing}
+        onClose={close}
+        labelledBy={headingId}
+        intent="form"
+      >
         <Heading size="large" id={headingId} className="t-h2 modal-title">
           {t("linkedinImport.editProfileTitle")}
         </Heading>
         <form
+          id={formId}
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
@@ -173,10 +165,6 @@ function LinkedInProfileRow() {
             }
           }}
         >
-          {/* Field + TextInput, not a hand-rolled label wrapping a bare <input>:
-              this one box had its own label type, its own padding, its own border
-              and its own focus ring, none of which agreed with the field beside it
-              in any other dialog on the tab. */}
           <Field label={t("linkedinImport.profileLabel")}>
             {(control) => (
               <TextInput
@@ -199,25 +187,23 @@ function LinkedInProfileRow() {
               {problemMessageOf(save.error, t)}
             </Callout>
           )}
-          <div className="actions">
-            <Button type="button" onClick={close} disabled={save.isPending}>
-              {t("create.cancel")}
-            </Button>
-            {/* An unchanged URL and a save in flight are two different
-                unavailabilities, and the design system draws them differently:
-                `disabled` for the precondition the reader can fix by typing,
-                `pending` for the write they have already started, which keeps
-                the button focusable so the wait is announced from it. */}
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={!dirty}
-              pending={save.isPending}
-            >
-              {t("linkedinImport.saveProfile")}
-            </Button>
-          </div>
         </form>
+        <div className="actions">
+          <Button type="button" onClick={close} disabled={save.isPending}>
+            {t("create.cancel")}
+          </Button>
+          {/* `disabled` for an unchanged URL the reader fixes by typing;
+              `pending` keeps a started save focusable so its wait is announced. */}
+          <Button
+            variant="primary"
+            type="submit"
+            form={formId}
+            disabled={!dirty}
+            pending={save.isPending}
+          >
+            {t("linkedinImport.saveProfile")}
+          </Button>
+        </div>
       </Modal>
     </>
   );
@@ -263,9 +249,11 @@ export function LinkedInNetworkPanel() {
             )}
           </ProviderRow>
         </ProviderList>
-        <SettingList>
-          <LinkedInProfileRow />
-        </SettingList>
+      </PanelBody>
+      <SettingList bleed="settings">
+        <LinkedInProfileRow />
+      </SettingList>
+      <PanelBody>
         <LinkedInReachSection />
         {/* LinkedIn's archive holds a dozen CSVs and the wrong one fails with
             a parse error, so the way to the right file stays one click away. */}

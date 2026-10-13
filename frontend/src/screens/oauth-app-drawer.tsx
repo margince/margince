@@ -3,7 +3,6 @@
 
 import { CalendarDays, LogIn, Mail } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { ConfirmModal } from "../design-system/confirmmodal";
@@ -18,12 +17,13 @@ import {
   ProviderMark,
   providerBrandName,
 } from "../design-system/provider-mark";
+import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, WriteRefused } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
 import { useCompanyPhrase } from "./company-phrase";
 import {
-  RedirectUris,
   useOAuthApp,
   useRemoveOAuthApp,
   useSetOAuthApp,
@@ -32,6 +32,7 @@ import {
   vendorCopy,
 } from "./oauth-app";
 import "./oauth-app.css";
+import { RedirectUris } from "./oauth-redirects";
 
 // The drawer's per-vendor wording, as literal keys for the reason vendorCopy
 // spells its own that way.
@@ -106,8 +107,7 @@ export function OAuthAppDrawer({
       onClose={dismiss}
       closeReason={save.isPending ? t("common.saving") : undefined}
       labelledBy={titleId}
-      placement="right"
-      size="wide"
+      intent="drawer-reading"
     >
       <div className="drawer-head">
         {/* The heading leads its band, which is what keeps the dialog's close
@@ -305,7 +305,12 @@ export function RedirectAddressesDialog({
   const titleId = useId();
   const app = useOAuthApp(provider);
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} size="wide">
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer-reading"
+    >
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("oauthApp.redirectTable")}
       </Heading>

@@ -3,7 +3,6 @@
 
 import { Copy } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { useCanWrite } from "../../app/capability";
 import type { AdminWait } from "../../app/setup-checklist";
 import { Button } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
@@ -14,10 +13,11 @@ import {
   PanelPlate,
 } from "../../design-system/panel";
 import { providerBrandName } from "../../design-system/provider-mark";
+import type { AccountVendor } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCanWrite } from "../../lib/capability";
 import { useCompanyPhrase } from "../company-phrase";
-import type { AccountVendor } from "../connectorproviders";
 import { OAuthAppDrawer } from "../oauth-app-drawer";
 
 // The picked account's company app is missing or will not open, so no connect

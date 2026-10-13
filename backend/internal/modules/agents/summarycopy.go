@@ -32,7 +32,7 @@ type summaryCopy struct {
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem, retireCustomField,
 	customFieldOptions, setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
-	mergeTags, changeList string
+	mergeTags, changeList, dismissDuplicate, reopenDuplicate string
 
 	// Lifecycle moves. A deal's target and source are stage semantics and pass
 	// through.
@@ -42,7 +42,7 @@ type summaryCopy struct {
 	// Correspondence. Addresses, subjects and bodies pass through, quoted where
 	// the sentence quotes them.
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
-	bookingHost, bookingLinks, noSubject, relinkActivity, relinkThread, relinkActivities string
+	bookingHost, bookingLinks, noSubject, relinkActivity, relinkActivities string
 
 	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
@@ -78,6 +78,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "its own domain",
 		onDeal:              "%s on deal %s",
 		applyTag:            "Apply tag %s",
+		dismissDuplicate:    "Mark the pair %s as not the same",
+		reopenDuplicate:     "Put the pair %s back in the review queue",
 		changeList:          "Change list %s",
 		addLineItem:         "Add a line item to offer %s",
 		updateLineItem:      "Update line item %s on offer %s",
@@ -116,7 +118,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", attached to %d record(s)",
 		noSubject:           "(no subject)",
 		relinkActivity:      "Re-associate activity %s to %s %s",
-		relinkThread:        "Re-associate the conversation %q to %s %s",
 		relinkActivities:    "Re-associate %d activities to %s %s",
 		importPreview:       "Check a file of %s records against this workspace, writing nothing",
 		importCommit:        "Import %d rows as %s records: %s",
@@ -154,6 +155,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
 		applyTag:            "Schlagwort %s anwenden",
+		dismissDuplicate:    "Das Paar %s als verschieden markieren",
+		reopenDuplicate:     "Das Paar %s wieder zur Prüfung vorlegen",
 		changeList:          "Liste %s ändern",
 		addLineItem:         "Position zum Angebot %s hinzufügen",
 		updateLineItem:      "Position %s im Angebot %s ändern",
@@ -192,7 +195,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", verknüpfte Datensätze: %d",
 		noSubject:           "(kein Betreff)",
 		relinkActivity:      "Aktivität %s neu zuordnen: %s %s",
-		relinkThread:        "Unterhaltung %q neu zuordnen: %s %s",
 		relinkActivities:    "%d Aktivitäten neu zuordnen: %s %s",
 		importPreview:       "Datei mit Datensätzen vom Typ %s mit diesem Workspace abgleichen, ohne etwas zu schreiben",
 		importCommit:        "%d Zeilen als Datensätze vom Typ %s importieren: %s",
@@ -230,6 +232,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",
 		applyTag:            "Gắn thẻ %s",
+		dismissDuplicate:    "Đánh dấu cặp %s là khác nhau",
+		reopenDuplicate:     "Đưa cặp %s về hàng chờ xem xét",
 		changeList:          "Thay đổi danh sách %s",
 		addLineItem:         "Thêm một dòng mục vào báo giá %s",
 		updateLineItem:      "Cập nhật dòng mục %s trong báo giá %s",
@@ -268,7 +272,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		bookingLinks:        ", gắn với %d bản ghi",
 		noSubject:           "(không có tiêu đề)",
 		relinkActivity:      "Liên kết lại hoạt động %s với %s %s",
-		relinkThread:        "Liên kết lại cuộc trò chuyện %q với %s %s",
 		relinkActivities:    "Liên kết lại %d hoạt động với %s %s",
 		importPreview:       "Kiểm tra một tệp bản ghi loại %s với không gian làm việc này, không ghi gì cả",
 		importCommit:        "Nhập %d dòng thành bản ghi loại %s: %s",

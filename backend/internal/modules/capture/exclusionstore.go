@@ -19,6 +19,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,7 +29,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+// fieldValue and fieldAddress are the request fields an exclusion refusal and a
+// sender-decision refusal point at.
+const (
+	fieldValue   = "value"
+	fieldAddress = "address"
 )
 
 // The exclusion vocabulary, the Go spelling of the table's CHECKs.
@@ -59,6 +68,19 @@ type Exclusion struct {
 	Kind      string
 	Value     string
 	CreatedAt time.Time
+	// CreatedByName is the member who added the rule, nil for a non-human
+	// creator or one no longer active.
+	CreatedByName *string
+}
+
+// exclusionColumns is what List and Add answer, with the creator named the way
+// the audit trail names a human actor.
+var exclusionColumns = `e.id, e.scope, e.user_id, e.kind, e.value, e.created_at, u.display_name
+	  FROM e LEFT JOIN app_user u
+	    ON e.created_by = 'human:' || u.id::text AND ` + workforce.LiveMemberSQL("u")
+
+func scanExclusion(row pgx.Row, e *Exclusion) error {
+	return row.Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &e.CreatedAt, &e.CreatedByName)
 }
 
 // ExclusionStore reads and writes the exclusion lists.
@@ -84,17 +106,17 @@ func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
 	var out []Exclusion
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, scope, user_id, kind, value, created_at
-			  FROM capture_exclusion
-			 WHERE scope = 'workspace' OR user_id = $1
-			 ORDER BY scope, kind, value`, actor.UserID)
+			WITH e AS (SELECT id, scope, user_id, kind, value, created_at, created_by
+			              FROM capture_exclusion WHERE scope = 'workspace' OR user_id = $1)
+			SELECT `+exclusionColumns+`
+			 ORDER BY e.scope, e.kind, e.value`, actor.UserID)
 		if err != nil {
 			return fmt.Errorf("capture: listing exclusions: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var e Exclusion
-			if err := rows.Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &e.CreatedAt); err != nil {
+			if err := scanExclusion(rows, &e); err != nil {
 				return fmt.Errorf("capture: listing exclusions: %w", err)
 			}
 			out = append(out, e)
@@ -155,14 +177,15 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 	}
 	var out Exclusion
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
-			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (scope, user_id, kind, value)
-			  DO UPDATE SET value = EXCLUDED.value
-			RETURNING id, scope, user_id, kind, value, created_at`,
-			scope, userID, kind, value, actor.ID).
-			Scan(&out.ID, &out.Scope, &out.UserID, &out.Kind, &out.Value, &out.CreatedAt); err != nil {
+		if err := scanExclusion(tx.QueryRow(ctx, `
+			WITH e AS (
+			  INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
+			  VALUES ($1, $2, $3, $4, $5)
+			  ON CONFLICT (scope, user_id, kind, value)
+			    DO UPDATE SET value = EXCLUDED.value
+			  RETURNING id, scope, user_id, kind, value, created_at, created_by)
+			SELECT `+exclusionColumns,
+			scope, userID, kind, value, actor.ID), &out); err != nil {
 			return fmt.Errorf("capture: adding an exclusion: %w", err)
 		}
 		// Audit-only, like the own-domain list beside it: this is capture
@@ -227,20 +250,37 @@ func exclusionAuditImage(e Exclusion) map[string]any {
 	return image
 }
 
+// parseSingleAddress returns the lowercased address in raw, or false when raw is
+// not a single bare email address within the length the contract and the
+// address indexes allow. The stored form is the form the lookups fold to
+// (normalizeEmail), so a row that was accepted can always be found again: a
+// display name or angle brackets are refused rather than stripped.
+func parseSingleAddress(raw string) (string, bool) {
+	if utf8.RuneCountInString(raw) > maxIndexedAddressChars {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(raw)
+	addr, err := mail.ParseAddress(trimmed)
+	if err != nil || addr.Name != "" || !strings.EqualFold(addr.Address, trimmed) || !strings.Contains(addr.Address, "@") {
+		return "", false
+	}
+	return strings.ToLower(addr.Address), true
+}
+
 // ValidExclusionValue vets one rule's value and returns its stored form: a
 // lowercased address, or an IDNA ASCII domain through the own-domain vetting.
 func ValidExclusionValue(kind, raw string) (string, error) {
 	switch kind {
 	case ExclusionKindAddress:
-		addr, err := mail.ParseAddress(strings.TrimSpace(raw))
-		if err != nil || addr.Address == "" || !strings.Contains(addr.Address, "@") {
-			return "", &InvalidExclusionError{Field: "value", Reason: "give one email address, for example name@example.com"}
+		address, ok := parseSingleAddress(raw)
+		if !ok {
+			return "", &InvalidExclusionError{Field: fieldValue, Reason: fmt.Sprintf("give one email address of at most %d characters, for example name@example.com", maxIndexedAddressChars)}
 		}
-		return strings.ToLower(addr.Address), nil
+		return address, nil
 	case ExclusionKindDomain:
 		domain, err := ValidOwnDomain(raw)
 		if err != nil {
-			return "", &InvalidExclusionError{Field: "value", Reason: err.Error()}
+			return "", &InvalidExclusionError{Field: fieldValue, Reason: err.Error()}
 		}
 		return domain, nil
 	case ExclusionKindContainer:
@@ -259,7 +299,7 @@ func validContainer(raw string) (string, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if !qualified || container == "" || !slices.Contains(containerProviders, provider) {
 		return "", &InvalidExclusionError{
-			Field:  "value",
+			Field:  fieldValue,
 			Reason: "name the provider and the container it belongs to, for example gmail:Private (" + strings.Join(containerProviders, ", ") + ")",
 		}
 	}

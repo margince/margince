@@ -17,7 +17,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { ReportingFilters } from "./reporting.filters";
 import {
   blockLabel,
@@ -40,6 +40,7 @@ export function SaveReportingDialog({
   const t = useT();
   const [selection, setSelection] = useState(initialSelection);
   const title = useId();
+  const formId = useId();
   const queryClient = useQueryClient();
   const [customizing, setCustomizing] = useState(!!report);
   const [name, setName] = useState(report?.name ?? "");
@@ -51,9 +52,7 @@ export function SaveReportingDialog({
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const allowedBlocks =
@@ -107,14 +106,13 @@ export function SaveReportingDialog({
     },
   });
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={title}
-      size={customizing ? "wide" : undefined}
-    >
+    <Modal open onClose={onClose} labelledBy={title} intent="form">
+      <Heading size="large" id={title} className="t-h2 modal-title">
+        {t(report ? "reporting.edit" : "reporting.save")}
+      </Heading>
       <form
-        className="reporting-dialog"
+        id={formId}
+        className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
           write.mutate({
@@ -131,9 +129,6 @@ export function SaveReportingDialog({
           });
         }}
       >
-        <Heading as="h2" size="medium" id={title}>
-          {t(report ? "reporting.edit" : "reporting.save")}
-        </Heading>
         <Field label={t("reporting.name")} required>
           {(field) => (
             <TextInput
@@ -180,7 +175,7 @@ export function SaveReportingDialog({
           {t("reporting.customize")}
         </Button>
         {customizing && (
-          <div>
+          <div className="form-stack">
             <ReportingFilters
               selection={selection}
               onChange={(next) => {
@@ -192,7 +187,7 @@ export function SaveReportingDialog({
                   setAudience("private");
               }}
             />
-            <fieldset>
+            <fieldset className="form-stack">
               <legend>{t("reporting.metrics")}</legend>
               {(
                 catalog.data?.metrics.map((metric) => metric.id) ??
@@ -213,7 +208,7 @@ export function SaveReportingDialog({
               ))}
             </fieldset>
             <Disclosure summary={t("reporting.blocks")}>
-              <fieldset>
+              <fieldset className="form-stack">
                 <legend>{t("reporting.blocks")}</legend>
                 {[...new Set([...selectedBlocks, ...allowedBlocks])].map(
                   (block) => (
@@ -263,25 +258,26 @@ export function SaveReportingDialog({
           </div>
         )}
         <ErrorLine error={write.error} />
-        <div className="reporting-dialog-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("reporting.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            disabled={
-              write.isPending ||
-              !name.trim() ||
-              metrics.length === 0 ||
-              (selection.period === "custom" &&
-                (!selection.interval ||
-                  selection.interval.start_at >= selection.interval.end_at))
-            }
-          >
-            {t("reporting.save")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("reporting.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          disabled={
+            write.isPending ||
+            !name.trim() ||
+            metrics.length === 0 ||
+            (selection.period === "custom" &&
+              (!selection.interval ||
+                selection.interval.start_at >= selection.interval.end_at))
+          }
+        >
+          {t("reporting.save")}
+        </Button>
+      </div>
     </Modal>
   );
 }

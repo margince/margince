@@ -12,6 +12,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The string metric behind the dedupe fuzzy tier (PO-F-1/PO-F-2
@@ -233,10 +234,7 @@ const nameScoringMaxRunes = 256
 // past the bound score as identical, which for names this long is the same
 // answer any metric would give.
 func boundedForScoring(s string) string {
-	if r := []rune(s); len(r) > nameScoringMaxRunes {
-		return string(r[:nameScoringMaxRunes])
-	}
-	return s
+	return textcut.Runes(s, nameScoringMaxRunes)
 }
 
 func jaroWinkler(a, b string) float64 {
@@ -264,10 +262,7 @@ func jaro(a, b string) float64 {
 		return 0
 	}
 
-	window := max(len(ra), len(rb))/2 - 1
-	if window < 0 {
-		window = 0
-	}
+	window := max(max(len(ra), len(rb))/2-1, 0)
 
 	matchedA := make([]bool, len(ra))
 	matchedB := make([]bool, len(rb))

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { ContactDetails } from "./contactdetails";
 import { view } from "./contactpage.testkit";
 import {
@@ -63,7 +64,7 @@ it("corrects an email while preserving other addresses, types and primary flags"
     },
     { ...contact, emails },
   );
-  await user.click(await screen.findByRole("button", { name: "Change Email" }));
+  await user.click(await screen.findByRole("button", { name: "Edit emails" }));
   const input = screen.getByDisplayValue("dana@brandt.example");
   await user.clear(input);
   await user.type(input, "dana@brandt.de");
@@ -96,7 +97,7 @@ it("allows removing the final address", async () => {
     sent.push(body);
     return jsonResponse(contact);
   });
-  await user.click(await screen.findByRole("button", { name: "Change Email" }));
+  await user.click(await screen.findByRole("button", { name: "Edit emails" }));
   await user.click(screen.getByRole("button", { name: /^Remove row/ }));
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toEqual([{ emails: [] }]));
@@ -115,7 +116,7 @@ it("keeps a refused correction and offers the existing record on a duplicate", a
       409,
     ),
   );
-  await user.click(await screen.findByRole("button", { name: "Change Email" }));
+  await user.click(await screen.findByRole("button", { name: "Edit emails" }));
   const input = screen.getByDisplayValue("dana@brandt.example");
   await user.clear(input);
   await user.type(input, "taken@example.test");
@@ -143,7 +144,7 @@ it("shows friendly conflict copy and retains the draft", async () => {
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
   expect((await screen.findByRole("alert")).textContent).toContain(
-    "This record changed since it was opened",
+    en["common.versionSkew"],
   );
   expect(screen.getByDisplayValue("CEO")).toBeTruthy();
   expect(screen.queryByText("internal version mismatch")).toBeNull();
@@ -155,7 +156,7 @@ it("retains the email action beside its field editor", async () => {
     await screen.findByRole("link", { name: "dana@brandt.example" }),
   ).toHaveAttribute("href", "mailto:dana@brandt.example");
   expect(
-    await screen.findByRole("button", { name: "Change Email" }),
+    await screen.findByRole("button", { name: "Edit emails" }),
   ).toBeTruthy();
 });
 it("does not offer to clear the owner of a private contact", async () => {
@@ -180,7 +181,9 @@ it("adds the first phone from Details without changing email", async () => {
     },
     { ...contact, phones: [] },
   );
-  await user.click(await screen.findByRole("button", { name: "Change Phone" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Edit phone numbers" }),
+  );
   await user.click(screen.getByRole("button", { name: "Add phone" }));
   await user.type(
     screen.getByRole("textbox", { name: "Phone" }),

@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import * as router from "../app/router";
 import { LocaleProvider } from "../i18n";
+import * as router from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import { SETTINGS_PAGES, type SettingsPage } from "./settingscatalog";
 import { SettingsSearchBox } from "./settingssearchbox";
 

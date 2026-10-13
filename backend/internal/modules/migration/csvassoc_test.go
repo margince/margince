@@ -110,3 +110,23 @@ func TestNoEmployerColumnAndNoContactRunOfferNoEdges(t *testing.T) {
 		t.Fatalf("edges = %d, want none — a company file has no employer to name", len(edges))
 	}
 }
+
+// A company_ref column offers an edge whose other end is the company's ref in
+// the source system. It is kept apart from a name, so the writer resolves it by ref.
+func TestACompanyRefColumnOffersARefEdge(t *testing.T) {
+	mapping := map[string]string{"Ref": "ref", "Email": "email", "Company": AssocTargetCompanyRef}
+	src := NewCSVSource(seedCSV(t, "Ref,Email,Company\nP-1,jo@x.test, CO-1 \nP-2,kim@x.test,\n"),
+		testCSVKey, ObjectContact, mapping, "Ref")
+
+	edges, err := src.Associations(context.Background())
+	if err != nil {
+		t.Fatalf("Associations: %v", err)
+	}
+	if len(edges) != 1 {
+		t.Fatalf("edges = %d, want one for the row naming a company", len(edges))
+	}
+	want := Assoc{FromType: ObjectContact, FromID: "P-1", ToType: AssocTargetCompanyRef, ToID: "CO-1", Category: assocCategoryEmployment}
+	if edges[0] != want {
+		t.Fatalf("edge = %+v, want %+v", edges[0], want)
+	}
+}

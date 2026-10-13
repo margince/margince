@@ -3,35 +3,36 @@ import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { InlineChoice } from "../design-system/inlinechoice";
+import { useT } from "../i18n";
 import {
   useCanWrite,
   useCanWriteRecord,
   useRecordWriteRefusal,
-} from "../app/capability";
-import { navigate } from "../app/router";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
-import { InlineChoice } from "../design-system/inlinechoice";
-import { useT } from "../i18n";
+} from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
 import { ArchiveAction } from "./archive";
 import { useClaimRecord } from "./claimrecord";
-import { throwProblem, useViewerId } from "./common";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import { patchCompanyField, searchCompanyTargets } from "./companyform";
 import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
-import { rosterMissLabel, useRoster, useRosterPartial } from "./entityref";
+import { rosterOwnerName, useRoster } from "./entityref";
 import { MergeAction } from "./merge";
-import { memberName, useRosterNames } from "./roster";
 import { ShareAction } from "./share";
 
-// The account header's editable pieces: lifecycle and owner, the two values a
-// rep changes in place (InlineChoice) rather than through an edit modal, plus
-// what the account IS (CompanyRelationshipBadges) and the record's own menu
-// (CompanyActionBadges). The subtitle and facts strip live in
-// companyheaderfacts.tsx and the header's other verbs in
-// companyheaderactions.tsx, so this file holds only the pieces that write.
+// The account header's editable pieces: the owner, changed in place
+// (InlineChoice) rather than through an edit modal, the write path the
+// lifecycle control (companylifecycle.tsx) shares, what the account IS
+// (CompanyRelationshipBadges) and the record's own menu (CompanyActionBadges).
+// The subtitle and facts strip live in companyheaderfacts.tsx and the header's
+// other verbs in companyheaderactions.tsx, so this file holds only the pieces
+// that write.
 //
 // Split out of companies.tsx because that file had grown past 2,700 lines
 // carrying the list screen, the enrichment tools, the evidence cards and this
@@ -39,7 +40,6 @@ import { ShareAction } from "./share";
 
 type Company = components["schemas"]["Company"];
 type Company360View = components["schemas"]["Company360"];
-type Lifecycle = NonNullable<Company["lifecycle"]>;
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // patchCompanyField sends one field through the ordinary company PATCH,
@@ -114,8 +114,8 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   // reason, and folding them in again would answer "no grant" as though it were
   // a fact about the record.
   const mine = company.writable ?? false;
-  // Archived first: no grant or owner lifts it, since nothing unarchives. Ownership
-  // comes last: somebody else's company is who owns it, not a problem to solve.
+  // Archived first: no grant or owner lifts it; only undoing the archive from
+  // History does. Ownership comes last: somebody else's company is who owns it.
   if (company.archived_at) {
     return t("record.archivedReadOnly");
   }
@@ -127,72 +127,6 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
     return t("record.notYoursToChange");
   }
   return undefined;
-}
-
-// Exported for its two mount points: the header passes it into RecordView's
-// `nameBadge` slot, where the record's standing belongs on the name's own
-// line, and the rail's Details grid mounts the SAME control rather than a
-// second InlineChoice with its own PATCH. One implementation of how lifecycle
-// is written, two places it is drawn, so the two cannot disagree about what
-// they last wrote. `hideLabel` is unconditional: both callers name the field
-// themselves, the badge beside the name and the grid's own label column.
-export function CompanyLifecycleControl({
-  company,
-}: Readonly<{ company: Company }>) {
-  const t = useT();
-  // useCanWriteRecord, not useCanWrite: the grant and the seat say this ROLE
-  // may change accounts, and the row says whether this one is theirs to change.
-  // Gating on the grant alone offers an active control whose save is rejected.
-  const canUpdate = useCanWriteRecord("company", company);
-  const readOnlyReason = useCompanyReadOnlyReason(company);
-  const patch = useCompanyFieldPatch(company);
-  return (
-    <InlineChoice
-      // Named for the company record's own layout suite, which measures this
-      // control's drawn size. Neither the shared primitive's class (it matches
-      // every other screen's inline choice) nor the German copy inside it (a
-      // copy change must not fail a layout assertion) can name it.
-      testId="company-lifecycle"
-      label={t("company.lifecycle")}
-      // The badge already reads as the account's standing beside its name —
-      // a "Lifecycle: " prefix in front of it would be the one value on the
-      // line saying its own name twice. `label` still drives the accessible
-      // name (aria-label, sr-only form label), so a screen reader hears
-      // "Lifecycle" regardless.
-      hideLabel
-      value={company.lifecycle ?? "unknown"}
-      options={LIFECYCLE_OPTIONS.map((value) => ({
-        value,
-        label: t(LIFECYCLE_LABELS[value]),
-      }))}
-      canEdit={canUpdate && !readOnlyReason}
-      readOnlyReason={readOnlyReason}
-      // The account's standing is the one value beside its name a reader
-      // looks for first. Tinted rather than filled: it marks the one value
-      // here a reader can set, without reading as the page's primary action.
-      render={(value) => (
-        <Badge tone="accent">{t(LIFECYCLE_LABELS[value as Lifecycle])}</Badge>
-      )}
-      onSave={(next) =>
-        patch({
-          lifecycle: next as NonNullable<UpdateCompanyRequest["lifecycle"]>,
-        })
-      }
-    />
-  );
-}
-
-// What to call an owner the roster's answer does not name. "No longer in the
-// user list" is a claim about a read that came back WITHOUT them, so it is the
-// only reading this screen supplies; still reading, read failed and walk stopped
-// short belong to the roster and are spelled once there. Shared by every control
-// here that names the current owner, so none goes on making the claim alone.
-function unresolvedOwnerLabel(
-  roster: Readonly<{ isPending: boolean; isError: boolean }>,
-  partial: boolean,
-  t: ReturnType<typeof useT>,
-): string {
-  return rosterMissLabel(roster, partial, t, t("ref.notInRoster"));
 }
 
 // Exported for the same reason as useCompanyFieldPatch/useCompanyReadOnlyReason
@@ -223,25 +157,29 @@ export function CompanyOwnerControl({
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
   const roster = useRoster("user", true);
-  const allMembers = useRosterNames("user", true);
-  const rosterPartial = useRosterPartial("user", true);
+  const ownerName = useMemberName(company.owner_id);
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
   // The current owner may not be offerable (invited, deactivated, or past the
-  // walk), and a select whose value is no option renders blank. An invited one
-  // is named; for the rest, `unresolvedOwnerLabel` says which honest sentence.
+  // walk), and a select whose value is no option renders blank. Named by id
+  // regardless: `rosterOwnerName` says the true sentence for the rest.
   if (
     company.owner_id &&
     !owners.some((user) => user.value === company.owner_id)
   ) {
     owners.unshift({
       value: company.owner_id,
-      label:
-        memberName(allMembers.data, company.owner_id) ??
-        unresolvedOwnerLabel(roster, rosterPartial, t),
+      // `company.owner_id` is truthy in this branch, so `unowned` is never
+      // read; passed anyway so the call reads the same as every other one.
+      label: rosterOwnerName(
+        company.owner_id,
+        ownerName,
+        t,
+        t("co.pulse.unowned"),
+      ),
     });
   }
   // "Unowned" is offered only while the account IS unowned. `owner_id` cannot
@@ -277,10 +215,10 @@ export function CompanyOwnerControl({
         if (!value) {
           return t("co.pulse.unowned");
         }
-        return (
-          owners.find((user) => user.value === value)?.label ??
-          unresolvedOwnerLabel(roster, rosterPartial, t)
-        );
+        // Every value this control can hold is one of the options above: the
+        // current owner is unshifted in when the walk misses them, and any
+        // other value is a seat the picker itself offered.
+        return owners.find((user) => user.value === value)?.label;
       }}
       // Taking an unowned account goes through the claim, the door open to
       // every seat; naming a colleague is a patch, offered only to a reader
@@ -374,13 +312,9 @@ export function CompanyActionBadges({
   archivedReasonId?: string;
 }>) {
   const t = useT();
-  // An archived record is read-only: the backend rejects edit/merge/archive
-  // on a non-live row (there is no unarchive path). The verbs stay VISIBLE
-  // and refused rather than disappearing (STATE-4a) — a control blocked by
-  // the record's STATE says why, because the reason is the information and a
-  // missing button reads as a build without the feature. Its history stays
-  // readable — what happened to a record is exactly what a reader wants after
-  // it has been put away.
+  // An archived record is read-only: the backend rejects edit, merge and
+  // archive on it until History undoes the archive. The verbs stay visible and
+  // refused (STATE-4a), because a missing button reads as a missing feature.
   //
   // Undefined on a live account, which is what leaves those verbs pressable.
   // See companyheaderactions.tsx's CompanyHeaderActions: the id is an
@@ -410,17 +344,16 @@ export function CompanyActionBadges({
           sourceName={company.display_name}
           searchTargets={searchCompanyTargets}
           merge={async (targetId) => {
-            const { data, error } = await api.POST("/companies/{id}/merge", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-              body: { target_id: targetId },
-            });
-            if (error) {
-              throwProblem(error, t);
-            }
-            return data;
+            return unwrap(
+              await api.POST("/companies/{id}/merge", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+                body: { target_id: targetId },
+              }),
+              t,
+            );
           }}
           invalidate="companies"
           recordKey="company"
@@ -480,16 +413,14 @@ export function CompanyActionBadges({
             name: company.display_name,
           })}
           archive={async () => {
-            const { data, error } = await api.DELETE("/companies/{id}", {
-              params: {
-                path: { id: company.id },
-                ...ifMatch(requireVersion(company.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.DELETE("/companies/{id}", {
+                params: {
+                  path: { id: company.id },
+                  ...ifMatch(requireVersion(company.version)),
+                },
+              }),
+            );
           }}
           invalidate="companies"
           recordKey="company"
@@ -526,10 +457,3 @@ export function companyWebsite(company: Company): string | undefined {
     (primaryDomain ? `https://${primaryDomain}` : undefined)
   );
 }
-
-// useAccountChronology assembles the middle column's history: what happened
-// with this account, what changed about the record, or both in one order.
-//
-// The two feeds page independently, so "both" is not a concatenation — the
-// merge is cut where it stops being provably complete (mergeChronology), and
-// the cut is stated rather than left to look like the end of the history.

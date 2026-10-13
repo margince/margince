@@ -3,14 +3,13 @@
 
 import { Sparkles } from "lucide-react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { forReader } from "../format/collate";
 import { formatDayMonth, formatNumber, INTL_LOCALE } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { contactTabRoute } from "./contacttab";
+import { useRecordZone } from "../lib/recordzone";
+import { openContactTab } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -40,7 +39,8 @@ export function ContactConfirmCallout({
   const pending = (view.profile_fields ?? []).filter(
     (field) => field.verdict === undefined,
   );
-  if (pending.length === 0) {
+  const [first] = pending;
+  if (first === undefined) {
     return null;
   }
   // Distinct field names, alphabetised in the reader's own order rather than
@@ -61,7 +61,7 @@ export function ContactConfirmCallout({
   // when THESE were read.
   const latest = pending.reduce(
     (max, field) => (field.captured_at > max ? field.captured_at : max),
-    pending[0].captured_at,
+    first.captured_at,
   );
   return (
     <Callout
@@ -74,7 +74,7 @@ export function ContactConfirmCallout({
       actions={
         <Button
           variant="link"
-          onClick={() => navigate(contactTabRoute(view.contact.id, "research"))}
+          onClick={() => openContactTab(view.contact.id, "research")}
         >
           {t("contact.confirm.review")}
         </Button>

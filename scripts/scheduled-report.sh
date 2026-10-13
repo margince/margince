@@ -105,12 +105,15 @@ resolve() {
     return
   fi
   echo "green again — closing #$existing"
+  # A failed close is counted, not raised: under `set -e` a bare failure here
+  # would end the run before the arms below it file what they measured.
   gh issue close "$existing" --repo "$REPO" --reason completed \
     --comment "Green on the $(date -u +%Y-%m-%d) run: $RUN_URL
 
 Closed by the lane that filed it, which re-ran and passed. If this issue was
 about something the run does not measure, reopen it — the close means the check
-is green, not that every question on the thread was answered."
+is green, not that every question on the thread was answered." ||
+    unreported=1
 }
 
 # Each report is attempted independently. Under `set -e` a bare call would abort
@@ -190,7 +193,27 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]] || [[ "${RENOVATE_OUTCOME:-}" = "q
   resolve "the Renovate liveness check could not run"
 fi
 
-if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+# Two measured verdicts, two titles, because they send somebody to different
+# places: a stopped bot is a Mend account or installation question, a stalled
+# one is a question about the PRs it already opened. Each retracts the other.
+if [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]] && [[ "${RENOVATE_STATUS:-}" = "STALLED" ]]; then
+  resolve "Renovate has stopped running against main"
+  report "Renovate is running but opens no pull requests" "priority: high,area: ci-tests,bug" \
+"The liveness check read \`STALLED\` on the scheduled run: $RUN_URL
+
+Renovate runs and rewrites its dashboard, but has opened no pull request within
+the budget while updates wait under **Rate-Limited** on it. Its open PRs fill
+\`prConcurrentLimit\` and none of them can merge, so nothing new is raised —
+\`lockFileMaintenance\` included, which is the only mechanism that adopts a fix
+for a lockfile-only transitive advisory.
+
+Find out why the open Renovate PRs cannot merge. A status check stuck at pending
+is the usual cause; \`renovate/stability-days\` never passes for an update with
+no release date unless \`minimumReleaseAgeBehaviour\` lets it through. A major
+never automerges and holds its slot until somebody closes or takes it."\
+    || unreported=1
+elif [[ "${RENOVATE_OUTCOME:-}" = "quiet" ]]; then
+  resolve "Renovate is running but opens no pull requests"
   report "Renovate has stopped running against main" "priority: high,area: ci-tests,bug" \
 "The liveness check read \`${RENOVATE_STATUS:-unknown}\` on the scheduled run:
 $RUN_URL
@@ -202,16 +225,19 @@ argues that at length. While the bot is quiet that mechanism is gone, and
 nothing else in this repository will say so: no lane reddens and no pull request
 is blocked.
 
-\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means it has
-never run here at all, which is what an installation bound to a previous owner or
-repository name looks like — check the GitHub App installation before looking
-at the config, because a bad \`renovate.json\` files a config-warning issue
+\`QUIET\` means it ran once and has not acted since. \`NO_DASHBOARD\` means no
+dashboard issue exists: first check that \`dependencyDashboard\` is not switched
+off in \`renovate.json\`, since that alone removes it. Otherwise, read the job
+history on the Mend portal (developer.mend.io) before anything on GitHub: jobs
+finishing with nothing here means the account is in Silent mode, no jobs means
+an installation problem. A bad \`renovate.json\` files a config-warning issue
 rather than going silent.
 
 The job log names the last act it could find and its date."\
     || unreported=1
 elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate has stopped running against main"
+  resolve "Renovate is running but opens no pull requests"
 fi
 
 if [[ "${LANE_RESULT:-}" = "failure" ]]; then
@@ -363,6 +389,69 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
+if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]]; then
+  report "the backend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
+"\`make backend-clock-drift\` failed on the scheduled run of \`main\` at +200 days: $RUN_URL
+
+The suite passes today and fails 200 days from now, so at least one test asserts
+against an instant something compares to \`now\` to decide a state. It will start
+failing on its own, on a commit that touches nothing near it — the confirmed
+instance was a task seeded seven days out, asserted to group as \`later\`, coming
+back \`this_week\` on a Thursday.
+
+READ THE FAILURES BEFORE FIXING THEM, because this lane has two failure modes and
+they are not the same finding:
+
+- A fixture whose claim depends on the day. Fix it at the fixture: assert the
+  thing no calendar can move (overdue or not, rather than which bucket), or take
+  the base instant from \`clocktest.Now(t)\` so the offset reaches it.
+- The lane's own. If the clock did not actually move, or a time service
+  re-synced mid-run, \`scripts/clock-drift-host.sh\` says so and the run is void
+  rather than a finding about the tree. A red that blames the tree for the lane
+  is what teaches a reader to ignore a scheduled lane, so rule this out first.
+
+Reproduce locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`.
+Read a green from it as weaker than this lane's: \`CURRENT_TIMESTAMP\` and
+stored column \`DEFAULT\`s keep the real date under that applier."\
+    || unreported=1
+elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]]; then
+  resolve "the backend suite's verdict depends on the calendar"
+fi
+
+if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
+  report "a story does not render clean on main" "priority: normal,area: ci-tests,bug" \
+"\`make fe-uat ARGS=--all-stories\` failed on the scheduled run of \`main\`: $RUN_URL
+
+On a branch, \`make fe-uat\` renders only the stories the diff reaches, so a story
+that fails on \`main\` stays hidden until some change reaches it, and then reads
+as that change's fault. The run's \`fe-uat-failures\` artifact holds the manifest, which
+names each failing story and its errors, and the capture of each one.
+
+No manifest in the artifact means the lane failed before it rendered: the install,
+the app build, the Chromium download or the Storybook build. The step log names
+which.
+
+Reproduce locally with \`make fe-uat ARGS=--all-stories\`."\
+    || unreported=1
+elif [[ "${STORIES_RESULT:-}" = "success" ]]; then
+  resolve "a story does not render clean on main"
+fi
+
+if [[ "${TREND_RESULT:-}" = "failure" ]]; then
+  report "the weekly slop trend could not run" "priority: low,area: ci-tests,bug" \
+"\`make slop-trend\` failed on the scheduled run: $RUN_URL
+
+The trend is a report, so it fails only when it cannot measure: craft did not
+download, the frontend packages did not install, the TypeScript compiler was not
+found, or a \`craft stats\` run read under 10,000 files. The step log names which.
+Until it runs again, nothing records whether the old comments are improving.
+
+Reproduce locally with \`make slop-trend\`."\
+    || unreported=1
+elif [[ "${TREND_RESULT:-}" = "success" ]]; then
+  resolve "the weekly slop trend could not run"
+fi
+
 if [[ "${CACHE_RESULT:-}" = "failure" ]]; then
   report "the Actions build-cache reaper is failing" "priority: normal,area: ci-tests,bug" \
 "\`scripts/reap-build-caches.sh\` failed on the scheduled run: $RUN_URL
@@ -386,6 +475,67 @@ Inspect without deleting anything: \`DRY_RUN=1 scripts/reap-build-caches.sh\`."\
 elif [[ "${CACHE_RESULT:-}" = "success" ]]; then
   resolve "the Actions build-cache reaper is failing"
 fi
+
+# The vendor live check. Four outcomes: `ok`, `drift` and `refused` are
+# verdicts, and `not-checked` means no key, which is none. A failed job with no
+# outcome broke before the call answered, and is filed as `no-verdict`.
+#
+# The detail is matched against the shapes the test prints and dropped
+# otherwise. The body is built from these fields alone, so no key or vendor
+# text can reach the public tracker through it.
+readonly SURFE_FAILED_TITLE="Surfe live check failed: GET /v1/credits"
+readonly SURFE_NO_KEY_TITLE="Surfe live check has no key"
+surfe_detail="${VENDOR_LIVE_DETAIL:-}"
+if ! [[ "$surfe_detail" =~ ^(status=([0-9]{3}|unreachable)|missing=[A-Za-z0-9_,]+|negative=[a-z_]+)$ ]]; then
+  surfe_detail="unrecognised"
+fi
+surfe_outcome="${VENDOR_LIVE_OUTCOME:-}"
+if [[ -z "$surfe_outcome" ]] && [[ "${VENDOR_LIVE_RESULT:-}" = "failure" ]]; then
+  surfe_outcome="no-verdict"
+  surfe_detail="no-verdict"
+fi
+case "$surfe_outcome" in
+drift | refused | no-verdict)
+  surfe_why="The answer no longer matches what the adapter expects. Compare it with
+\`backend/internal/modules/integrations/surfe/testdata/vendor-wire.json\` and fix the adapter."
+  if [[ "$surfe_outcome" = "refused" ]]; then
+    surfe_why="Surfe refused the key. It may have expired or been revoked: renew the
+\`SURFE_LIVE_KEY\` repository secret with a low-limit key."
+  elif [[ "$surfe_outcome" = "no-verdict" ]]; then
+    surfe_why="The job failed before the call gave an answer, so nothing is known about
+Surfe's API today. The job log names the step that failed."
+  fi
+  report "$SURFE_FAILED_TITLE" "priority: high,area: capture" \
+"The daily live check of a data vendor failed on \`main\`: $RUN_URL
+
+- Vendor: Surfe
+- Call: \`GET /v1/credits\`, through the production adapter
+- Outcome: \`$surfe_outcome\`
+- Detail: \`$surfe_detail\`
+
+$surfe_why
+
+Reproduce with \`MARGINCE_SURFE_LIVE_KEY=<key> make vendor-live\`." ||
+    unreported=1
+  ;;
+ok)
+  resolve "$SURFE_FAILED_TITLE"
+  resolve "$SURFE_NO_KEY_TITLE"
+  ;;
+not-checked)
+  # Opened once and never commented on: a missing key is a standing fact, and a
+  # daily "still no key" adds nothing. It never retracts a failure either.
+  if [[ -z "$(lookup "$SURFE_NO_KEY_TITLE")" ]]; then
+    report "$SURFE_NO_KEY_TITLE" "priority: normal,area: capture" \
+"The daily live check of Surfe did not run on \`main\`, because the
+\`SURFE_LIVE_KEY\` repository secret is not set: $RUN_URL
+
+Surfe is unchecked until the secret holds a low-limit Surfe API key. Not
+checked is not a pass: a change to Surfe's API goes unseen until then." ||
+      unreported=1
+  fi
+  ;;
+esac
 
 # --- main-health.yml -----------------------------------------------------------
 #
@@ -598,9 +748,13 @@ Three things this is NOT, each of which has looked like a regression before:
 
 There is no standing failure to dismiss this against. Case 6 — asked about past
 account-manager changes, the assistant repeating a note's wrong month in its own
-voice — was the one, and it was fixed: it passes 3 of 3 on \`claude-opus-5\`, this
-lane's default model. So a case 6 failure here is a REGRESSION of that fix and
-the transcript is worth reading closely, not a known finding to be filed away.
+voice — was the one, and it was fixed: it passed 3 of 3 on \`claude-opus-5\`.
+This job now drives \`claude-sonnet-5-5\` over the claude CLI, on a stack
+whose search ranks by word overlap (no embedding key reaches the runner). No
+committed verdict was measured that way: the coverage page's numbers come from
+the neutral bridge on a semantic search. So a failure here is not yet a
+REGRESSION — re-run the case locally on a semantic stack (the how-to's section
+2) before calling it one, and read this run's transcript for what differed.
 
 Nothing else is standing either. Every scenario in this lane is expected to pass,
 and this issue means one did not."\
@@ -659,6 +813,6 @@ close it; the record is the point."\
 fi
 
 if [[ "$unreported" -ne 0 ]]; then
-  echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
+  echo "FAIL: at least one finding could not be filed or retracted — the run above names which, and the tracker does not yet say so" >&2
   exit 1
 fi

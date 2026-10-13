@@ -32,10 +32,11 @@ const (
 	KindString Kind = "string"
 	// KindDuration parses with time.ParseDuration ("15m", "24h").
 	KindDuration Kind = "duration"
-	// KindInt is a base-10 integer.
+	// KindInt is an integer as Go's flag package reads one: base 10, or a
+	// 0x / 0o / 0b prefix, and a leading 0 for octal.
 	KindInt Kind = "int"
-	// KindBool is the literal "true"; anything else is false. Spelled out
-	// because the tree already reads it that way and a schema must say so.
+	// KindBool is true or false as strconv.ParseBool reads them ("1", "t",
+	// "TRUE" and the like count); anything else is refused, never read as false.
 	KindBool Kind = "bool"
 )
 

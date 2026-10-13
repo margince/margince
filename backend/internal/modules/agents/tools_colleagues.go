@@ -59,7 +59,7 @@ func (t listColleagues) Spec() mcp.ToolSpec {
 		Name: "list_colleagues", Title: "List colleagues", Version: toolVersionV1,
 		Description:   listColleaguesCopy.render(),
 		Instead:       listColleaguesCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listUsers",
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"Narrow by name or email; omit for the whole roster"}},

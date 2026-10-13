@@ -14,6 +14,8 @@ package contacts
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -62,15 +64,11 @@ func ensureLeadEmailUnclaimed(ctx context.Context, tx pgx.Tx, email *string) err
 	if err != nil || !found {
 		return err
 	}
-	dup := &DuplicateLeadError{Email: *email}
-	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	named, err := nameableLead(ctx, tx, existing)
 	if err != nil {
 		return err
 	}
-	if visible {
-		dup.ExistingID = existing
-	}
-	return dup
+	return &DuplicateLeadError{Email: *email, ExistingID: named}
 }
 
 // lockLeadLinkedInIdentity takes the LinkedIn write identity BEFORE either
@@ -107,13 +105,85 @@ func ensureLeadLinkedInUnclaimed(ctx context.Context, tx pgx.Tx, url *string) er
 	if err != nil || !found {
 		return err
 	}
-	dup := &DuplicateLeadLinkedInError{URL: *url}
-	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	named, err := nameableLead(ctx, tx, existing)
 	if err != nil {
 		return err
 	}
-	if visible {
-		dup.ExistingID = existing
+	return &DuplicateLeadLinkedInError{URL: *url, ExistingID: named}
+}
+
+// DuplicateContactLeadError refuses a second live lead worked from one
+// contact. ExistingID is set only when the caller may read that lead.
+type DuplicateContactLeadError struct {
+	ExistingID ids.LeadID
+}
+
+func (e *DuplicateContactLeadError) Error() string {
+	return "a live lead is already worked from this contact"
+}
+
+// Is maps the refusal onto the shared conflict sentinel, as its siblings do.
+func (e *DuplicateContactLeadError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// ensureContactNotWorked is the contact key's refusal. A contact with no email
+// and no LinkedIn profile has no other key, so without it a retried "Work as a
+// lead" mints a second lead. Racing writers queue on the contact row itself:
+// demote already holds it, so a separate lock taken after it could deadlock
+// against a create, and NO KEY UPDATE leaves the lead's foreign-key check free.
+// uq_lead_from_contact_live backs it up. A lead coming back to life passes
+// itself as except, so it is not refused over its own row.
+func ensureContactNotWorked(ctx context.Context, tx pgx.Tx, contactID *ids.ContactID, except *ids.LeadID) error {
+	if contactID == nil {
+		return nil
 	}
-	return dup
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR NO KEY UPDATE`, contactID); err != nil {
+		return fmt.Errorf("lock the contact a lead is worked from: %w", err)
+	}
+	var existing ids.LeadID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM lead WHERE from_contact_id = $1 AND archived_at IS NULL
+		   AND ($2::uuid IS NULL OR id <> $2)`, contactID, except).Scan(&existing)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("probe lead worked from contact: %w", err)
+	}
+	named, err := nameableLead(ctx, tx, existing)
+	if err != nil {
+		return err
+	}
+	return &DuplicateContactLeadError{ExistingID: named}
+}
+
+// nameableLead is the lead a duplicate refusal may name: the incumbent when the
+// caller could read it, and the zero id otherwise, so the 409 never discloses a
+// lead outside their sight. It decides nothing about the row being written.
+func nameableLead(ctx context.Context, tx pgx.Tx, existing ids.LeadID) (ids.LeadID, error) {
+	visible, err := auth.VisibleTo(ctx, tx, "lead", existing.UUID)
+	if err != nil || !visible {
+		return ids.LeadID{}, err
+	}
+	return existing, nil
+}
+
+// workedFromContact is the contact a lead row was worked from, or nil. Read off
+// the row: the wire lead withholds a contact its reader cannot open, and the
+// writers that need the link must see it either way.
+func workedFromContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (*ids.ContactID, error) {
+	var contact *ids.ContactID
+	if err := tx.QueryRow(ctx, `SELECT from_contact_id FROM lead WHERE id = $1`, leadID).Scan(&contact); err != nil {
+		return nil, fmt.Errorf("read the contact a lead was worked from: %w", err)
+	}
+	return contact, nil
+}
+
+// reopenedLeadContactFree refuses bringing a closed lead back to life while
+// another live lead is worked from its contact.
+func reopenedLeadContactFree(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) error {
+	contact, err := workedFromContact(ctx, tx, leadID)
+	if err != nil {
+		return err
+	}
+	return ensureContactNotWorked(ctx, tx, contact, &leadID)
 }

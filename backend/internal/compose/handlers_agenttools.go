@@ -34,6 +34,10 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			// representable).
 			continue
 		}
+		if spec.Unlisted {
+			// Never offered to a client, so this mirror does not show it.
+			continue
+		}
 		out = append(out, crmcontracts.AgentTool{
 			// Name doubles as the action verb in this registry (e.g.
 			// "search_records", "send_email"); OpenAPIOp is the
@@ -48,7 +52,7 @@ func agentToolsFromSpecs(specs []mcp.ToolSpec) []crmcontracts.AgentTool {
 			// text their agents actually select on.
 			Title:         spec.Title,
 			Description:   agents.DescribeForClient(spec),
-			RequiredScope: ptrString(string(spec.RequiredScope)),
+			RequiredScope: new(string(spec.RequiredScope)),
 			Tier:          tierWire(spec.Tier),
 			Egress:        spec.Egress,
 		})
@@ -73,5 +77,3 @@ func tierWire(t mcp.RiskTier) crmcontracts.AgentToolTier {
 	}
 	return crmcontracts.AgentToolTierConfirmationRequired // unreachable; conservative floor if a tier is added without updating this switch
 }
-
-func ptrString(v string) *string { return &v }

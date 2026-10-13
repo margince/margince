@@ -105,6 +105,20 @@ var shareableTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
+// actsForTheInstallation reports whether an actor reads an owner-private row.
+// It is the one widening capture privacy admits.
+//
+// A system job qualifies by construction, and so does a connector with no
+// human behind it. Such a run buys for the installation, not for a colleague.
+// Withholding the row protects nobody and loses the write. Object RBAC and
+// grants are untouched.
+func actsForTheInstallation(p principal.Principal) bool {
+	if p.Type == principal.PrincipalSystem {
+		return true
+	}
+	return p.Type == principal.PrincipalConnector && p.OnBehalfOf.IsZero()
+}
+
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
 // 'workspace' — everyone in the workspace, the default — or 'owner', the
 // capturing user's alone until a human edit or approval promotes it. Connector
@@ -223,9 +237,9 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	case ownerScoped:
 		scope = OwnerPredicate(p, arg)
 	}
-	// The system principal is trusted by construction and reads both
-	// arms away; an unbounded human still faces capture privacy.
-	private := bool(capture) && ownerPrivateTables[table] && p.Type != principal.PrincipalSystem
+	// An actor with no human behind it reads both arms away; an unbounded
+	// human still faces capture privacy.
+	private := bool(capture) && ownerPrivateTables[table] && !actsForTheInstallation(p)
 	// An actor who reads every row needs no grant arm to see a shareable
 	// row — unless capture privacy just took it away from them again.
 	shareable := shareableTables[table] && (!everyRow || private)
@@ -350,11 +364,19 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	return nil
 }
 
-// VisibleTo probes whether one row passes the caller's row scope WITHOUT
-// erroring — for the dedupe pre-checks, which must answer 409 either way
-// but may only disclose the existing row's id when the caller could read
-// it (existence-hiding must survive the conflict path).
+// VisibleTo probes whether the caller could read one row WITHOUT erroring —
+// for the dedupe pre-checks, which must answer 409 either way but may only
+// disclose the existing row's id when the caller could read it
+// (existence-hiding must survive the conflict path). Reading takes the
+// object grant as well as the row scope: a seat that may create a type and
+// not read it is told a duplicate exists, never which one.
 func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	if err := Require(ctx, table, principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
+	}
 	err := EnsureVisible(ctx, tx, table, id)
 	switch {
 	case err == nil:

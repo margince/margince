@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -11,8 +10,14 @@ import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import {
+  type BriefSentence,
+  type OpenReceipt,
+  SentenceList,
+  WrittenBy,
+} from "./record360";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -65,10 +70,12 @@ const BAND_TONES: Partial<Record<Band, "success" | "warning">> = {
 export function GrowthFitPanel({
   companyId,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   companyId: string;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -79,24 +86,20 @@ export function GrowthFitPanel({
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}/growth-fit", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/companies/{id}/growth-fit", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
   });
   const reassess = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/companies/{id}/growth-fit", {
-        params: { path: { id: companyId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/companies/{id}/growth-fit", {
+          params: { path: { id: companyId } },
+        }),
+      );
     },
     onSuccess: (data) =>
       queryClient.setQueryData(["company-growth-fit", companyId], data),
@@ -182,6 +185,7 @@ export function GrowthFitPanel({
           <GrowthFitReasons
             fit={readable}
             onOpenRecord={onOpenRecord}
+            onOpenReceipt={onOpenReceipt}
             onOpenEmail={onOpenEmail}
           />
         </>
@@ -294,10 +298,12 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
 function GrowthFitReasons({
   fit,
   onOpenRecord,
+  onOpenReceipt,
   onOpenEmail,
 }: Readonly<{
   fit: GrowthFit;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  onOpenReceipt: OpenReceipt;
   // Opens a cited message in the page's email drawer; see `Citations`.
   onOpenEmail?: (activityId: string) => void;
 }>) {
@@ -342,6 +348,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences ?? []}
                 onOpenRecord={onOpenRecord}
+                onOpenReceipt={onOpenReceipt}
                 onOpenEmail={onOpenEmail}
               />
             </div>
@@ -356,6 +363,7 @@ function GrowthFitReasons({
               <SentenceList
                 sentences={group.sentences}
                 onOpenRecord={onOpenRecord}
+                onOpenReceipt={onOpenReceipt}
                 onOpenEmail={onOpenEmail}
               />
             </GrowthFitRow>

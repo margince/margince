@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
@@ -46,6 +46,7 @@ const passports = () =>
         revoked_at: null,
       },
     ],
+    api_base_url: "https://crm.example.com/v1",
     page: { next_cursor: null, has_more: false },
   });
 
@@ -67,7 +68,7 @@ const tools = () =>
         name: "search_records",
         title: "Search records",
         description:
-          'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+          "Find contacts, companies, deals, leads and projects by name.",
         required_scope: "read",
         tier: "auto_execute",
         egress: false,
@@ -209,6 +210,14 @@ export const AgentsTabDark: Story = {
   render: tab("agents", agentsTabRoutes),
 };
 
+// At 390px. The code example wraps inside the card instead of widening it.
+export const AgentsTabPhone: Story = {
+  name: "Your agents — phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: tab("agents", agentsTabRoutes),
+};
+
 // The connector switched off: the guide has no commands to print, so its one row
 // says so and says what still works. It is the state a default install is in, and
 // it used to render as a bold line and a paragraph flush against the disclosure.
@@ -220,24 +229,25 @@ export const AgentsConnectorOff: Story = {
   }),
 };
 
-// AS-2 kill-switch: PassportCard revoke is a hard DELETE behind a ConfirmModal.
-// Mirrors share.stories' revoke play() — render the card with a live
-// (non-revoked) passport, click Revoke, leave the confirm modal open so the
-// guarded state is what the render gate captures.
+// The row's menu opens the revoke confirm, left open here so the guarded
+// state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const revokeButton = await canvas.findByRole("button", { name: "Revoke" });
-    await userEvent.click(revokeButton);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Actions for Scout" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Revoke Scout" }),
+    );
   },
 };
 
-// The mint DRAWER, which is where the create form lives now. It used to be a
-// row inside the card — a label, a name field, five scope ticks and the submit
-// on one flex line with one gap value between all eight — so nothing said where
-// the field ended and the choices began.
-export const PassportMintDrawer: Story = {
+// Minting: a name and five scope ticks in a confirm-width dialog, where the
+// token is then shown once.
+export const PassportMintDialog: Story = {
   name: "Mint a passport",
   render: tab("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
@@ -248,10 +258,55 @@ export const PassportMintDrawer: Story = {
   },
 };
 
-// The same drawer in dark, because the fieldset's legend, the checkbox rows and
+// After the mint: the passport once, with its own copy control, and the ways to
+// use it under it. The example keeps the variable, never the new value.
+const mintedRoutes = {
+  ...agentsTabRoutes,
+  "POST /passports": () =>
+    jsonResponse({
+      id: "pp-new",
+      label: "Claude Code on my laptop",
+      scopes: ["read", "draft"],
+      created_at: "2026-10-01T08:00:00Z",
+      expires_at: "2026-10-31T08:00:00Z",
+      revoked_at: null,
+      token: "mgp_example_passport",
+    }),
+};
+
+const mintPassport = async ({
+  canvasElement,
+}: {
+  canvasElement: HTMLElement;
+}) => {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "New passport" }),
+  );
+  // The Modal portals into the document body, outside the canvas.
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog"));
+  await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
+  await dialog.findByText("Next, use it");
+};
+
+export const PassportMinted: Story = {
+  name: "Mint a passport — minted",
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
+};
+
+export const PassportMintedDark: Story = {
+  name: "Mint a passport — minted, dark",
+  globals: { theme: "dark" },
+  render: tab("agents", mintedRoutes),
+  play: mintPassport,
+};
+
+// The same dialog in dark, because the fieldset's legend, the checkbox rows and
 // the recessed token plate are three surfaces whose separation is carried by
 // tokens that move between themes.
-export const PassportMintDrawerDark: Story = {
+export const PassportMintDialogDark: Story = {
   name: "Mint a passport — dark",
   globals: { theme: "dark" },
   render: tab("agents", agentsTabRoutes),
@@ -263,14 +318,10 @@ export const PassportMintDrawerDark: Story = {
   },
 };
 
-// The governed tool console renders the inventory unfiltered by default,
-// then strikes the send_email row once the read-only "Scout" passport (whose
-// only granted scope is "read") is selected — its required "send" scope
-// is absent from that grant.
+// The tool table unfiltered, then scoped to the read-only "Scout" passport: the
+// send_email row is struck, because "send" is not in that grant.
 const toolConsoleRoutes = agentsTabRoutes;
 
-// Selects the read-only passport, so the send_email row is dimmed. Shared with
-// the dark variant below, which is about that dimming and nothing else.
 const selectScoutPassport = async ({
   canvasElement,
 }: {
@@ -292,12 +343,6 @@ export const AgentToolConsole: Story = {
   play: selectScoutPassport,
 };
 
-// The unreachable row is dimmed, and dimming is the one signal that does not
-// survive a theme swap by construction: on a light ground it reads as "faded
-// toward the paper", on a dark one the same reduction moves the text toward the
-// background it is meant to stay legible against. This is the story that says
-// whether the dim row is still readable text or has become a grey smear — and
-// whether the tier/egress badges beside it still separate from each other.
 export const AgentToolConsoleDark: Story = {
   globals: { theme: "dark" },
   render: tab("agents", toolConsoleRoutes),
@@ -401,6 +446,10 @@ function fixtureStage(
     position: n,
     semantic,
     win_probability: winProbability,
+    version: 1,
+    ...(semantic === "open"
+      ? { exit_criteria: { required: n % 2, optional: n > 2 ? 1 : 0 } }
+      : {}),
   };
 }
 const pipelinesFixture = {
@@ -495,23 +544,16 @@ export const PipelinesReadOnly: Story = {
   render: pipelinesCard({ pipeline: ["read"] }),
 };
 
-// The narrow render of the ladder's own breakpoint. A `.stage-row` carries a
-// fixed step and odds track beside the verbs, so on a phone those ARE the width
-// and the stage name has nothing left; under 560px the verbs take a line of
-// their own instead. The ladder is what makes this the right story on this
-// page: the other cards answer their list routes from the stub's empty-page
-// fallback, so a page-level narrow story would picture empty states and a head.
+// The ladder at phone width. A page-level phone story would picture only empty
+// states, since the other cards answer from the stub's empty page.
 export const PipelinesAdminPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// And the dark render of the same page, the densest real content it has: the
-// catalog's compact strips, the open ladder's shading, the Won and Lost plates
-// beside the Default badge, and the `.t-num` odds. What it watches is whether the
-// outcome plates stay distinguishable from each other and from the rows behind
-// them once the ground goes dark: each is tinted text on a tinted surface.
+// The dark render of the same page, its densest real content. The compact
+// strips, the meters and the Default badge are each tinted on a tinted ground.
 export const PipelinesAdminDark: Story = {
   globals: { theme: "dark" },
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),

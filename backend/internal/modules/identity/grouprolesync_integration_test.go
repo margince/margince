@@ -63,8 +63,8 @@ func TestFederatedSignInGrantsTheMappedRoleOnce(t *testing.T) {
 		return map[string]string{"crm-users": "rep"}, nil
 	})
 
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
-		[]string{"crm-users", "some-unmapped-group"}); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email, Groups: []string{"crm-users", "some-unmapped-group"}}); err != nil {
 		t.Fatalf("LoginViaFederatedIdentity: %v", err)
 	}
 	if got := heldRoleKeys(t, conn, userID); !slices.Equal(got, []string{"rep"}) {
@@ -85,8 +85,8 @@ func TestFederatedSignInGrantsTheMappedRoleOnce(t *testing.T) {
 
 	// The SECOND sign-in changes nothing: the role is already held, so no new
 	// assignment, no second audit row — an unchanged login stays a login.
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
-		[]string{"crm-users"}); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email, Groups: []string{"crm-users"}}); err != nil {
 		t.Fatalf("second LoginViaFederatedIdentity: %v", err)
 	}
 	if got := heldRoleKeys(t, conn, userID); !slices.Equal(got, []string{"rep"}) {
@@ -105,15 +105,16 @@ func TestAMemberKeepsARoleWhoseGroupLeftTheMap(t *testing.T) {
 	roleMap := map[string]string{"crm-users": "rep"}
 	svc.WithGroupRoleMap(func(context.Context, pgx.Tx) (map[string]string, error) { return roleMap, nil })
 
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
-		[]string{"crm-users"}); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email, Groups: []string{"crm-users"}}); err != nil {
 		t.Fatalf("first LoginViaFederatedIdentity: %v", err)
 	}
 
 	// The admin retires the mapping AND the directory drops the member from
 	// the group — the strongest revocation the IdP side can express.
 	roleMap = map[string]string{}
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email, nil); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email}); err != nil {
 		t.Fatalf("second LoginViaFederatedIdentity: %v", err)
 	}
 	if got := heldRoleKeys(t, conn, userID); !slices.Equal(got, []string{"rep"}) {
@@ -127,8 +128,8 @@ func TestAnUnmappedGroupGrantsNothing(t *testing.T) {
 		return map[string]string{"crm-users": "rep"}, nil
 	})
 
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
-		[]string{"another-group-entirely"}); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email, Groups: []string{"another-group-entirely"}}); err != nil {
 		t.Fatalf("LoginViaFederatedIdentity: %v", err)
 	}
 	if got := heldRoleKeys(t, conn, userID); len(got) != 0 {
@@ -150,8 +151,8 @@ func TestAStaleMapEntryIsSkippedAndTheSignInSucceeds(t *testing.T) {
 		return map[string]string{"crm-users": "a_role_since_retired"}, nil
 	})
 
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email,
-		[]string{"crm-users"}); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email, Groups: []string{"crm-users"}}); err != nil {
 		t.Fatalf("a stale map entry failed the login: %v", err)
 	}
 	if got := heldRoleKeys(t, conn, userID); len(got) != 0 {
@@ -169,8 +170,8 @@ func TestGroupsOnANeverInvitedEmailStillRefuse(t *testing.T) {
 	})
 
 	strangerEmail := "stranger@example.com"
-	_, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-stranger", strangerEmail,
-		[]string{"crm-admins"})
+	_, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-stranger", Email: strangerEmail, Groups: []string{"crm-admins"}})
 	if !errors.Is(err, ErrFederatedSignInRefused) {
 		t.Fatalf("err = %v, want ErrFederatedSignInRefused — the map grants roles, never accounts", err)
 	}
@@ -193,7 +194,8 @@ func TestAGrouplessTokenNeverReadsTheMap(t *testing.T) {
 		return map[string]string{}, nil
 	})
 
-	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google", "sub-1", email, nil); err != nil {
+	if _, err := svc.LoginViaFederatedIdentity(groupSyncCtx(), "google",
+		OIDCClaims{Subject: "sub-1", Email: email}); err != nil {
 		t.Fatalf("LoginViaFederatedIdentity: %v", err)
 	}
 }

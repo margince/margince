@@ -118,17 +118,25 @@ func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
 // buyer with a fresh message and no thread behind it.
 //
 // The OPERAND is what tells them apart, and it is not a heuristic. The card's
-// arms are exhaustive: unansweredInbound names the mail being answered, so its
-// move carries an activity_id; firstOutreach names nobody yet, so its move
-// carries no arguments at all. A `draft_email` with a record is a reply.
+// arms are exhaustive. unansweredInbound names the mail being answered, so its
+// move carries an activity_id. firstOutreach names nobody yet, so its move
+// carries no arguments at all. The follow-up after a meeting names the meeting
+// and links the contacts it goes to. A `draft_email` with a record and no
+// recipients is a reply. One with recipients starts a conversation, so it
+// names no record to answer.
 //
-// Held by: TestAnUnansweredMailReachesTheRowAsAReply (dealmoves_test.go)
+// Held by: TestAnUnansweredMailReachesTheRowAsAReply and
+// TestAMeetingFollowUpReachesTheRowAsAFreshMessage (dealmoves_test.go)
 func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.WorklistMove {
 	out := &crmcontracts.WorklistMove{Action: crmcontracts.WorklistMoveAction(decided.Action)}
 	if decided.Arguments == nil {
 		return out
 	}
 	args := *decided.Arguments
+	out.Arguments = &args
+	if _, addressed := args["links"]; addressed && out.Action == crmcontracts.WorklistMoveActionDraftEmail {
+		return out
+	}
 	if id, ok := NamedActivityArgument(args); ok {
 		named := openapi_types.UUID(id)
 		out.ActivityId = &named
@@ -136,7 +144,6 @@ func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.Workl
 			out.Action = crmcontracts.WorklistMoveActionDraftReply
 		}
 	}
-	out.Arguments = &args
 	return out
 }
 

@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -179,12 +180,7 @@ func userReactivatedPayload(userID, by ids.UserID, status string) crmcontracts.P
 // RBAC policy documents do not cover (user administration is not a
 // record-type permission).
 func (id Identity) hasRole(key string) bool {
-	for _, r := range id.Roles {
-		if r == key {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(id.Roles, key)
 }
 
 // actorCtx binds the acting identity as the storekit principal. The

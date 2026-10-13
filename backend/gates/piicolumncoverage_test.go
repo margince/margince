@@ -5,7 +5,7 @@
 
 package gates
 
-// The Art. 17 redaction, judged by COLUMN rather than by table.
+// The Art. 17 redaction, judged by column rather than by table.
 //
 // piicoverage_test.go asks whether erasure writes a registered PII table at
 // all. That question is satisfied by any UPDATE touching it, which is why
@@ -62,6 +62,10 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
+	// The evidence ledger's closed vocabularies: source kind, author side,
+	// commitment and writer. The snippet is the column that quotes the subject,
+	// and the redaction clears it.
+	"deal_stage_evidence": {"source_type", "author_side", "commitment", "extracted_by"},
 	// A decision's own vocabulary: what kind of message it was, what the engine
 	// and the old gate each answered, and which rollout mode was in force. Every
 	// value is drawn from a closed set this repository defines — none of it is
@@ -112,6 +116,8 @@ var erasureColumnBaseline = map[string][]string{
 	// prose a colleague typed and can name or quote the subject.
 	"data_subject_request": {
 		"channel",
+		// The rule set the deadline came from: "gdpr" or "<code> v<N>".
+		"due_rule",
 		"kind",
 		"receipt_reference",
 		"status",
@@ -133,6 +139,9 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// One of the eight iCalendar method words RFC 5546 defines, enforced by
+		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
+		"calendar_method",
 		// A digest of the product's own classifier prompt, naming which rules
 		// reached the verdict beside it. Nothing the subject wrote and nothing
 		// derived from what they wrote — the same string on every row one build
@@ -194,6 +203,9 @@ var erasureColumnBaseline = map[string][]string{
 		// which put the address back on the one table whose whole point is that
 		// the address copy is scrubbed.
 		"from_name",
+		// The storage key of the workspace's own logo the markup embeds. It
+		// names the workspace's mark and is the same on every delivery.
+		"inline_logo_key",
 		"in_reply_to",
 		"message_id",
 		"provider",
@@ -346,7 +358,7 @@ func sqlConstants(t *testing.T, dirs ...string) map[string]string {
 	// literals; the second renders the rest against them, so a value whose
 	// WHERE clause is assembled still yields its readable SET clause instead of
 	// the whole declaration going dark.
-	for pass := 0; pass < 2; pass++ {
+	for pass := range 2 {
 		for _, d := range declared {
 			text := renderSQL(d.value, out)
 			if pass == 0 && strings.Contains(text, unresolved) {

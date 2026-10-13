@@ -16,9 +16,11 @@ import {
 } from "../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
+import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { throwProblem } from "../lib/problem";
 import {
   suggestionsFor,
   useAiModelCatalogue,
@@ -26,9 +28,8 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "./ai-models";
-import { useSetProviderKey } from "./ai-provider-keys";
+import { useSetProviderKey } from "./ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
-import { throwProblem, WriteRefused } from "./common";
 import { ImapMailboxForm } from "./imap-connect-form";
 import {
   usePlatformDeclined,
@@ -36,13 +37,13 @@ import {
 } from "./installation-setup.decline";
 import { AiBindRefused } from "./installation-setup.notices";
 import {
-  RedirectUris,
   useOAuthApp,
   useSetOAuthApp,
   VENDOR_CONSOLE,
   type Vendor,
   vendorCopy,
 } from "./oauth-app";
+import { RedirectUris } from "./oauth-redirects";
 import { CORE_LABELS } from "./onboarding-core-label";
 import { Ignition, useIgnitionCore } from "./onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
@@ -289,7 +290,10 @@ function AiStep({
         secret: apiKey.trim(),
       },
       {
-        onSuccess: () =>
+        // The key is stored, so its copy in the mutation goes now, before a
+        // binding that may fail keeps it there; the field keeps its own.
+        onSuccess: () => {
+          saveKey.reset();
           bind.mutate(
             {
               provider: preset.provider,
@@ -305,14 +309,14 @@ function AiStep({
                 // Both landed, so the field has done its job and this is the
                 // only copy of the key the app was holding.
                 setApiKey("");
-                saveKey.reset();
                 // And the screen becomes the ignition. Nothing is refetched
                 // yet: see `useBindModels` for why the reader, not the query,
                 // decides when this step is over.
                 onIgnite(preset.label);
               },
             },
-          ),
+          );
+        },
       },
     );
   };

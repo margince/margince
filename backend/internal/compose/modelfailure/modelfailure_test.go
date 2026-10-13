@@ -135,3 +135,33 @@ func TestAnErrorThatIsNotTheModelLaneIsNotAnsweredAsOne(t *testing.T) {
 		t.Errorf("a missing record reached Write and was answered %d rather than httperr's 404", rec.Code)
 	}
 }
+
+// A BLOCKED PROVIDER is answered with the reason the administrator can act on,
+// and with nothing of the provider's own.
+func TestAProviderTheRouterBlockedIsAnsweredWithItsReason(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		health   model.ProviderHealth
+		wantCode string
+	}{
+		"an account with no credit": {model.HealthOutOfCredit, codeProviderOutOfCredit},
+		"a refused credential":      {model.HealthUnauthorized, codeProviderUnauthorized},
+		"a provider that is down":   {model.HealthDown, codeProviderUnavailable},
+		"a degraded provider":       {model.HealthDegraded, codeProviderUnavailable},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			blocked := &ai.ProviderDownError{Provider: "PROVIDER-HOST", Health: tc.health}
+			rec := httptest.NewRecorder()
+			Write(rec, httptest.NewRequest(http.MethodPost, "/", nil), fmt.Errorf("walk: %w", blocked))
+			body := rec.Body.String()
+			if rec.Code != http.StatusServiceUnavailable || !strings.Contains(body, tc.wantCode) {
+				t.Errorf("want 503 %s, got %d %s", tc.wantCode, rec.Code, body)
+			}
+			if !strings.Contains(body, "system administrator") || strings.Contains(body, "PROVIDER-HOST") {
+				t.Errorf("the detail must send the reader to their administrator and name no provider: %s", body)
+			}
+		})
+	}
+}

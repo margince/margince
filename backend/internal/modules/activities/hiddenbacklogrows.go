@@ -15,6 +15,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -50,10 +51,7 @@ const (
 func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 	switch rule {
 	case HiddenRuleSetAside:
-		// The zero reader matches no reader_state row, which is how the
-		// set-aside figure is taken — the rule is relaxed by forgetting whose
-		// set-asides they were.
-		return waitingRelaxation{reader: ids.UUID{}}, true
+		return waitingRelaxation{reader: reader, keepSetAside: true}, true
 	case HiddenRuleNotSales:
 		return waitingRelaxation{reader: reader, keepNotSales: true}, true
 	case HiddenRulePastHorizon:
@@ -74,7 +72,31 @@ func relaxationFor(rule HiddenRule, reader ids.UUID) (waitingRelaxation, bool) {
 // A refusal rather than an empty list: "no rows behind that rule" and "there is
 // no such rule" are different answers, and returning the first for the second
 // would let a typo read as a clean queue.
-var ErrUnknownHiddenRule = fmt.Errorf("activities: unknown hiding rule")
+var ErrUnknownHiddenRule = errors.New("activities: unknown hiding rule")
+
+// UnknownHiddenRuleError is that refusal with the field it is about, so the
+// transport answers 422 rather than a server fault.
+//
+// The endpoint's handler used to say the generated router validated the path
+// enum before the request arrived. It does not.
+//
+// So this refusal was the only thing between a mistyped rule and the store.
+// It reached the caller as `500 internal`, because a bare sentinel names no
+// field.
+//
+// It wraps the sentinel, so a caller testing errors.Is still sees it.
+type UnknownHiddenRuleError struct{ Rule string }
+
+func (e *UnknownHiddenRuleError) Error() string {
+	return "unknown hiding rule " + e.Rule
+}
+
+func (e *UnknownHiddenRuleError) Unwrap() error { return ErrUnknownHiddenRule }
+
+// FieldFault names the path parameter the caller can correct.
+func (e *UnknownHiddenRuleError) FieldFault() (field, code, message string) {
+	return "rule", "invalid_enum", e.Error()
+}
 
 // HiddenWaitingRows lists the threads one rule is holding back.
 //
@@ -96,14 +118,13 @@ func (s *Store) HiddenWaitingRows(
 	reader := readerOrNobody(ctx)
 	relax, known := relaxationFor(rule, reader)
 	if !known {
-		return nil, fmt.Errorf("%w: %q", ErrUnknownHiddenRule, rule)
+		return nil, &UnknownHiddenRuleError{Rule: string(rule)}
 	}
 	var out []WaitingReply
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// One horizon for both halves, for the reason HiddenWaiting measures it
-		// once: two cutoffs would make the difference report a change in the
-		// clock rather than the rule being relaxed.
-		measured, err := s.waitingHorizonFor(ctx, tx, asOf)
+		// One horizon for both halves, as in HiddenWaiting: two cutoffs would
+		// make the difference report a changed clock, not the relaxed rule.
+		measured, err := s.waitingHorizonFor(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -117,7 +138,8 @@ func (s *Store) HiddenWaitingRows(
 			return err
 		}
 		strict, err := s.waitingStatement(
-			ctx, tx, asOf, waitingRelaxation{reader: reader}, measured, arg)
+			ctx, tx, asOf, waitingRelaxation{reader: reader}, measured, arg,
+		)
 		if err != nil {
 			return err
 		}
@@ -133,7 +155,8 @@ func (s *Store) HiddenWaitingRows(
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
 				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
-				&row.Engaged, &row.OwnerID, &row.Threaded); err != nil {
+				&row.Engaged, &row.OwnerID, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
+				&row.MeetingBookedAt); err != nil {
 				return err
 			}
 			out = append(out, row)

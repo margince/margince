@@ -1,3 +1,4 @@
+import { Badge } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { formatDateTime } from "../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
@@ -95,14 +96,16 @@ export function ChartContext({
             )}
           </p>
         )}
+        {chart.coverage.status !== "ok" && chart.coverage.reason && (
+          <p>{chart.coverage.reason}</p>
+        )}
       </Popover>
+      {/* Coverage short of complete is said beside the period, where it
+          qualifies the figure; the reason joins the details above. */}
       {chart.coverage.status !== "ok" && (
-        <Popover onHover label={t(`reporting.status.${chart.coverage.status}`)}>
-          <p>
-            {chart.coverage.reason ??
-              t(`reporting.status.${chart.coverage.status}`)}
-          </p>
-        </Popover>
+        <Badge tone="warning">
+          {t(`reporting.status.${chart.coverage.status}`)}
+        </Badge>
       )}
       {chart.capture_status?.failure && (
         <p className="t-caption" role="status">

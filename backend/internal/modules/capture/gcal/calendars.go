@@ -6,7 +6,7 @@ package gcal
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 
@@ -23,7 +23,7 @@ const (
 func (a *httpAPI) List(ctx context.Context, token string) ([]connector.CalendarOption, error) {
 	query := url.Values{calendarMaxResults: {"250"}, "minAccessRole": {"reader"}}
 	calendars := []connector.CalendarOption{}
-	for page := 0; page < 20; page++ {
+	for range 20 {
 		var result struct {
 			Next  string `json:"nextPageToken"`
 			Items []struct {
@@ -47,5 +47,5 @@ func (a *httpAPI) List(ctx context.Context, token string) ([]connector.CalendarO
 		}
 		query.Set("pageToken", result.Next)
 	}
-	return nil, fmt.Errorf("calendar: incomplete calendar list")
+	return nil, errors.New("calendar: incomplete calendar list")
 }

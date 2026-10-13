@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor } from "storybook/test";
 import { ImapConnectForm } from "./imap-connect-form";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -33,6 +33,39 @@ async function fillAndSubmit() {
   await userEvent.click(canvas.getByRole("button", { name: "Connect" }));
 }
 
+// The refusal lands at the foot of a scrolling form, so it has to bring itself
+// into the scroller's view: at the harness's 1024x720 it starts below the fold,
+// and on a phone the action row pinned to the sheet's foot would cover it.
+async function expectRefusalInView(sentence: RegExp) {
+  const refusal = (await screen.findByText(sentence)).closest("[role=alert]");
+  const actions = refusal?.closest(".modal")?.querySelector(".actions");
+  if (!(refusal instanceof HTMLElement) || !actions) {
+    throw new Error("the refusal is not announced as an alert in the dialog");
+  }
+  await waitFor(() => {
+    const view = scrollerOf(refusal).getBoundingClientRect();
+    const line = refusal.getBoundingClientRect();
+    expect(line.top).toBeGreaterThanOrEqual(view.top);
+    expect(line.bottom).toBeLessThanOrEqual(view.bottom);
+    expect(line.bottom).toBeLessThanOrEqual(
+      actions.getBoundingClientRect().top,
+    );
+  });
+}
+
+function scrollerOf(element: HTMLElement): Element {
+  for (let box = element.parentElement; box; box = box.parentElement) {
+    const { overflowY } = getComputedStyle(box);
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      box.scrollHeight > box.clientHeight
+    ) {
+      return box;
+    }
+  }
+  return document.documentElement;
+}
+
 export const Idle: Story = {
   render: () => {
     installFetchStub({});
@@ -41,6 +74,9 @@ export const Idle: Story = {
         <ImapConnectForm open onClose={() => {}} />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    await screen.findByRole("dialog");
   },
 };
 
@@ -64,7 +100,7 @@ export const LoginRejected: Story = {
   },
   play: async () => {
     await fillAndSubmit();
-    await screen.findByText(/rejected these credentials/i);
+    await expectRefusalInView(/rejected these credentials/i);
   },
 };
 
@@ -89,7 +125,7 @@ export const Unreachable: Story = {
   },
   play: async () => {
     await fillAndSubmit();
-    await screen.findByText(/could not be reached/i);
+    await expectRefusalInView(/could not be reached/i);
   },
 };
 
@@ -121,7 +157,7 @@ export const LoginRejectedDark: Story = {
   },
   play: async () => {
     await fillAndSubmit();
-    await screen.findByText(/rejected these credentials/i);
+    await expectRefusalInView(/rejected these credentials/i);
   },
 };
 
@@ -148,4 +184,11 @@ export const IdlePhone: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const LoginRejectedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: LoginRejected.render,
+  play: LoginRejected.play,
 };

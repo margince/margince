@@ -279,3 +279,44 @@ func TestARateSheetApprovalIsAnnouncedOnlyForThisWorkspace(t *testing.T) {
 		})
 	}
 }
+
+// A file's events ride the grant on the record it hangs off, and are refused
+// above the row probe when that grant is missing.
+//
+// There is no attachment object grant to hold, so the only thing that can admit
+// a file's event is a read on its parent. This resolves without a database
+// because objectReadable answers before any probe runs, and the nil pool is the
+// assertion: a path that reached the row probe would panic rather than answer.
+func TestAFileEventIsRefusedWithoutAReadOnTheParentRecord(t *testing.T) {
+	s := NewStore(nil, nil)
+
+	// A contact grant, asked about a company's file. The question is the
+	// parent's kind, not the file's.
+	visible, err := s.recordVisible(
+		readerOf("contact", principal.ObjectGrant{Read: true}), "company", ids.NewV7(),
+	)
+	if err != nil {
+		t.Fatalf("probing a company file for a contact-only reader: %v", err)
+	}
+	if visible {
+		t.Error("an owner with no read on the parent record received its file's events")
+	}
+}
+
+// The activity arm is its own predicate, and it is refused at the same floor.
+// An activity's content visibility is a different rule from the shared one, so
+// the grant check has to hold for it too rather than only for the records that
+// go through EnsureVisible.
+func TestAFileOnAnActivityIsRefusedWithoutAnActivityRead(t *testing.T) {
+	s := NewStore(nil, nil)
+
+	visible, err := s.recordVisible(
+		readerOf("company", principal.ObjectGrant{Read: true}), "activity", ids.NewV7(),
+	)
+	if err != nil {
+		t.Fatalf("probing an activity file for a company-only reader: %v", err)
+	}
+	if visible {
+		t.Error("an owner with no activity read received a mail attachment's events")
+	}
+}

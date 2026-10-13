@@ -135,8 +135,7 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 			if err == nil {
 				t.Fatalf("%s was accepted — the value would be discarded with no signal", tc.wantNamed)
 			}
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Fatalf("err = %v, want a BadArgsError the tool surface explains", err)
 			}
 			if !strings.Contains(err.Error(), tc.wantNamed) {
@@ -291,8 +290,7 @@ func TestWriteToolsRefuseTheCustomFieldPrefixWithNoSlug(t *testing.T) {
 			if err == nil {
 				t.Fatalf("%s was accepted — the value would be discarded with no signal", fields)
 			}
-			var bad *BadArgsError
-			if !errors.As(err, &bad) {
+			if _, ok := errors.AsType[*BadArgsError](err); !ok {
 				t.Errorf("err = %v, want a BadArgsError the tool surface explains", err)
 			}
 		})

@@ -1,16 +1,26 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CompanyRejectAction } from "./companyreject";
+
+const confirmButton = () =>
+  within(screen.getByRole("dialog")).getByRole("button", {
+    name: "Not a company",
+  });
 
 // Every capability predicate reads false while /me is in flight, so an absence
 // asserted on the first frame passes whatever the grants say. This is the row
@@ -107,6 +117,8 @@ const rejected = () =>
         domain: "mail.expensify.test",
         admission: "suppressed",
         reason: "a tool we use",
+        reason_code: "stated",
+        note: "a tool we use",
         source: "human",
         decided_at: "2026-09-08T10:00:00Z",
       },
@@ -142,7 +154,7 @@ it("rejects a company in one request and reports the domain the server refused",
     screen.getByLabelText(/reason this is not a company/i),
     "a tool we use",
   );
-  await user.click(screen.getByTestId("reject-company-confirm"));
+  await user.click(confirmButton());
 
   // ONE. Two calls is the defect this verb exists to end, and a count is the
   // only assertion that sees it: both orders of the old pair produced a
@@ -210,12 +222,12 @@ it("will not send until a reason is written", async () => {
   render(<CompanyRejectAction company={COMPANY} />);
 
   await user.click(await screen.findByTestId("reject-company"));
-  expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
+  expect(confirmButton()).toBeDisabled();
   await user.type(
     screen.getByLabelText(/reason this is not a company/i),
     "   ",
   );
-  expect(screen.getByTestId("reject-company-confirm")).toBeDisabled();
+  expect(confirmButton()).toBeDisabled();
   expect(sent).toHaveLength(0);
 });
 
@@ -235,7 +247,7 @@ it("mints a new idempotency key for each confirmation", async () => {
       screen.getByLabelText(/reason this is not a company/i),
       reason,
     );
-    await user.click(screen.getByTestId("reject-company-confirm"));
+    await user.click(confirmButton());
     await screen.findByRole("status");
   }
 

@@ -1,18 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Calendar,
-  Euro,
-  Hash,
-  List,
-  type LucideIcon,
-  ToggleRight,
-  Type,
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -24,16 +14,17 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
+import { NameDialog } from "../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
-import { AuditEntryLine } from "./audit";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
@@ -47,8 +38,14 @@ import {
   slug,
 } from "./customfields.logic";
 import { RetireFieldConfirm } from "./customfields.retire";
+import {
+  AuditRail,
+  auditState,
+  type CustomField,
+  FieldTable,
+  STAGED_ID,
+} from "./customfields.table";
 import "./customfields.css";
-import { stable } from "../format/collate";
 
 // The add-field builder (AC-custom-fields-3..5/8): a governed form that turns a
 // human's plain label into one typed scalar column on an existing object. The
@@ -58,19 +55,6 @@ import { stable } from "../format/collate";
 // is NOT the Accept/Edit/Dismiss triad — it is a `warning` Callout,
 // which is what the surface saying something about itself already looks like
 // everywhere else.
-
-// One glyph per scalar type, so a field's shape reads at a glance in the table.
-// Decorative only — every use is aria-hidden, so the accessible name stays the
-// translated type word.
-const TYPE_ICON: Record<CfType, LucideIcon> = {
-  text: Type,
-  number: Hash,
-  date: Calendar,
-  currency: Euro,
-  picklist: List,
-  multiselect: List,
-  boolean: ToggleRight,
-};
 
 export type NewFieldDraft = {
   object: CfObject;
@@ -135,128 +119,120 @@ export function FieldBuilder({
   };
 
   return (
-    <div className="cf-builder">
-      <div className="cf-builder-head">
-        <p className="cf-hint">{t("cf.builder.intro")}</p>
-        <Badge>{t("cf.builder.noCode")}</Badge>
-      </div>
-
-      <div className="cf-grid">
-        <Field label={t("cf.label")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={apiKey(object, label)}
-              disabled
-              readOnly
-            />
-          )}
-        </Field>
-      </div>
-
-      {/* One closed set of options, all visible at once — the definition of
-          SegmentedControl. It replaced a six-tile icon grid that was the same
-          `aria-pressed` button in a third chrome, and whose glyphs were
-          aria-hidden decoration the accessible name never carried. Losing them
-          costs the reader nothing; the type still reads on every row of the
-          table above, where it names a field rather than a choice. */}
-      <div className="field">
-        <span className="t-label">{t("cf.typeLabel")}</span>
-        <SegmentedControl
-          label={t("cf.typeLabel")}
-          options={CF_TYPES}
-          value={type}
-          onChange={setType}
-          labels={typeLabels(t)}
-        />
-      </div>
-
-      {type === "currency" && (
-        <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={currency}
-              maxLength={3}
-              onChange={(event) =>
-                setCurrency(event.target.value.toUpperCase())
-              }
-            />
-          )}
-        </Field>
-      )}
-
-      {(type === "picklist" || type === "multiselect") && (
-        <div className="field">
-          <span className="t-label">{t("cf.options")}</span>
-          <div className="cf-options">
-            {options.map((option, idx) => (
-              // Option rows have no stable id (they are user-typed values that
-              // may repeat), so the row index is the only honest key here.
-              // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
-              <div className="cf-option-row" key={idx}>
-                <TextInput
-                  aria-label={t("cf.optionPlaceholder")}
-                  placeholder={t("cf.optionPlaceholder")}
-                  value={option}
-                  onChange={(event) => setOptionAt(idx, event.target.value)}
-                />
-                <Button
-                  iconOnly
-                  aria-label={t("cf.removeOption")}
-                  onClick={() => removeOption(idx)}
-                >
-                  <X aria-hidden="true" />
-                </Button>
-              </div>
-            ))}
-          </div>
-          <Button onClick={() => setOptions((current) => [...current, ""])}>
-            {t("cf.addOption")}
-          </Button>
+    <>
+      <div className="form-stack">
+        <div className="cf-builder-head">
+          <p className="cf-hint">{t("cf.builder.intro")}</p>
+          <Badge>{t("cf.builder.noCode")}</Badge>
         </div>
-      )}
 
-      {structural && (
-        <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
-          <p>{t("cf.refuse.body")}</p>
-          <p>{t("cf.refuse.route")}</p>
+        <div className="cf-grid">
+          <Field label={t("cf.label")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("cf.apiKey")} hint={t("cf.apiKeyHint")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={apiKey(object, label)}
+                disabled
+                readOnly
+              />
+            )}
+          </Field>
+        </div>
+
+        <div className="field">
+          <span className="t-label">{t("cf.typeLabel")}</span>
+          <SegmentedControl
+            label={t("cf.typeLabel")}
+            options={CF_TYPES}
+            value={type}
+            onChange={setType}
+            labels={typeLabels(t)}
+          />
+        </div>
+
+        {type === "currency" && (
+          <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={currency}
+                maxLength={3}
+                onChange={(event) =>
+                  setCurrency(event.target.value.toUpperCase())
+                }
+              />
+            )}
+          </Field>
+        )}
+
+        {(type === "picklist" || type === "multiselect") && (
+          <div className="field">
+            <span className="t-label">{t("cf.options")}</span>
+            <div className="cf-options">
+              {options.map((option, idx) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: option rows are positional, not identity-keyed
+                <div className="cf-option-row" key={idx}>
+                  <TextInput
+                    aria-label={t("cf.optionPlaceholder")}
+                    placeholder={t("cf.optionPlaceholder")}
+                    value={option}
+                    onChange={(event) => setOptionAt(idx, event.target.value)}
+                  />
+                  <Button
+                    iconOnly
+                    aria-label={t("cf.removeOption")}
+                    onClick={() => removeOption(idx)}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button onClick={() => setOptions((current) => [...current, ""])}>
+              {t("cf.addOption")}
+            </Button>
+          </div>
+        )}
+
+        {structural && (
+          <Callout tone="danger" kind="standing" title={t("cf.refuse.title")}>
+            <p>{t("cf.refuse.body")}</p>
+            <p>{t("cf.refuse.route")}</p>
+          </Callout>
+        )}
+
+        {/* `warning`: confirmed unread, the column lands on every record. */}
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={
+            <>
+              <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
+            </>
+          }
+        >
+          <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
+          <code className="cf-ddl t-caption">
+            {ddlPreview(object, label, type, currency)}
+          </code>
         </Callout>
-      )}
-
-      {/* `warning`: nothing is wrong yet, and something will be if the reader
-          confirms unread — the column goes live on every record of this object.
-          The dot rides in the title, so tier and sentence are one line. */}
-      <Callout
-        tone="warning"
-        kind="standing"
-        title={
-          <>
-            <AutonomyDot tier="confirm" /> {t("cf.gate.title")}
-          </>
-        }
-      >
-        <p>{t("cf.gate.body", { object: t(`cf.obj.${object}`) })}</p>
-        <code className="cf-ddl t-caption">
-          {ddlPreview(object, label, type, currency)}
-        </code>
-      </Callout>
+      </div>
 
       {/* Cancel first, then the verb that writes — the order every dialog in
           this tree uses, so the destructive-looking half is never where the
           reader's hand expects the safe one. Reset went with the disclosure
           this form used to live in: closing the dialog discards the draft, so
           a control that empties the inputs in place has nothing left to do. */}
-      <div className="cf-actions">
+      <div className="actions">
         <Button variant="ghost" onClick={onCancel}>
           {t("deals.cancel")}
         </Button>
@@ -264,221 +240,11 @@ export function FieldBuilder({
           {t("cf.confirm")}
         </Button>
       </div>
-    </div>
+    </>
   );
 }
 
-// The two option sets this screen switches on, each as the flat label map
-// SegmentedControl takes. Spelled out rather than derived from the tuple so
-// every key is checked against the catalog at compile time — a mapped
-// `Object.fromEntries` would need a cast to get back to Record<Option, string>,
-// and a cast is exactly what stops a missing translation being a build error.
-type CustomField = components["schemas"]["CustomField"];
 type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
-type AuditLogEntry = components["schemas"]["AuditLogEntry"];
-
-// The sentinel id for the optimistic "writing…" row the create mutation stages
-// into the list cache before the server commits — a real field id is a UUID, so
-// this never collides with one, and the table gives it the pending treatment.
-const STAGED_ID = "staged";
-
-// The custom-fields listing for one object (AC-custom-fields-1): every field's
-// immutable cf_ API key, its typed chip, and who added it, plus the rename /
-// archive affordances — rendered only for a manager whose call the server would
-// honour. A retired field is not removed (retire is a reversible status flip,
-// CUSTOM-FIELDS-AC-13): it stays in the list, struck through and badged, so the
-// history the audit trail retains is legible at a glance. DataTable owns no
-// per-row class hook, so the retired treatment lives inside the field cell.
-export function FieldTable({
-  object,
-  fields,
-  canEdit,
-  meUserId,
-  onRename,
-  onArchive,
-}: Readonly<{
-  object: CfObject;
-  fields: CustomField[];
-  // Both affordances this gates are updates: renaming relabels a live field,
-  // and retiring one is a lifecycle transition that keeps the column and its
-  // history. Neither is custom_field:delete, which no surface offers.
-  canEdit: boolean;
-  meUserId?: string;
-  onRename: (field: CustomField) => void;
-  onArchive: (field: CustomField) => void;
-}>) {
-  const t = useT();
-
-  if (fields.length === 0) {
-    return <EmptyState>{t(`cf.empty.${object}`)}</EmptyState>;
-  }
-
-  const typeChip = (field: CustomField): string => {
-    const base = t(`cf.type.${field.type}`);
-    if (field.type === "picklist" || field.type === "multiselect") {
-      return `${base} · ${field.options?.length ?? 0}`;
-    }
-    if (field.type === "currency") {
-      return `${base} · ${field.currency ?? ""}`;
-    }
-    return base;
-  };
-
-  const columns: {
-    key: string;
-    header: string;
-    render: (field: CustomField) => React.ReactNode;
-  }[] = [
-    {
-      key: "field",
-      header: t("cf.col.field"),
-      render: (field) => {
-        const staged = field.id === STAGED_ID;
-        let cellClass: string | undefined;
-        if (staged) {
-          cellClass = "cf-cell-staged";
-        } else if (field.status === "retired") {
-          cellClass = "cf-cell-retired";
-        }
-        const Icon = TYPE_ICON[field.type];
-        return (
-          <div className="cf-fieldcell">
-            <span className="cf-fieldicon" aria-hidden>
-              <Icon />
-            </span>
-            <div className="cf-fieldmeta">
-              <span className="cf-fieldname">
-                <span className={cellClass}>{field.label}</span>
-                {field.status === "retired" && (
-                  <Badge tone="warning">{t("cf.retired")}</Badge>
-                )}
-              </span>
-              <span className="cf-key">
-                {`${field.object}.${field.column_name}`}
-              </span>
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      key: "type",
-      header: t("cf.col.type"),
-      render: (field) => {
-        return <Badge icon={TYPE_ICON[field.type]}>{typeChip(field)}</Badge>;
-      },
-    },
-    {
-      key: "addedBy",
-      header: t("cf.col.addedBy"),
-      render: (field) =>
-        meUserId === field.created_by
-          ? t("cf.addedByYou")
-          : t("cf.addedByAdmin"),
-    },
-  ];
-
-  if (canEdit) {
-    columns.push({
-      key: "actions",
-      header: "",
-      // The optimistic staged row is not yet a real field: it has no id the
-      // server would honour, so it wears the "writing…" note instead of the
-      // rename/archive affordances until the create commits and replaces it.
-      render: (field) =>
-        field.id === STAGED_ID ? (
-          <span className="cf-cell-staged">{t("cf.writing")}</span>
-        ) : (
-          <div className="cf-rowactions">
-            {/* Two ghost verbs. Archiving a field hides it from new records and
-                keeps every value already captured — the toast says so, and the
-                act is reversible — so `danger` overstated it: three solid red
-                buttons per table were the loudest thing on the tab, which is
-                the shout a reader learns to ignore. An `aria-label` repeating
-                the button's own words is not a name either; the text is the
-                name. */}
-            <Button onClick={() => onRename(field)}>{t("cf.edit")}</Button>
-            <Button onClick={() => onArchive(field)}>{t("cf.archive")}</Button>
-          </div>
-        ),
-    });
-  }
-
-  return (
-    <DataTable
-      label={t("cf.listLabel", { object: objectLabels(t)[object] })}
-      columns={columns}
-      rows={fields}
-      rowKey={(field) => field.id}
-    />
-  );
-}
-
-// The custom-field audit rail (AC-custom-fields-6/7): a most-recent-first,
-// read-only projection of the audit_log rows this screen's changes emit. It
-// renders only the fields the AuditLogEntry contract actually carries — the
-// action, the entity it touched, the actor, and when — never an invented
-// display name.
-//
-// Loading, failed, withheld and empty are FOUR different sentences and the rail
-// used to hand-roll three of them into one muted paragraph, with no retry on
-// the failure — which is `unavailable` wearing the word "error". SurfaceState
-// owns that vocabulary, so the caller classifies and this renders.
-export function AuditRail({
-  entries,
-  state,
-  meUserId,
-  onRetry,
-}: Readonly<{
-  entries: AuditLogEntry[];
-  state: SectionState;
-  meUserId?: string;
-  onRetry: () => void;
-}>) {
-  const t = useT();
-  const recentFirst = [...entries].sort((a, b) =>
-    stable(b.occurred_at, a.occurred_at),
-  );
-
-  return (
-    <SurfaceState
-      loadingLabel={t("cf.audit.title")}
-      state={state}
-      emptyLabel={t("cf.audit.empty")}
-      detail={{ onRetry }}
-    >
-      <ul className="cf-audit">
-        {recentFirst.map((entry) => (
-          <li key={entry.id}>
-            <AuditEntryLine entry={entry} meUserId={meUserId} />
-          </li>
-        ))}
-      </ul>
-    </SurfaceState>
-  );
-}
-
-// Which of the four the rail is in. Withheld comes FIRST because a disabled
-// query never leaves its pending state: classified in read-query order, a
-// reader whose role cannot see the trail would be shown a skeleton forever
-// instead of being told the answer is already settled.
-function auditState(
-  readsTrail: boolean,
-  isPending: boolean,
-  isError: boolean,
-  count: number,
-): SectionState {
-  if (!readsTrail) {
-    return "withheld";
-  }
-  if (isError) {
-    return "failed";
-  }
-  if (isPending) {
-    return "loading";
-  }
-  return count === 0 ? "empty" : "ready";
-}
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
 // `source:"manual"` (the FE convention across deals/leads/companies), and the
@@ -576,26 +342,22 @@ export function CustomFieldsAdmin() {
   const toast = useToast();
   const [renaming, setRenaming] = useState<CustomField | null>(null);
   const [retiring, setRetiring] = useState<CustomField | null>(null);
-  const [renameLabel, setRenameLabel] = useState("");
   // The dialog stays MOUNTED so it can animate out, so `addSeq` is what gives
   // each open a builder of its own: it re-keys the form, which discards a
   // half-typed label rather than leaving it waiting under an object nobody
   // re-chose, and stops a second Confirm resubmitting a draft already created.
   const [adding, setAdding] = useState(false);
   const [addSeq, setAddSeq] = useState(0);
-  const renameId = useId();
   const addId = useId();
 
   const list = useQuery({
     queryKey: ["custom-fields", object],
     queryFn: async () => {
-      const { data, error } = await api.GET("/custom-fields", {
-        params: { query: { object } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/custom-fields", {
+          params: { query: { object } },
+        }),
+      );
     },
   });
 
@@ -607,13 +369,11 @@ export function CustomFieldsAdmin() {
     // succeed, over a refusal they cannot act on.
     enabled: readsAuditTrail,
     queryFn: async () => {
-      const { data, error } = await api.GET("/audit-log", {
-        params: { query: { entity_type: "custom_field" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/audit-log", {
+          params: { query: { entity_type: "custom_field" } },
+        }),
+      );
     },
   });
 
@@ -624,13 +384,11 @@ export function CustomFieldsAdmin() {
 
   const create = useMutation({
     mutationFn: async (draft: NewFieldDraft) => {
-      const { data, error } = await api.POST("/custom-fields", {
-        body: createBody(draft),
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/custom-fields", {
+          body: createBody(draft),
+        }),
+      );
     },
     onMutate: async (draft: NewFieldDraft) => {
       // Key the optimistic write to the DRAFT's object, not the current-render
@@ -667,33 +425,28 @@ export function CustomFieldsAdmin() {
 
   const rename = useMutation({
     mutationFn: async (input: { field: CustomField; label: string }) => {
-      const { data, error } = await api.PATCH("/custom-fields/{id}", {
-        params: {
-          path: { id: input.field.id },
-          header: input.field.version
-            ? { "If-Match": String(input.field.version) }
-            : undefined,
-        },
-        body: { label: input.label },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/custom-fields/{id}", {
+          params: {
+            path: { id: input.field.id },
+            header: input.field.version
+              ? { "If-Match": String(input.field.version) }
+              : undefined,
+          },
+          body: { label: input.label },
+        }),
+      );
     },
     onSuccess: (_data, input) => {
       invalidate();
       toast.show(t("cf.renamed", { label: input.label }));
       setRenaming(null);
     },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
-    },
   });
 
   const startRename = (field: CustomField) => {
+    rename.reset();
     setRenaming(field);
-    setRenameLabel(field.label);
   };
 
   const objectName = t(`cf.obj.${object}`);
@@ -721,20 +474,14 @@ export function CustomFieldsAdmin() {
         )
       }
     >
-      {/* No `form-stack` on the body: `PanelIntro` owns the interval down to
-          the rows and `.cf-posture` owns the one up from the posture line, so
-          the stack's gap has nothing left here to space. */}
       <PanelBody>
         <PanelIntro>{t("cf.subtitle")}</PanelIntro>
         <SettingList>
-          {/* Which object the rows below belong to. One closed set of four, all
-              visible at once, so it answers its own row from the right column —
-              the same shape every other single-choice setting on this page
-              takes. The count that used to ride the active pill is gone: it
-              only ever described the object already selected, whose whole list
-              is immediately below. */}
+          {/* Which object the table below belongs to. Stacked: six objects
+              beside the label overflow a tablet-width pane. */}
           <SettingRow
             label={t("cf.object")}
+            layout="stack"
             control={
               <SegmentedControl
                 label={t("cf.object")}
@@ -745,55 +492,49 @@ export function CustomFieldsAdmin() {
               />
             }
           />
-          {/* The fields are the SUBJECT of this card rather than an answer to a
-              question beside them, so they take the row's full width. The table
-              is read per object, so the row above is a tab strip: the table
-              that lands is a fresh element and arrives. */}
-          <SettingRow
-            label={t("cf.listLabel", { object: objectName })}
-            layout="stack"
-            control={
-              <div className="arrive-stack">
-                <QueryGate
-                  query={list}
-                  pendingLabel={t("cf.listLabel", { object: objectName })}
-                >
-                  {(page) => (
-                    <FieldTable
-                      object={object}
-                      fields={page.data}
-                      canEdit={canEdit}
-                      meUserId={meUserId}
-                      onRename={startRename}
-                      onArchive={setRetiring}
-                    />
-                  )}
-                </QueryGate>
-              </div>
-            }
-          />
-          {/* Withheld, not absent: the trail keeps its place for every reader,
-              because a section that simply were not there would read as "nobody
-              has changed a field" — a claim about the data in place of one about
-              who may read it. Closed by default because it is a secondary read;
-              the state inside it is settled before it is ever opened. */}
-          <Disclosure summary={t("cf.audit.title")}>
-            <AuditRail
-              entries={audit.data?.data ?? []}
-              state={auditState(
-                readsAuditTrail,
-                audit.isPending,
-                audit.isError,
-                audit.data?.data.length ?? 0,
-              )}
-              meUserId={meUserId}
-              onRetry={() => void audit.refetch()}
-            />
-            {/* True for every reader: the recording happens whether or not this
-                one may read it back. */}
-            <p className="cf-hint t-caption">{t("cf.audit.footer")}</p>
-          </Disclosure>
         </SettingList>
+      </PanelBody>
+      {list.isSuccess && list.data.data.length > 0 ? (
+        <FieldTable
+          object={object}
+          fields={list.data.data}
+          canEdit={canEdit}
+          meUserId={meUserId}
+          onRename={startRename}
+          onArchive={setRetiring}
+        />
+      ) : (
+        <PanelBody>
+          <QueryStates
+            query={list}
+            pendingLabel={t("cf.listLabel", { object: objectName })}
+          >
+            <EmptyState>{t(`cf.empty.${object}`)}</EmptyState>
+          </QueryStates>
+        </PanelBody>
+      )}
+      <PanelBody>
+        {/* Withheld, not absent: the trail keeps its place for every reader,
+            because a section that simply were not there would read as "nobody
+            has changed a field" — a claim about the data in place of one about
+            who may read it. Closed by default because it is a secondary read;
+            the state inside it is settled before it is ever opened. */}
+        <Disclosure summary={t("cf.audit.title")}>
+          <AuditRail
+            entries={audit.data?.data ?? []}
+            state={auditState(
+              readsAuditTrail,
+              audit.isPending,
+              audit.isError,
+              audit.data?.data.length ?? 0,
+            )}
+            meUserId={meUserId}
+            onRetry={() => void audit.refetch()}
+          />
+          {/* True for every reader: the recording happens whether or not this
+              one may read it back. */}
+          <p className="cf-hint t-caption">{t("cf.audit.footer")}</p>
+        </Disclosure>
         {/* The posture speaks for BOTH grants, so it is bound to both. The
             server splits them — create.go admits `custom_field:create`, the
             lifecycle handlers admit `update` — and a principal holding update
@@ -805,15 +546,9 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      {/* `wide` is the variant's stated case: the builder carries the pending
-          DDL, and a 440px dialog wraps
-          `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
-          unreadable stack — the one line a reader is meant to check before
-          confirming a live schema change. It also keeps the label and the API
-          key derived from it side by side. */}
       <Modal
         open={adding}
-        size="wide"
+        intent="form"
         onClose={() => setAdding(false)}
         labelledBy={addId}
       >
@@ -839,48 +574,19 @@ export function CustomFieldsAdmin() {
         }}
       />
 
-      <Modal
+      <NameDialog
         open={renaming !== null}
         onClose={() => setRenaming(null)}
-        labelledBy={renameId}
-      >
-        {/* A dialog is its own region, so its title starts the outline at
-            level 2, matching ConfirmModal. `.section-header` went with the h3:
-            it is the flex row that carries a card section's title, subtitle and
-            actions, and a dialog title is none of those — inside the modal it
-            only contributed a page-flow top margin that pushed the title off
-            the modal's own padding. `.modal-title` is the catalog's own name for
-            the interval under a dialog title, so the twelve pixels are declared
-            once for every dialog rather than typed in here. */}
-        <Heading size="large" id={renameId} className="t-h2 modal-title">
-          {t("cf.edit")}
-        </Heading>
-        <Field label={t("cf.renamePrompt")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={renameLabel}
-              onChange={(event) => setRenameLabel(event.target.value)}
-            />
-          )}
-        </Field>
-        <div className="cf-actions">
-          <Button variant="ghost" onClick={() => setRenaming(null)}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            disabled={rename.isPending || renameLabel.trim().length === 0}
-            onClick={() => {
-              if (renaming && renameLabel.trim().length > 0) {
-                rename.mutate({ field: renaming, label: renameLabel.trim() });
-              }
-            }}
-          >
-            {t("trust.save")}
-          </Button>
-        </div>
-      </Modal>
+        title={t("cf.edit")}
+        label={t("cf.renamePrompt")}
+        initial={renaming?.label ?? ""}
+        confirmLabel={t("trust.save")}
+        pending={rename.isPending}
+        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        onSave={(label) => {
+          if (renaming) rename.mutate({ field: renaming, label });
+        }}
+      />
     </Panel>
   );
 }

@@ -4,9 +4,15 @@
 package ai
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The key is the claim's PATH, never its value. Keyed on the value, a verdict
@@ -212,5 +218,41 @@ func TestAMarkerWithoutACorrectionIsDatedToo(t *testing.T) {
 	}
 	if _, applies := v.AsOf("Head of Sales", recorded.Add(time.Hour)); applies {
 		t.Error("a confirmation outlived the value it confirmed — the page would say a human had seen an answer they never saw")
+	}
+}
+
+// The batch read refuses a subject kind the ledger keeps no claims about, and
+// says the same thing the single-record read and the write say — one spelling
+// of the refusal, reached from three doors.
+func TestTheBatchReadRefusesASubjectKindTheLedgerDoesNotKeep(t *testing.T) {
+	_, err := (&FeedbackStore{}).VerdictsForManyTx(
+		context.Background(), nil, "invoice", []ids.UUID{ids.NewV7()},
+	)
+	var parse *values.ParseError
+	if !errors.As(err, &parse) {
+		t.Fatalf("an unknown subject kind answered %v, want a values.ParseError", err)
+	}
+	if parse.Code != "invalid_subject_type" {
+		t.Errorf("the refusal carries code %q", parse.Code)
+	}
+}
+
+// No subjects, no query. A sweep whose page held nothing to ask about must not
+// reach the database at all — the nil transaction here is what proves it did
+// not, because touching it would panic.
+func TestTheBatchReadAsksNothingWhenThereIsNobodyToAskAbout(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system",
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	verdicts, err := (&FeedbackStore{}).VerdictsForManyTx(ctx, nil, "contact", nil)
+	if err != nil {
+		t.Fatalf("an empty batch answered %v", err)
+	}
+	if len(verdicts) != 0 {
+		t.Errorf("an empty batch answered %d subject(s)", len(verdicts))
 	}
 }

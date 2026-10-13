@@ -88,21 +88,13 @@ func TestMyAiActivityRefusesAnAgentBearer(t *testing.T) {
 	}
 }
 
-// Which kinds queries the REAL binder gets refused, and with which code.
+// Which kinds queries the real router refuses. `?kinds=` binds to one empty
+// member, not to a zero-length slice, and the enum refusal covers it like any
+// other value outside the contract's vocabulary.
 //
-// Every handler test constructs GetMyAiActivityParams directly, and that is
-// exactly how the empty-filter branch came to be unreachable over HTTP: `?kinds=`
-// does not bind to a zero-length slice, it binds to one empty member, so the
-// case the code documents as its motivating example was answering with the wrong
-// code and the wrong sentence. A test that skips the binder cannot see that.
-//
-// SCOPE, stated so the accepted cases are not read for more than they hold: this
-// covers the binder and the refusal vocabulary. The accepted rows assert that a
-// legal query shape is NOT refused — they cannot assert that the filter narrowed
-// anything, because a freshly bootstrapped workspace has no AI activity and an
-// empty feed looks the same either way. That the bound falls inside the caller's
-// own set is TestTheBoundFallsInsideTheKindsTheCallerAskedFor, against seeded
-// occurrences.
+// The accepted rows assert only that a legal query is not refused. A fresh
+// workspace has no AI activity, so narrowing is proved against seeded
+// occurrences in TestTheBoundFallsInsideTheKindsTheCallerAskedFor.
 func TestTheKindsQueryIsRefusedOrAcceptedAsTheBinderDeliversIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -113,9 +105,9 @@ func TestTheKindsQueryIsRefusedOrAcceptedAsTheBinderDeliversIt(t *testing.T) {
 		want  int
 		code  string
 	}{
-		{"a list that went missing", "?kinds=", http.StatusUnprocessableEntity, "empty_filter"},
-		{"a hand-typed name", "?kinds=summarise", http.StatusUnprocessableEntity, "unknown_kind"},
-		{"one bad name beside a good one", "?kinds=morning_brief&kinds=summarise", http.StatusUnprocessableEntity, "unknown_kind"},
+		{"a list that went missing", "?kinds=", http.StatusUnprocessableEntity, "invalid"},
+		{"a hand-typed name", "?kinds=summarise", http.StatusUnprocessableEntity, "invalid"},
+		{"one bad name beside a good one", "?kinds=morning_brief&kinds=summarise", http.StatusUnprocessableEntity, "invalid"},
 		{"the kinds a client draws", "?kinds=morning_brief&kinds=document_extract", http.StatusOK, ""},
 		{"every kind the contract carries", "?kinds=morning_brief&kinds=summarize&kinds=voice_build", http.StatusOK, ""},
 		{"no filter at all", "", http.StatusOK, ""},

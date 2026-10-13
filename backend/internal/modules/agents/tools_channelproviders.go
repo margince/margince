@@ -73,14 +73,17 @@ func (t listChannelProviders) Spec() mcp.ToolSpec {
 		Name: "list_channel_providers", Title: "List messaging transports", Version: toolVersionV1,
 		Description:   listChannelProvidersCopy.render(),
 		Instead:       listChannelProvidersCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "listChannelProviders",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ChannelProviderResult](),
 	}
 }
 
-func (t listChannelProviders) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listChannelProviders) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	entries, err := t.directory.ChannelProviders(ctx)
 	if err != nil {
 		return nil, err

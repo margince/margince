@@ -43,7 +43,7 @@ const judgeEvalRecordDir = "aicert/records/judge_eval"
 // would silently start excusing real failures, which is the one direction a
 // census must not fail in.
 var judgeEvalHarnessArtifacts = gatekit.Waive(map[string]string{
-	"judge/a verdict from another model is a stop": "the case pins a model with no recorded corpus and asserts the replay is refused; an eval drives the suite live, where there is no replay to mismatch, so it fails for every model alike and measures the trial rather than the judge",
+	"judge/a verdict from another model is a stop": "the case pins a model with no recorded corpus and asserts the replay is refused. An eval drives the suite live, where there is no replay to mismatch, so it fails for every model alike and measures the trial rather than the judge",
 })
 
 type judgeEvalRecord struct {
@@ -164,15 +164,15 @@ func writeCoverageJudges(p *strings.Builder, r mcpToolCoverage) {
 	}
 	p.WriteString("The semantic half of each criterion is decided by a model rather than a regex, " +
 		"so the judge is part of the apparatus and its accuracy belongs on the same page as the " +
-		"results it produced. A judge wrong in the quiet direction — passing an answer the " +
-		"criterion fails — turns a missed defect into a green run.\n\n")
-	p.WriteString("Reproduce a row with `python3 e2e/llm/judge-eval.py <model>` — it drives the " +
+		"results it produced. A judge that passes an answer the criterion fails turns a " +
+		"missed defect into a green run.\n\n")
+	p.WriteString("Reproduce a row with `python3 e2e/llm/judge-eval.py <model>`: it drives the " +
 		"offline suite with that model as a live judge and rewrites its record. Scored over the " +
-		"JUDGED fixtures only: the suite also exercises the usage reader, the probe and the regex " +
+		"judged fixtures only: the suite also exercises the usage reader, the probe and the regex " +
 		"half, which no judge decides.\n\n")
 	p.WriteString("Scored against **human-authored fixtures** under `e2e/llm/testdata/<case>/`, " +
 		"labelled by `scripts/test-e2e-llm-check.sh`. The recorded verdicts under " +
-		"`e2e/llm/testdata/judge/` are deliberately not the reference: they were written by one " +
+		"`e2e/llm/testdata/judge/` are not the reference, because they were written by one " +
 		"model, so scoring against them measures resemblance to that model and hands it a free " +
 		"hundred per cent.\n\n")
 	p.WriteString("| Judge | Accuracy | Scored | Passed | Its own errors |\n|---|---:|---:|---:|---:|\n")
@@ -191,7 +191,7 @@ func writeCoverageJudges(p *strings.Builder, r mcpToolCoverage) {
 		p.WriteString("Excluded from every judge's score, because it fails for all of them alike " +
 			"and measures how the trial is driven rather than the model:\n\n")
 		for _, name := range sortedKeys(r.Excluded) {
-			p.WriteString("- `" + name + "` — " + r.Excluded[name] + "\n")
+			p.WriteString("- `" + name + "`: " + r.Excluded[name] + "\n")
 		}
 		p.WriteString("\n")
 	}

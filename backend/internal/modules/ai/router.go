@@ -79,8 +79,9 @@ type Router struct {
 	// the generated certification table, except on the certification lane's
 	// own DB-less router (WithEveryDecisionCertified).
 	decisionCertified func(DecisionCertKey) bool
-	// decisionTimeout bounds one decision call (DecisionCallTimeout).
-	decisionTimeout time.Duration
+	// overrides is the admin's per-task thinking level and deadlines
+	// (ai.task_overrides), republished by the routing watcher.
+	overrides atomic.Pointer[TaskOverrides]
 }
 
 // installConfigSnapshot computes and stores this Router's config-snapshot
@@ -100,6 +101,9 @@ type RouteInfo struct {
 	ModelID  string
 	Degraded bool
 	Cached   bool
+	// cacheKey is the result-cache key this answer was served or stored under,
+	// so Reject evicts that one entry without deriving the key a second time.
+	cacheKey string
 }
 
 // NewRouter builds the production router from a validated routing config.
@@ -140,7 +144,6 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		metrics:           sharedCallMetrics,
 		now:               time.Now,
 		decisionCertified: decisionIsCertified,
-		decisionTimeout:   DecisionCallTimeout,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -215,10 +218,15 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// existing. striprecorder.go says why that matters.
 	strips := newStripRecorder(req.SecretStripper)
 	req.SecretStripper = strips
+	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
+	}
+	if downErr := r.blockedUnlessCached(b, task, ladder, key, wsID, keyErr); downErr != nil {
+		// Like a budget deferral: no call was made, so nothing is traced.
+		return model.Response{}, RouteInfo{}, downErr
 	}
 
 	// Every terminal from here on is traced — the budget-read and cache-key
@@ -230,6 +238,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	start := r.now()
 	trace := r.newAttemptTrace(ctx, task, key, reason, req)
 	defer func() {
+		if refusedUncalled(err) {
+			return
+		}
 		// BEFORE finalize, which is what buffers the row: a field set after it
 		// would be written to a copy nobody reads.
 		trace.SecretsRemoved, trace.SecretKinds = strips.report()
@@ -267,7 +278,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// scripted repeat-call tests) never consults it: every call must reach
 	// the model.
 	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
-		return r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
+		resp, info, err = r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
+		info.cacheKey = key
+		return resp, info, err
 	}
 
 	out, tier, served, ladderErr := r.attemptLadder(ctx, b, lc, &trace, task, ladder, req, key, wsID, start)
@@ -285,7 +298,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	if served {
 		m := b.routeMeta[tier]
-		return out, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded}, nil
+		return out, RouteInfo{Tier: tier, Provider: m.provider, ModelID: m.model, Degraded: degraded, cacheKey: key}, nil
 	}
 	// The honest degraded state (§4.3): no bound model can serve this.
 	//
@@ -327,6 +340,14 @@ func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
 		}
 	}
 	return out
+}
+
+// Reject is the caller's verdict that the answer info describes is unusable,
+// so the identical next request reaches the model instead of replaying it.
+func (r *Router) Reject(info RouteInfo) {
+	if info.cacheKey != "" {
+		r.cache.forget(info.cacheKey)
+	}
 }
 
 // Invalidate drops a workspace's cached results — the hook the §6
@@ -403,7 +424,8 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		ContextFingerprint string                     `json:"context_fingerprint"`
 		Site               string                     `json:"site,omitempty"`
 		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
-	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor})
+		ThinkingLevel      string                     `json:"thinking_level,omitempty"`
+	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor, req.ThinkingLevel})
 	if err != nil {
 		// A ProviderOptions namespace carrying invalid JSON would otherwise
 		// marshal to nil and collapse every such request onto one cache key —

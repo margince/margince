@@ -23,10 +23,15 @@ import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { useAnchoredToTrigger } from "./anchored";
 import { meshOf, meshStyle, monogramOf } from "./avatarmesh";
-import { coveredByDialog, useDialogFocus } from "./dialogfocus";
+import {
+  coveredByDialog,
+  panelsOpenedFrom,
+  useDialogFocus,
+} from "./dialogfocus";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
-import { useScrollRegion } from "./scrollregion";
+import { type ScrollRegionName, useScrollRegion } from "./scrollregion";
+import { useWaited } from "./waited";
 import "./badge.css";
 import "./avatar.css";
 import "./atoms.css";
@@ -199,7 +204,7 @@ export function Button({
 }) {
   const ownReasonId = useId();
   const busyLabelId = useId();
-  const singlePress = useSinglePress();
+  const singlePress = useSinglePress(pending);
   const classes = [
     "btn",
     `btn-${variant}`,
@@ -938,23 +943,7 @@ export function PendingBody({
   visible?: boolean;
   delayMs?: number;
 }>) {
-  const [waited, setWaited] = useState(delayMs === undefined);
-  useEffect(() => {
-    if (delayMs === undefined) {
-      // A caller that drops the delay wants the pending state NOW, and the
-      // effect has to say so: leaving `waited` where the previous delay left it
-      // hides the body for good, since nothing re-runs to release it.
-      setWaited(true);
-      return;
-    }
-    // The clock is per MOUNT and per delay, not per read. A pending body that
-    // stays mounted while one query replaces another keeps the time it has
-    // already served — a reader typing through a slow search watches one bar
-    // rather than a bar that blinks out on every keystroke.
-    setWaited(false);
-    const timer = setTimeout(() => setWaited(true), delayMs);
-    return () => clearTimeout(timer);
-  }, [delayMs]);
+  const waited = useWaited(delayMs);
   if (!waited) {
     return null;
   }
@@ -1191,36 +1180,36 @@ export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";
 
 /**
- * The box a table too wide for its column scrolls sideways INSIDE.
- *
- * The one spelling of `.table-scroll`. A settings page is 720px wide and a
- * record's finance table is eight columns, so the overflow is a property of the
- * TABLE rather than a knob each page answers for — and the four screens that
- * had each written this wrapper by hand were four chances to forget the part
- * below.
+ * The box a table too wide for its column scrolls sideways in. It is the one
+ * spelling of `.table-scroll`, so the overflow is a property of the table
+ * rather than a knob each page answers for.
  *
  * Reachability is `useScrollRegion`'s (scrollregion.ts): the tab stop and the
- * name arrive only while the box is actually holding something past its right
- * edge.
+ * name arrive only while the box holds something past its right edge.
  *
- * `label` is what the region is called ("Recent invoices", "Spend by task") and
- * is the caller's to translate. It is required rather than defaulted because a
- * region announced as "region" tells a reader nothing about which of the page's
- * tables they have just landed in.
+ * `label` names the region: a phrase, or `{ labelledBy }` for a heading already
+ * on the page. It has no default, since "region" names no table.
  */
 export function TableScroll({
   label,
+  bleed,
+  stickyFirst,
   className,
   children,
-}: Readonly<{ label: string; className?: string; children: ReactNode }>) {
+}: Readonly<{
+  label: ScrollRegionName;
+  bleed?: boolean;
+  stickyFirst?: boolean;
+  className?: string;
+  children: ReactNode;
+}>) {
   const box = useRef<HTMLDivElement | null>(null);
   const region = useScrollRegion(box, label);
+  const bleedClass = bleed ? "table-scroll-bleed" : "";
+  const stickyClass = stickyFirst ? "table-scroll-sticky" : "";
+  const boxClasses = ["table-scroll", bleedClass, stickyClass, className ?? ""];
   return (
-    <div
-      ref={box}
-      className={["table-scroll", className ?? ""].filter(Boolean).join(" ")}
-      {...region}
-    >
+    <div ref={box} className={boxClasses.filter(Boolean).join(" ")} {...region}>
       {children}
     </div>
   );
@@ -1366,11 +1355,14 @@ export function OverflowMenu({
       if (event.key !== "Escape") {
         return;
       }
-      // A dialog opened from this menu owns Escape while it is up. Closing
-      // both layers on one keypress would take the reader back past the menu
-      // they were choosing from, and they would have to reopen it to pick
-      // something else.
-      if (coveredByDialog(trigger.current)) {
+      // A dialog or panel opened from this menu owns Escape while it is up.
+      // Closing both layers on one keypress would take the reader back past
+      // the menu they were choosing from, and they would have to reopen it to
+      // pick something else.
+      if (
+        coveredByDialog(trigger.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       setOpen(false);
@@ -1380,10 +1372,16 @@ export function OverflowMenu({
       if (!(event.target instanceof Node)) {
         return;
       }
-      // A dialog this menu opened is portalled to the body, so every click
-      // inside it looks like a click outside the menu. Closing on those would
-      // hide the item the dialog has to give focus back to when it closes.
-      if (event.target instanceof Element && event.target.closest(".overlay")) {
+      // A dialog or a panel this menu opened is portalled to the body, so every
+      // click inside it looks like a click outside the menu. Closing on those
+      // would hide the item it has to give focus back to when it closes.
+      const target = event.target;
+      if (
+        (target instanceof Element && target.closest(".overlay")) ||
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
         return;
       }
       // The panel lives at the body, not inside the wrapper, so "outside" is

@@ -46,6 +46,7 @@ export function TaskVerb({
         open={open}
         onClose={() => setOpen(false)}
         title={t("bulk.taskTitle")}
+        intent="form"
         confirmLabel={t("bulk.taskNext")}
         confirmDisabled={subject.trim() === ""}
         onConfirm={() => {

@@ -5,20 +5,21 @@ import type { components } from "@composition/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
+import { Badge } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
+import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
+import { useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
-} from "../app/storage";
-import { Badge } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { Switch } from "../design-system/switch";
-import { useToast } from "../design-system/toast";
-import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+} from "../lib/storage";
 
 // The rep's standing answer: may an agent work as them overnight?
 //
@@ -73,10 +74,7 @@ export function useAgentGrants() {
   return useQuery({
     queryKey: GRANTS_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/me/agent-grants");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/me/agent-grants"));
       return data.data;
     },
   });
@@ -90,14 +88,12 @@ export function useSetAgentGrant() {
   const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
-      const { data, error } = await api.PUT("/me/agent-grants/{spec}", {
-        params: { path: { spec: MORNING_BRIEF } },
-        body: { granted },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/me/agent-grants/{spec}", {
+          params: { path: { spec: MORNING_BRIEF } },
+          body: { granted },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
@@ -207,61 +203,60 @@ export function OvernightGrantCard() {
       title={t("overnightGrant.title")}
       titleAction={shownOff ? <Badge>{t("overnightGrant.off")}</Badge> : null}
     >
-      <PanelBody>
-        <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
-          {(grants) => {
-            const grant = morningBriefGrant(grants);
-            const granted = grant?.state === "granted";
-            const shown = optimistic ?? granted;
-            // The rep agreed and their credential no longer does the job: the
-            // passport lapsed, or the agent gained a tool it was never minted to
-            // fund. Either degrades silently at 2am, so each gets its own notice.
-            const lapsed = granted && !grant?.credential_usable;
-            const outgrown =
-              granted &&
-              grant?.credential_usable === true &&
-              !grant?.credential_funds_agent;
-            return (
-              <>
-                <SettingList>
-                  <SettingRow
-                    label={t("overnightGrant.label")}
-                    description={t("overnightGrant.help")}
-                    control={(control) => (
-                      <Switch
-                        describedBy={control["aria-describedby"]}
-                        testId="overnight-grant-toggle"
-                        label={t("overnightGrant.label")}
-                        labelHidden
-                        checked={shown}
-                        pending={save.isPending}
-                        onChange={(next) => {
-                          setOptimistic(next);
-                          save.mutate(next, {
-                            onSettled: () => setOptimistic(null),
-                          });
-                        }}
-                      />
-                    )}
-                  />
-                </SettingList>
-                {/* A quiet sentence, not a warning: off is a settled answer on
-                    this page, and reading it back as a fault every visit nags. */}
-                {!shown && (
-                  <p className="t-sub">{t("overnightGrant.offNote")}</p>
-                )}
-                <GrantNotices
-                  showRenewal={lapsed && shown}
-                  showScopeRenewal={outgrown && shown}
-                  error={
-                    save.isError ? problemMessageOf(save.error, t) : undefined
-                  }
+      <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
+        {(grants) => {
+          const grant = morningBriefGrant(grants);
+          const granted = grant?.state === "granted";
+          const shown = optimistic ?? granted;
+          // Lapsed and outgrown differ from a decline (the rep already agreed);
+          // each names its cause, since either degrades the 2am run silently.
+          const lapsed = granted && !grant?.credential_usable;
+          const outgrown =
+            granted &&
+            grant?.credential_usable === true &&
+            !grant?.credential_funds_agent;
+          return (
+            <>
+              <SettingList bleed="settings">
+                <SettingRow
+                  label={t("overnightGrant.label")}
+                  description={t("overnightGrant.help")}
+                  control={(control) => (
+                    <Switch
+                      describedBy={control["aria-describedby"]}
+                      testId="overnight-grant-toggle"
+                      label={t("overnightGrant.label")}
+                      labelHidden
+                      checked={shown}
+                      pending={save.isPending}
+                      onChange={(next) => {
+                        setOptimistic(next);
+                        save.mutate(next, {
+                          onSettled: () => setOptimistic(null),
+                        });
+                      }}
+                    />
+                  )}
                 />
-              </>
-            );
-          }}
-        </QueryGate>
-      </PanelBody>
+              </SettingList>
+              {/* A quiet sentence, not a warning: off is a settled answer on
+                  this page, and reading it back as a fault every visit nags. */}
+              {!shown && (
+                <PanelBody>
+                  <p className="t-sub">{t("overnightGrant.offNote")}</p>
+                </PanelBody>
+              )}
+              <GrantNotices
+                showRenewal={lapsed && shown}
+                showScopeRenewal={outgrown && shown}
+                error={
+                  save.isError ? problemMessageOf(save.error, t) : undefined
+                }
+              />
+            </>
+          );
+        }}
+      </QueryGate>
     </Panel>
   );
 }
@@ -282,34 +277,36 @@ function GrantNotices({
     return null;
   }
   return (
-    <div className="settings-panel-commit">
-      {showRenewal && (
-        <Callout
-          kind="event"
-          tone="warning"
-          title={t("overnightGrant.renewTitle")}
-        >
-          {t("overnightGrant.renew")}
-        </Callout>
-      )}
-      {showScopeRenewal && (
-        <Callout
-          kind="event"
-          tone="warning"
-          title={t("overnightGrant.renewScopeTitle")}
-        >
-          {t("overnightGrant.renewScope")}
-        </Callout>
-      )}
-      {error !== undefined && (
-        <Callout
-          kind="outcome"
-          tone="danger"
-          title={t("overnightGrant.writeFailedTitle")}
-        >
-          {error}
-        </Callout>
-      )}
-    </div>
+    <PanelBody>
+      <div className="settings-panel-commit">
+        {showRenewal && (
+          <Callout
+            kind="event"
+            tone="warning"
+            title={t("overnightGrant.renewTitle")}
+          >
+            {t("overnightGrant.renew")}
+          </Callout>
+        )}
+        {showScopeRenewal && (
+          <Callout
+            kind="event"
+            tone="warning"
+            title={t("overnightGrant.renewScopeTitle")}
+          >
+            {t("overnightGrant.renewScope")}
+          </Callout>
+        )}
+        {error !== undefined && (
+          <Callout
+            kind="outcome"
+            tone="danger"
+            title={t("overnightGrant.writeFailedTitle")}
+          >
+            {error}
+          </Callout>
+        )}
+      </div>
+    </PanelBody>
   );
 }

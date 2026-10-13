@@ -30,7 +30,7 @@ const retentionClassCorrespondence = "commercial_correspondence"
 //
 // IDEMPOTENT. A deal can qualify twice — an offer leaves draft and later the
 // deal is won — and the second qualification must not fail the transaction
-// that concluded it. The stamp is write-once in the database (the
+// that concluded it. The stamp is monotonic in the database (the
 // activity_refuse_restricted_mutation trigger), so this only stamps rows that
 // carry no class yet, and the evidence insert tolerates the row it already
 // wrote.

@@ -2,9 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+} from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import {
   Panel,
@@ -12,13 +18,17 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
+import { RowOpen } from "../design-system/rowopen";
 import { useToast } from "../design-system/toast";
-import { formatDate } from "../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { EntityRef } from "./entityref";
+import "./capture-senders.css";
 
 // What the classifier decided about each sender this mailbox brought in, and
 // the seat's own answer where they gave one.
@@ -36,9 +46,7 @@ type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 
 // The classifier's vocabulary, in the reader's words. A kind absent from the
-// map is one the server learned to say and this screen has not — it falls back
-// to the raw token rather than rendering nothing, so a new kind shows up as
-// something to name instead of a blank cell.
+// map is one the server learned to say and this screen has not.
 const kindLabel: Record<string, MessageKey> = {
   contact: "senders.kind.contact",
   role_mailbox: "senders.kind.roleMailbox",
@@ -100,13 +108,12 @@ function useSetDecision() {
       address: string;
       decision: "business" | "keep_out";
     }) => {
-      const { error } = await api.PUT("/capture/senders/{address}/decision", {
-        params: { path: { address: vars.address } },
-        body: { decision: vars.decision },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/capture/senders/{address}/decision", {
+          params: { path: { address: vars.address } },
+          body: { decision: vars.decision },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-senders"] });
@@ -121,13 +128,11 @@ function useWithdrawDecision() {
   const t = useT();
   return useMutation({
     mutationFn: async (address: string) => {
-      const { error } = await api.DELETE(
-        "/capture/senders/{address}/decision",
-        { params: { path: { address } } },
+      unwrap(
+        await api.DELETE("/capture/senders/{address}/decision", {
+          params: { path: { address } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-senders"] });
@@ -149,109 +154,177 @@ export function CaptureSendersCard() {
     <Panel title={t("senders.title")}>
       <PanelBody>
         <PanelIntro>{t("senders.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("senders.title")}>
-          {(list) =>
-            list.data.length === 0 ? (
-              <EmptyState title={t("senders.emptyTitle")}>
-                {t("senders.emptyBody")}
-              </EmptyState>
-            ) : (
-              <>
-                <DataTable<SenderDecision>
-                  label={t("senders.title")}
-                  rows={list.data}
-                  rowKey={(row) => row.address}
-                  columns={[
-                    {
-                      key: "address",
-                      header: t("senders.colSender"),
-                      render: (row) => row.address,
-                    },
-                    {
-                      key: "decision",
-                      header: t("senders.colDecision"),
-                      render: (row) => <DecisionCell row={row} />,
-                    },
-                    {
-                      key: "record",
-                      header: t("senders.colRecord"),
-                      render: (row) =>
-                        row.record_exists
-                          ? t("senders.recordYes")
-                          : t("senders.recordNo"),
-                    },
-                    {
-                      key: "verbs",
-                      header: t("senders.colActions"),
-                      render: (row) => (
-                        <div className="cell-actions">
-                          {/* The two verbs are the two answers the contract
-                              takes. A sender already admitted needs no
-                              readmitting, so only the other one is offered. */}
-                          {!admitted.has(row.kind ?? "") &&
-                            row.decision !== "business" && (
-                              <Button
-                                variant="ghost"
-                                disabled={setDecision.isPending}
-                                onClick={() =>
-                                  setDecision.mutate({
-                                    address: row.address,
-                                    decision: "business",
-                                  })
-                                }
-                              >
-                                {t("senders.markBusiness")}
-                              </Button>
-                            )}
-                          {row.decision !== "keep_out" && (
-                            <Button
-                              variant="ghost"
-                              disabled={setDecision.isPending}
-                              onClick={() => setKeepingOut(row.address)}
-                            >
-                              {t("senders.keepOut")}
-                            </Button>
-                          )}
-                          {row.overruled && (
-                            <Button
-                              variant="ghost"
-                              disabled={withdraw.isPending}
-                              onClick={() => withdraw.mutate(row.address)}
-                            >
-                              {t("senders.withdraw")}
-                            </Button>
-                          )}
-                        </div>
-                      ),
-                    },
-                  ]}
-                />
-                <ErrorLine error={setDecision.error} />
-              </>
-            )
-          }
-        </QueryGate>
-        <ConfirmModal
-          open={keepingOut !== null}
-          onClose={() => setKeepingOut(null)}
-          title={t("senders.keepOutTitle")}
-          confirmLabel={t("senders.keepOutConfirm")}
-          confirmVariant="danger"
-          pending={setDecision.isPending}
-          onConfirm={() => {
-            if (keepingOut) {
-              setDecision.mutate(
-                { address: keepingOut, decision: "keep_out" },
-                { onSuccess: () => setKeepingOut(null) },
-              );
-            }
-          }}
-        >
-          {t("senders.keepOutBody")}
-        </ConfirmModal>
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("senders.title")}>
+        {(list) =>
+          list.data.length === 0 ? (
+            <PanelBody>
+              <EmptyState>{t("senders.emptyBody")}</EmptyState>
+            </PanelBody>
+          ) : (
+            <SenderTable
+              rows={list.data}
+              verbs={{ setDecision, withdraw, keepOut: setKeepingOut }}
+            />
+          )
+        }
+      </QueryGate>
+      {(setDecision.isError || withdraw.isError) && (
+        <PanelBody>
+          <ErrorLine error={setDecision.error ?? withdraw.error} />
+        </PanelBody>
+      )}
+      <ConfirmModal
+        open={keepingOut !== null}
+        onClose={() => setKeepingOut(null)}
+        title={t("senders.keepOutTitle")}
+        confirmLabel={t("senders.keepOutConfirm")}
+        confirmVariant="danger"
+        pending={setDecision.isPending}
+        onConfirm={() => {
+          if (keepingOut) {
+            setDecision.mutate(
+              { address: keepingOut, decision: "keep_out" },
+              { onSuccess: () => setKeepingOut(null) },
+            );
+          }
+        }}
+      >
+        {t("senders.keepOutBody")}
+      </ConfirmModal>
       <AwaitingDecision />
     </Panel>
+  );
+}
+
+type SenderVerbs = Readonly<{
+  setDecision: ReturnType<typeof useSetDecision>;
+  withdraw: ReturnType<typeof useWithdrawDecision>;
+  keepOut: (address: string) => void;
+}>;
+
+function SenderTable({
+  rows,
+  verbs,
+}: Readonly<{ rows: SenderDecision[]; verbs: SenderVerbs }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const columns: DataTableColumn<SenderDecision>[] = [
+    {
+      key: "address",
+      header: t("senders.colSender"),
+      grow: true,
+      render: (row) => (
+        <span className="capture-senders-address">{row.address}</span>
+      ),
+    },
+    {
+      key: "decision",
+      header: t("senders.colDecision"),
+      render: (row) => <DecisionCell row={row} />,
+    },
+    {
+      key: "record",
+      header: t("senders.colRecord"),
+      render: (row) =>
+        row.contact_id ? (
+          <EntityRef
+            kind="contact"
+            id={row.contact_id}
+            name={row.contact_name}
+          />
+        ) : (
+          "—"
+        ),
+      folded: (row) => (row.contact_id ? undefined : t("senders.recordNo")),
+    },
+    {
+      key: "messages",
+      header: t("senders.colMessages"),
+      align: "end",
+      render: (row) => formatNumber(row.message_count, locale),
+      folded: (row) =>
+        plural("senders.messages", row.message_count, {
+          count: formatNumber(row.message_count, locale),
+        }),
+    },
+    {
+      key: "lastSeen",
+      header: t("senders.colLastSeen"),
+      align: "end",
+      render: (row) =>
+        row.last_seen_at ? formatDateTime(row.last_seen_at, locale, zone) : "—",
+      folded: (row) =>
+        row.last_seen_at
+          ? t("senders.lastSeen", {
+              date: formatDateTime(row.last_seen_at, locale, zone),
+            })
+          : null,
+    },
+    {
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (row) => <SenderMenu row={row} verbs={verbs} />,
+    },
+  ];
+  return (
+    <DataTable<SenderDecision>
+      bleed
+      fold
+      label={t("senders.title")}
+      rows={rows}
+      rowKey={(row) => row.address}
+      columns={columns}
+    />
+  );
+}
+
+// The two answers the contract takes, and taking yours back. A sender already
+// admitted needs no readmitting, so only the other answer is offered.
+function SenderMenu({
+  row,
+  verbs: { setDecision, withdraw, keepOut },
+}: Readonly<{ row: SenderDecision; verbs: SenderVerbs }>) {
+  const t = useT();
+  const offersBusiness =
+    !admitted.has(row.kind ?? "") && row.decision !== "business";
+  const offersKeepOut = row.decision !== "keep_out";
+  if (!offersBusiness && !offersKeepOut && !row.overruled) {
+    return null;
+  }
+  return (
+    <span className="cell-actions">
+      <OverflowMenu label={t("table.rowActions", { name: row.address })}>
+        {offersBusiness && (
+          <Button
+            disabled={setDecision.isPending}
+            onClick={() =>
+              setDecision.mutate({ address: row.address, decision: "business" })
+            }
+          >
+            {t("senders.markBusiness")}
+          </Button>
+        )}
+        {offersKeepOut && (
+          <Button aria-haspopup="dialog" onClick={() => keepOut(row.address)}>
+            {t("senders.keepOut")}
+          </Button>
+        )}
+        {row.overruled && (
+          <Button
+            disabled={withdraw.isPending}
+            onClick={() => withdraw.mutate(row.address)}
+          >
+            {t("senders.withdraw")}
+          </Button>
+        )}
+      </OverflowMenu>
+    </span>
   );
 }
 
@@ -260,92 +333,120 @@ export function CaptureSendersCard() {
 // already said, and one flashed while loading would say it and take it back.
 function AwaitingDecision() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const zone = viewerZone();
   const query = useAwaitingDecision();
   if (query.isPending || (query.isSuccess && query.data.data.length === 0)) {
     return null;
   }
+  const name = (row: AwaitingContact) =>
+    row.display_name ?? row.emails[0] ?? null;
+  const open = (row: AwaitingContact) =>
+    navigate({ screen: "contacts", id: row.contact_id });
+  const openLabel = (row: AwaitingContact) => {
+    const named = name(row);
+    return named
+      ? t("senders.waiting.openNamed", { name: named })
+      : t("senders.waiting.openUnnamed");
+  };
   return (
     <>
       <PanelGroupHead title={t("senders.waiting.title")} level="h3" />
       <PanelBody>
         <PanelIntro>{t("senders.waiting.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("senders.waiting.title")}>
-          {(list) => (
-            <DataTable<AwaitingContact>
-              label={t("senders.waiting.title")}
-              rows={list.data}
-              rowKey={(row) => row.contact_id}
-              columns={[
-                {
-                  key: "contact",
-                  header: t("senders.waiting.colContact"),
-                  render: (row) => (
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("senders.waiting.title")}>
+        {(list) => (
+          <DataTable<AwaitingContact>
+            bleed
+            fold
+            label={t("senders.waiting.title")}
+            rows={list.data}
+            rowKey={(row) => row.contact_id}
+            onRowClick={open}
+            columns={[
+              {
+                key: "contact",
+                header: t("senders.waiting.colContact"),
+                render: (row) => (
+                  <CellStack>
                     <EntityRef
                       kind="contact"
                       id={row.contact_id}
-                      name={row.display_name ?? row.emails[0] ?? null}
+                      name={name(row)}
+                      asText
                     />
-                  ),
-                },
-                {
-                  key: "addresses",
-                  header: t("senders.waiting.colAddresses"),
-                  render: (row) => row.emails.join(", "),
-                },
-                {
-                  key: "since",
-                  header: t("senders.waiting.colSince"),
-                  render: (row) => formatDate(row.captured_at, locale, zone),
-                },
-              ]}
-            />
-          )}
-        </QueryGate>
-      </PanelBody>
+                    {row.emails.length > 0 && (
+                      <span className="t-caption capture-senders-address">
+                        {row.emails[0]}
+                        {row.emails.length > 1 &&
+                          ` ${plural("senders.waiting.moreAddresses", row.emails.length - 1, { count: formatNumber(row.emails.length - 1, locale) })}`}
+                      </span>
+                    )}
+                  </CellStack>
+                ),
+              },
+              {
+                key: "since",
+                header: t("senders.waiting.colSince"),
+                align: "end",
+                render: (row) => formatDate(row.captured_at, locale, zone),
+              },
+              {
+                key: "open",
+                header: t("table.actions"),
+                headerHidden: true,
+                align: "end",
+                fold: "end",
+                render: (row) => (
+                  <RowOpen label={openLabel(row)} onOpen={() => open(row)} />
+                ),
+              },
+            ]}
+          />
+        )}
+      </QueryGate>
     </>
   );
 }
 
 // What was decided, and by whom. A seat's own answer outranks the classifier's
-// and says so: "you decided" beside the kind it replaced, so the row reports a
-// correction rather than only the answer that now stands.
+// and says so, so the row reads as a correction.
 function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const kind = row.kind ?? "";
-  const words = kindLabel[kind] ? t(kindLabel[kind]) : kind;
   if (row.overruled) {
     return (
-      <>
+      <CellStack>
         <Badge tone={row.decision === "business" ? "success" : "danger"}>
           {row.decision === "business"
             ? t("senders.kind.business")
             : t("senders.kind.keptOut")}
-        </Badge>{" "}
-        {t("senders.byYou")}
-      </>
+        </Badge>
+        <span className="t-caption">{t("senders.byYou")}</span>
+      </CellStack>
     );
   }
+  const kind = row.kind ?? "";
+  const known = kindLabel[kind];
   return (
-    <>
+    <CellStack>
       <Badge tone={admitted.has(kind) ? "success" : undefined}>
-        {words || t("senders.kind.undecided")}
+        {known
+          ? t(known)
+          : t(kind ? "senders.kind.other" : "senders.kind.undecided")}
       </Badge>
-      {/* The deadline, not just the verdict. A personal verdict does not hide
-          this sender's mail, so during the window nothing on the page looks
-          different and there is nothing for an owner to object to — the date is
-          what turns a silent classification into something they can act on, and
-          "mark as business" beside it is the act that cancels it. */}
+      {/* The deadline, not just the verdict: a personal verdict changes nothing
+          on the page until the mail goes, so the date is what an owner acts on. */}
       {row.deletes_at && (
-        <div>
+        <span className="t-caption">
           {t("senders.deletesOn", {
             date: formatDate(row.deletes_at, locale, zone),
           })}
-        </div>
+        </span>
       )}
-    </>
+    </CellStack>
   );
 }

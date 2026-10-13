@@ -5,8 +5,8 @@
 
 package gates
 
-// The AI-activity contract must name exactly the work that can reach it, and
-// cap exactly what the read caps.
+// The AI-activity contract names the work that can reach it and nothing else,
+// and caps what the read caps.
 //
 // Both halves were held by a gate inside the package the read used to live in.
 // That package is gone, and the obligations are not: a spec whose name the

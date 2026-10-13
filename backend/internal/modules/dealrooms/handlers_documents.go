@@ -89,6 +89,11 @@ func (h Handlers) RemoveDealRoomDocument(w http.ResponseWriter, r *http.Request,
 // addDocumentInput validates the add. The group is checked here, before the
 // schema CHECK would refuse it as a 500 naming a constraint.
 func addDocumentInput(req crmcontracts.AddDealRoomDocumentRequest) (AddDocumentInput, error) {
+	source, err := httperr.RequireNonBlank("source", req.Source)
+	if err != nil {
+		return AddDocumentInput{}, err
+	}
+	req.Source = source
 	if err := provenance.Refuse("source", req.Source); err != nil {
 		return AddDocumentInput{}, err
 	}

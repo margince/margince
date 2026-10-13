@@ -86,6 +86,11 @@ type Parties struct {
 	// cap. It is the number itself rather than a bool so a caller can say how
 	// large the list was that it refused.
 	Named int
+	// Withheld is the list the cap refused, and empty when it refused nothing.
+	// It travels so capture, which knows the workspace's seats, can bind its own
+	// colleagues from a crowded invitation; the cap's reasoning is about
+	// strangers on a distribution list, and a seat on the event is not one.
+	Withheld []MessageParticipant
 }
 
 // Capped reports whether the cap withheld the names.
@@ -100,7 +105,7 @@ func (p Parties) Capped() bool { return p.Named > MaxParticipants }
 // sixty-contact invite must be recorded, or not, whichever parser saw it.
 func CapParticipants(parties []MessageParticipant) Parties {
 	if len(parties) > MaxParticipants {
-		return Parties{Named: len(parties)}
+		return Parties{Named: len(parties), Withheld: parties}
 	}
 	return Parties{Participants: parties, Named: len(parties)}
 }

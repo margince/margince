@@ -27,7 +27,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // routingRecheckInterval bounds how long a role may serve a superseded binding.
@@ -42,6 +45,13 @@ type RoutingWatcher struct {
 	target *ai.Router
 	keys   config.Lookup
 	log    *slog.Logger
+	// seedMarker plants the embed binding marker for a lane adopted since
+	// boot. A collaborator rather than a call, so what this does with its
+	// failure is judged without a database.
+	seedMarker func(context.Context) error
+	// markerOwed says the adopted lane still has no marker. Read and written
+	// on the tick goroutine, which is why a plain bool carries it.
+	markerOwed bool
 }
 
 // NewRoutingWatcher binds a watcher to the path this role resolved. A role that
@@ -61,7 +71,11 @@ func NewRoutingWatcher(pool *pgxpool.Pool, path *ModelPath, keys config.Lookup, 
 	if target == nil {
 		return nil
 	}
-	return &RoutingWatcher{pool: pool, target: target, keys: keys, log: log}
+	w := &RoutingWatcher{pool: pool, target: target, keys: keys, log: log}
+	w.seedMarker = func(ctx context.Context) error {
+		return seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), target, log)
+	}
+	return w
 }
 
 // Run re-reads until ctx is cancelled. Started by each role that resolved a
@@ -70,6 +84,10 @@ func (w *RoutingWatcher) Run(ctx context.Context) {
 	if w == nil {
 		return
 	}
+	// The overrides are read now rather than on the first tick: the binding
+	// was resolved at boot, and its calls must not run on the defaults for
+	// half a minute after it.
+	w.refreshTaskOverrides(ctx)
 	ticker := time.NewTicker(routingRecheckInterval)
 	defer ticker.Stop()
 	for {
@@ -91,13 +109,20 @@ func (w *RoutingWatcher) Recheck(ctx context.Context) {
 	if w == nil {
 		return
 	}
+	w.refreshTaskOverrides(ctx)
+	// Deferred so an owed marker is attempted whatever the rest of the tick
+	// does. The routing document and the marker are different reads, so a
+	// failure to re-read the binding must not postpone the repair as well.
+	defer w.seedTheEmbedMarker(ctx)
 	next, err := ResolveRouting(ctx, w.pool, "", w.keys, w.log)
 	if err != nil {
 		w.log.WarnContext(ctx, "re-reading the model binding failed; keeping the one this process is serving",
 			"error", err, "routing_version", w.target.RoutingVersion())
 		return
 	}
-	w.applyIfChanged(ctx, next)
+	if w.applyIfChanged(ctx, next) {
+		w.markerOwed = true
+	}
 }
 
 // applyIfChanged is the decision, split from the read so it can be judged
@@ -147,4 +172,57 @@ func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConf
 		"from", previous, "to", next.RoutingVersion(),
 		"credentials_changed", next.CredentialVersion() != previousCredentials)
 	return true
+}
+
+// refreshTaskOverrides publishes the stored per-task overrides when they differ
+// from what the Router serves. A failed read keeps the current ones, for the
+// reason Recheck keeps the current binding.
+func (w *RoutingWatcher) refreshTaskOverrides(ctx context.Context) {
+	ws, err := singletonWorkspace(ctx, w.pool)
+	if err != nil {
+		w.log.WarnContext(ctx, "resolving the installation to re-read the AI task overrides failed; keeping the ones this process is serving", "error", err)
+		return
+	}
+	if ws == (ids.UUID{}) {
+		return
+	}
+	stored, err := settings.Get(routingCtx(ctx, ws), NewSettingsStore(w.pool), ai.TaskOverridesSetting)
+	if err != nil {
+		w.log.WarnContext(ctx, "re-reading the AI task overrides failed; keeping the ones this process is serving", "error", err)
+		return
+	}
+	w.adoptTaskOverrides(ctx, stored)
+}
+
+// adoptTaskOverrides publishes stored unless the Router already serves that
+// revision, and reports whether it did.
+func (w *RoutingWatcher) adoptTaskOverrides(ctx context.Context, stored ai.TaskOverrides) bool {
+	if stored.Revision() == w.target.TaskOverridesRevision() {
+		return false
+	}
+	w.target.SetTaskOverrides(stored)
+	w.log.InfoContext(ctx, "adopted changed AI task overrides without restarting", "tasks", len(stored))
+	return true
+}
+
+// seedTheEmbedMarker plants the marker boot plants, for a lane adopted since.
+// Without it the drift sweep finds identity and marker unequal and heals
+// nothing.
+//
+// Retried on every tick until it lands, because the adoption that owes it
+// happens once. A failure that cleared the debt would leave the sweep unable
+// to heal until the next binding change or a restart.
+//
+// Never returned: the binding already serves, and refusing it over a repair
+// aid would be an outage.
+func (w *RoutingWatcher) seedTheEmbedMarker(ctx context.Context) {
+	if !w.markerOwed {
+		return
+	}
+	if err := w.seedMarker(ctx); err != nil {
+		w.log.WarnContext(ctx, "the adopted embed lane has no binding marker, so the drift sweep cannot heal under it",
+			"error", err)
+		return
+	}
+	w.markerOwed = false
 }

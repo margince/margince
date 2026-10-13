@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -124,5 +125,37 @@ func TestAnUnknownPipelineIsNotAnEmptyReport(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("an unknown pipeline answered %d, want 404 — an empty report would tell "+
 			"the reader to wait for numbers that can never arrive", rec.Code)
+	}
+}
+
+// The window is the contract's 1 to 365 days, refused by name outside it: a
+// zero or negative window would report a pipeline as having earned nothing.
+func TestTheReportWindowIsBoundedToAYear(t *testing.T) {
+	e := Setup(t)
+	pipeline, _, _ := DealFixture(t, e)
+	for _, c := range []struct {
+		days int
+		want int
+	}{
+		{0, http.StatusUnprocessableEntity},
+		{-1, http.StatusUnprocessableEntity},
+		{366, http.StatusUnprocessableEntity},
+		{365, http.StatusOK},
+	} {
+		days := c.days
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/stage-automation/report", nil).
+			WithContext(e.Admin())
+		deals.NewHandlers(e.DB(), installseam.Deals()).GetStageAutomationReport(rec, req,
+			crmcontracts.GetStageAutomationReportParams{
+				PipelineId: openapi_types.UUID(pipeline.UUID), WindowDays: &days,
+			})
+		if rec.Code != c.want {
+			t.Errorf("window_days=%d answered %d, want %d: %s", c.days, rec.Code, c.want, rec.Body.String())
+			continue
+		}
+		if c.want == http.StatusUnprocessableEntity && !strings.Contains(rec.Body.String(), `"window_days"`) {
+			t.Errorf("window_days=%d was refused without naming the field: %s", c.days, rec.Body.String())
+		}
 	}
 }

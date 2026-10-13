@@ -28,6 +28,7 @@ const SHEET = [
     cache_read_per_mtok: "0.075",
     cache_write_per_mtok: "0.3833",
     effective_date: "2026-08-01",
+    source: "seed" as const,
   },
   {
     provider: "gemini",
@@ -38,6 +39,7 @@ const SHEET = [
     cache_read_per_mtok: "0",
     cache_write_per_mtok: "0",
     effective_date: "2026-08-01",
+    source: "seed" as const,
   },
 ];
 
@@ -148,7 +150,9 @@ export const UnpricedReceipt: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const receipts = await canvas.findAllByRole("button", { name: "Evidence" });
-    await userEvent.click(receipts[0]);
+    const [receipt] = receipts;
+    if (!receipt) throw new Error("no rate shows its evidence");
+    await userEvent.click(receipt);
   },
 };
 

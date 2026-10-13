@@ -1,39 +1,28 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { THEME_LABEL_KEYS } from "../app/account";
-import { useInstallState } from "../app/pwa";
-import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
-import { useUnsavedGuard } from "../app/unsaved";
-import {
-  Avatar,
-  Button,
-  Field,
-  Modal,
-  SegmentedControl,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
-import { Heading } from "../design-system/heading";
+import { Avatar, Button, SegmentedControl } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type Toast, useToast } from "../design-system/toast";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useInstallState } from "../lib/pwa";
+import { useLogout, useMe } from "../lib/session";
+import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { BriefDeliveryRows } from "./briefdelivery";
-import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  useLogout,
-  useMe,
-  WriteRefused,
-} from "./common";
 import { PasswordSettingRow } from "./passwordcard";
+import {
+  DisplayNameSettingRow,
+  GreetingNameSettingRow,
+} from "./settings-names";
+import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
 import "./account-settings.css";
 
@@ -61,7 +50,7 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const query = useMe();
   return (
     <Panel title={t("account.profileCard")}>
-      <PanelBody className="form-stack">
+      <PanelBody>
         <QueryGate query={query} pendingLabel={t("account.profileCard")}>
           {(me) => (
             <div className="settings-identity account-identity">
@@ -93,11 +82,12 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
             </div>
           )}
         </QueryGate>
-        <SettingList>
-          <DisplayNameSettingRow toast={toast} />
-          <SignatureSettingRow toast={toast} />
-        </SettingList>
       </PanelBody>
+      <SettingList bleed="settings">
+        <DisplayNameSettingRow toast={toast} />
+        <GreetingNameSettingRow toast={toast} />
+        <SignatureSettingRow toast={toast} />
+      </SettingList>
     </Panel>
   );
 }
@@ -111,28 +101,24 @@ function SignInPanel() {
   const email = me.data?.user.email;
   return (
     <Panel title={t("account.signInCard")}>
-      <PanelBody>
-        <SettingList>
-          <PasswordSettingRow
-            description={
-              email ? t("account.passwordHelp", { email }) : undefined
-            }
-          />
-          <SettingRow
-            label={t("auth.signOut")}
-            description={t("account.signOutHelp")}
-            control={
-              <Button
-                variant="ghost"
-                disabled={logout.isPending}
-                onClick={() => logout.mutate()}
-              >
-                {t("auth.signOut")}
-              </Button>
-            }
-          />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <PasswordSettingRow
+          description={email ? t("account.passwordHelp", { email }) : undefined}
+        />
+        <SettingRow
+          label={t("auth.signOut")}
+          description={t("account.signOutHelp")}
+          control={
+            <Button
+              variant="ghost"
+              disabled={logout.isPending}
+              onClick={() => logout.mutate()}
+            >
+              {t("auth.signOut")}
+            </Button>
+          }
+        />
+      </SettingList>
     </Panel>
   );
 }
@@ -141,11 +127,9 @@ function LanguagePanel() {
   const t = useT();
   return (
     <Panel title={t("account.languageCard")}>
-      <PanelBody>
-        <SettingList>
-          <LanguageSettingRow />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <LanguageSettingRow />
+      </SettingList>
     </Panel>
   );
 }
@@ -158,12 +142,10 @@ function BrowserPanel() {
   const install = useInstallState();
   return (
     <Panel title={t("account.browserCard")}>
-      <PanelBody>
-        <SettingList>
-          <AppearanceSettingRow />
-          <InstallSettingRow install={install} />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <AppearanceSettingRow />
+        <InstallSettingRow install={install} />
+      </SettingList>
     </Panel>
   );
 }
@@ -172,221 +154,10 @@ function ScheduledEmailsPanel() {
   const t = useT();
   return (
     <Panel title={t("account.emailsCard")}>
-      <PanelBody>
-        <SettingList>
-          <BriefDeliveryRows />
-        </SettingList>
-      </PanelBody>
+      <SettingList bleed="settings">
+        <BriefDeliveryRows />
+      </SettingList>
     </Panel>
-  );
-}
-
-/**
- * The name colleagues see you by, edited in place.
- *
- * The saved answer is read back from `/me` rather than kept here, so the shell's
- * account chip and the roster agree with this row the moment it lands.
- */
-function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const me = useMe();
-  const queryClient = useQueryClient();
-  const stored = me.data?.user.display_name ?? "";
-  // null means "not editing": a `/me` refetch cannot overwrite what the reader
-  // is in the middle of typing.
-  const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? stored;
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/display-name", {
-        body: { display_name: next },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // Keep the saved name visible if the account refetch is delayed or fails.
-      setDraft(saved?.display_name ?? null);
-      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
-      toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
-    },
-  });
-  // Trimmed for the comparison as well as for the send, or a trailing space
-  // reads as a change the server answers is not one.
-  const trimmed = shown.trim();
-  const dirty = trimmed !== stored;
-  // Counted in characters, as the contract's `maxLength` and the server's
-  // `utf8.RuneCountInString` do; `String.length` counts UTF-16 units.
-  const tooLong = [...trimmed].length > 255;
-  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
-  return (
-    <SettingRow
-      label={t("settings.displayName")}
-      description={t("settings.displayNameHelp")}
-      control={(row) => (
-        <form
-          className="account-inline settingrow-measure"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (dirty && trimmed !== "" && !tooLong && !save.isPending) {
-              save.mutate(trimmed);
-            }
-          }}
-        >
-          <Field label={t("settings.displayName")} labelHidden error={refusal}>
-            {(field) => (
-              <TextInput
-                {...field}
-                aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={[field, row]
-                  .map((owner) => owner["aria-describedby"])
-                  .filter(Boolean)
-                  .join(" ")}
-                autoComplete="name"
-                value={shown}
-                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
-                onChange={(event) => setDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button
-            type="submit"
-            variant="ghost"
-            disabled={!dirty || trimmed === "" || tooLong || save.isPending}
-          >
-            {t("settings.displayNameSave")}
-          </Button>
-        </form>
-      )}
-    />
-  );
-}
-
-// The sign-off appended below every message this member sends. It sits with
-// identity rather than under the composer because it is who the sender IS; a
-// signature written per message would differ every time. Plain text, because
-// the transport sends text/plain.
-function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const titleId = useId();
-  const [open, setOpen] = useState(false);
-  const [body, setBody] = useState<string | null>(null);
-  const signature = useQuery({
-    queryKey: ["me-email-signature"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/me/email-signature");
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? { body: "" };
-    },
-  });
-  const save = useMutation({
-    mutationFn: async (next: string) => {
-      const { data, error } = await api.PUT("/me/email-signature", {
-        body: { body: next },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (saved) => {
-      // The server trims what it stores; handing the edit back to its answer
-      // keeps Save from offering a difference that exists only in the browser.
-      setBody(saved?.body ?? "");
-      queryClient.invalidateQueries({ queryKey: ["me-email-signature"] });
-      setOpen(false);
-      toast.show(t("settings.saved"));
-    },
-  });
-
-  // The saved value until the member types; theirs from then on, so a refetch
-  // landing underneath them discards no keystroke.
-  const stored = signature.data?.body ?? "";
-  const shown = body ?? stored;
-  const dirty = shown !== stored;
-  // Only while the dialog is showing: it outlives its own close, and a draft the
-  // reader walked away from must not go on blocking navigation.
-  useUnsavedGuard(open && dirty);
-  // The first line is the part a reader recognises their sign-off by. Nothing
-  // is claimed about the signature until the read has answered.
-  const firstLine = stored.split("\n")[0].trim();
-  const empty = firstLine === "";
-  const answer = signature.isPending
-    ? undefined
-    : empty
-      ? t("settings.signatureNone")
-      : firstLine;
-
-  // Closing only closes, so the dialog animates out over the draft it showed;
-  // the draft is discarded on the next open, when the reader asks for a form.
-  const close = () => setOpen(false);
-  const edit = () => {
-    setBody(null);
-    save.reset();
-    setOpen(true);
-  };
-
-  return (
-    <>
-      <SettingRow
-        label={t("settings.signature")}
-        description={t("account.signatureHelp")}
-        value={answer}
-        control={
-          <Button variant="ghost" onClick={edit}>
-            {signature.isSuccess && empty
-              ? t("account.signatureAdd")
-              : t("settings.signatureEdit")}
-          </Button>
-        }
-      />
-      <Modal open={open} onClose={close} labelledBy={titleId}>
-        <form
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (dirty && !save.isPending) save.mutate(shown);
-          }}
-        >
-          <Heading size="large" className="t-h3" id={titleId}>
-            {t("settings.signature")}
-          </Heading>
-          <WriteRefused titleKey="settings.saveFailed" error={save.error} />
-          <Field label={t("settings.signatureLabel")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                rows={5}
-                value={shown}
-                placeholder={t("settings.signaturePlaceholder")}
-                onChange={(event) => setBody(event.target.value)}
-              />
-            )}
-          </Field>
-          <p className="t-caption">{t("settings.signatureHint")}</p>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={close}>
-              {t("settings.signatureCancel")}
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!save.isPending && !dirty}
-              pending={save.isPending}
-              busyLabel={t("settings.signatureSaving")}
-            >
-              {t("record.save")}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-    </>
   );
 }
 
@@ -400,10 +171,7 @@ function LanguageSettingRow() {
   // for, and the next sign-in re-asks the server.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
-      const { error } = await api.PUT("/me/locale", { body: { locale: next } });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["me"] });

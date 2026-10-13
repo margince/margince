@@ -442,7 +442,7 @@ type Activity struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// ChannelProvider Which transport carried this message — non-null exactly when `kind=message`.
+	// ChannelProvider Which transport carried this message: set on every `kind=message` row, null on every other kind.
 	// The kind says what sort of interaction happened; this says what carried it. They
 	// are separate axes, and reading one off the other is what ADR-0107 retired.
 	ChannelProvider *ProviderRef `json:"channel_provider,omitempty"`
@@ -492,13 +492,13 @@ type Activity struct {
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
-	// SourceActivityId The activity this one was derived FROM — today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	// SourceActivityId The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
-	// SourceId Provider message/event id — idempotency key part.
+	// SourceId Provider message/event id; part of the idempotency key.
 	SourceId *string `json:"source_id,omitempty"`
 
-	// SourceSystem Which system this record came from — `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
+	// SourceSystem Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
 	SourceSystem *string `json:"source_system,omitempty"`
 	Subject      *string `json:"subject,omitempty"`
 
@@ -553,7 +553,10 @@ type ActivityLinkEntityType string
 // CreateActivityRequest defines model for CreateActivityRequest.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
-	Body       *string `json:"body,omitempty"`
+
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
+	Body            *string   `json:"body,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns

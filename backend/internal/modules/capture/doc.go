@@ -37,5 +37,11 @@
 // swept 24-hour window), and capture_sweep_run (one receipt per repair pass
 // per workspace turn, so "when did it last succeed" outlives River's day of
 // retention — bookkeeping about a pass, not audited).
+//
+// Two more tables back the undo of an owner identity.
+// capture_owner_identity_withdrawn holds a withdrawn identity for the ten
+// minutes of its undo. capture_alias_refused holds a learned alias the seat
+// withdrew, which discovery never claims again.
+//
 // Imports shared + platform only; never a sibling module.
 package capture

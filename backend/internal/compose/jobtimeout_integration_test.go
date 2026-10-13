@@ -158,7 +158,6 @@ func TestTheDeclaredTimeoutIsTheDeadlineRiverApplies(t *testing.T) {
 	river.AddWorker(workers, jobs.Govern[timeoutProbeArgs](
 		probe,
 		jobs.Spec{Kind: "timeout_probe", Timeout: jobs.TimeoutPolicy{Fixed: declared}},
-		0,
 	))
 
 	runner, cleanup := newProbeRunner(t, workers)
@@ -209,7 +208,6 @@ func TestADeclaredAbsenceLeavesTheJobWithNoDeadline(t *testing.T) {
 	river.AddWorker(workers, jobs.Govern[timeoutProbeArgs](
 		probe,
 		jobs.Spec{Kind: "timeout_probe", Timeout: jobs.TimeoutPolicy{None: true}},
-		0,
 	))
 
 	runner, cleanup := newProbeRunner(t, workers)

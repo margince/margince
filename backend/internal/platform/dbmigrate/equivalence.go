@@ -54,6 +54,17 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "3322c618c5e63b3adc0cbafd9d00a7ddb8d921fd046941747dea2e4c42a2b4a4",
 			source:  "57662d25857ee38a6207b33cac92b93453f02fcf3163abf892df35a824758751",
 		}},
+		// The shipped body was a data backfill only: it stamped
+		// capture_import.provider_received_at from stored originals and relabelled
+		// acquisitions and notice cases. It created no catalog object, so the
+		// no-op that replaced it builds the same schema; the down half of either
+		// leaves the schema unchanged too. It was emptied because its run time grew
+		// with the mailbox and outlasted the api's boot window (margince#6692);
+		// the body moved unchanged to migrations/datafix/ as an operator task.
+		"1790871111": {{
+			applied: "95c9f28caa40048fcdf856f131e886bdc08ce249dfee2ce731d6244a3fe71f4b",
+			source:  "e96ba4f65cfffb7aad40b1eb7825602e8b2fb53015b2ab9d5f6511786de51b5c",
+		}},
 	},
 }
 

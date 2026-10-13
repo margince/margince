@@ -22,6 +22,7 @@ function connection(
   return {
     id: `connection-${provider}`,
     provider,
+    can_backfill: true,
     status: "connected",
     scopes: [],
     backfill,

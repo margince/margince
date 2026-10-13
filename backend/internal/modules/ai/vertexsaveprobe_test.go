@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // servesEverything answers every probe verb as served, at every location.
@@ -99,7 +98,9 @@ func TestOneSaveAsksEachQuestionOnceOnOneToken(t *testing.T) {
 	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
 	next := vertexRouting("europe-west4")
 	next.Tiers[TierFrontier] = next.Tiers[TierPremium]
-	next.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerGeminiVertex, Location: "eu", Model: "gemini-3.5-flash"}
+	next.Tiers[TierCheapCloud] = ProviderConfig{Provider: providerGeminiVertex, Location: "europe-west4", Model: "gemini-3.5-flash-lite"}
+	// The embedder sits at a location of its own, so the save names two.
+	next.Embeddings.Location = "eu"
 
 	if err := store.probeVertexBindings(context.Background(), RoutingConfig{}, next); err != nil {
 		t.Fatalf("a served binding was refused: %v", err)
@@ -144,42 +145,9 @@ func TestASaveGoogleCannotAnswerForIsAdmittedAndLogged(t *testing.T) {
 	}
 }
 
-// The probe is a call to the bound location, so a save eu_hosted refuses never
-// reaches it: not one request, not even the token exchange.
-func TestAnEUHostedSaveOutsideTheEUAsksGoogleNothing(t *testing.T) {
+// A binding without gemini_vertex gives a save nothing to ask Google.
+func TestASaveWithoutVertexHasNothingToProbe(t *testing.T) {
 	t.Parallel()
-	selector, google := googleAt(t, servesEverything(t))
-	store := &RoutingStore{keys: allCloudKeys(t), selectBrain: selector}
-	for _, location := range []string{"us", "global", "europe-west2"} {
-		next := vertexRouting(location)
-		next.Profile = ProfileEUHosted
-		if err := store.probeCandidate(context.Background(), RoutingConfig{}, next); err == nil || !strings.Contains(err.Error(), "not an EU location") {
-			t.Errorf("%s: want the EU refusal, got %v", location, err)
-		}
-	}
-	if n := google.requests.Load(); n != 0 {
-		t.Errorf("%d request(s) reached Google for saves eu_hosted refuses", n)
-	}
-	// The control: the same store does ask Google about an EU location.
-	if err := store.probeCandidate(context.Background(), RoutingConfig{}, vertexRouting("europe-west4")); err != nil {
-		t.Fatalf("an EU save was refused: %v", err)
-	}
-	if google.requests.Load() == 0 {
-		t.Error("an EU save reached nobody either, so the zero above proves nothing")
-	}
-}
-
-// A save that binds no gemini_vertex lane is left wholly to the write: nothing
-// is read, built or judged before the lock. The store below has no settings to
-// read and would panic if it tried, and the binding is an eu_hosted broker lane
-// with no pin of its own — which the write accepts when it carries the stored
-// lane's pin, so refusing it here would break that carry.
-func TestASaveWithoutVertexReadsAndProbesNothing(t *testing.T) {
-	t.Parallel()
-	store := &RoutingStore{selectBrain: func(ProviderConfig, config.Lookup) (model.Client, error) {
-		t.Error("a binding without gemini_vertex built a client on save")
-		return nil, errors.New("unreachable")
-	}}
 	cfg := RoutingConfig{
 		Profile: ProfileEUHosted,
 		Tiers: map[Tier]ProviderConfig{TierPremium: {
@@ -187,8 +155,8 @@ func TestASaveWithoutVertexReadsAndProbesNothing(t *testing.T) {
 		}},
 		Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "e"}},
 	}
-	if err := store.probeBeforeWrite(context.Background(), cfg, "stale"); err != nil {
-		t.Errorf("a save without vertex was judged before the write: %v", err)
+	if probes := vertexProbesOf(cfg); len(probes) != 0 {
+		t.Errorf("a save without vertex has %d probe(s), want none", len(probes))
 	}
 }
 
@@ -279,7 +247,7 @@ func TestOnlyAMissingPublisherModelReadsAsNotServed(t *testing.T) {
 // throttle or an outage is not, and the save goes through unchecked.
 func TestARefusedKeyRefusesTheSaveAndAnOutageDoesNot(t *testing.T) {
 	t.Parallel()
-	p := labelledProbe{label: "tier premium", vertexProbe: vertexProbe{location: "eu", model: "gemini-3.5-flash"}}
+	p := labelledProbe{label: "tier premium", location: "eu", model: "gemini-3.5-flash"}
 	for status, refused := range map[int]bool{
 		http.StatusBadRequest: true, http.StatusUnauthorized: true, http.StatusForbidden: true,
 		http.StatusTooManyRequests: false, http.StatusServiceUnavailable: false,

@@ -22,6 +22,7 @@ package integration
 // order the page by the name it is being refused.
 
 import (
+	"bytes"
 	"context"
 	"slices"
 	"testing"
@@ -88,6 +89,34 @@ func TestTheDealsListSortsByTheStatusColumnItDraws(t *testing.T) {
 	// "open" < "won"
 	assertIDOrder(t, listed("status"), []ids.UUID{openDeal, wonDeal}, "status ascending")
 	assertIDOrder(t, listed("-status"), []ids.UUID{wonDeal, openDeal}, "status descending")
+}
+
+// TestTheDealsListSortsByTheOwnerColumnItDraws: by the owner's name, which is
+// what the column prints. The seats are named against their id order, so an
+// id sort cannot pass.
+func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
+	e := Setup(t)
+	pipeline, stage, _ := DealFixture(t, e)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
+
+	owners := []ids.UUID{e.Rep1, e.Rep2, e.Rep3}
+	slices.SortFunc(owners, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	for i, name := range []string{"Zed", "Mia", "Anna"} {
+		e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, owners[i], name)
+	}
+	// Seeded middle, last, first: the default newest-first sort then gives an
+	// order that is neither ascending nor descending, so a pass cannot come
+	// from it.
+	dealOf := map[ids.UUID]ids.UUID{}
+	for _, owner := range []ids.UUID{owners[1], owners[2], owners[0]} {
+		dealOf[owner] = e.SeedDeal(t, "Owned by "+owner.String(), pipeline, stage, &owner)
+	}
+
+	byName := []ids.UUID{dealOf[owners[2]], dealOf[owners[1]], dealOf[owners[0]]}
+	assertIDOrder(t, dealsIn(ctx, t, e, "owner_id"), byName, "owner ascending")
+	descending := slices.Clone(byName)
+	slices.Reverse(descending)
+	assertIDOrder(t, dealsIn(ctx, t, e, "-owner_id"), descending, "owner descending")
 }
 
 // The refusal still refuses. Widening a vocabulary is the shape most likely to
@@ -169,8 +198,8 @@ func TestTheDealsListSortsStagesByPipelineOrderAndNotByName(t *testing.T) {
 	assertIDOrder(t, dealsIn(ctx, t, e, "stage_id"), want, "stage ascending (pipeline order)")
 
 	reversed := make([]ids.UUID, 0, len(want))
-	for i := len(want) - 1; i >= 0; i-- {
-		reversed = append(reversed, want[i])
+	for _, w := range slices.Backward(want) {
+		reversed = append(reversed, w)
 	}
 	assertIDOrder(t, dealsIn(ctx, t, e, "-stage_id"), reversed, "stage descending")
 }

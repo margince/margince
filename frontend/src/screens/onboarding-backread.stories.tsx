@@ -111,7 +111,7 @@ export const EstimateFailed: Story = {
     },
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText(/could not estimate that window/i);
+    await within(canvasElement).findByText(/period could not be estimated/i);
   },
 };
 
@@ -224,7 +224,7 @@ export const Stopping: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /stop reading/i }),
+      await canvas.findByRole("button", { name: /stop import/i }),
     );
     await canvas.findByText(/Nothing was written/i);
   },

@@ -13,12 +13,14 @@ package privacy
 
 import (
 	"net/http"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ListRetentionPolicies implements (GET /retention-policies).
@@ -74,7 +76,19 @@ func (h Handlers) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	cleared := httperr.ClearedFields(r)
+	// retain_days is NOT NULL and the contract declares it a plain integer, so
+	// a null names no window at all. Refused rather than ignored: a 200 that
+	// leaves the old window standing tells an admin their change landed.
+	if slices.Contains(cleared, fieldRetainDays) {
+		httperr.Write(w, r, &values.ParseError{
+			Field: fieldRetainDays, Code: codeInvalidRetainDays,
+			Message: "retain_days cannot be null — name a window, or omit the field to leave it unchanged",
+		})
+		return
+	}
 	patch := PolicyPatch{
+		Clear:       cleared,
 		RetainDays:  req.RetainDays,
 		LawfulBasis: req.LawfulBasis,
 		Enabled:     req.Enabled,

@@ -129,6 +129,15 @@ func (c *collector) holdCalendar(content []byte) {
 	}
 }
 
+// justAdmitted is the body of the part the last take admitted, or nil when that
+// part was refused by a bound.
+func (c *collector) justAdmitted() []byte {
+	if n := len(c.parts); n > 0 && c.parts[n-1].Ordinal == c.ordinal {
+		return c.parts[n-1].Body
+	}
+	return nil
+}
+
 // settle admits whatever was held back, after every part the sender named has
 // had its claim on the bounds.
 func (c *collector) settle() {

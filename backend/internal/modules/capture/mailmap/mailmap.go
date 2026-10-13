@@ -14,13 +14,14 @@ package mailmap
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -52,6 +53,7 @@ type Message struct {
 	// authored, and empty whenever no such claim can be trusted
 	// (deliveredto.go). It is how a forwarding alias becomes discoverable.
 	deliveredTo string
+	senderAuth  connector.SenderAuthentication
 	autoReply   bool // a reply nobody chose to write: kept off the timeline
 	// machineTouched is the BROADER question — did any machine have a hand in
 	// this? It never drops a message; it only refuses the outbound attestation,
@@ -67,6 +69,7 @@ type Message struct {
 	// calendarNotice answers only the OUTBOUND contact-minting question, and an
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
+	calendarMethod  string // the part's RFC 5546 method, "" when none is known
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -126,6 +129,10 @@ func Parse(raw []byte, owner string) (Message, error) {
 	occurredAt, _ := header.Date()
 
 	fromList, _ := header.AddressList("From")
+	groupOriginal, viaGroup := googleGroupSender(header)
+	if viaGroup {
+		fromList = groupOriginal
+	}
 	toList, _ := header.AddressList("To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
@@ -139,10 +146,12 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := header.AddressList("Bcc")
 	deliveredTo := TopDeliveredTo(header)
+	senderAuth := TopSenderAuthentication(header)
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops, hasCalendarPart := extractText(reader)
+	body, parts, drops, calendar := extractText(reader)
+	hasCalendarPart := calendar.present
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
 	direction := connector.DirectionInbound
@@ -189,12 +198,14 @@ func Parse(raw []byte, owner string) (Message, error) {
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
+		senderAuth:       senderAuth,
 		autoReply:        autoReply,
 		machineTouched:   machineTouched,
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
+		calendarMethod:   calendar.method(),
 		deliveryReport:   deliveryReport,
-		listUnsubscribe:  strings.TrimSpace(header.Get("List-Unsubscribe")) != "",
+		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
 		parts:            parts,
@@ -319,8 +330,8 @@ func replyIDs(references, inReplyTo, messageID string) []string {
 	refs := strings.Fields(references)
 	candidates := make([]string, 0, len(refs)+1)
 	candidates = append(candidates, strings.Fields(inReplyTo)...)
-	for i := len(refs) - 1; i >= 0; i-- {
-		candidates = append(candidates, refs[i])
+	for _, ref := range slices.Backward(refs) {
+		candidates = append(candidates, ref)
 	}
 	seen := make(map[string]bool, len(candidates))
 	out := make([]string, 0, len(candidates))
@@ -380,7 +391,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 	if m.body != "" {
 		body = header + "\n\n" + m.body
 	}
-	body = truncate(body, maxBodyLen)
+	body = textcut.BytesMarked(body, maxBodyLen, "…")
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
@@ -392,18 +403,20 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			OccurredAt:      m.occurredAt,
 			Direction:       m.direction,
 			HasCalendarPart: m.hasCalendarPart,
+			CalendarMethod:  m.calendarMethod,
 		},
-		Source:       source,
-		CapturedBy:   "connector:" + connectorName,
-		Raw:          raw,
-		DeliveredTo:  m.deliveredTo,
-		Counterparty: m.recordCounterparty(),
-		ThreadKey:    m.threadKey,
-		ReplyTo:      m.replyTo,
-		Participants: m.participants.Participants,
-		Addresses:    m.addresses,
-		Parts:        m.recordParts(),
-		PartDrops:    m.recordDrops(),
+		Source:               source,
+		CapturedBy:           "connector:" + connectorName,
+		Raw:                  raw,
+		DeliveredTo:          m.deliveredTo,
+		SenderAuthentication: m.senderAuth,
+		Counterparty:         m.recordCounterparty(),
+		ThreadKey:            m.threadKey,
+		ReplyTo:              m.replyTo,
+		Participants:         m.participants.Participants,
+		Addresses:            m.addresses,
+		Parts:                m.recordParts(),
+		PartDrops:            m.recordDrops(),
 	}
 }
 
@@ -439,19 +452,6 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func truncate(s string, limit int) string {
-	if len(s) <= limit {
-		return s
-	}
-	// Back off to a rune boundary so the stored excerpt is never a broken
-	// UTF-8 sequence.
-	cut := limit
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "…"
 }
 
 // recordParts hands the collected files to the seam.

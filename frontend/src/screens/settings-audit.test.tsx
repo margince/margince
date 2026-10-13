@@ -1,20 +1,18 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { pickOption } from "../design-system/select-testing";
+import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { SEARCH_DEBOUNCE_MS } from "./listquery";
-import { AuditLogCard } from "./settings.auditlog";
-import { auditWhenRange } from "./settings.auditlog.vocab";
 import { auditEntry, jsonResponse, render } from "./settings.testkit";
+import { AuditLogCard } from "./settings-audit";
 
-// The audit trail card, read on its own rather than through the page that
-// hosts it: a toolbar always in view, a table of changes that names records in
-// words, the wire as the only honest witness that a filter narrowed the
-// question, and a change detail that stays out of the table until asked for.
+// The fixture entry's toggle, named by its action and entity.
+const EXPAND_UPDATE = "Show change detail: update on contact";
+const ANY_EXPAND = /^Show change detail: /;
 
 // No shared fetch stub: the backend a claim needs is installed beside the claim,
 // so what answered it is readable where it is asserted.
@@ -29,11 +27,32 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-type AuditAnswer = Readonly<{ status?: number; body: unknown }>;
+const VIEWER_ID = "00000000-0000-4000-8000-000000000001";
+const RECORD_ID = "01a11ea4-37ab-720f-89a7-9008eb3f4280";
 
-// A principal holding `audit_log:read`, which `GET /v1/audit-log` asks for,
-// and an audit log answering whatever `answer` says for the URL it was asked.
-function auditLogBackend(answer: (url: string) => AuditAnswer) {
+const created = {
+  ...auditEntry,
+  id: "al-created",
+  actor_type: "human",
+  actor_id: "human:u-anna",
+  actor_name: "Anna Weber",
+  passport_id: null,
+  on_behalf_of: null,
+  action: "create",
+  entity_type: "onboarding_wizard_state",
+  entity_id: RECORD_ID,
+  entity_label: null,
+  before: null,
+  after: { step: "complete", settings: { voice: false } },
+  authorization_rule:
+    "role[individual] onboarding_wizard_state.create row_scope=own",
+  evidence: null,
+};
+
+type Page = { entries: readonly object[]; next?: string | null };
+
+function auditLogBackend(...pages: Page[]) {
+  const answers = pages.length > 0 ? pages : [{ entries: [auditEntry] }];
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
@@ -42,8 +61,11 @@ function auditLogBackend(answer: (url: string) => AuditAnswer) {
       );
     }
     if (url.includes("/audit-log")) {
-      const { status, body } = answer(url);
-      return jsonResponse(body, status);
+      const page = url.includes("cursor=") ? answers[1] : answers[0];
+      return jsonResponse({
+        data: page.entries,
+        page: { next_cursor: page.next ?? null, has_more: Boolean(page.next) },
+      });
     }
     return jsonResponse({
       data: [],
@@ -52,148 +74,79 @@ function auditLogBackend(answer: (url: string) => AuditAnswer) {
   });
 }
 
-function page(entries: readonly unknown[]): AuditAnswer {
-  return {
-    body: { data: entries, page: { next_cursor: null, has_more: false } },
-  };
-}
-
-// Which /audit-log URLs a backend was actually asked for, newest last.
 function auditLogUrls(backend: ReturnType<typeof auditLogBackend>) {
   return backend.mock.calls
     .map(([input]) => String(input instanceof Request ? input.url : input))
     .filter((url) => url.includes("/audit-log"));
 }
 
+async function openDetail(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: ANY_EXPAND }));
+}
+
 describe("AuditLogCard", () => {
-  // The dials lead the card rather than hiding in a disclosure: a reader who
-  // came to find one change narrows first, and a closed "Filters" summary made
-  // that a hunt.
-  it("keeps the filters in view above a table of changes, in one card", async () => {
-    vi.stubGlobal(
-      "fetch",
-      auditLogBackend(() => page([auditEntry])),
-    );
+  it("puts the filters inside the log's own card, in a disclosure closed on arrival", async () => {
+    vi.stubGlobal("fetch", auditLogBackend());
     render(<AuditLogCard />);
-    const action = await screen.findByText("Updated");
+    await screen.findByText("update");
 
-    const who = screen.getByLabelText("Who");
-    const card = who.closest("section");
-    expect(card).not.toBeNull();
-    expect(who.closest("details")).toBeNull();
-    expect(action.closest("section")).toBe(card);
+    const card = screen.getByLabelText("Actor").closest("section");
     expect(card).toContainElement(
-      screen.getByRole("heading", { level: 2, name: "Changes" }),
+      screen.getByRole("heading", { level: 2, name: "Audit log" }),
     );
-    for (const dial of ["When", "Action", "Record type", "Record"]) {
-      expect(screen.getByLabelText(dial)).toBeInTheDocument();
-    }
-    for (const column of ["When", "Who", "What", "Record"]) {
-      expect(
-        screen.getByRole("columnheader", { name: column }),
-      ).toBeInTheDocument();
-    }
-  });
-
-  it("names a record without a page by its type in words and a short id, never its table name", async () => {
-    const scheduled = {
-      ...auditEntry,
-      id: "al-sys",
-      actor_type: "system",
-      actor_id: "system:scheduler",
-      passport_id: null,
-      on_behalf_of: null,
-      action: "erase",
-      entity_type: "forecast_capture_status",
-      entity_id: "01a0fbe7-3c1d-7e2a-9b44-5d6e7f809a1b",
-    };
-    vi.stubGlobal(
-      "fetch",
-      auditLogBackend(() => page([scheduled])),
-    );
-    render(<AuditLogCard />);
-
-    expect(
-      await screen.findByText("Forecast capture status"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("01a0fbe7")).toBeInTheDocument();
-    expect(screen.queryByText(/forecast_capture_status/)).toBeNull();
-    expect(screen.queryByText(/01a0fbe7-3c1d/)).toBeNull();
-    // Destroying data reads in the danger tone; a routine write does not.
-    expect(screen.getByText("Erased").closest(".badge")).toHaveClass(
-      "badge-danger",
-    );
+    expect(card).toContainElement(screen.getByText("update"));
+    const disclosure = screen.getByLabelText("Actor").closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(disclosure?.querySelector("summary")).toHaveTextContent("Filters");
   });
 
   it("narrows the request to the filters, keeping the page size and dropping the cursor", async () => {
     const user = steppedClock();
-    const backend = auditLogBackend(() => page([auditEntry]));
+    const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
-    await screen.findByText("Updated");
+    await screen.findByText("update");
     expect(auditLogUrls(backend)[0]).toContain("limit=20");
 
-    await pickOption(user, screen.getByLabelText("Action"), "Exported");
-    await pickOption(user, screen.getByLabelText("Record type"), "Contact");
-    await user.type(screen.getByLabelText("Actor ID"), "agent:sdr");
-    await user.type(screen.getByLabelText("Bulk change ID"), "batch-7");
-
-    // The card debounces what it asks, so the narrowed request exists only once
-    // the debounce has elapsed, and that is stepped rather than waited out.
+    await user.type(screen.getByLabelText("Actor"), "agent:sdr");
+    await user.type(screen.getByLabelText("Entity type"), "contact");
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+
     await waitFor(() => {
       const latest = auditLogUrls(backend).at(-1) ?? "";
       expect(latest).toContain("actor=agent%3Asdr");
-      expect(latest).toContain("action=export");
       expect(latest).toContain("entity_type=contact");
-      expect(latest).toContain("batch_id=batch-7");
     });
     const latest = auditLogUrls(backend).at(-1) ?? "";
     expect(latest).toContain("limit=20");
-    // A filter change is a new question, so the keyset chain starts over.
     expect(latest).not.toContain("cursor=");
   });
 
-  it("says the log is empty in words that say what will fill it", async () => {
-    vi.stubGlobal(
-      "fetch",
-      auditLogBackend(() => page([])),
-    );
-    render(<AuditLogCard />);
-    expect(
-      await screen.findByText(
-        "Changes appear here as soon as anyone creates or edits a record.",
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("tells a narrowed empty list apart from an empty log, and offers the way back", async () => {
+  it("says the log is empty before any filter, and that nothing matches after one", async () => {
     const user = steppedClock();
-    const backend = auditLogBackend((url) =>
-      page(url.includes("action=") ? [] : [auditEntry]),
-    );
-    vi.stubGlobal("fetch", backend);
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [] }));
     render(<AuditLogCard />);
-    await screen.findByText("Updated");
+    expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
 
-    await pickOption(user, screen.getByLabelText("Action"), "Exported");
+    await user.type(screen.getByLabelText("Action"), "erase");
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     expect(
-      await screen.findByText("No changes match these filters"),
+      await screen.findByText("No recorded actions match these filters."),
     ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Clear filters" }));
-    await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
-    expect(await screen.findByText("Updated")).toBeInTheDocument();
   });
 
   it("offers a retry when the log fails to load, and keeps the filters", async () => {
     vi.stubGlobal(
       "fetch",
-      auditLogBackend(() => ({
-        status: 500,
-        body: { title: "Upstream is down" },
-      })),
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+          );
+        }
+        return jsonResponse({ title: "Upstream is down" }, 500);
+      }),
     );
     render(<AuditLogCard />);
     expect(
@@ -202,93 +155,302 @@ describe("AuditLogCard", () => {
     expect(
       screen.getByText("Could not load this view. Reload the page."),
     ).toBeInTheDocument();
-    // A failed page must not take the controls that could ask a different
-    // question with it.
-    expect(screen.getByLabelText("Who")).toBeInTheDocument();
+    expect(screen.getByLabelText("Actor")).toBeInTheDocument();
   });
 
-  it("keeps the before/after diff and the attribution trail out of the table until a change is opened", async () => {
+  it("names the row its toggle opens, and points at a region in the document", async () => {
+    vi.stubGlobal("fetch", auditLogBackend());
+    render(<AuditLogCard />);
+    const user = userEvent.setup();
+    const toggle = await screen.findByRole("button", { name: EXPAND_UPDATE });
+
+    for (const expanded of ["false", "true"]) {
+      expect(toggle).toHaveAttribute("aria-expanded", expanded);
+      const controls = toggle.getAttribute("aria-controls") ?? "";
+      expect(document.getElementById(controls)).not.toBeNull();
+      await user.click(toggle);
+    }
+  });
+
+  it("names the toggle in the same words the row shows, never the raw key", async () => {
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
+    render(<AuditLogCard />);
+    expect(
+      await screen.findByRole("button", {
+        name: "Show change detail: create on onboarding wizard state",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("reads each entry under the column it belongs to", async () => {
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
+    render(<AuditLogCard />);
+    const table = await screen.findByRole("table", {
+      name: "Recorded actions",
+    });
+    const headers = within(table)
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent);
+    expect(headers).toEqual(["When", "Actor", "Action", "Target", "Detail"]);
+    const [, row] = within(table).getAllByRole("row");
+    const cells = within(row).getAllByRole("cell");
+    expect(cells[1]).toHaveTextContent("Anna Weber");
+    expect(cells[2]).toHaveTextContent("create");
+    expect(cells[3]).toHaveTextContent("onboarding wizard state");
+  });
+
+  it.each([
+    ["create", "badge-success"],
+    ["delete", "badge-danger"],
+  ])("tones a %s as %s and every other verb neutral", async (action, tone) => {
     vi.stubGlobal(
       "fetch",
-      auditLogBackend(() => page([auditEntry])),
+      auditLogBackend({ entries: [{ ...created, action }, auditEntry] }),
     );
+    render(<AuditLogCard />);
+    expect((await screen.findByText(action)).closest(".badge")).toHaveClass(
+      tone,
+    );
+    expect(screen.getByText("update").closest(".badge")).toHaveAttribute(
+      "class",
+      "badge",
+    );
+  });
+
+  it("states when an entry happened against the clock, with the instant on hover", async () => {
+    steppedClock();
+    vi.setSystemTime(new Date("2026-07-10T12:00:00Z"));
+    vi.stubGlobal("fetch", auditLogBackend());
+    render(<AuditLogCard />);
+    const when = await screen.findByText("3 hours ago");
+    expect(when).toHaveAttribute("datetime", auditEntry.occurred_at);
+    expect(when.getAttribute("title")).toMatch(/2026/);
+  });
+
+  it("names the record from its label and links a record that has a page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      auditLogBackend({
+        entries: [{ ...auditEntry, entity_label: "Priya Shah" }],
+      }),
+    );
+    render(<AuditLogCard />);
+    const link = await screen.findByRole("link", { name: "Priya Shah" });
+    expect(link).toHaveAttribute("href", "#/contacts/p-1");
+  });
+
+  it("names a record without a label by its kind and its id's random tail, and asks the server nothing else", async () => {
+    const backend = auditLogBackend({ entries: [created] });
+    vi.stubGlobal("fetch", backend);
+    render(<AuditLogCard />);
+    const shortId = await screen.findByText("eb3f4280");
+    expect(shortId.tagName).toBe("CODE");
+    expect(shortId).toHaveAttribute("title", RECORD_ID);
+    expect(screen.queryByText(RECORD_ID.slice(0, 8))).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Copy record ID" }),
+    ).toBeInTheDocument();
+    const asked = backend.mock.calls.map(([input]) =>
+      String(input instanceof Request ? input.url : input),
+    );
+    expect(asked.every((url) => /\/v1\/(me|audit-log)/.test(url))).toBe(true);
+  });
+
+  it("keeps the change detail hidden until the row is expanded", async () => {
+    vi.stubGlobal("fetch", auditLogBackend());
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("Updated");
-    expect(screen.queryByText("new")).toBeNull();
+    await screen.findByText("update");
+    const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("qualified")).toBeNull();
-    expect(screen.queryByText("pp-9")).toBeNull();
 
-    await user.click(
-      screen.getByRole("button", { name: "Open details for this change" }),
+    await openDetail(user);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const detail = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
     );
-    const drawer = await screen.findByRole("dialog");
-    expect(drawer).toHaveTextContent("new");
-    expect(drawer).toHaveTextContent("qualified");
-    expect(drawer).toHaveTextContent("pp-9");
-    expect(drawer).toHaveTextContent("role:admin");
+    expect(detail).toHaveTextContent("qualified");
+    expect(detail).toHaveTextContent("An agent");
+    expect(detail).not.toHaveTextContent("pp-9");
   });
 
-  it("renders a non-scalar before/after value as its JSON string, not [object Object]", async () => {
-    const objectValuedEntry = {
-      ...auditEntry,
-      id: "al-2",
-      before: { address: { city: "Berlin" } },
-      after: { address: { city: "Munich" } },
-    };
+  it("names the client the row's own passport recorded, though the reader's passports no longer list it", async () => {
+    const rotated = { ...auditEntry, agent_client: "Claude Desktop" };
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [rotated] }));
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("update");
+
+    await openDetail(user);
+
+    const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
+    const detail = document.getElementById(
+      toggle.getAttribute("aria-controls") ?? "",
+    );
+    expect(detail).toHaveTextContent("Claude Desktop");
+    expect(detail).not.toHaveTextContent("An agent");
+  });
+
+  it("opens an entry from anywhere on its row, its id included, but not from a control in it", async () => {
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    const toggle = await screen.findByRole("button", { name: ANY_EXPAND });
+
+    await user.click(screen.getByText("eb3f4280"));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(screen.getByRole("button", { name: "Copy record ID" }));
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(screen.getByText("Anna Weber"));
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows a created record's values alone, and a structured one as code", async () => {
+    vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("Anna Weber");
+    await openDetail(user);
+
+    const fields = screen.getByText("Value").closest("table");
+    if (!fields) {
+      throw new Error("the change detail drew no field table");
+    }
+    expect(within(fields).getByText("complete")).toBeInTheDocument();
+    expect(within(fields).getByText('{"voice":false}').tagName).toBe("CODE");
+    expect(within(fields).queryByText("(created)")).toBeNull();
+  });
+
+  it("strikes the value an update replaced and keeps the one it wrote", async () => {
     vi.stubGlobal(
       "fetch",
-      auditLogBackend(() => page([objectValuedEntry])),
+      auditLogBackend({
+        entries: [
+          {
+            ...auditEntry,
+            before: { address: { city: "Berlin" } },
+            after: { address: { city: "Munich" } },
+          },
+        ],
+      }),
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("Updated");
-    await user.click(
-      screen.getByRole("button", { name: "Open details for this change" }),
+    await screen.findByText("update");
+    await openDetail(user);
+
+    expect(screen.getByText("Before and after")).toBeInTheDocument();
+    expect(screen.getByText('{"city":"Berlin"}')).toHaveClass(
+      "field-diff-from",
     );
-    expect(await screen.findByText('{"city":"Berlin"}')).toBeTruthy();
-    expect(screen.getByText('{"city":"Munich"}')).toBeTruthy();
-    // The changed field reads as a word, not as its column name.
-    expect(screen.getByText("Address")).toBeTruthy();
+    expect(screen.getByText('{"city":"Munich"}')).toHaveClass("field-diff-to");
     expect(screen.queryByText("[object Object]")).toBeNull();
   });
-});
 
-// The When dial cuts days on the company clock the table reads on. At 23:30Z
-// on 1 October it is already 2 October in Berlin, so "Today" starts at Berlin
-// midnight, 22:00Z, rather than at UTC midnight two hours earlier.
-describe("auditWhenRange", () => {
-  const now = new Date("2026-10-01T23:30:00Z");
-  const zone = "Europe/Berlin";
-  const noCustom = { from: "", to: "" };
-
-  it("starts Today at the company's midnight", () => {
-    expect(auditWhenRange("today", noCustom, now, zone)).toEqual({
-      from: "2026-10-01T22:00:00.000Z",
-    });
+  it("shows what a removal took away", async () => {
+    vi.stubGlobal(
+      "fetch",
+      auditLogBackend({
+        entries: [
+          {
+            ...created,
+            action: "delete",
+            before: { name: "Old list" },
+            after: null,
+          },
+        ],
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("delete");
+    await openDetail(user);
+    expect(screen.getByText("Removed value")).toBeInTheDocument();
+    expect(screen.getByText("Old list")).toBeInTheDocument();
   });
 
-  it("counts the last seven days including today", () => {
-    expect(auditWhenRange("last7", noCustom, now, zone)).toEqual({
-      from: "2026-09-25T22:00:00.000Z",
-    });
+  it.each([
+    [
+      "a role policy in words",
+      "role[admin] activity.create row_scope=all",
+      "Admin role · activity create · all records",
+    ],
+    [
+      "several roles under one plural",
+      "role[rep,individual] deal.update row_scope=team",
+      "User, individual roles · deal update · team records",
+    ],
+    ["a system write", "system", "System, no role check"],
+    ["a Deal Room write", "deal_room_session", "Deal Room session"],
+    ["an unknown shape as written", "role:admin", "role:admin"],
+  ])("says what allowed the write: %s", async (_case, rule, words) => {
+    vi.stubGlobal(
+      "fetch",
+      auditLogBackend({
+        entries: [{ ...auditEntry, authorization_rule: rule }],
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("update");
+    await openDetail(user);
+    const term = screen.getByText("Allowed by");
+    expect(term.nextElementSibling).toHaveTextContent(words);
   });
 
-  it("reads a custom range inclusive of the whole last day", () => {
+  it.each([
+    ["the resolved name", { on_behalf_of_name: "Anna Weber" }, "Anna Weber"],
+    ["a stand-in when no name resolved", {}, "Unknown member"],
+    ["the viewer as You", { on_behalf_of: VIEWER_ID }, "You"],
+  ])(
+    "names an agent's human authority as %s, with the agent under it",
+    async (_case, fields, expected) => {
+      vi.stubGlobal(
+        "fetch",
+        auditLogBackend({ entries: [{ ...auditEntry, ...fields }] }),
+      );
+      render(<AuditLogCard />);
+      await screen.findByText("update");
+      const name = await screen.findByText(expected);
+      expect(name.closest(".auditlog-who")).toHaveTextContent("via an agent");
+      expect(name.closest("td")).not.toHaveTextContent(VIEWER_ID);
+    },
+  );
+
+  it("says a target with no id has no value, and offers nothing to copy", async () => {
+    vi.stubGlobal(
+      "fetch",
+      auditLogBackend({ entries: [{ ...auditEntry, entity_id: undefined }] }),
+    );
+    render(<AuditLogCard />);
+
+    const none = await screen.findByText(en["settings.auditNoValue"]);
+    const cell = none.closest("td");
+    if (!(cell instanceof HTMLElement)) throw new Error("no target cell");
     expect(
-      auditWhenRange(
-        "custom",
-        { from: "2026-10-02", to: "2026-10-02" },
-        now,
-        zone,
-      ),
-    ).toEqual({
-      from: "2026-10-01T22:00:00.000Z",
-      to: "2026-10-02T21:59:59.999Z",
-    });
+      within(cell).queryByRole("button", { name: en["settings.auditCopyId"] }),
+    ).toBeNull();
   });
 
-  it("asks for no range at any time", () => {
-    expect(auditWhenRange("any", noCustom, now, zone)).toEqual({});
+  it("loads the next page under the first", async () => {
+    const backend = auditLogBackend(
+      { entries: [auditEntry], next: "c-2" },
+      { entries: [{ ...created, id: "al-next" }] },
+    );
+    vi.stubGlobal("fetch", backend);
+    const user = userEvent.setup();
+    render(<AuditLogCard />);
+    await screen.findByText("update");
+
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByText("Anna Weber")).toBeInTheDocument();
+    expect(screen.getByText("update")).toBeInTheDocument();
+    expect(auditLogUrls(backend).at(-1)).toContain("cursor=c-2");
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 });

@@ -152,6 +152,26 @@ describe("ComboBox", () => {
     );
   });
 
+  it("lets go of the active row when the suggestions shrink under it", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{ArrowUp}");
+    expect(box).toHaveAttribute("aria-activedescendant");
+
+    rerender(<Harness suggestions={MODELS.slice(0, 2)} />);
+    expect(box).not.toHaveAttribute("aria-activedescendant");
+    await user.keyboard("{Enter}");
+    expect(screen.getByTestId("committed")).toHaveTextContent("");
+    await user.keyboard("{ArrowDown}");
+    const active = box.getAttribute("aria-activedescendant");
+    expect(document.getElementById(active ?? "")).toHaveTextContent(
+      MODELS[0].value,
+    );
+  });
+
   // ArrowUp reaches for the end of the list, the way Select's does. Clamping
   // both directions to zero put ArrowUp and ArrowDown on the same row, which
   // leaves a keyboard reader no way to reach the last option but to walk the

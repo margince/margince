@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { problemCode, problemDetails } from "../lib/problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
 
@@ -151,13 +152,10 @@ export function sourceRef(
 //     own writing ("Frage:", "Vorschlag:" in an email), and the file is the
 //     prose it reads as. Refusing it would reject the owner's own sent mail.
 //
-// One shape sits on the wrong side of that line and is accepted knowingly: a
-// short quoted line attributed to someone else inside a long own-authored
-// document ("Sam: we ship Friday", then two paragraphs about it). It is
-// textually identical to a heading, so no rule over this data separates them,
-// and it is taken as prose. What that costs is a handful of quoted words in a
-// corpus of thousands; refusing it instead would reject ordinary sent mail,
-// which is the material the voice is built from.
+// A short quoted line inside the owner's own document ("Sam: we ship Friday",
+// then two paragraphs about it) reads exactly like a heading here, and is sent
+// as prose. The server tells them apart on ingest: a label naming a contact or
+// colleague the owner can see is somebody else speaking, and leaves the source.
 //
 // The share is computed from the server's own counts, never from the text.
 export function routePreview(
@@ -202,37 +200,26 @@ const refusalReasons: Record<string, RefusalReason> = {
   unsupported_format: "unsupported",
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 // Every stable machine code an RFC 7807 body carries: the top-level `code` plus
 // any per-field `details.errors[].code`.
 function problemCodes(problem: unknown): string[] {
-  if (!isRecord(problem)) {
-    return [];
-  }
-  const codes: string[] = [];
-  if (typeof problem.code === "string") {
-    codes.push(problem.code);
-  }
-  const details = problem.details;
-  if (isRecord(details) && Array.isArray(details.errors)) {
-    for (const raw of details.errors) {
-      if (isRecord(raw) && typeof raw.code === "string") {
-        codes.push(raw.code);
-      }
-    }
-  }
-  return codes;
+  const top = problemCode(problem);
+  const errors = problemDetails(problem)?.errors;
+  const fieldCodes = Array.isArray(errors)
+    ? errors.map(problemCode).filter((code) => code !== null)
+    : [];
+  return top === null ? fieldCodes : [top, ...fieldCodes];
 }
 
 // The refusal category a 422 names, or null when no code here recognizes it.
 export function refusalOf(problem: unknown): RefusalReason | null {
-  const known = problemCodes(problem).find(
-    (code) => refusalReasons[code] !== undefined,
-  );
-  return known === undefined ? null : refusalReasons[known];
+  for (const code of problemCodes(problem)) {
+    const reason = refusalReasons[code];
+    if (reason !== undefined) {
+      return reason;
+    }
+  }
+  return null;
 }
 
 /** What one intake attempt ended as. Every path a source can take terminates in

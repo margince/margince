@@ -52,23 +52,21 @@ const regenerate = "cd backend && go test ./gates -run EntityModel -update-entit
 const entityModelLede = `Every table this product keeps, what each column is, and how the records point
 at each other.
 
-**This page set is generated and an edit made here is lost.** It is rendered
-from the schema the migrations build (` + "`backend/migrations/testdata/head_catalog.txt`" + `),
+Rendered from the schema the migrations build (` + "`backend/migrations/testdata/head_catalog.txt`" + `),
 the field descriptions in the API contract (` + "`backend/api/crm.yaml`" + `), and the
-module that owns each table's writes. Nothing a reader has to keep in step by
-hand is on it.
-
-Changing the model means changing one of those three, and the gate that renders
-this fails on the same run — so regenerate it with the change that moved it:
+module that owns each table's writes. Changing the model means changing one of
+those three, and the gate that renders this fails on the same run, so
+regenerate it with the change that moved it:
 
     cd backend && go test ./gates -run EntityModel -update-entity-model
 
-A column that reads only ` + "`Required text`" + ` or ` + "`Optional text`" + ` has no description
-anywhere in the tree — the catalog knows its type and nothing has said what it
-is for. Give it one by adding a ` + "`description:`" + ` to the matching field in
-` + "`backend/api/crm.yaml`" + `, and the next regeneration picks it up.
+A column whose last cell is empty has no description anywhere in the tree: the
+catalog knows its type and nothing has said what it is for. Give it one by
+adding a ` + "`description:`" + ` to the matching field in ` + "`backend/api/crm.yaml`" + `, and
+the next regeneration picks it up. A foreign-key column names its target; what
+happens when the parent is deleted is in the table's **Points at** list.
 
-For WHY the schema is shaped this way rather than what it holds, read
+For why the schema is shaped this way rather than what it holds, read
 [explanation/architecture.md](../../explanation/architecture.md) and
 [explanation/write-backbone.md](../../explanation/write-backbone.md). For which
 module to put a change in, read [modules.md](../modules.md).
@@ -133,7 +131,7 @@ func TestEntityModelDrawsOnEveryColumnItsSourcesCarry(t *testing.T) {
 		printed++
 		for _, column := range schema.tables[name].columns {
 			columns++
-			if !strings.Contains(page, "| `"+column.name+"` | `"+column.dataType+"` |") {
+			if !strings.Contains(page, "| `"+column.name+"` | "+cell(typeCell(column))+" |") {
 				t.Errorf("%s.%s is in the catalog and on no page", name, column.name)
 			}
 		}

@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -214,6 +220,29 @@ describe("ContractRenewModal", () => {
 
     await screen.findByText(/a term cannot end before it starts/);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // A browser's Enter submits through the form's default button, which sits in
+  // the pinned foot and joins the fields' form by its `form` attribute.
+  it("renews from a field's submit, through the Renew button's form", async () => {
+    const renewed = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ ...PREDECESSOR, id: "c-2" }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    stubRenewalFetch(renewed);
+    show(<ContractRenewModal contract={PREDECESSOR} open onClose={vi.fn()} />);
+
+    const form = ((await screen.findByLabelText(/^Title/)) as HTMLInputElement)
+      .form;
+    const renew = screen.getByRole("button", { name: "Renew" });
+    expect(renew).toHaveAttribute("type", "submit");
+    expect((renew as HTMLButtonElement).form).toBe(form);
+    fireEvent.submit(form as HTMLFormElement);
+
+    await waitFor(() => expect(renewed).toHaveBeenCalledTimes(1));
   });
 });
 

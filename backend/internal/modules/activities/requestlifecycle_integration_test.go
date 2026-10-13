@@ -50,7 +50,9 @@ func TestSchedulingRequestSurvivesAcknowledgementAndCreatesOneTask(t *testing.T)
 	}
 }
 
-func TestHistoricalRequestIsReviewableAndExplicitAcceptanceIsIdempotent(t *testing.T) {
+// A request past the waiting horizon leaves the queue, and its record still
+// offers it, so a human can take it back on deliberately.
+func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.T) {
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -69,23 +71,21 @@ func TestHistoricalRequestIsReviewableAndExplicitAcceptanceIsIdempotent(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
 	for _, row := range waiting {
-		found = found || row.ActivityID == id
-	}
-	if !found {
-		t.Fatal("historical request disappeared from review")
+		if row.ActivityID == id {
+			t.Fatal("a request past the waiting horizon is still daily work")
+		}
 	}
 	review, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestReviewAsOf: &asOf})
 	if err != nil {
 		t.Fatal(err)
 	}
-	found = false
+	found := false
 	for _, row := range review {
 		found = found || ids.UUID(row.Id) == id
 	}
 	if !found {
-		t.Fatal("record review disagrees with waiting queue")
+		t.Fatal("the record no longer offers the historical request for taking")
 	}
 	actor, ok := principal.Actor(e.as())
 	if !ok {

@@ -23,6 +23,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -112,42 +113,67 @@ const (
 	waitingHorizonWindowDays = 365
 )
 
-// waitingHorizonFor is this installation's horizon as of asOf: remembered when
-// it was measured within the hour (waitinghorizoncache.go), measured inside the
-// caller's transaction otherwise.
+// waitingHorizonStaleAfter is how old a stored measurement may be and still be
+// read. The number is in days and moves slowly, so a day is below what the
+// queue can tell apart. Past it the pass has stopped running, and the compiled
+// horizon beats a measurement of an older business.
+const waitingHorizonStaleAfter = 24 * time.Hour
+
+// waitingHorizonFor is the horizon the worker pass stored, or the compiled one
+// when none is stored or it is older than waitingHorizonStaleAfter. It never
+// measures: a read that did was as slow as the mailbox is long.
 //
-// UNGATED, and that is the one thing about this read worth arguing. Every other
-// figure in this package is taken under the caller's own visibility, because it
-// is about their work. The horizon is not: it decides which rows the queue
-// contains, so two colleagues reading one shared thread have to be judged by
-// one number. Derived per reader it would make the queue's contents depend on
-// who is looking, twice over and invisibly. The same argument is what makes it
-// safe to remember per workspace: a value no reader shapes is a value every
-// reader may be handed.
-//
-// What that costs is a duration and a count over the installation, and no
-// content: nothing here names a conversation, a contact or a record.
-func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
-	// The workspace this store's transaction already resolved; a handle that
-	// cannot name it simply measures, which is the answer before the cache.
-	ws, wsErr := s.db.Workspace(ctx)
-	if wsErr == nil {
-		if days, ok := s.horizons.lookup(ws, asOf, s.now()); ok {
-			return days, nil
-		}
+// Ungated: the horizon decides which rows the queue holds, so two colleagues
+// reading one thread must be judged by one number. It names no record.
+func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
+	var days int
+	var measuredAt time.Time
+	err := tx.QueryRow(ctx,
+		`SELECT horizon_days, measured_at FROM activity_waiting_horizon`).Scan(&days, &measuredAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return waitingHorizonDays, nil
 	}
+	if err != nil {
+		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
+	}
+	if s.now().Sub(measuredAt) >= waitingHorizonStaleAfter {
+		return waitingHorizonDays, nil
+	}
+	return days, nil
+}
+
+// RefreshWaitingHorizon measures the horizon as of now, stores it and answers
+// the days stored. It is the only place the measurement runs.
+//
+// A failed measurement returns its error and writes nothing, so the previous
+// value stands. The compiled horizon is never stored in its place: a reader
+// would take a stand-in for something this installation measured.
+func (s *Store) RefreshWaitingHorizon(ctx context.Context) (int, error) {
+	var days int
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		days, err = s.refreshWaitingHorizonTx(ctx, tx, s.now())
+		return err
+	})
+	return days, err
+}
+
+func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	days, err := s.measureWaitingHorizon(ctx, tx, asOf)
 	if err != nil {
 		return 0, err
 	}
-	if wsErr == nil {
-		s.horizons.remember(ws, asOf, s.now(), days)
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES ($1, $2)
+		ON CONFLICT (singleton) DO UPDATE
+		   SET horizon_days = EXCLUDED.horizon_days, measured_at = EXCLUDED.measured_at`,
+		days, asOf); err != nil {
+		return 0, fmt.Errorf("activities: storing the waiting horizon: %w", err)
 	}
 	return days, nil
 }
 
 // measureWaitingHorizon takes the response spread and derives the horizon
-// from it — the year-long percentile the cache exists to avoid repeating.
+// from it: the year-long percentile only the worker pass pays for.
 func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
 	args := []any{asOf.AddDate(0, 0, -waitingHorizonWindowDays), asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }

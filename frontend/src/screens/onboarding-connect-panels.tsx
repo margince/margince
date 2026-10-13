@@ -2,24 +2,24 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import {
-  readStored,
-  removeStored,
-  STORAGE_KEYS,
-  writeStored,
-} from "../app/storage";
 import { Button, Disclosure, Field } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { CaptureNotice } from "./capture-notice";
-import { throwProblem } from "./common";
 import {
   asOAuthConnectProvider,
   type OAuthConnectProvider,
   VENDOR_SERVICES,
   vendorOf,
-} from "./connectorproviders";
+} from "../format/connectorprovider";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../lib/storage";
+import { CaptureNotice } from "./capture-notice";
 import { useConnectors } from "./connectors";
 import { imapErrorMessage } from "./imap-connect-form";
 
@@ -238,23 +238,21 @@ export function ImapConnectPanel({
 
   const connect = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/connectors/{provider}/connect", {
-        params: { path: { provider: "imap" } },
-        body: {
-          imap: {
-            host: host.trim(),
-            port: parsedPort,
-            username: email.trim(),
-            secret: password,
-            mailbox: mailbox.trim() || "INBOX",
-            max_messages: Number(max) || 30,
+      return unwrap(
+        await api.POST("/connectors/{provider}/connect", {
+          params: { path: { provider: "imap" } },
+          body: {
+            imap: {
+              host: host.trim(),
+              port: parsedPort,
+              username: email.trim(),
+              secret: password,
+              mailbox: mailbox.trim() || "INBOX",
+              max_messages: Number(max) || 30,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+        }),
+      );
     },
     // The mailbox is live once the shared roster says so: the step's account
     // panel (and Settings) read that key, so the form closes only after it

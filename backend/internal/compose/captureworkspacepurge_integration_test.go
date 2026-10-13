@@ -372,3 +372,65 @@ func seedHandLoggedMail(t *testing.T, e *integration.Env, from, subject string) 
 	}
 	return id
 }
+
+// A message an open request is about survives the WIDER purge too, and is
+// reported rather than silently kept.
+//
+// The seat arm shielded it and this one did not, so the same message answered
+// differently depending on who asked: the owner's purge kept it and said so,
+// while an admin's purge destroyed it and reported a clean success. The arm
+// without the shield was the one that destroys every seat's copy on one
+// decision, and nothing downstream would have kept it — destruction erases the
+// id it is handed.
+//
+// The counterpart case, that a FINISHED request shields nothing, is proved once
+// against the clause both arms now share (TestAPurgeIsNotShieldedByAFinished-
+// Request): an EXISTS over the whole table would freeze every purge on every
+// address the installation ever had a case about.
+func TestAWorkspacePurgeReportsMailAnOpenRequestIsAboutRatherThanDestroyingIt(t *testing.T) {
+	e := integration.Setup(t)
+	evidence := seedRequestAgainstLawyer(t, e, "open", "")
+
+	rule := seedWorkspaceExclusion(t, e, "kanzlei.example")
+	outcome := runPurgeAs(adminCtx(e), t, e, rule, false)
+
+	// The REASON too: a skip the statutory floor caused would satisfy a count-only
+	// assertion while the request shield did nothing.
+	if outcome.Destroyed != 0 || outcome.Skipped != 1 || outcome.Kept.UnderRequest != 1 {
+		t.Fatalf("destroyed=%d skipped=%d under_request=%d, want 0, 1 and 1 — the assignee opens "+
+			"a request whose source material an admin destroyed, and the count that would have "+
+			"said so reports zero",
+			outcome.Destroyed, outcome.Skipped, outcome.Kept.UnderRequest)
+	}
+	if body := activityBody(t, e, evidence); body == "" {
+		t.Error("the correspondence an open request is about was destroyed by a workspace purge")
+	}
+}
+
+// The subject copied on the line, rather than written to, is shielded as well.
+//
+// A workspace rule reaches a message through a To or Cc address, not only through
+// the counterparty — so a shield reading the counterparty alone hands over exactly
+// the message where the subject was one of several recipients, and reports it
+// destroyed with nothing kept.
+func TestAWorkspacePurgeKeepsMailWhereTheSubjectWasOnlyCopied(t *testing.T) {
+	e := integration.Setup(t)
+	const copied = "anwalt@kanzlei.example"
+	// The counterparty is somebody the request says nothing about; the subject is on
+	// the line, which is the only reason this message is theirs.
+	mail := seedPurgeableMail(t, e, "sachbearbeiter@amt.example", "Durchschrift", e.Rep1)
+	addParticipantAddress(t, e, mail, copied)
+	seedRequestFor(t, e, copied, "open", "")
+
+	rule := seedWorkspaceExclusion(t, e, "amt.example")
+	outcome := runPurgeAs(adminCtx(e), t, e, rule, false)
+
+	if outcome.Destroyed != 0 || outcome.Kept.UnderRequest != 1 {
+		t.Fatalf("destroyed=%d under_request=%d, want 0 and 1 — the subject was copied on this "+
+			"message, which is what the rule matched it by",
+			outcome.Destroyed, outcome.Kept.UnderRequest)
+	}
+	if body := activityBody(t, e, mail); body == "" {
+		t.Error("a message an open request is about was destroyed because the subject was only copied")
+	}
+}

@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../design-system/atoms";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
 
 // What this dialog owes the reader: the file lands on the record they chose,
@@ -48,9 +49,9 @@ const OLDER_DEAL = {
   status: "open",
 };
 
-// /me refuses a payload without `user` (common.tsx:105), so a fixture that
-// carried only the authorization block would leave every control refused for a
-// reason the test was not testing.
+// /me refuses a payload without `user` (lib/session.ts). A fixture that
+// carried only the authorization block would leave every control refused, for
+// a reason the test was not testing.
 const USER = { id: "u-1", email: "rep@example.com", name: "Demo Rep" };
 
 const GRANTS = {
@@ -562,6 +563,15 @@ describe("adding a document from the account", () => {
     expect(
       screen.getByRole("button", { name: "Upload" }).hasAttribute("disabled"),
     ).toBe(true);
+  });
+
+  it("offers only the kinds of file the server will keep", () => {
+    stubApi(FULL_SEAT);
+    show();
+
+    const accept = screen.getByLabelText(/File/).getAttribute("accept") ?? "";
+    expect(accept.split(",")).toEqual([...ACCEPTED_ATTACHMENT_EXTENSIONS]);
+    expect(accept).not.toContain(".svg");
   });
 
   it("refuses a read-only seat even though its RBAC grant says update", async () => {

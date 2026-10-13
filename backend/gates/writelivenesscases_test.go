@@ -5,8 +5,8 @@
 
 package gates
 
-// What the liveness census judges, and what it credits, driven with SYNTHETIC
-// source rather than the tree — the same reason updateguardcases_test.go gives
+// What the liveness census judges, and what it credits, driven with synthetic
+// source rather than the tree, for the reason updateguardcases_test.go gives
 // for its own. That census is meant to pass, so a reader proven only by "the
 // tree is clean" is one that keeps passing after it stops working: a write it
 // stops recognising produces no finding, only a smaller silence.

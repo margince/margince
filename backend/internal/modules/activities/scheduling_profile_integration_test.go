@@ -200,3 +200,42 @@ func TestSwitchingABookingPageBackOnChecksTheCalendarAgain(t *testing.T) {
 		t.Fatalf("%d checks, want the first enable and the re-enable only", calendar.checks)
 	}
 }
+
+// A host who picks a provider before connecting it gets the sentence the
+// no-provider case already gives, naming the provider field, not a server error.
+func TestEnablingBookingsWithoutAUsableCalendarNamesTheProvider(t *testing.T) {
+	for name, calendar := range map[string]*invitationCalendar{
+		"no connection":              {checkErr: connector.ErrAuthRejected},
+		"a connection since revoked": {listErr: connector.ErrAuthRejected},
+	} {
+		e := setupSend(t)
+		store := e.store(nil).WithPublicBaseURL("https://crm.example.test").WithSchedulingCalendar(calendar)
+		profile := defaultSchedulingProfile()
+		profile.Enabled = true
+		profile.Provider = "gcal"
+
+		_, err := store.SaveSchedulingProfile(e.as(principal.RowScopeAll), profile)
+
+		var refusal *SchedulingArgumentError
+		if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "required" {
+			t.Errorf("%s answered %v, want a refusal naming provider", name, err)
+		}
+	}
+}
+
+// The contract lists the providers a profile may name; a disabled profile is
+// held to it too, so an unknown value is never stored.
+func TestSavingAProfileRefusesAProviderOutsideTheContract(t *testing.T) {
+	e := setupSend(t)
+	store := e.store(nil).WithPublicBaseURL("https://crm.example.test")
+	profile := defaultSchedulingProfile()
+	profile.Enabled = false
+	profile.Provider = "zoom"
+
+	_, err := store.SaveSchedulingProfile(e.as(principal.RowScopeAll), profile)
+
+	var refusal *SchedulingArgumentError
+	if !errors.As(err, &refusal) || refusal.Field != "provider" || refusal.Code != "invalid" {
+		t.Fatalf("saving provider zoom answered %v, want an invalid refusal naming provider", err)
+	}
+}

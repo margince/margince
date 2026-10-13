@@ -9,8 +9,8 @@ package compose
 // to. Both are exercised here on their failure paths — the success path is
 // already pinned by TestJobCensusMatchesTheContract building the census for
 // real, which is why this file targets only what that happy path never
-// reaches: a config missing a registration or cadence dependency, and a seam
-// actually being called.
+// reaches: a config missing a registration dependency, and a seam actually
+// being called.
 
 import (
 	"context"
@@ -21,27 +21,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-func TestEveryDeclaredDependencySuppliedRefusesAConfigMissingARegistrationOrCadenceDependency(t *testing.T) {
+func TestEveryDeclaredDependencySuppliedRefusesAConfigMissingARegistrationDependency(t *testing.T) {
 	// The zero JobRunnerConfig supplies nothing: every kind gated on a
-	// Registration.When path and every kind whose Cadence reads an operator
-	// field is, from this config's point of view, unmet. That drives both the
-	// registration-gap branch and the cadence-gap branch in the same call,
-	// which is the census's own definition of "fallen behind the declaration".
+	// Registration.When path is, from this config's point of view, unmet.
 	err := everyDeclaredDependencySupplied(JobRunnerConfig{})
 	if err == nil {
-		t.Fatal("everyDeclaredDependencySupplied(JobRunnerConfig{}) = nil, want an error — the zero config supplies no registry, vault, brain, or interval, so every gated kind is unmet")
+		t.Fatal("everyDeclaredDependencySupplied(JobRunnerConfig{}) = nil, want an error — the zero config supplies no registry, vault or brain, so every gated kind is unmet")
 	}
 	// gmail_watch_renew is gated on GmailRegistry AND GmailWatch.Topic
 	// (api/jobs.yaml's Registration.When), so its absence is the
 	// registration-gap branch.
 	if !strings.Contains(err.Error(), "GmailRegistry") {
 		t.Errorf("error does not name GmailRegistry as an unmet registration dependency: %v", err)
-	}
-	// close_date_hygiene reads its cadence from CloseDateInterval
-	// (api/jobs.yaml's {operator: CloseDateInterval}), so a zero interval is
-	// the cadence-gap branch.
-	if !strings.Contains(err.Error(), "CloseDateInterval") {
-		t.Errorf("error does not name CloseDateInterval as an unmet cadence dependency: %v", err)
 	}
 }
 

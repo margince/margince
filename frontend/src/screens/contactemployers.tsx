@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
@@ -11,9 +10,10 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { AddEmploymentModal } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
-import { problemMessageOf, throwProblem } from "./common";
 import { EmploymentRow } from "./contactemploymentrow";
 import {
   bodyState,
@@ -38,12 +38,11 @@ type UpdateRelationshipRequest =
 export async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((company) => ({
     id: company.id,
     name: company.display_name,
@@ -68,11 +67,7 @@ function useEmploymentActions(contactId: string) {
   };
   const create = useMutation({
     mutationFn: async (body: CreateRelationshipRequest) => {
-      const { data, error } = await api.POST("/relationships", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.POST("/relationships", { body }));
     },
     onSuccess: invalidate,
   });
@@ -93,12 +88,11 @@ function useEmploymentActions(contactId: string) {
   });
   const remove = useMutation({
     mutationFn: async (relationshipId: string) => {
-      const { error } = await api.DELETE("/relationships/{id}", {
-        params: { path: { id: relationshipId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/relationships/{id}", {
+          params: { path: { id: relationshipId } },
+        }),
+      );
     },
     onSuccess: invalidate,
   });

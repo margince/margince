@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // TestNewDeclaresTheGoBDFloors pins the statutory content: the §147
@@ -178,5 +180,38 @@ func TestTheUnitDeclaresItsMessagingRules(t *testing.T) {
 	if declared[0].Jurisdiction != New().Jurisdictions[0].Code() {
 		t.Errorf("messaging rules name jurisdiction %q while the pack is %q",
 			declared[0].Jurisdiction, New().Jurisdictions[0].Code())
+	}
+}
+
+// Germany adds no deadline shorter than the GDPR month, and says so with its
+// citation rather than by leaving the kinds out.
+func TestGermanyGivesEveryRequestKindOneCalendarMonth(t *testing.T) {
+	sets := New().SubjectRights
+	if len(sets) != 1 {
+		t.Fatalf("declaration carries %d subject-rights sets, want 1", len(sets))
+	}
+	if err := sets[0].Validate(); err != nil {
+		t.Fatalf("the German deadlines do not validate: %v", err)
+	}
+	for _, kind := range []subjectrights.RequestKind{subjectrights.Access, subjectrights.Rectify, subjectrights.Erasure} {
+		if got := sets[0].Deadlines[kind]; got != (subjectrights.Deadline{Period: jurisdiction.Period{Months: 1}}) {
+			t.Errorf("%s deadline = %+v, want one calendar month", kind, got)
+		}
+	}
+}
+
+// Every listed document is embedded, valid, and in both languages: an original
+// to sign and a copy to read.
+func TestThePackShipsEachDocumentInGermanAndEnglish(t *testing.T) {
+	docs := New().Documents
+	if err := compliancedocs.ValidateSet(docs); err != nil {
+		t.Fatalf("the documents do not validate: %v", err)
+	}
+	languages := map[string]int{}
+	for _, d := range docs {
+		languages[d.Language]++
+	}
+	if languages["de"] != 5 || languages["en"] != 5 {
+		t.Fatalf("documents per language = %v, want five German originals and five English copies", languages)
 	}
 }

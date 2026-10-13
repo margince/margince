@@ -1,55 +1,27 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { components, operations } from "../api/schema";
-import { dotTier } from "../app/autonomy";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigateReplacing, type Route } from "../app/router";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Disclosure,
-  Field,
-  Modal,
-  TextInput,
-} from "../design-system/atoms";
+import type { operations } from "../api/schema";
+import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   ConfirmPhraseBox,
   phraseMatches,
 } from "../design-system/confirmphrase";
-import { Heading } from "../design-system/heading";
-import {
-  Panel,
-  PanelBody,
-  PanelIntro,
-  PanelPlate,
-} from "../design-system/panel";
-import {
-  PassportSelect,
-  ScopeChips,
-  scopeChipLabel,
-} from "../design-system/passportselect";
-import { FieldGuard } from "../design-system/rbac";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { AutonomyDot } from "../design-system/trust";
-import { formatDate, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigateReplacing, type Route } from "../lib/router";
+import { useMe } from "../lib/session";
 import { AccountCard } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
+import { ModelPricesCard } from "./ai-price-sync";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { AiRoutingCard } from "./ai-routing";
 import { AiTasksCard } from "./ai-tasks";
@@ -60,30 +32,23 @@ import { AutonomySettingsCard } from "./autonomy-settings";
 import { BlockedDomainsCard } from "./blocked-domains";
 import { CaptureActivityTab } from "./capture-activity";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
-import { CaptureSettingsCard } from "./capture-settings";
-import { CaptureHealthCard } from "./capturehealth";
 import {
-  problemMessageOf,
-  QueryGate,
-  resetToSignedOut,
-  throwProblem,
-  useMe,
-  WriteRefused,
-} from "./common";
+  CaptureSettingsCard,
+  MailSyncCard,
+  WebsiteReadingCard,
+} from "./capture-settings";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
 import { TelegramConnectorsPanel } from "./connectors.telegram";
 import { ConsumerMailDomainsCard } from "./consumer-mail-domains";
 import { CustomFieldsAdmin } from "./customfields";
-import { EmbedReindexCard } from "./embedreindex";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
-import { ExtensionIngestHealthCard } from "./extingesthealth";
+import { FollowUpSettingsCard } from "./followupsettings";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
-import { JobHealthCard } from "./jobhealth";
 import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
@@ -105,11 +70,17 @@ import { FxRatesCard, ModelCostsCard } from "./rates";
 import { RecordRolesCard } from "./recordroles";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import { RolesSettings } from "./roles-settings";
-import { AuditLogCard } from "./settings.auditlog";
+import { JurisdictionCard } from "./settings.jurisdiction";
 import { PipelinesCard } from "./settings.pipelines";
 import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
+import { SystemHealthPage } from "./settings.systemhealth";
+import { AgentToolsCard } from "./settings-agenttools";
+import { AuditLogCard } from "./settings-audit";
+import { AutonomyTiersCard } from "./settings-autonomytiers";
+import { PassportCard } from "./settings-passports";
 import { SignInMethodsCard } from "./sign-in-methods";
+import { SignatureTemplateCard } from "./signaturetemplatecard";
 import { TagVocabularyCard } from "./tagadmin";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
@@ -120,11 +91,6 @@ import "./settings.css";
 import { ProvidersStat } from "./ai-settings";
 import type { SettingsPageId } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-// The catalog, the addresses and the visibility predicate moved to
-// ./settingsnav so `src/app/**` can read them without pulling in every card.
-// Re-exported here because this module's own consumers — the tests, the stories,
-// the testkit — ask for both halves, and splitting their imports would be churn
-// that proves nothing.
 import {
   ADMIN_SEGMENT,
   SETTINGS_SCREEN,
@@ -158,7 +124,7 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
-export function tabContent(id: SettingsPageId): ReactNode {
+export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   switch (id) {
     // ---- me ----
     case "account":
@@ -185,25 +151,31 @@ export function tabContent(id: SettingsPageId): ReactNode {
     // ---- company ----
     case "company":
       // The installation's own facts, then the money, then the company profile
-      // the AI reads. The currency pair stays ADJACENT and nothing is allowed
-      // between them: the base currency is declared in the second card of
-      // InstallationSettingsCard and every rate below converts to it, and
-      // before they were merged the lock reason was explained on one page while
-      // the consequence landed on another.
+      // the AI reads, then the follow-up window. The currency pair stays
+      // ADJACENT: the base currency is declared in InstallationSettingsCard and
+      // every rate below converts to it.
       return (
         <>
           <InstallationSettingsCard />
           <FxRatesCard />
           <CompanyContextCard />
+          <FollowUpSettingsCard />
+          <SignatureTemplateCard />
         </>
       );
     case "authentication":
+      // Split from the company profile, which is a different question with a
+      // different reader: what the company IS, versus who may sign in to
+      // it. The vendor OAuth apps sit with the sign-in methods because the same
+      // OAuth client now serves sign-in as well as mailbox connection — filing
+      // them under Capture said they belonged to one of the two.
       // The apps come first: one OAuth client serves mail, calendar and sign-in,
       // so no provider reaches the sign-in screen before its app exists.
       return (
         <>
           <OAuthAppsCard />
           <SignInMethodsCard />
+          <AgentConnectionsCard />
         </>
       );
 
@@ -230,8 +202,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <LeadSourcesCard />
-          <LeadHandlingCard />
           <LeadDisqualifyReasonsCard />
+          <LeadHandlingCard />
         </>
       );
     case "acquisition":
@@ -261,11 +233,15 @@ export function tabContent(id: SettingsPageId): ReactNode {
               used to sit on the reader's own Connections page, where "Only you"
               was written over a switch that binds everybody. */}
           <MailSharingCard />
+          {/* How often the mailboxes under that rule are read, before what is
+              done with what they bring in. */}
+          <MailSyncCard />
           {/* Then which domains are OURS, then what to do with mail from the
               rest, then which of the rest are consumer mailboxes — the posture,
               then the two judgements that read it. */}
           <OwnDomainsCard />
           <CaptureSettingsCard />
+          <WebsiteReadingCard />
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
@@ -278,7 +254,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
     case "knowledge":
       return <KnowledgeCard />;
     case "import":
-      return <ImportCard />;
+      return <ImportCard subpage={route?.id2} />;
 
     // ---- ai ----
     // The five-tab strip that used to hold these is gone. Its tabs shared ONE
@@ -295,6 +271,8 @@ export function tabContent(id: SettingsPageId): ReactNode {
               the thing an operator came here to fix. */}
           <ProvidersStat />
           <AiProviderKeysCard />
+          {/* The prices those vendors charge, below the keys that decide which vendors are priced. */}
+          <ModelPricesCard />
           <AiRoutingCard />
           <AiTasksCard />
         </>
@@ -317,43 +295,32 @@ export function tabContent(id: SettingsPageId): ReactNode {
     // ---- governance ----
     case "privacy":
       return <PrivacyLanes />;
+    case "jurisdiction":
+      return <JurisdictionCard />;
     case "audit":
-      // Split from the privacy page it used to end. The trail proves the
-      // surfaces there were honoured, but it answers to `audit_log` where they
-      // answer to the consent registry and the retention policy — so a reader
-      // could hold the audit grant and be refused the page carrying it.
+      // Its own page: it answers to `audit_log`, where the privacy page answers
+      // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
       return (
         <>
-          {/* A reindex that costs tokens, then a read of what the background
-              system is holding. They hid beside the custom-field editor before,
-              which put "define a field" and "watch a stalled queue" on one
-              page. */}
-          <EmbedReindexCard />
-          <JobHealthCard />
-          {/* Beside the queue reading, not under Capture or Extensions: each
-              answers "is something broken in the background". */}
-          <CaptureHealthCard />
+          <SystemHealthPage />
           <PublicOriginCard />
-          <ExtensionIngestHealthCard />
         </>
       );
     case "extensions":
       return <ExtensionAccessCard />;
     case "reset":
-      // Its own page, and the reason is the ordering the old Maintenance page
-      // could not express: a reindex, a queue reading and "empty the
-      // installation" were three verbs on one screen, ascending in consequence
-      // and separated by nothing.
+      // Its own page: a reindex, a queue reading and "empty the installation"
+      // were three verbs on one screen, separated by nothing.
       return <ResetDataCard />;
   }
 }
 
 // What YOU are connected to: the mail connector list is scoped to the calling
 // human server-side (capture is per-user, RC-8) and both LinkedIn surfaces read
-// `/me`, so this is personal and needs no grant. The mail-sharing plate is the
-// one company fact here, stated with its "Whole company" badge.
+// `/me`, so this is personal and needs no grant. What those mailboxes brought in
+// and what is held back is on Capture activity.
 function ConnectionsTab() {
   return (
     <>
@@ -455,7 +422,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // carried, so a rewrite never invents an address: a legacy link to a page the
   // reader may not open is left as typed, and the boundary answers it.
   useEffect(() => {
-    if (legacy) {
+    if (legacy && active) {
       navigateReplacing(settingsHref(active.id));
     }
   }, [legacy, active]);
@@ -486,6 +453,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
       </div>
     );
   }
+  if (active === undefined) return null;
 
   return (
     <div className="wrap">
@@ -506,7 +474,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
             {t("settings.readOnlyPage")}
           </Callout>
         )}
-        {tabContent(active.id)}
+        {tabContent(active.id, route)}
       </div>
     </div>
   );
@@ -531,7 +499,7 @@ function AgentsTab() {
           that connects with its own fresh credential instead. */}
       <ConnectedAgentsCard />
       <AgentToolsCard />
-      <AutonomyCard />
+      <AutonomyTiersCard />
       {/* Which kinds of proposal stop asking this reader. It sat on Account,
           under the identity, because it is a statement about them rather than
           about the company — but every other thing on this page is also
@@ -539,640 +507,6 @@ function AgentsTab() {
           Directly under the tier reference it is written in terms of. */}
       <AutonomySettingsCard />
     </>
-  );
-}
-
-const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
-
-// The scope's wire token is what the server reads; a contact choosing what
-// authority to hand their agent needs the sentence. Composed rather than
-// switched, and annotated so an added scope is a missing-key compile error
-// rather than a checkbox that quietly labels itself `enrich` in every
-// language.
-function scopeLabelKey(scope: (typeof PASSPORT_SCOPES)[number]): MessageKey {
-  return `passport.scope.${scope}`;
-}
-
-function PassportCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
-  const [scopes, setScopes] = useState<Set<string>>(new Set(["read", "draft"]));
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [minting, setMinting] = useState(false);
-  const revokingRow = useRef<HTMLElement | null>(null);
-  // Where the minted token lands. It is a live region that is ALWAYS mounted
-  // for the drawer's whole life rather than one that appears with the token in
-  // it: a region inserted at the same moment as its content is not reliably
-  // announced, and this token is shown exactly once in its life.
-  const tokenRegion = useRef<HTMLDivElement | null>(null);
-  const mintTitleId = useId();
-  const mintScopeHintId = useId();
-
-  // Metadata only — the wire schema carries no token (PassportSummary),
-  // so this list cannot re-disclose one.
-  const list = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const mint = useMutation({
-    mutationFn: async () => {
-      const { data, error, response } = await api.POST("/passports", {
-        body: {
-          label: label.trim() || null,
-          scopes: [...scopes] as (
-            | "read"
-            | "draft"
-            | "write"
-            | "send"
-            | "enrich"
-          )[],
-        },
-      });
-      // An expired session must not read as a mint that did nothing. The `me`
-      // probe is cached for five minutes, so without this the screen keeps
-      // believing it is signed in and the button simply fails in silence —
-      // which is how the OAuth consent screen's empty-passport guide became an
-      // inescapable loop: it sends the human here to mint, the mint 401s
-      // without saying so, and returning finds no passport and shows the same
-      // guide again.
-      //
-      // Keyed on the STATUS rather than on `error` being truthy: a non-2xx
-      // with no body leaves `error` undefined in this client (compose.tsx
-      // documents the same shape), and that response would otherwise pass as
-      // a success and then render an undefined token.
-      if (response.status === 401) {
-        // useLogout's order, for its reason: drop every other cached answer
-        // BEFORE resetting the probe. AuthGate restores this route after the
-        // next sign-in, and whoever signs in then must not be shown the
-        // previous session's passport list out of cache.
-        await resetToSignedOut(queryClient);
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      if (!response.ok) {
-        // A refusal that carried no problem document still has to refuse.
-        throwProblem({
-          type: "about:blank",
-          title: response.statusText || "Request failed",
-          status: response.status,
-        });
-      }
-      return data;
-    },
-    onSuccess: () => list.refetch(),
-  });
-
-  // AS-2 kill-switch: revoke is a hard DELETE, never a soft toggle in this
-  // client — ConfirmModal guards it so a stray click can't kill a live
-  // agent's credential.
-  const revoke = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/passports/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: async () => {
-      // Refetch BEFORE closing, so the row focus returns to is already carrying
-      // the revoked state it is meant to announce. Closing first restores focus
-      // against the pre-revoke DOM and reads the row back unchanged.
-      await list.refetch();
-      setConfirmId(null);
-    },
-  });
-
-  // The token arrives asynchronously, is shown once, and is never re-disclosed:
-  // announcing it is not enough on its own, because a reader whose focus is
-  // still on the Mint button has to hunt for what they just made. Focus moves
-  // to the region holding it, which is also what makes the copy gesture reach
-  // it from the keyboard.
-  const minted = mint.isSuccess;
-  useEffect(() => {
-    if (minted) {
-      tokenRegion.current?.focus();
-    }
-  }, [minted]);
-
-  // Closing resets the whole attempt, so re-opening starts clean rather than
-  // showing the previous mint's token or its refusal. The scope defaults come
-  // back with it — the drawer is not a form somebody left half-filled, it is a
-  // new passport each time.
-  const closeMint = useCallback(() => {
-    // Refused while the request is outstanding, and this is about losing a
-    // credential rather than about tidiness. `mint.reset()` detaches the
-    // observer; it does not cancel the POST. A drawer closed mid-flight
-    // therefore still creates a passport on the server, and its token — shown
-    // exactly once, never re-served — goes with the drawer. There is no way
-    // back: the list carries metadata only.
-    if (mint.isPending) {
-      return;
-    }
-    setMinting(false);
-    setLabel("");
-    setScopes(new Set(["read", "draft"]));
-    mint.reset();
-  }, [mint]);
-
-  return (
-    // The card LISTS what exists; minting is a drawer. It used to be one flex
-    // row holding a label, a name field, five scope ticks and the submit — eight
-    // controls on one line with a single 8px gap between all of them, so nothing
-    // said where the field ended and the choices began. A form that wide is not
-    // a row in a settings card; it is a form, and the product already has the
-    // surface for one.
-    <Panel
-      title={t("settings.passports")}
-      // The card's one create verb, in the header band beside the title rather
-      // than as a trailing row: a row whose label reads "Mint a new passport"
-      // beside a button reading "New passport" says the same thing twice, and it made
-      // a third interval out of what is not a decision the list holds. The verb
-      // names the THING it creates and the drawer's submit names the act —
-      // two buttons reading "Mint passport" are one name for two acts, for a
-      // reader and for a name-based query alike.
-      //
-      // Ghost, which is Button's default: the primary it used to carry was the
-      // only one on the page, and a page with one loud button reads as if the
-      // other three cards had nothing to offer.
-      titleAction={
-        <Button onClick={() => setMinting(true)}>
-          {t("settings.mintOpen")}
-        </Button>
-      }
-    >
-      <PanelBody>
-        {/* Both sentences above the rows, neither as a `panel-foot` band: every
-            card on this page reads title, prose, rows. */}
-        <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
-        <PanelIntro>{t("settings.passportsLendHint")}</PanelIntro>
-        <SettingList>
-          {/* Only what this human MINTED, each credential its own row: the name
-              on the left, what it currently IS on the right — masked token,
-              scopes, dates, and the verb that kills it. A row carrying a
-              connection was issued by the token exchange to a client — it
-              belongs to ConnectedAgentsCard, and listing it here put a raw DCR
-              client id among the names the human chose. `connection` is the
-              server's own statement of which kind a row is; the `oauth:` label
-              prefix is display text and decides nothing.
-              The rows are handed to the enclosing list as its own children
-              rather than wrapped in a list of their own: the hairline between
-              two credentials belongs to the card that holds both. */}
-          <QueryGate
-            pendingLabel={t("settings.passports")}
-            query={list}
-            empty={(page) =>
-              page.data.every((passport) => passport.connection != null)
-            }
-          >
-            {(page) =>
-              page.data
-                .filter((passport) => passport.connection == null)
-                .map((passport) => (
-                  <PassportRow
-                    key={passport.id}
-                    passport={passport}
-                    locale={locale}
-                    onRevoke={(row) => {
-                      revokingRow.current = row;
-                      setConfirmId(passport.id);
-                    }}
-                  />
-                ))
-            }
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
-      <Modal
-        open={minting}
-        onClose={closeMint}
-        labelledBy={mintTitleId}
-        placement="right"
-      >
-        <Heading size="large" className="t-h2 modal-title" id={mintTitleId}>
-          {t("settings.mint")}
-        </Heading>
-        {/* The token region is mounted for the whole life of the drawer rather
-            than appearing with the token in it: a live region inserted at the
-            same moment as its content is not reliably announced, and this token
-            is shown exactly once. */}
-        <div
-          className="passport-token"
-          ref={tokenRegion}
-          tabIndex={-1}
-          role="status"
-        >
-          {mint.isSuccess && (
-            <PanelPlate>
-              <p>{t("settings.tokenOnce")}</p>
-              <p className="passport-token-value">{mint.data.token}</p>
-            </PanelPlate>
-          )}
-        </div>
-        {mint.isSuccess ? (
-          // The drawer does NOT close itself on success. Closing would take the
-          // one and only sight of the credential with it, and a reader who was
-          // still reading has no way back — the list carries metadata and the
-          // server will not re-disclose a token.
-          <div className="form-actions">
-            <Button variant="primary" onClick={closeMint}>
-              {t("settings.mintDone")}
-            </Button>
-          </div>
-        ) : (
-          <form
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (scopes.size > 0 && !mint.isPending) mint.mutate();
-            }}
-          >
-            <Field label={t("settings.passportLabel")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={label}
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-              )}
-            </Field>
-            {/* A fieldset with a legend, which is what five checkboxes that
-                belong together ARE. Loose siblings beside a text input said
-                nothing about what they were choices FOR, and the accessible
-                group had no name at all. `.field-multiselect` is the house
-                spelling — `create.tsx` has used it for exactly this since it
-                was written. */}
-            <fieldset
-              className="field-multiselect"
-              aria-describedby={mintScopeHintId}
-            >
-              <legend className="t-name">{t("settings.passportScopes")}</legend>
-              <p id={mintScopeHintId} className="t-caption">
-                {t("settings.passportScopesHint")}
-              </p>
-              {PASSPORT_SCOPES.map((scope) => (
-                <Checkbox
-                  key={scope}
-                  checked={scopes.has(scope)}
-                  onChange={(event) => {
-                    const next = new Set(scopes);
-                    if (event.target.checked) {
-                      next.add(scope);
-                    } else {
-                      next.delete(scope);
-                    }
-                    setScopes(next);
-                  }}
-                  label={t(scopeLabelKey(scope))}
-                />
-              ))}
-            </fieldset>
-            {/* Beside the button that produced it, not below the tokens. */}
-            <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
-            <div className="form-actions">
-              <Button disabled={mint.isPending} onClick={closeMint}>
-                {t("settings.mintCancel")}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                // A passport with no scope is a credential that can do nothing,
-                // so the button says why it is refused rather than sitting pale
-                // with nothing to offer. The sentence refuses the press on its
-                // own, so there is no `disabled` beside it saying the same
-                // thing in a spelling that carries no explanation.
-                // And only while nobody is minting: `reason` outranks `pending`
-                // in Button, so a scope cleared after the press would take the
-                // spinner and `aria-busy` off a request still in flight — the
-                // reader would be told the press was refused while the write
-                // they made is running.
-                reason={
-                  scopes.size === 0 && !mint.isPending
-                    ? t("settings.passportScopesRequired")
-                    : undefined
-                }
-                pending={mint.isPending}
-                busyLabel={t("settings.minting")}
-              >
-                {t("settings.mint")}
-              </Button>
-            </div>
-          </form>
-        )}
-      </Modal>
-      <ConfirmModal
-        open={confirmId != null}
-        onClose={() => {
-          setConfirmId(null);
-          revoke.reset();
-        }}
-        title={t("settings.revoke")}
-        confirmLabel={t("settings.revoke")}
-        onConfirm={() => confirmId && revoke.mutate(confirmId)}
-        pending={revoke.isPending}
-        error={revoke.error ? problemMessageOf(revoke.error, t) : null}
-        // The revoked passport's own row, which survives the DELETE as a
-        // struck-through entry carrying the "revoked" badge — so focus lands on
-        // the outcome, at the place the reader was working. The Revoke button
-        // they pressed cannot be the target: it is what the badge replaced.
-        returnFocusTo={() => revokingRow.current}
-      >
-        <p>{t("settings.revokeConfirm")}</p>
-      </ConfirmModal>
-    </Panel>
-  );
-}
-
-type PassportSummary = components["schemas"]["PassportSummary"];
-
-// One minted passport as one row: the name the human gave it on the left, what
-// the credential currently IS on the right, and the verb that kills it at the
-// same x as every other answer on the page. The revoked state is STRUCK, never
-// dimmed: dimming drops the row under the AA contrast floor (B-EP09.21), and it
-// is the revoked row a reader most needs to read.
-//
-// The row is wrapped rather than bare because the revoke confirm hands focus
-// back HERE — the button it was opened from is gone by then — and the wrapper is
-// what carries `data-passport` for the resolver and the -1 tab index that makes
-// it reachable by focus() without joining anybody's Tab order.
-function PassportRow({
-  passport,
-  locale,
-  onRevoke,
-}: Readonly<{
-  passport: PassportSummary;
-  locale: Locale;
-  onRevoke: (row: HTMLElement | null) => void;
-}>) {
-  const t = useT();
-  const recordZone = useRecordZone();
-  const revoked = passport.revoked_at != null;
-  return (
-    <div data-passport={passport.id} tabIndex={-1}>
-      <SettingRow
-        label={
-          <span className={revoked ? "passport-struck" : undefined}>
-            {passport.label}
-          </span>
-        }
-        // The credential's lifetime reads on the LEFT, under the name: it
-        // qualifies which passport this is rather than answering what it is set
-        // to, and six facts crowded into the right column left the name with
-        // three characters of width.
-        description={
-          <span className="settings-run">
-            <span>
-              {t("settings.created", {
-                date: formatDate(passport.created_at, locale, recordZone),
-              })}
-            </span>
-            {/* A credential's lifetime is a personal deadline, so it reads on
-                the viewer's own calendar — the same zone-by-purpose split the
-                consent screen makes. created_at above stays the fixed record
-                zone. */}
-            {passport.expires_at && (
-              <span>
-                {t("settings.expires", {
-                  date: formatDate(passport.expires_at, locale, viewerZone()),
-                })}
-              </span>
-            )}
-          </span>
-        }
-        value={
-          <span className="settings-run">
-            {/* The credential exists but is withheld by design (shown once at
-                mint) — masked reads as "withheld", not absent. */}
-            <span className="t-label">{t("settings.token")}</span>
-            <FieldGuard mode="masked" />
-            <ScopeChips
-              labels={passport.scopes.map((scope) => scopeChipLabel(t, scope))}
-            />
-          </span>
-        }
-        control={
-          revoked ? (
-            <Badge tone="danger">{t("settings.revoked")}</Badge>
-          ) : (
-            <Button
-              variant="danger"
-              // The row is remembered from the CLICK rather than from
-              // `confirmId`: the focus resolver runs as the dialog closes, by
-              // which time that state is already back to null and there is
-              // nothing left to look the row up by.
-              onClick={(event) =>
-                onRevoke(
-                  event.currentTarget.closest<HTMLElement>("[data-passport]"),
-                )
-              }
-            >
-              {t("settings.revoke")}
-            </Button>
-          )
-        }
-      />
-    </div>
-  );
-}
-
-// The read-only tool console (IT-1): the same governed surface an MCP client
-// sees — GET /agent-tools, with an optional passport selector that strikes
-// through any row the selected passport's granted scopes don't cover. No passport
-// picked means every row reads as reachable (the unfiltered inventory).
-function AgentToolsCard() {
-  const t = useT();
-  const { locale } = useLocale();
-  const [passportId, setPassportId] = useState<string>("");
-  const tools = useQuery({
-    queryKey: ["agent-tools"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/agent-tools");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  const passports = useQuery({
-    queryKey: ["passports"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/passports");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-  // Live, and minted by the human themselves. A connection's credential is
-  // neither: it is minted fresh by the token exchange from whatever the human
-  // ticked on the consent screen, so it was never a standalone passport a
-  // human picked from a list — offering one here would offer a choice that
-  // doesn't exist, and would put a raw DCR client id back in front of a reader
-  // the rest of this change just took it away from.
-  const mintedPassports = (passports.data?.data ?? []).filter(
-    (p) => p.revoked_at == null && p.connection == null,
-  );
-  // Whether this human has ever minted one — a REVOKED one still counts, so
-  // the row a human just revoked does not yank the selector out from under
-  // them (the test below pins that transition). A connection's credential
-  // never counts, revoked or not: a human who only ever connected agents,
-  // never minted, has no selector to show.
-  const everMintedAPassport = (passports.data?.data ?? []).some(
-    (p) => p.connection == null,
-  );
-  // The filter follows the selector: a passport revoked while it was the
-  // chosen scope drops out of the options, and the <select> then shows "all
-  // passports" — so the inventory must read as unfiltered too, rather than
-  // stay quietly scoped to a credential no longer on offer.
-  const scopeId = mintedPassports.some((p) => p.id === passportId)
-    ? passportId
-    : "";
-  const grantedScopes = new Set(
-    mintedPassports.find((p) => p.id === scopeId)?.scopes ?? [],
-  );
-
-  return (
-    <Panel title={t("tools.title")}>
-      <PanelBody>
-        <PanelIntro>{t("tools.sub")}</PanelIntro>
-        <SettingList>
-          {/* The dial FIRST, then the inventory it narrows — the posture before
-              the judgements that read it. Absent, not disabled, while this human
-              has minted nothing: a selector offering one choice is a control
-              with nothing behind it. `PassportSelect` carries its own accessible
-              name ("All passports"), the way `Switch` does, so the row hands it
-              no ARIA of its own. */}
-          {everMintedAPassport && (
-            <SettingRow
-              label={t("tools.scopeLabel")}
-              control={
-                <PassportSelect
-                  options={mintedPassports.map((p) => ({
-                    id: p.id,
-                    label: t("tools.scopedTo", { label: p.label }),
-                    scopes: p.scopes,
-                  }))}
-                  value={scopeId}
-                  onChange={setPassportId}
-                  allowEmpty
-                  emptyLabel={t("tools.scopeAll")}
-                  ariaLabel={t("tools.scopeAll")}
-                />
-              }
-            />
-          )}
-          {/* The inventory is a REFERENCE, and it is 68 tools long: each row
-              carries the tool's name, what it is for, and the text an agent
-              selects it by, which is the promise this console makes — and read
-              open it measured 14,000px, so the card was a page-long wall in
-              front of the two rows above it that a reader actually sets. So it
-              is the card's secondary half and it is closed: the rule this page
-              follows for anything advanced or diagnostic.
-
-              One row per governed tool, handed to the list inside as its own
-              children so the hairline between two tools comes from the list
-              that holds both. */}
-          <QueryGate
-            query={tools}
-            empty={(data) => data.data.length === 0}
-            pendingLabel={t("tools.title")}
-          >
-            {(data) => (
-              <Disclosure
-                summary={t("tools.inventory", {
-                  count: formatNumber(data.data.length, locale),
-                })}
-              >
-                <SettingList>
-                  {data.data.map((tool) => (
-                    <ToolRow
-                      key={tool.name}
-                      tool={tool}
-                      reachable={
-                        !scopeId ||
-                        tool.required_scope == null ||
-                        grantedScopes.has(tool.required_scope)
-                      }
-                    />
-                  ))}
-                </SettingList>
-              </Disclosure>
-            )}
-          </QueryGate>
-        </SettingList>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-type AgentTool = components["schemas"]["AgentTool"];
-
-// One governed tool as one row, in the same two columns as every other row on
-// this page: the tool's NAME is the label, what it is for and what an agent
-// selects it by read under it, and the governance it runs under answers on the
-// right.
-//
-// The name and its written title used to share the label's line, so each row
-// read as a pair of unrelated strings — "company_coverage  Relationship coverage
-// on a deal" — beside cards whose rows are a label with a description beneath.
-// The title is a statement ABOUT the tool, so it goes where this page puts those.
-//
-// Struck, not dimmed: dimming the row to 0.4 took the whole row under the AA
-// contrast floor (B-EP09.21) — including the words that are supposed to be the
-// text equivalent of the dimming, so the one part a reader needs most became the
-// hardest to read. The strikethrough wraps the NAME and its display title and
-// nothing else: the badges state the tool's governance, which is true either
-// way, and the unreachable line is the explanation.
-//
-// That line is prose and therefore NOT a control: it used to sit in the right
-// column beside the badges, which is what left the answers on this card at three
-// different widths. It says something about the tool, so it reads with the rest
-// of what this row says about it.
-//
-// Wrapped rather than bare because `data-tool` is how the console's own coverage
-// reads one tool's row out of the inventory.
-function ToolRow({
-  tool,
-  reachable,
-}: Readonly<{ tool: AgentTool; reachable: boolean }>) {
-  const t = useT();
-  const struck = reachable ? undefined : "tool-out-of-scope";
-  return (
-    <div data-tool={tool.name}>
-      <SettingRow
-        label={
-          <span className={["tool-name", struck].filter(Boolean).join(" ")}>
-            {tool.name}
-          </span>
-        }
-        description={
-          <span className="tool-row-text">
-            {tool.title && <span className={struck}>{tool.title}</span>}
-            {/* The text an agent actually selects on. This console promises the
-                surface an MCP client sees, and the name alone was never that. */}
-            <span>{tool.description}</span>
-            {!reachable && <span>{t("tools.unreachable")}</span>}
-          </span>
-        }
-        control={
-          <span className="settings-run">
-            <AutonomyDot tier={dotTier(tool.tier)} />
-            {tool.required_scope && <Badge>{tool.required_scope}</Badge>}
-            {tool.egress && <Badge tone="warning">{t("tools.egress")}</Badge>}
-          </span>
-        }
-      />
-    </div>
   );
 }
 
@@ -1206,6 +540,11 @@ function ResetDataCard() {
   const t = useT();
   const { locale } = useLocale();
   const me = useMe();
+  // `system_reset:delete`, which is what POST /admin/reset-data asks for
+  // (compose/datareset.go). The literal admin role guarded it while no object
+  // named the verb; one does now, so a role edited to carry it reaches the
+  // control and one that lost it does not — which the role name could not say.
+  //
   // `useCanWrite`: the reset is a POST, and a read seat is refused every
   // mutation by the seat ceiling above RBAC (identity/admission.go) whatever
   // its grants say. Offering the danger zone to one would be a button that
@@ -1215,8 +554,9 @@ function ResetDataCard() {
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const phraseInput = useRef<HTMLInputElement>(null);
-  // What the last reset cleared: null until one has run, so the danger zone
-  // never implies a result nobody triggered.
+  // What the last reset actually cleared — null until one has run, so the
+  // danger zone stays quiet on first render rather than implying a result
+  // nobody triggered.
   const [summary, setSummary] = useState<ResetSummary | null>(null);
   const queryClient = useQueryClient();
 
@@ -1226,13 +566,11 @@ function ResetDataCard() {
       // clearing here means a retry's error can never leave a previous
       // success sitting on screen, and an in-flight retry shows no summary.
       setSummary(null);
-      const { data, error } = await api.POST("/admin/reset-data", {
-        body: { confirmation },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/admin/reset-data", {
+          body: { confirmation },
+        }),
+      );
     },
     onSuccess: (data) => {
       setOpen(false);
@@ -1257,23 +595,22 @@ function ResetDataCard() {
     >
       <PanelBody className="form-stack">
         <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
-        <SettingList>
-          {/* One row, because there is one act: what it does on the left, the
-              verb that does it on the right. This verb opens the question and
-              the dialog's confirm answers it, so each is named for its own act
-              — a destructive button and the button that asks again about it
-              must not read the same while both are on screen. */}
-          <SettingRow
-            label={t("settings.resetDataLabel")}
-            description={t("settings.resetDataDesc")}
-            control={
-              <Button variant="danger" onClick={() => setOpen(true)}>
-                {t("settings.resetDataButton")}
-              </Button>
-            }
-          />
-        </SettingList>
-        {summary && (
+      </PanelBody>
+      <SettingList bleed="settings">
+        {/* This button and the dialog's confirm share the screen, so each is
+            named for its own act. */}
+        <SettingRow
+          label={t("settings.resetDataLabel")}
+          description={t("settings.resetDataDesc")}
+          control={
+            <Button variant="danger" onClick={() => setOpen(true)}>
+              {t("settings.resetDataButton")}
+            </Button>
+          }
+        />
+      </SettingList>
+      {summary && (
+        <PanelBody>
           <p className="t-caption settings-danger-result" role="status">
             {t("settings.resetDataResult", {
               tables: formatNumber(summary.tables_cleared, locale),
@@ -1283,23 +620,17 @@ function ResetDataCard() {
               objects: formatNumber(summary.objects_deleted, locale),
             })}
           </p>
-        )}
-        {summary?.drain_timed_out && (
-          // ds:ignore a warning in --warningText, not a refusal
-          <p className="settings-danger-warning" role="alert">
-            {t("settings.resetDataDrainWarning")}
-          </p>
-        )}
-      </PanelBody>
+          {summary.drain_timed_out && (
+            // ds:ignore a warning in --warningText, not a refusal
+            <p className="settings-danger-warning" role="alert">
+              {t("settings.resetDataDrainWarning")}
+            </p>
+          )}
+        </PanelBody>
+      )}
       <ConfirmModal
         open={open}
         onClose={() => {
-          // Escape and the backdrop wait out the request: closing would
-          // re-enable the outer button while the POST is in flight
-          // (reset.reset() cannot abort it), allowing a second reset.
-          if (reset.isPending) {
-            return;
-          }
           setOpen(false);
           setTyped("");
           reset.reset();
@@ -1318,70 +649,15 @@ function ResetDataCard() {
         error={reset.error ? problemMessageOf(reset.error, t) : null}
         initialFocusTo={() => phraseInput.current}
       >
-        <div className="form-stack">
-          <p>{t("settings.resetDataConfirmBody")}</p>
-          <ConfirmPhraseBox
-            prompt={t("settings.resetDataConfirmName")}
-            phrase={workspaceName}
-            value={typed}
-            onChange={setTyped}
-            inputRef={phraseInput}
-          />
-        </div>
+        <p>{t("settings.resetDataConfirmBody")}</p>
+        <ConfirmPhraseBox
+          prompt={t("settings.resetDataConfirmName")}
+          phrase={workspaceName}
+          value={typed}
+          onChange={setTyped}
+          inputRef={phraseInput}
+        />
       </ConfirmModal>
-    </Panel>
-  );
-}
-
-// The tier table: informational, and the advance-stage row is locked — there
-// is no toggle that could soften it (AC-settings). It reads AFTER the passports
-// and the tools it governs, because nothing on it can be acted on: it is the
-// reference for the tiers those rows are marked with. "Locked" is about the
-// FLOOR, not about waiting every time: advancing resolves its tier per move and
-// only stages when the move closes the deal, and that floor is what no toggle
-// reaches.
-function AutonomyCard() {
-  const t = useT();
-  return (
-    <Panel title={t("settings.autonomy")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.autonomySub")}</PanelIntro>
-        {/* Four rows in the page's own language, even though none of them is
-            settable: what the tier COVERS reads left as prose, and the tier it
-            runs at — the dot, and on the locked row the badge saying the answer
-            cannot move — sits at the same x as every answer on this page. A
-            reader coming from the tool inventory above is matching dots, which
-            is why sending carries the green one: a contact's grant of the `send`
-            scope IS the approval, so a funded send does not stage a second. */}
-        <SettingList>
-          <SettingRow
-            label={t("settings.tierRead")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierSend")}
-            control={<AutonomyDot tier="auto" />}
-          />
-          <SettingRow
-            label={t("settings.tierWait")}
-            control={<AutonomyDot tier="confirm" />}
-          />
-          <SettingRow
-            label={t("settings.tierAdvance")}
-            // The dot and the badge are ONE answer — the tier, and the fact that
-            // it cannot move — so they travel as a run at the page's own 8px chip
-            // gap. Handed to the control column loose, they took its 12px flex
-            // gap instead, which put the one row on this page carrying two chips
-            // at a different interval from every tool row above it.
-            control={
-              <span className="settings-run">
-                <AutonomyDot tier="confirm" />
-                <Badge tone="warning">{t("settings.locked")}</Badge>
-              </span>
-            }
-          />
-        </SettingList>
-      </PanelBody>
     </Panel>
   );
 }

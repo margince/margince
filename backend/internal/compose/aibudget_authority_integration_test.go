@@ -65,7 +65,7 @@ func TestAllowanceRecoveryLeavesIneligibleRequestersParkedWithoutFailing(t *test
 			setRecoveryAllowance(t, e, 1000000)
 			recovery := newAIBudgetResumeWorker(e.Pool, slog.New(slog.DiscardHandler))
 			for range 2 {
-				if err := recovery.resumeWorkspace(e.Admin(), e.WS); err != nil {
+				if err := recovery.resumeWorkspace(context.Background(), e.WS); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -88,7 +88,7 @@ func TestAllowanceRecoveryLeavesIneligibleRequestersParkedWithoutFailing(t *test
 				if err := service.ChangeUserRole(e.Admin(), actor, user, "rep"); err != nil {
 					t.Fatal(err)
 				}
-				if err := recovery.resumeWorkspace(e.Admin(), e.WS); err != nil {
+				if err := recovery.resumeWorkspace(context.Background(), e.WS); err != nil {
 					t.Fatal(err)
 				}
 				current, err := e.Contacts.GetSiteRead(e.Admin(), companyIDOf(company), read.ID)

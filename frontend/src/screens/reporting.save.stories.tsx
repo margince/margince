@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor } from "storybook/test";
 import { SaveReportingDialog } from "./reporting.save";
 import {
   reportingStoryEvaluation,
@@ -32,13 +32,29 @@ export const Default: Story = {
       </StoryProviders>
     );
   },
+  play: async () => {
+    await screen.findByRole("dialog");
+  },
 };
 
+/** Customise open overflows the dialog at a desktop height: the field stack
+ *  scrolls and every row keeps its own height, the toggle included. */
 export const Customize: Story = {
   ...Default,
   play: async () => {
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Customize report" }),
+    const dialog = await screen.findByRole("dialog");
+    const toggle = await screen.findByRole("button", {
+      name: "Customize report",
+    });
+    await userEvent.click(toggle);
+    await screen.findByRole("group", { name: "Metrics" });
+    const stack = dialog.querySelector<HTMLElement>(":scope > .form-stack");
+    if (!stack) throw new Error("The dialog drew no field stack.");
+    await waitFor(() =>
+      expect(stack.scrollHeight).toBeGreaterThan(stack.clientHeight),
+    );
+    await expect(toggle.offsetHeight).toBeGreaterThanOrEqual(
+      toggle.scrollHeight,
     );
   },
 };

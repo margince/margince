@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 )
 
-const frontendVendorServices = "../frontend/src/screens/connectorproviders.ts"
+const frontendVendorServices = "../frontend/src/format/connectorprovider.ts"
 
 // tsVendorPair reads one `vendor: { mail: "x", calendar: "y" }` entry, in
 // either quote style, so an entry spelled the other way still counts.

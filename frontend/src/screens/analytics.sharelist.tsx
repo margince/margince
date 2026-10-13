@@ -7,15 +7,17 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
 
 // The forecast links a reader has issued and that still open, listed so any of
 // them can be closed after the dialog that showed it is gone. The server
@@ -42,12 +44,11 @@ const POPULATION_FALLBACK: Record<OpenShare["scope_kind"], MessageKey> = {
 };
 
 export async function closeShare(id: string): Promise<void> {
-  const { error } = await api.DELETE("/forecast/shares/{id}", {
-    params: { path: { id } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  unwrap(
+    await api.DELETE("/forecast/shares/{id}", {
+      params: { path: { id } },
+    }),
+  );
 }
 
 // `canClose` is the write half: a read seat may list its links and is refused
@@ -67,12 +68,16 @@ export function SharedLinksButton({
         open={open}
         onClose={() => setOpen(false)}
         labelledBy={headingId}
-        placement="right"
+        intent="drawer"
       >
-        <Heading size="large" id={headingId} className="t-h2 modal-title">
-          {t("analytics.share.listTitle")}
-        </Heading>
-        <OpenShareList headingId={headingId} canClose={canClose} />
+        <DrawerHead>
+          <Heading size="large" id={headingId} className="t-h2 modal-title">
+            {t("analytics.share.listTitle")}
+          </Heading>
+        </DrawerHead>
+        <DrawerBody>
+          <OpenShareList headingId={headingId} canClose={canClose} />
+        </DrawerBody>
       </Modal>
     </>
   );
@@ -90,10 +95,7 @@ function OpenShareList({
   const shares = useQuery({
     queryKey: OPEN_SHARES_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/forecast/shares", {});
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/forecast/shares", {}));
       return data.data;
     },
   });

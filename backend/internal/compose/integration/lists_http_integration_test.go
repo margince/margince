@@ -45,6 +45,7 @@ func TestListsAreAbsentWhenAnOperatorSwitchesThemOff(t *testing.T) {
 		{"GET", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members"},
 		{"POST", "/v1/lists/" + someList + "/members/remove"},
+		{"POST", "/v1/lists/" + someList + "/members/restore"},
 		{"GET", "/v1/lists/" + someList + "/members/" + someList + "/why"},
 		{"GET", "/v1/lists/" + someList + "/history"},
 		{"GET", "/v1/contacts?list_id=" + someList},
@@ -113,8 +114,8 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 		t.Fatalf("create list → %d", status)
 	}
 	var member, other AnyMap
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Quoted Customer"}, nil, &member)
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Not Quoted"}, nil, &other)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quoted Customer"}, nil, &member)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Not Quoted"}, nil, &other)
 	// The member is added through the agent's door, the read through both.
 	added := agent.CallOK(t, "change_lists", map[string]any{
 		"mode": "add_member", "list_id": list.ID, "entity_type": "contact",
@@ -151,7 +152,7 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 
 func TestAnAgentPreviewOfAListDefinitionIsLoggedAsARead(t *testing.T) {
 	e, agent := listsApp(t, true)
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Previewed Contact"}, nil, nil)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Previewed Contact"}, nil, nil)
 	before := countPreviews(t, e)
 	agent.CallOK(t, "read_lists", map[string]any{
 		"mode": "preview", "entity_type": "contact",

@@ -77,6 +77,9 @@ type Service struct {
 	// in a process that never called SetDefault writes it where nobody is
 	// reading, and that is why the composition root injects its own.
 	log *slog.Logger
+	// undoable classifies the staged kinds whose release a credential may give
+	// to a proposal of its own human's (ownrelease.go). Nil answers no kind.
+	undoable UndoableRelease
 }
 
 const (

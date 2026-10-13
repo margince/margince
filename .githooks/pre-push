@@ -4,14 +4,13 @@
 # the integration lane. Everything but the lane answers in seconds; the lane is
 # the one deliberate exception and its own comment below says what buys it.
 #
-# Runs the deterministic craftsmanship linter on the Go files that THIS push
-# changes vs origin/main — backend/, extensions/, fixtures/ and desktop/ alike,
-# since a first-party unit ships the same product — not the whole tree, so a push
-# pays only
-# for what it touches. BLOCKER and MAJOR findings both fail the push (--strict);
-# MINOR stays advisory. There is no pre-existing backlog to exempt: the tree was
-# cleared to zero before this bar was armed, and `make craft-static` is green.
-# A genuine false positive is waived in-source with a reason:
+# Runs the deterministic craftsmanship linter on the Go and TypeScript files
+# THIS push changes vs origin/main, not the whole tree, so a push pays only for
+# what it touches. BLOCKER and MAJOR findings both fail the push (--strict);
+# MINOR stays advisory. The code checks judge whole Go files, and the tree was
+# cleared to zero before they were armed. The comment checks judge only the
+# lines this push adds (--diff-base), so old comments improve as files are
+# touched. A genuine false positive is waived in-source with a reason:
 # //craft:ignore <check> <reason>.
 #
 # Install once (or run `make hooks`):  git config core.hooksPath .githooks
@@ -100,14 +99,15 @@ if [[ -n "$lane_paths" ]]; then
 	fi
 fi
 
-# Changed-and-still-present Go files, excluding generated code. extensions/,
-# fixtures/ and desktop/ are each their own module and would otherwise escape the
-# bar entirely — a first-party unit ships the same product as backend/, and the
-# desktop launcher is a binary that users run.
-files="$(git diff --name-only --diff-filter=d "$base"...HEAD -- backend extensions fixtures desktop \
-	| grep -E '\.go$' | grep -v '_gen\.go$' || true)"
+# Changed-and-still-present Go and TypeScript files, excluding generated code
+# and test data. extensions/, fixtures/ and desktop/ are each their own module and
+# would otherwise escape the bar: a first-party unit ships the same product as
+# backend/, and the desktop launcher is a binary that users run. craft reads only
+# the comments of a TypeScript file.
+files="$(git diff --name-only --diff-filter=d "$base"...HEAD -- backend extensions fixtures desktop frontend tools \
+	| grep -E '\.(go|ts|tsx)$' | grep -vE '(_gen\.go|\.gen\.ts|\.d\.ts)$|/testdata/' || true)"
 if [[ -z "$files" ]]; then
-	echo "craft static: no changed Go files — ok"
+	echo "craft static: no changed Go or TypeScript files — ok"
 	exit 0
 fi
 
@@ -117,12 +117,18 @@ while IFS= read -r f; do
 	[[ -n "$f" ]] && args+=("$root/$f")
 done <<< "$files"
 
-echo "craft static: checking ${#args[@]} changed Go file(s)…"
-if ! "$("$root/scripts/craft-pin.sh")" static --strict "${args[@]}"; then
+echo "craft static: checking ${#args[@]} changed file(s)…"
+if ! "$("$root/scripts/craft-pin.sh")" static --strict --root "$root" --diff-base "$base" "${args[@]}"; then
 	echo ""
 	echo "craft static BLOCKED the push. Fix the findings above, or waive a"
 	echo "genuine false positive in-source:  //craft:ignore <check> <reason>"
+	echo "\`craft words\` prints the word lists the comment checks use."
 	exit 1
+fi
+
+# The gates below read Go only.
+if ! grep -qE '\.go$' <<< "$files"; then
+	exit 0
 fi
 
 # The comment budget: this push may not add more comment lines than the code

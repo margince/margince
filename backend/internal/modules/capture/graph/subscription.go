@@ -300,7 +300,7 @@ var ErrSubscriptionGone = errors.New("graph: the subscription no longer exists")
 // extended.
 func (a *httpAPI) findSubscription(ctx context.Context, accessToken, notificationURL string) (string, error) {
 	next := a.base + subscriptionsPath
-	for page := 0; page < maxSubscriptionPages; page++ {
+	for range maxSubscriptionPages {
 		var body struct {
 			Value    []subscription `json:"value"`
 			NextLink string         `json:"@odata.nextLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode

@@ -3,52 +3,48 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
+import { en } from "../i18n/en";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { UsersAdminCard } from "./users-admin";
 import {
   backend,
   jsonResponse,
-  openRoleChange,
   ROSTER,
   render,
+  roleSelect,
   roleShown,
   rowFor,
-  rowMenu,
 } from "./users-admin.testkit";
 
-// The member card's role column and its change-role dialog: what each row reads
-// back and offers, and the role seam the dialog drives. The server stays the
-// authority on every change.
+// The member card's role picker: what each row reads back and offers, and the
+// role seam it drives. The server stays the authority on every change.
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-describe("UsersAdminCard role change", () => {
+describe("UsersAdminCard role picker", () => {
   it("reads back each member's current role", async () => {
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(roleShown(rowFor("Ada Active"))).toBe("Admin");
-    expect(roleShown(rowFor("Otto Off"))).toBe("Read-only");
+    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Admin");
+    expect(roleShown(rowFor("Otto Off"), "otto off")).toBe("Read-only");
   });
 
-  it("reads a member holding no role as such, and confirms nothing until a pick", async () => {
+  it("offers the placeholder to a member holding no role", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
 
-    expect(roleShown(rowFor("Nora None"))).toBe("No role");
-    const change = await openRoleChange(user, "Nora None");
-    // "Set role…" is the picker's face and never an entry: picking it back would
-    // set no role, so the confirm stays shut and the list is the assignable
-    // roles, in the server's key order, and nothing else.
-    expect(change.select.textContent).toBe("Set role…");
-    expect(change.confirm.disabled).toBe(true);
-    await user.click(change.select);
+    expect(roleShown(rowFor("Nora None"), "nora none")).toBe("Set role…");
+    // It is a face and never an entry: picking "Set role…" back would set no
+    // role, so the list this row opens is the assignable roles, in the server's
+    // key order, and nothing else. The options exist only while the popup is open, hence the click.
+    await user.click(roleSelect(rowFor("Nora None"), "nora none"));
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
@@ -63,10 +59,9 @@ describe("UsersAdminCard role change", () => {
   });
 
   // Any choice replaces the whole set, so a member holding several roles must
-  // read as every one of them, and the dialog says a pick replaces them all;
-  // otherwise an admin could strip privileges they were never shown.
+  // not read as a blank "Set role…" — that would let an admin strip privileges
+  // they were never shown.
   it("names the roles a multi-role member holds", async () => {
-    const user = userEvent.setup();
     const twoRoles = {
       ...ROSTER,
       data: ROSTER.data.map((u) =>
@@ -121,12 +116,13 @@ describe("UsersAdminCard role change", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Nora None")).toBeTruthy());
 
-    // Both held roles are named, under their display labels, on the row and in
-    // the dialog, and the dialog says what picking one does.
-    expect(roleShown(rowFor("Nora None"))).toBe("Team lead, Ops");
-    const change = await openRoleChange(user, "Nora None");
-    expect(change.dialog.getByText("Role today: Team lead, Ops")).toBeTruthy();
-    expect(change.dialog.getByText(/replaces every role/i)).toBeTruthy();
+    // Both held roles are named, under their display labels, and the copy says
+    // what picking one does.
+    const shown = roleShown(rowFor("Nora None"), "nora none");
+    expect(shown).toMatch(/holds/i);
+    expect(shown).toContain("Team lead");
+    expect(shown).toContain("Ops");
+    expect(shown).toMatch(/replaces all of them/i);
   });
 
   it("sets a member's role through the role seam", async () => {
@@ -136,11 +132,8 @@ describe("UsersAdminCard role change", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    const change = await openRoleChange(user, "Ada Active");
-    // Nothing is written by the pick itself: the dialog's confirm is the write.
-    await pickOption(user, change.select, "Team lead");
-    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
-    await user.click(change.confirm);
+    const active = rowFor("Ada Active");
+    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
 
     await waitFor(() =>
       expect(
@@ -209,17 +202,12 @@ describe("UsersAdminCard role change", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    const change = await openRoleChange(user, "Ada Active");
-    await pickOption(user, change.select, "User");
-    await user.click(change.confirm);
+    const active = rowFor("Ada Active");
+    await pickOption(user, roleSelect(active, "ada active"), "User");
     await waitFor(() => expect(patches).toHaveLength(1));
-    // The refusal reads in the dialog and the dialog stays, on the same pick.
-    await waitFor(() =>
-      expect(change.dialog.getByText(/try again/i)).toBeTruthy(),
-    );
 
     // The SAME target again — the retry the operator would make.
-    await user.click(change.confirm);
+    await pickOption(user, roleSelect(active, "ada active"), "User");
     await waitFor(() => expect(patches).toHaveLength(2));
   });
 
@@ -299,24 +287,27 @@ describe("UsersAdminCard role change", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    const change = await openRoleChange(user, "Ada Active");
-    await pickOption(user, change.select, "Team lead");
-    await user.click(change.confirm);
+    const active = rowFor("Ada Active");
+    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
     await waitFor(() => expect(rosterReads).toBe(2));
 
-    // Mid-flight: the dialog stays open and locked over the role being applied,
-    // so the row's stale "Admin" is never presented as the outcome.
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(change.select.disabled).toBe(true);
+    // Mid-flight: the row reads the role being applied and stays locked. "Admin"
+    // here would be the stale cache showing through.
+    expect(roleShown(active, "ada active")).toBe("Team lead");
+    expect(roleSelect(active, "ada active").disabled).toBe(true);
 
     releaseRoster();
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(roleShown(rowFor("Ada Active"))).toBe("Team lead");
+    await waitFor(() =>
+      expect(roleSelect(rowFor("Ada Active"), "ada active").disabled).toBe(
+        false,
+      ),
+    );
+    expect(roleShown(rowFor("Ada Active"), "ada active")).toBe("Team lead");
   });
 
   // A custom role reads under the name its maker gave it, and is offered like
-  // any other. A member holding a role this reader may not hand out offers no
-  // change at all, and the row says so.
+  // any other. A role this reader may not hand out stays on the face of a
+  // refused picker rather than reading as unset.
   it("names a custom role and offers only the roles the reader may assign", async () => {
     const user = userEvent.setup();
     const fieldSales = {
@@ -352,18 +343,15 @@ describe("UsersAdminCard role change", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ivy Invited")).toBeTruthy());
 
-    expect(roleShown(rowFor("Ivy Invited"))).toBe("Field sales");
-    // Ada holds admin, which this reader may not hand out.
-    expect(roleShown(rowFor("Ada Active"))).toBe("Admin");
-    expect(
-      within(rowFor("Ada Active")).getByText("You cannot change this role"),
-    ).toBeTruthy();
-    expect(
-      (await rowMenu(user, "Ada Active")).queryByText("Change role"),
-    ).toBeNull();
+    expect(roleShown(rowFor("Ivy Invited"), "ivy invited")).toBe("Field sales");
+    // Ada holds admin, which this reader may not hand out: the picker still
+    // names it, refused, and says why.
+    const ada = rowFor("Ada Active");
+    expect(roleSelect(ada, "ada active").disabled).toBe(true);
+    expect(roleShown(ada, "ada active")).toBe("Admin");
+    expect(within(ada).getByText(en["users.role.outside"])).toBeTruthy();
 
-    const change = await openRoleChange(user, "Nora None");
-    await user.click(change.select);
+    await user.click(roleSelect(rowFor("Nora None"), "nora none"));
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);

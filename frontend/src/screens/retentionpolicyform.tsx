@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../api/client";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   actionLabelKey,
   isDuplicateScope,
@@ -33,6 +33,7 @@ export function RetentionPolicyForm({
 }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const formId = useId();
   const [scope, setScope] = useState<RetentionScope>(RETENTION_SCOPES[0]);
   const [retainDays, setRetainDays] = useState("");
   // Archive first, deliberately: the least destructive action is the one a new
@@ -46,22 +47,19 @@ export function RetentionPolicyForm({
 
   const create = useMutation({
     mutationFn: async (window: number) => {
-      const { data, error } = await api.POST("/retention-policies", {
-        body: {
-          scope,
-          retain_days: window,
-          action,
-          // An omitted basis is null on the wire, not "" — the auditor reading
-          // the row must be able to tell "not stated" from a blank string
-          // somebody saved.
-          lawful_basis: lawfulBasis.trim() || null,
-          enabled,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/retention-policies", {
+          body: {
+            scope,
+            retain_days: window,
+            action,
+            // An omitted basis is null on the wire, not "". The auditor reading the
+            // row must tell "not stated" from a blank string somebody saved.
+            lawful_basis: lawfulBasis.trim() || null,
+            enabled,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RETENTION_POLICIES_KEY });
@@ -97,106 +95,117 @@ export function RetentionPolicyForm({
         problemMessageOf(create.error, t);
 
   return (
-    <div className="form-stack">
-      <Field label={t("retention.scope")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={RETENTION_SCOPES.map((value) => ({
-              value,
-              label: t(scopeLabelKey(value)),
-            }))}
-            value={scope}
-            onChange={(value) => {
-              const picked = RETENTION_SCOPES.find(
-                (candidate) => candidate === value,
-              );
-              if (picked) {
-                setScope(picked);
-                dismissError();
-              }
-            }}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("retention.window")}
-        hint={
-          days === null && retainDays.trim() !== ""
-            ? t("retention.windowInvalid")
-            : undefined
-        }
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            inputMode="numeric"
-            value={retainDays}
-            onChange={(event) => {
-              setRetainDays(event.target.value);
-              dismissError();
-            }}
-          />
-        )}
-      </Field>
-
-      <Field label={t("retention.action")} hint={t("retention.actionHint")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={RETENTION_ACTIONS.map((value) => ({
-              value,
-              label: t(actionLabelKey(value)),
-            }))}
-            value={action}
-            onChange={(value) => {
-              const picked = RETENTION_ACTIONS.find(
-                (candidate) => candidate === value,
-              );
-              if (picked) {
-                setAction(picked);
-                dismissError();
-              }
-            }}
-          />
-        )}
-      </Field>
-
-      <Field
-        label={t("retention.lawfulBasis")}
-        hint={t("retention.lawfulBasisHint")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            value={lawfulBasis}
-            onChange={(event) => {
-              setLawfulBasis(event.target.value);
-              dismissError();
-            }}
-          />
-        )}
-      </Field>
-
-      <Checkbox
-        label={t("retention.enabled")}
-        checked={enabled}
-        onChange={(event) => {
-          setEnabled(event.target.checked);
-          dismissError();
+    <>
+      <form
+        id={formId}
+        className="form-stack"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (days !== null && !create.isPending) create.mutate(days);
         }}
-      />
-
-      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
-
-      <Button
-        variant="primary"
-        disabled={days === null || create.isPending}
-        onClick={() => days !== null && create.mutate(days)}
       >
-        {t("retention.create")}
-      </Button>
-    </div>
+        <Field label={t("retention.scope")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={RETENTION_SCOPES.map((value) => ({
+                value,
+                label: t(scopeLabelKey(value)),
+              }))}
+              value={scope}
+              onChange={(value) => {
+                const picked = RETENTION_SCOPES.find(
+                  (candidate) => candidate === value,
+                );
+                if (picked) {
+                  setScope(picked);
+                  dismissError();
+                }
+              }}
+            />
+          )}
+        </Field>
+
+        <Field
+          label={t("retention.window")}
+          hint={
+            days === null && retainDays.trim() !== ""
+              ? t("retention.windowInvalid")
+              : undefined
+          }
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              inputMode="numeric"
+              value={retainDays}
+              onChange={(event) => {
+                setRetainDays(event.target.value);
+                dismissError();
+              }}
+            />
+          )}
+        </Field>
+
+        <Field label={t("retention.action")} hint={t("retention.actionHint")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={RETENTION_ACTIONS.map((value) => ({
+                value,
+                label: t(actionLabelKey(value)),
+              }))}
+              value={action}
+              onChange={(value) => {
+                const picked = RETENTION_ACTIONS.find(
+                  (candidate) => candidate === value,
+                );
+                if (picked) {
+                  setAction(picked);
+                  dismissError();
+                }
+              }}
+            />
+          )}
+        </Field>
+
+        <Field
+          label={t("retention.lawfulBasis")}
+          hint={t("retention.lawfulBasisHint")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={lawfulBasis}
+              onChange={(event) => {
+                setLawfulBasis(event.target.value);
+                dismissError();
+              }}
+            />
+          )}
+        </Field>
+
+        <Checkbox
+          label={t("retention.enabled")}
+          checked={enabled}
+          onChange={(event) => {
+            setEnabled(event.target.checked);
+            dismissError();
+          }}
+        />
+
+        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
+      </form>
+      <div className="actions">
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={days === null || create.isPending}
+        >
+          {t("retention.create")}
+        </Button>
+      </div>
+    </>
   );
 }

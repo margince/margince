@@ -203,7 +203,7 @@ func (c *telegramEnv) assertNothingWasMerged(t *testing.T, channelContact, phone
 // a record the product itself would have produced.
 func (c *telegramEnv) seedContact(t *testing.T, name string, phone *string) string {
 	t.Helper()
-	body := integration.AnyMap{"full_name": name}
+	body := integration.AnyMap{"full_name": name, "source": "manual"}
 	if phone != nil {
 		body["phones"] = []integration.AnyMap{{"phone": *phone, "phone_type": "mobile"}}
 	}

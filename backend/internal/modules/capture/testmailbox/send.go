@@ -9,50 +9,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
-
-// reservedDomains is test_mailbox's own quarantine (RFC 2606) — independent
-// of offline_demo's dataset addresses, which are a different safety story.
-// Named domains (example.com/.net/.org) admit their subdomains too — a
-// realistic address like qa@mail.example.com belongs in the quarantine as
-// much as buyer@example.com does. The four bare labels (test/example/
-// invalid/localhost) are TLDs: any domain ending in one is reserved by
-// definition, at any depth.
-var reservedDomains = map[string]bool{
-	"example.com": true, "example.net": true, "example.org": true,
-	"test": true, "example": true, "invalid": true, "localhost": true,
-}
-
-// inQuarantine reports whether addr's domain is inside the reserved set —
-// exactly, or as a subdomain of a reserved name or TLD. addr is parsed
-// through values.ParseEmail rather than cut on "@" by hand: an address with
-// more than one "@" (a quoted local part, RFC 5321) names its domain after
-// the LAST one, and only a real parse gets that right — a raw first-"@" cut
-// would misread the domain for such an address. A malformed addr — anything
-// ParseEmail refuses — is outside the quarantine by construction: nothing
-// here is a real destination for it to reach.
-func inQuarantine(addr string) bool {
-	email, err := values.ParseEmail(addr)
-	if err != nil {
-		return false
-	}
-	domain := email.Domain()
-	for {
-		if reservedDomains[domain] {
-			return true
-		}
-		i := strings.IndexByte(domain, '.')
-		if i < 0 {
-			return false
-		}
-		domain = domain[i+1:]
-	}
-}
 
 // authPayload carries whose seat this credential names. There is no real
 // credential to seal; Credential is the one place this shape is spelled, so
@@ -84,7 +45,8 @@ func readUserID(auth connector.Auth) (ids.UUID, error) {
 	return userID, nil
 }
 
-// SendEmail validates, quarantines, records the send for its own echo
+// SendEmail validates, refuses any recipient outside the RFC 2606 reserved
+// names (values.IsReservedAddress), records the send for its own echo
 // (sync.go), and returns a synthetic, idempotent receipt. It never reaches
 // the network.
 func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg connector.EmailMessage) (connector.SendReceipt, error) {
@@ -92,7 +54,7 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 		return connector.SendReceipt{}, err
 	}
 	for _, addr := range append(append(append([]string{}, msg.To...), msg.Cc...), msg.Bcc...) {
-		if !inQuarantine(addr) {
+		if !values.IsReservedAddress(addr) {
 			return connector.SendReceipt{}, fmt.Errorf("test_mailbox: %q is outside the reserved-domain quarantine: %w", addr, connector.ErrRecipientUnreachable)
 		}
 	}

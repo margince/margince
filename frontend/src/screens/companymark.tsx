@@ -10,7 +10,8 @@ import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { postMultipart } from "../lib/multipart";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { storeCompany } from "./installationcompany";
 import "./companymark.css";
 
@@ -110,19 +111,11 @@ export function CompanyMark({
 // path LITERAL: a variable would leave the response `unknown` and the profile
 // this write settles unchecked.
 async function deleteWideMark(): Promise<CompanyProfile> {
-  const { data, error } = await api.DELETE("/company/logo");
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.DELETE("/company/logo"));
 }
 
 async function deleteIconMark(): Promise<CompanyProfile> {
-  const { data, error } = await api.DELETE("/company/logo/icon");
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
+  return unwrap(await api.DELETE("/company/logo/icon"));
 }
 
 type MarkWrites = ReturnType<typeof useMarkWrites>;
@@ -140,21 +133,7 @@ function useMarkWrites(
 ) {
   const upload = useMutation({
     mutationFn: async (file: File): Promise<CompanyProfile> => {
-      // Sent as multipart by hand rather than through the typed client: the
-      // generated client serializes JSON bodies, and this endpoint takes a
-      // file part.
-      const body = new FormData();
-      body.append("file", file);
-      // contract-fetch:allow multipart — see the note above
-      const response = await fetch(uploadPath, {
-        method: "POST",
-        body,
-        credentials: "include",
-      });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok) {
-        throwProblem(payload);
-      }
+      const payload = await postMultipart(uploadPath, { file });
       return payload as CompanyProfile;
     },
     onSuccess: settle,

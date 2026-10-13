@@ -4,7 +4,7 @@
 package agents
 
 // bulk_update_records: one change over a selection of contacts, companies,
-// deals or leads, previewed and confirmed in the conversation that asked for it.
+// deals, leads or Worklist tasks, previewed and confirmed in the conversation that asked for it.
 //
 // The tool reaches the engine POST /v1/bulk/preview and POST /v1/bulk/execute
 // run on, through a seam compose implements, so the per-row write check, the
@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,6 +89,7 @@ type BulkRecordState struct {
 	Listed   *bool     `json:"listed,omitempty"`
 	Tagged   *bool     `json:"tagged,omitempty"`
 	TaskID   *ids.UUID `json:"task_id,omitempty"`
+	Done     *bool     `json:"done,omitempty"`
 }
 
 // BulkSampleRow is one record the change would alter, before and after.
@@ -157,8 +159,8 @@ func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["mode"],"properties":{
 			"mode":{"type":"string","enum":["preview","execute","undo_preview","undo"],
 				"description":"preview says what would change; execute changes it; undo_preview and undo do the same for putting back the change batch_id names"},
-			"record_type":{"type":"string","enum":["contact","company","deal","lead"],"description":"A lead takes every verb but archive"},
-			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list","add_tag","remove_tag","create_task"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","worklist_item"],"description":"A lead takes every verb but archive and complete. A worklist_item is a Worklist task, and takes complete alone; a Worklist commitment is refused, because the user marks it done"},
+			"verb":{"type":"string","enum":["reassign_owner","archive","add_to_list","remove_from_list","add_tag","remove_tag","create_task","complete"]},
 			"items":{"type":"array","minItems":1,"maxItems":500,"items":{"type":"object","required":["id","version"],
 				"properties":{"id":{"type":"string","format":"uuid"},"version":{"type":"integer"}},"additionalProperties":false}},
 			"owner_id":{"type":"string","format":"uuid","description":"The new owner, for reassign_owner"},
@@ -193,7 +195,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 	switch args.Mode {
 	case bulkModePreview, bulkModeExecute:
 		if args.BatchID != nil {
-			return nil, &BadArgsError{Cause: fmt.Errorf("batch_id belongs to undo_preview and undo")}
+			return nil, &BadArgsError{Cause: errors.New("batch_id belongs to undo_preview and undo")}
 		}
 		if args.RecordType == "" || args.Verb == "" || len(args.Items) == 0 {
 			return nil, &BadArgsError{Cause: fmt.Errorf("%s needs record_type, verb and items", args.Mode)}
@@ -202,7 +204,7 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 			return t.changer.ExecuteBulkChange(ctx, cmd)
 		}
 		if cmd.ConfirmToken != "" {
-			return nil, &BadArgsError{Cause: fmt.Errorf("confirm_token belongs to execute; a preview mints one")}
+			return nil, &BadArgsError{Cause: errors.New("confirm_token belongs to execute; a preview mints one")}
 		}
 		return t.changer.PreviewBulkChange(ctx, cmd)
 	case bulkModeUndoPreview, bulkModeUndo:
@@ -226,7 +228,7 @@ func (t bulkUpdateRecords) undo(ctx context.Context, args bulkUpdateRecordsArgs)
 		return t.changer.UndoBulkChange(ctx, *args.BatchID, args.ConfirmToken)
 	}
 	if args.ConfirmToken != "" {
-		return nil, &BadArgsError{Cause: fmt.Errorf("confirm_token belongs to undo; undo_preview mints one")}
+		return nil, &BadArgsError{Cause: errors.New("confirm_token belongs to undo; undo_preview mints one")}
 	}
 	return t.changer.PreviewBulkUndo(ctx, *args.BatchID)
 }

@@ -7,15 +7,15 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { forgetSeat } from "../lib/storage";
 import type { ConnectorsResult } from "../screens/connectors";
 import { type SettingsPageId, settingsReach } from "../screens/settingscatalog";
-import { type GrantSpec, meFixture } from "./mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   deriveSetupSteps,
   type SetupReads,
   useSetupChecklist,
 } from "./setup-checklist";
-import { forgetSeat } from "./storage";
 
 // The reminder and the settings home both draw these steps, so these cases
 // pin what each roster asks of the reader and that nothing about it is stored
@@ -45,6 +45,7 @@ function connection(
   return {
     id: `00000000-0000-4000-8000-${provider.padStart(12, "0")}`,
     provider,
+    can_backfill: true,
     status,
     scopes: [...scopes],
     account_label: "ada@example.test",

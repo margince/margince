@@ -21,7 +21,6 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
-export { useCan, useCanWrite } from "../app/capability";
 // `formatNumber` alongside `formatDateTime` for the same reason: a unit's screen
 // renders figures a reader reads, `useT` below refuses a raw number, and the
 // only alternative left to a unit would be `String(n)` — which groups for
@@ -37,6 +36,7 @@ export { formatBytes, formatDateTime, formatNumber } from "../format/format";
 // nothing useful. Exporting the provider is what lets a unit test its own
 // screen the way the app actually runs it.
 export { LocaleProvider, useLocale } from "../i18n";
+export { useCan, useCanWrite } from "../lib/capability";
 
 /**
  * The catalogue lookup, widened to a unit's own keys.

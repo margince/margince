@@ -3,15 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { SaveFilterListAction } from "./filterlist";
 import { listsMe, liveList, TEAM_ID, teamsPage } from "./lists.fixtures";
 import { ListSettingsAction } from "./listsettings";
 import { ListAudienceFields } from "./listsharing";
-import { newGroup, newLeaf } from "./segmentpredicate";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// Who can find a list, asked where a list is made and where it is changed. A
-// team audience also asks which team: one of the reader's, or all of them.
+// Who can find a list, and for a team audience which team: one of the reader's
+// or all of them. Saving a filter as a list asks it in "Save this filter".
 const meta: Meta = { title: "Patterns/List sharing" };
 export default meta;
 
@@ -35,26 +33,6 @@ export const TeamAudience: Story = {
           ownerIsReader
         />
       </StoryProviders>
-    );
-  },
-};
-
-export const SaveAsLiveList: Story = {
-  render: () => {
-    routes();
-    return (
-      <StoryProviders>
-        <SaveFilterListAction
-          resource="company"
-          tree={newGroup("and", [newLeaf("industry", "eq", "Manufacturing")])}
-        />
-      </StoryProviders>
-    );
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Save as Live List" }),
     );
   },
 };

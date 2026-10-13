@@ -11,19 +11,18 @@
 //
 // Every verb here is undoable from the confirmation it raises, because each one
 // REMOVES something from the reader's view. A control whose effect is a
-// disappearance needs its way back offered at the moment of the disappearance;
-// finding it again afterwards means knowing which of three judgements you made.
+// disappearance needs its way back offered at the moment of the disappearance.
+// Finding it again afterwards means knowing which judgement you made.
 
 import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useRef, useState } from "react";
-
-import { useFoldedViewport } from "../app/viewport";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { SwipeRow } from "../design-system/swiperow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { useFoldedViewport } from "../lib/viewport";
 import {
   type ReopenCondition,
   useClearDisposition,
@@ -31,6 +30,15 @@ import {
   type WorklistDisposition,
   type WorklistItem,
 } from "./worklist.queries";
+import {
+  DispositionButton,
+  knownDispositions,
+  type PutDownAnswer,
+  SWIPE_SIDES,
+  writeState,
+} from "./worklist.verbbutton";
+
+export { SWIPE_SIDES };
 
 // How long a snooze lasts, when the reader does not say.
 //
@@ -53,7 +61,7 @@ export const SNOOZE_DAYS = 1;
 // hide work for four days nobody asked for. A span says exactly what it does.
 export const SNOOZE_SPANS = [1, 3, 7] as const;
 
-type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
+export type SnoozeSpan = (typeof SNOOZE_SPANS)[number];
 
 // The two answers a span cannot give.
 //
@@ -72,44 +80,7 @@ export const SNOOZE_EVENTS = ["reply"] as const satisfies readonly Exclude<
   "time" | "meeting"
 >[];
 
-type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
-
-// WHICH answer a press sent, as opposed to the fact that one is out.
-//
-// The judgements on a row are alternatives, so a band of them needs to tell the
-// control that started a write from the ones merely standing down. The
-// disposition alone cannot: three snooze answers send the same one with
-// different moments behind it, and the moment is what the reader chose.
-type PutDownAnswer = Readonly<{
-  disposition: WorklistDisposition;
-  until?: SnoozeSpan | SnoozeEvent;
-}>;
-
-// The two states one in-flight write puts a band of alternatives into — and
-// never both on one control.
-//
-// The control the reader PRESSED goes `pending`: `Button` refuses the second
-// press through `aria-disabled` while keeping the control focusable, so the
-// reader keeps their place and the wait is announced from where they are
-// standing. Every other answer goes `disabled` — it started nothing and is
-// simply not available until this one settles, which is the same division
-// `DecisionVerbs` draws (design-system/decisioncard.tsx).
-//
-// Never both, because inside the atom `disabled` outranks `pending`: a control
-// handed the pair is natively disabled, and a browser drops focus off a control
-// that disables under the press — the exact loss `pending` exists to prevent.
-function writeState(
-  writing: PutDownAnswer | undefined,
-  answer: PutDownAnswer,
-): { pending?: boolean; disabled?: boolean } {
-  if (writing === undefined) {
-    return {};
-  }
-  return writing.disposition === answer.disposition &&
-    writing.until === answer.until
-    ? { pending: true }
-    : { disabled: true };
-}
+export type SnoozeEvent = (typeof SNOOZE_EVENTS)[number];
 
 // Which undo REACH each judgement takes back.
 //
@@ -121,36 +92,6 @@ function undoScope(disposition: WorklistDisposition): "mine" | "thread" {
 }
 
 type T = ReturnType<typeof useT>;
-
-// Which side of a swipe each judgement answers.
-//
-// `snooze` goes with the finger's forward direction because it is the one a rep
-// reaches for most and the one they take back most: it puts the row down for a
-// day rather than deciding anything about it. The two that say "this is not my
-// work" go the other way, together, so the direction a reader learns is the
-// direction that MEANS something rather than one verb's private habit.
-//
-// ONE SIDE EACH, and every judgement named.
-//
-// A gesture has two directions and the contract offers three judgements, so a
-// map alone cannot place them: two sharing a side means the second is
-// unreachable, which is the capability-lost-on-a-phone failure the row ceiling
-// was already hiding. The side is therefore the ORDER a repeated swipe walks —
-// `swipeActions` cycles the judgements on a side rather than taking the first —
-// and this map decides which walk a direction starts.
-//
-// `snooze` leads the forward walk because it is the one a rep reaches for most
-// and takes back most: it puts the row down for a day rather than deciding
-// anything about it. The two that say "this is not my work" share the other
-// direction, in the order a reader meets them.
-//
-// EXHAUSTIVE rather than partial: `Record` so a fourth disposition added to the
-// contract fails the build here, instead of shipping a verb no phone can reach.
-export const SWIPE_SIDES = {
-  snooze: "end",
-  not_mine: "start",
-  not_sales: "start",
-} as const satisfies Record<WorklistDisposition, "start" | "end">;
 
 // Putting one row down, as an action the CALLER places.
 //
@@ -164,7 +105,7 @@ export function usePutDown(item: WorklistItem) {
   const toast = useToast();
   const set = useSetDisposition();
   const clear = useClearDisposition();
-  const offered = item.dispositions ?? [];
+  const offered = knownDispositions(item.dispositions);
   // The answer the last press sent. Read only through `writing` below, which is
   // why nothing clears it: an answer that is not in flight is not consulted,
   // and every press that puts one in flight records it first.
@@ -214,10 +155,10 @@ export function usePutDown(item: WorklistItem) {
         onSuccess: () =>
           toast.show(doneText(disposition, until, t, locale), {
             action: {
+              kind: "undo",
               label: t("worklist.disposition.undo"),
-              // A failed undo needs saying. The toast dismisses itself the
-              // moment the action is pressed, so without this the row stays
-              // hidden and the only way back has just left the screen.
+              // A failed undo needs saying: the toast is gone once Undo is
+              // pressed, so silence would leave the row hidden with no way back.
               onAct: () =>
                 clear.mutate(
                   { activityId: item.id, scope: undoScope(disposition) },
@@ -321,9 +262,8 @@ type PutDown = ReturnType<typeof usePutDown>;
 
 // The same judgements, reachable without a pointer.
 //
-// A swipe is not a control a keyboard, a switch or a screen reader can operate,
-// so below the fold the three judgements had exactly one route and it needed a
-// finger. The staged bar the gesture opens carries real buttons, but only a
+// A swipe is not a control a keyboard, a switch or a screen reader can operate.
+// Below the fold the judgements had one route, and it needed a finger. The staged bar the gesture opens carries real buttons, but only a
 // drag opens it.
 //
 // A MENU rather than the buttons back. Restoring them is the 44px band that was
@@ -361,14 +301,13 @@ function PutDownMenu({
   return (
     <OverflowMenu label={t("worklist.disposition.menu")}>
       {offered.map((disposition) => (
-        <Button
+        <DispositionButton
           key={disposition}
-          variant="ghost"
-          {...writeState(writing, { disposition })}
-          onClick={() => put(disposition)}
-        >
-          {t(`worklist.disposition.verb.${disposition}` as const)}
-        </Button>
+          disposition={disposition}
+          writing={writing}
+          onPress={() => put(disposition)}
+          t={t}
+        />
       ))}
       {/* The LONGER SPANS, as lines of their own rather than behind a second
           control. Above the fold they live in the caret half of the snooze
@@ -476,14 +415,13 @@ export function DispositionVerbs({ item }: Readonly<{ item: WorklistItem }>) {
             onPick={(until) => put("snooze", until)}
           />
         ) : (
-          <Button
+          <DispositionButton
             key={disposition}
-            variant="ghost"
-            {...writeState(writing, { disposition })}
-            onClick={() => put(disposition)}
-          >
-            {t(`worklist.disposition.verb.${disposition}` as const)}
-          </Button>
+            disposition={disposition}
+            writing={writing}
+            onPress={() => put(disposition)}
+            t={t}
+          />
         ),
       )}
     </>
@@ -505,14 +443,14 @@ export function swipeActions(
 ) {
   const side = (which: "start" | "end") => {
     const here = offered.filter((one) => SWIPE_SIDES[one] === which);
-    if (here.length === 0) {
-      return undefined;
-    }
     // Repeated swipes WALK the side rather than restaging the same judgement,
     // so a direction carrying two of them reaches both. Modulo rather than a
     // stop at the end: a reader who has swiped past what they wanted gets it
     // again on the next flick instead of a direction that stops answering.
     const one = here[walked[which] % here.length];
+    if (one === undefined) {
+      return undefined;
+    }
     return {
       label: t(`worklist.disposition.verb.${one}` as const),
       onAct: () => put(one),

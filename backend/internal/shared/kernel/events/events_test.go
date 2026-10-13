@@ -139,6 +139,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// activity stream — which also carries captures and edits — the
 		// distinction is the whole point of the type.
 		"disposition_recorded": true,
+		// One reader marked a waiting message done. "handled" alone would read
+		// as the message being settled for everybody; "marked" says it is one
+		// reader's mark.
+		"marked_handled": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is
@@ -170,6 +174,16 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// leave a consumer unable to tell a notice moving from the routing that
 		// decides where the next one goes.
 		"preference_changed": true,
+		// A rep vouched that a machine-level refusal may be overruled for one
+		// category. The verb carries its object for the same reason
+		// suppression_lifted's does: this stream also carries "changed" and
+		// "suppressed", and "recorded" alone would not say what was recorded.
+		"override_recorded": true,
+		// A standing override was taken back. The verb carries its object for
+		// the same reason suppression_lifted's does: this stream also carries
+		// the recording, and "lifted" alone would not say which of the two
+		// happened.
+		"override_lifted": true,
 	}
 
 	for _, typ := range Types() {
@@ -284,6 +298,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
 		"cg:deal-room-timeline": {"gw:events:crm:deal"},
+		"cg:commitment-settle":  {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.
@@ -310,7 +325,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, and the approval-pending fan-out", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

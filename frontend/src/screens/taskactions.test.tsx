@@ -18,7 +18,7 @@ afterEach(cleanup);
 // search for its exact subject. These hold the link, and hold that a task
 // nobody read out of anything does not offer one.
 
-function stubTask(sourceActivityId: string | null) {
+function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
     "GET /activities/task-1": () =>
       jsonResponse({
@@ -30,6 +30,7 @@ function stubTask(sourceActivityId: string | null) {
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
         source_activity_id: sourceActivityId,
+        captured_by: capturedBy,
       }),
     // The PLAIN activity read, which is what the reader calls. Stubbing the
     // email presentation instead is what let a 404 ship: that endpoint refuses
@@ -164,7 +165,9 @@ test("a source that cannot be read says so instead of disappearing", async () =>
   expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
 });
 
-test("an email request is read in the task, with no click to open it", async () => {
+// An email-request task whose source message carries `parties`, read through
+// the same presentation endpoint the panel asks.
+function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
     "GET /activities/task-1": () =>
       jsonResponse({
@@ -214,8 +217,13 @@ test("an email request is read in the task, with no click to open it", async () 
           can_change: false,
           change_mode: "none",
         },
+        ...parties,
       }),
   });
+}
+
+test("an email request is read in the task, with no click to open it", async () => {
+  stubEmailRequest();
   openTask();
 
   // The message itself, with nothing pressed. It used to sit behind "Open
@@ -236,4 +244,109 @@ test("an email request is read in the task, with no click to open it", async () 
   expect(
     moveTo.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+});
+
+test("the source email names who sent it and who was copied, above the words", async () => {
+  stubEmailRequest({
+    from: [
+      {
+        address: "minh@example.com",
+        display_name: "Nhật Minh Nguyễn",
+        contact_id: "c0000000-0000-4000-8000-000000000001",
+      },
+    ],
+    to: [{ address: "lars@example.com", display_name: "Lars" }],
+    cc: [
+      { address: "anna@example.com", display_name: "Anna Weber" },
+      { address: "tom@example.com", display_name: null },
+    ],
+    bcc_withheld: true,
+  });
+  openTask();
+
+  const sender = await screen.findByRole("link", { name: "Nhật Minh Nguyễn" });
+  expect(sender.getAttribute("href")).toContain(
+    "c0000000-0000-4000-8000-000000000001",
+  );
+  const line = (label: string) => screen.getByText(label).parentElement;
+  expect(line("From")?.textContent).toBe("FromNhật Minh Nguyễn");
+  expect(line("To")?.textContent).toBe("ToLars");
+  // A party with no display name is named by its address, not dropped.
+  expect(line("Cc")?.textContent).toBe("CcAnna Weber, tom@example.com");
+  expect(screen.getByText(/blind-copied and are not shown/)).toBeTruthy();
+
+  // Above the body: the quoted history's own From/To lines sit below the
+  // reply's words, and with no envelope over them a reader took them for the
+  // reply's.
+  const message = screen.getByText("Please send the report.");
+  const envelope = [
+    line("From"),
+    line("To"),
+    line("Cc"),
+    screen.getByText(/blind-copied and are not shown/),
+  ];
+  for (const envelopeLine of envelope) {
+    expect(
+      (envelopeLine?.compareDocumentPosition(message) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }
+});
+
+test("a task an agent wrote is marked as AI-assisted", async () => {
+  stubTask(null, "agent:commitment-reader");
+  openTask();
+  expect(await screen.findByText("AI-assisted")).not.toBeNull();
+});
+
+test("a task a colleague typed carries no AI mark", async () => {
+  stubTask(null);
+  openTask();
+  await screen.findByText(/committed to this in the meeting transcript/);
+  expect(screen.queryByText("AI-assisted")).toBeNull();
+});
+
+// The record a task is filed under, named and reachable from the panel.
+
+function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Send the renewal paperwork",
+        occurred_at: "2026-09-08T09:00:00Z",
+        is_done: false,
+        links,
+      }),
+    "GET /deals/deal-1": () =>
+      jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
+    "GET /companies/co-1": () =>
+      jsonResponse({ id: "co-1", display_name: "Brandt Automotive" }),
+  });
+}
+
+test("a task filed under a deal and its company names the deal first", async () => {
+  // The company first on the wire, so the order on screen is the panel's own.
+  stubFiledTask([
+    { entity_type: "company", entity_id: "co-1" },
+    { entity_type: "deal", entity_id: "deal-1" },
+  ]);
+  openTask();
+
+  const deal = await screen.findByRole("link", { name: "Brandt renewal 2027" });
+  await screen.findByRole("link", { name: "Brandt Automotive" });
+  const names = screen.getAllByRole("link").map((link) => link.textContent);
+  expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
+  // Opened in place: following the record is leaving the panel for it.
+  expect(deal.getAttribute("href")).toBe("#/deals/deal-1");
+  expect(deal.getAttribute("target")).toBeNull();
+});
+
+test("a task filed under nothing names no record", async () => {
+  stubFiledTask([]);
+  openTask();
+
+  await screen.findByText(/^Logged/);
+  expect(screen.queryByRole("link")).toBeNull();
 });

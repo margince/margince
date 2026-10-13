@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -79,11 +80,13 @@ type QuickCaptureResult struct {
 // only the first gets a contact and a refusal, not a half-written pair, because
 // the refusal rolls the transaction back.
 func (s *Store) QuickCapture(ctx context.Context, in QuickCaptureInput) (QuickCaptureResult, error) {
-	if strings.TrimSpace(in.FullName) == "" {
-		return QuickCaptureResult{}, &RequiredFieldError{Field: fieldFullName}
+	name, err := httperr.RequireNonBlank(fieldFullName, in.FullName)
+	if err != nil {
+		return QuickCaptureResult{}, err
 	}
+	in.FullName = name
 	var out QuickCaptureResult
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = s.quickCaptureInTx(ctx, tx, in)
 		return err
@@ -100,7 +103,7 @@ func (s *Store) quickCaptureInTx(
 	in QuickCaptureInput,
 ) (QuickCaptureResult, error) {
 	var out QuickCaptureResult
-	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in))
+	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in), CustomColumns{})
 	if err != nil {
 		return out, err
 	}
@@ -151,7 +154,7 @@ func (s *Store) employerForQuickCapture(
 	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
 		DisplayName: name,
 		Source:      quickCaptureSource,
-	})
+	}, CustomColumns{})
 	if err != nil {
 		return nil, false, err
 	}

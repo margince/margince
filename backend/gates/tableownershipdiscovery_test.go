@@ -5,7 +5,7 @@
 
 package gates
 
-// WHICH packages the ownership gate walks, derived rather than remembered.
+// Which packages the ownership gate walks, derived rather than remembered.
 //
 // Separate from the judgement next door because it answers a different
 // question. That file asks whether a package writes only what it owns; this one

@@ -2,33 +2,28 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
-import { type Fact, FactList } from "../design-system/factlist";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { KeyedName } from "../design-system/keyedname";
+import { PanelBody, PanelGroupHead, PanelIntro } from "../design-system/panel";
 import {
   formatDateTime,
   formatNumber,
   identifierNumber,
   ordinalNumber,
 } from "../format/format";
+import { formatAge } from "../format/interval";
+import { jobKindNameKey } from "../format/jobkinds";
 import { viewerZone } from "../format/timezone";
-import {
-  type Locale,
-  type PluralTranslator,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
-import { formatWaitedFor, HealthCard } from "./healthcard";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { HealthCard } from "./healthcard";
 import { DeadWorkCallout } from "./jobhealthdead";
-import "./jobhealth.css";
 
 // GET /admin/job-health — the operator's only window onto the background
 // system, for Settings → Maintenance. Until this card existed a stalled queue
@@ -56,70 +51,75 @@ const FAILURE_STATE: Record<
   cancelled: { label: "jobs.state.cancelled", tone: undefined },
 };
 
-// All four states of one kind, always all four. A zero is a fact an operator
-// came here to read — "0 dead" is the reassurance — and dropping the zeros
-// would also let the pills shift position from row to row, which is the one
-// thing that makes a column of counts unscannable.
-function KindCounts({ kind }: Readonly<{ kind: JobKindHealth }>) {
+// River's kind stays under the name: it is the string the worker log carries.
+function JobKind({ kind }: Readonly<{ kind: string }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const shown = (value: number) => formatNumber(value, locale);
-  return (
-    <span className="jobhealth-counts">
-      <Badge>{t("jobs.count.waiting", { count: shown(kind.waiting) })}</Badge>
-      <Badge>{t("jobs.count.running", { count: shown(kind.running) })}</Badge>
-      <Badge tone={kind.retrying > 0 ? "warning" : undefined}>
-        {t("jobs.count.retrying", { count: shown(kind.retrying) })}
-      </Badge>
-      <Badge tone={kind.dead > 0 ? "danger" : undefined}>
-        {t("jobs.count.dead", { count: shown(kind.dead) })}
-      </Badge>
-    </span>
-  );
+  const name = jobKindNameKey(kind);
+  return <KeyedName name={name === undefined ? kind : t(name)} code={kind} />;
 }
 
-function kindFacts(
-  kinds: readonly JobKindHealth[],
+const COUNTED = ["waiting", "running", "retrying", "dead"] as const;
+type Counted = (typeof COUNTED)[number];
+
+const COUNT_HEADER: Record<Counted, MessageKey> = {
+  waiting: "jobs.col.waiting",
+  running: "jobs.col.running",
+  retrying: "jobs.col.retrying",
+  dead: "jobs.col.dead",
+};
+
+// A retry or a dead job above zero is the figure an operator came to find.
+const COUNT_TONE: Partial<Record<Counted, "warning" | "danger">> = {
+  retrying: "warning",
+  dead: "danger",
+};
+
+// Every count, zeros included: "0 dead" is the reassurance an operator came for.
+function kindColumns(
   t: Translator,
-  plural: PluralTranslator,
   locale: Locale,
-): Fact[] {
-  return kinds.map((kind) => ({
-    // `kind` is unique per queue, not globally — the same worker kind can be
-    // registered on two queues, and the pair is what names one row. Serialized
-    // rather than joined on a separator, because neither identifier's grammar
-    // rules one out and a delimiter that can appear in a part is a key collision.
-    key: JSON.stringify([kind.queue, kind.kind]),
-    // The stable identifier River persists in river_job.kind, verbatim: it is
-    // what the operator greps the worker log for, so humanizing the underscores
-    // away would cost them the string they actually need.
-    term: <span>{kind.kind}</span>,
-    value: <KindCounts kind={kind} />,
-    note: (
-      <>
-        {t("jobs.queue", { queue: kind.queue })}
-        {/* Stated only when something of this kind IS runnable. A null age
-            means nothing is queued now — a job scheduled for later is not
-            late — and a row claiming a wait of zero would read as a queue
-            that just started rather than one with nothing in it. */}
-        {kind.oldest_waiting_age_seconds !== null && (
-          <>
-            {" · "}
-            {formatWaitedFor(kind.oldest_waiting_age_seconds, plural, locale)}
-          </>
-        )}
-      </>
-    ),
-  }));
+): DataTableColumn<JobKindHealth>[] {
+  const counts = COUNTED.map(
+    (count): DataTableColumn<JobKindHealth> => ({
+      key: count,
+      header: t(COUNT_HEADER[count]),
+      align: "end",
+      render: (kind) => {
+        const tone = COUNT_TONE[count];
+        const shown = formatNumber(kind[count], locale);
+        return tone && kind[count] > 0 ? (
+          <Badge tone={tone}>{shown}</Badge>
+        ) : (
+          shown
+        );
+      },
+    }),
+  );
+  return [
+    {
+      key: "kind",
+      header: t("jobs.col.job"),
+      render: (kind) => <JobKind kind={kind.kind} />,
+    },
+    {
+      key: "queue",
+      header: t("jobs.col.queue"),
+      render: (kind) => <code>{kind.queue}</code>,
+    },
+    ...counts,
+    {
+      key: "oldest",
+      header: t("jobs.col.oldestWait"),
+      align: "end",
+      // A null age means nothing is runnable now, which is not a wait of zero.
+      render: (kind) =>
+        kind.oldest_waiting_age_seconds === null
+          ? null
+          : formatAge(kind.oldest_waiting_age_seconds, locale),
+    },
+  ];
 }
 
-// One reading of the queue, as a stacked row: the counts ARE the subject rather
-// than an answer to a question that would fit beside them, so they take the
-// card's full width under their naming (design-system README, SettingRow).
-//
-// `.settingrow-control` is a flex ROW, and a `FactList` is a grid that sizes to
-// its content inside one — hence the `settingrow-measure` wrapper, which is what
-// gives a stacked control the whole width back.
 function KindSection({
   label,
   description,
@@ -132,157 +132,149 @@ function KindSection({
   emptyText: string;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <SettingRow
-      label={label}
-      description={description}
-      layout="stack"
-      control={
-        <div className="settingrow-measure">
-          {kinds.length === 0 ? (
-            <EmptyState>{emptyText}</EmptyState>
-          ) : (
-            <FactList numeric facts={kindFacts(kinds, t, plural, locale)} />
-          )}
-        </div>
-      }
-    />
-  );
-}
-
-// The meta line under one failure: which row it is, how far up the retry ladder
-// it got, and how long it has been there.
-//
-// Every part but the attempt counter is optional on the wire, and an absent one
-// is DROPPED rather than drawn — a "failing since" with nothing after it, or a
-// bare job label, states a value this report never sent and sends the reader
-// looking for a row that does not exist.
-function failureNote(
-  failure: JobFailure,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): ReactNode {
-  const { failure_class: failureClass, job_id: jobID } = failure;
-  const since = failure.first_failed_at;
-  return (
     <>
-      {/* The class reads as an identifier, not a `Badge`. A Badge is a status
-          and this row already carries the one status it has, so a second pill
-          beside it reads as a second state; and the class vocabulary grows with
-          every unit that declares one, so no closed tone could be honest about
-          a token this build has never seen. Verbatim, like the kind above it,
-          because both are strings the operator greps the worker log with and
-          keys an alert on, and dressing either up costs them the exact text. */}
-      {failureClass !== null && failureClass !== undefined && (
-        <>
-          <span>{failureClass}</span>
-          {" · "}
-        </>
+      <PanelGroupHead title={label} level="h3" />
+      {(description || kinds.length === 0) && (
+        <PanelBody>
+          {description && <PanelIntro>{description}</PanelIntro>}
+          {kinds.length === 0 && <EmptyState>{emptyText}</EmptyState>}
+        </PanelBody>
       )}
-      {t("jobs.attempt", {
-        attempt: ordinalNumber(failure.attempt),
-        max: ordinalNumber(failure.max_attempts),
-        when: formatDateTime(failure.failed_at, locale, zone),
-      })}
-      {/* The id River prints in its own log lines, so it stays the string an
-          operator greps them with. */}
-      {jobID !== undefined && (
-        <>
-          {" · "}
-          {t("jobs.jobId", { id: identifierNumber(jobID) })}
-        </>
-      )}
-      {/* Only when an attempt error was actually recorded. A job cancelled
-          before it ever ran has no first failure, and falling back to failed_at
-          would report a single failure as a span of them. */}
-      {since !== null && since !== undefined && (
-        <>
-          {" · "}
-          {t("jobs.failingSince", {
-            when: formatDateTime(since, locale, zone),
-          })}
-        </>
+      {kinds.length > 0 && (
+        <DataTable
+          bleed
+          stickyFirst
+          label={label}
+          columns={kindColumns(t, locale)}
+          rows={[...kinds]}
+          // A kind is unique per queue only, so the pair names the row.
+          rowKey={(kind) => JSON.stringify([kind.queue, kind.kind])}
+        />
       )}
     </>
   );
 }
 
-function failureFacts(
-  failures: readonly JobFailure[],
+function failureColumns(
   t: Translator,
   locale: Locale,
   zone: string,
-): Fact[] {
-  return failures.map((failure, index) => {
-    const state = FAILURE_STATE[failure.state];
-    return {
-      // Position joins the key deliberately: this is a server-ordered snapshot
-      // with nothing to reorder or edit, and two failures of one kind can
-      // genuinely share a timestamp, so nothing else tells them apart.
-      key: JSON.stringify([index, failure.kind]),
-      term: (
-        <>
-          <span>{failure.kind}</span>{" "}
-          <Badge tone={state.tone}>{t(state.label)}</Badge>
-        </>
-      ),
-      // The job layer's own vetted sentence, shown as it arrived. The worker's
-      // raw cause never travels on this endpoint, so there is nothing here to
-      // second-guess or trim.
-      value: (
-        <>
-          {failure.reason}
-          {/* Checked on its own rather than off the class: the endpoint nulls
-              the two together, but a screen that inferred one from the other
-              would draw an empty action line the day that coupling changes. */}
-          {failure.remedy !== null && failure.remedy !== undefined && (
-            <span className="t-caption jobhealth-remedy">
+): DataTableColumn<JobFailure>[] {
+  return [
+    {
+      key: "kind",
+      header: t("jobs.col.job"),
+      render: (failure) => <JobKind kind={failure.kind} />,
+    },
+    {
+      key: "state",
+      header: t("jobs.col.state"),
+      fold: "end",
+      render: (failure) => {
+        const state = FAILURE_STATE[failure.state];
+        return <Badge tone={state.tone}>{t(state.label)}</Badge>;
+      },
+    },
+    {
+      key: "reason",
+      header: t("jobs.col.reason"),
+      // The job layer's vetted sentence, as it arrived; the class beside it is
+      // the token an operator keys an alert on, so it stays verbatim.
+      render: (failure) => (
+        <CellStack>
+          <span>{failure.reason}</span>
+          {failure.remedy && (
+            <span className="t-caption">
               {t("jobs.remedy", { remedy: failure.remedy })}
             </span>
           )}
-        </>
+          {failure.failure_class && (
+            <code className="t-caption">{failure.failure_class}</code>
+          )}
+        </CellStack>
       ),
-      note: failureNote(failure, t, locale, zone),
-    };
-  });
+    },
+    {
+      key: "attempt",
+      header: t("jobs.col.attempt"),
+      align: "end",
+      render: (failure) =>
+        t("jobs.attemptOf", {
+          attempt: ordinalNumber(failure.attempt),
+          max: ordinalNumber(failure.max_attempts),
+        }),
+      folded: (failure) =>
+        t("jobs.attempt", {
+          attempt: ordinalNumber(failure.attempt),
+          max: ordinalNumber(failure.max_attempts),
+        }),
+    },
+    {
+      key: "failedAt",
+      header: t("jobs.col.failedAt"),
+      // A first failure only when an attempt error was recorded: a job cancelled
+      // before it ran has none, and failed_at would fake a span.
+      render: (failure) => (
+        <CellStack>
+          <span>{formatDateTime(failure.failed_at, locale, zone)}</span>
+          {failure.first_failed_at && (
+            <span className="t-caption">
+              {t("jobs.failingSince", {
+                when: formatDateTime(failure.first_failed_at, locale, zone),
+              })}
+            </span>
+          )}
+        </CellStack>
+      ),
+    },
+    {
+      key: "jobId",
+      header: t("jobs.col.jobId"),
+      align: "end",
+      fold: "hide",
+      render: (failure) =>
+        failure.job_id === undefined ? null : identifierNumber(failure.job_id),
+    },
+  ];
 }
 
 function FailureSection({
   failures,
-  locale,
   zone,
-}: Readonly<{
-  failures: readonly JobFailure[];
-  locale: Locale;
-  zone: string;
-}>) {
+}: Readonly<{ failures: readonly JobFailure[]; zone: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
-    <SettingRow
-      label={t("jobs.failures")}
-      description={t("jobs.failuresSub")}
-      layout="stack"
-      control={
-        failures.length === 0 ? (
+    <>
+      <PanelGroupHead title={t("jobs.failures")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("jobs.failuresSub")}</PanelIntro>
+        {failures.length === 0 && (
           <EmptyState>{t("jobs.failuresEmpty")}</EmptyState>
-        ) : (
-          // The list and the caveat under it are two children of the ROW's
-          // control column, not two children of one wrapper: a stacked row's
-          // control is already a flex column with the interval on it
-          // (settingrow.css), so a wrapper here would have to state a margin
-          // the row has spelled once for every card.
-          <>
-            <div className="settingrow-measure">
-              <FactList facts={failureFacts(failures, t, locale, zone)} />
-            </div>
-            <p>{t("jobs.reasonVetted")}</p>
-          </>
-        )
-      }
-    />
+        )}
+      </PanelBody>
+      {failures.length > 0 && (
+        <>
+          <DataTable
+            bleed
+            fold
+            label={t("jobs.failures")}
+            columns={failureColumns(t, locale, zone)}
+            rows={[...failures]}
+            // A server-ordered snapshot: two failures of one kind can share a
+            // timestamp, so position is what tells them apart.
+            rowKey={(failure) =>
+              JSON.stringify([failures.indexOf(failure), failure.kind])
+            }
+          />
+          <PanelBody>
+            <p className="t-caption">{t("jobs.reasonVetted")}</p>
+          </PanelBody>
+        </>
+      )}
+    </>
   );
 }
 
@@ -291,36 +283,33 @@ function JobHealthBody({
   zone,
 }: Readonly<{ health: JobHealth; zone: string }>) {
   const t = useT();
-  const { locale } = useLocale();
 
   if (health.kinds.length === 0 && health.recent_failures.length === 0) {
     // Its own words rather than the generic "nothing here": that the background
     // system is idle is a finding, and the reader must be able to tell it from
     // a card that had nothing to show them.
-    return <EmptyState>{t("jobs.empty")}</EmptyState>;
+    return (
+      <PanelBody>
+        <EmptyState>{t("jobs.empty")}</EmptyState>
+      </PanelBody>
+    );
   }
 
   return (
     <>
       <DeadWorkCallout health={health} />
-      <SettingList>
-        <KindSection
-          label={t("jobs.workspaceKinds")}
-          kinds={health.kinds.filter((kind) => !kind.fleet_wide)}
-          emptyText={t("jobs.workspaceEmpty")}
-        />
-        <KindSection
-          label={t("jobs.dispatcherKinds")}
-          description={t("jobs.dispatcherSub")}
-          kinds={health.kinds.filter((kind) => kind.fleet_wide)}
-          emptyText={t("jobs.dispatcherEmpty")}
-        />
-        <FailureSection
-          failures={health.recent_failures}
-          locale={locale}
-          zone={zone}
-        />
-      </SettingList>
+      <KindSection
+        label={t("jobs.workspaceKinds")}
+        kinds={health.kinds.filter((kind) => !kind.fleet_wide)}
+        emptyText={t("jobs.workspaceEmpty")}
+      />
+      <KindSection
+        label={t("jobs.dispatcherKinds")}
+        description={t("jobs.dispatcherSub")}
+        kinds={health.kinds.filter((kind) => kind.fleet_wide)}
+        emptyText={t("jobs.dispatcherEmpty")}
+      />
+      <FailureSection failures={health.recent_failures} zone={zone} />
     </>
   );
 }
@@ -346,10 +335,7 @@ export function JobHealthCard() {
     queryKey: ["job-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/job-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/job-health"));
       // The contract makes all three required (JobHealth), so a body missing
       // one is not a thin report — it is a report this card cannot read, and
       // the check belongs at the boundary where the wire stops being trusted

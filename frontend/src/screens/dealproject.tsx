@@ -6,16 +6,16 @@ import { Briefcase } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { ENTITY } from "../app/entity";
-import { navigate, routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FieldGuard } from "../design-system/rbac";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ENTITY } from "../lib/entity";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
 import { dealRecordKeys } from "./activitykeys";
-import { problemMessageOf, throwProblem } from "./common";
 import type { CreateField } from "./create";
 import { useEntityName } from "./entityref";
 import type { Project } from "./projects.form";
@@ -55,17 +55,16 @@ function useProjectPage(
   const projects = useQuery({
     queryKey: ["projects", "open", companyId ?? "all"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/projects", {
-        params: {
-          query: {
-            ...(companyId ? { company_id: companyId } : {}),
-            limit: 200,
+      const data = unwrap(
+        await api.GET("/projects", {
+          params: {
+            query: {
+              ...(companyId ? { company_id: companyId } : {}),
+              limit: 200,
+            },
           },
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+        }),
+      );
       return data.data;
     },
     enabled,
@@ -163,6 +162,7 @@ export async function resolveDealProject(
   values: Record<string, string>,
   companyId: string | null,
   t: (key: MessageKey) => string,
+  idempotencyKey?: string,
 ): Promise<string | null> {
   const picked = values.project_id?.trim() ?? "";
   if (picked !== NEW_PROJECT) {
@@ -171,16 +171,16 @@ export async function resolveDealProject(
   if (!companyId) {
     throw new Error(t("deal.projectNeedsCompany"));
   }
-  const { data, error } = await api.POST("/projects", {
-    body: {
-      name: values.new_project_name?.trim() ?? "",
-      company_id: companyId,
-      source: "manual",
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.POST("/projects", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
+      body: {
+        name: values.new_project_name?.trim() ?? "",
+        company_id: companyId,
+        source: "manual",
+      },
+    }),
+  );
   return data.id;
 }
 
@@ -298,15 +298,16 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   // A withheld project arrives as null with `masked_fields` naming it, and
   // is not the same as none; an archived deal takes no writes at all.
   const masked = (deal.masked_fields ?? []).includes("project_id");
+  const [project] = candidates;
   if (
     deal.status !== "won" ||
     masked ||
     deal.archived_at ||
-    candidates.length !== 1
+    candidates.length !== 1 ||
+    project === undefined
   ) {
     return null;
   }
-  const project = candidates[0];
   // The retry case: the deal already names this project but the advance
   // failed, so the project is still short of delivery.
   const attached = deal.project_id === project.id;

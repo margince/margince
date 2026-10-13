@@ -2,22 +2,26 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { connectorsPollInterval } from "../app/capture-progress";
-import { type Route, useRoute } from "../app/router";
-import { type UrlParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ProviderList } from "../design-system/providerrow";
+import {
+  type AccountVendor,
+  accountsOf,
+  vendorOf,
+} from "../format/connectorprovider";
 import { useT } from "../i18n";
+import { connectorsPollInterval } from "../lib/capture-progress";
+import { problemCode, problemMessageOf, throwProblem } from "../lib/problem";
+import { type Route, useRoute } from "../lib/router";
+import { type UrlParams, useUrlParams } from "../lib/urlstate";
 import { isImportWindow } from "../mail-history/window-picker";
-import { problemCode, problemMessageOf, throwProblem } from "./common";
 import { type ImportWindow, useConnectAccount } from "./connect-account";
 import { ConnectFlow } from "./connect-flow";
 import { canAddAccount, type FlowAccount } from "./connect-flow-draft";
 import { ConnectionAccountRow } from "./connection-account";
 import { ConnectTiles } from "./connection-empty";
-import { type AccountVendor, accountsOf, vendorOf } from "./connectorproviders";
 import { OAuthOutcomeNote } from "./connectors.notices";
 import { ImapConnectForm } from "./imap-connect-form";
 import { MailSharingPlate } from "./mail-sharing";
@@ -39,20 +43,12 @@ import "./connectors.css";
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
 export type ConnectorsResult = {
-  // GET /connectors answers 501 code:not_implemented when this deployment
-  // never wired mail capture (httperr.NotImplemented) — a calm, documented
-  // feature-off state, never an error card (mirrors webhooks.tsx's
-  // webhooks_not_configured treatment).
+  // A 501 not_implemented is a deployment that never wired mail capture: a
+  // documented feature-off state, never an error card.
   notConfigured: boolean;
   data: CaptureConnection[];
-  // Which providers this installation could connect at all, and why not where
-  // it could not. The connect surfaces draw their blockers from it; a body that
-  // carried none reads as an empty roster, which is what a deployment with no
-  // capture wired actually has.
   providers: ProviderReadiness[];
-  // The address this installation puts in outgoing links, and whether it
-  // answered when last asked. Absent when none is configured — which is
-  // itself the answer, not a failure.
+  // Absent when none is configured, which is itself the answer.
   publicOrigin?: PublicOriginStatus;
 };
 
@@ -91,10 +87,8 @@ export function useConnectors(
         publicOrigin: data.public_origin,
       };
     },
-    // Live while a mailbox is importing: the orb's ring, the capture chip and
-    // this card's own run row all draw the import from THIS read, and at the
-    // client's default staleness an import would be reported thirty seconds
-    // behind the counts the server holds.
+    // Live while a mailbox imports: the orb, the capture chip and the import
+    // dialog all draw the run from this read.
     refetchInterval: (query) => connectorsPollInterval(query.state.data),
   });
 }

@@ -4,7 +4,6 @@
 import { Copy } from "lucide-react";
 import { useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
@@ -16,6 +15,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { type Translator, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { navigate } from "../lib/router";
 import {
   type CalendarStanding,
   calendarName,

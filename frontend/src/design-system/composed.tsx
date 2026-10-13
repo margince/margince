@@ -10,7 +10,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useState } from "react";
 import type { components } from "../api/schema";
 import { splitEmailBody } from "../format/emailtext";
 import {
@@ -22,9 +22,11 @@ import {
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button, OptionCount } from "./atoms";
-import { type BoardDealMail, DealCard } from "./dealcard";
+import { type BoardDealMail, DealCard, type DealCardHooks } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
+import { Markdown } from "./markdown";
+import { URL_PATTERN } from "./markdown-autolink";
 import { type ContactOn, withWhom } from "./participants";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
@@ -233,22 +235,21 @@ type PlainBoardProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
 };
 
-type DealBoardProps = BoardHandlers<BoardDeal> & {
-  variant?: "deal";
-  columns: BoardMoneyColumn[];
-  /**
-   * Each card's own address. Required, because every card on this board opens a
-   * deal and a card that opens a record is a link — see `DealCard`'s `href`.
-   * A function rather than a field on the deal: the ADDRESS is the screen's
-   * vocabulary and this tier holds no routes.
-   */
-  cardHref: (deal: BoardDeal) => string;
-  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
-  /** Each card's mail flyout — see `DealCard`'s `mailAside`. */
-  mailAside?: (deal: BoardDeal) => ReactNode;
-  /** The zone a close date is read in — see `DealCard`'s `zone`. */
-  zone: string;
-};
+type DealBoardProps = BoardHandlers<BoardDeal> &
+  DealCardHooks & {
+    variant?: "deal";
+    columns: BoardMoneyColumn[];
+    /**
+     * Each card's own address. Required, because every card on this board opens a
+     * deal and a card that opens a record is a link — see `DealCard`'s `href`.
+     * A function rather than a field on the deal: the ADDRESS is the screen's
+     * vocabulary and this tier holds no routes.
+     */
+    cardHref: (deal: BoardDeal) => string;
+    onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+    /** The zone a close date is read in — see `DealCard`'s `zone`. */
+    zone: string;
+  };
 
 type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
@@ -289,6 +290,7 @@ function BoardLayout<Record extends BoardRecord>({
     <div className="board">
       {columns.map((column) => {
         const money = moneyFor(column);
+        const dealCount = column.count ?? column.deals.length;
         return (
           <section
             key={column.stage}
@@ -341,7 +343,7 @@ function BoardLayout<Record extends BoardRecord>({
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
               <span className="board-col-count" aria-hidden="true">
-                <OptionCount count={column.count ?? column.deals.length} />
+                <OptionCount count={dealCount} />
               </span>
               {money && (
                 <span className="prob">
@@ -369,12 +371,9 @@ function BoardLayout<Record extends BoardRecord>({
                     announces "12 deals" rather than "Qualified: 12". */}
                 <span className="sr-only">
                   {countLabel
-                    ? countLabel(column.count ?? column.deals.length)
-                    : t("board.count", {
-                        count: formatNumber(
-                          column.count ?? column.deals.length,
-                          locale,
-                        ),
+                    ? countLabel(dealCount)
+                    : translatePlural(locale, "board.count", dealCount, {
+                        count: formatNumber(dealCount, locale),
                       })}
                 </span>
               </span>
@@ -404,13 +403,11 @@ function BoardLayout<Record extends BoardRecord>({
                   An EMPTY column says nothing: with no deals counted there is
                   no sum to refuse, and ten columns repeating the sentence over
                   a blank board read as ten errors. */}
-              {money &&
-                column.sumHidden &&
-                (column.count ?? column.deals.length) > 0 && (
-                  <span className="board-col-refusal">
-                    {column.sumHiddenReason ?? t("board.mixedCurrencies")}
-                  </span>
-                )}
+              {money && column.sumHidden && dealCount > 0 && (
+                <span className="board-col-refusal">
+                  {column.sumHiddenReason ?? t("board.mixedCurrencies")}
+                </span>
+              )}
             </div>
             {!column.collapsed &&
               column.deals.map((record) => (
@@ -451,6 +448,7 @@ export function PipelineBoard<Record extends BoardRecord>(
           zone={props.zone}
           onOpen={props.onOpen}
           mailAside={props.mailAside}
+          actions={props.cardActions?.(deal)}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />
       )}
@@ -582,6 +580,8 @@ export type TimelineEntry = {
    * Art. 17 request, which is why this is optional rather than empty string.
    */
   body?: string | null;
+  /** A pasted or uploaded transcript, drawn as its lines rather than markdown. */
+  transcript?: boolean;
   /**
    * The row is discoverable but its CONTENT is not this reader's: the
    * activity's audience was limited by a human and the reader is not in it.
@@ -607,14 +607,11 @@ export type TimelineEntry = {
   detail?: ReactNode;
 };
 
-// One icon for every kind, and ONE for every messaging transport: since
-// ADR-0107/A158 the timeline no longer knows a Telegram row from a WhatsApp one
-// by its kind, so a per-transport icon here would be a map this file cannot
-// keep — an extension unit's transport has no entry and never will. The row
-// names its transport in the label instead.
-// The kind in a word, beside the row rather than as an icon alone: a glyph is
-// a thing to recognise and a word is a thing to read, and a chronology mixing
-// mail, meetings and field edits is scanned by the second.
+// One icon per kind and one for all messaging transports. An extension unit's
+// transport has no entry here, so the row names it in the label.
+// The kind in a word beside the row, not an icon alone. A glyph is a thing to
+// recognise and a word is a thing to read. A timeline that mixes mail,
+// meetings and field edits is scanned by reading.
 const TIMELINE_KIND_LABEL = {
   email: "timeline.kind.email",
   meeting: "timeline.kind.meeting",
@@ -660,7 +657,6 @@ const TIMELINE_ICON = {
 // URL itself, so the destination a reader checks is the destination they get —
 // a mail we did not write is not a place to render a friendly label over a
 // different address.
-const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?]/g;
 
 function linkify(text: string): ReactNode[] {
   const out: ReactNode[] = [];
@@ -689,36 +685,35 @@ function linkify(text: string): ReactNode[] {
   return out;
 }
 
+const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
+
 /**
- * TimelineText is the message itself, two lines by default and the whole of it
- * on request.
+ * TimelineText is the message itself, three lines by default and the whole of
+ * it on request. A timeline of full emails would be a mailbox.
  *
- * Two lines is enough to recognise a thread; the full text is one click away
- * rather than one application away. Collapsed by default because a timeline
- * where every row is a full email is a mailbox, and the point of the row is
- * still the sequence.
- *
- * On a mail row the reader gets the sentence the sender wrote. The sign-off and
- * the quoted history below it are folded into a second control instead of being
- * dropped, because the split is a heuristic: when it takes too much, the text is
- * one click away rather than gone. `email` gates that, since a note may open
- * with "Viele Grüße" or carry a "> " line as ordinary prose.
+ * On a mail row the sign-off and quoted history fold into a second control,
+ * because the split is a heuristic and may take too much. Only a mail is split,
+ * since a note may say "Viele Grüße" as prose. What a rep writes (a note, call,
+ * meeting or task) is markdown; a mail, a chat and a transcript stay text.
  */
 function TimelineText({
   text,
-  email = false,
-}: Readonly<{ text: string; email?: boolean }>) {
+  entry,
+}: Readonly<{
+  text: string;
+  entry: Pick<TimelineEntry, "kind" | "transcript">;
+}>) {
   const t = useT();
+  const email = entry.kind === "email";
   const [open, setOpen] = useState(false);
   const [tailOpen, setTailOpen] = useState(false);
-  // Whether the clamp is actually cutting the text off, measured rather than
-  // guessed. Counting characters was wrong in the one direction that matters:
-  // the clamp is two VISUAL lines at whatever width the column happens to be,
-  // so a message short enough to look safe still wrapped past it in a narrow
-  // column, got clipped by CSS, and — having failed the character test — was
-  // given no way to expand. Text the reader could not reach.
+  // Measured, not guessed: the clamp is three VISUAL lines at the column's
+  // width, and a short guess leaves clipped text with no control to reach it.
   const [clipped, setClipped] = useState(false);
-  const bodyRef = useRef<HTMLSpanElement>(null);
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  // Markdown is block content, which a <span> may not hold.
+  const Block =
+    WRITTEN_KINDS.has(entry.kind) && !entry.transcript ? "div" : "span";
   // The tail is what the reader is spared; `trimmed` is what the row shows and
   // what the clamp measures, so the split has to happen before that effect.
   const parts = useMemo(
@@ -729,10 +724,8 @@ function TimelineText({
     ? [parts.header, parts.main].filter(Boolean).join("\n\n")
     : text.trim();
   const tail = parts?.trimmed ?? "";
-  // A row is keyed by activity id, so React keeps this component mounted when
-  // the entry it renders is replaced. Without this the next mail's signature
-  // would already be open, revealed by a click the reader made on a different
-  // message.
+  // A row is keyed by activity id, so this stays mounted when its entry is
+  // replaced. The next mail's signature stays closed.
   const [shownFor, setShownFor] = useState(text);
   if (shownFor !== text) {
     setShownFor(text);
@@ -740,7 +733,6 @@ function TimelineText({
   }
 
   useLayoutEffect(() => {
-    const el = bodyRef.current;
     // Nothing to measure while expanded: scrollHeight equals clientHeight, and
     // re-measuring there would drop the control that collapses it again. Empty
     // text renders nothing, so there is nothing that could be clipped.
@@ -757,16 +749,20 @@ function TimelineText({
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [open, trimmed]);
+  }, [el, open, trimmed]);
 
   if (!trimmed) {
     return null;
   }
   return (
-    <span className="tl-text">
-      <span ref={bodyRef} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {linkify(trimmed)}
-      </span>
+    <Block className="tl-text">
+      <Block ref={setEl} className={open ? "tl-text-full" : "tl-text-clamp"}>
+        {Block === "div" ? (
+          <Markdown source={trimmed} autolink />
+        ) : (
+          linkify(trimmed)
+        )}
+      </Block>
       {(clipped || open) && (
         <button
           type="button"
@@ -793,7 +789,7 @@ function TimelineText({
           {tailOpen && <span className="tl-text-tail">{linkify(tail)}</span>}
         </>
       )}
-    </span>
+    </Block>
   );
 }
 
@@ -904,12 +900,14 @@ export function GroupedTimelineList({
     <ul className="timeline">
       {groups.map((group) =>
         group.kind === "single" ? (
-          <TimelineRow
-            key={group.id}
-            entry={group.entries[0]}
-            zone={zone}
-            flag={<MoveFlag entry={group.entries[0]} />}
-          />
+          group.entries[0] && (
+            <TimelineRow
+              key={group.id}
+              entry={group.entries[0]}
+              zone={zone}
+              flag={<MoveFlag entry={group.entries[0]} />}
+            />
+          )
         ) : group.kind === "thread" ? (
           <ThreadRow
             key={group.id}
@@ -1112,9 +1110,7 @@ function MessageWords({
   if (entry.emailSummary) {
     return <EmailWords summary={entry.emailSummary} />;
   }
-  return entry.body ? (
-    <TimelineText text={entry.body} email={entry.kind === "email"} />
-  ) : null;
+  return entry.body ? <TimelineText text={entry.body} entry={entry} /> : null;
 }
 
 /**
@@ -1206,7 +1202,10 @@ function ThreadRow({
   const { locale } = useLocale();
   const t = useT();
   const [allOpen, setAllOpen] = useState(false);
-  const newest = group.entries[0];
+  const [newest] = group.entries;
+  if (newest === undefined) {
+    return null;
+  }
   const Icon = TIMELINE_ICON[newest.kind];
   const threadKey = newest.threadKey;
   const participants = threadParticipants(group.entries, t, locale);
@@ -1327,7 +1326,10 @@ function BulkGroupRow({
   const { locale } = useLocale();
   const t = useT();
   const [open, setOpen] = useState(false);
-  const newest = group.entries[0];
+  const [newest] = group.entries;
+  if (newest === undefined) {
+    return null;
+  }
   const Icon = TIMELINE_ICON[newest.kind];
   return (
     <li className={directionClass(newest.direction)}>
@@ -1373,10 +1375,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry — a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText
-                text={newest.body}
-                email={newest.kind === "email"}
-              />
+              <TimelineText text={newest.body} entry={newest} />
             )}
           </>
         )}
@@ -1401,11 +1400,11 @@ function BulkGroupRow({
             ))}
           </ul>
         )}
+        {/* The newest copy's verbs stand for the send: Relink on it offers to
+            move the rest, so a mis-filed send is fixed from its summary row
+            without opening it first. */}
+        {newest.actions && <span className="tl-actions">{newest.actions}</span>}
       </div>
-      {/* The newest copy's verbs stand for the send: Relink on it offers to
-          move the rest, so a mis-filed send is fixed from its summary row
-          without opening it first. */}
-      {newest.actions && <span className="tl-actions">{newest.actions}</span>}
     </li>
   );
 }
@@ -1490,8 +1489,8 @@ export function TimelineRow({
             whyNotOpenable="noReader"
           />
           {flag}
+          {entry.actions && <span className="tl-actions">{entry.actions}</span>}
         </div>
-        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </li>
     );
   }
@@ -1512,8 +1511,7 @@ export function TimelineRow({
       </span>
       {/* A div, not a span: a change row's detail is a field diff whose
                 long-value side is a focusable region — flow content, invalid
-                inside phrasing content. The row lays out identically, because
-                .tl-body is a flex column either way. */}
+                inside phrasing content. */}
       <div className="tl-body">
         {/* What KIND of thing this was, as a kicker and not a status, and
             which way it went — one line above the headline, because both
@@ -1568,14 +1566,14 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} email={entry.kind === "email"} />
+          <TimelineText text={entry.body} entry={entry} />
         )}
         {entry.detail}
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />
         </span>
+        {entry.actions && <span className="tl-actions">{entry.actions}</span>}
       </div>
-      {entry.actions && <span className="tl-actions">{entry.actions}</span>}
     </li>
   );
 }

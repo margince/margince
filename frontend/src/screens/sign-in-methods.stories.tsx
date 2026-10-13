@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { screen, userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";

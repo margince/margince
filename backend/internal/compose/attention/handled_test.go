@@ -103,6 +103,66 @@ func TestAnUnwiredReaderShowsNothingRatherThanRefusing(t *testing.T) {
 	}
 }
 
+// TestAHandledReceiptNamesTheRecordItChanged.
+//
+// A row that says what was done but not to which record leaves the reader
+// unable to judge Undo against Accept. The record is named under the reader's
+// own grants, one read per type; a record they may not read keeps its id and
+// stays unnamed, and an act about no record carries no subject.
+func TestAHandledReceiptNamesTheRecordItChanged(t *testing.T) {
+	t.Parallel()
+	deal, hidden, contact := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	names := &stubNames{labels: map[ids.UUID]string{
+		deal: "Fleet retrofit", contact: "Dana Weiss",
+	}}
+	svc := &Service{
+		now: func() time.Time { return rankInstant },
+		receipts: listedReceipts{
+			{ID: ids.NewV7(), TargetType: "deal", TargetID: deal},
+			{ID: ids.NewV7(), TargetType: "deal", TargetID: hidden},
+			{ID: ids.NewV7(), TargetType: "contact", TargetID: contact},
+			{ID: ids.NewV7(), TargetType: "deal", TargetID: deal},
+			{ID: ids.NewV7()},
+		},
+		names: names,
+	}
+
+	out, err := svc.HandledForYou(leadReader())
+	if err != nil {
+		t.Fatalf("reading the receipts: %v", err)
+	}
+
+	want := []string{"Fleet retrofit", "", "Dana Weiss", "Fleet retrofit"}
+	for i, label := range want {
+		subject := out.Receipts[i].Subject
+		if subject == nil {
+			t.Fatalf("receipt %d lost the record it was about", i)
+		}
+		got := ""
+		if subject.Label != nil {
+			got = *subject.Label
+		}
+		if got != label {
+			t.Errorf("receipt %d is labelled %q, want %q", i, got, label)
+		}
+	}
+	if out.Receipts[4].Subject != nil {
+		t.Errorf("an act about no record carries a subject: %+v", out.Receipts[4].Subject)
+	}
+	// Two types, two reads; the deal named twice is asked once.
+	if len(names.calls) != 2 || names.asked[deal] != 1 {
+		t.Errorf("labels took %d reads asking the deal %d times, want 2 reads and 1 ask",
+			len(names.calls), names.asked[deal])
+	}
+}
+
+// listedReceipts answers exactly the acts it holds.
+type listedReceipts []Receipt
+
+func (l listedReceipts) Recent(_ context.Context, _ time.Time, limit int) ([]Receipt, error) {
+	return l[:min(limit, len(l))], nil
+}
+
 // fixedReceipts is n completed acts, newest first.
 type fixedReceipts int
 

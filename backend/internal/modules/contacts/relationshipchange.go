@@ -200,7 +200,7 @@ func changeInputs(
 		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL`+
+		 WHERE `+strengthCounts+` AND a.archived_at IS NULL`+
 		auth.AudienceWorkspaceOnly("a")+foldWithin,
 		foldArgs...,
 	).Scan(
@@ -226,7 +226,7 @@ func changeInputs(
 		SELECT max(a.occurred_at)
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE a.kind IN `+strengthKinds+` AND a.archived_at IS NULL
+		 WHERE `+strengthCounts+` AND a.archived_at IS NULL
 		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a")+precedingWithin,
 		precedingArgs...,
 	).Scan(&in.PrecedingInteraction); err != nil {

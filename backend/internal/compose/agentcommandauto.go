@@ -18,9 +18,11 @@ package compose
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -118,7 +120,7 @@ func relinkThreadCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, b
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewRelinkThreadCall(deps.records, deps.language, agents.RelinkThreadCommand{
+	return agents.NewRelinkThreadCall(agents.RelinkThreadCommand{
 		ThreadKey: in.ThreadKey, EntityType: in.EntityType, EntityID: in.EntityID,
 	}), nil
 }
@@ -193,6 +195,14 @@ func composeReportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, 
 		return nil, err
 	}
 	return agents.NewComposeReportCall(deps.language, agents.ComposeReportCommand{Blocks: len(in.Blocks)}), nil
+}
+
+// uploadAttachmentCommand refuses to stage an upload, as the tool door refuses
+// attach_document: the approval would keep the file's bytes.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func uploadAttachmentCommand(agentPolicy, restCommandDeps, *http.Request, []byte) (agents.GovernedCall, error) {
+	return nil, agents.FileCannotWait(fmt.Errorf("agent gate: uploadAttachment is confirm-first here: %w", apperrors.ErrRequiresApproval))
 }
 
 // decideApprovalCommand decodes a decision on ONE staged proposal. The verdict

@@ -17,6 +17,7 @@ import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { TimezoneSelect } from "../design-system/timezoneselect";
@@ -25,7 +26,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { amountLabel } from "./meeting-phrases";
 import { putSchedulingChanges } from "./scheduling-profile-query";
 import { dayLabelKey, narrowing, useWorkingHours, WEEK } from "./working-hours";
@@ -451,9 +452,10 @@ function useSaveAvailability(
     scope: { id: "working-hours" },
     mutationFn: async ({ hours, rules }: Draft) => {
       if (hours) {
-        const saved = await api.PUT("/me/working-hours", { body: hours });
-        if (saved.error) throwProblem(saved.error);
-        client.setQueryData(["working-hours"], saved.data);
+        const saved = unwrap(
+          await api.PUT("/me/working-hours", { body: hours }),
+        );
+        client.setQueryData(["working-hours"], saved);
         onHoursSaved(hours);
         await client.invalidateQueries({ queryKey: ["reliable-availability"] });
       }

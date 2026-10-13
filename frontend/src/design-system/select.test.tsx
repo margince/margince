@@ -204,6 +204,69 @@ describe("the trigger", () => {
   });
 });
 
+describe("the button appearance", () => {
+  // The face changes and nothing else does: a caller reaching for the button
+  // shape must not lose the combobox contract every Select keeps.
+  it("wears the button's box instead of the field's, and stays a combobox", async () => {
+    const user = userEvent.setup();
+    const { trigger, changes } = renderSelect({
+      appearance: "button",
+      value: "qualify",
+    });
+    expect(trigger.classList.contains("btn")).toBe(true);
+    expect(trigger.classList.contains("btn-primary")).toBe(true);
+    expect(trigger.classList.contains("input")).toBe(false);
+    expect(trigger.classList.contains("select-control")).toBe(false);
+    expect(trigger.textContent).toContain("Qualify");
+    await pickOption(user, trigger, "Won");
+    expect(changes).toEqual(["won"]);
+  });
+
+  it("is the field box when no appearance is asked for", () => {
+    const { trigger } = renderSelect();
+    expect(trigger.classList.contains("select-control")).toBe(true);
+    expect(trigger.classList.contains("btn")).toBe(false);
+  });
+
+  // The busy claim was accepted at the call site and dropped before the
+  // trigger, so a write in flight drew as a refusal. It reaches the button now.
+  it("carries aria-busy and the test id onto the trigger", () => {
+    const { trigger } = renderSelect({
+      "aria-busy": true,
+      testId: "stage-control",
+    });
+    expect(trigger.getAttribute("aria-busy")).toBe("true");
+    expect(trigger.getAttribute("data-testid")).toBe("stage-control");
+  });
+
+  // The button face hands busy to Button's `pending`: refused, but focusable,
+  // so the reader who just picked is not dropped to the page body.
+  it("stays focusable while busy in the button face", () => {
+    const { trigger } = renderSelect({
+      appearance: "button",
+      "aria-busy": true,
+    });
+    expect(trigger.getAttribute("aria-busy")).toBe("true");
+    expect(trigger.getAttribute("aria-disabled")).toBe("true");
+    expect(trigger.hasAttribute("disabled")).toBe(false);
+  });
+
+  // Busy refuses the keyboard as it refuses the pointer: a list opened
+  // mid-write would offer a pick the write in flight then drops.
+  it("opens no list from the keyboard while busy", async () => {
+    const user = userEvent.setup();
+    const { trigger } = renderSelect({
+      appearance: "button",
+      "aria-busy": true,
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
 describe("the popup", () => {
   it("is not in the document at all while closed", () => {
     renderSelect();

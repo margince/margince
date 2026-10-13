@@ -342,7 +342,7 @@ func twinnedOperations(served *agents.Registry) map[string]string {
 		if !registered || !served.Stageable(pol.Tool) {
 			continue
 		}
-		for _, named := range strings.Split(spec.OpenAPIOp, "/") {
+		for named := range strings.SplitSeq(spec.OpenAPIOp, "/") {
 			if named == op {
 				twins[op] = pol.Tool
 			}
@@ -489,7 +489,7 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		agents.WithTierFloor(func(string, string) (mcp.RiskTier, bool) {
 			return mcp.TierConfirmationRequired, true
 		}))
-	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
 	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
@@ -518,7 +518,7 @@ func (bothDoorsTags) RecordTagTypes() []string { return []string{"contact"} }
 func (bothDoorsTags) TaggableTypes() []string { return []string{"contact"} }
 
 func (bothDoorsTags) GetTag(_ context.Context, tagID ids.UUID) (agents.TagDetail, error) {
-	return agents.TagDetail{Tag: agents.Tag{TagID: tagID, Name: "tag-" + tagID.String()}}, nil
+	return agents.TagDetail{TagID: tagID, Name: "tag-" + tagID.String()}, nil
 }
 
 // bothDoorsImports answers a run in the one state a commit accepts, so the
@@ -540,8 +540,16 @@ func (bothDoorsImports) ReadRun(context.Context, ids.UUID) (crmcontracts.ImportR
 	return crmcontracts.ImportRun{Status: "awaiting_approval"}, nil
 }
 
-func (bothDoorsImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
-	return crmcontracts.ImportRunReport{}, nil
+func (bothDoorsImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return crmcontracts.ImportRun{Status: "awaiting_approval"}, &crmcontracts.ImportRunReport{}, nil
+}
+
+func (bothDoorsImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+	return crmcontracts.ImportFormat{}, nil
+}
+
+func (bothDoorsImports) ProfileFiles(context.Context, []agents.ImportFile) (crmcontracts.ImportSourceProfile, error) {
+	return crmcontracts.ImportSourceProfile{}, nil
 }
 
 func (bothDoorsImports) Commit(context.Context, ids.UUID) (crmcontracts.ImportRun, error) {
@@ -589,8 +597,8 @@ func (bothDoorsComms) DraftEmail(context.Context, ids.UUID, string) (string, str
 	return "", "", errBothDoorsExecuted
 }
 
-func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (string, string, error) {
-	return "", "", errBothDoorsExecuted
+func (bothDoorsComms) DraftCompanyEmail(context.Context, []agents.RecordLink, string) (agents.FirstDraft, error) {
+	return agents.FirstDraft{}, errBothDoorsExecuted
 }
 
 func (bothDoorsComms) SendEmail(context.Context, ids.UUID, agents.SendEmailArgs) (agents.SendEmailResult, error) {
@@ -678,10 +686,9 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"the MCP door through the tool's own InputSchema — that second one exists because relinkActivity is " +
 		"not a dynamicTool, so the registry hands the resolver raw tool arguments and the two spellings of " +
 		"`entity_type` are held together by nothing else",
-	"relink_thread": "the same destination-type tier as relink_activity, answered by the same resolver " +
-		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
-		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
-		"TestRelinkTierReadsTheArgumentShapeTheToolActuallyDeclares the MCP door",
+	"relink_thread": "it stages nothing on either door: its resolver refuses every thread move with one " +
+		"shared refusal, so there is no staged row for the two doors to differ on; " +
+		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door's tier",
 	"relink_activities": "the same destination-type tier as relink_activity, answered by the same resolver " +
 		"(relinkActivityTier) off the same `entity_type` argument on both doors; " +
 		"TestEveryDynamicTierRouteHasACommandThatAnswersItsTier drives the REST door and " +
@@ -707,12 +714,12 @@ func assertVerbResolvesItsTierPerCall(t *testing.T, served *agents.Registry, op,
 // compareDoors resolves one operation through each door and holds the two
 // answers to being the same one.
 //
-// The REST side is compared at the COMMAND, not at the staged row: this door
-// writes its own inbox line (restSummary names the concrete method and path a
-// REST diff hash binds), so the resolver's sentence never reaches the approval
-// it stages. The sentence is still the only handle either door has on what the
-// erased command carries — the enrich depth lives nowhere else — so it is the
-// resolved StageInfo that is held against the tool door's staged row.
+// The REST side is compared at the COMMAND, not at the staged row. The sentence
+// is the only handle either door has on what the erased command carries, and the
+// enrich depth lives nowhere else. So the resolved StageInfo is held against the
+// tool door's staged row. What the REST gate stages is checked for every
+// operation too. It opens with the resolver's sentence, unless that has none or
+// names a record by id.
 func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 	t.Helper()
 	primary, secondary := ids.NewV7(), ids.NewV7()
@@ -751,6 +758,14 @@ func compareDoors(t *testing.T, op, tool string, fixture bothDoorsFixture) {
 		t.Errorf("the doors resolve one operation to two commands:\n  REST: %q\n  tool: %q\nThe sentence is "+
 			"the only place an erased command's own arguments show, so the two doors would perform different "+
 			"acts for one call", rest.Summary, subject.Summary)
+	}
+	staged := stagedSentence(rest, inEnglish, pol, req, body)
+	if rest.Summary == "" || uuidText.MatchString(rest.Summary) {
+		if want := restSummary(inEnglish, pol, req, body); staged != want {
+			t.Errorf("%s: the resolver has no readable sentence, so the gate stages %q, want its own %q", op, staged, want)
+		}
+	} else if staged != subject.Summary && !strings.HasPrefix(staged, subject.Summary+": ") {
+		t.Errorf("%s: the gate stages %q and the tool %q, two sentences for one operation", op, staged, subject.Summary)
 	}
 	if (subject.TargetVersion == nil) != (rest.TargetVersion == nil) {
 		t.Errorf("one door pins a version the other does not (REST %v, tool %v) — the same call would be held "+

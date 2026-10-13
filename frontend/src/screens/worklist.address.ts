@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useUrlParams } from "../app/urlstate";
+import { useUrlParams } from "../lib/urlstate";
 import { worklistFilterFrom } from "./worklist.header";
 import {
   UNASSIGNED,

@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -58,8 +59,11 @@ type replyActivityData struct {
 	// rule sends to the familiar greeting rather than to a guess.
 	RecipientLastName string `json:"recipient_last_name,omitempty"`
 
-	Subject      string `json:"subject,omitempty"`
-	Body         string `json:"body,omitempty"`
+	Subject string `json:"subject,omitempty"`
+	Body    string `json:"body,omitempty"`
+	// OccurredAt is the anchor's own date, RFC 3339. The band alone spans 8 to
+	// 90 days, and a model given only its name wrote "a few weeks" for ten.
+	OccurredAt   string `json:"occurred_at,omitempty"`
 	Intent       string `json:"intent,omitempty"`
 	Conversation string `json:"conversation,omitempty"`
 	// Thread identifies inbound evidence for grounding and consent semantics.
@@ -153,6 +157,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Stored:  activityLanguage(activity),
 		Body:    body,
 		Subject: topic,
+		Purpose: intent,
 	}, state)
 	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 
@@ -172,11 +177,12 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// server-derived and fixed-shape.
 		Envelope:          envelope,
 		Thread:            threadFlag(threaded),
-		Recipient:         boundedRunes(recipient, recipientMaxRunes),
-		RecipientLastName: boundedRunes(surname, recipientMaxRunes),
-		Subject:           boundedRunes(topic, replyActivityMaxRunes),
-		Body:              boundedRunes(body, replyActivityMaxRunes),
-		Intent:            boundedRunes(strings.TrimSpace(intent), replyActivityMaxRunes),
+		Recipient:         textcut.Runes(recipient, recipientMaxRunes),
+		RecipientLastName: textcut.Runes(surname, recipientMaxRunes),
+		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
+		Body:              textcut.Runes(body, replyActivityMaxRunes),
+		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
+		Intent:            textcut.Runes(strings.TrimSpace(intent), replyActivityMaxRunes),
 		Conversation:      conversation,
 	}
 

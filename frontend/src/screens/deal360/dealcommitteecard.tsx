@@ -17,10 +17,10 @@
 // a column, where it sits beside the contact it describes.
 
 import type { components } from "../../api/schema";
-import { useCanWrite } from "../../app/capability";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { RelationshipRows } from "../relationshiprows";
 import { AddRelationshipAction } from "../relationships";
 import { CommitteeReading } from "./dealcommittee";

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CustomFieldsAdmin, FieldBuilder, FieldTable } from "./customfields";
+import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,7 +18,6 @@ import {
 // refusal variants drive it there with `play` before the frame is taken — a
 // story that only mounted the default builder three times captured the same
 // screenshot three times and proved nothing about any of the three branches.
-// FieldTable is fully prop-driven, so its states are pinned by fixtures.
 const meta: Meta = {
   title: "Settings/Sales/Fields/Custom fields",
   parameters: { layout: "padded" },
@@ -142,10 +141,12 @@ export const BuilderPicklist: Story = {
     await userEvent.type(canvas.getByLabelText("Label"), "Stage reason");
     await userEvent.click(canvas.getByRole("button", { name: "Picklist" }));
     const [first] = await canvas.findAllByLabelText("Option label");
+    if (first === undefined) throw new Error("the picklist drew no option");
     await userEvent.type(first, "Budget");
     await userEvent.click(canvas.getByRole("button", { name: "Add option" }));
-    const rows = await canvas.findAllByLabelText("Option label");
-    await userEvent.type(rows[rows.length - 1], "Timing");
+    const added = (await canvas.findAllByLabelText("Option label")).at(-1);
+    if (added === undefined) throw new Error("Add option drew no option");
+    await userEvent.type(added, "Timing");
   },
 };
 
@@ -180,95 +181,6 @@ export const BuilderRefusal: Story = {
   },
 };
 
-export const TableWithFields: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={dealFields}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-// The field table at 390px. Every row carries a fully-qualified key
-// (`deal.cf_deal_stage_reason`) next to a type, a version and its rename/archive
-// verbs — a long unbreakable identifier in an identity column beside an actions
-// column, which is the pairing that makes a table stop fitting. The table is
-// supposed to scroll inside the card; this says whether it does.
-export const TableWithFieldsPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={dealFields}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const EmptyObject: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="contact"
-        fields={[]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const Retired: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={[
-          field({
-            label: "Legacy priority",
-            slug: "legacy_priority",
-            column_name: "cf_legacy_priority",
-            status: "retired",
-          }),
-        ]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
-export const NoPermission: Story = {
-  render: () => (
-    <StoryProviders>
-      <FieldTable
-        object="deal"
-        fields={[field()]}
-        canEdit={false}
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-      />
-    </StoryProviders>
-  ),
-};
-
 // The whole card, in the row language the settings page speaks: the object
 // picker answers its row from the right column, the field table is the subject
 // so it takes the full width, and the builder — several inputs confirmed
@@ -282,6 +194,8 @@ const CARD_ROUTES = {
   ),
   "GET /custom-fields": () => jsonResponse({ data: dealFields }),
   "GET /audit-log": () => jsonResponse({ data: [] }),
+  "GET /users/names": () =>
+    jsonResponse({ data: [{ id: "admin-user", display_name: "Anna Weber" }] }),
 };
 
 export const CardRows: Story = {
@@ -332,6 +246,57 @@ export const CardAddDialog: Story = {
   },
 };
 
+// Relabelling a live field: one input, so the dialog is the short-form box.
+export const CardRenameDialog: Story = {
+  render: () => {
+    installFetchStub(CARD_ROUTES);
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Actions for Renewal date" }),
+    );
+    await userEvent.click(
+      await body.findByRole("button", { name: "Edit label" }),
+    );
+    await body.findByRole("dialog", { name: "Edit label" });
+  },
+};
+
+// An object with no fields yet: the empty sentence sits in the card body.
+export const CardEmpty: Story = {
+  render: () => {
+    installFetchStub({
+      ...CARD_ROUTES,
+      "GET /custom-fields": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+};
+
+// At a phone width the field table folds each row onto two lines.
+export const CardRowsPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installFetchStub(CARD_ROUTES);
+    return (
+      <StoryProviders>
+        <CustomFieldsAdmin />
+      </StoryProviders>
+    );
+  },
+};
+
 // A seat that may read the catalogue and change nothing: the add row is absent
 // (an action-only affordance makes no claim about the data by not being there)
 // and the posture line says so once for the whole section.
@@ -365,6 +330,7 @@ const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
     canvas.getByRole("button", { name: "Multiple choice" }),
   );
   const [first] = await canvas.findAllByLabelText("Option label");
+  if (first === undefined) throw new Error("the choice list drew no option");
   await userEvent.type(first, "Fit, scope");
 };
 

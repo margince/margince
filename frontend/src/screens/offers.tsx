@@ -1,10 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  skipToken,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowLeft, Check, PenLine, RefreshCw, Send, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { navigate } from "../app/router";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable } from "../design-system/datatable";
@@ -12,6 +16,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -19,12 +24,8 @@ import {
 import { Select } from "../design-system/select";
 import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import {
-  isVersionSkewOf,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-} from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,
@@ -33,6 +34,7 @@ import {
 } from "./offerlinebilling";
 import { NewLineRates } from "./offerlinerates";
 import { OfferTotalsPanel } from "./offerrecurring";
+import { OfferCurrencyField } from "./offers.currencyfield";
 import { searchProductCandidates } from "./products";
 import "./offers.css";
 
@@ -50,12 +52,11 @@ type UpdateOfferLineItemRequest =
 async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((company) => ({
     id: company.id,
     name: company.display_name,
@@ -66,12 +67,11 @@ function useOfferTemplates() {
   return useQuery({
     queryKey: ["offer-templates-all"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/offer-templates", {
-        params: { query: { limit: 100 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/offer-templates", {
+          params: { query: { limit: 100 } },
+        }),
+      );
       return data.data;
     },
   });
@@ -98,19 +98,20 @@ function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const [override, setOverride] = useState<RecordPickerCandidate | null>(null);
   const existingQuery = useQuery({
     queryKey: ["company", "ref", buyerCompanyId],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/companies/{id}", {
-        params: { path: { id: buyerCompanyId ?? "" } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return {
-        id: buyerCompanyId ?? "",
-        name: data.display_name ?? "",
-      } satisfies RecordPickerCandidate;
-    },
-    enabled: Boolean(buyerCompanyId) && open,
+    queryFn: buyerCompanyId
+      ? async () => {
+          const data = unwrap(
+            await api.GET("/companies/{id}", {
+              params: { path: { id: buyerCompanyId } },
+            }),
+          );
+          return {
+            id: buyerCompanyId,
+            name: data.display_name ?? "",
+          } satisfies RecordPickerCandidate;
+        }
+      : skipToken,
+    enabled: open,
     staleTime: 60_000,
   });
   const buyerCompany =
@@ -160,24 +161,22 @@ function EditOfferHeaderModal({
 
   const mutation = useMutation({
     mutationFn: async (input: HeaderEditValues) => {
-      const { data, error } = await api.PATCH("/offers/{id}", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-        body: {
-          currency: input.currency,
-          buyer_company_id: input.buyer_company_id,
-          valid_until: input.valid_until || null,
-          template_id: input.template_id,
-          intro_text: input.intro_text || null,
-          terms_text: input.terms_text || null,
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PATCH("/offers/{id}", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+          body: {
+            currency: input.currency,
+            buyer_company_id: input.buyer_company_id,
+            valid_until: input.valid_until || null,
+            template_id: input.template_id,
+            intro_text: input.intro_text || null,
+            terms_text: input.terms_text || null,
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -185,36 +184,21 @@ function EditOfferHeaderModal({
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("offer.edit")}
       </Heading>
       <div className="form-stack">
-        <Field label={t("offer.currency")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={values.currency}
-              onChange={(currency) =>
-                setValues((prev) => ({ ...prev, currency }))
-              }
-              // A currency code is its own label — an ISO 4217 code is not
-              // copy, so there is nothing to translate.
-              options={["EUR", "USD", "GBP", "CHF"].map((code) => ({
-                value: code,
-                label: code,
-              }))}
-            />
-          )}
-        </Field>
+        <OfferCurrencyField
+          value={values.currency}
+          lineItems={offer.line_items}
+          onChange={(currency) => setValues((prev) => ({ ...prev, currency }))}
+        />
         <Field label={t("offer.validUntil")}>
           {(control) => (
             <TextInput
@@ -301,8 +285,8 @@ function EditOfferHeaderModal({
             />
           )}
         </Field>
+        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </div>
-      {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       <div className="actions">
         <Button onClick={onClose}>{t("deals.cancel")}</Button>
         <Button
@@ -473,14 +457,12 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const addMutation = useMutation({
     mutationFn: async (input: OfferLineItemInput) => {
-      const { data, error } = await api.POST("/offers/{id}/line-items", {
-        params: { path: { id: offer.id } },
-        body: input,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/line-items", {
+          params: { path: { id: offer.id } },
+          body: input,
+        }),
+      );
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -498,17 +480,12 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;
     }) => {
-      const { data, error } = await api.PATCH(
-        "/offers/{id}/line-items/{lineItemId}",
-        {
+      return unwrap(
+        await api.PATCH("/offers/{id}/line-items/{lineItemId}", {
           params: { path: { id: offer.id, lineItemId: variables.lineItemId } },
           body: variables.patch,
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -517,14 +494,11 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const removeMutation = useMutation({
     mutationFn: async (lineItemId: string) => {
-      const { data, error } = await api.DELETE(
-        "/offers/{id}/line-items/{lineItemId}",
-        { params: { path: { id: offer.id, lineItemId } } },
+      return unwrap(
+        await api.DELETE("/offers/{id}/line-items/{lineItemId}", {
+          params: { path: { id: offer.id, lineItemId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     onSuccess: (data) => {
       applyOffer(data);
@@ -533,12 +507,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
 
   const activeError =
     addMutation.error ?? updateMutation.error ?? removeMutation.error;
-  const skew = isVersionSkewOf(activeError);
-  const errorMessage = activeError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(activeError, t)
-    : null;
+  const errorMessage = activeError ? problemMessageOf(activeError, t) : null;
 
   const saveLine =
     (lineItemId: string) => (patch: UpdateOfferLineItemRequest) => {
@@ -796,16 +765,14 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/send", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/send", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -813,11 +780,8 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -834,12 +798,8 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         onClose={() => setOpen(false)}
         title={t("offer.sendConfirm")}
         tier="confirm"
-        // The last control before an irreversible write says which write it
-        // is. A dialog opened from "Send" whose button reads "Confirm" makes
-        // the reader carry the verb in their head across the dialog boundary,
-        // and this screen's three dialogs are one press apart from each other:
-        // send, accept and reject all read "Confirm", so the button was the
-        // one thing on screen that could not tell them apart.
+        // The confirm names its write: send, accept and reject sit one press
+        // apart, and three buttons all reading "Confirm" cannot be told apart.
         confirmLabel={t("offer.send")}
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
@@ -863,16 +823,14 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/accept", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/accept", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -884,11 +842,8 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -931,17 +886,15 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/reject", {
-        params: {
-          path: { id: offer.id },
-          ...ifMatch(requireVersion(offer.version)),
-        },
-        body: { reason: reason || null },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/reject", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+          body: { reason: reason || null },
+        }),
+      );
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["offer", offer.id], data);
@@ -954,11 +907,8 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  const skew = isVersionSkewOf(mutation.error);
   const errorMessage = mutation.isError
-    ? skew
-      ? t("edit.versionSkew")
-      : problemMessageOf(mutation.error, t)
+    ? problemMessageOf(mutation.error, t)
     : null;
 
   return (
@@ -975,6 +925,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         onClose={() => setOpen(false)}
         title={t("offer.rejectConfirm")}
         confirmLabel={t("offer.reject")}
+        confirmVariant="danger"
         onConfirm={() => mutation.mutate()}
         pending={mutation.isPending}
         error={errorMessage}
@@ -1008,13 +959,11 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await api.POST("/offers/{id}/regenerate", {
-        params: { path: { id: offer.id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/offers/{id}/regenerate", {
+          params: { path: { id: offer.id } },
+        }),
+      );
     },
     onSuccess: (newDraft) => {
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
@@ -1240,13 +1189,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const offerQuery = useQuery({
     queryKey: ["offer", id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/offers/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/offers/{id}", {
+          params: { path: { id } },
+        }),
+      );
     },
     // RegenerateOfferAction seeds this exact key with its 201 response — the
     // only place ai_disclosure/diff_from_previous are ever populated — right

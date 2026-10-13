@@ -117,3 +117,27 @@ func (c Category) ServesTheSubject() bool {
 		return false
 	}
 }
+
+// KnownForOverride reports whether c is a category a rep's standing override
+// (consent.Allow) may name: a resolvable category that is NOT one that serves
+// the subject.
+//
+// The ServesTheSubject five — security_notice, privacy_notice,
+// optout_confirmation, consent_confirmation, record_confirmation — are refused
+// as vouch targets by policy. The four confirmation categories each carry
+// evidence the installation produces for the subject or the subject produced
+// themselves: a confirm token, or the subject's own standing stop. A rep's word
+// cannot stand in for either, and a confirmation sent on a vouch would be a
+// message with nothing to confirm. security_notice carries no evidence, and a
+// vouch has no lawful message to unlock there. The door reads the
+// ServesTheSubject invariant rather than a second hand-typed set, so it moves
+// the day that set changes.
+//
+// The door narrows; the STORAGE does not. The migration's CHECK on
+// communication_override.category
+// (backend/migrations/core/1791255835_a_rep_may_vouch_for_a_send.up.sql) still
+// admits all fourteen Categories() values, held by
+// TestOverrideCategoryVocabularyAgreesWithItsCheckConstraint: a row already
+// written carries its original category forward, so the column must accept the
+// whole vocabulary even though this door will not write every member of it.
+func (c Category) KnownForOverride() bool { return c.Valid() && !c.ServesTheSubject() }

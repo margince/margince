@@ -6,7 +6,7 @@
 package gates
 
 // A contract change owes three regenerations, and the one that strands the
-// FRONTEND types is enforced in two different places for two different readers.
+// frontend types is enforced in two different places for two different readers.
 //
 // Locally it is scripts/check-contract-frontend-drift.sh, wired into
 // check-backend, because a backend-only author has no reason to run the lane
@@ -31,6 +31,7 @@ package gates
 
 import (
 	"os"
+	"slices"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -102,10 +103,8 @@ func TestTheContractReachesTheFrontendLane(t *testing.T) {
 	if len(entries) == 0 {
 		t.Fatalf("the classifier's %q filter is empty — every frontend job would skip on every pull request, and a skipped job reads green", theFrontendFilter)
 	}
-	for _, entry := range entries {
-		if entry == contractPathspec {
-			return
-		}
+	if slices.Contains(entries, contractPathspec) {
+		return
 	}
 	t.Fatalf(`the classifier's %q filter no longer lists %q, so a pull request that changes only the contract skips every frontend job.
 

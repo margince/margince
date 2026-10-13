@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
-import type { InstallOutcome, InstallState } from "../app/pwa";
 import { Button } from "../design-system/atoms";
 import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { logUnexpectedError } from "./common";
+import { logUnexpectedError } from "../lib/problem";
+import type { InstallOutcome, InstallState } from "../lib/pwa";
 
 /** The install row, absent where the browser cannot install: a capability
  *  this device lacks, not a refusal. */

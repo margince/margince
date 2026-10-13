@@ -13,9 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { OwnDomainsCard } from "./own-domains";
 
 // Settings → Capture: the domains this installation treats as its own. Two
@@ -51,6 +52,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     anchor_domains: opts.anchors ?? [],
   };
   let capturedPost: unknown = null;
+  const deleted: string[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -58,6 +60,12 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       const url = new URL(req.url, "http://localhost");
       if (url.pathname.endsWith("/me")) {
         return jsonResponse(meFixture({ allow }));
+      }
+      if (req.method === "DELETE") {
+        const domain = decodeURIComponent(url.pathname.split("/").pop() ?? "");
+        deleted.push(domain);
+        state.data = state.data.filter((row) => row.domain !== domain);
+        return new Response(null, { status: 204 });
       }
       if (url.pathname.endsWith("/capture/email-domains")) {
         if (req.method === "POST") {
@@ -72,7 +80,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       throw new Error(`unexpected request: ${req.method} ${url.pathname}`);
     },
   );
-  return { fetchMock, post: () => capturedPost };
+  return { fetchMock, post: () => capturedPost, deleted };
 }
 
 function render(node: ReactNode) {
@@ -81,15 +89,14 @@ function render(node: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{node}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {node}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
-}
-
-// One settings row, by the id it names itself with: an assertion that counted
-// rows would pass for the wrong reason the moment a row is reordered.
-function rowOf(testId: string): Promise<HTMLElement> {
-  return screen.findByTestId(testId);
 }
 
 afterEach(() => {
@@ -98,7 +105,7 @@ afterEach(() => {
 });
 
 describe("OwnDomainsCard", () => {
-  it("keeps the company-claimed domains and the managed ones in separate rows", async () => {
+  it("keeps the company-claimed domains and the managed ones in separate groups", async () => {
     const { fetchMock } = backendFor(CAPTURE_EDITOR, {
       anchors: ["brandt-automotive.de"],
       domains: [{ domain: "brandt.de", source: "admin", verified: true }],
@@ -107,21 +114,21 @@ describe("OwnDomainsCard", () => {
 
     render(<OwnDomainsCard />);
 
-    const company = await rowOf("own-domains-company-row");
-    expect(within(company).getByText(/company domains/i)).toBeTruthy();
+    const company = await screen.findByTestId("own-domains-from-company");
+    expect(
+      screen.getByRole("heading", { name: en["ownDomains.companyTitle"] }),
+    ).toBeTruthy();
     expect(within(company).getByText("brandt-automotive.de")).toBeTruthy();
-    // Read-only means read-only: nothing in this row offers to change a list
+    // Read-only means read-only: nothing in this list offers to change a list
     // the company profile owns.
     expect(within(company).queryByRole("button")).toBeNull();
     expect(within(company).queryByRole("textbox")).toBeNull();
 
-    const managed = await rowOf("own-domains-curated-row");
-    expect(within(managed).getByText(/managed here/i)).toBeTruthy();
-    // The note about what registering a domain does travels with the row that
-    // offers the acts it describes.
+    const managed = await screen.findByTestId("own-domains-list");
     expect(
-      within(managed).getByText(/applies from the next message/i),
+      screen.getByRole("heading", { name: en["ownDomains.curatedTitle"] }),
     ).toBeTruthy();
+    expect(screen.getByText(en["ownDomains.irreversible"])).toBeTruthy();
     expect(
       within(managed).getByRole("button", { name: /remove brandt\.de/i }),
     ).toBeTruthy();
@@ -134,16 +141,19 @@ describe("OwnDomainsCard", () => {
     expect(screen.queryByLabelText(/add own domain/i)).toBeNull();
   });
 
-  it("shows no company row when the company profile claims no domain", async () => {
+  it("shows no company group when the company profile claims no domain", async () => {
     const { fetchMock } = backendFor(CAPTURE_EDITOR);
     vi.stubGlobal("fetch", fetchMock);
 
     render(<OwnDomainsCard />);
 
-    // The empty managed list still states itself; a row whose whole content
+    // The empty managed list still states itself; a group whose whole content
     // would be an empty read-only list says nothing worth naming.
     expect(await screen.findByTestId("own-domains-empty")).toBeTruthy();
-    expect(screen.queryByTestId("own-domains-company-row")).toBeNull();
+    expect(screen.queryByTestId("own-domains-from-company")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: en["ownDomains.companyTitle"] }),
+    ).toBeNull();
   });
 
   it("adds a domain through the dialog the add verb opens", async () => {
@@ -194,5 +204,91 @@ describe("OwnDomainsCard", () => {
     );
     expect(remove.getAttribute("aria-describedby")).toBe(denial.id);
     expect(add.getAttribute("aria-describedby")).toBe(denial.id);
+  });
+
+  // Adding a confirmed domain again restores it, so its removal runs at once
+  // and offers Undo instead of asking first.
+  it("removes a confirmed domain at once and puts it back on Undo", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, post, deleted } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "brandt.de", source: "admin", verified: true }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /remove brandt\.de/i }),
+    );
+    await waitFor(() => expect(deleted).toEqual(["brandt.de"]));
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+    await waitFor(() => expect(post()).toEqual({ domain: "brandt.de" }));
+  });
+
+  // The removed row takes its verb with it, so focus moves on rather than
+  // dropping to the page.
+  it("hands focus to the next domain's verb, then to the add verb", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(CAPTURE_EDITOR, {
+      domains: [
+        { domain: "brandt.de", source: "admin", verified: true },
+        { domain: "seen.de", source: "mailbox", verified: false },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /remove brandt\.de/i }),
+    );
+    const next = screen.getByRole("button", { name: /remove seen\.de/i });
+    await waitFor(() => expect(document.activeElement).toBe(next));
+
+    await user.click(next);
+    const add = screen.getByRole("button", { name: en["ownDomains.addOpen"] });
+    await waitFor(() => expect(document.activeElement).toBe(add));
+  });
+
+  // Adding a candidate again would confirm it, which is not the inverse.
+  it("offers no Undo for a candidate it removed", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, deleted } = backendFor(CAPTURE_EDITOR, {
+      domains: [{ domain: "seen.de", source: "mailbox", verified: false }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    expect(await screen.findByText(en["ownDomains.candidate"])).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /remove seen\.de/i }));
+    await waitFor(() => expect(deleted).toEqual(["seen.de"]));
+    expect(
+      await screen.findByText(
+        en["settings.removedItem"].replace("{name}", "seen.de"),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
+  });
+
+  it("marks only an unconfirmed domain, since confirmed is the normal state", async () => {
+    const { fetchMock } = backendFor(CAPTURE_EDITOR, {
+      domains: [
+        { domain: "brandt.de", source: "admin", verified: true },
+        { domain: "seen.de", source: "mailbox", verified: false },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<OwnDomainsCard />);
+
+    const managed = await screen.findByTestId("own-domains-list");
+    expect(
+      within(managed).getAllByText(en["ownDomains.candidate"]),
+    ).toHaveLength(1);
   });
 });

@@ -7,7 +7,10 @@ package attention
 
 import (
 	"context"
+	"log/slog"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Snapshots composes a multi-statement read inside a single database snapshot.
@@ -58,9 +61,20 @@ func (s *Service) detached(ctx context.Context) context.Context {
 // unavailable source rather than as its own failure. Every producer of a
 // failed WorklistSourceUnavailable reads through it, because a lane that
 // errors on the shared snapshot without it aborts every read that follows.
-func (s *Service) degradable(ctx context.Context, fn func(context.Context) error) error {
+// budget is laneBudget, or what is left of it for a lane read in parts.
+func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error {
 	if s.snapshots == nil {
 		return fn(ctx)
 	}
-	return s.snapshots.Degradable(ctx, laneBudget, fn)
+	return s.snapshots.Degradable(ctx, budget, fn)
+}
+
+// laneFailureLevel is the level a lane the page named as unavailable is logged
+// at. A caller who left takes the lane's connection with them. That failure
+// sits below the level an operator sweeps for faults.
+func laneFailureLevel(ctx context.Context) slog.Level {
+	if httperr.CallerLeft(ctx) {
+		return slog.LevelDebug
+	}
+	return slog.LevelError
 }

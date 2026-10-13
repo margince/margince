@@ -4,14 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { DealFiles, dealDocumentsKey } from "./dealfiles";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { installFetchStub, jsonResponse, type RouteMap } from "./story-utils";
 
 // The deal's Files area with both kinds of row — an upload and a captured
-// email attachment — and the empty state, so each reads right without a
-// mailbox on a running stack.
+// email attachment — the empty state, and a hide with its Undo and its
+// refusal, so each reads right without a mailbox on a running stack.
 
 const meta: Meta<typeof DealFiles> = {
   title: "Records/Deal 360/Files",
@@ -82,8 +84,9 @@ const CAPTURED = {
 // console error and the story fails on it.
 function Served({
   docs,
+  writes,
   children,
-}: Readonly<{ docs: unknown[]; children: ReactNode }>) {
+}: Readonly<{ docs: unknown[]; writes?: RouteMap; children: ReactNode }>) {
   const documents = { data: docs, page: {} };
   const session = {
     user: { id: "u1" },
@@ -97,6 +100,7 @@ function Served({
   installFetchStub({
     "GET /deals/deal-1/documents": () => jsonResponse(documents),
     "GET /me": () => jsonResponse(session),
+    ...writes,
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -105,7 +109,12 @@ function Served({
   client.setQueryData(["me"], session);
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {children}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }
@@ -126,4 +135,75 @@ export const Empty: Story = {
       <DealFiles deal={DEAL} />
     </Served>
   ),
+};
+
+const HIDE_ROUTE = "/deals/deal-1/documents/att-mail/hide";
+
+const pressHide: Story["play"] = async ({ canvasElement }) => {
+  const user = userEvent.setup();
+  await user.click(
+    await within(canvasElement).findByRole("button", {
+      name: "Actions for MSA-redline.docx",
+    }),
+  );
+  await user.click(
+    await within(document.body).findByRole("button", {
+      name: "Hide from this deal",
+    }),
+  );
+};
+
+/** Hide runs at once: no dialog, and the toast's Undo is the way back. */
+export const HideOffersUndo: Story = {
+  render: () => (
+    <Served
+      docs={[CAPTURED, UPLOAD]}
+      writes={{
+        [`PUT ${HIDE_ROUTE}`]: () => new Response(null, { status: 204 }),
+        [`DELETE ${HIDE_ROUTE}`]: () => new Response(null, { status: 204 }),
+      }}
+    >
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+  play: async (context) => {
+    await pressHide(context);
+    const undo = await within(document.body).findByRole("button", {
+      name: "Undo",
+    });
+    await waitFor(() => expect(undo).toBeVisible());
+    await expect(
+      within(document.body).queryByRole("dialog"),
+    ).not.toBeInTheDocument();
+  },
+};
+
+/** A refused hide has no dialog to land in, so it stays as a danger toast. */
+export const HideRefused: Story = {
+  render: () => (
+    <Served
+      docs={[CAPTURED, UPLOAD]}
+      writes={{
+        [`PUT ${HIDE_ROUTE}`]: () =>
+          jsonResponse(
+            { detail: "The message this file came with was deleted." },
+            409,
+          ),
+      }}
+    >
+      <DealFiles deal={DEAL} />
+    </Served>
+  ),
+  play: async (context) => {
+    await pressHide(context);
+    const close = await within(document.body).findByRole("button", {
+      name: "Close",
+    });
+    await waitFor(() => expect(close).toBeVisible());
+    await expect(
+      within(document.body).getByText(
+        "The message this file came with was deleted.",
+      ),
+    ).toBeVisible();
+  },
 };

@@ -5,8 +5,8 @@
 
 package gates
 
-// The tool catalog calls the record a COMPANY, and this is what stops the other
-// word coming back to it.
+// The tool catalog calls the record a company, and the other word for it fails
+// here.
 //
 // companyvocabulary_test.go holds the whole tree against the record type's
 // RETIRED name, and says in its own doc why it does not also hold it against
@@ -65,13 +65,6 @@ var otherSenses = gatekit.Waive(map[string]string{
 	"account_notice": "a communication_context: a notice about the customer's ACCOUNT WITH US — their subscription, their billing " +
 		"relationship — which is a consent category in the published enum and not the CRM record type. Renaming it would " +
 		"change what a sender is claiming about a message",
-	`a workspace with "Key Account" does not want "key accounts" beside it`: "an example of a workspace's OWN tag vocabulary, " +
-		"quoted to show that two spellings of one tag split the records that belong together. The words are the reader's, not the product's",
-	// One entry per STRING, not per occurrence: forecast_movement's description
-	// says it three times — what the buckets account FOR, that they are a
-	// complete account OF the change, and that subtracting two readings gives a
-	// number with no account of where it went. They are one sense between them.
-	"named causes that account for the whole difference": "the ordinary verb, and the ordinary noun twice beside it",
 })
 
 func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {

@@ -108,6 +108,7 @@ func TestEmbedLaneKeepsATighterCallerDeadline(t *testing.T) {
 // deadlineSpyEmbedder answers a valid embedding and records the deadline it was
 // called under, which is the only place the lane's bound is observable.
 type deadlineSpyEmbedder struct {
+	model.NoHealth
 	hadDeadline bool
 	remaining   time.Duration
 }
@@ -146,8 +147,8 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 	t.Helper()
 	cfg := FakeRoutingConfig()
 	cfg.Embeddings = EmbeddingsConfig{
-		ProviderConfig: ProviderConfig{Provider: ProviderFake, Model: "spy"},
-		Dimensions:     4,
+		Provider: ProviderFake, Model: "spy",
+		Dimensions: 4,
 	}
 	router, err := NewRouter(cfg, nil, nil, nil, false, nil)
 	if err != nil {

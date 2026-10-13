@@ -5,6 +5,8 @@ package blobstore
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 )
@@ -54,13 +56,24 @@ func FromEnv(ctx context.Context, env config.Lookup) (store Store, configured bo
 		}
 		return nil, false, nil
 	}
+	// Strict, like every boolean flag: "TRUE" or "1" is somebody asking for
+	// TLS, and reading it as false would quietly drop the encryption they asked
+	// for. Unset is false.
+	useSSL := false
+	if raw := env(EnvUseSSL); raw != "" {
+		on, perr := strconv.ParseBool(raw)
+		if perr != nil {
+			return nil, false, fmt.Errorf("blobstore: %s=%q is not true or false", EnvUseSSL, raw)
+		}
+		useSSL = on
+	}
 	s, err := New(ctx, Config{
 		Endpoint:  endpoint,
 		AccessKey: env(EnvAccessKey),
 		SecretKey: env(EnvSecretKey),
 		Bucket:    env(EnvBucket),
 		Region:    env(EnvRegion),
-		UseSSL:    env(EnvUseSSL) == "true",
+		UseSSL:    useSSL,
 	})
 	if err != nil {
 		return nil, false, err

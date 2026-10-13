@@ -10,8 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { AvailabilityCard } from "./meeting-availability";
 
 // The hours half of Meetings, as a reader without the booking grant gets it.

@@ -7,6 +7,7 @@ package attention
 
 import (
 	"context"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -45,4 +46,6 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 type besideDay struct {
 	night  theNight
 	failed []*crmcontracts.WorklistSourceUnavailable
+	// until is where the day's lanes stopped reading, so a read past today starts there.
+	until time.Time
 }

@@ -68,11 +68,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 			return " " + calleeName(v) + " ", true
 		}
 		text := ""
+		var textSb71 strings.Builder
 		for _, a := range v.Args {
 			if part, ok := flattenSQL(a, seen, owner); ok {
-				text += part
+				textSb71.WriteString(part)
 			}
 		}
+		text += textSb71.String()
 		return " " + text + " ", true
 	case *ast.CompositeLit:
 		// A statement assembled as `strings.Join([]string{…}, " ")` kept its
@@ -82,11 +84,13 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 		// could ever be a finding.
 		seen[n] = true
 		text := ""
+		var textSb85 strings.Builder
 		for _, elt := range v.Elts {
 			if part, ok := flattenSQL(elt, seen, owner); ok {
-				text += part
+				textSb85.WriteString(part)
 			}
 		}
+		text += textSb85.String()
 		return text, true
 	case *ast.FuncLit:
 		// NOT claimed. A callback body is where most of this tree's SQL lives —
@@ -113,6 +117,7 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 // arguments hidden. `inside` says the one thing the empty string could not.
 type helperScope struct {
 	qualifier string          // the local name the owning module is bound to, "" if not imported
+	other     string          // the local name of a second package that defines the same helper, "" if none or not imported
 	inside    bool            // this file IS the owning package
 	names     map[string]bool // the exported helper(s) that ARE the definition
 }
@@ -141,7 +146,8 @@ func (h helperScope) isOneDefinition(call *ast.CallExpr) bool {
 		return h.inside && named(f.Name)
 	case *ast.SelectorExpr:
 		pkg, ok := f.X.(*ast.Ident)
-		return ok && h.qualifier != "" && pkg.Name == h.qualifier && named(f.Sel.Name)
+		return ok && named(f.Sel.Name) &&
+			((h.qualifier != "" && pkg.Name == h.qualifier) || (h.other != "" && pkg.Name == h.other))
 	}
 	return false
 }

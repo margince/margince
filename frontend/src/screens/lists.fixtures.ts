@@ -4,7 +4,8 @@
 // One Live List, one Shortlist and the answers their pages read, shared by the
 // list stories and tests so both draw the same lists.
 
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import type { FilterVocabulary } from "./filterdata";
 import type {
   List,
   ListExplanation,
@@ -51,6 +52,43 @@ export const liveList: List = {
   last_check: { checked_at: "2026-09-29T08:15:00Z", outcome: "complete" },
   since_last_visit: { since: "2026-09-28T17:00:00Z", entered: 3, left: 1 },
   joined_since_visit: [MEMBER_ID],
+};
+
+/** Two exports of `liveList`, the older first, so the newer must be found. */
+export const exportDependencies: NonNullable<List["dependencies"]> = [
+  { kind: "export", occurred_at: "2026-09-01T09:00:00Z", blocking: false },
+  { kind: "export", occurred_at: "2026-09-20T14:30:00Z", blocking: false },
+];
+
+/**
+ * What moved on `liveList` since the reader's last visit: two of four joiners
+ * named, one leaver, one filter change.
+ */
+export const changesSinceVisit: NonNullable<List["changes_since_visit"]> = {
+  since: "2026-09-28T17:00:00Z",
+  joined: {
+    count: 4,
+    records: [
+      { entity_id: MEMBER_ID, name: "MiTek" },
+      { entity_id: "01a0f000-0000-7000-8000-000000000006", name: "Kessler" },
+    ],
+  },
+  left: {
+    count: 1,
+    records: [
+      { entity_id: "01a0f000-0000-7000-8000-000000000005", name: "Haberland" },
+    ],
+  },
+  filter_changes: 1,
+};
+
+/** The company vocabulary naming both fields `liveList` filters on. */
+export const liveVocabulary: FilterVocabulary = {
+  resource: "company",
+  fields: [
+    { name: "industry", type: "text", operators: ["eq"], custom: false },
+    { name: "cf_last_touch", type: "date", operators: ["lt"], custom: true },
+  ],
 };
 
 export const shortlist: List = {

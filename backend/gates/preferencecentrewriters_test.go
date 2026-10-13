@@ -5,8 +5,8 @@
 
 package gates
 
-// The public preference centre answers in ONE shape, and resolves "which
-// address is theirs" in ONE place.
+// The public preference centre answers in one shape, and resolves "which
+// address is theirs" in one place.
 //
 // Both claims are load-bearing and both are the kind that rots quietly.
 //

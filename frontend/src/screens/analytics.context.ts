@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
 export type AnalyticsScope = components["schemas"]["AnalyticsScope"];
@@ -34,11 +34,7 @@ export function useAnalyticsContext() {
   return useQuery({
     queryKey: CONTEXT_KEY,
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/context", {});
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/analytics/context", {}));
     },
   });
 }
@@ -63,9 +59,7 @@ export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
   }, [context, chosen]);
 
   const selectScope = useCallback((scope: AnalyticsScope) => {
-    const next = new Map(currentParams());
-    next.set("scope", scopeKey(scope));
-    replaceParams(next);
+    replaceDial("scope", scopeKey(scope));
   }, []);
 
   return { selection, selectScope };

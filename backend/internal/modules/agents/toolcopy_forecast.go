@@ -42,10 +42,13 @@ var forecastReadingsCopy = toolCopy{
 		"currency conversion and the weighting. These figures also cannot be cited in a " +
 		"composed document — for a board-pack section or anything a reader keeps, " +
 		"run_analytics_query with save and compose_analytics_report from the run id. Ask " +
-		"forecast_input_checks whether the inputs behind these numbers were read.",
+		"read_input_checks whether the inputs behind these numbers were read. `snapshots` " +
+		"lists this period's frozen states, newest first: the ids forecast_movement takes. " +
+		"Empty means nothing was frozen for this population, which includes managed teams.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
 		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
-		"and `fx_missing_count` are the counts `coverage_note` is written from.",
+		"and `fx_missing_count` are the counts `coverage_note` is written from. Every `_minor` " +
+		"figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastMovementCopy = toolCopy{
@@ -59,14 +62,15 @@ var forecastMovementCopy = toolCopy{
 		"classification exists to prevent: `definition` means the two snapshots were computed " +
 		"under different rules, and then the WHOLE difference is in that bucket; `model` means " +
 		"a probability the product re-scored.",
-	Instead: "IT NEEDS TWO SNAPSHOT IDS, and nothing on this surface hands one out — no tool " +
-		"lists snapshots and no resource publishes them, so a caller that has not been given " +
-		"ids from elsewhere cannot call this. Reading forecast_readings twice and subtracting " +
-		"is NOT the same answer and must not be reported as one: the difference between two " +
-		"reads is a number with no account of where it went.",
+	Instead: "IT NEEDS TWO SNAPSHOT IDS, `from` then `to`, both from ONE forecast_readings " +
+		"read's `snapshots` so they share a period; none listed means nothing was frozen yet. " +
+		"Reading forecast_readings twice and subtracting is NOT the same answer and must not " +
+		"be reported as one: the difference between two reads is a number with no account of " +
+		"where it went.",
 	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
 		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
-		"no money disappears without a row that says where it went.",
+		"no money disappears without a row that says where it went. Every `_minor` figure is in " +
+		"minor units of forecast_readings' `base_currency`: 3100000 in EUR is EUR 31,000.",
 }
 
 var forecastInputChecksCopy = toolCopy{
@@ -114,4 +118,40 @@ var dataCoverageCopy = toolCopy{
 		"both are silent on whether it could look — a clean set of findings over sources " +
 		"nobody opened reads as good news and is not. Ask this one when the question is " +
 		"whether to trust the other two.",
+}
+
+var readInputChecksCopy = toolCopy{
+	Purpose: "Answer whether the forecast's inputs can be trusted, in three views. summary: the " +
+		"verdict — whether the numbers are sound enough to quote — and how much of the pipeline " +
+		"last night's check reached. exceptions: the open input problems themselves, most " +
+		"material first — a close date that went by, an amount that disagrees with the sent " +
+		"offer, a deal nobody has heard from in ninety days. sources: which connectors the " +
+		"nightly check could read at all, and how far back each reaches.",
+	Limits: "`checks_incomplete` is NOT a worse `needs_review`: one says the pipeline has " +
+		"problems, the other says nobody could look. exceptions is scoped to what you can open, " +
+		"and an empty list cannot be told apart from a clean pipeline — sources is what tells " +
+		"them apart. sources needs a coverage grant that operators hold and sellers do not, so " +
+		"a refusal there is a seat boundary, not a missing run.",
+	Retain: "Read summary's `readiness` before quoting any forecast figure. Only a `checked` " +
+		"source carries a date; any other state means nothing was read from it. In exceptions, " +
+		"`affected_minor` absent means the money at stake cannot be said, not that nothing is.",
+}
+
+var readForecastCopy = toolCopy{
+	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
+		"readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and " +
+		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
+		"the forecast changed between two snapshots, as named causes that sum to the whole " +
+		"difference.",
+	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline " +
+		"whose close date somebody confirmed. `coverage_note` says what the totals leave out; " +
+		"quote it with any total. movement needs `from` then `to`, both from ONE readings answer's " +
+		"`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is " +
+		"not the same answer: it says nothing of where the difference went. In movement, `definition` means the snapshots used different rules and " +
+		"`model` a re-scored probability: neither is sales movement.",
+	Instead: "run_report and query_workspace also produce numbers, and neither is the forecast. " +
+		"For a board-pack section, run_analytics_query with save, then compose_analytics_report; " +
+		"read_input_checks says whether the inputs were read.",
+	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
+		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }

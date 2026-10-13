@@ -18,8 +18,9 @@ import { ifMatch, requireVersion } from "../api/version";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
@@ -37,20 +38,20 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Merge-target search (P-2): mirrors searchContactsTargets (contacts.tsx) — the
-// caller filters out the source row.
+// Merge-target search (P-2): mirrors searchContactsTargets
+// (contactrecordactions.tsx), with the primary domain as the detail line.
 export async function searchCompanyTargets(
   q: string,
-): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await api.GET("/companies", {
-    params: { query: { q, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+): Promise<RecordPickerCandidate[]> {
+  const data = unwrap(
+    await api.GET("/companies", {
+      params: { query: { q, limit: 10 } },
+    }),
+  );
   return data.data.map((candidate) => ({
     id: candidate.id,
     name: candidate.display_name,
+    detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
   }));
 }
 
@@ -82,7 +83,7 @@ function mapDomainRowsReplaceSet(rows: FormRows): DomainPatch {
   return (rows.domains ?? [])
     .filter((row) => (row.domain ?? "").trim().length > 0)
     .map((row) => ({
-      domain: row.domain.trim().toLowerCase(),
+      domain: (row.domain ?? "").trim().toLowerCase(),
       is_primary: row.is_primary === "true",
     }));
 }
@@ -107,7 +108,7 @@ export function mapCompanyBody(
   rows: FormRows,
 ): CreateCompanyRequest {
   return {
-    display_name: values.display_name.trim(),
+    display_name: (values.display_name ?? "").trim(),
     legal_name: values.legal_name?.trim() || undefined,
     industry: values.industry?.trim() || undefined,
     size_band: asSizeBand(values.size_band),
@@ -361,30 +362,30 @@ export async function createCompany(
   rows: FormRows | undefined,
   customFields: Record<string, unknown>,
   t: (key: MessageKey) => string,
+  idempotencyKey: string,
 ): Promise<Company> {
-  const { data, error } = await api.POST("/companies", {
-    body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
-  });
-  if (error) {
-    throwProblem(error, t);
-  }
-  return data;
+  return unwrap(
+    await api.POST("/companies", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
+      body: { ...mapCompanyBody(values, rows ?? {}), ...customFields },
+    }),
+    t,
+  );
 }
 
 export async function patchCompanyField(
   company: Pick<Company, "id" | "version">,
   body: UpdateCompanyRequest,
 ): Promise<void> {
-  const { error } = await api.PATCH("/companies/{id}", {
-    params: {
-      path: { id: company.id },
-      ...ifMatch(requireVersion(company.version)),
-    },
-    body,
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  unwrap(
+    await api.PATCH("/companies/{id}", {
+      params: {
+        path: { id: company.id },
+        ...ifMatch(requireVersion(company.version)),
+      },
+      body,
+    }),
+  );
 }
 
 // The editable domain shape excludes row ids and other server metadata.

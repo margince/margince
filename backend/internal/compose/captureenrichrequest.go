@@ -48,7 +48,7 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	// already holds. The pass reads a signature to find out whether what it
 	// holds is still true, so naming the empty fields would ask the narrower
 	// question and miss the number that changed.
-	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"linkedin\",\"company_name\",\"address\",\"website\"]\n")
+	prompt.WriteString("Fields to extract when stated: [\"title\",\"phone\",\"linkedin\",\"company_name\",\"address\",\"website\",\"first_name\",\"last_name\"]\n")
 	prompt.WriteString("Signature block (untrusted; the trailing lines of their last email):\n")
 	prompt.WriteString(fence.WrapAttr("source_id", cand.ActivityID.String(), lines) + "\n")
 	prompt.WriteString(`Return JSON: { "fields": [ { "field", "value", "evidence_snippet", "confidence" } ] }`)

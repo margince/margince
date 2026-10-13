@@ -4,11 +4,12 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { problemCode, throwProblem } from "./common";
 import {
   asOAuthConnectProvider,
   type OAuthConnectProvider,
-} from "./connectorproviders";
+} from "../format/connectorprovider";
+import { throwProblem } from "../lib/problem";
+import { problemCode } from "../lib/problembody";
 
 type ConnectRequest = components["schemas"]["ConnectConnectorRequest"];
 type Provider = components["schemas"]["CaptureConnection"]["provider"];

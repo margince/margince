@@ -197,7 +197,7 @@ func TestABrokerModelListFailureSendsNoFloorAndServesTheCall(t *testing.T) {
 // site floor, in either direction; the model list is then never read.
 func TestABindingReasoningEffortOutranksTheFloor(t *testing.T) {
 	stub := &brokerStub{}
-	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", &OpenRouterRouting{ReasoningEffort: "none"})
+	client := newBrokerClient(t, stub, "google/gemma-4-31b-it", &OpenRouterRouting{Reasoning: &OpenRouterReasoning{Effort: "none"}})
 	askWithFloor(t, client, "low")
 	if got := string(stub.chats[0]["reasoning"]); got != `{"effort":"none"}` {
 		t.Fatalf("reasoning = %s, want the binding's none", got)

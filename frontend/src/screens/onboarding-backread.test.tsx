@@ -198,7 +198,9 @@ describe("the scope preview", () => {
     expect(
       await screen.findByText("About 900 messages in this period."),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Counting the messages/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Counting messages in this period/),
+    ).not.toBeInTheDocument();
   });
 
   // The count is a description of the window, not the consent to it: the

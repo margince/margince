@@ -167,8 +167,8 @@ func ClampLimit(limit *int) int {
 // ("oreilly" finds "Tim O'Reilly"; f_unaccent maps the typographic ’
 // to ' first, so every spelling collapses the same way). nameExpr must
 // mirror the expression of the entity's *_name_trgm index so the LIKE
-// stays indexed; the query text is a bind parameter (LIKE
-// metacharacters at worst widen the caller's own match).
+// stays indexed. The query is a bind parameter with its LIKE
+// metacharacters escaped: `%` and `_` search for themselves.
 func QuickFindClause(pos int, nameExpr string) string {
 	return QuickFindClauseWith(pos, nameExpr, Identifier{})
 }
@@ -197,19 +197,28 @@ type Identifier struct {
 // ever read the name index. The address lives one table away and is the thing
 // most often copied out of a mail client, so it is the identifier a search has
 // to answer for.
-//
-// `id IN (SELECT fk FROM t WHERE col = ...)`, deliberately, and not a
-// correlated EXISTS: an EXISTS in this position stops the planner satisfying
-// the whole predicate as a bitmap OR over the name indexes, and turns a
-// three-index lookup into a scan of the record table.
 func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	clause := fmt.Sprintf(`search_tsv @@ websearch_to_tsquery('simple', f_unaccent($%[1]d))
-	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || f_fold_apostrophes(lower($%[1]d)) || '%%'`, pos, nameExpr)
+	   OR f_fold_apostrophes(lower(%[2]s)) LIKE '%%' || %[3]s || '%%'`,
+		pos, nameExpr, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower($%d))", pos)))
 	if id.Table != "" {
-		clause += fmt.Sprintf(`
-	   OR id IN (SELECT %[2]s FROM %[3]s
-	              WHERE archived_at IS NULL AND %[4]s = lower(btrim($%[1]d)))`,
-			pos, id.FK, id.Table, id.Column)
+		clause += "\n\t   OR " + id.MatchSQL(pos, "id")
 	}
 	return "(" + clause + ")"
+}
+
+// The identifier tables of the two record types a pasted handle names. The
+// contact and company lists and the cross-object search all read them here.
+var (
+	ContactEmails  = Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}
+	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
+)
+
+// MatchSQL is true when a live identifier row of the record equals the query at
+// pos. The ARRAY is built once, so the primary key joins the bitmap union over
+// the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
+func (id Identifier) MatchSQL(pos int, idColumn string) string {
+	return fmt.Sprintf(`%[1]s = ANY (ARRAY(SELECT %[3]s FROM %[4]s
+	              WHERE archived_at IS NULL AND %[5]s = lower(btrim($%[2]d))))`,
+		idColumn, pos, id.FK, id.Table, id.Column)
 }

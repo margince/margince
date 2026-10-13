@@ -49,6 +49,7 @@ type TagDetail struct {
 	Contacts  int `json:"contacts"`
 	Companies int `json:"companies"`
 	Deals     int `json:"deals"`
+	Leads     int `json:"leads"`
 }
 
 // RecordTagsResult is what one record carries. Withheld says the caller may
@@ -127,7 +128,7 @@ type Tags interface {
 	// It answers the WORD, not TagDetail: usage counts are a second read, and a
 	// write that reported them would either pay for a count nobody asked for or
 	// — as this first shipped — report zero for a word on fifty records.
-	CreateTag(ctx context.Context, name string, color *string) (Tag, error)
+	CreateTag(ctx context.Context, name string, color, description *string) (Tag, error)
 	// UpdateTag renames, recolours or describes an existing word. A nil field
 	// is left alone, which is what lets a caller recolour without restating a
 	// name it never read.
@@ -173,6 +174,8 @@ func RegisterTagTools(r *Registry, tags Tags) {
 	r.Register(createTag{tags: tags})
 	r.Register(updateTag{tags: tags})
 	r.Register(mergeTags{tags: tags, language: r.language})
+	r.Register(readTags{})
+	r.Register(changeTags{})
 }
 
 // taggingSchema is apply's and remove's argument shape, spelled once: they name
@@ -203,7 +206,7 @@ func (t listTags) Spec() mcp.ToolSpec {
 		Name: "list_tags", Title: "List tags", Version: toolVersionV1,
 		Description:   listTagsCopy.render(),
 		Instead:       listTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listTags",
 		InputSchema: schema(`{"type":"object","properties":{
 			"include_archived":{"type":"boolean","description":"Also list retired words; they cannot be applied"}},
@@ -242,7 +245,7 @@ func (t getTag) Spec() mcp.ToolSpec {
 		Name: "get_tag", Title: "Get a tag", Version: toolVersionV1,
 		Description:   getTagCopy.render(),
 		Instead:       getTagCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getTag",
 		InputSchema: schema(`{"type":"object","required":["tag_id"],"properties":{
 			"tag_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`),
@@ -280,7 +283,7 @@ func (t getRecordTags) Spec() mcp.ToolSpec {
 		Name: "get_record_tags", Title: "Get a record's tags", Version: toolVersionV1,
 		Description:   getRecordTagsCopy.render(),
 		Instead:       getRecordTagsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getRecordTags",
 		InputSchema: schema(`{"type":"object","required":["record_type","record_id"],"properties":{
 			"record_type":{"type":"string","enum":[` + strings.Join(quoted, ",") + `]},
@@ -316,7 +319,7 @@ func (t applyTag) Spec() mcp.ToolSpec {
 		Name: "apply_tag", Title: "Apply a tag to a record", Version: toolVersionV1,
 		Description:   applyTagCopy.render(),
 		Instead:       applyTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "applyTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
@@ -365,7 +368,7 @@ func (t removeTag) Spec() mcp.ToolSpec {
 		Name: "remove_tag", Title: "Take a tag off a record", Version: toolVersionV1,
 		Description:   removeTagCopy.render(),
 		Instead:       removeTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "removeTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),

@@ -57,7 +57,6 @@ export const LabelAndHelp: Story = {
       {(control) => (
         <RecordPicker
           {...control}
-          label="Search companies"
           searchTargets={searchFixture}
           onPick={() => undefined}
         />

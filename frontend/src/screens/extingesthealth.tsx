@@ -4,10 +4,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { Badge, EmptyState } from "../design-system/atoms";
-import { type Fact, FactList } from "../design-system/factlist";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
+import { KeyedName } from "../design-system/keyedname";
+import { PanelBody, PanelIntro } from "../design-system/panel";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
@@ -19,7 +20,9 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { useCan } from "../lib/capability";
+import { extensionTitle } from "../lib/extensions";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
@@ -51,51 +54,65 @@ const REFUSAL_LABEL: Record<Refusal["refusal"], MessageKey> = {
   size: "extIngest.refusal.size",
 };
 
-function unitFacts(
-  units: readonly UnitHealth[],
+function unitColumns(
   t: Translator,
   plural: PluralTranslator,
   locale: Locale,
   zone: string,
-): Fact[] {
-  return units.map((unit) => ({
-    key: unit.unit,
-    // The unit's own name, verbatim: it is what the operator greps the
-    // connector's log with and what names the directory the mapping lives in.
-    term: <span>{unit.unit}</span>,
-    value: (
-      <span>
-        {unit.refusals.map((refusal) => (
-          <Badge key={refusal.refusal} tone="warning">
-            {t("extIngest.refusalCount", {
-              count: formatNumber(refusal.refused, locale),
-              refusal: t(REFUSAL_LABEL[refusal.refusal]),
-            })}
-          </Badge>
-        ))}
-      </span>
-    ),
-    note: (
-      <>
-        {plural("extIngest.refusedTotal", unit.refused, {
+): DataTableColumn<UnitHealth>[] {
+  return [
+    {
+      key: "unit",
+      header: t("extIngest.col.connector"),
+      // The key under the title is what the connector's log and directory carry.
+      render: (unit) => (
+        <KeyedName name={extensionTitle(unit.unit, locale)} code={unit.unit} />
+      ),
+    },
+    {
+      key: "refused",
+      header: t("extIngest.col.refused"),
+      align: "end",
+      render: (unit) => formatNumber(unit.refused, locale),
+      folded: (unit) =>
+        plural("extIngest.refusedTotal", unit.refused, {
           count: formatNumber(unit.refused, locale),
-        })}
-        {/* Only when the report carried one. A unit is listed because it
-            refused something, so this is present in practice — but a line
-            reading "most recent" with nothing after it would state a value the
-            report never sent. */}
-        {unit.last_refused_at !== null &&
-          unit.last_refused_at !== undefined && (
-            <>
-              {" · "}
-              {t("extIngest.lastRefused", {
-                when: formatDateTime(unit.last_refused_at, locale, zone),
+        }),
+    },
+    {
+      key: "reasons",
+      header: t("extIngest.col.reasons"),
+      grow: true,
+      render: (unit) => (
+        <CellStack>
+          {unit.refusals.map((refusal) => (
+            <span key={refusal.refusal}>
+              {t("extIngest.refusalCount", {
+                count: formatNumber(refusal.refused, locale),
+                refusal: t(REFUSAL_LABEL[refusal.refusal]),
               })}
-            </>
-          )}
-      </>
-    ),
-  }));
+            </span>
+          ))}
+        </CellStack>
+      ),
+    },
+    {
+      key: "last",
+      header: t("extIngest.col.lastRefused"),
+      // A unit is listed because it refused something, so a time is present in
+      // practice; a missing one stays blank rather than claiming a value.
+      render: (unit) =>
+        unit.last_refused_at
+          ? formatDateTime(unit.last_refused_at, locale, zone)
+          : null,
+      folded: (unit) =>
+        unit.last_refused_at
+          ? t("extIngest.lastRefused", {
+              when: formatDateTime(unit.last_refused_at, locale, zone),
+            })
+          : undefined,
+    },
+  ];
 }
 
 function ExtensionIngestBody({
@@ -111,30 +128,30 @@ function ExtensionIngestBody({
     // with no answer, and the answer — every record was representable — is
     // precisely what the reader came for.
     return (
-      <EmptyState>
-        {t("extIngest.empty", {
-          days: formatNumber(health.window_days, locale),
-        })}
-      </EmptyState>
+      <PanelBody>
+        <EmptyState>
+          {t("extIngest.empty", {
+            days: formatNumber(health.window_days, locale),
+          })}
+        </EmptyState>
+      </PanelBody>
     );
   }
 
   return (
-    <SettingList>
-      <SettingRow
+    <>
+      <PanelBody>
+        <PanelIntro>{t("extIngest.noDetail")}</PanelIntro>
+      </PanelBody>
+      <DataTable
+        bleed
+        fold
         label={t("settings.extIngest")}
-        description={t("extIngest.noDetail")}
-        layout="stack"
-        control={
-          <div className="settingrow-measure">
-            <FactList
-              numeric
-              facts={unitFacts(health.units, t, plural, locale, zone)}
-            />
-          </div>
-        }
+        columns={unitColumns(t, plural, locale, zone)}
+        rows={[...health.units]}
+        rowKey={(unit) => unit.unit}
       />
-    </SettingList>
+    </>
   );
 }
 
@@ -152,10 +169,7 @@ export function ExtensionIngestHealthCard() {
     queryKey: ["extension-ingest-health"],
     enabled: canSee,
     queryFn: async () => {
-      const { data, error } = await api.GET("/admin/extension-ingest-health");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/admin/extension-ingest-health"));
       // Rejected rather than defaulted. `?? []` would draw the clean state,
       // which claims every record this installation's connectors sent was
       // representable — a statement about the installation that this response

@@ -229,10 +229,7 @@ func TestTheMarkupAlternativeCarriesTheSameDisclosures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
-	got, err := store.signedHTML(context.Background(), "<p>As discussed.</p>", derived)
-	if err != nil {
-		t.Fatalf("rendering the markup: %v", err)
-	}
+	got := signedHTML("<p>As discussed.</p>", SignOff{Kind: SignOffNone}, derived)
 
 	if !strings.Contains(got, "Beispiel GmbH") {
 		t.Errorf("the markup alternative carries no controller identity:\n%s\n\nWhich "+

@@ -6,7 +6,7 @@
 # carries derives-from: and the chapter owns the number.
 #
 # No entry carries a derives-from today: every cadence below is either this
-# repo's own operational choice or an operator's dial, and neither is a number
+# repo's own operational choice or an admin's setting, and neither is a number
 # a spec chapter owns. The field is here so the first one that is can say so.
 #
 # Every kind River persists in river_job.kind is declared here. A kind that is
@@ -20,7 +20,7 @@
 # gmail_watch_renew_connection is GmailWatchRenewArgs — the names are crossed
 # relative to the types, and that is not a defect to fix here.)
 #
-# timeout takes exactly one of four forms:
+# timeout takes exactly one of three forms:
 #   2m                                a literal wall clock
 #   {derived: c, value: 4h, reason:}  computed from a Go constant elsewhere in
 #                                     the tree; value is what Govern hands
@@ -36,8 +36,6 @@
 #                                     literal above. reason: is optional and
 #                                     states the arithmetic where the kind's
 #                                     own reason: does not.
-#   {operator: Field}                 computed at registration from a config
-#                                     field; not knowable here at all
 #   {none: true, reason:}             a deliberate absence — the pass is bounded
 #                                     by a backlog rather than a wall clock, and
 #                                     a negative River timeout takes the row out
@@ -148,9 +146,9 @@ queues:
   rate_refresh:
     max_workers: 2
     reason: >-
-      The FX rate refresh (page fetch + LLM extract) is likewise long; its own
-      bounded pool keeps a multi-workspace burst from starving
-      close-date, reconcile, and capture jobs.
+      The FX rate refresh (page fetch + LLM extract) and the daily model price
+      sync are likewise long; their own bounded pool keeps a multi-workspace
+      burst from starving close-date, reconcile, and capture jobs.
   ai_capture:
     max_workers: 2
     reason: >-
@@ -188,6 +186,13 @@ queues:
     reason: >-
       A full batch per policy, each record its own multi-statement audited
       transaction — minutes of database-bound work per tenant.
+  import_write:
+    max_workers: 1
+    reason: >-
+      Commit and undo slices of an import. One per process: slices of two runs
+      interleave through the snooze, so one worker is fair to both, and the
+      run's advisory lock keeps two processes off one run. Each slice holds the
+      lock's connection plus one row transaction at a time.
 
 # Every DISPATCHER below takes timeout: 2m, and the reason is one reason rather
 # than twenty-three: a dispatcher runs one indexed scan and one insert-many (or
@@ -236,7 +241,7 @@ kinds:
         RunWallClock, plus the seed/claim/finish round trips between them.
     max_attempts: 1
     opts_owner: args
-    cadence: {operator: AgentScheduler.Interval, schedule_when_positive: AgentScheduler.Interval}
+    cadence: {setting: installation.agent_runner_interval_seconds}
     registration: {when: [AgentScheduler.Service], absent: registers_nothing}
     reason: >-
       One attempt, not three: this pass's retry is its own next tick, which is
@@ -572,7 +577,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    cadence: {operator: CloseDateInterval}
+    cadence: {setting: installation.close_date_sweep_interval_seconds}
 
 
   comms_send_email:
@@ -863,7 +868,7 @@ kinds:
     queue: default
     timeout: 5m
     opts_owner: caller
-    cadence: {operator: ReconcileInterval}
+    cadence: {setting: installation.follow_up_reconcile_interval_seconds}
 
 
   fx_rate_refresh:
@@ -901,7 +906,7 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: {operator: GmailWatch.Interval}
+    cadence: {setting: installation.gmail_watch_scan_interval_seconds}
     registration: {when: [GmailRegistry, GmailWatch.Topic], absent: registers_nothing}
     fans_out_to: gmail_watch_renew_connection
     fan_out_unit: connection
@@ -927,7 +932,7 @@ kinds:
     queue: default
     timeout: 2m
     opts_owner: caller
-    cadence: {operator: GraphWatch.Interval, schedule_when_positive: GraphWatch.Interval}
+    cadence: {setting: installation.graph_watch_scan_interval_seconds}
     registration: {when: [GmailRegistry.OffersGraph, GraphWatch.NotificationURL], absent: registers_nothing}
     fans_out_to: graph_watch_renew_connection
     fan_out_unit: connection
@@ -1201,6 +1206,20 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  waiting_horizon_refresh:
+    role: worker
+    go_type: WaitingHorizonRefreshArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because readers treat a stored horizon older than a day as
+      missing (waitingHorizonStaleAfter): a few missed passes still leave a
+      fresh value, and a measurement that fails keeps the previous one. The
+      measurement is a year of inbound mail, which is why no read does it.
+
   idempotency_retention:
     role: worker
     fleet: true
@@ -1216,6 +1235,22 @@ kinds:
       lapsed bulk-change confirmations, which name who previewed and live 15
       minutes.
 
+
+  suppression_journal_export:
+    role: worker
+    fleet: true
+    go_type: SuppressionJournalArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    registration: {when: [Blobstore], absent: registers_nothing}
+    reason: >-
+      Hourly, and the cadence answers how much of the journal a restore may
+      lose rather than how long the export takes: an erasure recorded after the
+      last export is one a restored database has no entry to refuse. The pass
+      itself is one indexed read of the suppression list and one Put per entry,
+      all of it idempotent, so a re-run costs writes and changes nothing.
 
   stored_object_reap:
     role: worker
@@ -1322,7 +1357,7 @@ kinds:
         covers the policy read and the per-stage due-list reads between records.
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: PrivacyRetention.Interval, schedule_when_positive: PrivacyRetention.Interval}
+    cadence: {setting: installation.retention_sweep_interval_seconds}
 
   provider_run_submit:
     role: worker
@@ -1347,6 +1382,74 @@ kinds:
       the real retry — and the uniqueness above dedupes over retryable, so a
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
+
+  import_commit:
+    role: worker
+    go_type: ImportCommitArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last flush
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: a failed row, an over-budget slice
+        and a lost fence are written to the run, or are a superseded attempt's
+        quiet exit; a River retry would rerun a slice whose run already says
+        what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an approved import's commit. The run row is the checkpoint,
+      so a slice ends by rows or time, snoozes, and the next one resumes at the
+      cursor.
+
+  import_undo:
+    role: worker
+    go_type: ImportUndoArgs
+    queue: import_write
+    timeout:
+      derived: importSliceTimeout
+      value: 1m
+      reason: a slice is at most importSliceBudget of rows, plus its setup and its last page
+    opts_owner: caller
+    fault:
+      nil_after_logging: >-
+        the import_run row owns the outcome: an undo that stops stays undoing
+        with its cause and its cursor, and a lost fence is a superseded
+        attempt's quiet exit; a River retry would rerun a slice whose run
+        already says what happened.
+    args:
+      Workspace: id
+      RunID: id
+      Attempt:
+        scalar: true
+        reason: the fence the run row holds; a new attempt is a new job
+    reason: >-
+      One slice of an import's undo, the commit's shape: it pages over the
+      rows the run created from its cursor, then snoozes for the next slice.
+
+  import_run_sweep:
+    role: worker
+    go_type: ImportRunSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    reason: >-
+      Settles every import run nothing else will move. A commit or undo slice
+      whose process died stops heartbeating, and the sweep queues a new attempt
+      within a couple of minutes, so the cadence is one minute. A test run
+      whose request ended without recording returns to draft; a draft or report
+      untouched for 7 days is cancelled; and every run that will not read its
+      uploaded file again releases it, so the stored-object reaper deletes the
+      bytes. Each rule selects its runs by status over an index, so on an idle
+      installation a pass finds nothing.
 
   employment_import_sweep:
     role: worker
@@ -1443,11 +1546,27 @@ kinds:
       it does not approach.
 
 
+  tag_scout:
+    role: worker
+    fleet: true
+    go_type: TagScoutArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Hourly, like deal_scout: a mail asking about a product this morning
+      should be a suggestion by lunch. The pass is one phrase-matching read
+      over thirty days of captured activity and at most two hundred writes per
+      workspace, and calls no model, so five minutes is a ceiling it does not
+      approach.
+
+
   site_deep_read:
     role: worker
     go_type: SiteDeepReadArgs
     queue: deep_read
-    timeout: {operator: DeepReadCaps}
+    timeout: {derived: deepReadTimeout, value: 13m50s}
     opts_owner: caller
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
@@ -1458,16 +1577,15 @@ kinds:
       MaxPages:
         scalar: true
         reason: >-
-          this run's page ceiling, or zero for the deployment's own. The
-          worker clamps it against the configured cap, so it can only ever
-          narrow what an operator set, and a crawl budget states nothing
-          about a subject.
+          this run's page ceiling, or zero for the installation's own. The
+          worker clamps it against the page limit an admin set, so it can only
+          ever narrow it, and a crawl budget states nothing about a subject.
     reason: >-
-      The crawl wall an operator configured, plus the parallel extraction
+      The longest crawl wall an admin may choose, plus the parallel extraction
       budget, plus the logo lane's own bounded spend, plus a minute for the
-      staging and dossier writes — floored so a tightened cap never squeezes the
-      terminal writes. Not knowable here: it is computed from CrawlCaps at
-      registration.
+      staging and dossier writes. Sized for the ceiling rather than the chosen
+      wall, because the wall is a setting read when the read starts and this is
+      fixed when the worker registers.
 
   check_company_vat:
     role: worker
@@ -1542,7 +1660,7 @@ kinds:
     timeout: 2m
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: Geocoding.BackfillInterval, schedule_when_positive: Geocoding.BackfillInterval}
+    cadence: {setting: installation.geocode_backfill_interval_seconds, off_at_zero: true}
     registration: {when: [Geocoder], absent: registers_nothing}
     reason: >-
       One indexed read and up to GeocodeBackfillBatch (50) enqueues, no
@@ -1586,7 +1704,7 @@ kinds:
     timeout: 2m
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: TechnicalEnrichment.BackfillInterval, schedule_when_positive: TechnicalEnrichment.BackfillInterval}
+    cadence: {setting: installation.technical_backfill_interval_seconds, off_at_zero: true}
     registration: {when: [TechnicalEnricher], absent: registers_nothing}
     reason: >-
       One indexed read and up to TechnicalEnrichBatch enqueues, with no
@@ -1736,7 +1854,7 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: {operator: TimeScanInterval}
+    cadence: {setting: installation.time_scan_interval_seconds}
 
 
   voice_build:
@@ -1774,6 +1892,20 @@ kinds:
       Carrier recovery preserves the original request and its attempt policy.
       The next periodic pass retries reconciliation; River backoff must not delay it.
 
+  ai_price_sync_sweep:
+    role: worker
+    fleet: true
+    go_type: AIPriceSyncSweepArgs
+    queue: rate_refresh
+    timeout: 5m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, and at boot like every pass here: a vendor changes a price on its own
+      timetable, and a day's lag is what the Model prices card promises. A pass reads
+      two public price lists once (a 15-minute in-process cache), asks each keyed vendor
+      for its model list (five seconds each) and writes what changed in one transaction.
+      Five minutes is that with a slow vendor or two.
   voice_build_retry:
     role: dispatcher
     go_type: VoiceBuildRetryArgs
@@ -1809,7 +1941,7 @@ kinds:
         database round trips between attempts.
     max_attempts: 3
     opts_owner: args
-    cadence: {operator: WebhookRetry.Interval, schedule_when_positive: WebhookRetry.Interval}
+    cadence: {setting: installation.webhook_retry_interval_seconds}
     registration: {when: [WebhookRetry.Deliverer], absent: registers_nothing}
 
   meeting_delivery:

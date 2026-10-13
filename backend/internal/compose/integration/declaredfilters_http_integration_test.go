@@ -81,8 +81,8 @@ func TestTheContactListNarrowsByTagOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	tagged := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Tagged Contact"})
-	createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Untagged Contact"})
+	tagged := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Tagged Contact"})
+	createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Untagged Contact"})
 	tag := createdRecord(t, e, "/v1/tags", AnyMap{"name": "VIP"})
 	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", AnyMap{
 		"entity_type": "contact", "entity_id": tagged,
@@ -117,9 +117,11 @@ func TestTheCompanyListNarrowsByDomainOnTheWire(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	held := createdRecord(t, e, "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Acme", "domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	})
 	createdRecord(t, e, "/v1/companies", AnyMap{
+		"source":       "manual",
 		"display_name": "Other", "domains": []AnyMap{{"domain": "other.example", "is_primary": true}},
 	})
 
@@ -211,8 +213,8 @@ func TestTheContactListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
 
-	createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Owned Contact", "owner_id": owner})
-	unowned := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Unowned Contact"})
+	createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Owned Contact", "owner_id": owner})
+	unowned := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Unowned Contact"})
 	nullOverDB(t, e, "contact", "owner_id", unowned)
 
 	// Unassigned is a fact with its own queue, not an absence: a list that
@@ -257,8 +259,8 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Acme"})
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
+	company := createdRecord(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Acme"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Dana Buyer"})
 	project := func(name string) string {
 		return createdRecord(t, e, "/v1/projects", AnyMap{
 			"name": name, "company_id": company, "source": "manual",
@@ -304,7 +306,7 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Dana Buyer"})
 	mail := func(subject, occurredAt string) string {
 		return createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": subject, "direction": "inbound", "occurred_at": occurredAt,
@@ -356,7 +358,7 @@ func TestTheContact360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Buyer"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Dana Buyer"})
 	const total = 27
 	for i := range total {
 		id := createdRecord(t, e, "/v1/activities", AnyMap{

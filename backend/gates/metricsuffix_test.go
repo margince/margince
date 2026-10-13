@@ -5,7 +5,7 @@
 
 package gates
 
-// A `_total` suffix means COUNTER, in both directions.
+// A `_total` suffix means counter, in both directions.
 //
 // Prometheus reserves the suffix for monotonically increasing counters, and a
 // dashboard author reads the name long before the `# TYPE` line. Four sweep

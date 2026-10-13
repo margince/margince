@@ -30,6 +30,7 @@ const SAVED: components["schemas"]["MailDraft"] = {
   body: "Following up on the seat count you asked about.",
   html_body: "<p>Following up on the seat count you asked about.</p>",
   version: 3,
+  agent_drafted: false,
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-20T09:05:00Z",
 };

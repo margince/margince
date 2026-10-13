@@ -61,10 +61,13 @@ type IntroRequest struct {
 // rather than about phrasing.
 type introFacts struct {
 	colleague string
-	contact   string
-	title     string
-	account   string
-	deal      string
+	// greeting is the colleague's chosen greeting name, empty when they chose
+	// none; colleagueGreeting decides what the draft actually opens with.
+	greeting string
+	contact  string
+	title    string
+	account  string
+	deal     string
 	// band is how warm the colleague's relationship is, in the vocabulary the
 	// page already shows. Carried rather than recomputed: a second banding here
 	// would let the draft claim a closeness the map does not draw.
@@ -152,8 +155,13 @@ func (s *Service) introFactsFor(
 	if err != nil {
 		return introFacts{}, err
 	}
+	greeting, err := colleagueGreetingName(ctx, tx, req.ViaUserID)
+	if err != nil {
+		return introFacts{}, err
+	}
 	facts := introFacts{
 		colleague: route.DisplayName,
+		greeting:  greeting,
 		contact:   who.fullName,
 		title:     titleOf(who),
 		account:   company.DisplayName,
@@ -208,6 +216,22 @@ func (s *Service) introRoute(
 		}
 	}
 	return crmcontracts.Company360Route{}, apperrors.ErrNotFound
+}
+
+// colleagueGreetingName reads the name the colleague chose to be greeted by,
+// "" when they chose none. The route read above has already found them a live
+// member this caller may name.
+func colleagueGreetingName(ctx context.Context, tx pgx.Tx, colleague ids.UserID) (string, error) {
+	var greeting *string
+	if err := tx.QueryRow(ctx,
+		`SELECT greeting_name FROM app_user WHERE id = $1`, colleague,
+	).Scan(&greeting); err != nil {
+		return "", fmt.Errorf("company360: reading the colleague's greeting name: %w", err)
+	}
+	if greeting == nil {
+		return "", nil
+	}
+	return *greeting, nil
 }
 
 // introDealName reads the deal the introduction is for, refusing one this

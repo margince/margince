@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
 import {
@@ -113,7 +114,9 @@ export const Empty: Story = { render: () => <Live over={{ linked: [] }} /> };
  * than "attach" — the same section, one truthful word apart.
  */
 export const HoldsOnlyOne: Story = {
-  render: () => <Live over={{ linked: [LINKED[0]], allowsMany: false }} />,
+  render: () => (
+    <Live over={{ linked: LINKED.slice(0, 1), allowsMany: false }} />
+  ),
 };
 
 /**
@@ -137,4 +140,17 @@ export const NotDetachableHere: Story = {
       emptyBody="companyProjects.empty"
     />
   ),
+};
+
+/** The attach form open: a role for the link, and the project to link. */
+export const Attaching: Story = {
+  render: () => <Live />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: /^Attach project/,
+      }),
+    );
+    await screen.findByRole("dialog");
+  },
 };

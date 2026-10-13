@@ -127,7 +127,8 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 
 	buyerCtx := principal.WithActor(
 		principal.WithWorkspaceID(context.Background(), e.ws.UUID),
-		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
+		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"},
+	)
 
 	for _, tc := range []struct {
 		name string
@@ -149,7 +150,7 @@ func TestTheRosterRefusesACallerWhoIsNotAMember(t *testing.T) {
 			if _, err := e.svc.SeatNames(tc.ctx, []ids.UserID{e.admin.UserID}); err == nil {
 				t.Error("SeatNames named a colleague")
 			}
-			if _, err := e.svc.GetUser(tc.ctx, e.member.UserID); err == nil {
+			if _, err := e.svc.GetUser(tc.ctx, Identity{}, e.member.UserID); err == nil {
 				t.Error("GetUser served one member")
 			}
 		})
@@ -168,10 +169,10 @@ func TestTheSingleMemberReadIsForMemberAdministratorsOnly(t *testing.T) {
 	if _, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{}); err != nil {
 		t.Fatalf("a member was refused the roster every seat may read: %v", err)
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.admin.UserID); err == nil {
+	if _, err := e.svc.GetUser(e.wsCtx(e.member), e.member, e.admin.UserID); err == nil {
 		t.Error("a member without user_admin read a single member's roles and teams")
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(e.admin), e.member.UserID); err != nil {
+	if _, err := e.svc.GetUser(e.wsCtx(e.admin), e.admin, e.member.UserID); err != nil {
 		t.Errorf("a member administrator was refused the read they administer with: %v", err)
 	}
 }
@@ -235,20 +236,20 @@ func carriesUser(rows []userRow, id ids.UUID) bool {
 	return false
 }
 
-// A delegated member administrator holding a WRITE verb and not read still gets
-// the row back after the write.
-//
-// The verbs on user_admin are grantable apart, and the writes admit on them
-// separately: DeactivateUser asks for delete, ChangeUserRole for update. The
-// read that every one of those writes returns through is the same read, so
-// demanding user_admin.read there would let the deactivation commit and then
-// answer 403 — the seat is locked out and the response says the request failed.
-//
-// The role is edited through the real editor rather than an UPDATE, so the
-// grant is one an operator can actually produce.
+// A delegate holding a write verb and not read still gets the row back after the write.
+// Demanding read there would commit a deactivation and then answer 403.
 func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-write-verb-read")
+	deleter := deleteOnlyMemberAdmin(t, e)
+	if _, err := e.svc.GetUser(e.wsCtx(deleter), deleter, e.member.UserID); err != nil {
+		t.Errorf("a holder of user_admin.delete cannot read back the seat it just wrote: %v", err)
+	}
+}
 
+// deleteOnlyMemberAdmin is a seat holding user_admin.delete and not read, edited through the
+// real role editor so the grant is one an operator can produce.
+func deleteOnlyMemberAdmin(t *testing.T, e *revocationEnv) Identity {
+	t.Helper()
 	if _, err := e.svc.SetRoleObjectGrant(e.wsCtx(e.admin), e.admin, "ops", objectUserAdmin,
 		storedGrant{Delete: true}, nil); err != nil {
 		t.Fatalf("granting ops user_admin.delete and nothing else: %v", err)
@@ -256,15 +257,29 @@ func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
 	deleter := e.admin
 	deleter.Roles = []string{"ops"}
 	deleter.Permissions = principal.Permissions{
-		RoleKeys: []string{"ops"},
-		Objects:  map[string]principal.ObjectGrant{objectUserAdmin: {Delete: true}},
+		RoleKeys: []string{"ops"}, RowScope: principal.RowScopeAll,
+		Objects: map[string]principal.ObjectGrant{objectUserAdmin: {Delete: true}},
 	}
-
-	// The premise: this seat may NOT read the object it may delete on.
 	if err := auth.Require(e.wsCtx(deleter), objectUserAdmin, principal.ActionRead); err == nil {
-		t.Fatal("the fixture holds user_admin.read, so the assertion below proves nothing")
+		t.Fatal("the fixture holds user_admin.read, so a test relying on its absence proves nothing")
 	}
-	if _, err := e.svc.GetUser(e.wsCtx(deleter), e.member.UserID); err != nil {
-		t.Errorf("a holder of user_admin.delete cannot read back the seat it just wrote: %v", err)
+	return deleter
+}
+
+func TestTeamSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-team-search")
+	for _, name := range []string{"100% Club", "Sales_EU", "Plain Team"} {
+		if _, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, name); err != nil {
+			t.Fatalf("creating %q: %v", name, err)
+		}
+	}
+	for q, want := range map[string]string{"%": "100% Club", "_": "Sales_EU"} {
+		rows, _, err := e.svc.ListTeams(e.wsCtx(e.admin), ListTeamsInput{Q: &q})
+		if err != nil {
+			t.Fatalf("searching teams for %q: %v", q, err)
+		}
+		if len(rows) != 1 || rows[0].Name != want {
+			t.Errorf("team search %q returned %d rows; want only %q", q, len(rows), want)
+		}
 	}
 }

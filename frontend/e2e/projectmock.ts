@@ -9,8 +9,8 @@ import type { Route } from "@playwright/test";
 //
 // It also mirrors the one cross-record rule the flow depends on: winning a
 // deal moves its project into `delivering` (deals/project_delivery.go), from
-// initiative or pursuing only. The deal advance handler in seed.ts calls
-// startDelivery for that.
+// initiative or pursuing only. The deal advance handler in mockapi/records.ts
+// calls startDelivery for that.
 
 type Json = (body: unknown, status?: number) => Promise<void>;
 

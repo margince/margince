@@ -5,7 +5,7 @@
 
 package gates
 
-// A report's answer is labelled with the instant it was COMPUTED at.
+// A report's answer is labelled with the instant it was computed at.
 //
 // The frame carries one AsOf, read from the database, and the money expressions
 // convert against it: an open deal takes the latest exchange rate on or before

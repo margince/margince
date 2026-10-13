@@ -8,9 +8,9 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { DealCommitteeCard } from "./dealcommitteecard";
 
 // The card joins two reads of ONE set of edges: the stakeholder rows carry the
@@ -221,7 +221,9 @@ describe("the deal's committee card", () => {
 
     await userEvent.click(await screen.findByTestId("remove-relationship"));
     await userEvent.click(
-      await screen.findByTestId("remove-relationship-confirm"),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["rel.remove"],
+      }),
     );
 
     expect(deleted).toEqual([`rel-${TALKING}`]);
@@ -335,7 +337,9 @@ describe("the deal's committee card", () => {
     const removes = await screen.findAllByTestId("remove-relationship");
     await userEvent.click(removes[0]);
     await userEvent.click(
-      await screen.findByTestId("remove-relationship-confirm"),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["rel.remove"],
+      }),
     );
     const refusal = await within(await screen.findByRole("dialog")).findByText(
       /Nope/,

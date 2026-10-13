@@ -3,14 +3,15 @@ import { DoorOpen, UserX } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { RoomStateBadge, STATE_LABELS } from "./dealroom";
 import { participantsKey } from "./dealroomaccess";
 
@@ -46,12 +47,13 @@ export function ContactDealRooms({
     queryFn: async () => {
       const pages = await Promise.all(
         emails.map(async (email) => {
-          const { data, error } = await api.GET("/deal-rooms", {
-            params: { query: { participant_email: email, limit: ROOMS_LIMIT } },
-          });
-          if (error) {
-            throwProblem(error);
-          }
+          const data = unwrap(
+            await api.GET("/deal-rooms", {
+              params: {
+                query: { participant_email: email, limit: ROOMS_LIMIT },
+              },
+            }),
+          );
           return {
             email,
             rooms: data?.data ?? [],
@@ -170,13 +172,12 @@ function RevokeSeat({
       if (!seat) {
         throw new Error(t("contactdealrooms.seatGone"));
       }
-      const { error } = await api.POST(
-        "/deal-rooms/{id}/participants/{participantId}/revoke",
-        { params: { path: { id: input.roomId, participantId: seat.id } } },
+      unwrap(
+        await api.POST("/deal-rooms/{id}/participants/{participantId}/revoke", {
+          params: { path: { id: input.roomId, participantId: seat.id } },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: roomsOfKey(emails) });

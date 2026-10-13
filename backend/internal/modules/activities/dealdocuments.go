@@ -56,7 +56,7 @@ const fieldDealID = "deal_id"
 // an activity linked to the deal, minus inline mail images. `$deal` is the
 // placeholder the caller bound the deal id to.
 func dealDocumentMembership(deal int) string {
-	return fmt.Sprintf(`at.archived_at IS NULL AND (
+	return fmt.Sprintf(`at.archived_at IS NULL AND NOT at.bytes_withheld AND (
 		(at.entity_type = '%s' AND at.entity_id = $%d)
 		OR (at.entity_type = '%s' AND EXISTS (
 			SELECT 1 FROM activity_link l

@@ -20,7 +20,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,17 +44,11 @@ import (
 // wiring for it.
 func everyDeclaredDependencySupplied(cfg JobRunnerConfig) error {
 	supplied := configDependencies(cfg)
-	intervals := operatorIntervals(cfg)
 	unmet := map[string]struct{}{}
 	for kind, spec := range jobs.Declared() {
 		for _, path := range spec.Registration.When {
 			if !supplied[path] {
 				unmet[fmt.Sprintf("%s is gated on JobRunnerConfig.%s", kind, path)] = struct{}{}
-			}
-		}
-		for _, path := range []string{spec.Cadence.OperatorField, spec.Cadence.ScheduleWhenPositive} {
-			if path != "" && intervals[path] <= 0 {
-				unmet[fmt.Sprintf("%s reads its cadence from JobRunnerConfig.%s", kind, path)] = struct{}{}
 			}
 		}
 	}
@@ -77,7 +70,7 @@ func censusCaptureRegistry() *capture.Registry {
 }
 
 // censusJobConfig is the maximally-configured role: every credential
-// custodian, connector registry, model lane and operator dial the declaration
+// custodian, connector registry and model lane the declaration
 // names, so that every kind the contract declares is one this assembly wires.
 //
 // It is not a deployment anyone runs. A real role supplies what it can reach,
@@ -105,8 +98,8 @@ func censusJobConfig() JobRunnerConfig {
 		// The watch passes are the conjunctions in this file: a registry alone
 		// does not wire either, so the topic has to be here too — and for Graph,
 		// the notification URL AND the connector above.
-		GmailWatch:             GmailWatchConfig{Topic: "projects/census/topics/census", Interval: censusInterval},
-		GraphWatch:             GraphWatchConfig{NotificationURL: "https://census.example/webhooks/graph", Interval: censusInterval},
+		GmailWatch:             GmailWatchConfig{Topic: "projects/census/topics/census"},
+		GraphWatch:             GraphWatchConfig{NotificationURL: "https://census.example/webhooks/graph"},
 		ChannelVault:           keyvault.NewMemory(),
 		ClassifyBrain:          seam,
 		OwedBrain:              seam,
@@ -121,16 +114,10 @@ func censusJobConfig() JobRunnerConfig {
 		DocumentExtractBrain:   censusDocumentSeam{},
 		VoiceBrain:             seam,
 		Embedder:               seam,
-		AgentScheduler:         AgentSchedulerConfig{Interval: censusInterval, Service: &RunnerService{}},
-		WebhookRetry:           WebhookRetryConfig{Interval: censusInterval, Deliverer: func(*database.DB) *webhooks.Deliverer { return &webhooks.Deliverer{} }},
+		AgentScheduler:         AgentSchedulerConfig{Service: &RunnerService{}},
+		WebhookRetry:           WebhookRetryConfig{Deliverer: func(*database.DB) *webhooks.Deliverer { return &webhooks.Deliverer{} }},
 		ProviderRuns:           ProviderRunsConfig{Registry: censusProviderRegistry(), Vault: keyvault.NewMemory()},
-		PrivacyRetention:       PrivacyRetentionConfig{Interval: censusInterval},
-		Geocoding:              GeocodingConfig{BackfillInterval: censusInterval},
 		TechnicalEnricher:      &TechnicalEnricher{},
-		TechnicalEnrichment:    TechnicalEnrichmentConfig{BackfillInterval: censusInterval},
-		CloseDateInterval:      censusInterval,
-		ReconcileInterval:      censusInterval,
-		TimeScanInterval:       censusInterval,
 	}
 }
 
@@ -157,11 +144,6 @@ func censusProviderRegistry() *integrations.Registry {
 	}
 	return reg
 }
-
-// censusInterval is a positive duration and nothing more: the kinds that
-// declare schedule_when_positive stay wired on any positive dial, and the
-// census never places a tick.
-const censusInterval = time.Minute
 
 // errCensusSeam is what every seam below answers with. A census wires these to
 // be COUNTED, never called, and an honest refusal is what keeps a caller that
@@ -211,6 +193,6 @@ func (censusGeocoder) Resolve(context.Context, string) (geocode.Point, bool, err
 // register never gave.
 type censusVatChecker struct{}
 
-func (censusVatChecker) Check(context.Context, string) (vatcheck.Result, error) {
+func (censusVatChecker) Check(context.Context, string, string) (vatcheck.Result, error) {
 	return vatcheck.Result{}, errCensusSeam
 }

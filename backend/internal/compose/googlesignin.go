@@ -120,12 +120,15 @@ type googleOIDCVerifierAdapter struct {
 	matchIdentity func(oidcClaims) error
 }
 
-func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (email, sub string, emailVerified bool, groups []string, err error) {
+func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (identity.OIDCClaims, error) {
 	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
-		return "", "", false, nil, err
+		return identity.OIDCClaims{}, err
 	}
-	return claims.Email, claims.Sub, claims.EmailVerified, claims.Groups, nil
+	return identity.OIDCClaims{
+		Email: claims.Email, Subject: claims.Sub, EmailVerified: claims.EmailVerified,
+		Groups: claims.Groups, GivenName: claims.GivenName,
+	}, nil
 }
 
 // googleSignInSource resolves the provider for one flow: the client from the
@@ -191,7 +194,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		// them: RedirectBase is this deployment's own externally-reachable
 		// origin. What an incomplete config withholds is the ROUTE, not the URL
 		// the route will answer on once the operator finishes.
-		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
+		if base := apiV1Base(cfg.RedirectBase); base != "" {
 			s.addRedirectURI(capture.AppProviderGoogle, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, googleProviderKey))
 		}
@@ -207,7 +210,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 			config: identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel},
 			source: source.provider,
 		}, identity.OIDCRoutes{
-			RedirectBase: signInRedirectBase(cfg.RedirectBase),
+			RedirectBase: apiV1Base(cfg.RedirectBase),
 			PostLoginURL: cfg.PostLoginURL,
 			FailureURL:   cfg.FailureURL,
 		}, cfg.StateKey)

@@ -4,7 +4,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemMessage } from "../common";
+import { problemMessage } from "../../lib/problem";
 import { isAcceptedCorpusFile } from "../voice-corpus-file";
 import type { IntakeOutcome, RefusalReason } from "../voice-intake-core";
 import {

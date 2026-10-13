@@ -39,7 +39,8 @@ var composeAnalyticsReportCopy = toolCopy{
 	Purpose: "WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary " +
 		"for a meeting — whose numbers come from governed queries, standard metrics or frozen editions instead of " +
 		"being typed. Not for answering with a figure: a number in the reply is " +
-		"run_analytics_query's or run_report's. The document carries the STRUCTURE and the " +
+		"run_analytics_query's or run_report's. A query-cell figure comes from run_analytics_query " +
+		"with save; a run_report answer has no run id and cannot be cited. The document carries the STRUCTURE and the " +
 		"WORDS; each figure names a query cell, metric_ref or edition_ref, and the server resolves " +
 		"those handles under the reader's own authority.",
 	Limits: "It writes no number of its own and refuses any document that does. A block " +
@@ -49,7 +50,7 @@ var composeAnalyticsReportCopy = toolCopy{
 		"query with save, and cite the run id it answers with.",
 	Instead: "Ask run_analytics_query for one number when a figure is what is wanted. This " +
 		"composes a DOCUMENT of several, which is worth the round trip only when the answer " +
-		"is a report somebody reads. describe_report_blocks holds the block kinds and their " +
+		"is a report somebody reads. describe_vocabulary (topic report_blocks) holds the block kinds and their " +
 		"fields for a caller that wants them before composing.",
 	Retain: "Never put a number in a block — cite the cell that holds it. A block kind " +
 		"outside the grammar is refused BY NAME with the whole set, so a first attempt costs " +

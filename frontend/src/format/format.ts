@@ -97,33 +97,31 @@ export function formatMoneyOrAbsent(
  * strip renders `formatMoney` in full, and it is one scroll away — this is the
  * scale of the account, that is the amount.
  *
- * Under 10,000 it stays exact: "€8,332" is as short as "€8k" and says more.
+ * Under 10,000 it stays exact, cents included: "€8,332" is as short as "€8k"
+ * and says more, and a one-cent deal rounded to "€0" reads as no value.
  */
 export function formatMoneyCompact(
   amountMinor: number,
   currency: string,
   locale: Locale,
 ): string {
-  // Our scale, Intl's formatting — see formatMoney for why the two are
-  // deliberately not the same source.
+  // Our scale, Intl's formatting: see formatMoney for why.
   const major = toMajorUnits(amountMinor, currency);
+  const abbreviated = Math.abs(major) >= 10_000;
+  if (!abbreviated && !Number.isInteger(major)) {
+    return formatMoney(amountMinor, currency, locale);
+  }
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "currency",
     currency,
-    // `compact` only kicks in at 1000; below 10_000 the long form is no wider
-    // and carries every digit, so the threshold is where abbreviating buys
-    // something.
-    notation: Math.abs(major) >= 10_000 ? "compact" : "standard",
-    // SPELLED OUT, because the currency style does not default it to zero.
-    // `minimumFractionDigits` starts at the currency's own minor-unit digits —
-    // two for EUR — and ECMA-402 only clamps that DOWN to
-    // `maximumFractionDigits`. So `maximumFractionDigits: 1` alone reads as "at
-    // most one digit" and resolves to EXACTLY one: €420,000 rendered "€420.0k",
-    // and in German, where 420k does not abbreviate at all, "420.000,0 €". The
-    // digit is only ever there to carry a remainder the compact form would
-    // otherwise drop.
+    notation: abbreviated ? "compact" : "standard",
+    // Spelled out: the currency style starts the minimum at the currency's own
+    // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
-    maximumFractionDigits: Math.abs(major) >= 10_000 ? 1 : 0,
+    maximumFractionDigits: abbreviated ? 1 : 0,
+    // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
+    // not reach; truncating drops digits but never adds any.
+    roundingMode: "trunc",
   }).format(major);
 }
 
@@ -166,20 +164,6 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
-}
-
-/**
- * A price-sheet estimate held in millionths of a dollar, as the AI cost reads
- * carry it. Not `formatMoney`: it rounds a fraction-of-a-cent read to $0.00.
- * The locale stays the reader's, because a German reader writes 0,0043 $.
- */
-export function formatMicroUSD(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: value > 0 && value < 10_000 ? 4 : 2,
-    maximumFractionDigits: 6,
-  }).format(value / 1_000_000);
 }
 
 /**
@@ -540,16 +524,16 @@ export function formatDateTime(
 }
 
 // A stored file's size, for a reader deciding whether to open it — never for
-// arithmetic. The unit steps with the file rather than being fixed: a 412-byte
-// note rendered on a kilobyte scale reads "0 kB", which looks like a file that
-// failed to upload. The unit words ride Intl's own vocabulary, so de and vi
-// read correctly without a lookup table here.
+// arithmetic. The unit steps with the file rather than being fixed. A 412-byte
+// note on a kilobyte scale reads "0 kB", which looks like a failed upload.
+// Intl's own unit words serve de and vi. A byte takes the long form, because
+// the short English one never inflects ("98 byte").
 export function formatBytes(bytes: number, locale: Locale): string {
   const [value, unit] = byteScale(bytes);
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
     style: "unit",
     unit,
-    unitDisplay: "short",
+    unitDisplay: unit === "byte" ? "long" : "short",
     maximumFractionDigits: unit === "byte" ? 0 : 1,
   }).format(value);
 }

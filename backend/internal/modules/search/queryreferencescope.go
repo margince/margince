@@ -130,6 +130,7 @@ var roleNamedReferences = map[string]string{
 	"parent_company_id":       entityCompany,
 	"counterparty_company_id": entityCompany,
 	"promoted_contact_id":     entityContact,
+	"from_contact_id":         entityContact,
 	"qualified_deal_id":       entityDeal,
 	"converted_from_lead_id":  entityLead,
 	"source_activity_id":      entityActivity,

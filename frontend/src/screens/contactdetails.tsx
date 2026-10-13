@@ -1,9 +1,9 @@
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { ContactLink } from "../design-system/contactlink";
 import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWriteRecord } from "../lib/capability";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { ADDRESS_FIELDS, addressFrom } from "./companyform";
 import { BoughtAttributes } from "./contactboughtattributes";
@@ -16,15 +16,21 @@ import { TagsPanel } from "./tagspanel";
 
 type Contact = components["schemas"]["Contact"];
 type Profile = components["schemas"]["ContactProviderProfile"];
+type EmailType = NonNullable<
+  NonNullable<Contact["emails"]>[number]["email_type"]
+>;
+type PhoneType = NonNullable<
+  NonNullable<Contact["phones"]>[number]["phone_type"]
+>;
 
 // The kind of each handle, in the words the edit form's own Type option
 // uses, so the card and the form never name one kind two ways.
-const EMAIL_TYPE_LABEL: Readonly<Record<string, MessageKey>> = {
+const EMAIL_TYPE_LABEL: Readonly<Record<EmailType, MessageKey>> = {
   work: "field.emailWork",
   personal: "field.emailPersonal",
   other: "field.emailOther",
 };
-const PHONE_TYPE_LABEL: Readonly<Record<string, MessageKey>> = {
+const PHONE_TYPE_LABEL: Readonly<Record<PhoneType, MessageKey>> = {
   work: "field.phoneWork",
   mobile: "field.phoneMobile",
   home: "field.phoneHome",
@@ -116,6 +122,7 @@ export function ContactDetails({
                 entityType="contact"
                 entityID={contact.id}
                 canEdit={canEdit}
+                employer={contact.employer}
                 bare
               />
             </FieldRow>

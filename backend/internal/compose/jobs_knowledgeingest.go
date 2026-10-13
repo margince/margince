@@ -16,11 +16,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -46,6 +48,29 @@ const knowledgeIngestActor = "agent:knowledge-ingest"
 // are a database blip or object storage being briefly unreachable, and a fourth
 // attempt at a file whose bytes are simply not text buys nothing.
 const knowledgeIngestMaxAttempts = 3
+
+// knowledgeIngestSnoozeWindow is how long an ingest waits out a cause that
+// clears by itself before it counts as failed. Two are known: an AI provider
+// rate limiting this installation, and an older worker mid-rollout that does
+// not ship a page. The window stops one that never clears holding a document
+// in `running`.
+const knowledgeIngestSnoozeWindow = time.Hour
+
+// knowledgeIngestSnoozeWait is how long one snooze lasts. The provider's own
+// Retry-After is not carried by the error. So this is a pause past the usual
+// burst limit, and long enough for a rollout to replace a worker.
+const knowledgeIngestSnoozeWait = time.Minute
+
+// ingestSnooze says whether an ingest that met a cause that clears by itself is
+// put back for later instead of being tried again at once. A snooze is not an
+// attempt, so the three attempts are not spent inside the wait.
+func ingestSnooze(err error, enqueuedAt, now time.Time) (time.Duration, bool) {
+	waitable := errors.Is(err, ai.ErrProviderThrottled) || errors.Is(err, knowledge.ErrHandbookPageGone)
+	if !waitable || now.Sub(enqueuedAt) > knowledgeIngestSnoozeWindow {
+		return 0, false
+	}
+	return knowledgeIngestSnoozeWait, true
+}
 
 // KnowledgeIngestArgs is one queued ingest.
 type KnowledgeIngestArgs struct {
@@ -95,6 +120,8 @@ type knowledgeIngestWorker struct {
 	// corpus does not cover the question.
 	embedder vectorkit.Embedder
 	log      *slog.Logger
+	// now is the clock the throttle window is judged by.
+	now func() time.Time
 }
 
 func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder vectorkit.Embedder, log *slog.Logger) *knowledgeIngestWorker {
@@ -102,6 +129,7 @@ func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder
 		store:    knowledge.NewStore(InstallationDB(pool)).WithBlobstore(blob),
 		embedder: embedder,
 		log:      log,
+		now:      time.Now,
 	}
 }
 
@@ -122,6 +150,9 @@ func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[Knowled
 		w.log.InfoContext(wsCtx, "corpus document vanished mid-ingest",
 			"document_id", job.Args.DocumentID)
 		return river.JobCancel(err)
+	}
+	if wait, snooze := ingestSnooze(err, job.CreatedAt, w.now()); snooze {
+		return river.JobSnooze(wait)
 	}
 	// Terminal only once River has no attempt left. A document mid-retry stays
 	// `running`, which readiness reads as "not ready yet" rather than as
@@ -186,13 +217,20 @@ func (w *knowledgeIngestWorker) readDocument(ctx context.Context, key string) (s
 // actionable sentence; anything else is a fault they cannot act on, so they get
 // a sentence that says so rather than an internal error.
 func ingestDetail(err error) string {
-	var full *knowledge.CorpusFullError
-	if errors.As(err, &full) {
+	if full, ok := errors.AsType[*knowledge.CorpusFullError](err); ok {
 		return full.Error()
 	}
-	var unsupported *knowledge.UnsupportedTypeError
-	if errors.As(err, &unsupported) {
+	if unsupported, ok := errors.AsType[*knowledge.UnsupportedTypeError](err); ok {
 		return unsupported.Error()
+	}
+	if errors.Is(err, knowledge.ErrHandbookPageGone) {
+		return "This handbook page is not in the handbook the worker holds, so it could not be indexed. An administrator has to update every worker to the current release, or the page has been withdrawn."
+	}
+	if errors.Is(err, ai.ErrProviderThrottled) {
+		return "The AI provider was rate limiting this installation, so the document could not be indexed. Try uploading it again in a few minutes."
+	}
+	if errors.Is(err, ai.ErrProviderQuota) {
+		return "The AI provider's account is out of budget, so the document could not be indexed. An administrator has to restore it before this can be uploaded again."
 	}
 	return "This document could not be read into passages. Nothing about the file is known to be wrong — try uploading it again."
 }

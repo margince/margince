@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states the file is filed against the Servicevertrag Leitstand Goslar contract (HST-2026-014) by name and reference code.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer tells the reader that the file is filed against the Servicevertrag Leitstand Goslar contract (HST-2026-014). Answer no if it says the file could not be linked to the contract, names another contract, or says nothing about the contract.",
+  "answer": "Done. servicevertrag-signiert.pdf is stored on the Leitstand Goslar project and filed against the Servicevertrag Leitstand Goslar (HST-2026-014). Meetings cannot hold files, so I put it on the project instead."
+}

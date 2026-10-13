@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // The licence pill in the panel's runtime strip names a fault only the seats
 // page can repair, so the pill is the way there: a label that told the reader

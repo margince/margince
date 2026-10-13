@@ -40,6 +40,7 @@ const (
 	argActivityID = "activity_id"
 	argEntityType = "entity_type"
 	argEntityID   = "entity_id"
+	argLinks      = "links"
 	linkDeal      = "deal"
 	linkContact   = "contact"
 )
@@ -52,6 +53,9 @@ const (
 	ActionNone             = "none"
 )
 
+// untitledMeeting names a meeting that has no subject of its own.
+const untitledMeeting = "meeting"
+
 // meetingHorizon bounds how far ahead a booked meeting still counts as the
 // next move. Past it, the meeting is a plan rather than a thing to prepare.
 const meetingHorizon = 14 * 24 * time.Hour
@@ -63,12 +67,17 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 		activityID := openapi_types.UUID(meeting.ID)
 		subject := meeting.Subject
 		if subject == "" {
-			subject = "meeting"
+			subject = untitledMeeting
 		}
 		return move(ActionOpenMeetingBrief,
 			fmt.Sprintf("A meeting is booked %s — read the brief before it.", until(f.now, meeting.StartsAt)),
 			map[string]any{argActivityID: activityID},
 			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: "Booked: " + subject})
+	}
+	// A follow-up owed after a meeting outranks open work. The open task is
+	// often this card's own generic step, and the buyer waits on the mail.
+	if met, ok := followUpOwed(f); ok {
+		return followUpMove(f, met)
 	}
 	// Existing work is the next step until somebody completes it. Creating
 	// another generic follow-up here duplicates the task the card just read.
@@ -120,7 +129,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 	meeting := *f.nextMeeting
 	subject := meeting.Subject
 	if subject == "" {
-		subject = "meeting"
+		subject = untitledMeeting
 	}
 	activityID := openapi_types.UUID(meeting.ID)
 	return move(ActionOpenMeetingBrief,
@@ -152,7 +161,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 		return move(ActionCreateTask, nextStepReason(f),
 			map[string]any{
 				"subject": "Agree the next step on " + f.deal.Name,
-				"links":   []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
+				argLinks:  []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}},
 				"source":  provenance.RecordSourceManual,
 			},
 			lastContactEvidence(f)...)
@@ -193,7 +202,7 @@ func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
 			sinceLastContact(f), seatWords(seat)),
 		map[string]any{
 			"subject": meetingSubject(seat, f.deal),
-			"links":   links,
+			argLinks:  links,
 			"source":  provenance.RecordSourceManual,
 		},
 		lastContactEvidence(f)...)
@@ -349,20 +358,29 @@ func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
 
 // lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings with future times, which are plans and
-// not contact.
+// not contact; a canceled or no-show meeting is no contact at all.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
-		if !a.OccurredAt.After(f.now) && relstrength.IsInteractionKind(string(a.Kind)) {
+		var status string
+		if a.MeetingStatus != nil {
+			status = string(*a.MeetingStatus)
+		}
+		if !a.OccurredAt.After(f.now) && relstrength.InteractionCounts(string(a.Kind), status) {
 			return a, true
 		}
 	}
 	return crmcontracts.Activity{}, false
 }
 
+// noContactYet is the claim an absent last contact supports. A note, a booked
+// meeting and a canceled one sit on the timeline without being contact, so
+// "nothing logged" would be false.
+const noContactYet = "No contact has taken place on this deal yet"
+
 func nextStepReason(f facts) string {
 	last, ok := lastContact(f)
 	if !ok {
-		return "Nothing has been logged on this deal yet — agree the next step."
+		return noContactYet + " — agree the next step."
 	}
 	return fmt.Sprintf("The last contact was %s and nothing is booked — agree the next step.",
 		since(f.now, last.OccurredAt))

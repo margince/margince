@@ -7,7 +7,7 @@
 
 package gates
 
-// Money this product COMPUTES has its arithmetic held by the database. Money it
+// Money this product computes has its arithmetic held by the database. Money it
 // COPIES does not.
 //
 // A net/tax/gross triple is derived, not entered: it is summed in Go from the

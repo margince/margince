@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Disclosure } from "../design-system/atoms";
+import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 import { reportingAmount } from "./reporting.model";
 
 type Target = components["schemas"]["ReportingTarget"];
@@ -15,11 +16,11 @@ export function TargetHistory({ target }: Readonly<{ target: Target }>) {
     queryKey: ["reporting-target", target?.id],
     enabled: !!target,
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/targets/{id}", {
-        params: { path: { id: target?.id ?? "" } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/analytics/targets/{id}", {
+          params: { path: { id: target?.id ?? "" } },
+        }),
+      );
     },
   });
   return (

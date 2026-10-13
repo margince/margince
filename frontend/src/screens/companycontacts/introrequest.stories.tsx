@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -82,6 +83,14 @@ export const ModelDraft: Story = {
       { kind: "deal", label: "Retrofit 2026" },
     ],
   }),
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = within(await body.findByRole("dialog"));
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Draft message" }),
+    );
+    await dialog.findByRole("textbox", { name: "Subject" });
+  },
 };
 
 /**

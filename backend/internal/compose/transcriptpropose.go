@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,9 +37,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -81,11 +84,14 @@ func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")
 }
 
-// TranscriptProposer reads a transcript and stages what it says was promised.
+// TranscriptProposer reads a transcript and hands each promise in it to the
+// commitment rule.
 type TranscriptProposer struct {
 	pool     *pgxpool.Pool
 	brain    completer
-	approval *approvals.Service
+	dispatch *CommitmentDispatcher
+	users    *identity.Service
+	contacts *contacts.Store
 	now      func() time.Time
 	log      *slog.Logger
 }
@@ -96,7 +102,11 @@ type TranscriptProposer struct {
 func NewTranscriptProposer(
 	pool *pgxpool.Pool, brain completer, approval *approvals.Service, now func() time.Time, log *slog.Logger,
 ) *TranscriptProposer {
-	return &TranscriptProposer{pool: pool, brain: brain, approval: approval, now: now, log: log}
+	return &TranscriptProposer{
+		pool: pool, brain: brain, dispatch: NewCommitmentDispatcher(pool, approval),
+		users: identity.NewService(pool), contacts: contacts.NewStore(InstallationDB(pool)),
+		now: now, log: log,
+	}
 }
 
 // proposedStep is one next step as the model reports it.
@@ -161,6 +171,9 @@ func transcriptRequest(lines []string, meetingDay string, lang string) model.Req
 			`Use "" when the transcript states no deadline, and when what it states is `+
 			`ambiguous: an empty due date is a next step nobody dated, and a guessed one `+
 			`is a deadline nobody agreed to. `+
+			`"confidence" is a number from 0 to 1 for how firmly the transcript commits the speaker: `+
+			`a plain "I will" with a thing and a day is 0.9 or more, while "I'll try", `+
+			`"at some point" or "maybe" names no real commitment and is 0.3 or less. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDay, maxTranscriptProposals, len(lines))
 
@@ -337,26 +350,25 @@ func stepEvidence(step proposedStep, lines []string, activityID ids.ActivityID) 
 	}
 }
 
-// quotedFromTranscript is the transcript's own words behind one step.
+// quotedFromTranscript is the transcript's own words behind one step: the
+// first run of adjacent cited lines. A quote joined across a gap is a string
+// the transcript never holds, and the claim writer refuses what the message
+// does not hold.
 //
-// One function because two readers need the SAME string: the evidence a reader
-// sees, and the proposal's `cited` field, which the rejection memory keys on. A
-// second spelling of the trim would let the two diverge on a long quotation,
-// and the memory would then fail to recognise a refusal that a reader can see
-// is about the same words.
+// One function because two readers need the same string: the evidence a reader
+// sees, and the proposal's `cited` field, which the rejection memory keys on.
 func quotedFromTranscript(step proposedStep, lines []string) string {
-	quoted := make([]string, 0, len(step.SourceLines))
-	for _, line := range step.SourceLines {
-		quoted = append(quoted, lines[line-1])
+	cited := slices.Sorted(slices.Values(step.SourceLines))
+	first, last := cited[0], cited[0]
+	for _, line := range cited[1:] {
+		if line > last+1 {
+			break
+		}
+		last = line
 	}
-	snippet := strings.Join(quoted, "\n")
-	if len(snippet) > approvals.MaxEvidenceSnippet {
-		// Trimmed on a rune boundary: cutting mid-sequence would replace the
-		// last character with U+FFFD, so a quotation of the transcript would
-		// end in a glyph the transcript does not contain.
-		snippet = strings.ToValidUTF8(snippet[:approvals.MaxEvidenceSnippet], "")
-	}
-	return snippet
+	// Trimmed on a rune boundary: cutting mid-sequence would replace the last
+	// character with U+FFFD, a glyph the transcript does not contain.
+	return textcut.Bytes(strings.Join(lines[first-1:last], "\n"), approvals.MaxEvidenceSnippet)
 }
 
 // transcriptReadStore is the slice of the activities store this engine drives.

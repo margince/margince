@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { UnitSecretScope } from "../app/extensions";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { UnitSecretScope } from "../lib/extensions";
 import { ExtensionUnitsCard } from "./extension-units";
 import { StoryProviders } from "./story-utils";
 

@@ -21,8 +21,9 @@ func (h Handlers) UpdateActivity(w http.ResponseWriter, r *http.Request, id crmc
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	activity, err := h.store.UpdateActivity(r.Context(), pathID[ids.ActivityKind](id),
-		activityUpdateInput(req, ifVersion))
+	in := activityUpdateInput(req, ifVersion)
+	in.Clear = httperr.ClearedFields(r)
+	activity, err := h.store.UpdateActivity(r.Context(), pathID[ids.ActivityKind](id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -162,11 +163,11 @@ func (h Handlers) SetActivityAudience(w http.ResponseWriter, r *http.Request, id
 
 // SetActivityDisposition puts a waiting message down.
 //
-// The three judgements route to two stores because they bind differently:
-// `not_sales` settles the thread for everybody, while `snooze` and `not_mine`
-// are the caller's own. The transport keeps that split rather than flattening
-// it into one write with a scope flag, so a reader of this function can see
-// which decisions reach past the contact making them.
+// The four judgements route to two stores because they bind differently:
+// `not_sales` settles the thread for everybody, while `handled`, `snooze` and
+// `not_mine` are the caller's own. The transport keeps that split rather than
+// one write with a scope flag. A reader of this function then sees which
+// decisions reach past the contact making them.
 func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.SetActivityDispositionRequest
 	if !httperr.Decode(w, r, &req) {
@@ -190,6 +191,8 @@ func (h Handlers) SetActivityDisposition(w http.ResponseWriter, r *http.Request,
 		err = h.store.SetThreadNotSales(r.Context(), activityID)
 	case crmcontracts.SetActivityDispositionRequestDispositionNotMine:
 		err = h.store.SetMessageNotMine(r.Context(), activityID)
+	case crmcontracts.SetActivityDispositionRequestDispositionHandled:
+		err = h.store.MarkMessageHandled(r.Context(), activityID)
 	case crmcontracts.SetActivityDispositionRequestDispositionSnooze:
 		err = h.snoozeFromRequest(r, activityID, req)
 	default:

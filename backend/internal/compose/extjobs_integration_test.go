@@ -96,11 +96,7 @@ func startRunner(t *testing.T, pool *pgxpool.Pool) (*jobs.Runner, <-chan *river.
 // control, for the one assertion that is ABOUT what was logged.
 func startRunnerLogging(t *testing.T, pool *pgxpool.Pool, log *slog.Logger) (*jobs.Runner, <-chan *river.Event) {
 	t.Helper()
-	runner, err := NewJobRunner(pool, log, JobRunnerConfig{
-		CloseDateInterval: time.Hour,
-		ReconcileInterval: time.Hour,
-		TimeScanInterval:  time.Hour,
-	})
+	runner, err := NewJobRunner(pool, log, JobRunnerConfig{})
 	if err != nil {
 		t.Fatalf("NewJobRunner: %v", err)
 	}

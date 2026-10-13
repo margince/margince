@@ -5,7 +5,7 @@
 
 package gates
 
-// The browser and the server must scale money by the SAME table, or the integer
+// The browser and the server must scale money by the same table, or the integer
 // they exchange means two different amounts.
 //
 // This is not a hypothetical drift. The frontend module first read its digit

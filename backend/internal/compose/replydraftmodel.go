@@ -10,6 +10,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -188,8 +189,11 @@ func (d replyDrafter) completeWith(ctx context.Context, site draftSystem, activi
 // correction rides the user turn, so a plain draft told to fix a phrase stays a
 // plain draft rather than silently becoming a voiced one.
 func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, data replyActivityData, voiceBlock voiceBlockFor) (replyDraft, error) {
-	record := draftcheck.Grounds{Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent)}
-	return draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
+	record := draftcheck.Grounds{
+		Booked: data.Booked(), Met: draftcheck.IntentNamesMeeting(data.Intent),
+		FirstName: data.Recipient, LastName: data.RecipientLastName,
+	}
+	draft, err := draftcore.CorrectOnce(ctx, data.Lang(), data.Band(), record,
 		func(ctx context.Context, correction string) (replyDraft, error) {
 			return d.completeWith(ctx, site, data, voiceBlock, correction)
 		},
@@ -199,6 +203,23 @@ func (d replyDrafter) completeChecked(ctx context.Context, site draftSystem, dat
 		func(draft replyDraft) (string, bool) { return draft.Subject, data.Threaded() },
 		draftRetryLog{log: d.logger()},
 	)
+	return draft, err
+}
+
+// greeted is the draft with the floor's greeting added if it still opens
+// without one. Applied once a reply draft is settled, after every voice check,
+// so the floor never judges a line the model did not write.
+//
+// The greeting lengthens a body every earlier check already passed, so the
+// served draft is held to the bounds again; a refusal sends the caller to its
+// deterministic draft.
+func (data replyActivityData) greeted(draft replyDraft) (replyDraft, error) {
+	draft.Body = draftcheck.EnsureGreeting(draft.Body, data.Envelope,
+		draftcheck.Grounds{FirstName: data.Recipient, LastName: data.RecipientLastName})
+	if err := validateReplyDraft(draft); err != nil {
+		return replyDraft{}, err
+	}
+	return draft, nil
 }
 
 // draftRetryLog reports what the correction loop decided. A retry that does not
@@ -265,26 +286,18 @@ func replyDraftShapeValid(text string) error {
 
 func validateReplyDraft(draft replyDraft) error {
 	if strings.TrimSpace(draft.Subject) == "" {
-		return fmt.Errorf("compose: reply draft subject is empty")
+		return errors.New("compose: reply draft subject is empty")
 	}
 	if strings.ContainsAny(draft.Subject, "\r\n") {
-		return fmt.Errorf("compose: reply draft subject contains a line break")
+		return errors.New("compose: reply draft subject contains a line break")
 	}
 	if strings.TrimSpace(draft.Body) == "" {
-		return fmt.Errorf("compose: reply draft body is empty")
+		return errors.New("compose: reply draft body is empty")
 	}
 	if len([]rune(draft.Subject)) > replyDraftSubjectMaxRunes || len([]rune(draft.Body)) > replyDraftBodyMaxRunes {
-		return fmt.Errorf("compose: reply draft exceeds the supported length")
+		return errors.New("compose: reply draft exceeds the supported length")
 	}
 	return nil
-}
-
-func boundedRunes(value string, maxRunes int) string {
-	runes := []rune(value)
-	if len(runes) <= maxRunes {
-		return value
-	}
-	return string(runes[:maxRunes])
 }
 
 func stringValue(value *string) string {

@@ -1,14 +1,12 @@
-import type { UrlParams } from "../app/urlstate";
+import type { components } from "../api/schema";
 import { Field, SearchField } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
-import {
-  CALL_OUTCOMES,
-  type CallOutcome,
-  outcomeLabel,
-  taskLabel,
-} from "./aicalls-vocab";
+import type { UrlParams } from "../lib/urlstate";
+import { CALL_OUTCOMES, type CallOutcome, outcomeLabel } from "./aicalls-vocab";
+
+type TaskOption = components["schemas"]["AiCallTaskOption"];
 
 const WINDOWS = { any: 0, hour: 3_600_000, day: 86_400_000, week: 604_800_000 };
 type CallWindow = keyof typeof WINDOWS;
@@ -108,7 +106,7 @@ export function CallFiltersBar({
   onSearch,
   onChange,
 }: Readonly<{
-  tasks: readonly string[];
+  tasks: readonly TaskOption[];
   models: readonly string[];
   filters: CallFilters;
   search: string;
@@ -136,10 +134,13 @@ export function CallFiltersBar({
               value={filters.task}
               onChange={(task) => onChange({ ...filters, task })}
               // "All features" is a real option, so a reader who narrowed to one
-              // can come back. A task is a wire key, spelled here in words.
+              // can come back. A task with no name of its own shows its key.
               options={[
                 { value: "", label: t("aicalls.filter.all") },
-                ...tasks.map((value) => ({ value, label: taskLabel(value) })),
+                ...tasks.map((option) => ({
+                  value: option.task,
+                  label: option.display_name ?? option.task,
+                })),
               ]}
             />
           )}

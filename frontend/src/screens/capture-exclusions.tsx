@@ -1,27 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Flame, Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import {
   Button,
   EmptyState,
   Field,
   Modal,
+  OverflowMenu,
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { KeyedName } from "../design-system/keyedname";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { throwProblem, unwrap } from "../lib/problem";
 import { useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { captureValueMessage } from "./capturevalue";
+import {
+  type MutationOutcome,
+  useRowHandoff,
+  useUndoableRemoval,
+} from "./undoableremoval";
+import "./capture-exclusions.css";
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must not
 // store at all. Two scopes on one card, because a reader sees both kinds of
@@ -36,10 +50,6 @@ const SCOPES: readonly Scope[] = ["user", "workspace"];
 // The kinds this card offers. `container` is a PICKER rather than a text box:
 // a container rule stores a provider's own token — a Gmail label id, a Graph
 // folder id — so the list comes from the mailbox and the reader chooses a name.
-//
-// It is offered only where a mailbox can answer. A provider with no folders
-// answers 501, and the kind drops out rather than presenting a choice with
-// nothing behind it.
 const KINDS: readonly Kind[] = ["address", "domain", "container"];
 
 /** The company-wide rules, which are the ones a plain seat may not touch. */
@@ -60,42 +70,45 @@ function useExclusions() {
   });
 }
 
-function useAddExclusion() {
+type ExclusionBody = { scope: Scope; kind: Kind; value: string };
+
+// Without an outcome it is the dialog's add. With one it is an Undo putting a
+// removed rule back, which says so in its own words.
+function useAddExclusion(outcome?: MutationOutcome<ExclusionBody>) {
   const toast = useToast();
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { scope: Scope; kind: Kind; value: string }) => {
-      const { data, error } = await api.POST("/capture/exclusions", { body });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+    mutationFn: async (body: ExclusionBody) => {
+      return unwrap(await api.POST("/capture/exclusions", { body }));
     },
+    onError: outcome?.onError,
     onSuccess: (_written, added) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
+      if (outcome) {
+        outcome.onSuccess(added);
+        return;
+      }
       toast.show(t("settings.addedItem", { name: added.value }));
     },
   });
 }
 
-function useRemoveExclusion() {
-  const toast = useToast();
-  const t = useT();
+function useRemoveExclusion(outcome: MutationOutcome<ExclusionBody | null>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await api.DELETE("/capture/exclusions/{id}", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+    mutationFn: async (rule: CaptureExclusion): Promise<ExclusionBody> => {
+      unwrap(
+        await api.DELETE("/capture/exclusions/{id}", {
+          params: { path: { id: rule.id } },
+        }),
+      );
+      return { scope: rule.scope, kind: rule.kind, value: rule.value };
     },
-    onSuccess: () => {
+    onError: outcome.onError,
+    onSuccess: (removed) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
-      // The variable is the row id; see the note in consumer-mail-domains.
-      toast.show(t("settings.removed"));
+      outcome.onSuccess(removed);
     },
   });
 }
@@ -119,8 +132,8 @@ export function CaptureExclusionsCard() {
   const t = useT();
   const canManageWorkspace = useCanWrite("capture_settings", "update");
   const query = useExclusions();
-  const remove = useRemoveExclusion();
   const [excluding, setExcluding] = useState(false);
+  const addVerb = useRef<HTMLButtonElement>(null);
   // The rule whose already-captured mail is being destroyed, held by id AND
   // value so the dialog can name what it is about to act on.
   const [purging, setPurging] = useState<{ id: string; value: string } | null>(
@@ -150,107 +163,70 @@ export function CaptureExclusionsCard() {
       // their OWN correspondent out — the dialog refuses the scope that binds
       // everyone, where that choice is made.
       titleAction={
-        <Button onClick={() => setExcluding(true)}>
+        <Button ref={addVerb} onClick={() => setExcluding(true)}>
           {t("captureExclusions.addOpen")}
         </Button>
       }
     >
-      {/* `form-stack` stays: the denial sentence and the failure Callout under
-          the list are non-row children, and the list owns only the intervals
-          BETWEEN its rows. */}
-      <PanelBody className="form-stack">
+      <PanelBody>
         <PanelIntro>{t("captureExclusions.sub")}</PanelIntro>
-        <SettingList>
-          {/* The rules are the subject of this card, not an answer beside a
-              question, so they take the row's full width. The irreversibility
-              note sits here rather than beside the header verb, because it
-              describes what BOTH acts on this card do — adding a rule and
-              taking one back. */}
-          <SettingRow
-            label={t("captureExclusions.current")}
-            description={t("captureExclusions.notRetroactive")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("captureExclusions.current")}
-              >
-                {(list) => (
-                  <ExclusionRows
-                    list={list.data}
-                    canManageWorkspace={canManageWorkspace}
-                    denialId={denialId}
-                    pending={remove.isPending}
-                    onRemove={(id) => remove.mutate(id)}
-                    onPurge={(id, value) => setPurging({ id, value })}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {refusesARow && <p id={denialId}>{t("captureSettings.adminOnly")}</p>}
-        {remove.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("captureSettings.removeFailed")}
-          >
-            {problemMessageOf(remove.error, t)}
-          </Callout>
-        )}
-        {excluding && (
-          <ExcludeDialog
-            canManageWorkspace={canManageWorkspace}
-            onClose={() => setExcluding(false)}
-          />
-        )}
-        {purging && (
-          <PurgeDialog
-            ruleId={purging.id}
-            ruleValue={purging.value}
-            onClose={() => setPurging(null)}
-          />
-        )}
       </PanelBody>
+      <PanelGroupHead title={t("captureExclusions.current")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("captureExclusions.notRetroactive")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("captureExclusions.current")}>
+        {(list) => (
+          <ExclusionRows
+            list={list.data}
+            canManageWorkspace={canManageWorkspace}
+            denialId={denialId}
+            landing={() => addVerb.current}
+            onPurge={(id, value) => setPurging({ id, value })}
+          />
+        )}
+      </QueryGate>
+      {refusesARow && (
+        <PanelBody>
+          <p id={denialId}>{t("captureSettings.adminOnly")}</p>
+        </PanelBody>
+      )}
+      {excluding && (
+        <ExcludeDialog
+          canManageWorkspace={canManageWorkspace}
+          onClose={() => setExcluding(false)}
+        />
+      )}
+      {purging && (
+        <PurgeDialog
+          ruleId={purging.id}
+          ruleValue={purging.value}
+          onClose={() => setPurging(null)}
+        />
+      )}
     </Panel>
   );
 }
 
-/**
- * One rule per row: the address or domain it names on the left, who it binds
- * and what kind of rule it is as the row's answer, and the verb that takes it
- * back at the right.
- *
- * It was a hand-rolled `<ul>` with an inline-styled `<li>` and an inline
- * `marginLeft` on the meta beside each entry — the same list own-domains.tsx
- * had copied, which is the signal the shape belongs to the row language rather
- * than to either screen. `SettingList` draws the hairline between entries and
- * `SettingRow` puts every verb at one x, so a reader auditing the rules travels
- * one column instead of reading a wall.
- */
+/** One rule per row: what it names, who it binds and its kind under it. */
 function ExclusionRows({
   list,
   canManageWorkspace,
   denialId,
-  pending,
-  onRemove,
+  landing,
   onPurge,
 }: Readonly<{
   list: CaptureExclusion[];
   canManageWorkspace: boolean;
   /** The one sentence saying why a company-wide rule is not this reader's. */
   denialId: string;
-  pending: boolean;
-  onRemove: (id: string) => void;
+  landing: () => HTMLElement | null;
   onPurge: (id: string, value: string) => void;
 }>) {
   const t = useT();
-  const words = useRuleWords();
   if (list.length === 0) {
     // `empty`, and only `empty`: nothing is excluded, which is a fact about the
-    // installation rather than a read that failed. The row caps and
-    // left-aligns it already (settingrow.css), so there is nothing to undo here.
+    // installation rather than a read that failed.
     return (
       <EmptyState>
         <p data-testid="capture-exclusions-empty">
@@ -260,50 +236,80 @@ function ExclusionRows({
     );
   }
   return (
-    <SettingList testId="capture-exclusions-list">
+    <SettingList bleed="records" testId="capture-exclusions-list">
       {list.map((rule) => (
-        <SettingRow
+        <ExclusionRow
           key={rule.id}
-          label={rule.value}
-          value={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
-          control={
-            <>
-              {/* Removing the RULE stops future capture; the other destroys
-                  what it already matched. Two different acts, and only one of
-                  them is irreversible, so they are two controls. */}
-              <Button
-                variant="ghost"
-                aria-label={t("capturePurge.open", { value: rule.value })}
-                disabled={pending}
-                reasonId={
-                  bindsEveryone(rule) && !canManageWorkspace
-                    ? denialId
-                    : undefined
-                }
-                onClick={() => onPurge(rule.id, rule.value)}
-              >
-                <Flame aria-hidden />
-              </Button>
-              <Button
-                variant="ghost"
-                aria-label={t("captureExclusions.remove", {
-                  value: rule.value,
-                })}
-                disabled={pending}
-                reasonId={
-                  bindsEveryone(rule) && !canManageWorkspace
-                    ? denialId
-                    : undefined
-                }
-                onClick={() => onRemove(rule.id)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
-            </>
+          rule={rule}
+          refusal={
+            bindsEveryone(rule) && !canManageWorkspace ? denialId : undefined
           }
+          landing={landing}
+          onPurge={() => onPurge(rule.id, rule.value)}
         />
       ))}
     </SettingList>
+  );
+}
+
+// Removing the rule stops future capture and comes back with Undo; deleting
+// what it already matched cannot be undone, so that verb keeps its dialog.
+function ExclusionRow({
+  rule,
+  refusal,
+  landing,
+  onPurge,
+}: Readonly<{
+  rule: CaptureExclusion;
+  refusal: string | undefined;
+  landing: () => HTMLElement | null;
+  onPurge: () => void;
+}>) {
+  const t = useT();
+  const verbs = useRowHandoff(landing);
+  const words = useRuleWords();
+  const toasts = useUndoableRemoval<ExclusionBody>({
+    removed: t("settings.removedItem", { name: rule.value }),
+    restored: t("settings.addedItem", { name: rule.value }),
+  });
+  const restore = useAddExclusion(toasts.restored);
+  const remove = useRemoveExclusion(
+    toasts.removed((body) => restore.mutate(body)),
+  );
+  return (
+    <SettingRow
+      label={
+        rule.kind === "container" ? (
+          <KeyedName name={rule.value} code={rule.value} />
+        ) : (
+          <span className="capture-exclusions-value">{rule.value}</span>
+        )
+      }
+      description={[
+        words.scope[rule.scope],
+        words.kind[rule.kind],
+        rule.created_by_name &&
+          t("captureExclusions.addedBy", { name: rule.created_by_name }),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      control={
+        <span className="cell-actions" ref={verbs}>
+          <OverflowMenu label={t("table.rowActions", { name: rule.value })}>
+            <Button
+              disabled={remove.isPending}
+              reasonId={refusal}
+              onClick={() => remove.mutate(rule)}
+            >
+              {t("captureExclusions.removeRule")}
+            </Button>
+            <Button aria-haspopup="dialog" reasonId={refusal} onClick={onPurge}>
+              {t("capturePurge.openShort")}
+            </Button>
+          </OverflowMenu>
+        </span>
+      }
+    />
   );
 }
 
@@ -318,6 +324,7 @@ function ExcludeDialog({
   const add = useAddExclusion();
   const headingId = useId();
   const denialId = useId();
+  const formId = useId();
   const [scope, setScope] = useState<Scope>("user");
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
@@ -337,11 +344,12 @@ function ExcludeDialog({
   const refused = effectiveScope === "workspace" && !canManageWorkspace;
   const value = draft.trim();
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("captureExclusions.addLabel")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -419,7 +427,7 @@ function ExcludeDialog({
           )}
         {/* A list that stopped short is still worth showing, and saying so is
             what keeps a missing folder from reading as a folder that does not
-            exist. The hand-typed fallback beneath it is the way out. */}
+            exist. */}
         {picking &&
           !folders.isPending &&
           !folders.isError &&
@@ -439,23 +447,24 @@ function ExcludeDialog({
             kind="outcome"
             title={t("captureSettings.addFailed")}
           >
-            {problemMessageOf(add.error, t)}
+            {captureValueMessage(add.error, add.variables?.kind, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={add.isPending || value === ""}
-            reasonId={refused ? denialId : undefined}
-          >
-            {t("captureExclusions.add")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={add.isPending || value === ""}
+          reasonId={refused ? denialId : undefined}
+        >
+          {t("captureExclusions.add")}
+        </Button>
+      </div>
     </Modal>
   );
 }

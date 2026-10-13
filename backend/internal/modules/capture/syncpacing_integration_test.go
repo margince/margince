@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -113,19 +115,19 @@ func TestARefusedSyncPacesTheRetryOnTheLadder(t *testing.T) {
 	pacedWithin(ctx, t, "imap", time.Minute, time.Hour)
 }
 
-// A healthy sync paces the next one at the interval the worker was configured
-// with — the flag's value, honoured in the units the flag is written in.
+// A healthy sync paces the next one at the interval an admin set, read when
+// the sync records itself — so a change reaches the very next sync.
 func TestAHealthySyncPacesTheNextOneAtTheConfiguredInterval(t *testing.T) {
-	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	// Distinctive on purpose: the default is two minutes, so an interval that
 	// never reached the write would still land inside any bound wide enough to
 	// hold the default, and this test would pass on the wrong number.
-	reg.WithSyncInterval(90 * time.Minute)
+	setMailSyncSeconds(ctx, t, ws, 3600)
 
 	if err := syncOnceOf(ctx, t, reg, "gmail"); err != nil {
 		t.Fatalf("SyncOnce: %v", err)
 	}
-	pacedWithin(ctx, t, "gmail", 85*time.Minute, 90*time.Minute)
+	pacedWithin(ctx, t, "gmail", 55*time.Minute, 60*time.Minute)
 }
 
 // A rate-limit honours the provider's Retry-After when it is longer than the
@@ -142,4 +144,36 @@ func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
 	// The ladder's early rungs are minutes, so a schedule near three hours can
 	// only have come from the Retry-After.
 	pacedWithin(ctx, t, "graph", 175*time.Minute, 3*time.Hour)
+}
+
+// setMailSyncSeconds saves the mail-sync interval the way an admin does,
+// through the capture settings store, and saves the default back when the test
+// ends: the setting is installation-wide and the package's other tests pace at
+// the default.
+func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, seconds int) {
+	t.Helper()
+	_, pool := setupCaptureDB(t)
+	store := capture.NewSettings(settings.New(pool, settings.NewRegistry(capture.Definitions()...)))
+	save := func(ctx context.Context, value int) error {
+		admin := principal.WithWorkspaceID(ctx, ws.UUID)
+		admin = principal.WithCorrelationID(admin, ids.NewV7())
+		admin = principal.WithActor(admin, principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+			SeatType: principal.SeatFull,
+			Permissions: principal.Permissions{
+				Objects:  map[string]principal.ObjectGrant{"capture_settings": {Read: true, Update: true}},
+				RowScope: principal.RowScopeAll,
+			},
+		})
+		_, err := store.Update(admin, capture.SettingsPatch{MailSyncIntervalSeconds: &value})
+		return err
+	}
+	if err := save(ctx, seconds); err != nil {
+		t.Fatalf("saving the mail sync interval: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := save(context.Background(), capture.DefaultMailSyncIntervalSeconds); err != nil {
+			t.Errorf("restoring the mail sync interval: %v", err)
+		}
+	})
 }

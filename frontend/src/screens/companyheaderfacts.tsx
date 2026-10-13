@@ -3,19 +3,21 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Popover } from "../design-system/popover";
+import { provenanceOf } from "../design-system/provenanceof";
 import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { provenanceOf, useViewerId } from "./common";
+import { useMemberName } from "../lib/membernames";
+import { useRecordZone } from "../lib/recordzone";
+import { useViewerId } from "../lib/session";
 import {
   CompanyOwnerControl,
   companyWebsite,
   displayHost,
 } from "./companyheader";
-import { EntityRef, useRoster } from "./entityref";
+import { EntityRef } from "./entityref";
 
 // The account's name-line subtitle and its facts strip: what CompanyIdentityLine
 // used to draw as one running sentence, in the contact record page's own
@@ -25,15 +27,18 @@ type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
 
 /**
- * CompanySubtitle is the name line's own subtitle, beside the name rather
- * than under everything else the header carries: what the account is, and
- * the one way in every reader already knows, the same inline shape
- * contactpage.tsx's ContactSubtitle draws for a contact's title and employer.
+ * CompanySubtitle is what the account is and the one way in every reader
+ * already knows, leading the marks row under the name (CompanyMarks). The
+ * name's own line holds the lifecycle control alone. Nothing is drawn for an
+ * account with neither, so the row does not open on an empty gap.
  */
 export function CompanySubtitle({
   company,
 }: Readonly<{ company: Company }>): ReactNode {
   const website = companyWebsite(company);
+  if (!company.industry && !website) {
+    return null;
+  }
   return (
     <div className="record-sub record-sub-inline">
       {company.industry}
@@ -71,7 +76,16 @@ export function CompanyIdentityFacts({
   const { locale } = useLocale();
   const zone = useRecordZone();
   const viewerId = useViewerId();
-  const roster = useRoster("user", true);
+  const provenance = provenanceOf(
+    company.captured_by,
+    viewerId,
+    company.author,
+  );
+  // Named by id, the same read every author/owner tag resolves through,
+  // asked for only when the provenance names a human at all.
+  const authorName = useMemberName(
+    provenance.kind === "human" ? provenance.userId : undefined,
+  );
   const website = companyWebsite(company);
   const wayIn = loading ? undefined : view?.strength;
   return (
@@ -117,12 +131,8 @@ export function CompanyIdentityFacts({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(
-                company.captured_by,
-                viewerId,
-                company.author,
-              )}
-              renderUser={companyAuthorName(roster.data)}
+              provenance={provenance}
+              renderUser={() => authorName.data ?? undefined}
             />
           }
         >
@@ -131,17 +141,4 @@ export function CompanyIdentityFacts({
       </Fact>
     </RecordFacts>
   );
-}
-
-// Resolves a `captured_by` human id to the name the owner control already
-// reads off the same roster, rather than the generic "typed by a person" the
-// tag falls back to without one: the header has always had the roster in
-// hand, so a record every colleague can see is named for who wrote it.
-function companyAuthorName(
-  roster: ReturnType<typeof useRoster>["data"],
-): (userId: string) => ReactNode {
-  return (userId: string) => {
-    const entry = roster?.find((candidate) => candidate.id === userId);
-    return entry && "display_name" in entry ? entry.display_name : undefined;
-  };
 }

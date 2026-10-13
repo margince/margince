@@ -27,8 +27,11 @@ package compose
 // not serve a declared verb advertises something tools/list cannot offer.
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -41,6 +44,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// importRunGrant is migration.ImportRunObject spelled as a literal. The
+// grant-reachability scan resolves only literals and same-package constants, so
+// a qualified name would leave each door below it uncounted.
+// importerobject_test.go pins the two spellings together.
+const importRunGrant = "import_run"
 
 // importSeam adapts the import handlers to the agents module's Imports port.
 type importSeam struct {
@@ -104,20 +113,19 @@ func (i importSeam) ProfileSource(
 	// import_run grant could call preview_import repeatedly, leaving an orphan
 	// blob each time before the refusal arrived — storage a stranger can spend,
 	// and a probe of whether their CSV parses.
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	return i.door().profileAndStore(ctx, object, []byte(csv))
+	return i.door().profileAndStore(ctx, object, "", []byte(csv))
 }
 
-// DiscardSource removes a stored source no run will reference. Same grant as
-// storing it: a caller who may create an import run may drop the file they just
-// uploaded for one, and nobody else may reach into the store at all.
+// DiscardSource ends the draft a stored source opened, releasing its file.
+// Storing it took this grant, and nobody without it may reach into the store.
 func (i importSeam) DiscardSource(ctx context.Context, ref string) error {
-	if err := auth.Require(ctx, migration.ImportRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
 		return err
 	}
 	if err := i.ready(); err != nil {
@@ -143,34 +151,97 @@ func (i importSeam) ReadRun(ctx context.Context, id ids.UUID) (crmcontracts.Impo
 	return toContractImportRun(run), nil
 }
 
-func (i importSeam) ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.ImportRunReport, error) {
+// ReadReport answers the run and its report, which is nil until validation
+// has produced one. The REST door answers 409 there instead; a poller after a
+// commit reads the state.
+func (i importSeam) ReadReport(
+	ctx context.Context, id ids.UUID,
+) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
 	run, err := i.door().stagedFor(ctx, openapi_types.UUID(id))
 	if err != nil {
-		return crmcontracts.ImportRunReport{}, err
+		return crmcontracts.ImportRun{}, nil, err
 	}
 	if run.Report == nil {
-		// The same 409 the REST door gives, and for the same reason: a run
-		// that has not been validated has no report, and answering an empty
-		// one would read as "this import will do nothing".
-		return crmcontracts.ImportRunReport{}, fmt.Errorf(
-			"import run %s has not been validated yet: %w", run.ID, apperrors.ErrConflict)
+		return toContractImportRun(run), nil, nil
 	}
-	return toContractImportReport(run), nil
+	report := toContractImportReport(run)
+	return toContractImportRun(run), &report, nil
+}
+
+// DescribeFormat answers the format the template and the column guide read,
+// in the installation's language.
+func (i importSeam) DescribeFormat(ctx context.Context) (crmcontracts.ImportFormat, error) {
+	door := i.door()
+	limitMB, err := door.uploadLimitMB()
+	if err != nil {
+		return crmcontracts.ImportFormat{}, err
+	}
+	return buildImportFormat(ctx, door.db, installationLanguage(door.db.Pool())(ctx), limitMB)
+}
+
+// ProfileFiles zips the files and profiles the ZIP as an upload is. Each
+// entry takes its type's template name, which is how a bundle matches a file
+// to a type. The grant is taken before anything is stored, as ProfileSource
+// does.
+func (i importSeam) ProfileFiles(
+	ctx context.Context, files []agents.ImportFile,
+) (crmcontracts.ImportSourceProfile, error) {
+	if err := auth.Require(ctx, importRunGrant, principal.ActionCreate); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
+	if err := i.ready(); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
+	body, err := zipImportFiles(files)
+	if err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
+	return i.door().profileBundle(ctx, importUpload{FileName: pastedBundleName, Body: body})
+}
+
+// pastedBundleName is the file name a pasted bundle is stored under. It is
+// what a run without a source name suggests as one.
+const pastedBundleName = "import.zip"
+
+// zipImportFiles writes each file at its type's template name.
+func zipImportFiles(files []agents.ImportFile) ([]byte, error) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, f := range files {
+		name := migration.FileNameFor(f.Object)
+		if name == "" {
+			return nil, fmt.Errorf("an import takes no %q file: %w", f.Object, apperrors.ErrInvalidArgument)
+		}
+		w, err := zw.Create(name)
+		if err != nil {
+			return nil, fmt.Errorf("zipping %s: %w", name, err)
+		}
+		if _, err := io.WriteString(w, f.CSV); err != nil {
+			return nil, fmt.Errorf("zipping %s: %w", name, err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		return nil, fmt.Errorf("closing the import zip: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.ImportRun, error) {
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	return i.door().commitRun(ctx, openapi_types.UUID(id))
+	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
+
+// errNoImportQueue refuses a commit on a role that cannot queue the worker's
+// job, which is where every commit now runs.
+var errNoImportQueue = fmt.Errorf("this role queues no import work, so it cannot commit an import: %w", apperrors.ErrConflict)
 
 // ready refuses the three verbs that need the source bytes when this role
 // stores no objects.
 //
-// The two pure reads do not call it: reading a run's state or its report only
-// touches the database, and refusing those for want of a blobstore would hide
-// a run that genuinely exists.
+// The reads do not call it. They touch only the database, and refusing them
+// for want of a blobstore would hide a run that exists.
 func (i importSeam) ready() error {
 	if i.door().blobs == nil {
 		return errNoObjectStore

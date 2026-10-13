@@ -5,7 +5,8 @@
 
 package gates
 
-// What booking a meeting CLAIMS and what it DOES, held against each other.
+// What booking a meeting claims to do and what it does, held against each
+// other.
 //
 // `POST /bookings` accepted `attendee_emails`, decoded them into a struct field,
 // and dropped them. The contract said it "sends an invite" and the screen said
@@ -182,10 +183,10 @@ func bookMeetingDescription(t *testing.T, contract string) string {
 			"nothing", op)
 	}
 	rest := contract[start:]
-	end := strings.Index(rest, "x-mcp-tool:")
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, "x-mcp-tool:")
+	if !ok {
 		t.Fatal("bookMeeting declares no x-mcp-tool, which is where its prose ends — " +
 			"re-derive this gate's bounds from the operation's current shape")
 	}
-	return rest[:end]
+	return before
 }

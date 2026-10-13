@@ -28,8 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func strptr(s string) *string { return &s }
-
 func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
@@ -43,11 +41,11 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 
 	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
-		Website:     strptr("https://www.acme.example/about"),
+		Website:     new("https://www.acme.example/about"),
 		Fields: map[string]*string{
-			"legal_name":    strptr("Acme Gesellschaft mit beschränkter Haftung"),
-			"offer_summary": strptr("Revenue operations software"),
-			"icp":           strptr("RevOps at SaaS scale-ups"),
+			"legal_name":    new("Acme Gesellschaft mit beschränkter Haftung"),
+			"offer_summary": new("Revenue operations software"),
+			"icp":           new("RevOps at SaaS scale-ups"),
 			// A field nobody filled stays absent rather than becoming "".
 			"usp": nil,
 		},
@@ -108,7 +106,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	// A second save updates the anchor rather than minting a rival company.
 	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme SE",
-		Fields:      map[string]*string{"icp": strptr("RevOps at enterprise")},
+		Fields:      map[string]*string{"icp": new("RevOps at enterprise")},
 	}); err != nil {
 		t.Fatalf("second SaveCompany: %v", err)
 	}
@@ -126,7 +124,7 @@ func TestCompanyIsUnsetUntilAHumanSavesIt(t *testing.T) {
 	// A field sent empty is cleared, not stored as the empty answer.
 	cleared, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme SE",
-		Fields:      map[string]*string{"icp": strptr("")},
+		Fields:      map[string]*string{"icp": new("")},
 	})
 	if err != nil {
 		t.Fatalf("clearing SaveCompany: %v", err)
@@ -148,18 +146,18 @@ func TestCompanyWebsiteCanBeChangedAfterTheFirstSave(t *testing.T) {
 	base := contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Fields: map[string]*string{
-			"legal_name": strptr("Acme GmbH"), "registered_address": strptr("Berlin"),
-			"register_vat": strptr("DE123"), "industry": strptr("Software"),
+			"legal_name": new("Acme GmbH"), "registered_address": new("Berlin"),
+			"register_vat": new("DE123"), "industry": new("Software"),
 		},
 	}
 	first := base
-	first.Website = strptr("https://old.example")
+	first.Website = new("https://old.example")
 	if _, err := store.SaveCompany(ctx, first); err != nil {
 		t.Fatalf("first SaveCompany: %v", err)
 	}
 
 	moved := base
-	moved.Website = strptr("https://new.example")
+	moved.Website = new("https://new.example")
 	got, err := store.SaveCompany(ctx, moved)
 	if err != nil {
 		t.Fatalf("changing the website: %v", err)
@@ -207,8 +205,8 @@ func TestCompanySavedByAHumanSurvivesALaterReadBack(t *testing.T) {
 
 	saved, err := store.SaveCompany(human, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
-		Website:     strptr("https://acme.example"),
-		Fields:      map[string]*string{"icp": strptr("What the human says we sell to")},
+		Website:     new("https://acme.example"),
+		Fields:      map[string]*string{"icp": new("What the human says we sell to")},
 	})
 	if err != nil {
 		t.Fatalf("SaveCompany: %v", err)
@@ -267,8 +265,8 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	// The first form save fills the empty header line from the summary.
 	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
-		Website:     strptr("https://acme.example"),
-		Fields:      map[string]*string{"offer_summary": strptr("Revenue operations software")},
+		Website:     new("https://acme.example"),
+		Fields:      map[string]*string{"offer_summary": new("Revenue operations software")},
 	})
 	if err != nil {
 		t.Fatalf("SaveCompany: %v", err)
@@ -289,7 +287,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 
 	// The header's inline edit is the one editor of a standing value.
 	if _, err := store.UpdateCompany(ctx, saved.CompanyID, contacts.UpdateCompanyInput{
-		Description: strptr("The RevOps platform for manufacturers"),
+		Description: new("The RevOps platform for manufacturers"),
 	}); err != nil {
 		t.Fatalf("UpdateCompany: %v", err)
 	}
@@ -298,7 +296,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	// must survive it.
 	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
-		Fields:      map[string]*string{"offer_summary": strptr("Revenue operations software")},
+		Fields:      map[string]*string{"offer_summary": new("Revenue operations software")},
 	}); err != nil {
 		t.Fatalf("second SaveCompany: %v", err)
 	}
@@ -512,10 +510,10 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 
 	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
-		Website:     strptr("https://acme.example"),
+		Website:     new("https://acme.example"),
 		Fields: map[string]*string{
-			"offer_summary": strptr("Revenue operations software"),
-			"icp":           strptr("Mid-market manufacturers"),
+			"offer_summary": new("Revenue operations software"),
+			"icp":           new("Mid-market manufacturers"),
 		},
 	})
 	if err != nil {
@@ -562,7 +560,7 @@ func TestCompanyContextIsScopedProvenanceBearingAndChangesWithTheProfile(t *test
 	if _, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: saved.DisplayName,
 		Fields: map[string]*string{
-			"offer_summary": strptr("Revenue intelligence software"),
+			"offer_summary": new("Revenue intelligence software"),
 		},
 	}); err != nil {
 		t.Fatal(err)
@@ -592,8 +590,8 @@ func TestTheCompanyReadSurvivesAFactNobodyScored(t *testing.T) {
 	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Fields: map[string]*string{
-			"offer_summary": strptr("Revenue operations software"),
-			"icp":           strptr("RevOps at SaaS scale-ups"),
+			"offer_summary": new("Revenue operations software"),
+			"icp":           new("RevOps at SaaS scale-ups"),
 		},
 	})
 	if err != nil {

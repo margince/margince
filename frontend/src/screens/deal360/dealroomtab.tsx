@@ -17,9 +17,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useCanWrite } from "../../app/capability";
-import { navigate } from "../../app/router";
-
 import {
   Button,
   EmptyState,
@@ -30,9 +27,12 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryStates } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, QueryStates, throwProblem } from "../common";
+import { useCanWrite } from "../../lib/capability";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import { navigate } from "../../lib/router";
 import { FINISHED_STATES, refusalFor, useDealRoom } from "../dealroom";
 import {
   buyerLink,
@@ -166,16 +166,16 @@ export function RoomText({
       welcome: string;
       version: number;
     }) => {
-      const { error } = await api.PATCH("/deal-rooms/{id}", {
-        params: { path: { id: room.id }, ...ifMatch(input.version) },
-        body: {
-          title: input.title,
-          welcome_message: input.welcome === "" ? null : input.welcome,
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
+      unwrap(
+        await api.PATCH("/deal-rooms/{id}", {
+          params: { path: { id: room.id }, ...ifMatch(input.version) },
+          body: {
+            title: input.title,
+            welcome_message: input.welcome === "" ? null : input.welcome,
+          },
+        }),
+        t,
+      );
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["deal-rooms", room.deal_id] }),
@@ -248,13 +248,12 @@ function OpenRoomCard({
   );
   const create = useMutation({
     mutationFn: async (roomTitle: string) => {
-      const { data, error } = await api.POST("/deal-rooms", {
-        body: { deal_id: dealId, title: roomTitle, source: "manual" },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms", {
+          body: { deal_id: dealId, title: roomTitle, source: "manual" },
+        }),
+        t,
+      );
     },
     // No navigation: the tab is already where a rep landed, and invalidating
     // the room read is what turns this same tab into the reading it just
@@ -291,6 +290,7 @@ function OpenRoomCard({
         open={creating}
         onClose={() => setCreating(false)}
         title={t("room.create.open")}
+        intent="form"
         confirmLabel={t("room.create.confirm")}
         confirmDisabled={title.trim() === ""}
         pending={create.isPending}
@@ -322,13 +322,12 @@ export function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const preview = useMutation({
     mutationFn: async (roomId: string) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/preview", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/preview", {
+          params: { path: { id: roomId } },
+        }),
+        t,
+      );
     },
     onSuccess: (data) => {
       if (data) {

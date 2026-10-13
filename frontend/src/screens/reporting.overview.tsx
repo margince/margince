@@ -1,25 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
-import { currentParams, replaceParams, useUrlParams } from "../app/urlstate";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { type ISODate, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
-import { Select } from "../design-system/select";
+import { FilterBar } from "../design-system/filterbar";
+import { QueryGate } from "../design-system/querystates";
 import { formatDateTime } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { replaceDial, useUrlParams } from "../lib/urlstate";
+import { AnalyticsAttention } from "./analytics.attention";
 import type { AnalyticsScope } from "./analytics.context";
-import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import {
+  type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
@@ -31,23 +34,20 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 
 export function ReportingOverview({
   scope,
-}: Readonly<{ scope: AnalyticsScope }>) {
+  scopeControl,
+}: Readonly<{ scope: AnalyticsScope; scopeControl?: ReactNode }>) {
   const t = useT();
   const catalog = useQuery({
     queryKey: ["reporting-catalog"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/metrics");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/metrics"));
     },
   });
   const pipelines = useReportingPipelines();
   const setup = useQuery({
     queryKey: ["reporting-overview-setup"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/framework");
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(await api.GET("/analytics/framework"));
     },
   });
   return (
@@ -59,6 +59,7 @@ export function ReportingOverview({
               {(pipelines) => (
                 <OverviewBody
                   scope={scope}
+                  scopeControl={scopeControl}
                   catalog={catalog}
                   template={setup.definition.template}
                   pipelines={pipelines.data}
@@ -77,28 +78,23 @@ function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
 ) {
   const [params] = useUrlParams();
-  const setParam = (key: string, value: string) => {
-    const next = new Map(currentParams());
-    next.set(key, value);
-    replaceParams(next);
-  };
   const template =
     params.get("view") === "sdr"
       ? "sdr"
       : params.get("view") === "sales"
         ? "sales"
         : defaultTemplate;
-  const setTemplate = (value: string) => setParam("view", value);
+  const setTemplate = (value: string) => replaceDial("view", value);
   const from = params.get("from") ?? "";
   const through = params.get("through") ?? "";
   const start: ISODate | "" = isISODate(from) ? from : "";
   const end: ISODate | "" = isISODate(through) ? through : "";
-  const setStart = (value: string) => setParam("from", value);
-  const setEnd = (value: string) => setParam("through", value);
+  const setStart = (value: string) => replaceDial("from", value);
+  const setEnd = (value: string) => replaceDial("through", value);
   const period =
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
     "this_month";
-  const setPeriod = (value: string) => setParam("period", value);
+  const setPeriod = (value: string) => replaceDial("period", value);
   const defaultPipeline =
     pipelines.find((pipeline) => pipeline.is_default)?.id ??
     pipelines[0]?.id ??
@@ -108,13 +104,14 @@ function useOverviewFilters(
       ? ""
       : (pipelines.find((pipeline) => pipeline.id === params.get("pipeline"))
           ?.id ?? defaultPipeline);
-  const setPipelineId = (value: string) => setParam("pipeline", value || "all");
+  const setPipelineId = (value: string) =>
+    replaceDial("pipeline", value || "all");
   const targetBasis: ReportingSelection["target_basis"] =
     period === "this_quarter" ? "fiscal_quarter" : "month";
-  const setTargetBasis = (value: string) => setParam("target", value);
+  const setTargetBasis = (value: string) => replaceDial("target", value);
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
-  const setCloseWindow = (value: string) => setParam("close", value);
+  const setCloseWindow = (value: string) => replaceDial("close", value);
   return {
     template,
     setTemplate,
@@ -135,11 +132,13 @@ function useOverviewFilters(
 
 function OverviewBody({
   scope,
+  scopeControl,
   catalog,
   template: defaultTemplate,
   pipelines,
 }: Readonly<{
   scope: AnalyticsScope;
+  scopeControl?: ReactNode;
   catalog: Catalog;
   template: "sales" | "sdr";
   pipelines: readonly components["schemas"]["Pipeline"][];
@@ -212,11 +211,11 @@ function OverviewBody({
     enabled: validPeriod,
     queryKey: ["reporting-evaluation", selection],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/evaluate", {
-        params: { query: reportingQuery(selection) },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/analytics/evaluate", {
+          params: { query: reportingQuery(selection) },
+        }),
+      );
     },
   });
   const contextKey = JSON.stringify(selection);
@@ -224,7 +223,28 @@ function OverviewBody({
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
-      <div className="reporting-controlbar">
+      <FilterBar
+        label={t("analytics.filters")}
+        actions={
+          <>
+            {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                onClick={() => setSaving(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.save")}
+              </Button>
+            )}
+          </>
+        }
+        caption={
+          validPeriod
+            ? resultsThrough(query.data, locale, t)
+            : t("reporting.chooseDates")
+        }
+      >
+        {scopeControl}
         <SegmentedControl
           label={t("reporting.view")}
           options={["sales", "sdr"]}
@@ -238,7 +258,7 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={false}
+          showCloseWindow={template === "sales"}
           showPipeline={template === "sales"}
           showTargets={false}
           dates={{
@@ -269,60 +289,19 @@ function OverviewBody({
             setEvidence(null);
           }}
         />
-        <div className="reporting-header-actions">
-          {query.data && <ReportingExportButton evaluation={query.data} />}
-          {canSave && (
-            <Button onClick={() => setSaving(true)} disabled={!query.isSuccess}>
-              {t("reporting.save")}
-            </Button>
-          )}
-        </div>
-      </div>
-      {!validPeriod && <p role="status">{t("reporting.chooseDates")}</p>}
+      </FilterBar>
       {invalidSelection && <ErrorLine error={query.error} />}
+      {/* Its sources are its own, so a failed or unasked evaluation does not
+          take the list down with it. */}
+      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
             <>
-              {evaluation.context.interval.end_at ===
-                evaluation.context.evaluated_at && (
-                <p className="t-caption" role="status">
-                  {t("reporting.resultsThrough", {
-                    at: formatDateTime(
-                      evaluation.context.interval.end_at,
-                      locale,
-                      evaluation.context.timezone,
-                    ),
-                  })}
-                </p>
-              )}
               <ReportingCharts
                 evaluation={evaluation}
+                afterSummary={<AnalyticsAttention scope={scope} />}
                 onEvidence={setEvidence}
-                pipelineControls={
-                  template === "sales" ? (
-                    <Select
-                      aria-label={t("reporting.pipelineFilter")}
-                      value={closeWindow}
-                      options={[
-                        { value: "all_open", label: t("reporting.all_open") },
-                        {
-                          value: "fiscal_quarter",
-                          label: t("reporting.fiscal_quarter"),
-                        },
-                      ]}
-                      onChange={(value) => {
-                        if (
-                          value === "all_open" ||
-                          value === "fiscal_quarter"
-                        ) {
-                          setCloseWindow(value);
-                          setEvidence(null);
-                        }
-                      }}
-                    />
-                  ) : undefined
-                }
               />
               {evidence && (
                 <ReportingEvidenceDrawer
@@ -356,4 +335,26 @@ function OverviewBody({
 
 function validDateRange(period: string, start: string, end: string): boolean {
   return period !== "custom" || !!(start && end);
+}
+
+// "Results through" only while the period is still running: a closed period
+// ends where it says it does, and the line would only repeat it.
+function resultsThrough(
+  evaluation: ReportingEvaluation | undefined,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  if (
+    !evaluation ||
+    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
+  ) {
+    return undefined;
+  }
+  return t("reporting.resultsThrough", {
+    at: formatDateTime(
+      evaluation.context.interval.end_at,
+      locale,
+      evaluation.context.timezone,
+    ),
+  });
 }

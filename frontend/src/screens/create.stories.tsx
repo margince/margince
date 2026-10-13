@@ -30,6 +30,16 @@ export default meta;
 
 type Story = StoryObj;
 
+const sizeBandField: CreateField = {
+  key: "size_band",
+  label: "create.sizeBand",
+  type: "select",
+  options: [
+    { value: "1-10", label: "1-10" },
+    { value: "11-50", label: "11-50" },
+  ],
+};
+
 // A mix of text + select + a repeatable "emails" field — the contact create
 // form's actual shape (contacts.tsx's contactCreateFields, trimmed to the
 // fields that show every control kind in one screen). Option labels are
@@ -41,15 +51,7 @@ type Story = StoryObj;
 const contactFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "title", label: "create.contactTitle" },
-  {
-    key: "size_band",
-    label: "create.sizeBand",
-    type: "select",
-    options: [
-      { value: "1-10", label: "1-10" },
-      { value: "11-50", label: "11-50" },
-    ],
-  },
+  sizeBandField,
   {
     key: "emails",
     label: "create.email",
@@ -71,19 +73,33 @@ const contactFields: CreateField[] = [
   },
 ];
 
+// Past six fields the form leaves the centred box for the drawer.
+const companyFields: CreateField[] = [
+  { key: "display_name", label: "create.displayName", required: true },
+  { key: "legal_name", label: "create.legalName" },
+  { key: "industry", label: "create.industry" },
+  sizeBandField,
+  { key: "city", label: "create.city" },
+  { key: "region", label: "create.region" },
+  { key: "postal_code", label: "create.postalCode" },
+  { key: "country", label: "create.country" },
+];
+
 function OpenModal({
   error,
   existing,
+  fields = contactFields,
 }: Readonly<{
   error?: string | null;
   existing?: { id: string; code: string } | null;
+  fields?: CreateField[];
 }>) {
   return (
     <CreateRecordModal
       open
       onClose={() => undefined}
       title="New contact"
-      fields={contactFields}
+      fields={fields}
       pending={false}
       error={error ?? null}
       existing={existing ?? null}
@@ -95,6 +111,10 @@ function OpenModal({
 
 export const Open: Story = {
   render: () => <OpenModal />,
+};
+
+export const ManyFields: Story = {
+  render: () => <OpenModal fields={companyFields} />,
 };
 
 // A duplicate (409) dedupe error: the server's detail renders verbatim plus

@@ -49,8 +49,8 @@ var whatsSlippingCopy = toolCopy{
 	Instead: "Use run_report for the pipeline as a whole (totals, counts, breakdowns), and " +
 		"at_risk_relationships when the question is who a deal rests on rather than whether it " +
 		"is moving.",
-	Retain: "Keep each deal_id if you intend to act; draft_follow_ups_for works over this same " +
-		"ranked set without you re-deriving it.",
+	Retain: "Keep each deal_id if you intend to act; draft_outbound (for: slipping_deals) works over this same " +
+		"ranked set at the default quiet_days without you re-deriving it.",
 }
 
 var reviewCommitmentsCopy = toolCopy{
@@ -144,9 +144,9 @@ var atRiskRelationshipsCopy = toolCopy{
 		"deals these are. It is about the shape of the relationships around a deal, not about " +
 		"the deal's own momentum.",
 	Instead: "Use whats_slipping_this_week when the question is about deals losing momentum, and " +
-		"company_coverage when the question is about one deal rather than the whole book.",
+		"read_relationships with a deal_id when the question is about one deal rather than the whole book.",
 	Retain: "Each finding names its deal_id and the contacts it is about; those are what " +
-		"intro_path_to and who_knows take next.",
+		"read_relationships takes next.",
 }
 
 // The prebuilt reports exist so a common question costs one call. That is only
@@ -166,13 +166,13 @@ var runReportCopy = toolCopy{
 		"workspace's prebuilt reports.",
 	Limits: "Only the named reports exist, each with its own filter, grouping and measure names; " +
 		"anything else is refused. It aggregates: how many and how much, never which record.",
-	Instead: "Use search_records or whats_slipping_this_week when the answer wanted is the " +
-		"records themselves rather than a number over them. Reach for run_analytics_query " +
-		"only when NO prebuilt report answers the question: a report already carries the " +
-		"filter and the grouping, so it is one call where a query is a vocabulary lookup " +
-		"and a query.",
-	Retain: "Call a report with no plan first to see its default answer, then narrow with the " +
-		"names describe_report_vocabulary gives for it.",
+	Instead: "Use search_records or whats_slipping_this_week when the answer is the records " +
+		"rather than a number over them. Reach for run_analytics_query " +
+		"only when NO prebuilt report answers the question — a report is one call, a query " +
+		"is a lookup and a call — or when the figures go into a written document: a " +
+		"report's answer has no run_id, so compose_analytics_report cannot cite it.",
+	Retain: "Call a report with no plan first for its default answer, then narrow with the " +
+		"names describe_vocabulary gives.",
 }
 
 var annotateBriefCopy = toolCopy{
@@ -202,4 +202,35 @@ var readBriefCopy = toolCopy{
 		"currently says.",
 	Retain: "Each item names a deal_id and its evidence_ids; read those to cite what the ranking " +
 		"rested on rather than restating the item's own summary.",
+}
+
+var readRelationshipsCopy = toolCopy{
+	Purpose: "Read the relationships this workspace has recorded, from the one id you name. " +
+		"contact_id: the colleagues who know that contact, warmest first. company_id: a warm " +
+		"route into the company — who we know there and which colleague could introduce us. " +
+		"deal_id: which roles at the deal's company we have a relationship with, and where the " +
+		"deal rests on a single contact.",
+	Limits: "Only interactions somebody recorded count, so an unlogged relationship is absent, and " +
+		"never spoken is no relationship rather than a score of zero. A company nobody here has " +
+		"spoken to has no warm path, and saying so is the answer. Deal coverage says nothing about " +
+		"whether the deal will close.",
+	Instead: "at_risk_relationships finds the thin relationships across every open deal at once.",
+	Retain: "Keep the user_id of each colleague and the contact ids a path names. For a deal, " +
+		"say WHO fills an uncovered seat by `contact_name`; a seat with no name is one this " +
+		"caller may not read, so report the gap and do not guess.",
+}
+
+var readProjectCopy = toolCopy{
+	Purpose: "Read one project. overview: its whole page — company, phase history with time per " +
+		"phase, deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
+		"coverage, totals. handoff: what the delivery side needs from sales — who owns it, who " +
+		"to call at the client, what was sold, by when, what is already promised — with a named " +
+		"gap for each the records do not answer.",
+	Limits: "overview cuts each section at 25 rows and flags it truncated; sections_omitted names " +
+		"what your grants withhold. A handoff gap means the field is empty as far as the caller " +
+		"can see. Preparing a handover is not performing one.",
+	Instead: "read_record for the project's stored fields alone, catch_me_up_on for what has been " +
+		"happening.",
+	Retain: "The project_id, each gap's source field, and the deal, contact and task ids a " +
+		"follow-up acts on.",
 }

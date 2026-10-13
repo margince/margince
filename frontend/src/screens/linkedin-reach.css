@@ -1,7 +1,5 @@
-/* The reach table: which accounts a member's imported network reaches. The
-   table is DataTable; what is left here is the caveat's spacing and what the
-   CONTENT of a cell needs. `min-width: 0` lets the table's own scroller
-   scroll inside the panel instead of pushing the panel sideways. */
+/* The caveat over the reach table. `min-width: 0` lets the table's own
+   scroller scroll inside the panel instead of pushing the panel sideways. */
 .li-reach {
   display: flex;
   flex-direction: column;
@@ -11,18 +9,4 @@
 
 .li-reach > p {
   margin: 0;
-}
-
-/* An account name plus two counts is wider than a phone, so every cell holds
-   its line and the table takes the sideways scroll instead of the page. It sits
-   on spans this file owns rather than on `.table td`: a screen sheet reaching
-   into a primitive's internals is a second author for a rhythm the design
-   system owns. */
-.li-reach-cell {
-  white-space: nowrap;
-}
-
-/* Two figures a reader compares down the column, so the digits have to line up. */
-.li-reach-figure {
-  font-variant-numeric: tabular-nums;
 }

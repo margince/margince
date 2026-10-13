@@ -9,6 +9,8 @@ package compose
 // owns the mechanism and knows no domain; the modules own the meaning.
 
 import (
+	"encoding/json"
+	"maps"
 	"reflect"
 	"strings"
 	"sync"
@@ -16,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -48,6 +51,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	identity.BaseCurrency.WithFreeze(deals.BaseCurrencyFreeze(identity.BaseCurrency.Key()))
 
 	var defs []settings.Definition
+	defs = append(defs, activities.Definitions()...)
 	defs = append(defs, ai.Definitions()...)
 	defs = append(defs, capture.Definitions()...)
 	defs = append(defs, consent.Definitions()...)
@@ -88,6 +92,9 @@ type SettingSpec struct {
 	AuditVerb  string
 	DefaultErr error
 	HasFreeze  bool
+	// Admits is the entry's own validator, so a gate can hold a bound some
+	// other document states to the code that actually refuses past it.
+	Admits func(json.RawMessage) error
 }
 
 // SettingsCatalogForTest flattens the assembled catalog for
@@ -99,7 +106,7 @@ func SettingsCatalogForTest() []SettingSpec {
 		_, err := d.DefaultJSON()
 		out = append(out, SettingSpec{
 			Key: d.Key(), Object: d.Object(), AuditVerb: d.AuditVerb(), DefaultErr: err,
-			HasFreeze: d.HasFreezeProbe(),
+			HasFreeze: d.HasFreezeProbe(), Admits: d.ValidateJSON,
 		})
 	}
 	return out
@@ -110,7 +117,7 @@ func SettingsCatalogForTest() []SettingSpec {
 // the STRUCT rather than the illustrative example file — which omits whole
 // sections and would let the check pass vacuously.
 func DeploymentConfigKeysForTest() map[string]bool {
-	return yamlPaths(reflect.TypeOf(deployconfig.Config{}), "")
+	return yamlPaths(reflect.TypeFor[deployconfig.Config](), "")
 }
 
 // yamlPaths walks a config struct and returns every dotted yaml path in it,
@@ -128,8 +135,7 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 		return nil
 	}
 	out := map[string]bool{}
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		tag, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
 		if tag == "" || tag == "-" {
 			continue
@@ -139,9 +145,7 @@ func yamlPaths(t reflect.Type, prefix string) map[string]bool {
 			path = prefix + "." + tag
 		}
 		out[path] = true
-		for k, v := range yamlPaths(f.Type, path) {
-			out[k] = v
-		}
+		maps.Copy(out, yamlPaths(f.Type, path))
 	}
 	return out
 }

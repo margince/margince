@@ -1,32 +1,38 @@
-/* The units an installation composed, as offered in Settings (Connections and
-   Integrations both draw the same card). Each unit is a ProviderRow, so the
-   row's geometry comes from the design system; what is left here is the link
-   in its action slot. */
+/* Each unit is a whole row that links to its own screen. */
 
-/* The way in, in the row's control column: a link, not a Button, because it
-   navigates. The chevron is the affordance and takes the meta colour so the
-   verb stays the thing read first. */
-.extunits-open {
-  display: inline-flex;
+.panel > .panel-row.extunits-row {
+  padding: 0;
+}
+
+.extunits-row-press {
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--accentText);
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-3) var(--padPanel);
+  color: inherit;
   text-decoration: none;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.extunits-open:hover {
-  text-decoration: underline;
-}
-
-.extunits-open:focus-visible {
+.extunits-row-press:focus-visible {
   outline: var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
+  outline-offset: -2px;
 }
 
-.extunits-open > svg {
-  width: 16px;
-  height: 16px;
+.extunits-mark,
+.extunits-go {
+  width: 18px;
+  height: 18px;
   flex: none;
+}
+
+.extunits-mark {
+  color: var(--accentText);
+}
+
+.extunits-go {
+  margin-inline-start: auto;
+  color: var(--textSecondary);
 }

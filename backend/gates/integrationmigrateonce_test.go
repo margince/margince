@@ -5,15 +5,16 @@
 
 package gates
 
-// Migrate-once discipline for everything the integration lane compiles, as a
-// fitness function. A suite migrates the schema once per test process
+// Every file the integration lane compiles migrates the schema once per test
+// process and resets between tests, rather than migrating on every setup. A
+// suite migrates the schema once per test process
 // (internal/platform/testdb.EnsureSchema) and resets between tests with a fast
 // data-only reset (testdb.Reset); one that instead runs its own DROP SCHEMA +
 // dbmigrate.Up on every setup reintroduces a per-test migrate that costs orders
 // of magnitude more than the reset it replaces. The obligation is module-wide,
-// so the walk is: a gate that judges one subtree also claims, silently, that the
-// subtree is where the obligated code lives, and that second claim is the one
-// nothing checks.
+// so the walk is: a gate that judges one subtree also claims, silently, that
+// the subtree is where the obligated code lives, and that second claim is the
+// one nothing checks.
 //
 // Every file the lane COMPILES is judged, not only the _test.go ones: a shared
 // fixture that moves into a build-tagged non-test file so sibling packages can
@@ -61,7 +62,7 @@ const testdbPackage = "internal/platform/testdb"
 // inlineMigrators are the suites outside migrationsPackage ratified to migrate
 // on their own, each bound to what the exception costs.
 var inlineMigrators = gatekit.Waive(map[string]string{
-	"internal/compose/integration/perfbench_integration_test.go": "seeds a large volume and asserts " +
+	"internal/compose/integration/perf_tier_bench_test.go": "seeds a large volume and asserts " +
 		"query-latency SLOs against it, so it needs pristine physical tables — a reset cycle leaves bloat " +
 		"and stale planner stats that move the very latencies under assertion. It migrates once for the " +
 		"whole suite, so the cost it opts back into is negligible. It now carries `integration && bench` " +

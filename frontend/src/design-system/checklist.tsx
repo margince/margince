@@ -61,7 +61,7 @@ export function ChecklistStep({
         </span>
         {caption !== undefined && <span className="t-caption">{caption}</span>}
         {children !== undefined && (
-          <div className="checklist-body">{children}</div>
+          <div>{children}</div>
         )}
       </div>
       {action !== undefined && <div className="checklist-action">{action}</div>}

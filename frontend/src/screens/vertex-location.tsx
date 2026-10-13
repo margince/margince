@@ -10,8 +10,7 @@ import { type ProviderLocations, useProviderLocations } from "./ai-models";
 
 // Where Google processes a Gemini-on-Vertex call. The location IS the
 // residency question, so the picker says which jurisdiction each one is under
-// and, under eu_hosted, refuses the ones outside the EU before the server has
-// to.
+// and marks the ones that are EU resident.
 
 export const VERTEX_PROVIDER = "gemini_vertex";
 
@@ -50,7 +49,6 @@ const JURISDICTION_ORDER: readonly Jurisdiction[] = [
 export function locationOptions(
   list: ProviderLocations | undefined,
   current: string,
-  euOnly: boolean,
   t: Translator,
 ): SelectOption[] {
   const known = [...(list?.locations ?? [])].sort(
@@ -59,7 +57,6 @@ export function locationOptions(
         JURISDICTION_ORDER.indexOf(b.jurisdiction) || stable(a.id, b.id),
   );
   const options: SelectOption[] = known.map((l) => {
-    const refused = euOnly && !l.resident;
     const group = t(`aiRouting.location.group.${l.jurisdiction}`);
     // Google names its multi-regions and leaves every region unnamed.
     const label = l.display_name
@@ -71,10 +68,7 @@ export function locationOptions(
       : t("aiRouting.location.optionBare", { group, id: l.id });
     return {
       value: l.id,
-      label: refused
-        ? `${label} — ${t("aiRouting.location.notResident")}`
-        : label,
-      disabled: refused,
+      label,
       adornment: l.resident ? (
         <Badge tone="success">{t("aiRouting.location.resident")}</Badge>
       ) : (
@@ -91,8 +85,6 @@ export function locationOptions(
 function locationHint(
   list: ProviderLocations | undefined,
   pending: boolean,
-  current: string,
-  euOnly: boolean,
   noKeyHint: string,
   t: Translator,
 ): string {
@@ -105,24 +97,16 @@ function locationHint(
   if (list?.unavailable) {
     return t("aiRouting.location.unreachable");
   }
-  if (!euOnly) {
-    return t("aiRouting.location.help");
-  }
-  const stored = list?.locations.find((l) => l.id === current);
-  return stored && !stored.resident
-    ? t("aiRouting.location.forbidden")
-    : t("aiRouting.location.residentHelp");
+  return t("aiRouting.location.help");
 }
 
 export function VertexLocationField({
   value,
-  profile,
   disabled,
   noKeyHint,
   onChange,
 }: Readonly<{
   value: string;
-  profile: string;
   disabled: boolean;
   // What to say while no key is held. Settings points at the key card;
   // onboarding is about to save the key itself.
@@ -131,15 +115,12 @@ export function VertexLocationField({
 }>) {
   const t = useT();
   const locations = useProviderLocations(VERTEX_PROVIDER, true);
-  const euOnly = profile === "eu_hosted";
   return (
     <Field
       label={t("aiRouting.location.label")}
       hint={locationHint(
         locations.data,
         locations.isPending,
-        value,
-        euOnly,
         noKeyHint ?? t("aiRouting.location.noKey"),
         t,
       )}
@@ -149,7 +130,7 @@ export function VertexLocationField({
           {...control}
           value={value}
           disabled={disabled}
-          options={locationOptions(locations.data, value, euOnly, t)}
+          options={locationOptions(locations.data, value, t)}
           onChange={onChange}
         />
       )}

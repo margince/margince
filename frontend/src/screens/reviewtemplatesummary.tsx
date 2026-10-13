@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { usePlural, useT } from "../i18n";
 import type { ReviewQuestion } from "./outcomereview.queries";
 

@@ -456,7 +456,6 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "erasure", "subject_ref": contactID,
-		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
@@ -517,7 +516,6 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "erasure", "subject_ref": contactID,
-		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
 	}
@@ -586,7 +584,6 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "erasure", "subject_ref": contactID,
-		"due_at": "2027-01-01T00:00:00Z",
 	}, nil, &opened); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d", status)
 	}

@@ -119,6 +119,15 @@ type joinTable struct {
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"confirm_token": "contact_id and lead_id are alternative SUBJECTS of one emailed link, and the " +
+		"confirm_token_one_subject CHECK admits exactly one. A link is a credential sent to one " +
+		"subject, not a relationship between records, so no hop traverses it",
+	"record_grant": "contact_id, company_id, deal_id, lead_id and project_id are generated from one " +
+		"record_type and record_id pair, and the record_grant_record_shape CHECK admits exactly one. A " +
+		"grant shares ONE record with a colleague or team, so it relates no two records and no hop traverses it",
+	"tag_suggestion": "contact_id and company_id are alternative SUBJECTS of one proposal, and the " +
+		"tag_suggestion_one_record CHECK admits exactly one. A suggestion is a proposal waiting " +
+		"for a decision, not a relationship between records, so no hop traverses it",
 	"provider_employment_resolution": "retained provider evidence and its resolution outcome, including unresolved and dismissed entries; canonical employment traversal belongs to relationship, otherwise rejected evidence would become a search edge",
 	"record_assignment": "company_id, deal_id and project_id are alternative PARENTS of one " +
 		"assignment — the record_assignment_one_parent CHECK admits exactly one — so the three " +
@@ -141,6 +150,9 @@ var notAnEdge = map[string]string{
 		"subject was lawful, which relates a contact to a DECISION and not to another record",
 	"communication_suppression": "polymorphic in the same way, and for the same reason: an objection is " +
 		"something one subject said, not a path from them to anybody else",
+	"communication_override": "polymorphic exactly as communication_suppression is: contact_id and " +
+		"lead_id are alternative SUBJECTS of one vouch, never both, and the row relates that subject to " +
+		"a rep's DECISION about a refusal — not to any other record a hop could land on",
 	"withdrawal_credential": "polymorphic exactly as the two above: contact_id and lead_id are " +
 		"alternative HOLDERS of one credential, never both, and most rows name neither — the " +
 		"credential is keyed by the address the mail went to, which is what an opt-out acts on. " +

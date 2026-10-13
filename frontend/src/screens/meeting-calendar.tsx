@@ -4,23 +4,23 @@
 import { CalendarClock, Send } from "lucide-react";
 import { useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, OverflowMenu, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
+import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { MultiSelect, Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatElapsed, useNow } from "../format/now";
 import { useLocale, usePlural, useT } from "../i18n";
+import { navigate } from "../lib/router";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
-import { QueryGate } from "./common";
 import { notConfiguredProvider, useConnectAccount } from "./connect-account";
 import { missingCalendarWriteGrant } from "./connector-status";
-import { vendorOf } from "./connectorproviders";
+import { vendorOf } from "../format/connectorprovider";
 import { usePatchSchedulingProfile } from "./scheduling-profile-query";
 import "./meeting-cards.css";
 

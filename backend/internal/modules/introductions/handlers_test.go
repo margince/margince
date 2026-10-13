@@ -120,28 +120,27 @@ func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 	}
 }
 
-// A client that sends no provenance has a contact typing. Defaulting the other
-// way would mark honest copy as machine-authored, which is the same lie in
-// reverse and just as visible to whoever reads the disclosure.
-func TestUnstatedProvenanceIsHuman(t *testing.T) {
-	if got := noteOriginOf(nil); got != "human" {
-		t.Errorf("an unstated origin defaulted to %q", got)
-	}
-	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
-	if got := noteOriginOf(&model); got != "model" {
-		t.Errorf("a stated origin became %q", got)
+// An unstated enum reaches the store as empty, which the store defaults, and a
+// stated one reaches it as written so an unknown value can be refused.
+func TestAnExplicitlyEmptyEnumIsRefusedNotDefaulted(t *testing.T) {
+	empty := crmcontracts.IntroNoteOrigin("")
+	if _, err := enumOf(&empty, "note_generated_by", "human, model or deterministic"); err == nil {
+		t.Error("a stated empty origin was read as unstated")
 	}
 }
 
-// An unstated fallback is "none" and never a policy the requester did not pick:
-// a default of name_drop would lend the colleague's name on their behalf.
-func TestUnstatedFallbackIsNone(t *testing.T) {
-	if got := fallbackOf(nil); got != "none" {
-		t.Errorf("an unstated fallback defaulted to %q", got)
+func TestAnOptionalEnumReachesTheStoreAsWritten(t *testing.T) {
+	got, err := enumOf[crmcontracts.IntroNoteOrigin](nil, "note_generated_by", "x")
+	if got != "" || err != nil {
+		t.Errorf("an unstated origin went on as %q, %v; want empty", got, err)
 	}
-	drop := crmcontracts.IntroFallbackPolicyIntroFallbackPolicyNameDrop
-	if got := fallbackOf(&drop); got != "name_drop" {
-		t.Errorf("a stated fallback became %q", got)
+	model := crmcontracts.IntroNoteOriginIntroNoteOriginModel
+	if got, err := enumOf(&model, "note_generated_by", "x"); got != "model" || err != nil {
+		t.Errorf("a stated origin became %q, %v", got, err)
+	}
+	unknown := crmcontracts.IntroFallbackPolicy("zzz")
+	if got, err := enumOf(&unknown, "fallback_policy", "x"); got != "zzz" || err != nil {
+		t.Errorf("an unknown fallback became %q, %v instead of reaching the store to be refused", got, err)
 	}
 }
 

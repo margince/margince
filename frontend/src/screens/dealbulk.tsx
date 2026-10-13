@@ -9,9 +9,9 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
 import { dealRecordKeys } from "./activitykeys";
 import { BulkVerbs } from "./bulkverbs";
-import { ProblemError, problemMessageOf, throwProblem } from "./common";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -92,16 +92,16 @@ export function DealBulkBar({
         const done = await acc;
         const name = deal.name;
         try {
-          const { error } = await api.POST("/deals/{id}/advance", {
-            params: {
-              path: { id: deal.id },
-              ...ifMatch(requireVersion(deal.version)),
-            },
-            body: { to_stage_id: toStageId },
-          });
-          if (error) {
-            throwProblem(error, t);
-          }
+          unwrap(
+            await api.POST("/deals/{id}/advance", {
+              params: {
+                path: { id: deal.id },
+                ...ifMatch(requireVersion(deal.version)),
+              },
+              body: { to_stage_id: toStageId },
+            }),
+            t,
+          );
           done.push({ id: deal.id, name });
         } catch (error) {
           done.push({

@@ -79,10 +79,11 @@ func (h aiAdminHandlers) PreviewAiRouting(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var next crmcontracts.AiRouting
-	if !httperr.Decode(w, r, &next) {
+	if !httperr.DecodeClosed(w, r, &next, routingBlockIsOwned) {
 		return
 	}
-	out, err := h.store.PreviewRouting(r.Context(), fromContractAiRouting(next))
+	draft, refused := fromContractAiRouting(next, sentRouting(r))
+	out, err := h.store.PreviewRouting(r.Context(), draft, refused)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

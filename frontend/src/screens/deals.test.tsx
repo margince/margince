@@ -11,12 +11,13 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
+import { askedToClose } from "./deal360/confirmadvance.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
 import {
   buildColumns,
@@ -228,12 +229,8 @@ function stubDealBackend(
   });
 }
 
-// AC-F1: column totals come from the server's per-stage
-// aggregate (Σround(amount×p/100), never round(Σamount×p/100)) — not from
-// summing whatever page of cards happened to load. buildStageTotals shapes
-// the report's rows (grouped by stage_id + currency); buildColumns reads
-// from that, and keeps building the CARD list from the loaded deals as
-// before — the cap on cards is unrelated to the correctness of the totals.
+// Column totals are the server's per-stage Σround(amount×p/100), never a sum of
+// the cards that loaded: the card cap is unrelated to the totals' correctness.
 describe("buildStageTotals", () => {
   it("carries one currency's totals straight through", () => {
     const totals = buildStageTotals([
@@ -812,7 +809,7 @@ describe("DealsScreen", () => {
   // A view saved on the deals list is a server row, and the tab rail has to
   // read it. The rail carried only the one hardcoded sort before, so a saved
   // view was storable through the contract and then invisible.
-  it("offers a saved view as a tab beside the standing sort", async () => {
+  it("offers a saved view as a tab beside the standard views", async () => {
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({})], {
@@ -837,7 +834,7 @@ describe("DealsScreen", () => {
     expect(
       await screen.findByRole("button", { name: "Slipping this quarter" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Newest" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All" })).toBeTruthy();
   });
 
   // Picking the tab has to narrow the list, not just highlight: the saved
@@ -1214,7 +1211,7 @@ describe("DealsScreen", () => {
     Object.assign(dropEvent, { dataTransfer });
     wonColumn.dispatchEvent(dropEvent as unknown as Event);
 
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet — confirm-first
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(advances).toHaveLength(1));
@@ -1241,7 +1238,7 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
 
     // The first confirm asks for nothing: a deal WITH a contract wins here, and
     // only the server knows which this is.
@@ -1250,9 +1247,7 @@ describe("DealsScreen", () => {
 
     // Refused — the dialog stays open and grows the question rather than
     // dropping the reader back on a board that has snapped the card home.
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
     expect(screen.getByText("Move to Won?")).toBeTruthy();
     expect(advances).toHaveLength(1);
 
@@ -1295,11 +1290,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1343,18 +1336,16 @@ describe("DealsScreen", () => {
     await waitFor(() => expect(screen.getByText("No contract")).toBeTruthy());
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     // Walk away from that deal without answering.
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByText("Move to Won?")).toBeNull());
 
     dropOnStage("s3", "d2");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     expect(screen.queryByText("How was it won?")).toBeNull();
   });
 
@@ -1370,7 +1361,7 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(screen.queryByText("Move to Won?")).toBeNull());
@@ -1395,11 +1386,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1440,11 +1429,9 @@ describe("DealsScreen", () => {
     );
 
     dropOnStage("s3");
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    await waitFor(() =>
-      expect(screen.getByText("How was it won?")).toBeTruthy(),
-    );
+    await screen.findByText("How was it won?");
 
     await pickOption(
       user,
@@ -1490,11 +1477,11 @@ describe("DealsScreen", () => {
     Object.assign(dropEvent, { dataTransfer });
     wonColumn.dispatchEvent(dropEvent as unknown as Event);
 
-    await waitFor(() => expect(screen.getByText("Move to Won?")).toBeTruthy());
+    await askedToClose("Won");
     // progress_deal is catalogued "auto_execute" — a hardcoded
-    // "confirm" dot would render "approval first" here instead.
+    // "confirm" dot would render "Approval first" here instead.
     await waitFor(() =>
-      expect(screen.getByLabelText("automatic")).toBeTruthy(),
+      expect(screen.getByLabelText("Automatic")).toBeTruthy(),
     );
   });
 
@@ -1814,11 +1801,8 @@ describe("DealScreen — edit, archive (A3)", () => {
     expect("partner_attribution" in body).toBe(false);
   });
 
-  // The facts used to run together without a separator on the identity line:
-  // three adjacent spans in a plain text row rendered "€48,000.00Acme Corpvia
-  // Northgate", which is why the partner looked missing on screen while every
-  // assertion about it passed. Each is its own cell in the facts strip now, so
-  // two facts cannot share a text node no matter what either one contains.
+  // Each fact is its own cell: adjacent spans in one text row run together
+  // ("€48,000.00Acme Corpvia Northgate") while every text assertion passes.
   it("keeps each fact in its own cell rather than running them together", async () => {
     const d = deal({
       id: "x",
@@ -1887,10 +1871,15 @@ describe("DealScreen — edit, archive (A3)", () => {
         },
       }),
     );
+    const user = userEvent.setup();
     render(<DealScreen id="x" />);
-    await openHeaderMenu();
-    await userEvent.click(screen.getByTestId("archive-record"));
-    await userEvent.click(screen.getByTestId("archive-confirm"));
+    await openHeaderMenu(user);
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
     await waitFor(() => expect(deleted).toBe(true));
   });
 });
@@ -2176,9 +2165,8 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     }
   });
 
-  // Absent is not "unknown", it is "no": a response from a server too old to
-  // send the field must fail closed, or the fix is only as good as the oldest
-  // server a client talks to.
+  // Absent is not "unknown", it is "no": a server too old to send the field
+  // must fail closed, or the guard is only as good as the oldest server.
   it("treats a deal with no writable field as one it may not change", async () => {
     const withoutWritable = deal({ id: "x", owner_id: "u-someone-else" });
     delete (withoutWritable as { writable?: boolean }).writable;
@@ -2206,8 +2194,9 @@ describe("DealScreen reopen", () => {
     render(<DealScreen id="x" />);
     await openHeaderMenu();
     await userEvent.click(screen.getByTestId("reopen-open"));
-    await userEvent.click(screen.getByTestId("reopen-stage-s1"));
-    await userEvent.click(screen.getByTestId("reopen-confirm"));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByTestId("reopen-stage-s1"));
+    await userEvent.click(dialog.getByRole("button", { name: "Reopen" }));
     await waitFor(() => expect(moves.length).toBe(1));
     expect(moves[0]).toEqual([{ to_stage_id: "s1", status: "open" }, "4"]);
   });

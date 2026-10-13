@@ -274,6 +274,35 @@ func transitionRatesTx(
 	}, nil
 }
 
+// StageAutomationEnabled answers whether this installation permits stage
+// automation at all, for the settings surface that renders the per-transition
+// rules beside it.
+//
+// settings.ApplyTx on StageAutopilotEnabled, which is where StageAutopilotModeTx
+// reads it too — the same SOURCE, not the same read: that one runs inside the
+// caller's transaction and this opens its own, so a switch flipped between them is
+// seen by one and not the other. What this rules out is a screen deriving the answer
+// some other way, which is the defect it closed: the page showed `auto` on
+// transitions the server forces to propose.
+//
+// Gated on `pipeline` read, like the rules it accompanies: one grant answers for
+// a pipeline's shape and for whether its stages move themselves.
+func (s *Store) StageAutomationEnabled(ctx context.Context) (bool, error) {
+	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var on bool
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		on, err = settings.ApplyTx(ctx, tx, StageAutopilotEnabled)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("read whether stage automation is on: %w", err)
+	}
+	return on, nil
+}
+
 // ReadTransitionPolicies answers every rule on one pipeline, for the settings
 // surface.
 func (s *Store) ReadTransitionPolicies(

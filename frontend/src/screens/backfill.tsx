@@ -1,18 +1,18 @@
 import { useId } from "react";
 import type { components } from "../api/schema";
-import { useDrawsImportRun } from "../app/import-onscreen";
 import { Button, Modal } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useDrawsImportRun } from "../lib/import-onscreen";
+import { ProblemError, problemCode, problemMessageOf } from "../lib/problem";
 import {
   IMPORT_WINDOW_LABELS,
   ImportWindowPicker,
 } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { RunView } from "./backfillrunview";
-import { ProblemError, problemCode, problemMessageOf } from "./common";
 import "./backfill.css";
 
 // The bounded connect-time backfill (ADR-0063): pick a window, see the scope
@@ -91,7 +91,7 @@ export function ImportPastEmailDialog({
   const t = useT();
   const headingId = useId();
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("connectors.menu.importOlder")}
       </Heading>
@@ -219,14 +219,14 @@ function BackfillSetup({
   // statement, not a retryable error inside the rest of the setup form.
   if (unsupported) {
     return (
-      <div className="backfill-setup">
+      <div className="backfill-setup form-stack">
         <p>{t("backfill.unsupportedNote")}</p>
       </div>
     );
   }
 
   return (
-    <div className="backfill-setup">
+    <div className="backfill-setup form-stack">
       <p>{t("backfill.intro")}</p>
       <ImportWindowPicker
         value={window}

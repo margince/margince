@@ -101,7 +101,7 @@ export const TheReviewOnAPhone: Story = {
 /**
  * THE SAME REVIEW IN DARK, which is where the recess changes direction.
  *
- * `Card inset` is `--bgCard` and the panel around it is `--bgElevated`, and
+ * `Card inset` is `--bgInset` and the panel around it is `--bgElevated`, and
  * those two swap places between the themes: in light the inset is the DARKER of
  * the pair and reads as a well cut into the card, in dark it is the LIGHTER one
  * and the two records read as plates lifted off the panel. So the frame worth

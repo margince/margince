@@ -2,12 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { recordNamesIn } from "../company360";
 import { activityHeadline, CompanyRecentList } from "../companyrecent";
 import "./glance.css";
@@ -46,14 +46,15 @@ export function ThreadFold({
   loading,
   onOpenHistory,
   onOpenRecord,
+  onOpenEmail,
 }: Readonly<{
   view?: Company360;
   loading: boolean;
   onOpenHistory?: () => void;
-  // The page's own router, the same door the spine above this fold takes. The
-  // fold draws the account's messages in full — sender, subject, preview — so
-  // without this it shows a reader the message and refuses to open it.
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // The page's email drawer, as for the spine above. The fold draws messages in
+  // full, so without this it shows a reader the message and refuses to open it.
+  onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -106,6 +107,7 @@ export function ThreadFold({
             activities={logged.slice(0, THREAD_LIMIT)}
             nameOf={recordNamesIn(view)}
             onOpenRecord={onOpenRecord}
+            onOpenEmail={onOpenEmail}
           />
         ) : (
           <SurfaceState

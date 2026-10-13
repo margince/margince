@@ -5,7 +5,8 @@
 
 package gates
 
-// A held message says WHY, or the reader cannot argue with the verdict.
+// A held message says why it was held, or the reader cannot argue with the
+// verdict.
 //
 // The browser names a hold from a map keyed on the same token the server writes
 // into `audience_reason`. That map held five of the nine reasons the derivation

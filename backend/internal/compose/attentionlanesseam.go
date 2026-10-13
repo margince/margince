@@ -62,6 +62,9 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	if err != nil {
 		return nil, err
 	}
+	if err := c.store.MarkSettleable(ctx, due); err != nil {
+		return nil, err
+	}
 	promises := make([]attention.Commitment, 0, len(due))
 	for _, row := range due {
 		promises = append(promises, attention.Commitment{
@@ -72,6 +75,8 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 			SourceLabel: row.SourceLabel,
 			OccurredAt:  row.OccurredAt,
 			DueAt:       row.DueAt,
+			Version:     row.Version,
+			ReadOnly:    !row.Settleable,
 		})
 	}
 	return promises, nil
@@ -122,7 +127,9 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
 			CloseDateProvisional: deal.CloseDateProvisional,
 			ForecastCategory:     deal.ForecastCategory,
-			NoChampion:           noChampionOf(cover, deal.DealID),
+			NoChampion:           cover.noChampion(deal.DealID),
+			ChampionUnknown:      cover.championUnknown(deal.DealID),
+			NoNextStep:           deal.NoOpenNextStep,
 		})
 	}
 	return risky, cut, nil
@@ -428,9 +435,9 @@ func (o attentionOverdue) OverduePerAssignee(
 // cannot come to answer different questions. A second statement, which is what a
 // true total beside a bounded page costs and what needs_you has always paid.
 func (t attentionTasks) CountOpenForViewer(
-	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (int, error) {
-	in, ok := openTasksDueBy(ctx, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
 	if !ok {
 		return 0, nil
 	}

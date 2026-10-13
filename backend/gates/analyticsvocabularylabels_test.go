@@ -5,7 +5,8 @@
 
 package gates
 
-// The question builder names exactly the analytics vocabulary the server serves.
+// The question builder names the analytics vocabulary the server serves, no
+// more and no fewer.
 //
 // The vocabulary is derived from the report catalog, so a field added to a spec
 // reaches the builder the day it ships. Without its catalog key it renders as a

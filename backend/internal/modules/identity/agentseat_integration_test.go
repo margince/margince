@@ -170,7 +170,8 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	// guard would fail this test on the wrong error and the assertions below
 	// would never be reached — the refusal has to be what stops it.
 	wsCtx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), wsID.UUID), ids.NewV7())
+		principal.WithWorkspaceID(context.Background(), wsID.UUID), ids.NewV7(),
+	)
 
 	// The admin's real Identity, resolved the way the HTTP surface resolves it:
 	// the refusal has to hold for a caller who passes every other gate.

@@ -16,10 +16,11 @@
 # (OPS-CFG-1): defaults -> this file -> the overlay -> env vars -> flags.
 version: 1
 
-# These four are what the installation IS, and they are read ONCE — the first
-# time this build boots against an empty database. After that the settings rows
-# are authoritative and this block is never consulted again, so a real
-# deployment replaces the demo values below BEFORE first boot.
+# name, base_currency, base_language and timezone are what the installation IS,
+# and they are read ONCE — the first time this build boots against an empty
+# database. After that the settings rows are authoritative and this block is
+# never consulted again, so a real deployment replaces the demo values below
+# BEFORE first boot.
 #
 # Getting one wrong is not fatal: Settings → General edits all four afterwards.
 # But base_currency stops being changeable once anything has converted against
@@ -32,6 +33,12 @@ workspace:
   # display language, which each user picks for themselves.
   base_language: en
   timezone: Europe/Berlin
+  # The jurisdiction pack this installation runs under: de, vn, or any other
+  # pack compiled into this build. It sets the retention floor, the messaging
+  # rules and the request deadlines. Leave it out to choose later in Settings →
+  # Jurisdiction; until then the strictest compiled-in floor and the GDPR
+  # one-month deadline apply. Boot refuses a code with no compiled-in pack.
+  # country: de
 
 bootstrap_admin:
   email: admin@demo.test
@@ -79,6 +86,11 @@ bootstrap_admin:
 #     port: 587
 #     username: privacy@example.com
 #     password: ${env:MARGINCE_SMTP_PASSWORD}
+#
+# The first boot that reads the password seals it into the key vault, and the
+# sealed copy answers once this line is gone. To stop using it (a relay that
+# takes no credential, or a password that has leaked), write `password: ${none}`:
+# the boot deletes the sealed copy and sends without authenticating.
 
 # Retention posture at first boot (optional). Consumed ONCE, when the api
 # bootstraps the company against an empty database — it is not re-read, and
@@ -266,9 +278,17 @@ bootstrap_admin:
 # The number is matched against the offered windows (3, 6, 12, 24, 36, 60, 84,
 # 120), so the connect dialog offers only what it admits and a start above it is
 # refused at the door as well as at the preview.
+#
+# skip_reserved_domain_proposals keeps senders on RFC 2606 reserved names
+# (example.com, example.net, example.org and their subdomains, and anything
+# under .test, .example, .invalid or .localhost) out of the contact review
+# queue. Their mail is still captured and shown; only the "is this a contact
+# worth keeping?" proposal is not raised. ON unless you set it to false, which
+# you would do only for an installation that deliberately runs a test mailbox.
 # capture:
 #   trace_payloads: false
 #   max_backfill_months: 24
+#   skip_reserved_domain_proposals: false
 
 # Rates & costs "Refresh from sources" (worker role): an admin triggers an async
 # FX refresh that stages confirm-first proposals into the approvals inbox; a
@@ -344,3 +364,22 @@ lists:
 #   # real deployment — a fake send that reads as a real one to a customer is
 #   # a worse failure than the capability merely existing.
 #   allow_test_mailbox: false
+
+# The RFC 9116 security.txt this installation publishes (optional).
+#
+# The contact belongs to whoever OPERATES this installation, the party a finder
+# should tell about a hole in it, so nothing is compiled in. With the block absent,
+# /.well-known/security.txt is a 404. With it set, the api serves the file, so
+# the ingress must route that exact path to the api ("Route one host to two
+# services" in docs/how-to/deploy-margince.md). Every contact is a mailto:,
+# https: or tel: URI; expires is required, in RFC 3339. The api warns at boot
+# when expires has passed or is more than a year out, and keeps serving the file
+# either way.
+# web:
+#   security_txt:
+#     contact:
+#       - mailto:security@example.org
+#       - https://example.org/report-a-vulnerability
+#     expires: "2030-01-01T00:00:00Z"
+#     policy: https://example.org/disclosure-policy   # optional, https: only
+#     preferred_languages: [en, de]                   # optional

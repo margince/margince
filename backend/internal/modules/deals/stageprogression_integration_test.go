@@ -71,7 +71,7 @@ func facts(t *testing.T, e *configEnv, dealID ids.DealID) StageProgressionFacts 
 	var out StageProgressionFacts
 	if err := e.store.Tx(e.asDealWriter(), func(tx pgx.Tx) error {
 		var err error
-		out, err = ReadStageProgressionFacts(e.asDealWriter(), tx, dealID, AutopilotFacts{}, time.Now())
+		out, err = e.store.ReadStageProgressionFacts(e.asDealWriter(), tx, dealID, AutopilotFacts{}, time.Now())
 		return err
 	}); err != nil {
 		t.Fatalf("reading the deal's progression facts: %v", err)
@@ -109,7 +109,7 @@ func TestADealOnTheLastStageHasNothingToPropose(t *testing.T) {
 	}
 
 	err := e.store.Tx(e.asDealWriter(), func(tx pgx.Tx) error {
-		_, err := ReadStageProgressionFacts(e.asDealWriter(), tx, dealID, AutopilotFacts{}, time.Now())
+		_, err := e.store.ReadStageProgressionFacts(e.asDealWriter(), tx, dealID, AutopilotFacts{}, time.Now())
 		return err
 	})
 	if !errors.Is(err, ErrNoNextStage) {

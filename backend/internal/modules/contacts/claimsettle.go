@@ -63,68 +63,75 @@ func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, o
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		// LOCKED before the status is read. Without FOR UPDATE two concurrent
-		// settles both read `open`, both pass the transition check, and the
-		// second overwrites the first — 204 to both callers, and the loser's
-		// audit row claims it moved a claim that was already settled. The
-		// conflict below only refuses a settlement it can SEE.
-		if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
-			return err
-		}
-		var contactID, activityID ids.UUID
-		var current string
-		if err := tx.QueryRow(ctx, `
-			SELECT contact_id, source_activity_id, status FROM conversation_claim
-			WHERE id = $1`, claimID).Scan(&contactID, &activityID, &current); err != nil {
-			return fmt.Errorf("read the claim to settle: %w", err)
-		}
-		// The contact's gate, not the claim's: a claim is reachable through the
-		// contact it is about, so a caller who may not write that contact may not
-		// settle their promises. A contact outside the caller's scope reads as
-		// absent, which is what keeps the claim's existence from leaking.
-		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
-			return err
-		}
-		// And the message the claim was read from, the same gate the recording
-		// path holds. A claim quotes words, and its evidence can be narrowed or
-		// archived after it was written — a caller who once saw the conversation
-		// must not go on settling promises read out of it, and the 204-vs-409
-		// answer would report the claim's current status to somebody who may no
-		// longer read what it rests on.
-		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
-			return err
-		}
-		if current == outcome {
-			// The caller's goal state already holds. Settling twice is one
-			// settlement, so this is success and writes nothing — a second audit
-			// row would say a contact's record changed when it did not.
-			return nil
-		}
-		if current != claimStatusOpen {
-			return fmt.Errorf("this claim was already settled as %s: %w", current, apperrors.ErrConflict)
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE conversation_claim SET status = $2 WHERE id = $1`,
-			claimID, outcome); err != nil {
-			return fmt.Errorf("settle the claim: %w", err)
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-			map[string]any{"claim_status": current, claimIDKey: claimID.String()},
-			map[string]any{"claim_status": outcome, claimIDKey: claimID.String()})
-		if err != nil {
-			return fmt.Errorf("audit the settlement: %w", err)
-		}
-		// The EXISTING changed event, not a settled one of its own. Its
-		// contract already names this case — "a human typed over the machine,
-		// or dismissed a claim outright" — and carries the two facts a
-		// subscriber needs, so a second event would be a second way to learn
-		// the same thing.
-		return storekit.EmitEvent(ctx, tx, auditID, contactID,
-			crmcontracts.PublicEventConversationClaimChanged{
-				ClaimId: openapi_types.UUID(claimID),
-				Status:  outcome,
-			})
+		return moveClaimStatus(ctx, tx, claimID, claimStatusOpen, outcome)
 	})
+}
+
+// moveClaimStatus moves one claim from status `from` to `to` under the gates a
+// settlement holds. A claim already at `to` is left alone; one at any other
+// status is a conflict rather than an overwrite.
+func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string) error {
+	// LOCKED before the status is read. Without FOR UPDATE two concurrent
+	// settles both read `open`, both pass the transition check, and the
+	// second overwrites the first — 204 to both callers, and the loser's
+	// audit row claims it moved a claim that was already settled. The
+	// conflict below only refuses a settlement it can SEE.
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	var contactID, activityID ids.UUID
+	var current string
+	if err := tx.QueryRow(ctx, `
+		SELECT contact_id, source_activity_id, status FROM conversation_claim
+		WHERE id = $1`, claimID).Scan(&contactID, &activityID, &current); err != nil {
+		return fmt.Errorf("read the claim to settle: %w", err)
+	}
+	// The contact's gate, not the claim's: a claim is reachable through the
+	// contact it is about, so a caller who may not write that contact may not
+	// settle their promises. A contact outside the caller's scope reads as
+	// absent, which is what keeps the claim's existence from leaking.
+	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
+		return err
+	}
+	// And the message the claim was read from, the same gate the recording
+	// path holds. A claim quotes words, and its evidence can be narrowed or
+	// archived after it was written — a caller who once saw the conversation
+	// must not go on settling promises read out of it, and the 204-vs-409
+	// answer would report the claim's current status to somebody who may no
+	// longer read what it rests on.
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+		return err
+	}
+	if current == to {
+		// The caller's goal state already holds. Settling twice is one
+		// settlement, so this is success and writes nothing — a second audit
+		// row would say a contact's record changed when it did not.
+		return nil
+	}
+	if current != from {
+		return fmt.Errorf("this claim was already settled as %s: %w", current, apperrors.ErrConflict)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE conversation_claim SET status = $2 WHERE id = $1`,
+		claimID, to); err != nil {
+		return fmt.Errorf("settle the claim: %w", err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
+		map[string]any{"claim_status": current, claimIDKey: claimID.String()},
+		map[string]any{"claim_status": to, claimIDKey: claimID.String()})
+	if err != nil {
+		return fmt.Errorf("audit the settlement: %w", err)
+	}
+	// The EXISTING changed event, not a settled one of its own. Its
+	// contract already names this case — "a human typed over the machine,
+	// or dismissed a claim outright" — and carries the two facts a
+	// subscriber needs, so a second event would be a second way to learn
+	// the same thing.
+	return storekit.EmitEvent(ctx, tx, auditID, contactID,
+		crmcontracts.PublicEventConversationClaimChanged{
+			ClaimId: openapi_types.UUID(claimID),
+			Status:  to,
+		})
 }
 
 // SettleConversationClaim implements (POST /claims/{id}/settle).

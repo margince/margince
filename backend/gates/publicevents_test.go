@@ -5,8 +5,7 @@
 
 package gates
 
-// The public-events contract as a cross-cutting fitness function (A15):
-// the outbound-webhook surface has three moving parts that must stay in
+// The outbound-webhook surface has three moving parts that must stay in
 // lock-step, and nothing in the build forces them to. This is the ONE
 // authoritative gate that pins them together, deriving from the runtime
 // registry and the tree rather than any hand-kept list:
@@ -314,7 +313,7 @@ func parseContractEntityTypes(t *testing.T) map[string]string {
 	}
 	out := map[string]string{}
 	var pendingEvent string
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if m := contractEventKey.FindStringSubmatch(line); m != nil {
 			if pendingEvent != "" {
 				t.Errorf("%s: x-event-type %q has no x-entity-type before the next event", publicEventsPath, pendingEvent)

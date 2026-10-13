@@ -11,8 +11,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AskMarginceModal } from "./corpusask";
 
 // Ask AI → Ask your documents.
@@ -55,8 +55,14 @@ const SET = {
   topic_statement: "How this product is operated, day to day.",
   min_similarity: 0.35,
   default_ask: true,
+  shipped: false,
   created_at: "2026-08-01T00:00:00Z",
-  coverage: { documents_total: 1, chunks_total: 4, chunks_embedded: 4 },
+  coverage: {
+    documents_total: 1,
+    chunks_total: 4,
+    chunks_embedded: 4,
+    embed_state: "complete",
+  },
 };
 
 // A second set, so the picker exists at all: it is offered only where there is
@@ -377,6 +383,52 @@ describe("AskMarginceModal", () => {
     await waitFor(() => expect(documentPaneIsOpen()).toBe(false));
   });
 
+  it("brings the cited document into view for each citation, and on reopening", async () => {
+    const user = userEvent.setup();
+    const scrolled = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+    const paneScrolls = () =>
+      scrolled.mock.contexts.filter(
+        (el) => el instanceof Element && el.classList.contains("ask-modal-doc"),
+      ).length;
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          summary: "",
+          claims: [KEPT, { ...KEPT, line: 15, quote: "kept for 400 days" }],
+        }),
+      }).fetchMock,
+    );
+    const { client, rerender } = render(
+      <AskMarginceModal open onClose={() => {}} />,
+    );
+    const at = (open: boolean) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <AskMarginceModal open={open} onClose={() => {}} />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    await askAbout(user, "how long are messages kept");
+
+    await user.click(
+      await screen.findByRole("button", { name: "1: operating.md, line 14" }),
+    );
+    await waitFor(() => expect(paneScrolls()).toBe(1));
+    // The same chunk behind a second claim is still a new thing to look at.
+    await user.click(
+      screen.getByRole("button", { name: "2: operating.md, line 15" }),
+    );
+    await waitFor(() => expect(paneScrolls()).toBe(2));
+
+    rerender(at(false));
+    await waitFor(() => expect(documentPaneIsOpen()).toBe(false));
+    rerender(at(true));
+    await waitFor(() => expect(paneScrolls()).toBe(3));
+  });
+
   // An answer belongs to the set it was asked of. useMutation keeps its last
   // result across a change of selection, so without the guard a reader who asks
   // one set and switches to another reads the FIRST set's answer under the
@@ -504,7 +556,12 @@ describe("AskMarginceModal", () => {
           outcome: "not_ready",
           summary: undefined,
           claims: [],
-          coverage: { documents_total: 2, chunks_total: 9, chunks_embedded: 4 },
+          coverage: {
+            documents_total: 2,
+            chunks_total: 9,
+            chunks_embedded: 4,
+            embed_state: "indexing",
+          },
         }),
       }).fetchMock,
     );

@@ -5,7 +5,7 @@
 
 package gates
 
-// A tool whose tier is resolved by READING a record carries that reading's
+// A tool whose tier is resolved by reading a record carries that reading's
 // version into its write.
 //
 // The dynamic tier is a verdict about a record as it was: the resolver reads it,

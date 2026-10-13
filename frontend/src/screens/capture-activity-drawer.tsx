@@ -12,8 +12,8 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
 import { useProviderLabel } from "./channelproviders";
-import { throwProblem } from "./common";
 
 type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 
@@ -44,7 +44,7 @@ export function CaptureActivityDrawer({
   message?: TraceEntry;
   /**
    * Opens the message itself. The page owns that drawer and CLOSES this one
-   * first: two `Modal placement="right"` sheets at once are two focus traps
+   * first: two drawer `Modal`s at once are two focus traps
    * and two Escape handlers over one another, so the reader moves from the
    * trace to the message rather than stacking them.
    */
@@ -57,11 +57,11 @@ export function CaptureActivityDrawer({
   const trace = useQuery({
     queryKey: ["capture-trace-pipeline", traceId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/capture/traces/{id}", {
-        params: { path: { id: traceId } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/capture/traces/{id}", {
+          params: { path: { id: traceId } },
+        }),
+      );
     },
   });
 
@@ -70,7 +70,7 @@ export function CaptureActivityDrawer({
       open
       onClose={onClose}
       labelledBy="capture-pipeline-title"
-      placement="right"
+      intent="drawer"
     >
       <Heading size="large" id="capture-pipeline-title" className="modal-title">
         {t("pipeline.title")}

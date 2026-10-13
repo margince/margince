@@ -48,7 +48,7 @@ func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T)
 	if err := ai.NewMeter(e.DB()).Record(e.Admin(), ai.Usage{Task: ai.TaskSiteExtract, Tier: ai.TierLocalSmall, TokensIn: 2}); err != nil {
 		t.Fatal(err)
 	}
-	if err := recovery.resumeWorkspace(e.Admin(), e.WS); err != nil {
+	if err := recovery.resumeWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatal(err)
 	}
 	blocked, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
@@ -61,7 +61,7 @@ func TestAllowanceRecoveryAdvancesBothWebsiteClocksAndIsIdempotent(t *testing.T)
 	setRecoveryAllowance(t, e, 1000)
 
 	for range 2 {
-		if err := recovery.resumeWorkspace(e.Admin(), e.WS); err != nil {
+		if err := recovery.resumeWorkspace(context.Background(), e.WS); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -104,7 +104,7 @@ func TestRecoveryPagesContainFailuresAndReachLaterRows(t *testing.T) {
 			start++
 		}
 		return idsToVisit[start:min(start+100, len(idsToVisit))], nil
-	}, func(id ids.UUID) ids.UUID { return id }, func(tx pgx.Tx, id ids.UUID) error {
+	}, func(id ids.UUID) ids.UUID { return id }, func(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		if id == idsToVisit[0] {
 			return failed
 		}

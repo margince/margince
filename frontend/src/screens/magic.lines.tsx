@@ -6,13 +6,16 @@
 // and the time, in columns the whole list shares. Who acted, why, and why a
 // change cannot be put back are the line's detail: on hover, and read out.
 
-import { ENTITY, isEntityKind } from "../app/entity";
-import { routeHash } from "../app/router";
 import { Disclosure } from "../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { ENTITY, isEntityKind } from "../lib/entity";
+import { routeHash } from "../lib/router";
+import { approvalHref } from "./approvaldrawer";
+import { approvalKindLabel } from "./approvalkind";
 import {
   magicByKey,
   magicConsequenceKey,
@@ -104,7 +107,7 @@ function MagicLineRow({
         {/* A sentence this build has no key for is DROPPED rather than
             printed: `magic.action.something` on a receipt is worse than a row
             that says only what it was about and when. */}
-        {sentence && t(sentence, line.summary.values)}{" "}
+        {sentence && t(sentence, readableValues(line.summary.values, t))}{" "}
         <LineSubject line={line} since={since} />
         {detail.length > 0 && (
           <span className="sr-only">
@@ -160,8 +163,19 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * A line standing for many offers its undos inside, one per record: one press
  * that put back 150 changes nobody had looked at would be the same unasked
  * bulk write this page exists to report.
+ *
+ * A decision waiting has nothing to undo. Its control opens that decision in
+ * the drawer over Home, where it is answered.
  */
 function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+  const t = useT();
+  if (line.lane === "needs_you") {
+    return (
+      <div className="magic-line-controls">
+        <a href={approvalHref(line.id)}>{t("magic.decide")}</a>
+      </div>
+    );
+  }
   const entity = line.entity;
   if (
     line.lane !== "done" ||
@@ -337,4 +351,17 @@ function recordHref(line: MagicLine): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[entity.type].route(entity.id));
+}
+
+// A proposal's kind and a connector's provider arrive as codes, not words.
+function readableValues(
+  values: Readonly<Record<string, string>> | undefined,
+  t: Translator,
+): Record<string, string> | undefined {
+  if (!values) return values;
+  return {
+    ...values,
+    ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
+    ...(values.provider && { provider: providerName(values.provider, t) }),
+  };
 }

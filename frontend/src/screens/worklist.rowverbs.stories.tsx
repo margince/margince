@@ -120,7 +120,7 @@ function waitingRow(): WorklistItem {
     title: "Re: pricing for the retrofit",
     because: [],
     actions: ["open", "reply"],
-    dispositions: ["snooze", "not_mine", "not_sales"],
+    dispositions: ["handled", "snooze", "not_mine", "not_sales"],
     version: 2,
     subject: {
       type: "deal",
@@ -186,6 +186,100 @@ export const AWaitingRowWithEveryVerb: Story = {
     href: rowHref(waitingRow()),
     owner: "",
     primary: <Verb message="compose.reply" answer />,
+  },
+};
+
+/** A message the reader sent that nobody answered: the follow-up is the answer. */
+export const AFollowUpRow: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "awaiting_reply",
+      category: "tasks",
+      consequence: "none",
+      title: "The proposal we discussed",
+      because: [
+        { kind: "you_wrote_last" },
+        { kind: "no_reply_days", value: { kind: "days", days: 3 } },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
+/** A meeting with nothing sent since: the follow-up is a fresh message. */
+export const AMeetingFollowUpRow: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Discovery workshop",
+      move: undefined,
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
+/** The same follow-up, owed to three attendees of a meeting filed on a deal. */
+export const AMeetingFollowUpToThreeAttendees: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Pricing review",
+      move: undefined,
+      contact: {
+        id: "01a05500-0000-7000-8000-0000000000d1",
+        label: "Ana Brandt",
+      },
+      recipients: [
+        { id: "01a05500-0000-7000-8000-0000000000d1", label: "Ana Brandt" },
+        { id: "01a05500-0000-7000-8000-0000000000d2", label: "Ben Ortiz" },
+        { id: "01a05500-0000-7000-8000-0000000000d3", label: "Cleo Nguyen" },
+      ],
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
+    primary: <Verb message="worklist.verb.draft_follow_up_now" answer />,
+  },
+};
+
+/** A follow-up with no attendee on file: the row opens the deal instead. */
+export const AMeetingFollowUpWithNoAttendee: Story = {
+  args: {
+    item: {
+      ...waitingRow(),
+      source: "meeting_follow_up",
+      category: "meetings",
+      consequence: "none",
+      title: "Pricing review",
+      move: undefined,
+      actions: ["open"],
+      contact: undefined,
+      because: [
+        { kind: "met_days_ago", value: { kind: "days", days: 3 } },
+        { kind: "nothing_sent_since" },
+        { kind: "no_attendee_on_file" },
+      ],
+    },
+    href: rowHref(waitingRow()),
+    owner: "",
   },
 };
 

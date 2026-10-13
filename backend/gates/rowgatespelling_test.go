@@ -5,7 +5,7 @@
 
 package gates
 
-// A module's READ spelling of a row gate is not a licence to write through it.
+// A module's read spelling of a row gate is not a licence to write through it.
 //
 // writeauthority_test.go asks the tier-wide question — is each probe on a
 // mutating path the write-authority spelling — and ratifies the shared read

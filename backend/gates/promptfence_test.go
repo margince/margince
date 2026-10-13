@@ -5,8 +5,7 @@
 
 package gates
 
-// Prompt-boundary fitness functions: no prompt may declare a data boundary the
-// writer of that data can spell.
+// No prompt may declare a data boundary the writer of that data can spell.
 //
 // The control this replaced was a fixed <untrusted> marker, and it failed for a
 // reason no review pass catches reliably — a marker built out of characters is a

@@ -36,7 +36,9 @@ package testdb
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -123,7 +125,9 @@ const resetTables = `
 // gate reported it as leaking.
 //
 // The report fence is one boot-seeded coordination row with no customer data.
-// Its generation is monotonic; no reader depends on a particular value.
+// Its generation is monotonic; no reader depends on a particular value. The
+// own-sent-mail repair cutoff is one such row too, and every test that reads
+// it sets it first.
 //
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
@@ -131,7 +135,7 @@ const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_so
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
 	`'maskable_field', 'report_projection_fence', ` +
-	`'activity_review_template')`
+	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -209,7 +213,7 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	// gone, not that there is nothing to do. Reporting a clean reset for that is
 	// the same silent-success shape the settings above exist to eliminate.
 	if len(tables) == 0 {
-		return fmt.Errorf("no data tables in public or ext — call EnsureSchema before Reset; the schema is missing or was dropped")
+		return errors.New("no data tables in public or ext — call EnsureSchema before Reset; the schema is missing or was dropped")
 	}
 	unbaselined, err := reclaimBloat(ctx, tx)
 	if err != nil {
@@ -253,9 +257,7 @@ func baselineNewTables(ctx context.Context, q execQuerier, unbaselined []string)
 	}
 	merged := make(map[string]int64, len(sizes))
 	if recorded := emptySizes.Load(); recorded != nil {
-		for name, size := range *recorded {
-			merged[name] = size
-		}
+		maps.Copy(merged, *recorded)
 	}
 	for _, name := range unbaselined {
 		if size, ok := sizes[name]; ok {

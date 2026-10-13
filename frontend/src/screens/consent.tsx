@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import {
   Badge,
   Button,
@@ -12,12 +11,14 @@ import {
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWriteRecord } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { humanizeToken } from "./audit";
-import { QueryStates, throwProblem } from "./common";
 import "./consent.css";
 import { stable } from "../format/collate";
 
@@ -37,13 +38,11 @@ function useContactConsent(contactId: string) {
   return useQuery({
     queryKey: ["contact-consent", contactId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/contacts/{id}/consent", {
-        params: { path: { id: contactId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/contacts/{id}/consent", {
+          params: { path: { id: contactId } },
+        }),
+      );
     },
   });
 }
@@ -55,11 +54,7 @@ export function useConsentPurposes() {
   return useQuery({
     queryKey: ["consent-purposes"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/consent-purposes");
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(await api.GET("/consent-purposes"));
     },
   });
 }
@@ -211,26 +206,24 @@ function ConsentRow({
 
   const setState = useMutation({
     mutationFn: async (newState: "granted" | "withdrawn") => {
-      const { data, error } = await api.POST("/contacts/{id}/consent", {
-        params: { path: { id: contactId } },
-        body: {
-          purpose_id: entry.purpose_id,
-          new_state: newState,
-          // Only a grant needs it: a withdrawal demonstrates nothing, and the
-          // server stores no wording for one.
-          ...(newState === "granted"
-            ? {
-                wording: t("consent.operatorWording", {
-                  label: purpose?.label ?? entry.purpose_key ?? "",
-                }),
-              }
-            : {}),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/contacts/{id}/consent", {
+          params: { path: { id: contactId } },
+          body: {
+            purpose_id: entry.purpose_id,
+            new_state: newState,
+            // Only a grant needs it: a withdrawal demonstrates nothing, and the
+            // server stores no wording for one.
+            ...(newState === "granted"
+              ? {
+                  wording: t("consent.operatorWording", {
+                    label: purpose?.label ?? entry.purpose_key ?? "",
+                  }),
+                }
+              : {}),
+          },
+        }),
+      );
     },
     // The write endpoint returns only the updated state row, not the new
     // consent_event — so the proof log can only pick up the transition just
@@ -439,14 +432,11 @@ export function ConfirmDetailsAction({
     // this contact's link went to.
     mutationKey: ["confirm-request", contactId],
     mutationFn: async (id: string) => {
-      const { data, error } = await api.POST(
-        "/contacts/{id}/consent/confirm-request",
-        { params: { path: { id } } },
+      return unwrap(
+        await api.POST("/contacts/{id}/consent/confirm-request", {
+          params: { path: { id } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
   });
 

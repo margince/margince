@@ -5,7 +5,7 @@
 
 package gates
 
-// contact_profile_field holds what a machine ASSERTED about a contact, and
+// contact_profile_field holds what a machine asserted about a contact, and
 // ai_feedback holds what a human then decided about that assertion. A surface
 // that shows the value without consulting the ledger shows the reader the exact
 // claim they already overrode — so consulting it cannot be one caller's job.
@@ -87,7 +87,7 @@ var profileFieldValueReaders = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/mergerelink.go:relinkContactReferences":                     "the merge copies each surviving evidence row from the merged-away contact to the survivor, value and provenance together, and deletes the source rows. It serves nobody: the values move between two records and are read back through contact360 afterwards like any other, verdict and all. Overlaying here would write the OVERLAID value into the survivor's row and destroy the distinction between what the machine asserted and what a human decided about it — the copy must be faithful precisely because the ledger is consulted later. The cost is that a verdict keyed to the merged-away contact's id does not follow its value across, which is a gap in the merge rather than in this reader",
 	"internal/modules/contacts/profilefieldrestore.go:readUndo":                            "the restore serves the value to NOBODY: it reads the row under FOR UPDATE to decide whether the undo may proceed — is the value still the one that was written, and is there a superseded value to put back — and the only thing it returns to a caller is 204. Overlaying a verdict here would make that test WRONG rather than safer: the overlaid value is what a human said, the stored value is what the record carries, and the CAS has to compare against what the record carries or it would refuse an undo of a value a human corrected in the ledger without touching. The reader who then re-reads the field goes through readProfileFields and sees the overlay as always. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/contactprofilefieldwrite.go:writeContactProfileField":       "the writer serves the value to NOBODY: when a phone number replaces the older number of its country, the statement deletes the older number's row and carries its stored value, author and date into the new row's undo buffer, row to row, inside one INSERT. Overlaying a verdict would write what a human SAID into superseded_value, and the undo would then put back a value the record never carried. The reader who re-reads the field goes through readProfileFields and sees the overlay as always. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
-	"internal/modules/contacts/companynamepromotion.go:loadSignatureCompanyNames":          "RATIFIED PENDING A DECISION, see issue #2319. The corroborated company-name promotion reads the company_name signature values to count how many contacts at a company state the same employer name. It does not show them as fact — it ranks a claim and, when signatures alone are the only agreement, stages a 🟡 proposal for a human. But it does not consult the ledger either, so a company_name a human already REJECTED still corroborates. Whether a verdict about one contact's signature should veto a rename of their employer is a product question with an argument on each side, which is why it is filed rather than decided here. The cost, stated plainly: until that is answered, a rejected claim carries weight it may not deserve",
+	"internal/modules/contacts/fillretraction.go:fillStands":                               "the undo of a machine fill serves the value to NOBODY: it reads the rows one pass wrote to decide whether they still stand — present, uncorrected, and still what the title column and the phone list carry — and answers only undoable or refused. The ledger IS consulted, in the same statement: a field carrying a live `corrected` verdict reads as changed since, so the undo refuses rather than clearing what a human ruled on. Overlaying the verdict instead would compare what a human SAID against what the record carries, which is the comparison readUndo explains is wrong. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/observedcontact.go:seedFromColumn":                          "seedFromColumn serves the value to NOBODY. It reads one field's sidecar row and compares it to the contact COLUMN beside it, answering a question about provenance rather than about content: does the column hold something this table never wrote — a title somebody typed by hand — which is therefore about to be replaced with no record of what it was. The answer decides only what goes into the undo buffer. Overlaying a verdict would make the comparison WRONG rather than safer: the overlaid value is what a human said, the column is what the record carries, and a match between them would then read as 'the sidecar accounts for this column' in exactly the case where the two disagree and the typed value is the one about to be lost. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/signatureretraction.go:RetractMisattributedSignatureFields": "the sweep serves the value to NOBODY: it reads f.value to compare against the contact COLUMN, which is the compare-and-swap that decides whether the column may be restored. Overlaying a verdict would make that test WRONG rather than safer, for the reason RestoreProfileField gives above — the overlaid value is what a human SAID and the column is what the record carries, so a match between them would read as 'this pass wrote the column' in exactly the case where a human has since typed something else, and their answer would be overwritten. The ledger IS consulted, on the other side of the same statement: a field carrying a live `corrected` verdict is excluded from the sweep entirely. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/privacy/sarsections.go:sarProvenanceSections":                        "the Article 15 export owes the subject what this installation HOLDS, and it holds two facts: the value the machine asserted and the verdict the human recorded against it. It exports the stored columns here and ai_feedback as its own section beside them, so the subject sees both. Overlaying the verdict instead would hand them one merged value and conceal that an override exists — the opposite of what an export is for. It also cannot share contact360's reader: privacy is a module and may not import compose (ADR-0054 §3). The cost is that the two statements must be corrected together when the column set changes, which is why they name each other at both sites",
@@ -122,7 +122,57 @@ func readsProfileFieldValues(path string, file *ast.File) bool {
 // rather than a WHERE fragment assembled elsewhere. A future reader that wraps
 // the pair in a third function still passes: it reads through the wrapper, so
 // the read and the call are in the same declaration again.
-var verdictOverlayMarkers = []string{"applyFieldVerdicts", "VerdictsForTx"}
+var verdictOverlayMarkers = []string{"applyFieldVerdicts", "VerdictsForTx", "VerdictsForManyTx"}
+
+// ruledAtASeam names the readers whose values are ruled ONE LAYER UP, each
+// pointing at the declaration that does the ruling.
+//
+// It exists because a module cannot import the feedback store — the DAG forbids
+// a module importing a sibling — so a reader inside one can never call the
+// overlay itself. Its values are ruled where the edge is allowed to exist, in
+// `compose`, before anything counts them.
+//
+// Not a waiver: a waiver states a cost and goes on being true. Each entry here
+// is a CLAIM, and the named declaration is parsed and must itself consult the
+// ledger — delete the consultation from the seam and this gate goes red.
+//
+// gatekit:fixture each reader's ruling seam, "<file>:<declaration>", parsed and
+// checked rather than trusted
+var ruledAtASeam = map[string]string{
+	"internal/modules/contacts/companynamepromotion.go:loadSignatureCompanyNames": "internal/compose/companynamepromotion.go:rule",
+}
+
+// The files named as seams above, so the scope below parses those and no others.
+var seamFiles = func() map[string]bool {
+	files := map[string]bool{}
+	for _, seam := range ruledAtASeam {
+		path, _, _ := strings.Cut(seam, ":")
+		files[path] = true
+	}
+	return files
+}()
+
+var verdictSeamScope = gatekit.Scope{
+	Roots:   []string{"internal"},
+	Subject: func(path string, _ *ast.File) bool { return seamFiles[path] },
+	Exempt:  gatekit.Waive(map[string]string{}),
+}
+
+// rulingSeams names every declaration in a seam file that consults the ledger.
+func rulingSeams(t *testing.T) map[string]bool {
+	t.Helper()
+	found := map[string]bool{}
+	for _, src := range verdictSeamScope.Files(t) {
+		for _, decl := range src.File.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			if !isFunc || !gatekit.CallsAny(decl, verdictOverlayMarkers) {
+				continue
+			}
+			found[src.Path+":"+fn.Name.Name] = true
+		}
+	}
+	return found
+}
 
 // unoverlaidValueReaders names each declaration in the file that serves values
 // from the table and consults no verdict of its own.
@@ -151,6 +201,18 @@ func unoverlaidValueReaders(file *ast.File) []string {
 func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing.T) {
 	t.Parallel()
 	defer profileFieldValueReaders.AssertAllMatched(t)
+	seams := rulingSeams(t)
+	matchedSeams := map[string]bool{}
+	// A claim about a reader that no longer exists is a claim nobody is
+	// checking: the same failure an unmatched waiver has, so it fails the same
+	// way.
+	defer func() {
+		for reader := range ruledAtASeam {
+			if !matchedSeams[reader] {
+				t.Errorf("ruledAtASeam names %s, which this census no longer reports as an unoverlaid reader — delete the entry or find out why the reader stopped being seen", reader)
+			}
+		}
+	}()
 	files := profileFieldReaderScope.Files(t)
 	if len(files) == 0 {
 		t.Fatal("no reader of contact_profile_field found — the matcher has stopped seeing this tree's SQL, and a gate that judges nothing reads exactly like a clean one")
@@ -161,7 +223,17 @@ func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing
 			// the guard skipped the loop below entirely, so a value reader
 			// added to a waived file afterwards was never looked at — the
 			// waiver covered a category where its reason names an instance.
-			if profileFieldValueReaders.Waived(t, src.Path+":"+strings.SplitN(offender, " ", 2)[0]) {
+			reader := src.Path + ":" + strings.SplitN(offender, " ", 2)[0]
+			if seam, claimed := ruledAtASeam[reader]; claimed {
+				if seams[seam] {
+					matchedSeams[reader] = true
+					continue
+				}
+				t.Errorf("%s: %s says its values are ruled at %s, and that declaration consults no verdict ledger — the claim has stopped being true, and the reader is serving values a human may already have struck", src.Path, offender, seam)
+				matchedSeams[reader] = true
+				continue
+			}
+			if profileFieldValueReaders.Waived(t, reader) {
 				continue
 			}
 			t.Errorf("%s: %s serves contact_profile_field values without consulting ai_feedback — it would show the machine's claim as fact to somebody who already overrode it. Route it through contact360's readProfileFields, or ratify it in profileFieldValueReaders with the reason and the cost", src.Path, offender)

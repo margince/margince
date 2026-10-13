@@ -10,7 +10,6 @@ package deals
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -19,11 +18,19 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// cleanLadderName is the one rule for a pipeline's or stage's name. Zero-width
+// runes are dropped before the name is judged, so "\u200bAlpha" cannot sit beside
+// "Alpha" and read as a free name.
+func cleanLadderName(field, raw string) (string, error) {
+	return httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+}
 
 type UpdatePipelineInput struct {
 	Name      *string
@@ -35,6 +42,13 @@ type UpdatePipelineInput struct {
 func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in UpdatePipelineInput) (crmcontracts.Pipeline, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionUpdate); err != nil {
 		return crmcontracts.Pipeline{}, err
+	}
+	if in.Name != nil {
+		name, err := cleanLadderName("name", *in.Name)
+		if err != nil {
+			return crmcontracts.Pipeline{}, err
+		}
+		in.Name = &name
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -87,6 +101,9 @@ func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 		}
 	}
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		if storekit.IsUniqueViolation(err) {
+			return apperrors.ErrConflict
+		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "pipeline", id.UUID, patch.Before(), patch.After())
@@ -122,9 +139,14 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 	if err := checkStagePosition(in.Position); err != nil {
 		return crmcontracts.Stage{}, err
 	}
+	name, err := cleanLadderName("name", in.Name)
+	if err != nil {
+		return crmcontracts.Stage{}, err
+	}
+	in.Name = name
 	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		// The pipeline row before the insert, as every ladder write takes it: a
 		// reorder holding it would otherwise wait on this insert's position
 		// while this insert waited on the pipeline.
@@ -199,43 +221,18 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 		return nil, err
 	}
 	var out []crmcontracts.Stage
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
 		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := predicateAlways
 		if pipelineID != nil {
-			where = storekit.SQLf("pipeline_id = $%d", arg(*pipelineID))
+			args = append(args, *pipelineID)
+			where = storekit.SQLf("s.pipeline_id = $%d", len(args))
 		}
 		if archived == storekit.LiveOnly {
-			where += " AND archived_at IS NULL"
+			where += " AND s.archived_at IS NULL"
 		}
-		rows, err := tx.Query(ctx, storekit.SQLf(
-			`SELECT id FROM stage WHERE %s ORDER BY pipeline_id, position`, where,
-		), args...)
-		if err != nil {
-			return err
-		}
-		var stageIDs []ids.StageID
-		for rows.Next() {
-			var id ids.StageID
-			if err := rows.Scan(&id); err != nil {
-				rows.Close()
-				return err
-			}
-			stageIDs = append(stageIDs, id)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		for _, id := range stageIDs {
-			stage, err := readStage(ctx, tx, id, storekit.IncludeArchived)
-			if err != nil {
-				return err
-			}
-			out = append(out, stage)
-		}
-		return nil
+		out, err = readStages(ctx, tx, where, args)
+		return err
 	})
 	return out, err
 }
@@ -256,6 +253,13 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err := checkStagePosition(*in.Position); err != nil {
 			return crmcontracts.Stage{}, err
 		}
+	}
+	if in.Name != nil {
+		name, err := cleanLadderName("name", *in.Name)
+		if err != nil {
+			return crmcontracts.Stage{}, err
+		}
+		in.Name = &name
 	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
@@ -283,6 +287,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 			return err
 		}
 		if err := refuseTerminalWithOpenDeals(ctx, tx, id, current.semantic, in.Semantic); err != nil {
+			return err
+		}
+		if err := refuseFlipUnderDecidedDeals(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
 		}
 		// An update naming no field changes nothing, and an audit row for it
@@ -363,27 +370,6 @@ func stageUpdatedPayload(pipelineID ids.PipelineID, in UpdateStageInput) crmcont
 		Semantic:       in.Semantic,
 		WinProbability: committedWinProbability(in),
 	}
-}
-
-func readStage(ctx context.Context, tx pgx.Tx, id ids.StageID, archived storekit.ArchivedFilter) (crmcontracts.Stage, error) {
-	q := `SELECT id, pipeline_id, name, position, semantic, win_probability, created_at, updated_at, archived_at
-	      FROM stage WHERE id = $1`
-	if archived == storekit.LiveOnly {
-		q += ` AND archived_at IS NULL`
-	}
-	var out crmcontracts.Stage
-	var stageID, pipelineID ids.UUID
-	err := tx.QueryRow(ctx, q, id).Scan(&stageID, &pipelineID, &out.Name, &out.Position,
-		&out.Semantic, &out.WinProbability, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.Stage{}, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return crmcontracts.Stage{}, err
-	}
-	out.Id = openapi_types.UUID(stageID)
-	out.PipelineId = openapi_types.UUID(pipelineID)
-	return out, nil
 }
 
 // codeTerminalStageHoldsOpenDeals is what a semantic flip answers when the

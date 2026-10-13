@@ -3,9 +3,9 @@
 
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
-import { useHoldsAdminRole } from "../app/capability";
-import { navigate } from "../app/router";
 import { useT } from "../i18n";
+import { useHoldsAdminRole } from "../lib/capability";
+import { navigate } from "../lib/router";
 import type { SettingsPage } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
 import { settingsSearch } from "./settingssearch";

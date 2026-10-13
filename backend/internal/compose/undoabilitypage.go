@@ -25,6 +25,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -151,7 +152,7 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 	edgePlaceholder := arg(privacy.EdgeEntityType)
 
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.occurred_at,
+		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.evidence, a.occurred_at,
 		       CASE WHEN a.entity_type = `+edgePlaceholder+` THEN NULL
 		            ELSE NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) END AS behind_erasure
 		FROM audit_log a
@@ -167,7 +168,7 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 	for rows.Next() {
 		var row pageRow
 		if err := rows.Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action,
-			&row.Before, &row.After, &row.OccurredAt, &row.behindErasure); err != nil {
+			&row.Before, &row.After, &row.Evidence, &row.OccurredAt, &row.behindErasure); err != nil {
 			return nil, err
 		}
 		out = append(out, row)
@@ -298,4 +299,4 @@ func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
 // The evaluator only asks whether the port returned an error, and the real one
 // separates "not yours" from "does not exist" — the distinction the row-scope
 // gate keeps hidden.
-var errRecordNotWritable = fmt.Errorf("the caller may not change this record")
+var errRecordNotWritable = errors.New("the caller may not change this record")

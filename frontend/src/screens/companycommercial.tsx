@@ -1,15 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -64,16 +64,16 @@ export function CompanyLastOffer({ view }: Readonly<{ view?: Company360 }>) {
     // ["deal-offers", id]; sharing it would let this one-row response stand in
     // for that list and leave the deal screen showing a single offer.
     queryKey: ["deal-latest-offer", leading?.deal_id],
-    enabled: Boolean(leading) && mayRead,
-    queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/offers", {
-        params: { path: { id: leading?.deal_id ?? "" }, query: { limit: 1 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+    enabled: mayRead,
+    queryFn: leading
+      ? async () => {
+          return unwrap(
+            await api.GET("/deals/{id}/offers", {
+              params: { path: { id: leading.deal_id }, query: { limit: 1 } },
+            }),
+          );
+        }
+      : skipToken,
   });
   const offer = offers.data?.data?.[0];
   if (!leading || !offer) {

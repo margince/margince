@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -45,7 +46,7 @@ const (
 // together or not at all.
 func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 	return func(ctx context.Context, tx pgx.Tx, change contacts.TechnicalChange, at time.Time) error {
-		summary, ok := technicalChangeSummary(baseLanguageForSummary(ctx, tx), change)
+		summary, ok := technicalChangeSummary(identity.BaseLanguageForRecord(ctx, tx), change)
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
 			// it; it just does not earn a line on the account's signal list.
@@ -103,15 +104,91 @@ type technicalSummaryCopy struct {
 	// technologyGone / technologyNew: a product left the stack, or joined it.
 	technologyGone string
 	technologyNew  string
-	// serviceNames names every service key techprofile can classify, because
-	// techprofile's own labels are the record's, written in one language, and
-	// a sentence in the reader's language must not carry a name in another.
-	// The census test holds this map complete against techprofile.ServiceKeys.
-	serviceNames map[string]string
-	// mailNames covers the two mail fallback labels techprofile writes in
-	// prose ("own mail server", "another provider"); a real provider's key is
-	// absent here on purpose, so its vendor name passes through untranslated.
-	mailNames map[string]string
+}
+
+// A vocabulary is spelled one key per row rather than once per language.
+//
+// The frames above are prose and differ in shape, so each language states its
+// own.
+//
+// A vocabulary entry is one concept in three languages, and a row shows all
+// three. A missing translation is then visible on the line that should carry
+// it, and the table does not repeat its structure per language.
+type vocabularyEntry struct{ english, german, vietnamese string }
+
+// in answers this language, falling back to English for one the product does
+// not ship. The census holds every row complete, so the fallback is a floor
+// rather than a path a shipped language takes.
+func (e vocabularyEntry) in(lang textlang.Lang) string {
+	switch lang {
+	case textlang.German:
+		return e.german
+	case textlang.Vietnamese:
+		return e.vietnamese
+	default:
+		return e.english
+	}
+}
+
+// serviceVocabulary names every service key techprofile classifies.
+//
+// One name serves both the sentence and the record, because a service name is
+// a standalone noun phrase in either position. The census holds this complete
+// against techprofile.ServiceKeys.
+var serviceVocabulary = map[string]vocabularyEntry{
+	techprofile.ServiceWebshop:        {"Webshop", "Webshop", "Cửa hàng trực tuyến"},
+	techprofile.ServiceCustomerPortal: {"Customer portal", "Kundenportal", "Cổng khách hàng"},
+	techprofile.ServiceCareers:        {"Careers page", "Karriereseite", "Trang tuyển dụng"},
+	techprofile.ServiceAPI:            {"Public API", "Öffentliche API", "API công khai"},
+	techprofile.ServiceVPN:            {"VPN access", "VPN-Zugang", "Truy cập VPN"},
+	techprofile.ServiceMail:           {"Own mail infrastructure", "Eigene Mail-Infrastruktur", "Hạ tầng mail riêng"},
+	techprofile.ServiceFileCloud:      {"File cloud", "Datei-Cloud", "Đám mây lưu trữ tệp"},
+	techprofile.ServiceDevInfra: {
+		"Development infrastructure", "Entwicklungs-Infrastruktur", "Hạ tầng phát triển",
+	},
+	techprofile.ServiceStatusPage: {"Status page", "Statusseite", "Trang trạng thái"},
+	techprofile.ServiceSupport:    {"Support portal", "Support-Portal", "Cổng hỗ trợ"},
+}
+
+// mailSentenceVocabulary is the two mail fallbacks inside a sentence. A real
+// provider's key is absent here, so its vendor name passes through
+// untranslated.
+var mailSentenceVocabulary = map[string]vocabularyEntry{
+	techprofile.MailSelfHosted: {"their own mail server", "eigener Mailserver", "máy chủ mail riêng"},
+	techprofile.MailOther:      {"another provider", "anderer Anbieter", "nhà cung cấp khác"},
+}
+
+// mailRecordVocabulary is the same two keys as a standalone record value.
+// "Mail runs on their own mail server" needs the possessive, and a fact row
+// reading "their own mail server" does not.
+var mailRecordVocabulary = map[string]vocabularyEntry{
+	techprofile.MailSelfHosted: {"Own mail server", "Eigener Mailserver", "Máy chủ mail riêng"},
+	techprofile.MailOther:      {"Another provider", "Anderer Anbieter", "Nhà cung cấp khác"},
+}
+
+// securityVocabulary and securityEvidenceVocabulary are the email-security
+// postures as the record carries them. The protocol names stay as they are,
+// because SPF and DMARC are not words any language translates.
+var securityVocabulary = map[string]vocabularyEntry{
+	techprofile.SecuritySPF:             {"SPF published", "SPF veröffentlicht", "Đã công bố SPF"},
+	techprofile.SecurityDMARCNone:       {"DMARC observing only", "DMARC nur beobachtend", "DMARC chỉ theo dõi"},
+	techprofile.SecurityDMARCQuarantine: {"DMARC quarantining", "DMARC in Quarantäne", "DMARC cách ly"},
+	techprofile.SecurityDMARCReject:     {"DMARC enforced", "DMARC durchgesetzt", "DMARC đã thực thi"},
+	techprofile.SecurityDKIM:            {"DKIM configured", "DKIM eingerichtet", "Đã thiết lập DKIM"},
+}
+
+var securityEvidenceVocabulary = map[string]vocabularyEntry{
+	techprofile.SecuritySPF:       {"SPF record (v=spf1)", "SPF-Eintrag (v=spf1)", "Bản ghi SPF (v=spf1)"},
+	techprofile.SecurityDMARCNone: {"DMARC record: p=none", "DMARC-Eintrag: p=none", "Bản ghi DMARC: p=none"},
+	techprofile.SecurityDMARCQuarantine: {
+		"DMARC record: p=quarantine", "DMARC-Eintrag: p=quarantine", "Bản ghi DMARC: p=quarantine",
+	},
+	techprofile.SecurityDMARCReject: {
+		"DMARC record: p=reject", "DMARC-Eintrag: p=reject", "Bản ghi DMARC: p=reject",
+	},
+	techprofile.SecurityDKIM: {
+		"DKIM selector answered", "DKIM-Selector beantwortet", "Bộ chọn DKIM đã phản hồi",
+	},
 }
 
 // technicalSummaryByLang is the census, keyed by textlang.Lang so the test can
@@ -126,22 +203,6 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 		hostingSet:     "Hosted at %s",
 		technologyGone: "No longer uses %s",
 		technologyNew:  "Now uses %s",
-		serviceNames: map[string]string{
-			techprofile.ServiceWebshop:        "Webshop",
-			techprofile.ServiceCustomerPortal: "Customer portal",
-			techprofile.ServiceCareers:        "Careers page",
-			techprofile.ServiceAPI:            "Public API",
-			techprofile.ServiceVPN:            "VPN access",
-			techprofile.ServiceMail:           "Own mail infrastructure",
-			techprofile.ServiceFileCloud:      "File cloud",
-			techprofile.ServiceDevInfra:       "Development infrastructure",
-			techprofile.ServiceStatusPage:     "Status page",
-			techprofile.ServiceSupport:        "Support portal",
-		},
-		mailNames: map[string]string{
-			techprofile.MailSelfHosted: "their own mail server",
-			techprofile.MailOther:      "another provider",
-		},
 	},
 	textlang.German: {
 		mailMoved:      "Mail läuft jetzt über %s (vorher %s)",
@@ -152,22 +213,6 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 		hostingSet:     "Hosting bei %s",
 		technologyGone: "%s wird nicht mehr eingesetzt",
 		technologyNew:  "Setzt jetzt %s ein",
-		serviceNames: map[string]string{
-			techprofile.ServiceWebshop:        "Webshop",
-			techprofile.ServiceCustomerPortal: "Kundenportal",
-			techprofile.ServiceCareers:        "Karriereseite",
-			techprofile.ServiceAPI:            "Öffentliche API",
-			techprofile.ServiceVPN:            "VPN-Zugang",
-			techprofile.ServiceMail:           "Eigene Mail-Infrastruktur",
-			techprofile.ServiceFileCloud:      "Datei-Cloud",
-			techprofile.ServiceDevInfra:       "Entwicklungs-Infrastruktur",
-			techprofile.ServiceStatusPage:     "Statusseite",
-			techprofile.ServiceSupport:        "Support-Portal",
-		},
-		mailNames: map[string]string{
-			techprofile.MailSelfHosted: "eigener Mailserver",
-			techprofile.MailOther:      "anderer Anbieter",
-		},
 	},
 	textlang.Vietnamese: {
 		mailMoved:      "Mail hiện chạy trên %s (trước đây là %s)",
@@ -178,22 +223,6 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 		hostingSet:     "Hosting tại %s",
 		technologyGone: "Không còn dùng %s",
 		technologyNew:  "Hiện đang dùng %s",
-		serviceNames: map[string]string{
-			techprofile.ServiceWebshop:        "Cửa hàng trực tuyến",
-			techprofile.ServiceCustomerPortal: "Cổng khách hàng",
-			techprofile.ServiceCareers:        "Trang tuyển dụng",
-			techprofile.ServiceAPI:            "API công khai",
-			techprofile.ServiceVPN:            "Truy cập VPN",
-			techprofile.ServiceMail:           "Hạ tầng mail riêng",
-			techprofile.ServiceFileCloud:      "Đám mây lưu trữ tệp",
-			techprofile.ServiceDevInfra:       "Hạ tầng phát triển",
-			techprofile.ServiceStatusPage:     "Trang trạng thái",
-			techprofile.ServiceSupport:        "Cổng hỗ trợ",
-		},
-		mailNames: map[string]string{
-			techprofile.MailSelfHosted: "máy chủ mail riêng",
-			techprofile.MailOther:      "nhà cung cấp khác",
-		},
 	},
 }
 
@@ -204,24 +233,20 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 // call, a careers page appearing is a hiring signal, and a shared phrasing
 // would flatten both into "a technical signal changed".
 func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange) (string, bool) {
-	said, ok := technicalSummaryByLang[lang]
-	if !ok {
-		// Unreachable for a language the product ships — the census holds that
-		// — but the language comes off a settings row, and answering English
-		// beats answering nothing.
-		said = technicalSummaryByLang[textlang.English]
-	}
+	said := technicalCopyFor(lang)
+
 	switch change.Field {
 	case contacts.FactMailProvider:
 		// The fallback mail labels are prose and follow the language; a real
 		// provider's key misses the map and its vendor name passes through.
-		value := nameOr(said.mailNames, change.ValueKey, change.Value)
+		value := nameOr(mailSentenceVocabulary, lang, change.ValueKey, change.Value)
 		if change.Kind == contacts.TechnicalMoved {
-			return fmt.Sprintf(said.mailMoved, value, nameOr(said.mailNames, change.PreviousKey, change.Previous)), true
+			previous := nameOr(mailSentenceVocabulary, lang, change.PreviousKey, change.Previous)
+			return fmt.Sprintf(said.mailMoved, value, previous), true
 		}
 		return fmt.Sprintf(said.mailSet, value), true
 	case contacts.FactOperatedService:
-		value := nameOr(said.serviceNames, change.ValueKey, change.Value)
+		value := nameOr(serviceVocabulary, lang, change.ValueKey, change.Value)
 		if change.Kind == contacts.TechnicalGone {
 			return fmt.Sprintf(said.serviceGone, value), true
 		}
@@ -247,9 +272,50 @@ func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange)
 
 // nameOr is the display name a language keeps for a key, and the record's own
 // label when it keeps none — a vendor name, which no language translates.
-func nameOr(names map[string]string, key, recorded string) string {
-	if name, ok := names[key]; ok {
-		return name
+func nameOr(vocabulary map[string]vocabularyEntry, lang textlang.Lang, key, recorded string) string {
+	if entry, ok := vocabulary[key]; ok {
+		return entry.in(lang)
 	}
 	return recorded
+}
+
+// technicalCopyFor is this language's copy, English when the language is one
+// the product does not ship.
+//
+// Unreachable for a shipped language, because the census holds the map
+// complete. The language comes off a settings row, and answering English beats
+// answering nothing.
+func technicalCopyFor(lang textlang.Lang) technicalSummaryCopy {
+	said, ok := technicalSummaryByLang[lang]
+	if !ok {
+		return technicalSummaryByLang[textlang.English]
+	}
+	return said
+}
+
+// recordName is what a record calls one enumerated signal, in this language.
+//
+// Keyed by field as well as key, so a service and a mail posture that ever
+// share a key cannot borrow each other's name.
+func recordName(signal techprofile.Signal, lang textlang.Lang) (string, bool) {
+	switch signal.Field {
+	case techprofile.FieldOperatedService:
+		return named(serviceVocabulary, lang, signal.Key)
+	case techprofile.FieldMailProvider:
+		return named(mailRecordVocabulary, lang, signal.Key)
+	case techprofile.FieldEmailSecurity:
+		return named(securityVocabulary, lang, signal.Key)
+	default:
+		return "", false
+	}
+}
+
+// named answers one vocabulary row in this language, and false for a key the
+// vocabulary does not carry.
+func named(vocabulary map[string]vocabularyEntry, lang textlang.Lang, key string) (string, bool) {
+	entry, ok := vocabulary[key]
+	if !ok {
+		return "", false
+	}
+	return entry.in(lang), true
 }

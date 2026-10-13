@@ -13,10 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { jsonResponse } from "./company.fixtures";
 import { ProjectScreen } from "./project360";
 import { project, project360 } from "./projects.fixtures";
@@ -364,6 +364,64 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
+  });
+
+  // The owner list is portalled beside the menu that holds its trigger, so a
+  // press inside it must not read to the menu as a press away from it.
+  it("keeps the overflow menu open while the owner list is worked, and lands focus on a live control after the pick", async () => {
+    const user = userEvent.setup();
+    const patches: string[] = [];
+    projectsBackend({
+      view: project360(),
+      respond: async (url, method, request) => {
+        if (new URL(url).pathname === "/v1/users") {
+          return jsonResponse({
+            data: [{ id: "u-42", display_name: "Jane Doe", email: "j@x.test" }],
+            page: { has_more: false },
+          });
+        }
+        if (method === "PATCH") {
+          patches.push(await request.text());
+          return jsonResponse(project({ owner_id: "u-42", version: 4 }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    const more = screen.getByRole("button", { name: "More actions" });
+    await user.click(more);
+    const assign = screen.getByRole("button", {
+      name: en["project.assignOwner"],
+    });
+    await user.click(assign);
+    const list = await screen.findByRole("dialog", {
+      name: en["project.assignOwner"],
+    });
+
+    await user.click(within(list).getByRole("combobox"));
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    expect(assign.closest("[hidden]")).toBeNull();
+
+    // Escape answers the layer the reader is in, not the menu under it too.
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(more.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement).toBe(assign);
+    await user.click(assign);
+    const reopened = await screen.findByRole("dialog", {
+      name: en["project.assignOwner"],
+    });
+
+    await user.click(
+      await within(reopened).findByRole("option", { name: "Jane Doe" }),
+    );
+    await waitFor(() => expect(patches).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const landed = document.activeElement;
+    expect(landed).not.toBe(document.body);
+    expect(landed?.isConnected).toBe(true);
+    expect(landed?.closest("[hidden]")).toBeNull();
   });
 });
 

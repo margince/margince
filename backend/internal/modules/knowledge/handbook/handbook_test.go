@@ -122,3 +122,46 @@ func TestOpenRefusesAPathRatherThanReadingOne(t *testing.T) {
 		t.Fatal("Open could not read README.md, so the refusals above prove nothing")
 	}
 }
+
+// A shipped page is listed by its heading, so a page without an H1 would reach
+// Settings as a bare filename.
+func TestEveryEmbeddedPageOpensWithAHeading(t *testing.T) {
+	embedded, err := Pages()
+	if err != nil {
+		t.Fatalf("reading the embedded handbook: %v", err)
+	}
+	if len(embedded) == 0 {
+		t.Fatal("no pages are embedded, so this gate would check nothing")
+	}
+	for _, page := range embedded {
+		if Title(page.Filename) == "" {
+			t.Errorf("%s has no `# ` heading; give the page a title in docs/handbook", page.Filename)
+		}
+	}
+	if got := Title("README.md"); got != "The Margince handbook" {
+		t.Errorf(`Title("README.md") = %q, want the page's H1`, got)
+	}
+	if got := Title("not-shipped.md"); got != "" {
+		t.Errorf("Title of a page this build lacks = %q, want empty", got)
+	}
+}
+
+// A `# ` line inside a code fence or a multi-line HTML comment is not the
+// page's heading. A page opening with either is still named by its H1.
+func TestFirstHeadingSkipsFencesAndComments(t *testing.T) {
+	for name, tc := range map[string]struct{ page, want string }{
+		"a plain H1":                           {"<!-- prose:plain -->\n# Settings\n", "Settings"},
+		"a fence before the H1":                {"```bash\n# not a title\n```\n# Real\n", "Real"},
+		"a tilde fence":                        {"~~~\n# code\n~~~\n# Real\n", "Real"},
+		"a multi-line comment":                 {"<!--\n# a note\n-->\n# Real\n", "Real"},
+		"a comment closing mid-line":           {"<!-- a\n# note --> x\n# Real\n", "Real"},
+		"a tilde line inside a backtick fence": {"```\n~~~\n# code\n```\n# Real\n", "Real"},
+		"a shorter closing fence":              {"````\n```\n# code\n````\n# Real\n", "Real"},
+		"a closing fence with text after it":   {"```\n``` x\n# code\n```\n# Real\n", "Real"},
+		"an H2 only":                           {"## Section\n", ""},
+	} {
+		if got := firstHeading(tc.page); got != tc.want {
+			t.Errorf("%s: firstHeading = %q, want %q", name, got, tc.want)
+		}
+	}
+}

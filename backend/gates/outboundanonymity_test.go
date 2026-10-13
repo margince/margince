@@ -6,7 +6,7 @@
 package gates
 
 // Every outbound HTTP request either says who is calling, or is registered as
-// deliberately anonymous with the reason.
+// anonymous by design with the reason.
 //
 // The sibling gate next door (TestNoOutboundIdentityIsWrittenAtItsCallSite)
 // holds the calls that DECLARE something to one spelling. It has nothing to say
@@ -47,9 +47,9 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"../extensions/openchannel/client.go:func post": "posts a document signed with a secret the RECEIVER issued, over a nonce and a timestamp they check; the signature names the sender to them more exactly than an agent could, and to anyone else the request is unverifiable whatever it claims",
 
 	// This product's own origin, and the harnesses that drive it.
-	"internal/modules/agents/apps/fetch.go:func Fetch":         "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
-	"internal/compose/integration/apptest/appenv.go:func Call": "drives a server the test itself started, in the same process tree, for the length of one test",
-	"internal/compose/integration/apptest/mcp.go:func rpc":     "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/modules/agents/apps/fetch.go:func Fetch":                 "fetches this product's own origin, so the server on the other end is this same process and a name would be it introducing itself to itself",
+	"internal/compose/integration/apptest/appenv.go:func CallVerbatim": "drives a server the test itself started, in the same process tree, for the length of one test",
+	"internal/compose/integration/apptest/mcp.go:func rpc":             "drives a server the test itself started, in the same process tree, for the length of one test",
 
 	// The model providers. Each call carries the customer's own credential — an
 	// API key, or a service account's signed assertion — which is the account

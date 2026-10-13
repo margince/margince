@@ -9,8 +9,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { MailSharingCard, MailSharingPlate } from "./mail-sharing";
 
 // The workspace mail-sharing posture (Settings → Capture rules): every role

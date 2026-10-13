@@ -21,6 +21,11 @@
 .reporting-toolbar > * {
   min-width: 8rem;
 }
+/* A toolbar whose verbs the reader may not use renders nothing, and its margin
+   would still open a gap in the page. */
+.reporting-toolbar:empty {
+  display: none;
+}
 .reporting-header {
   display: flex;
   justify-content: space-between;
@@ -37,15 +42,6 @@
   display: grid;
   gap: var(--space-5);
   padding: var(--padPanel);
-}
-.reporting-dialog-actions {
-  display: flex;
-  justify-content: end;
-  gap: var(--gapActions);
-  position: sticky;
-  bottom: 0;
-  padding-block: var(--space-3);
-  background: var(--bgElevated);
 }
 .reporting-panel-sdr_outcomes {
   grid-column: 1 / -1;
@@ -69,6 +65,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   background: var(--bgChip);
+  color: var(--textPrimary);
 }
 .reporting-block-choice {
   display: flex;
@@ -105,18 +102,10 @@
   gap: var(--space-3);
 }
 
-.reporting-controlbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-4);
-  margin-bottom: var(--space-5);
-}
-.reporting-controlbar .reporting-toolbar {
+/* Inside the filter card the card brings the air; the toolbar's own margin
+   would open a second gap under the dials. */
+.filter-bar .reporting-toolbar {
   margin: 0;
-}
-.reporting-controlbar .reporting-header-actions {
-  margin-inline-start: auto;
 }
 
 .reporting-results {

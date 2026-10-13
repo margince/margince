@@ -268,7 +268,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
       detail: "“Can you confirm the lead time before Friday?”",
       because: [{ kind: "waiting_days", value: { kind: "days", days: 4 } }],
       actions: ["open", "reply"],
-      dispositions: ["snooze", "not_mine", "not_sales"],
+      dispositions: ["handled", "snooze", "not_mine", "not_sales"],
       subject: {
         type: "deal",
         id: "01a05500-0000-7000-8000-0000000000bb",
@@ -453,8 +453,34 @@ export const AMailboxThatStopped: Story = {
       source: "capture_health",
       category: "system",
       level: 6,
-      consequence: "data_drifts",
-      title: "A mailbox stopped syncing",
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      detail: "lena.fischer@margince.test",
+      cause_label: "lena.fischer@margince.test",
+      connection: { provider: "gmail", medium: "mailbox" },
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A calendar is never called a mailbox. Its title, eyebrow and cost come from
+// the connection's medium and provider; it has no account to name.
+export const ACalendarThatStopped: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      id: "sh2",
+      source: "capture_health",
+      category: "system",
+      level: 6,
+      consequence: "mailbox_blind",
+      kind: "reauth_required",
+      connection: { provider: "gcal", medium: "calendar" },
       because: [],
       actions: [],
     },
@@ -568,6 +594,41 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       because: [{ kind: "outcome_unrecorded" }],
       actions: [],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
+    },
+  },
+};
+
+/**
+ * The same row naming who the meeting was with, the account they work for and
+ * who hosted it. A host whose name the reader may not resolve arrives with no
+ * label and is not drawn.
+ */
+export const AMeetingNamingItsCustomerAndHost: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...AMeetingWithNoOutcomeRecorded.args?.item,
+      id: "m3",
+      source: "meeting_outcome",
+      category: "meetings",
+      level: 1,
+      consequence: "data_drifts",
+      because: [{ kind: "outcome_unrecorded" }],
+      actions: [],
+      title: "Weekly sync",
+      contact: {
+        id: "22222222-2222-7222-8222-222222222222",
+        label: "Sonya Beck",
+        employer: {
+          company_id: "33333333-3333-7333-8333-333333333333",
+          company_name: "Turbinenbau GmbH",
+        },
+      },
+      host: {
+        kind: "user",
+        id: "44444444-4444-7444-8444-444444444444",
+        label: "Lena Fischer",
+      },
     },
   },
 };

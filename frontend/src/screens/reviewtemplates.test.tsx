@@ -1,203 +1,150 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { RbacAction } from "../app/capability";
-import type { ReviewTemplate } from "./outcomereview.queries";
-import { ReviewTemplateEditor } from "./reviewtemplateeditor";
-import { ReviewTemplatesCard } from "./reviewtemplates";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
 
-const NATIVE_FETCH = globalThis.fetch;
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { GrantSpec } from "../testing/mefixture";
+import { meFixture } from "../testing/mefixture";
+import type { ReviewTemplate } from "./outcomereview.queries";
+import { ReviewTemplatesCard } from "./reviewtemplates";
+import { jsonResponse, render } from "./settings.testkit";
+
+// What a closed deal is asked, one group per template, so an administrator
+// reads the questions under the template that asks them.
+
+beforeEach(() => {
+  globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
+});
 
 afterEach(() => {
   cleanup();
-  globalThis.fetch = NATIVE_FETCH;
   vi.unstubAllGlobals();
+  globalThis.localStorage.clear();
 });
 
-function template(over: Partial<ReviewTemplate> = {}): ReviewTemplate {
+function template(over: Partial<ReviewTemplate>): ReviewTemplate {
   return {
-    id: "loss",
-    key: "loss_review",
-    label: "Loss review",
-    outcome: "lost",
-    version: 4,
-    active: true,
-    system: true,
-    created_at: "2026-09-01T00:00:00Z",
-    updated_at: "2026-09-01T00:00:00Z",
+    id: "11111111-1111-4111-8111-111111111111",
+    key: "win_review",
+    label: "Win review",
+    outcome: "won",
     questions: [
-      { key: "why", label: "Why did we lose?", type: "text", required: true },
+      { key: "why", label: "Why did we win?", type: "text", required: true },
       {
-        key: "who",
-        label: "Who did they choose instead?",
-        type: "multiselect",
+        key: "else",
+        label: "Who else were they considering?",
+        type: "text",
         required: false,
-        options: ["A competitor"],
       },
     ],
+    version: 1,
+    active: true,
+    system: true,
+    created_at: "2026-09-01T10:00:00Z",
+    updated_at: "2026-09-01T10:00:00Z",
     ...over,
   };
 }
 
-function serveCard(allow: readonly RbacAction[], templates: ReviewTemplate[]) {
-  installFetchStub({
-    "GET /me": meRoute({ custom_field: allow }),
-    "GET /activity-review-templates": () => jsonResponse({ data: templates }),
-  });
-  render(
-    <StoryProviders>
-      <ReviewTemplatesCard />
-    </StoryProviders>,
+const TEMPLATES = [
+  template({}),
+  template({
+    id: "22222222-2222-4222-8222-222222222222",
+    key: "loss_review",
+    label: "Loss review",
+    outcome: "lost",
+    questions: [
+      {
+        key: "why_lost",
+        label: "What decided it against us?",
+        type: "text",
+        required: false,
+      },
+    ],
+  }),
+];
+
+function served(allow: GrantSpec) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse(meFixture({ roles: ["admin"], allow }));
+      }
+      if (url.includes("/activity-review-templates")) {
+        return jsonResponse({ data: TEMPLATES });
+      }
+      return jsonResponse({ data: [], page: {} });
+    }),
   );
 }
 
-describe("the outcome reviews page", () => {
-  it("gives each review its own panel with numbered questions and what each needs", async () => {
-    serveCard(["read"], [template()]);
-    const panel = await screen.findByRole("region", { name: "Loss review" });
-    expect(within(panel).getByText("Lost")).toBeTruthy();
-    expect(within(panel).getByText("2 questions, 1 required")).toBeTruthy();
-    const rows = within(panel).getAllByRole("row").slice(1);
-    expect(within(rows[0]).getByText("Why did we lose?")).toBeTruthy();
+const EDITOR: GrantSpec = { custom_field: ["read", "update"] };
+
+describe("outcome review questions", () => {
+  it("lists each template's questions in order under that template's own heading", async () => {
+    served(EDITOR);
+    render(<ReviewTemplatesCard />);
+
+    const win = await screen.findByRole("list", { name: "Win review" });
     expect(
-      within(rows[0]).getByText(
-        "Filled with the close reason, when the rep gave one",
+      within(win)
+        .getAllByRole("listitem")
+        .map(
+          (item) => item.querySelector(".reviewtemplate-label")?.textContent,
+        ),
+    ).toEqual(["Why did we win?", "Who else were they considering?"]);
+    const loss = screen.getByRole("list", { name: "Loss review" });
+    expect(win.tagName).toBe("OL");
+    expect(within(loss).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("marks only the questions that must be answered", async () => {
+    served(EDITOR);
+    render(<ReviewTemplatesCard />);
+
+    const win = await screen.findByRole("list", { name: "Win review" });
+    const [required, optional] = within(win).getAllByRole("listitem");
+    expect(within(required).getByText("Required")).toBeTruthy();
+    expect(within(optional).queryByText("Required")).toBeNull();
+    expect(
+      within(screen.getByRole("list", { name: "Loss review" })).queryByText(
+        "Required",
       ),
-    ).toBeTruthy();
-    // The answer and need columns; the question cell repeats both for a
-    // narrow panel, where the stylesheet folds these columns away.
-    const [first, second] = rows.map((row) => within(row).getAllByRole("cell"));
-    expect(first[3].textContent).toBe("Required");
-    expect(second[2].textContent).toBe("Pick from a list");
-    expect(second[3].textContent).toBe("Optional");
+    ).toBeNull();
   });
 
-  it("offers Edit questions only to a reader who may update custom fields", async () => {
-    serveCard(["read"], [template()]);
-    await screen.findByRole("region", { name: "Loss review" });
-    expect(screen.queryByRole("button", { name: "Edit questions" })).toBeNull();
-    cleanup();
-    serveCard(["read", "update"], [template()]);
-    const panel = await screen.findByRole("region", { name: "Loss review" });
-    expect(
-      await within(panel).findByRole("button", { name: "Edit questions" }),
-    ).toBeTruthy();
-  });
+  it("puts each template's edit verb in its own head and opens that template", async () => {
+    served(EDITOR);
+    const user = userEvent.setup();
+    render(<ReviewTemplatesCard />);
 
-  it("keeps a retired review listed under a Retired badge", async () => {
-    serveCard(["read"], [template({ active: false })]);
-    const panel = await screen.findByRole("region", { name: "Loss review" });
-    expect(within(panel).getByText("Retired")).toBeTruthy();
-  });
-
-  it("links the outcome note to the pipelines and stage automation pages", async () => {
-    serveCard(["read"], [template()]);
-    await screen.findByRole("region", { name: "Loss review" });
-    const pipelines = screen.getByRole("link", { name: "Pipelines" });
-    const automation = screen.getByRole("link", { name: "Stage automation" });
-    expect(pipelines.getAttribute("href")).toContain("pipelines");
-    expect(automation.getAttribute("href")).toContain("stageautomation");
-  });
-
-  it("says no review is offered when nothing is set up", async () => {
-    serveCard(["read"], []);
-    expect(
-      await screen.findByText(
-        "No review questions are set up. Reps are not offered a review when they close a deal.",
-      ),
-    ).toBeTruthy();
-  });
-});
-
-function openEditor(current: ReviewTemplate, onPatch = vi.fn()) {
-  installFetchStub({
-    "GET /me": meRoute({ custom_field: ["read", "update"] }),
-    [`PATCH /activity-review-templates/${current.id}`]: (body) => {
-      onPatch(body);
-      return jsonResponse(current);
-    },
-  });
-  const close = vi.fn();
-  render(
-    <StoryProviders>
-      <ReviewTemplateEditor template={current} onClose={close} />
-    </StoryProviders>,
-  );
-  return { close, user: userEvent.setup() };
-}
-
-describe("editing a review's questions", () => {
-  it("saves the reordered questions with trimmed choices and the version it read", async () => {
-    const onPatch = vi.fn();
-    const { close, user } = openEditor(
-      template({
-        questions: [
-          { key: "why", label: "Why?", type: "text", required: true },
-          {
-            key: "who",
-            label: "Who?",
-            type: "multiselect",
-            required: false,
-            options: ["  A competitor ", "", "In-house"],
-          },
-        ],
-      }),
-      onPatch,
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Move question 2 up" }),
-    );
-    expect(screen.getByText("Unsaved changes")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Save questions" }));
-    await vi.waitFor(() => expect(close).toHaveBeenCalled());
-    expect(onPatch).toHaveBeenCalledWith({
-      version: 4,
-      questions: [
-        {
-          key: "who",
-          label: "Who?",
-          type: "multiselect",
-          required: false,
-          options: ["A competitor", "In-house"],
-        },
-        { key: "why", label: "Why?", type: "text", required: true },
-      ],
+    const lossHead = await screen.findByRole("heading", {
+      name: "Loss review",
     });
-  });
+    const head = lossHead.closest<HTMLElement>(".panel-grouphead");
+    if (!head) throw new Error("the template name is not a group head");
+    const edit = screen.getByRole("button", {
+      name: "Edit questions",
+      description: "Loss review",
+    });
+    expect(head.contains(edit)).toBe(true);
+    await user.click(edit);
 
-  it("holds Save while a question has no label", async () => {
-    const { user } = openEditor(template());
-    const save = screen.getByRole("button", { name: "Save questions" });
-    expect(save.hasAttribute("disabled")).toBe(false);
-    await user.clear(screen.getAllByRole("textbox", { name: /Question/ })[0]);
-    expect(save.hasAttribute("disabled")).toBe(true);
-  });
-
-  it("holds Save while a pick-from-a-list question has no choice", async () => {
-    const { user } = openEditor(template());
-    await user.clear(
-      screen.getByRole("textbox", { name: /Choices, one per line/ }),
-    );
+    const dialog = await screen.findByRole("dialog");
     expect(
-      screen
-        .getByRole("button", { name: "Save questions" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+      within(dialog).getByRole("heading", { name: "Loss review" }),
+    ).toBeTruthy();
   });
 
-  it("will not remove the last remaining question", () => {
-    openEditor(template({ questions: [template().questions[0]] }));
-    expect(
-      screen
-        .getByRole("button", { name: "Remove question 1" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+  it("offers no edit verb to a reader who may only read the questions", async () => {
+    served({ custom_field: ["read"] });
+    render(<ReviewTemplatesCard />);
+
+    await screen.findByRole("list", { name: "Win review" });
+    expect(screen.queryByRole("button", { name: "Edit questions" })).toBeNull();
   });
 });

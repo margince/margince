@@ -67,7 +67,11 @@ func renderDeclaredSchemas(t *testing.T) []byte {
 // someone has to make deliberately, and this is where they are asked to.
 func TestOnlyTheDeclaredExceptionsAdvertiseABareObject(t *testing.T) {
 	allowed := map[string]bool{"enrich": true}
-	for _, spec := range fullRegistry(t).Specs() {
+	r := fullRegistry(t)
+	for _, spec := range r.Specs() {
+		if _, isRouter := r.RouteTargets(spec.Name); isRouter {
+			continue // a composed schema is refused at boot; its answer is its target's
+		}
 		if spec.OutputSchema == nil {
 			t.Errorf("%s declares no output schema at all", spec.Name)
 			continue

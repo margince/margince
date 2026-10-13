@@ -8,9 +8,11 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
 import {
+  beforeHistoryWeeklyNumbers,
   firstWeek,
   narratedWeek,
   PRIOR_WEEK_START,
+  partlyRecordedWeeklyNumbers,
   sharedWeeklyNumbers,
   unavailableWeeklyNumbers,
   WEEK_START,
@@ -19,7 +21,9 @@ import {
   weeklyOutlook,
   weeklyScorecard,
   wholeWeek,
+  zeroWeekCounts,
 } from "./brief.fixtures";
+import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection } from "./brief.weekly";
 import { LearningsPanel } from "./brief.weekly.learnings";
@@ -392,7 +396,32 @@ export const Workings: Story = {
   render: frozen(
     <InTheWeeksPanel>
       <PanelBody>
-        <WeeklyWorkings counts={narratedWeek.counts} />
+        <WeeklyWorkings
+          counts={narratedWeek.counts}
+          figures={weeklyNumericStatus(undefined).figures}
+        />
+      </PanelBody>
+    </InTheWeeksPanel>,
+  ),
+};
+
+// The same list when deals were counted from midweek and tasks never recorded.
+export const WorkingsPartlyRecorded: Story = {
+  render: frozen(
+    <InTheWeeksPanel>
+      <PanelBody>
+        <WeeklyWorkings
+          counts={narratedWeek.counts}
+          figures={
+            weeklyNumericStatus({
+              ...partlyRecordedWeeklyNumbers,
+              figure_coverage: {
+                ...partlyRecordedWeeklyNumbers.figure_coverage,
+                tasks: beforeHistoryWeeklyNumbers.figure_coverage?.tasks,
+              },
+            }).figures
+          }
+        />
       </PanelBody>
     </InTheWeeksPanel>,
   ),
@@ -445,6 +474,37 @@ export const SharedMetricsUnavailable: Story = {
         jsonResponse({
           ...narratedWeek,
           numeric_summary: unavailableWeeklyNumbers,
+        }),
+      [WEEK_START],
+    ),
+  ),
+};
+
+// A week that closed before any source held a record: every figure says it was
+// not recorded and when its records start, never a zero.
+export const WeekBeforeRecordedHistory: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({
+          ...firstWeek,
+          counts: zeroWeekCounts,
+          numeric_summary: beforeHistoryWeeklyNumbers,
+        }),
+      [WEEK_START],
+    ),
+  ),
+};
+
+// Deals counted from midweek and meetings read in part keep their numbers with
+// the qualifier; leads, never recorded, say so.
+export const PartlyRecordedWeek: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({
+          ...narratedWeek,
+          numeric_summary: partlyRecordedWeeklyNumbers,
         }),
       [WEEK_START],
     ),

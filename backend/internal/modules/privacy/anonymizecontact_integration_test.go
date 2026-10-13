@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -103,8 +104,39 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		 VALUES ('contact', 'private_note', 'Private note', 'text', 'cf_private_note', $1)`, user)
 	mustExec(ctx, t, tx, `UPDATE contact SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, contact)
 
+	// An introduction one colleague asked another for, about the subject. Two seats
+	// because intro_request_distinct_seats refuses a requester who is also the
+	// introducer, and the prose is what this fixture is for.
+	introducer := ids.NewV7()
+	mustExec(ctx, t, tx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Introducer')`,
+		introducer, "intro-"+introducer.String()+"@anon.test")
+	mustExec(ctx, t, tx, `
+		INSERT INTO intro_request
+		  (contact_id, requester_user_id, introducer_user_id, route_type, internal_reason,
+		   value_for_target, forwardable_note, decision_reason, due_at, captured_by)
+		VALUES ($1, $2, $3, 'direct', 'Hedda turned us down last year',
+		        'Hedda gets the architecture she asked about',
+		        'Hedda runs platform and owns the budget',
+		        'Hedda asked us not to contact her employer', now() + interval '3 days',
+		        $4)`, contact, user, introducer, "user:"+user.String())
+
 	if err := anonymizeContactRecord(ctx, tx, contact.UUID, nil); err != nil {
 		t.Fatalf("anonymizing: %v", err)
+	}
+
+	// Both acts have to reach this one. An operator told a contact was anonymized,
+	// reading a colleague's ask, would find who they were spelled out in it.
+	var describing int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM intro_request
+		 WHERE forwardable_note || ' ' || internal_reason || ' ' || value_for_target
+		       || ' ' || coalesce(decision_reason, '') ILIKE '%Hedda%'`).Scan(&describing); err != nil {
+		t.Fatal(err)
+	}
+	if describing != 0 {
+		t.Errorf("%d introduction row(s) still describe the subject by name after an anonymize",
+			describing)
 	}
 
 	var pending int
@@ -138,5 +170,46 @@ func mustExec(ctx context.Context, t *testing.T, conn execer, sql string, args .
 	t.Helper()
 	if _, err := conn.Exec(ctx, sql, args...); err != nil {
 		t.Fatalf("seeding (%s): %v", sql, err)
+	}
+}
+
+// A contact that is not there is a refusal, not a silent no-op.
+//
+// The scrub holds the subject before it reads anything, and a lock on a row that does
+// not exist answers ErrNotFound. Returning nil instead would let an erasure report that
+// it cleared an introduction's prose for a contact it never found — the shape where a
+// cascade step quietly skips and the certificate still says the data is gone.
+func TestRedactingAnAbsentContactsIntroductionsRefuses(t *testing.T) {
+	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
+	if ownerDSN == "" {
+		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, ownerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
+		}
+	})
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back: %v", err)
+		}
+	})
+
+	absent := ids.From[ids.ContactKind](ids.NewV7())
+	if err := redactIntroductionRequests(ctx, tx, absent); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("redacting an absent contact's introductions → %v, want not-found: a scrub that "+
+			"answers nil for a contact it could not hold reports work it did not do", err)
 	}
 }

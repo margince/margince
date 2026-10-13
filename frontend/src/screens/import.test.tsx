@@ -4,261 +4,163 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
+import { navigate, parseHash, useRoute } from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
+import {
+  dryRun,
+  jsonResponse,
+  profile,
+  render,
+  renderAtImport,
+  run,
+  stubRoutes,
+} from "./import.testkit";
+import { tabContent } from "./settings";
+import {
+  IMPORT_RUN_SUBPAGE,
+  settingsHref,
+  settingsRouteTarget,
+} from "./settingsrouting";
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+// The settings screen hands the card the segment the shell is showing.
+function RoutedImport() {
+  return <ImportCard subpage={useRoute().id2} />;
 }
 
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
+const RUN_PAGE = "#/settings/import/run";
 
-const profile = {
-  source_ref: "ws/import/abc",
-  object: "lead",
-  rows_profiled: 4,
-  columns: [
-    { header: "Email", fill_rate: 1, samples: ["ada@x.test", "grace@x.test"] },
-    { header: "Full Name", fill_rate: 0.75, samples: ["Ada Lovelace"] },
-    { header: "Notes", fill_rate: 0.25, samples: [] },
-  ],
-  suggested_mapping: { Email: "email", "Full Name": "full_name" },
-  targets: ["full_name", "email", "title", "company_name"],
-};
+const DRAFT_CLOSED =
+  "This draft is not offered again. Upload the file again to start over.";
 
-const run = {
-  id: "019ff-run",
-  connector: "csv",
-  object: "lead",
-  status: "awaiting_approval",
-  checkpoint: 0,
-  source: "import_api",
-  created_at: "2026-08-13T10:00:00Z",
-  updated_at: "2026-08-13T10:00:00Z",
-};
-
-const dryRun = {
-  run_id: run.id,
-  status: "awaiting_approval",
-  rows_read: 4,
-  disposition: { created: 3, updated: 0, unchanged: 0, skipped: 1 },
-  issues: [{ line: 3, reason: 'the "Email" column is empty' }],
-  source_key_used: "Email",
-};
-
-type Sent = { method: string; path: string; body?: unknown };
-
-// Every request the card could make, recorded, so a test can assert what
-// actually went to the server — including the mapping, which is the one thing
-// the screen composes rather than echoes.
-function stubRoutes(overrides: Record<string, () => Response> = {}) {
-  const sent: Sent[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      // The typed client calls fetch with a Request; the hand-rolled multipart
-      // upload calls it with a url + init. Both shapes reach here.
-      const request = input instanceof Request ? input : null;
-      const url = new URL(
-        request ? request.url : String(input),
-        "https://test.local",
-      );
-      const method = request?.method ?? init?.method ?? "GET";
-      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-
-      let body: unknown;
-      const raw = request ? await request.clone().text() : init?.body;
-      if (typeof raw === "string" && raw.length > 0) {
-        body = JSON.parse(raw);
-      } else if (init?.body instanceof FormData) {
-        body = Object.fromEntries(
-          [...init.body.entries()].map(([k, v]) => [
-            k,
-            v instanceof File ? v.name : v,
-          ]),
-        );
-      }
-      sent.push({ method, path: key, body });
-
-      for (const [prefix, make] of Object.entries(overrides)) {
-        if (key.startsWith(prefix)) {
-          return make();
-        }
-      }
-      if (key === "GET /me") {
-        return jsonResponse(
-          meFixture({
-            roles: ["admin"],
-            allow: { import_run: ["create", "update", "read"] },
-          }),
-        );
-      }
-      if (key === "POST /imports/sources") {
-        return jsonResponse(profile);
-      }
-      if (key.startsWith("POST /imports/") && key.endsWith("/approve")) {
-        return jsonResponse({ ...run, status: "complete" }, 202);
-      }
-      if (key === "POST /imports") {
-        return jsonResponse(run, 202);
-      }
-      if (key.endsWith("/report")) {
-        return jsonResponse(dryRun);
-      }
-      return jsonResponse({});
-    }),
-  );
-  return sent;
-}
-
-// The card itself is one row carrying the verb; every step of the flow lives in
-// the dialog that verb opens. Nothing is on screen until /me has answered
-// whether this seat may import at all, so the verb is waited for rather than
-// looked up.
+// The run page is a page of its own under the hub. Nothing is on screen until
+// /me has answered whether this seat may import at all, so the page is waited
+// for rather than looked up.
 async function openWizard() {
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Start import" }),
+  navigate({ ...settingsHref("import"), id2: IMPORT_RUN_SUBPAGE });
+  await screen.findByRole("link", { name: "Back to data import" });
+}
+
+// One CSV dropped on the run page, its type kept, and the Map step open.
+async function toTheMap(user: UserEvent, file = "leads.csv") {
+  globalThis.location.hash = RUN_PAGE;
+  render(<RoutedImport />);
+  await user.upload(
+    await screen.findByLabelText("Upload your data"),
+    new File(["Email\na@x.test\n"], file),
   );
+  await user.click(await screen.findByRole("button", { name: /Next: map/ }));
+  await screen.findByRole("row", { name: /Notes/ });
 }
 
-async function upload(file = new File(["Email\na@x.test\n"], "estate.csv")) {
-  const input = await screen.findByLabelText("CSV file");
-  await userEvent.upload(input, file);
+function staged(sent: ReturnType<typeof stubRoutes>) {
+  return sent.filter((s) => s.path === "POST /imports").at(-1);
 }
-
-// The id the screen remembers a run by, so a remount can pick it up again.
-const REMEMBERED_RUN_KEY = "margince.import.run";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-  // The reference outlives a mount by design, so it would outlive a test too.
-  localStorage.clear();
+  globalThis.location.hash = "";
 });
 
-describe("the import card", () => {
+describe("one CSV through the run page", () => {
   it("shows each column's fill rate and values before anyone maps it", async () => {
+    const user = userEvent.setup();
     stubRoutes();
-    render(<ImportCard />);
-
-    await openWizard();
-    await upload();
+    await toTheMap(user);
 
     // The fill rate is what separates a column worth mapping from one that is
     // a mapping mistake waiting to happen; without it a name is all you have.
-    const notes = await screen.findByRole("row", { name: /Notes/ });
+    const notes = screen.getByRole("row", { name: /Notes/ });
     expect(within(notes).getByText("25%")).toBeInTheDocument();
     const email = screen.getByRole("row", { name: /Email/ });
     expect(within(email).getByText(/ada@x.test/)).toBeInTheDocument();
     expect(within(notes).getByText("Empty")).toBeInTheDocument();
   });
 
-  it("sends only the columns with a destination, and reports what it will do", async () => {
+  it("sends only the columns with a destination, as one object", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes();
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
+    await toTheMap(user);
+    await user.click(screen.getByRole("button", { name: "Run test" }));
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
-    );
-
-    const created = await waitFor(() => {
-      const found = sent.find((s) => s.path === "POST /imports");
-      if (!found) {
-        throw new Error("the run was never created");
-      }
-      return found;
-    });
-    // "Notes" was suggested nothing, so it stays out — an unmapped column is
+    await waitFor(() => expect(staged(sent)).toBeDefined());
+    // "Notes" was suggested nothing, so it stays out: an unmapped column is
     // not a column mapped to nothing.
-    expect(created.body).toMatchObject({
+    expect(staged(sent)?.body).toEqual({
       connector: "csv",
-      object: "lead",
       source_ref: "ws/import/abc",
-      mapping: { Email: "email", "Full Name": "full_name" },
-    });
-    // The whole body, so an extra column could not slip in unseen either.
-    expect(created.body).toEqual({
-      connector: "csv",
       object: "lead",
-      source_ref: "ws/import/abc",
       mapping: { Email: "email", "Full Name": "full_name" },
+      on_broken_link: "skip_row",
+      file_name: "leads.csv",
     });
-
-    // The prediction, and the row it cannot take, named by its line.
-    expect(await screen.findByText("Import preview")).toBeInTheDocument();
-    // The disclosure names the line to open in the file AND why, in one
-    // sentence a human can act on.
-    const issue = screen.getByRole("listitem");
-    expect(issue).toHaveTextContent("Line 3:");
-    expect(issue).toHaveTextContent('the "Email" column is empty');
+    expect(
+      await screen.findByText(/the "Email" column is empty/),
+    ).toBeVisible();
   });
 
-  it("writes nothing until the human presses the second button", async () => {
+  it("drops a column the human clears, and keeps the ones they kept", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes();
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
+    await toTheMap(user);
+    await user.click(
+      screen.getByRole("combobox", { name: "Field for Full Name" }),
     );
-    await screen.findByText("Import preview");
-
-    // The whole promise of the screen: validating has not approved anything.
-    expect(sent.some((s) => s.path.includes("/approve"))).toBe(false);
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Import 3 rows" }),
-    );
+    await user.click(screen.getByRole("option", { name: "Do not import" }));
+    await user.click(screen.getByRole("button", { name: "Run test" }));
 
     await waitFor(() =>
-      expect(sent.some((s) => s.path.includes("/approve"))).toBe(true),
+      expect(staged(sent)?.body).toMatchObject({ mapping: { Email: "email" } }),
     );
-    expect(await screen.findByText("Import complete")).toBeInTheDocument();
+  });
+
+  it("shows a column name the file spells oddly, verbatim", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports/sources": () =>
+        jsonResponse({
+          ...profile,
+          columns: [
+            ...profile.columns,
+            { header: "E-Mail (work) ", fill_rate: 1, samples: ["x@y.test"] },
+          ],
+        }),
+    });
+    await toTheMap(user);
+    expect(
+      screen.getByRole("combobox", { name: /^Field for E-Mail \(work\)/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("writes nothing until the human presses Import", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    await toTheMap(user);
+    await user.click(screen.getByRole("button", { name: "Run test" }));
+    const commit = await screen.findByRole("button", { name: "Import 3 rows" });
+
+    expect(sent.some((s) => s.path.endsWith("/approve"))).toBe(false);
+    await user.click(commit);
+    await waitFor(() =>
+      expect(sent.some((s) => s.path.endsWith("/approve"))).toBe(true),
+    );
   });
 
   it("counts the rows it will write in words that read as English", async () => {
+    const user = userEvent.setup();
     stubRoutes({
-      "GET /imports": () =>
+      [`GET /imports/${run.id}/report`]: () =>
         jsonResponse({
           ...dryRun,
           disposition: { created: 1, updated: 0, unchanged: 2, skipped: 1 },
         }),
     });
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
-    );
+    await toTheMap(user);
+    await user.click(screen.getByRole("button", { name: "Run test" }));
 
     // "1 rows" is how a machine counts. This button is the last thing a human
     // reads before the least reversible write in the product.
@@ -267,184 +169,114 @@ describe("the import card", () => {
     ).toBeInTheDocument();
   });
 
-  it("refuses to validate a mapping that identifies no row", async () => {
-    stubRoutes({
-      "POST /imports/sources": () =>
-        jsonResponse({
-          ...profile,
-          // Nothing lands on email: no row could be recognized on a second
-          // upload, or undone.
-          suggested_mapping: { "Full Name": "full_name" },
-        }),
-    });
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-
-    expect(
-      await screen.findByText(
-        /Map a column to email\. Without it, rows cannot be matched/,
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Preview import" }),
-    ).toBeDisabled();
-  });
-
-  // A run that stops part-way answers with a PROBLEM, not with a run — the
-  // truth is on the run itself, which the server recorded before answering.
-  // Reading it back is what turns "something went wrong" into the resumable
-  // state the contract promises. The earlier version of this test stubbed a 202
-  // carrying status:"failed", a shape the server cannot produce.
-  it("reads the run back when the commit stops part-way, and offers to resume", async () => {
-    stubRoutes({
-      "POST /imports/019ff-run/approve": () =>
-        jsonResponse(
-          { status: 500, code: "internal", detail: "the import stopped" },
-          500,
-        ),
-      "GET /imports/019ff-run/report": () =>
-        jsonResponse({
-          ...dryRun,
-          status: "failed",
-          disposition: { created: 2, updated: 0, unchanged: 0, skipped: 1 },
-        }),
-      "GET /imports/019ff-run": () =>
-        jsonResponse({ ...run, status: "failed", checkpoint: 2 }),
-    });
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
-    );
-    await screen.findByText("Import preview");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Import 2 rows" }),
-    );
-
-    expect(await screen.findByText(/Rows processed: 2\./)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Resume import" }),
-    ).toBeInTheDocument();
-  });
-
-  // A column the human explicitly sets back to "don't import" must leave the
-  // wire, not merely be absent from the suggestion that seeded it.
-  it("drops a column the human clears, and keeps the ones they kept", async () => {
+  it("uploads the same file again when the reader changes its type", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes();
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
-
-    await userEvent.click(
-      screen.getByRole("combobox", { name: "Field for Full Name" }),
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\n"], "leads.csv"),
     );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Do not import" }),
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "Record type for leads.csv",
+      }),
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
+    await user.click(screen.getByRole("option", { name: "Companies" }));
+
+    await waitFor(() =>
+      expect(
+        sent
+          .filter((s) => s.path === "POST /imports/sources")
+          .map((s) => s.body),
+      ).toEqual([
+        { object: "lead", file: "leads.csv" },
+        { object: "company", file: "leads.csv" },
+      ]),
     );
-
-    const created = await waitFor(() => {
-      const found = sent.find((s) => s.path === "POST /imports");
-      if (!found) {
-        throw new Error("the run was never created");
-      }
-      return found;
-    });
-    expect(created.body).toMatchObject({ mapping: { Email: "email" } });
-    expect(created.body).not.toMatchObject({
-      mapping: { "Full Name": "full_name" },
-    });
-  });
-
-  // A header the file spells with a regexp-replacement token must reach the
-  // screen as itself. String.replace would read "$&" as "the whole match".
-  it("shows a column name the file spells oddly, verbatim", async () => {
-    stubRoutes({
-      "POST /imports/sources": () =>
-        jsonResponse({
-          ...profile,
-          columns: [
-            { header: "Amount ($&)", fill_rate: 1, samples: ["10"] },
-            ...profile.columns,
-          ],
-        }),
-    });
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-
-    expect(
-      await screen.findByRole("combobox", { name: "Field for Amount ($&)" }),
-    ).toBeInTheDocument();
-  });
-
-  // A second file that cannot be read must not leave the FIRST file's report —
-  // and its armed commit button — on screen. Nothing on this card names which
-  // file a report belongs to, so the button would approve the wrong estate.
-  it("clears the previous file's answers as a new upload starts", async () => {
-    let uploads = 0;
-    stubRoutes({
-      "POST /imports/sources": () => {
-        uploads += 1;
-        return uploads === 1
-          ? jsonResponse(profile)
-          : jsonResponse(
-              {
-                status: 422,
-                code: "validation_error",
-                detail: "The uploaded file has no content.",
-              },
-              422,
-            );
-      },
-    });
-    render(<ImportCard />);
-    await openWizard();
-    await upload();
-    await screen.findByRole("row", { name: /Notes/ });
-    await userEvent.click(
-      screen.getByRole("button", { name: "Preview import" }),
-    );
-    await screen.findByText("Import preview");
-
-    await upload(new File([""], "broken.csv"));
-
-    expect(
-      await screen.findByText("The uploaded file has no content."),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("Import preview")).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Import / })).toBeNull();
   });
 
   it("says what went wrong with a file it cannot read", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports/sources": () =>
+        jsonResponse(
+          {
+            status: 422,
+            code: "validation",
+            detail: "The uploaded file has no content.",
+          },
+          422,
+        ),
+    });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File([""], "leads.csv"),
+    );
+
+    expect(await screen.findByText("File could not be read")).toBeVisible();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("says to split a file with more rows than one test run reads", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /imports/sources": () =>
         jsonResponse(
           {
             status: 422,
             code: "validation_error",
-            detail: "The uploaded file has no content.",
+            detail: "The request is not valid.",
+            details: {
+              errors: [
+                {
+                  field: "file",
+                  code: "too_many_rows",
+                  message: "this upload has 15001 rows",
+                },
+              ],
+            },
           },
           422,
         ),
     });
-    render(<ImportCard />);
-
-    await openWizard();
-    await upload(new File([""], "empty.csv"));
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
 
     expect(
-      await screen.findByText("The uploaded file has no content."),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      await screen.findByText("File is too long for one test run"),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "This file has more rows than one test run can read. Split it into smaller files and import each one.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("File could not be read")).toBeNull();
   });
 
+  it("refuses an upload answer that names no run", async () => {
+    const user = userEvent.setup();
+    const { run_id: _unnamed, ...unnamed } = profile;
+    stubRoutes({ "POST /imports/sources": () => jsonResponse(unnamed) });
+    globalThis.location.hash = RUN_PAGE;
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    expect(await screen.findByText("File could not be read")).toBeVisible();
+  });
+});
+
+describe("who is offered the import", () => {
   it("is offered to an ops seat, which the server also admits", async () => {
     stubRoutes({
       "GET /me": () =>
@@ -455,14 +287,14 @@ describe("the import card", () => {
           }),
         ),
     });
-    render(<ImportCard />);
+    render(<RoutedImport />);
 
-    // The grant is what decides, not the admin role — an ops seat holds
+    // The grant is what decides, not the admin role: an ops seat holds
     // import_run and would be accepted by the store.
-    expect(await screen.findByText("Import file")).toBeInTheDocument();
+    expect(await screen.findByText("New import")).toBeInTheDocument();
   });
 
-  // The flow creates a run, parks it, and approves it — three actions, not one.
+  // The flow creates a run, parks it, and approves it: three actions, not one.
   // A role edited to create-without-update would see the card and be refused at
   // the first button it presses.
   it("is not offered to a role that could not finish the flow", async () => {
@@ -472,7 +304,7 @@ describe("the import card", () => {
           meFixture({ roles: ["ops"], allow: { import_run: ["create"] } }),
         ),
     });
-    const { container } = render(<ImportCard />);
+    const { container } = render(<RoutedImport />);
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
@@ -481,371 +313,199 @@ describe("the import card", () => {
     stubRoutes({
       "GET /me": () => jsonResponse(meFixture({ roles: ["rep"], allow: {} })),
     });
-    const { container } = render(<ImportCard />);
+    const { container } = render(<RoutedImport />);
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
+});
 
-  // Undo (IEM-WIRE-9): offered only once the run is complete, reverses what
-  // nobody edited, and names what it kept — A93's "kept — you edited these".
-  describe("undo", () => {
-    it("offers undo once the run is complete, and reverses what nobody edited", async () => {
-      const sent = stubRoutes({
-        "POST /imports/019ff-run/undo": () =>
-          jsonResponse({ ...run, status: "undone" }, 202),
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({
-            ...dryRun,
-            status: "undone",
-            undo: {
-              run_id: run.id,
-              status: "undone",
-              reversed_count: 3,
-              kept: [],
-              errored: [],
-            },
-          }),
-      });
-      render(<ImportCard />);
-      await openWizard();
-      await upload();
-      await screen.findByRole("row", { name: /Notes/ });
-      await userEvent.click(
-        screen.getByRole("button", { name: "Preview import" }),
-      );
-      await screen.findByText("Import preview");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Import 3 rows" }),
-      );
-      await screen.findByText("Import complete");
-
-      const undoButton = screen.getByRole("button", {
-        name: "Undo import (3 rows)",
-      });
-      await userEvent.click(undoButton);
-
-      await waitFor(() =>
-        expect(sent.some((s) => s.path.includes("/undo"))).toBe(true),
-      );
-      expect(await screen.findByText("Import undone")).toBeInTheDocument();
-      expect(screen.getByText("3 rows reversed.")).toBeInTheDocument();
-      expect(
-        screen.queryByText("Kept because they were edited after the import:"),
-      ).toBeNull();
+describe("a run named by the address", () => {
+  it("is read back with the undo it still carries", async () => {
+    const sent = stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "complete" }),
     });
+    renderAtImport("r1");
 
-    it("names a human-edited row as kept rather than reversing it", async () => {
-      stubRoutes({
-        "POST /imports/019ff-run/undo": () =>
-          jsonResponse({ ...run, status: "undone" }, 202),
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({
-            ...dryRun,
-            status: "undone",
-            undo: {
-              run_id: run.id,
-              status: "undone",
-              reversed_count: 2,
-              kept: [{ object: "lead", id: "019ff-kept-lead" }],
-              errored: [],
-            },
-          }),
-      });
-      render(<ImportCard />);
-      await openWizard();
-      await upload();
-      await screen.findByRole("row", { name: /Notes/ });
-      await userEvent.click(
-        screen.getByRole("button", { name: "Preview import" }),
-      );
-      await screen.findByText("Import preview");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Import 3 rows" }),
-      );
-      await screen.findByText("Import complete");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Undo import (3 rows)" }),
-      );
-
-      expect(await screen.findByText("2 rows reversed.")).toBeInTheDocument();
-      expect(
-        screen.getByText("Kept because they were edited after the import:"),
-      ).toBeInTheDocument();
-      expect(screen.getByText(/019ff-kept-lead/)).toBeInTheDocument();
-    });
-
-    it("offers to continue an undo that was interrupted, not to restart it", async () => {
-      stubRoutes({
-        "POST /imports/019ff-run/undo": () =>
-          jsonResponse({ ...run, status: "undoing" }, 202),
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({ ...dryRun, status: "undoing" }),
-      });
-      render(<ImportCard />);
-      await openWizard();
-      await upload();
-      await screen.findByRole("row", { name: /Notes/ });
-      await userEvent.click(
-        screen.getByRole("button", { name: "Preview import" }),
-      );
-      await screen.findByText("Import preview");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Import 3 rows" }),
-      );
-      await screen.findByText("Import complete");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Undo import (3 rows)" }),
-      );
-
-      expect(
-        await screen.findByText(/undo was interrupted\. Continue resumes/),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Continue undo" }),
-      ).toBeInTheDocument();
-    });
-
-    it("names a row that could not be reversed, without hiding the rest of the outcome", async () => {
-      stubRoutes({
-        "POST /imports/019ff-run/undo": () =>
-          jsonResponse({ ...run, status: "undone" }, 202),
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({
-            ...dryRun,
-            status: "undone",
-            undo: {
-              run_id: run.id,
-              status: "undone",
-              reversed_count: 2,
-              kept: [],
-              errored: [
-                {
-                  object: "lead",
-                  id: "019ff-stuck-lead",
-                  reason: "the record refused the reversal",
-                },
-              ],
-            },
-          }),
-      });
-      render(<ImportCard />);
-      await openWizard();
-      await upload();
-      await screen.findByRole("row", { name: /Notes/ });
-      await userEvent.click(
-        screen.getByRole("button", { name: "Preview import" }),
-      );
-      await screen.findByText("Import preview");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Import 3 rows" }),
-      );
-      await screen.findByText("Import complete");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Undo import (3 rows)" }),
-      );
-
-      expect(await screen.findByText("Import undone")).toBeInTheDocument();
-      expect(screen.getByText("2 rows reversed.")).toBeInTheDocument();
-      expect(screen.getByText(/Could not be reversed/)).toBeInTheDocument();
-      expect(screen.getByText(/019ff-stuck-lead/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/the record refused the reversal/),
-      ).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByRole("button", { name: "Undo this import" }),
+    ).toBeInTheDocument();
+    // Read back, not re-uploaded: nothing about the file is on this machine
+    // any more, and the reader chose no file this time.
+    expect(sent.some((s) => s.path === "POST /imports/sources")).toBe(false);
   });
 
-  // The completed run lived in React state alone, so the documented way to use
-  // undo — edit the one row you want to keep on the Leads list, come back, undo
-  // the rest — threw the affordance away on the way out. The run and its report
-  // answer for an id regardless, so the screen remembers the id and reads them
-  // back.
-  describe("a run left behind by an earlier visit", () => {
-    // A committed run, as the two endpoints answer for it after a remount.
-    function completedRunRoutes() {
-      return {
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({ ...dryRun, status: "complete" }),
-        "GET /imports/019ff-run": () =>
-          jsonResponse({ ...run, status: "complete" }),
-      };
-    }
-
-    // A run stopped part-way, as the two endpoints answer for it after a
-    // remount: the state with the most left to lose, because the estate is
-    // half-written until somebody resumes it.
-    function interruptedRunRoutes() {
-      return {
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({
-            ...dryRun,
-            status: "failed",
-            disposition: { created: 2, updated: 0, unchanged: 0, skipped: 1 },
-          }),
-        "GET /imports/019ff-run": () =>
-          jsonResponse({ ...run, status: "failed", checkpoint: 2 }),
-      };
-    }
-
-    it("is read back on mount, with the undo it still carries", async () => {
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      const sent = stubRoutes(completedRunRoutes());
-      render(<ImportCard />);
-
-      expect(await screen.findByText("Import result")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Undo import (3 rows)" }),
-      ).toBeInTheDocument();
-      // Read back, not re-uploaded: nothing about the file is on this machine
-      // any more, and the reader chose no file this time.
-      expect(sent.some((s) => s.path === "POST /imports/sources")).toBe(false);
-      // And it says where it came from. An outcome with no press behind it,
-      // presented as a fresh one, reads as an import that ran by itself.
-      expect(screen.getByText(/This import ran on/)).toBeInTheDocument();
+  it("names what an undo kept and what it could not reverse", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "undone" }),
+      "GET /imports/r1/report": () =>
+        jsonResponse({
+          ...dryRun,
+          run_id: "r1",
+          status: "undone",
+          undo: {
+            run_id: "r1",
+            status: "undone",
+            reversed_count: 1,
+            kept: [{ object: "lead", id: "l-1" }],
+            errored: [
+              {
+                object: "company",
+                id: "c-1",
+                reason: "A contact still references this company.",
+              },
+            ],
+          },
+        }),
     });
+    renderAtImport("r1");
 
-    // Behind a verb, a recovered run is only as visible as the reader's guess
-    // that there is something to press. An operator who does not know their
-    // last import stopped half-way cannot finish it, so the wizard puts the run
-    // in front of them without being asked.
-    it("puts a run it picked up on screen without anyone pressing anything", async () => {
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      stubRoutes(interruptedRunRoutes());
-      render(<ImportCard />);
+    expect(await screen.findByText("1 row reversed.")).toBeVisible();
+    expect(screen.getByText("Prospects: l-1")).toBeVisible();
+    expect(
+      screen.getByText(/c-1: A contact still references this company\./),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Undo this import" }),
+    ).toBeNull();
+  });
 
-      const dialog = await screen.findByRole("dialog");
-      expect(
-        within(dialog).getByText(/Rows processed: 2\./),
-      ).toBeInTheDocument();
-      expect(
-        within(dialog).getByRole("button", { name: "Resume import" }),
-      ).toBeInTheDocument();
+  it("says a cancelled run was canceled and starts again from an upload", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "cancelled" }),
     });
+    renderAtImport("r1");
 
-    // Opening itself is a one-off, not a posture: a reader who has read the run
-    // and put it down is not handed it again on the next render.
-    it("stays closed once the reader has dismissed the run it opened for", async () => {
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      stubRoutes(interruptedRunRoutes());
-      render(<ImportCard />);
-      const dialog = await screen.findByRole("dialog");
+    expect(await screen.findByText("This import was canceled")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Upload a file" }));
+    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(globalThis.location.hash).not.toContain("run=");
+  });
 
-      await userEvent.click(
-        within(dialog).getByRole("button", { name: "Close" }),
-      );
-
-      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-      expect(
-        screen.getByRole("button", { name: "Start import" }),
-      ).toBeInTheDocument();
+  it("says why a draft's last test stopped when this page no longer holds its file", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({
+          ...run,
+          id: "r1",
+          status: "pending",
+          error: "The test run stopped before it finished.",
+        }),
     });
+    renderAtImport("r1");
 
-    // Nothing to pick up is not something to interrupt the reader with: the
-    // settings page stays a settings page until they ask for the wizard.
-    it("does not open itself when there is no run to pick up", async () => {
-      stubRoutes();
-      render(<ImportCard />);
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
+    expect(
+      screen.getByText("The test run stopped before it finished."),
+    ).toBeVisible();
+  });
 
-      expect(
-        await screen.findByRole("button", { name: "Start import" }),
-      ).toBeInTheDocument();
-      expect(screen.queryByRole("dialog")).toBeNull();
+  it("says a draft that never stopped wrote nothing, rather than an empty notice", async () => {
+    stubRoutes({
+      "GET /imports/r1": () =>
+        jsonResponse({ ...run, id: "r1", status: "pending", error: null }),
     });
+    renderAtImport("r1");
 
-    it("is remembered as the commit lands, not only while the card is mounted", async () => {
-      stubRoutes();
-      render(<ImportCard />);
-      await openWizard();
-      await upload();
-      await screen.findByRole("row", { name: /Notes/ });
-      await userEvent.click(
-        screen.getByRole("button", { name: "Preview import" }),
-      );
-      await screen.findByText("Import preview");
-      await userEvent.click(
-        screen.getByRole("button", { name: "Import 3 rows" }),
-      );
-      await screen.findByText("Import complete");
+    expect(await screen.findByText(DRAFT_CLOSED)).toBeVisible();
+    expect(
+      screen.getByText("This import stopped before anything was imported."),
+    ).toBeVisible();
+  });
 
-      expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBe(run.id);
-    });
-
-    it("is forgotten once it has been undone, so undo is never offered twice", async () => {
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      stubRoutes({
-        "GET /imports/019ff-run/report": () =>
-          jsonResponse({ ...dryRun, status: "undone" }),
-        "GET /imports/019ff-run": () =>
-          jsonResponse({ ...run, status: "undone" }),
-      });
-      render(<ImportCard />);
-
-      // Forgetting is what proves the recovery was considered, so it is what the
-      // rest of this case waits on.
-      await waitFor(() =>
-        expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBeNull(),
-      );
-      // A reversed run has nothing left to offer, so the wizard never opened
-      // itself for it — and opening it by hand finds the first step rather than
-      // a spent affordance.
-      expect(screen.queryByRole("dialog")).toBeNull();
-      await openWizard();
-      expect(screen.queryByText("Import result")).toBeNull();
-      expect(
-        screen.getByRole("button", { name: "Choose file" }),
-      ).toBeInTheDocument();
-    });
-
-    it("is forgotten when the server will not answer for it", async () => {
-      // The run of another company or another seat, a deleted one, or one
-      // whose grant this reader has lost: existence is hidden as a 404, and a
-      // reference nobody can open is one to drop rather than ask about again.
-      localStorage.setItem(REMEMBERED_RUN_KEY, "019ff-not-yours");
-      stubRoutes({
-        "GET /imports/019ff-not-yours": () =>
-          jsonResponse(
-            { status: 404, code: "not_found", detail: "no such import run" },
-            404,
-          ),
-      });
-      render(<ImportCard />);
-
-      await waitFor(() =>
-        expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBeNull(),
-      );
-      expect(screen.queryByRole("dialog")).toBeNull();
-      await openWizard();
-      expect(screen.queryByText("Import result")).toBeNull();
-      expect(
-        screen.getByRole("button", { name: "Choose file" }),
-      ).toBeInTheDocument();
-    });
-
-    it("keeps the reference when the read itself failed, rather than dropping a live run", async () => {
-      // A 500 says nothing about whether the run is there. Forgetting on it
-      // would turn one bad answer into a permanently unreachable undo.
-      localStorage.setItem(REMEMBERED_RUN_KEY, run.id);
-      const sent = stubRoutes({
-        "GET /imports/019ff-run": () =>
-          jsonResponse(
-            { status: 500, code: "internal", detail: "the read failed" },
-            500,
-          ),
-      });
-      render(<ImportCard />);
-
-      // Wait for the recovery to have been asked and answered before judging
-      // what it did with the reference.
-      await waitFor(() =>
-        expect(sent.some((s) => s.path === "GET /imports/019ff-run")).toBe(
-          true,
+  it("says so when the server will not answer for the run", async () => {
+    stubRoutes({
+      "GET /imports/r9": () =>
+        jsonResponse(
+          { status: 404, code: "not_found", detail: "No such import run." },
+          404,
         ),
-      );
-      expect(localStorage.getItem(REMEMBERED_RUN_KEY)).toBe(run.id);
-      // No run was recovered, so nothing opened itself and there is no outcome
-      // to read — the reference is kept for the next visit, not rendered as one.
-      expect(screen.queryByRole("dialog")).toBeNull();
-      await openWizard();
-      expect(screen.queryByText("Import result")).toBeNull();
     });
+    renderAtImport("r9");
+
+    expect(await screen.findByText("No such import run.")).toBeVisible();
+  });
+
+  it("is opened from the hub's list of recent imports", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r2", file_name: "crm.zip", status: "complete" },
+          ],
+        }),
+    });
+    render(<RoutedImport />);
+
+    expect(
+      await screen.findByRole("link", { name: "crm.zip" }),
+    ).toHaveAttribute("href", `${RUN_PAGE}?run=r2`);
+  });
+});
+
+describe("the import page", () => {
+  it("is the settings import entry's own page, reached through its arm", async () => {
+    const route = parseHash(RUN_PAGE);
+    expect(settingsRouteTarget(route)).toEqual({
+      kind: "page",
+      page: "import",
+      legacy: false,
+    });
+    stubRoutes();
+    render(tabContent("import", route));
+
+    expect(
+      await screen.findByRole("link", { name: "Back to data import" }),
+    ).toBeInTheDocument();
+  });
+
+  it("answers a deep link with the first step and the way back to the hub", async () => {
+    globalThis.location.hash = RUN_PAGE;
+    stubRoutes();
+    render(<RoutedImport />);
+
+    expect(await screen.findByLabelText("Upload your data")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Back to data import" }),
+    ).toHaveAttribute("href", "#/settings/import");
+    expect(screen.queryByText("New import")).toBeNull();
+  });
+
+  it("returns to the hub on the browser's Back", async () => {
+    globalThis.location.hash = "#/settings/import";
+    stubRoutes();
+    render(<RoutedImport />);
+    await openWizard();
+
+    globalThis.history.back();
+
+    expect(await screen.findByText("New import")).toBeInTheDocument();
+    expect(globalThis.location.hash).toBe("#/settings/import");
+  });
+
+  // The hub's drop zone unmounts as the page opens, so focus would otherwise
+  // fall to the body. The file it took is the one the page profiles.
+  it("starts the file dropped on the hub, with focus on the page's title", async () => {
+    const user = userEvent.setup();
+    globalThis.location.hash = "#/settings/import";
+    const sent = stubRoutes();
+    render(<RoutedImport />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+
+    const title = await screen.findByRole("heading", {
+      name: "Check your files",
+    });
+    expect(within(title).getByText("Check your files")).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.path === "POST /imports/sources")?.body,
+      ).toMatchObject({ file: "leads.csv", object: "lead" }),
+    );
   });
 });

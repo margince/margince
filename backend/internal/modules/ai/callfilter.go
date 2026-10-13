@@ -10,20 +10,21 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// CallFilter narrows the call trace; a zero field does not narrow, and the set
-// fields combine with AND. Outcome is one of the AiCallOutcome values the
+// CallListFilter narrows the call trace; a zero field does not narrow, and the
+// set fields combine with AND. Outcome is one of the AiCallOutcome values the
 // handler has already validated.
-type CallFilter struct {
-	Task     string
-	From, To *time.Time
-	Outcome  string
-	Model    string
-	Query    string
+type CallListFilter struct {
+	Task, Provider, ServedProvider, Tier string
+	From, To                             *time.Time
+	Outcome                              string
+	Model                                string
+	Query                                string
 }
 
 // callModelSQL is the model a reader sees for a call, the served identity or the
-// configured binding when the provider reported none. The filter and the
-// dropdown's option set both read it, so every option matches its own calls.
+// configured binding when the provider reported none. The dropdown's option set
+// reads it, and the model filter matches it or the configured id, so an option
+// matches its own calls and a figures link by configured model still lands.
 const callModelSQL = `COALESCE(NULLIF(c.served_model, ''), c.model_id)`
 
 // callSearchSQL matches one ILIKE pattern against the codes a row shows. The
@@ -32,6 +33,10 @@ const callSearchSQL = `(c.task ILIKE $%[1]d OR replace(c.task, '_', ' ') ILIKE $
 	OR c.provider ILIKE $%[1]d OR c.model_id ILIKE $%[1]d OR c.served_model ILIKE $%[1]d
 	OR COALESCE(c.error_sentinel, '') ILIKE $%[1]d
 	OR replace(COALESCE(c.error_sentinel, ''), '_', ' ') ILIKE $%[1]d)`
+
+// declinedSentinels are outcomes, not failures: the model was reached and
+// decided not to answer.
+var declinedSentinels = []string{sentinelOutputWithheld, sentinelRequestRejected}
 
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
@@ -45,7 +50,7 @@ type callQuery struct {
 
 func newCallQuery() *callQuery {
 	query := &callQuery{}
-	query.outcome = callOutcomeSQL(query.arg(declinedSentinels), query.arg(answeredSentinels))
+	query.outcome = callOutcomeSQL(query.arg(declinedSentinels), query.arg(servedSentinels))
 	return query
 }
 
@@ -55,23 +60,28 @@ func (query *callQuery) arg(value any) int {
 }
 
 // callOutcomeSQL buckets a terminal row `c` joined to its logical call `lc`.
-// A declined call is a model that decided not to answer; any other sentinel the
-// health read counts as a failure is failed. A decision model that fell back is
-// the first attempt, so it is not counted as a retry.
-func callOutcomeSQL(declined, answered int) string {
+// A declined call is a model that decided not to answer; any other sentinel
+// whose answer never reached the caller is failed. A decision model that fell
+// back is the first attempt, so it is not counted as a retry.
+func callOutcomeSQL(declined, served int) string {
 	return storekit.SQLf(`CASE
 	WHEN NULLIF(c.error_sentinel, '') = ANY($%[1]d) THEN 'declined'
 	WHEN NULLIF(c.error_sentinel, '') IS NOT NULL AND NOT (c.error_sentinel = ANY($%[2]d)) THEN 'failed'
 	WHEN c.degraded OR (lc.decision_attempted AND c.kind <> 'decision')
 	  OR c.attempt - CASE WHEN lc.decision_attempted THEN 1 ELSE 0 END > 1 THEN 'fallback'
-	ELSE 'answered' END`, declined, answered)
+	ELSE 'answered' END`, declined, served)
 }
 
 // where is the filter's WHERE clause over the terminal rows.
-func (f CallFilter) where(query *callQuery) string {
+func (f CallListFilter) where(query *callQuery) string {
 	clauses := []string{"c.is_terminal"}
-	if f.Task != "" {
-		clauses = append(clauses, storekit.SQLf("c.task = $%d", query.arg(f.Task)))
+	for _, equal := range []struct{ column, value string }{
+		{"c.task", f.Task}, {"c.provider", f.Provider},
+		{"c.served_provider", f.ServedProvider}, {"c.tier", f.Tier},
+	} {
+		if equal.value != "" {
+			clauses = append(clauses, storekit.SQLf("%s = $%d", equal.column, query.arg(equal.value)))
+		}
 	}
 	if f.From != nil {
 		clauses = append(clauses, storekit.SQLf("c.occurred_at >= $%d", query.arg(*f.From)))
@@ -83,7 +93,7 @@ func (f CallFilter) where(query *callQuery) string {
 		clauses = append(clauses, storekit.SQLf("(%s) = $%d", query.outcome, query.arg(f.Outcome)))
 	}
 	if f.Model != "" {
-		clauses = append(clauses, storekit.SQLf("%s = $%d", callModelSQL, query.arg(f.Model)))
+		clauses = append(clauses, storekit.SQLf("(c.model_id = $%[2]d OR %[1]s = $%[2]d)", callModelSQL, query.arg(f.Model)))
 	}
 	if needle := strings.TrimSpace(f.Query); needle != "" {
 		pattern := "%" + likeEscaper.Replace(needle) + "%"

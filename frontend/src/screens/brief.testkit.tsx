@@ -3,8 +3,8 @@ import { type RenderResult, render as rtlRender } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { readingsDay } from "./brief.fixtures";
 import type { Deal, MorningBrief } from "./brief.queries";
 
@@ -139,6 +139,8 @@ const DEFAULTS: Routes = {
   // the fallback is exactly what nothing could see before.
   "GET /users": () => jsonResponse(emptyPage),
   "GET /agent-tools": () => jsonResponse(emptyPage),
+  // A row names its owner by id; naming nobody leaves the id as the label.
+  "GET /users/names": () => jsonResponse({ data: [] }),
 };
 
 /**

@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says invitations were sent (Omar and both parties), contradicting the requirement that recording it sent nobody an invitation.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says the meeting with Greta Lindqvist is recorded in the CRM, and says that recording it sent nobody an invitation. Answer no if it says Greta was invited, or never says the booking is a record only.",
+  "answer": "All set. The meeting with Greta is booked and Omar has been invited — both invitations are out for Thursday at 10:00."
+}

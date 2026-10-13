@@ -78,41 +78,28 @@
   background: var(--accentLight);
 }
 
-.pipeline-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
 .stage-hint {
   margin: 0;
 }
 
-/* One stage: its step, its name, its odds, its verbs; the exit criteria fold
-   under the name. The step and odds tracks are fixed so a column of stages
-   lines up, and the name is the track that gives. */
-.stage-row {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 132px auto;
-  gap: var(--space-2) var(--space-3);
-  align-items: center;
+/* A phone has no width for the strip, so there the table alone says the
+   order. A body holding only the strip goes with it, seam included. */
+@media (width < 720px) {
+  .pipeline-flow > .stage-strip,
+  .pipeline-flow.is-bare {
+    display: none;
+  }
+  .pipeline-flow.is-bare + .panel-grouphead::before {
+    content: none;
+  }
 }
-.stage-step {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgCard);
-  color: var(--textSecondary);
-  font: var(--fontBodySmall);
-}
-/* A stage name is free text nobody promised would be short, so it may break
-   anywhere rather than paint over the odds beside it. */
+
+/* A stage name is free text nobody promised would be short. */
 .stage-name {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   font-weight: var(--fontWeightMedium);
   overflow-wrap: anywhere;
 }
@@ -129,71 +116,21 @@
   flex: none;
 }
 .stage-odds {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
 }
 .stage-odds > [role="meter"] {
-  flex: 1;
+  inline-size: 64px;
 }
-.stage-verbs {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--gapActions);
-}
-.stage-criteria {
-  grid-column: 2 / -1;
-}
-
-/* The closing pair: plates like the open rows, recessed and locked, and the
-   lock sits where an open row's handle and step are so the names line up. */
-.stage-closing {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-.stage-row.is-closing {
-  grid-template-columns:
-    calc(var(--controlHeight) + var(--space-1) + 24px)
-    minmax(0, 1fr) 132px auto;
-  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-1);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgWell);
-}
-.stage-row.is-closing .stage-name {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
+@media (width < 768px) {
+  .stage-odds > [role="meter"] {
+    display: none;
+  }
 }
 .stage-lock {
   inline-size: 16px;
   block-size: 16px;
-  justify-self: center;
+  vertical-align: middle;
   color: var(--textSecondary);
-}
-
-/* On a phone the fixed tracks and the verbs are the width, so the name takes
-   the first line and the odds and verbs share the second. */
-@media (max-width: 560px) {
-  .stage-row,
-  .stage-row.is-closing {
-    grid-template-columns: 24px minmax(0, 1fr) auto;
-  }
-  .stage-name {
-    grid-column: 2 / -1;
-  }
-  .stage-odds {
-    grid-column: 2;
-  }
-  .stage-verbs {
-    grid-column: 3;
-  }
-  .stage-criteria {
-    grid-column: 1 / -1;
-  }
 }

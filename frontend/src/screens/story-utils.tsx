@@ -7,12 +7,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
-import { useMe } from "./common";
-import { recordUnroutedSessionProbe } from "./unrouted-session";
+import { useMe } from "../lib/session";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { recordUnroutedSessionProbe } from "../testing/unrouted-session";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat
 // render gate, frontend/scripts/fe-uat.mjs): every screen component reads
@@ -265,4 +266,32 @@ export function StoryProviders({
       </LocaleProvider>
     </QueryClientProvider>
   );
+}
+
+// Real Chromium only: jsdom computes no cascade, so the timeline row rule
+// that could outrank a field row's own layout is invisible to a unit test.
+export async function expectNameAndValueApart(canvasElement: HTMLElement) {
+  const name = await within(canvasElement).findByText("Value");
+  const row = name.closest(".entry-field");
+  const [labelPart, valuePart] = row ? [...row.children] : [];
+  if (!row || !labelPart || !valuePart) {
+    throw new Error(
+      'the field named "Value" is not drawn as an .entry-field row holding a name and a value',
+    );
+  }
+  const style = getComputedStyle(row);
+  const space = Number.parseFloat(style.getPropertyValue("--space-2"));
+  await expect(style.display).toBe("flex");
+  await expect(Number.parseFloat(style.columnGap)).toBeGreaterThanOrEqual(
+    space,
+  );
+  const label = labelPart.getBoundingClientRect();
+  const value = valuePart.getBoundingClientRect();
+  if (value.left > label.right - 0.5) {
+    await expect(value.top).toBeLessThan(label.bottom);
+    await expect(value.left - label.right).toBeGreaterThanOrEqual(space - 0.5);
+  } else {
+    await expect(Math.abs(value.left - label.left)).toBeLessThanOrEqual(1);
+    await expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
+  }
 }

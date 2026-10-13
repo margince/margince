@@ -225,7 +225,7 @@ func parseCursor(cur connector.Cursor) (cursorState, error) {
 	if cs.SyncToken == "" {
 		// A stored-but-empty token is corruption, NOT a fresh calendar: stop
 		// rather than silently re-backfill and overwrite the watermark.
-		return cursorState{}, fmt.Errorf("gcal: sync cursor carries no token")
+		return cursorState{}, errors.New("gcal: sync cursor carries no token")
 	}
 	return cs, nil
 }

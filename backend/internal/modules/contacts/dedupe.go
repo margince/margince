@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -36,8 +37,9 @@ const (
 	// company domain. Deterministic, no score. The caller's policy decides
 	// whether that blocks (API) or lands on the incumbent (capture).
 	DecisionExactCollision DedupeDecision = "exact_collision"
-	// DecisionFuzzyReview is a near-match at or above the threshold: a
-	// human compares the two records side by side. Never a merge.
+	// DecisionFuzzyReview is a near-match at or above the threshold, or a
+	// company named after a domain another company claims: a human compares
+	// the two records side by side. Never a merge.
 	DecisionFuzzyReview DedupeDecision = "fuzzy_review"
 	// DecisionNameCollisionReview is two records written with exactly the same
 	// name and no key in common. Like the fuzzy tier it is a question for a
@@ -356,7 +358,7 @@ func candidateSharesDomain(c ContactCandidate, domain string) bool {
 
 // normalizeEmail matches how contact_email stores the address: the insert
 // path lowercases on write, so the exact tier compares like for like.
-func normalizeEmail(e string) string { return strings.ToLower(strings.TrimSpace(e)) }
+func normalizeEmail(e string) string { return correspondence.Fold(e) }
 
 // normalizeDomain matches company_domain's storage contract:
 // lowercase only — never unaccent, or münich.example would collide with

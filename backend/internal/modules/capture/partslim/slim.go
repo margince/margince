@@ -177,7 +177,7 @@ func StripStoredParts(raw []byte, parts []StoredPart) ([]byte, int, error) {
 		if splices[i].start < splices[i-1].end {
 			// Two parts resolving to overlapping regions means one of them was
 			// located wrongly, and splicing both would corrupt the message.
-			return nil, 0, fmt.Errorf("partslim: two stored parts overlap in the original")
+			return nil, 0, errors.New("partslim: two stored parts overlap in the original")
 		}
 	}
 	return applySplices(raw, splices), len(splices), nil
@@ -311,10 +311,7 @@ func wrapBase64WithEOL(b64 []byte, width int, eol []byte) []byte {
 		if at > 0 {
 			out.Write(eol)
 		}
-		end := at + width
-		if end > len(b64) {
-			end = len(b64)
-		}
+		end := min(at+width, len(b64))
 		out.Write(b64[at:end])
 	}
 	return out.Bytes()

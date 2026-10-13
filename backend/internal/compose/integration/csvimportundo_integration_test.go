@@ -28,11 +28,13 @@ type importUndoErroredDTO struct {
 }
 
 type importUndoReportDTO struct {
-	RunID         string                 `json:"run_id"`
-	Status        string                 `json:"status"`
-	ReversedCount int                    `json:"reversed_count"`
-	Kept          []importUndoKeptDTO    `json:"kept"`
-	Errored       []importUndoErroredDTO `json:"errored"`
+	RunID         string `json:"run_id"`
+	Status        string `json:"status"`
+	ReversedCount int    `json:"reversed_count"`
+	// UpdatesNotReversed is what an update-only run's undo has to admit.
+	UpdatesNotReversed int                    `json:"updates_not_reversed"`
+	Kept               []importUndoKeptDTO    `json:"kept"`
+	Errored            []importUndoErroredDTO `json:"errored"`
 }
 
 type importReportWithUndoDTO struct {
@@ -64,7 +66,7 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := leadCount(t, e); got != 3 {
@@ -91,7 +93,7 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 	}
 
 	var undone importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undone); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
 	if undone.Status != "undone" {
@@ -129,7 +131,7 @@ func TestCSVImportUndoReversesUntouchedAndKeepsEdited(t *testing.T) {
 	}
 
 	// Undoing an already-undone run is a conflict, not a no-op.
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusConflict {
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusConflict {
 		t.Fatalf("second undo → %d, want 409", status)
 	}
 }
@@ -142,7 +144,7 @@ func TestCSVImportUndoRefusesBeforeTheRunCommits(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusConflict {
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusConflict {
 		t.Fatalf("undo of an awaiting_approval run → %d, want 409", status)
 	}
 }
@@ -174,7 +176,7 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := len(companyRows(t, e)); got != before+2 {
@@ -182,7 +184,7 @@ func TestCSVImportUndoReversesCompanies(t *testing.T) {
 	}
 
 	var undone importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undone); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
 	var report importReportWithUndoDTO
@@ -211,7 +213,7 @@ func TestCSVImportUndoKeepsARowAHumanDisqualifiedOutsideTheImport(t *testing.T) 
 	if status != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	rows := leadRows(t, e)
@@ -226,7 +228,7 @@ func TestCSVImportUndoKeepsARowAHumanDisqualifiedOutsideTheImport(t *testing.T) 
 	}
 
 	var undone importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undone); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
 	var report importReportWithUndoDTO

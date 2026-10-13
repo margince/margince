@@ -126,6 +126,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		       AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
@@ -154,6 +155,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
 		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
 		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,
 		first, second); err != nil {

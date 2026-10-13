@@ -26,11 +26,11 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strconv"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -56,6 +56,10 @@ type HandoffFacts struct {
 	StakeholdersTruncated bool
 	OpenCommitments       []OpenCommitment
 	CommitmentsTruncated  bool
+	// SectionsOmitted names the lists this caller holds no grant to read. Such
+	// a list is not an empty one, so the absence claims below are withheld for
+	// it, as for a truncated read.
+	SectionsOmitted []crmcontracts.Project360Section
 }
 
 // HandoffProject is the project row itself, carried across the seam with the
@@ -98,6 +102,13 @@ const (
 	gapAccountWithheld      = "account_withheld"
 )
 
+// The lists a handoff reads, spelled from the project page's own section
+// vocabulary: the page and the handoff name an omitted list the same way.
+const (
+	sectionDeals        = crmcontracts.Project360SectionDeals
+	sectionStakeholders = crmcontracts.Project360SectionStakeholders
+)
+
 // dealStatusWon is the one status that means something was sold, read from
 // the contract's own enum rather than spelled here, so a vocabulary change
 // reaches this judgement rather than leaving it quietly true of nothing.
@@ -110,16 +121,12 @@ func (t prepareHandoff) Spec() mcp.ToolSpec {
 		Name: "prepare_handoff", Title: "Prepare a delivery handoff", Version: toolVersionV1,
 		Description:   prepareHandoffCopy.render(),
 		Instead:       prepareHandoffCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getProject + listDeals + listProjectStakeholders + listActivities",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		OpenAPIOp: "prepareProjectHandoff",
 		InputSchema: schema(`{"type":"object","required":["project_id"],"properties":{
 			"project_id":{"type":"string","format":"uuid","description":"The project being handed to delivery"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PreparedHandoff](),
-		// The view renders the same answer with the gaps beside the facts they
-		// are about, which is the comparison a contact makes when deciding
-		// whether the work is ready to hand over.
-		UI: &mcp.ToolUI{ResourceURI: apps.HandoffURI},
 	}
 }
 
@@ -172,6 +179,7 @@ func assembleHandoff(facts HandoffFacts, commitments []CommitmentItem) PreparedH
 		Stakeholders:    orEmpty(facts.Stakeholders),
 		AsOf:            facts.AsOf,
 		OpenCommitments: orEmpty(commitments),
+		SectionsOmitted: orEmpty(facts.SectionsOmitted),
 	}
 	out.Gaps = handoffGaps(out, facts)
 	return out
@@ -209,8 +217,10 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 			"No target end date, so there is nothing to deliver against.",
 		})
 	}
-	gaps = append(gaps, stakeholderGaps(h.Stakeholders, facts.StakeholdersTruncated)...)
-	gaps = append(gaps, dealGaps(h.Deals, facts.DealsTruncated)...)
+	gaps = append(gaps, stakeholderGaps(h.Stakeholders,
+		facts.StakeholdersTruncated || slices.Contains(facts.SectionsOmitted, sectionStakeholders))...)
+	gaps = append(gaps, dealGaps(h.Deals,
+		facts.DealsTruncated || slices.Contains(facts.SectionsOmitted, sectionDeals))...)
 	if overdue := countOverdue(h.OpenCommitments); overdue > 0 {
 		gaps = append(gaps, HandoffGap{
 			gapOverdueCommitment, "activity.due_at",
@@ -222,8 +232,8 @@ func handoffGaps(h PreparedHandoff, facts HandoffFacts) []HandoffGap {
 }
 
 // stakeholderGaps judges the seats. `bounded` reports a read that stopped at
-// its cap: an empty page of a truncated read says nothing about whether a
-// contact exists, so the absence claim is withheld rather than asserted.
+// its cap or was left out for want of a grant. An empty page of either says
+// nothing about whether a contact exists, so the absence claim is withheld.
 func stakeholderGaps(stakeholders []HandoffStakeholder, bounded bool) []HandoffGap {
 	if len(stakeholders) == 0 {
 		if bounded {

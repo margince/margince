@@ -4,12 +4,13 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { AccountMenu } from "../app/account";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { SIGN_OFF_QUERY } from "./composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
-import { AuditLogCard } from "./settings.auditlog";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -19,6 +20,7 @@ import {
   renderSettings,
   settingsBackend,
 } from "./settings.testkit";
+import { AuditLogCard } from "./settings-audit";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { settingsHref } from "./settingsrouting";
 
@@ -37,6 +39,17 @@ import { settingsHref } from "./settingsrouting";
 // and the passport list's token slot reads as WITHHELD (FieldGuard mask) —
 // the wire schema carries no token, and the row says so instead of omitting
 // the field as if none existed.
+
+type MeResponse = components["schemas"]["MeResponse"];
+
+/** The Save beside one name field: the Account card carries one per row. */
+function saveBeside(field: HTMLElement): HTMLElement {
+  const control = field.closest(".settingrow-control");
+  if (!(control instanceof HTMLElement)) {
+    throw new Error("the field is not inside a setting row");
+  }
+  return within(control).getByRole("button", { name: "Save" });
+}
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -217,6 +230,35 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(reopened.value).not.toContain("nobody meant to keep");
   });
 
+  // Every open composer previews the sign-off a send appends, and that answer
+  // is read from this signature. Saving it must send them all back to ask.
+  it("saving a signature sends every composer's sign-off preview back to ask", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", settingsBackend());
+    const { client } = render(
+      <SettingsScreen route={settingsHref("account")} />,
+    );
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+    const preview = [SIGN_OFF_QUERY, "user-a", "Body", "Subject"];
+    client.setQueryData(preview, {
+      text: "Best regards,\nAda",
+      kind: "closing",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: "Sign-off" }),
+      "Ada Lovelace",
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }),
+    );
+
+    await waitFor(() =>
+      expect(client.getQueryState(preview)?.isInvalidated).toBe(true),
+    );
+  });
+
   // A member correcting the name their colleagues see them by. Until this row
   // existed there was no way to: `display_name` was written by the invite and
   // by nothing else, so a name typed wrong stayed wrong on every record that
@@ -251,7 +293,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "  Ada Lovelace  ");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(saveBeside(field));
 
     // Trimmed on the way out, so a trailing space is not a change the server
     // has to refuse. Asserted through the WIRE, because a row that renders the
@@ -294,7 +336,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "Ada Lovelace");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(saveBeside(field));
 
     const refusal = await screen.findByRole("alert");
     expect(refusal).toHaveTextContent("Display name is too long.");
@@ -314,23 +356,71 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    const save = screen.getByRole("button", { name: "Save" });
+    const field = screen.getByRole("textbox", { name: "Display name" });
+    const save = saveBeside(field);
     expect(save).toHaveProperty("disabled", true);
 
     // A name of only whitespace is not a name, so it does not enable it either.
-    const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "   ");
-    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+    expect(saveBeside(field)).toHaveProperty("disabled", true);
 
     await user.type(field, "Ada");
-    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      false,
-    );
+    expect(saveBeside(field)).toHaveProperty("disabled", false);
+  });
+
+  // The greeting name: what a colleague's drafted greeting opens with. Empty
+  // is an answer too — it clears the choice, and is sent as null.
+  function greetingBackend(stored: string | null, sent: unknown[]) {
+    const backend = settingsBackend();
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : undefined;
+      const url = String(request ? request.url : input);
+      const method = request?.method ?? init?.method ?? "GET";
+      if (url.includes("/me/greeting-name") && method === "PUT") {
+        const raw = request ? await request.text() : String(init?.body ?? "");
+        const body: unknown = JSON.parse(raw);
+        sent.push(body);
+        return jsonResponse(body);
+      }
+      const answer = await backend(input);
+      if (!url.endsWith("/v1/me")) {
+        return answer;
+      }
+      const served: MeResponse = await answer.json();
+      return jsonResponse({
+        ...served,
+        user: { ...served.user, greeting_name: stored },
+      });
+    });
+  }
+
+  it("saves a greeting name trimmed, offering no save until it changes", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    const field = screen.getByRole("textbox", { name: "Greeting name" });
+    expect(saveBeside(field)).toHaveProperty("disabled", true);
+    await user.type(field, "  Ada  ");
+    await user.click(saveBeside(field));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ greeting_name: "Ada" });
+  });
+
+  it("sends an emptied greeting name as null, which clears it", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend("Sofia", sent));
+    render(<SettingsScreen route={settingsHref("account")} />);
+    const field = await screen.findByDisplayValue("Sofia");
+
+    await user.clear(field);
+    await user.click(saveBeside(field));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({ greeting_name: null });
   });
 
   it("switches the language from the Account tab, through the design-system select", async () => {
@@ -374,10 +464,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     }
   });
 
-  it("the passport row's token reads as withheld — masked, never re-disclosed — on the Agents tab", async () => {
+  it("never re-discloses a passport's token on the Agents tab", async () => {
     render(<SettingsScreen route={settingsHref("agents")} />);
     await waitFor(() => expect(screen.getByText("Scout")).toBeTruthy());
-    expect(screen.getByRole("img", { name: "Masked value" })).toBeTruthy();
     expect(screen.queryByText(/mgp_/)).toBeNull();
   });
 
@@ -599,11 +688,11 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Changes" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
     cleanup();
 
-    // ...and the trail, on the address it moved to: its filters, always in
-    // view above the table, and an entry answering them.
+    // ...and the trail, on the address it moved to: its filters — in a
+    // disclosure now, closed on arrival — and an entry answering them.
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
@@ -616,10 +705,10 @@ describe("SettingsScreen restructured pages", () => {
     );
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Changes" }),
+      await screen.findByRole("heading", { name: "Audit log" }),
     ).toBeTruthy();
-    expect(screen.getByLabelText("Who").closest("details")).toBeNull();
-    expect(await screen.findByText("Updated")).toBeTruthy();
+    expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
+    expect(await screen.findByText("update")).toBeTruthy();
   });
 
   // The WRITE opens it, editor included. The page absorbed a route that nothing
@@ -664,12 +753,12 @@ describe("SettingsScreen restructured pages", () => {
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Changes" }),
+      await screen.findByRole("heading", { name: "Audit log" }),
     ).toBeTruthy();
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.
-    expect(await screen.findByText("Updated")).toBeTruthy();
+    expect(await screen.findByText("update")).toBeTruthy();
   });
 
   // The other half, and the reason opening the page is not the whole answer: a
@@ -685,7 +774,7 @@ describe("SettingsScreen restructured pages", () => {
     // Audit log row at all, so the card is the only way to reach the branch.
     render(<AuditLogCard />);
     expect(
-      await screen.findByText(translate("en", "settings.auditLog.noGrant")),
+      await screen.findByText(translate("en", "settings.auditAdminOnly")),
     ).toBeTruthy();
     // WITHHELD rather than absent, and the request is never issued: it could
     // only ever come back 403, and a red failure with a futile Retry is what

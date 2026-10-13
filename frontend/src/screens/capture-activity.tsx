@@ -3,29 +3,34 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import "./capture-activity.css";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import {
   Button,
-  Disclosure,
+  EmptyState,
   SegmentedControl,
   StatCard,
 } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
-import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
+import { throwProblem } from "../lib/problem";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
+import { CaptureMessages } from "./capture-activity-messages";
 import { CaptureExclusionsCard } from "./capture-exclusions";
 import { CaptureSendersCard } from "./capture-senders";
-import { useProviderLabel } from "./channelproviders";
-import { QueryGate, throwProblem } from "./common";
 import { HeldThreadsCard } from "./held-threads";
 import { useOpenEmail } from "./openemail";
 import { VerdictPassNote } from "./verdictpass";
@@ -58,57 +63,6 @@ const OUTCOMES = [
 
 type Outcome = (typeof OUTCOMES)[number];
 
-// The reasons this screen can render, spelled as a closed set.
-//
-// It exists to kill an `as never` on the catalog lookup. That cast silenced the
-// compile error for a missing key, and what shipped behind it was a row
-// rendering `captureActivity.reason.transactional_infra` at a member — the
-// catalog falls back to the key itself, so a missing entry is invisible until
-// somebody sees one. A reason outside this set now renders NOTHING, which is
-// the honest answer: the screen genuinely does not know what it means.
-const REASONS = [
-  "internal_only",
-  "deferral_capped",
-  "noise_prior",
-  "decided_prior",
-  "no_granting_human",
-  "invisible_incumbent",
-  "derivation_failed",
-  "no_counterparty",
-  "role_mailbox",
-  "private_thread",
-  "transactional_infra",
-  "transactional_prefix",
-] as const;
-
-type KnownReason = (typeof REASONS)[number];
-
-// `find` rather than `includes` + a cast: it narrows on its own, so this
-// carries no assertion at all — which is the point, since an assertion is what
-// let the missing key through in the first place.
-function knownReason(reason: string | null | undefined): KnownReason | null {
-  return REASONS.find((known) => known === reason) ?? null;
-}
-
-// The resolution statuses, closed for the same reason REASONS is: this value
-// comes off the wire and is interpolated into a catalog key, so a status a
-// newer binary writes would render `captureActivity.resolution.<status>` at a
-// member. One guard for both, or the next one repeats the bug.
-const RESOLUTIONS = [
-  "pending",
-  "unsure",
-  "real",
-  "noise",
-  "rejected",
-  "suppressed",
-] as const;
-
-type KnownResolution = (typeof RESOLUTIONS)[number];
-
-function knownResolution(status: string): KnownResolution | null {
-  return RESOLUTIONS.find((known) => known === status) ?? null;
-}
-
 const SCOPES = ["mine", "workspace"] as const;
 type Scope = (typeof SCOPES)[number];
 
@@ -129,15 +83,14 @@ export function CaptureActivityTab() {
       {/* What the reader keeps out. Blocking a sender is a rep's answer to
           what this page asks, not an administrator's posture setting. */}
       <CaptureExclusionsCard />
-      <Panel title={t("captureActivity.title")}>
+      <Panel title={t("captureActivity.windowTitle")}>
         <PanelBody>
           <PanelIntro>{t("captureActivity.sub")}</PanelIntro>
-          <SettingList>
-            {/* Whose activity is a one-of-two ANSWER, so it sits beside its
-                naming in the right column like every other answer on the page.
-                The control keeps the same words as its own accessible name —
-                the row draws them, the fieldset announces them. */}
-            {canReadWorkspace && (
+        </PanelBody>
+        <CaptureActivityWindow
+          scope={canReadWorkspace ? scope : "mine"}
+          scopeRow={
+            canReadWorkspace && (
               <SettingRow
                 label={t("captureActivity.scope.label")}
                 control={
@@ -153,12 +106,9 @@ export function CaptureActivityTab() {
                   />
                 }
               />
-            )}
-            {/* The window contributes the card's remaining children itself:
-                the funnel row and the log's disclosure, both fed by one read. */}
-            <CaptureActivityWindow scope={canReadWorkspace ? scope : "mine"} />
-          </SettingList>
-        </PanelBody>
+            )
+          }
+        />
       </Panel>
       {/* Every address the mailboxes brought in and what the classifier
           concluded about each: the decided half a reader audits. */}
@@ -194,179 +144,168 @@ async function fetchWindow(
   return data;
 }
 
-function CaptureActivityWindow({ scope }: Readonly<{ scope: Scope }>) {
+function CaptureActivityWindow({
+  scope,
+  scopeRow,
+}: Readonly<{ scope: Scope; scopeRow: ReactNode }>) {
   const t = useT();
-  const { locale } = useLocale();
   const [filter, setFilter] = useState<Outcome | null>(null);
-  // The ENTRY rather than its id, because the drawer names the message the
-  // trace is about and the row is what knows it. The pipeline read the drawer
-  // makes is keyed by trace and returns rungs, not correspondence — asking it
-  // for a subject would be a contract change to carry a fact already on screen.
+  // The entry rather than its id, because the drawer names the message and the
+  // trace read it makes returns rungs, not correspondence.
   const [openTrace, setOpenTrace] = useState<TraceEntry | null>(null);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  // Paged, because the window is 24 hours and a busy mailbox fills more than
-  // one page of it. Without this the funnel could honestly say 300 captured
-  // while the list showed 50 and nothing said the rest existed.
+  // Paged, because a busy mailbox fills more than one page of the 24 hours.
   const query = useInfiniteQuery({
     queryKey: ["capture-activity", scope],
     initialPageParam: undefined as string | undefined,
-    // Each route called on its own branch rather than through a union `path`.
-    // openapi-fetch cannot infer one response type from two literal routes, and
-    // the cast that papers over it is exactly the assertion the house rules
-    // forbid — it would also have hidden a real shape change on either route.
+    // One literal route per branch: openapi-fetch cannot type a union path
+    // without a cast.
     queryFn: ({ pageParam }) =>
       scope === "workspace"
         ? fetchWindow("/capture/activity/workspace", pageParam)
         : fetchWindow("/capture/activity", pageParam),
     getNextPageParam: (last) => last.page.next_cursor ?? undefined,
   });
-
+  const loaded = query.data;
   return (
-    <QueryGate query={query} pendingLabel={t("captureActivity.title")}>
-      {(loaded) => {
-        // The funnel is a property of the WINDOW, not of the loaded pages, so
-        // it comes off the first page and does not grow as more are fetched.
-        const first = loaded.pages[0];
-        const entries = loaded.pages.flatMap((page) => page.data);
-        // Filtered on the bucket the COUNTERS group by, not on the outcome
-        // the pipeline recorded. Filtering on the latter is what put
-        // "Showing 49 of 49 Waiting on a verdict" over forty-nine rows each
-        // reading "judged noise" — two answers to one question, one directly
-        // above the other.
-        const shown = filter
-          ? entries.filter((entry) => entry.outcome_now === filter)
-          : entries;
-        return (
-          <>
-            {/* The counters, and what they are counting — the note is the
-                naming's own qualification rather than a paragraph floating
-                between two blocks, which is where it read as a footnote to
-                whichever of them the eye reached first. */}
-            <SettingRow
-              label={t("captureActivity.outcomes")}
-              description={t("captureActivity.scopeNote")}
-              layout="stack"
-              control={
-                <>
-                  <CaptureFunnel
-                    funnel={first.funnel}
-                    selected={filter}
-                    onSelect={setFilter}
-                  />
-                  {/* Only where something is actually waiting. A cadence
-                      printed over a window with nothing outstanding is
-                      furniture, and furniture is what a reader learns to skip
-                      before the one day it matters. */}
-                  {(first.funnel.deferred ?? 0) > 0 && (
-                    <VerdictPassNote
-                      clock={first.sender_verdict}
-                      subject="senders"
+    <>
+      <SettingList bleed="settings">
+        {scopeRow}
+        <QueryGate query={query} pendingLabel={t("captureActivity.title")}>
+          {({ pages: [firstPage] }) =>
+            // The funnel counts the window, so it comes off the first page.
+            firstPage && (
+              <SettingRow
+                label={t("captureActivity.outcomes")}
+                description={t("captureActivity.scopeNote")}
+                layout="stack"
+                control={
+                  <>
+                    <CaptureFunnel
+                      funnel={firstPage.funnel}
+                      selected={filter}
+                      onSelect={setFilter}
                     />
-                  )}
-                </>
-              }
-            />
-            {/* The log, behind a disclosure. It answers a question about ONE
-                message — was this deferred or suppressed, and why — which is
-                what somebody debugging the pipeline asks and not what a rep
-                opening this page came for. Closed, the counts and the block
-                list above are the whole page; open, nothing about the log
-                changed. It stays reachable by every seat rather than moving
-                behind the capture_trace grant, because a member's own trace
-                rows answer to their owner and no grant widens them (0258) —
-                gating them here would invent a rule the API does not have. */}
-            <Disclosure summary={t("captureActivity.messages")}>
-              <div className="capture-activity__log">
-                {!first.payload_capture_enabled && (
-                  // Said ONCE, about the installation, rather than on every
-                  // row. Per-row it read as a property of that message — as
-                  // though this one arrived without a sender — when it is the
-                  // deployment having stored no address for any of them.
-                  <p className="capture-activity__note t-sub">
-                    {t("captureActivity.payloadsOff")}
-                  </p>
-                )}
-                {filter && (
-                  // Both numbers, always. The funnel counts the WINDOW and
-                  // this filters what is loaded, so a bare "12" under a
-                  // counter reading 26 would look like the counter was wrong.
-                  // Both numbers, so a filtered view can never be read as the
-                  // whole window.
-                  <p className="t-sub">
-                    {t("captureActivity.filtered", {
-                      shown: formatNumber(shown.length, locale),
-                      total: formatNumber(first.funnel[filter] ?? 0, locale),
-                      outcome: t(`captureActivity.outcome.${filter}`),
-                    })}
-                  </p>
-                )}
-                {shown.length === 0 && (
-                  // A filter that matched nothing LOADED is not an empty
-                  // window. The counter above may say 3 while all three sit
-                  // on pages nobody has fetched, and saying "no capture
-                  // activity" there would contradict the number beside it.
-                  <SurfaceState
-                    loadingLabel={t("captureActivity.title")}
-                    state="empty"
-                    emptyLabel={t(
-                      filter
-                        ? "captureActivity.emptyFiltered"
-                        : "captureActivity.empty",
-                    )}
-                  >
-                    {null}
-                  </SurfaceState>
-                )}
-                {shown.length > 0 && (
-                  <ul className="capture-activity__list">
-                    {shown.map((entry) => (
-                      <CaptureEntryRow
-                        key={entry.id}
-                        entry={entry}
-                        payloads={first.payload_capture_enabled}
-                        onOpen={() => setOpenTrace(entry)}
+                    {/* Only while something waits; a cadence over nothing
+                      outstanding is furniture a reader learns to skip. */}
+                    {(firstPage.funnel.deferred ?? 0) > 0 && (
+                      <VerdictPassNote
+                        clock={firstPage.sender_verdict}
+                        subject="senders"
                       />
-                    ))}
-                  </ul>
-                )}
-                {/* Outside the rows, so a filter matching nothing on this
-                    page can still reach the pages that hold its matches.
-                    Hiding it there was a dead end: the counter promised rows
-                    the reader had no way to fetch. */}
-                {query.hasNextPage && (
-                  <Button
-                    disabled={query.isFetchingNextPage}
-                    onClick={() => void query.fetchNextPage()}
-                  >
-                    {t("captureActivity.loadMore")}
-                  </Button>
-                )}
-              </div>
-            </Disclosure>
-            {openTrace && (
-              <CaptureActivityDrawer
-                traceId={openTrace.id}
-                message={openTrace}
-                onOpenEmail={(activityId) => {
-                  // The trace drawer closes as the message opens. Two
-                  // right-anchored sheets at once are two focus traps and two
-                  // Escape handlers stacked, and the reader is moving from the
-                  // trace to the message rather than reading both.
-                  setOpenTrace(null);
-                  setOpenEmail(activityId);
-                }}
-                onClose={() => setOpenTrace(null)}
+                    )}
+                  </>
+                }
               />
-            )}
-            <OpenEmailDrawer
-              activityId={openEmail}
-              zone={viewerZone()}
-              onClose={() => setOpenEmail(null)}
-            />
-          </>
-        );
-      }}
-    </QueryGate>
+            )
+          }
+        </QueryGate>
+      </SettingList>
+      {loaded && (
+        <CaptureLog
+          pages={loaded.pages}
+          filter={filter}
+          more={
+            query.hasNextPage && (
+              <Button
+                disabled={query.isFetchingNextPage}
+                onClick={() => void query.fetchNextPage()}
+              >
+                {t("captureActivity.loadMore")}
+              </Button>
+            )
+          }
+          onOpen={setOpenTrace}
+        />
+      )}
+      {openTrace && (
+        <CaptureActivityDrawer
+          traceId={openTrace.id}
+          message={openTrace}
+          onOpenEmail={(activityId) => {
+            // Two drawers at once are two focus traps, and the reader is moving
+            // from the trace to the message rather than reading both.
+            setOpenTrace(null);
+            setOpenEmail(activityId);
+          }}
+          onClose={() => setOpenTrace(null)}
+        />
+      )}
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
+    </>
+  );
+}
+
+// The rows already loaded, filtered on the bucket the counters group by so the
+// list and the tile above it give one answer.
+function CaptureLog({
+  pages,
+  filter,
+  more,
+  onOpen,
+}: Readonly<{
+  pages: CaptureActivity[];
+  filter: Outcome | null;
+  /** Outside the rows, so a filter matching nothing loaded can still page on. */
+  more: ReactNode;
+  onOpen: (entry: TraceEntry) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const first = pages[0];
+  if (first === undefined) return null;
+  const entries = pages.flatMap((page) => page.data);
+  const shown = filter
+    ? entries.filter((entry) => entry.outcome_now === filter)
+    : entries;
+  return (
+    <>
+      <PanelGroupHead title={t("captureActivity.messages")} level="h3" />
+      {(!first.payload_capture_enabled || filter || shown.length === 0) && (
+        <PanelBody className="form-stack">
+          {!first.payload_capture_enabled && (
+            // Said once, about the installation: per row it would read as a
+            // fact about that one message.
+            <p className="capture-activity__note t-sub">
+              {t("captureActivity.payloadsOff")}
+            </p>
+          )}
+          {filter && (
+            // Both numbers: the funnel counts the window and this filters what
+            // is loaded, so a bare "12" under a tile reading 26 looks wrong.
+            <p className="t-sub" aria-live="polite">
+              {t("captureActivity.filtered", {
+                shown: formatNumber(shown.length, locale),
+                total: formatNumber(first.funnel[filter] ?? 0, locale),
+                outcome: t(`captureActivity.outcome.${filter}`),
+              })}
+            </p>
+          )}
+          {shown.length === 0 && (
+            // A filter that matched nothing loaded is not an empty window.
+            <EmptyState>
+              {t(
+                filter
+                  ? "captureActivity.emptyFiltered"
+                  : "captureActivity.empty",
+              )}
+            </EmptyState>
+          )}
+        </PanelBody>
+      )}
+      {shown.length > 0 && (
+        <CaptureMessages
+          entries={shown}
+          payloads={first.payload_capture_enabled}
+          onOpen={onOpen}
+        />
+      )}
+      {more && <PanelBody>{more}</PanelBody>}
+    </>
   );
 }
 
@@ -423,144 +362,5 @@ function CaptureFunnel({
         </button>
       ))}
     </StatStrip>
-  );
-}
-
-function CaptureEntryRow({
-  entry,
-  payloads,
-  onOpen,
-}: Readonly<{ entry: TraceEntry; payloads: boolean; onOpen: () => void }>) {
-  const { locale } = useLocale();
-  const t = useT();
-  const providerLabel = useProviderLabel();
-  // The reader's own zone: a trace is read to reconcile "I sent that at 9:04"
-  // against what the pipeline did, and a UTC timestamp makes them do the
-  // arithmetic themselves.
-  const zone = viewerZone();
-  return (
-    <li className="capture-activity__row" data-outcome={entry.outcome}>
-      {/* The whole row opens the ladder. A button rather than a click handler
-          on the <li>, so it is reachable by keyboard and announces itself as
-          something that opens. */}
-      <button
-        type="button"
-        className="capture-activity__open"
-        onClick={onOpen}
-        aria-label={t("captureActivity.openTrace")}
-      >
-        <span className="t-sub">
-          {formatDateTime(entry.occurred_at, locale, zone)}
-        </span>
-        {/* The provider ID resolved to a name. The contract is explicit that a
-            label is never stored — two deploys would disagree about the same
-            transport — so it is resolved here, against the registry. */}
-        <span className="t-sub">{providerLabel(entry.connector)}</span>
-        <CaptureEntryOutcome entry={entry} />
-        <CaptureEntryContent entry={entry} payloads={payloads} />
-        <CaptureEntryResolution entry={entry} />
-      </button>
-    </li>
-  );
-}
-
-// The outcome and the reason that qualifies it.
-//
-// Two deferral pairs would otherwise contradict themselves on screen, and both
-// are read the same way: "Waiting on a verdict" is only true while one is
-// actually outstanding.
-//
-// A CAPPED deferral is not waiting, because the ceiling refused to ask for a
-// verdict at all — it says "Not queued", and the reason line explains why.
-//
-// A SETTLED one is not waiting either: the ledger has answered, and the
-// resolution beside it says what the answer was. Left alone the row reads
-// "Waiting on a verdict — judged a real contact", which is the screen arguing
-// with itself. The ladder DID defer this sender, so the outcome still says so;
-// it just says it in the past tense.
-function CaptureEntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
-  const t = useT();
-  const reason = knownReason(entry.reason);
-  const outcome =
-    entry.outcome === "deferred" ? deferralLabel(entry, reason) : entry.outcome;
-  return (
-    <span className="capture-activity__outcome">
-      {t(`captureActivity.outcome.${outcome}`)}
-      {/* The reason is the half that changes what the outcome MEANS — a capped
-          deferral is not waiting for anything — so it is quieter than the
-          outcome but never hidden behind an interaction. */}
-      {reason ? (
-        <span className="t-sub">{t(`captureActivity.reason.${reason}`)}</span>
-      ) : null}
-    </span>
-  );
-}
-
-// Which of the three things a deferral can be this row is.
-//
-// `pending` is the only status that leaves a question outstanding: every other
-// one — including `unsure`, which passes it to a human — is the ledger having
-// answered. An unknown status is treated as settled rather than waiting,
-// because a status this build does not recognise is one a newer binary wrote,
-// and the one thing it cannot be is the state that has no verdict yet.
-function deferralLabel(
-  entry: TraceEntry,
-  reason: KnownReason | null,
-): "deferred" | "deferred_capped" | "deferred_sent" {
-  if (reason === "deferral_capped") {
-    return "deferred_capped";
-  }
-  if (!entry.resolution || entry.resolution.status === "pending") {
-    return "deferred";
-  }
-  return "deferred_sent";
-}
-
-// What the row can honestly show about the message itself.
-//
-// An installation that turned payload capture off stored no address and no
-// subject for any message, so the row shows nothing here and the note above the
-// list says why, once, for all of them. Per-row it read as a fact about THIS
-// message, which is the one thing it is not.
-function CaptureEntryContent({
-  entry,
-  payloads,
-}: Readonly<{ entry: TraceEntry; payloads: boolean }>) {
-  const t = useT();
-  if (!payloads) {
-    return null;
-  }
-  if (!entry.counterparty && !entry.subject) {
-    // Payload capture IS on, so this row genuinely carried neither — an erased
-    // subject, or a message with no sender we could read. Here the absence IS
-    // about this message, so the row says so.
-    return (
-      <span className="capture-activity__content capture-activity__content--absent">
-        {t("captureActivity.contentNone")}
-      </span>
-    );
-  }
-  return (
-    <span className="capture-activity__content">
-      <span className="capture-activity__from">{entry.counterparty}</span>
-      {entry.subject ? (
-        <span className="capture-activity__subject">{entry.subject}</span>
-      ) : null}
-    </span>
-  );
-}
-
-// What later became of a deferred message's sender, from the disposition
-// ledger. Absent for every other outcome, because there is no open question.
-function CaptureEntryResolution({ entry }: Readonly<{ entry: TraceEntry }>) {
-  const t = useT();
-  const status = entry.resolution
-    ? knownResolution(entry.resolution.status)
-    : null;
-  if (!status) {
-    return null;
-  }
-  return (
-    <span className="t-sub">{t(`captureActivity.resolution.${status}`)}</span>
   );
 }

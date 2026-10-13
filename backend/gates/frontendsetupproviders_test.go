@@ -8,7 +8,7 @@
 package gates
 
 // Onboarding offers a first-time admin a provider and a model, and the server
-// has to be able to price and serve exactly what it offered.
+// has to be able to price and serve whatever it offered.
 //
 // The frontend cannot read Go, so `frontend/src/screens/setup-providers.ts` is a
 // declared MIRROR — and this is what makes "mirror" true rather than "two lists

@@ -5,7 +5,7 @@
 
 package gates
 
-// A label VALUE in the hand-rolled exposition is escaped by httpserver.Label,
+// A label value in the hand-rolled exposition is escaped by httpserver.Label,
 // never by %q.
 //
 // The two agree on ordinary input, which is why %q survived here for as long as

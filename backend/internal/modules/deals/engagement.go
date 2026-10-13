@@ -77,8 +77,8 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 	if err != nil {
 		return nil, err
 	}
-	// The kind list is an ARGUMENT to Sprintf, not concatenated into its format
-	// string. Concatenated, a `%` ever appearing in a kind would be read as a
+	// The interaction rule is an ARGUMENT to Sprintf, not concatenated into its
+	// format string. Concatenated, a `%` ever appearing in it would be read as a
 	// verb and corrupt the statement at runtime with nothing to catch it.
 	return collectIDs(tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT r.contact_id FROM relationship r
@@ -87,14 +87,14 @@ func EngagedStakeholders(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now 
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
-			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
+			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')
-		ORDER BY r.contact_id`, dealPos, windowPos, bound, healthActivityKinds), args...))
+		ORDER BY r.contact_id`, dealPos, windowPos, bound, healthInteraction), args...))
 }
 
 // DealStakeholder is one seat on a deal: who, in what role, and whether they

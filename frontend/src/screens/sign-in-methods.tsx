@@ -3,21 +3,22 @@ import { CircleAlert, CircleCheck, Lock } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
-import { Badge } from "../design-system/atoms";
+import { Badge, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   ConfirmPhraseBox,
   phraseMatches,
 } from "../design-system/confirmphrase";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { providerBrandName } from "../design-system/provider-mark";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { useCompanyPhrase } from "./company-phrase";
 import {
   AUTHENTICATION_POLICY_KEY,
@@ -45,12 +46,11 @@ function useSetEnabledProviders() {
     // than merges, so sending one provider would silently turn every other one
     // off. It arrives as a variable, so a click cannot submit a stale list.
     mutationFn: async (keys: string[]) => {
-      const { error } = await api.PATCH("/installation/settings", {
-        body: { enabled_oidc_providers: keys },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PATCH("/installation/settings", {
+          body: { enabled_oidc_providers: keys },
+        }),
+      );
     },
     onSuccess: async () => {
       // The write lands on the installation aggregate, but this card reads the
@@ -97,108 +97,110 @@ export function SignInMethodsCard() {
   return (
     <Panel title={t("signInMethods.title")}>
       <PanelBody>
-        <p className="t-body">{t("signInMethods.sub")}</p>
-        <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
-          {(current) => {
-            // Defaulted, not asserted: a body that lost a required field would
-            // otherwise take the whole settings page down.
-            const providers = current.sign_in_providers ?? [];
-            const onScreen = current.sign_in_screen ?? [];
-            const enabledKeys = providers
-              .filter((provider) => provider.enabled)
-              .map((provider) => provider.key);
-            return (
-              <>
-                {save.error && turningOff === null && (
-                  <Callout
-                    tone="danger"
-                    kind="outcome"
-                    title={t("signInMethods.saveFailed")}
-                  >
-                    {problemMessageOf(save.error, t)}
-                  </Callout>
-                )}
-                <SettingList>
+        <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
+        {settings.isSuccess && save.error && turningOff === null && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("signInMethods.saveFailed")}
+          >
+            {problemMessageOf(save.error, t)}
+          </Callout>
+        )}
+      </PanelBody>
+      <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
+        {(current) => {
+          // Defaulted, not asserted: a body that lost a required field would
+          // otherwise take the whole settings page down.
+          const providers = current.sign_in_providers ?? [];
+          const onScreen = current.sign_in_screen ?? [];
+          const enabledKeys = providers
+            .filter((provider) => provider.enabled)
+            .map((provider) => provider.key);
+          return (
+            <>
+              <SettingList bleed="settings">
+                <SettingRow
+                  label={t("signInMethods.password")}
+                  description={t("signInMethods.passwordAlways")}
+                  control={
+                    <Badge icon={Lock}>{t("signInMethods.alwaysOn")}</Badge>
+                  }
+                />
+                {providers.map((provider) => (
                   <SettingRow
-                    label={t("signInMethods.password")}
-                    description={t("signInMethods.passwordAlways")}
-                    control={
-                      <Badge icon={Lock}>{t("signInMethods.alwaysOn")}</Badge>
-                    }
-                  />
-                  {providers.map((provider) => (
-                    <SettingRow
-                      key={provider.key}
-                      label={provider.label}
-                      description={
-                        <>
-                          {isVendor(provider.key) &&
-                            t(`signInMethods.desc.${provider.key}`)}
-                          <ScreenLine
-                            provider={provider}
-                            onScreen={onScreen.includes(provider.key)}
-                          />
-                        </>
-                      }
-                      control={(control) => (
-                        <Switch
-                          label={provider.label}
-                          labelHidden
-                          checked={provider.enabled}
-                          describedBy={control["aria-describedby"]}
-                          pending={save.isPending}
-                          reason={
-                            canManage
-                              ? undefined
-                              : t("signInMethods.noWriteReason")
-                          }
-                          // Held while ANY save is out: the list travels whole,
-                          // so a second flip from the stale cache would undo
-                          // the first.
-                          disabled={save.isPending}
-                          onChange={(next) => {
-                            if (next) {
-                              save.mutate([...enabledKeys, provider.key]);
-                            } else {
-                              save.reset();
-                              setTurningOff(provider);
-                            }
-                          }}
+                    key={provider.key}
+                    label={provider.label}
+                    description={
+                      <>
+                        {isVendor(provider.key) &&
+                          t(`signInMethods.desc.${provider.key}`)}
+                        <ScreenLine
+                          provider={provider}
+                          onScreen={onScreen.includes(provider.key)}
                         />
-                      )}
-                    />
-                  ))}
-                </SettingList>
+                      </>
+                    }
+                    control={(control) => (
+                      <Switch
+                        label={provider.label}
+                        labelHidden
+                        checked={provider.enabled}
+                        describedBy={control["aria-describedby"]}
+                        pending={save.isPending}
+                        reason={
+                          canManage
+                            ? undefined
+                            : t("signInMethods.noWriteReason")
+                        }
+                        // Held while ANY save is out: the list travels whole,
+                        // so a second flip from the stale cache would undo
+                        // the first.
+                        disabled={save.isPending}
+                        onChange={(next) => {
+                          if (next) {
+                            save.mutate([...enabledKeys, provider.key]);
+                          } else {
+                            save.reset();
+                            setTurningOff(provider);
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                ))}
+              </SettingList>
+              <PanelBody>
                 {providers.length === 0 && (
-                  <p>{t("signInMethods.noneConfigured")}</p>
+                  <EmptyState>{t("signInMethods.noneConfigured")}</EmptyState>
                 )}
                 <GroupRoleGrants
                   // Defaulted for the reason `sign_in_providers` is.
                   initial={current.oidc_group_role_map ?? {}}
                   canManage={canManageGrants}
                 />
-                {turningOff !== null && (
-                  <TurnOffConfirm
-                    provider={turningOff}
-                    pending={save.isPending}
-                    error={save.error ? problemMessageOf(save.error, t) : null}
-                    onClose={() => {
-                      setTurningOff(null);
-                      save.reset();
-                    }}
-                    onConfirm={() =>
-                      save.mutate(
-                        enabledKeys.filter((key) => key !== turningOff.key),
-                        { onSuccess: () => setTurningOff(null) },
-                      )
-                    }
-                  />
-                )}
-              </>
-            );
-          }}
-        </QueryGate>
-      </PanelBody>
+              </PanelBody>
+              {turningOff !== null && (
+                <TurnOffConfirm
+                  provider={turningOff}
+                  pending={save.isPending}
+                  error={save.error ? problemMessageOf(save.error, t) : null}
+                  onClose={() => {
+                    setTurningOff(null);
+                    save.reset();
+                  }}
+                  onConfirm={() =>
+                    save.mutate(
+                      enabledKeys.filter((key) => key !== turningOff.key),
+                      { onSuccess: () => setTurningOff(null) },
+                    )
+                  }
+                />
+              )}
+            </>
+          );
+        }}
+      </QueryGate>
     </Panel>
   );
 }

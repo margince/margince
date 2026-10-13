@@ -1,8 +1,6 @@
 import { ExternalLink, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Avatar, Badge, Button, Checkbox } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -11,9 +9,13 @@ import {
   formatNumber,
 } from "../format/format";
 import { daysPast } from "../format/lateness";
+import { useNow } from "../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useViewerId } from "./common";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { useViewerId } from "../lib/session";
+import { DismissClaimButton } from "./claimdismiss";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
 // 360 already assembled — none of them fetches, so a card can never show a
@@ -171,7 +173,9 @@ export function ContactCommercialCard({
                   />
                   <span>{member.full_name}</span>
                 </span>
-                <span className="t-sub">{readableRole(member.role)}</span>
+                {member.role && (
+                  <span className="t-sub">{readableRole(member.role)}</span>
+                )}
               </div>
             ))}
           </>
@@ -259,10 +263,23 @@ function openLoops(
       theirs: false,
     }),
   );
+  // A commitment that became a task is the task's while it is open: the page
+  // lists the task, on this card or beside it, and the claim would say the
+  // same thing twice. Once kept, the task leaves the open list and settled
+  // its claim with it, so the claim stays as the record that it was kept —
+  // unless the task was reopened, when the open task speaks for it again.
+  const openTasks = new Set(
+    (view.next_steps?.data ?? []).map((task) => task.id),
+  );
   const fromClaims = LOOPS.flatMap((loop) =>
     claims
       .filter(
-        (claim) => claim.kind === loop.kind && claim.status !== "dismissed",
+        (claim) =>
+          claim.kind === loop.kind &&
+          claim.status !== "dismissed" &&
+          (!claim.task_activity_id ||
+            (claim.status === "done" &&
+              !openTasks.has(claim.task_activity_id))),
       )
       .map(
         (claim): OpenLoop => ({
@@ -272,6 +289,8 @@ function openLoops(
           dueAt: claim.due_at ?? null,
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
+          quote: claim.source_quote,
+          dismissible: claim.status === "open",
         }),
       ),
   );
@@ -290,6 +309,10 @@ type OpenLoop = {
   done: boolean;
   // Whether the OTHER side owes it, which decides the badge when no date is set.
   theirs: boolean;
+  // The words a claim was read from, for the reader to check it against.
+  quote?: string;
+  // Whether the reader may dismiss it as never made.
+  dismissible?: boolean;
 };
 
 // Whether this task is the reader's to deliver. Unassigned work is the
@@ -339,6 +362,12 @@ export function ContactCommitmentsCard({
           <span className="pe-loop-body">
             {loopPrefix(loop, firstName, t)}
             {loop.body}
+            {loop.quote && (
+              <span className="pe-loop-quote t-caption">
+                {t("commitment.quote", { quote: loop.quote })}
+              </span>
+            )}
+            {loop.dismissible && <DismissClaimButton id={loop.key} />}
           </span>
           <LoopStatus loop={loop} />
         </PanelRow>
@@ -364,6 +393,12 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const nowMs = useNow(60_000);
+  // A kept commitment owes nothing, so it names no deadline: a ticked row
+  // reading "overdue" would contradict its own checkbox.
+  if (loop.done) {
+    return null;
+  }
   // An unreadable due instant names no deadline, so the row reads as one with
   // no date rather than as a promise due at some NaN o'clock.
   const dueMs = loop.dueAt ? Date.parse(loop.dueAt) : Number.NaN;
@@ -372,7 +407,6 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
     // a promise 23 hours past due is late by no whole days and still late, and
     // reading `days > 0` as the verdict is what let this card call it "due
     // yesterday" while the task list called the same promise overdue.
-    const nowMs = Date.now();
     const { days, late } = daysPast(dueMs, nowMs);
     if (late) {
       return (

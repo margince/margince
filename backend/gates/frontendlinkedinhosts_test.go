@@ -6,7 +6,7 @@
 package gates
 
 // Which hosts count as LinkedIn is decided on both sides of the wire, and the
-// two answers are deliberately different sizes.
+// two answers are different sizes by design.
 //
 // The SERVER decides what may be STORED as a contact's profile — the
 // contact_social slot, the vCard import's slot, the classifier that splits a

@@ -12,8 +12,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AutomationsAdmin } from "./automations";
 
 // A REFUSAL BELONGS TO THE OPENING THAT EARNED IT.
@@ -135,7 +135,9 @@ describe("a refused write does not survive the dialog that earned it", () => {
       expect(screen.getByText("Stalled-deal nudge")).toBeTruthy(),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Use template" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Use template/ }),
+    );
     const dialog = screen.getByRole("dialog");
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Create" }),
@@ -147,7 +149,9 @@ describe("a refused write does not survive the dialog that earned it", () => {
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Cancel" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Use template" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Use template/ }),
+    );
     // The form is re-seeded by its key; the refusal has to be reset by hand, and
     // this is the assertion that says somebody did.
     expect(within(screen.getByRole("dialog")).queryByRole("alert")).toBeNull();

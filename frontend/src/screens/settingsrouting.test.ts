@@ -131,6 +131,15 @@ describe("home and nowhere are different answers", () => {
       settingsRouteTarget({ screen: SETTINGS_SCREEN, id: "nonesuch" }),
     ).toEqual({ kind: "unknown" });
   });
+
+  it.each([
+    ["a segment the page does not have", { id2: "junk" }],
+    ["a segment below its own subpage", { id2: "run", id3: "junk" }],
+  ])("reads %s as unknown", (_, below) => {
+    expect(
+      settingsRouteTarget({ screen: SETTINGS_SCREEN, id: "import", ...below }),
+    ).toEqual({ kind: "unknown" });
+  });
 });
 
 describe("id2 is page-local state, not a sub-page", () => {

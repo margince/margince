@@ -102,7 +102,7 @@ var foldableCategories = map[crmcontracts.WorklistItemCategory]bool{
 
 // keepFiltered narrows the candidates to what one filter value asks for.
 //
-// Most values name a category and are a plain equality. Two are not, and they
+// Most values name a category and are a plain equality. Some are not, and they
 // are here rather than in the caller because a filter that lives in two places
 // is a filter that answers two things: the surface counting a population and the
 // door narrowing to it must read ONE rule, which is the whole reason these two
@@ -125,6 +125,8 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
+	case crmcontracts.WorklistFilterLeads:
+		return prospectingWork(row.item)
 	case filterUrgent:
 		// The row's OWN level, through the same predicate the summary counts
 		// through. A pin is a reader's ordering preference and makes nothing
@@ -174,3 +176,7 @@ func alreadyACard(row ranked) bool {
 // holds the pair: two spellings of one exclusion drift the first time either
 // side learns a new source.
 const deckAnswers = crmcontracts.WorklistItemSource("approval")
+
+func prospectingWork(item crmcontracts.WorklistItem) bool {
+	return item.Source == sourceTask && buildsPipeline(item)
+}

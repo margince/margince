@@ -47,6 +47,19 @@ func (h Handlers) WithUploadLimit(bytes int64) Handlers {
 	return h
 }
 
+// FileCeiling bounds one upload's file part, and says how a larger one is refused.
+type FileCeiling struct {
+	Bytes  int64
+	Refuse func(size, limit int64) error
+}
+
+// WithFileCeiling returns handlers that refuse a file over the ceiling's bytes.
+// Compose sets one per request for a caller held below the route's own limit.
+func (h Handlers) WithFileCeiling(ceiling FileCeiling) Handlers {
+	h.fileCeiling = ceiling
+	return h
+}
+
 // UploadAttachment stores an uploaded file against an entity. Multipart is
 // parsed here (the JSON decoder cannot carry bytes); the store owns provenance
 // and the write shape, and the RBAC gate that decides.
@@ -112,6 +125,10 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 			slog.WarnContext(ctx, "closing uploaded file part", "err", cerr)
 		}
 	}(r.Context())
+	if ceiling := h.fileCeiling; ceiling.Refuse != nil && header.Size > ceiling.Bytes {
+		httperr.Write(w, r, ceiling.Refuse(header.Size, ceiling.Bytes))
+		return
+	}
 
 	// The agreement this document is about, when the uploader named one. An
 	// absent part files the document against no contract, which is the ordinary
@@ -138,7 +155,7 @@ func (h Handlers) UploadAttachment(w http.ResponseWriter, r *http.Request) {
 		ContractID:  contractID,
 	})
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/attachments/"+att.Id.String())
@@ -160,7 +177,7 @@ func (h Handlers) ListAttachments(w http.ResponseWriter, r *http.Request, params
 	atts, page, err := h.store.ListAttachments(r.Context(),
 		string(params.EntityType), ids.UUID(params.EntityId), cursor, limit)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AttachmentListResponse{Data: atts, Page: pageInfo(page)})
@@ -171,7 +188,7 @@ func (h Handlers) ListAttachments(w http.ResponseWriter, r *http.Request, params
 func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	meta, rc, err := h.store.OpenAttachment(r.Context(), ids.UUID(id))
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	contentType := "application/octet-stream"
@@ -183,8 +200,8 @@ func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id 
 		size = *meta.ByteSize
 	}
 	httperr.StreamObject(w, r, httperr.StreamedObject{
-		Download: httperr.Download{ContentType: contentType, Filename: meta.Filename, Size: size},
-		Body:     rc,
+		ContentType: contentType, Filename: meta.Filename, Size: size,
+		Body: rc,
 	}, "attachment "+id.String())
 }
 
@@ -192,20 +209,10 @@ func (h Handlers) DownloadAttachment(w http.ResponseWriter, r *http.Request, id 
 // erasure/retention path, not here).
 func (h Handlers) DeleteAttachment(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.ArchiveAttachment(r.Context(), ids.UUID(id)); err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// writeAttachmentErr maps a role that wired no object store to a 501, and
-// otherwise defers to the module's shared store-error mapping.
-func writeAttachmentErr(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, ErrBlobstoreUnconfigured) {
-		httperr.NotImplemented(w, r, "attachments")
-		return
-	}
-	writeStoreErr(w, r, err)
 }
 
 // ListCompanyDocuments serves the account's document library. Every row is
@@ -239,7 +246,7 @@ func (h Handlers) ListCompanyDocuments(w http.ResponseWriter, r *http.Request,
 	}
 	docs, page, err := h.store.ListCompanyDocuments(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK,
@@ -281,7 +288,7 @@ func (h Handlers) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Reques
 	}
 	out, err := h.store.UpdateAttachmentMetadata(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeAttachmentErr(w, r, err)
+		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

@@ -471,7 +471,9 @@ describe("whose queue the page is answering", () => {
       { id: "u-runner", display_name: "Overnight Runner", is_agent: true },
     ]);
     const user = userEvent.setup();
-    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+    renderUnderAToastRegion(
+      <OwnerPicker owner="" onOwner={() => {}} scope="mine" />,
+    );
 
     await user.click(await screen.findByRole("combobox"));
     expect(screen.getByRole("option", { name: "Minh Tran" })).toBeTruthy();
@@ -480,12 +482,28 @@ describe("whose queue the page is answering", () => {
     ).toBeNull();
   });
 
+  // Naming nobody follows the scope dial. Under All the empty choice is
+  // everyone's work, so calling it "My Worklist" misstates what is on screen.
+  it("names the empty choice after the scope it follows", async () => {
+    stubRosterWalk([{ id: MINH, display_name: "Minh Tran" }]);
+    renderUnderAToastRegion(
+      <OwnerPicker owner="" onOwner={() => {}} scope="all" />,
+    );
+
+    expect((await screen.findByRole("combobox")).textContent).toContain(
+      "Everyone",
+    );
+    expect(screen.queryByText("My Worklist")).toBeNull();
+  });
+
   // The walk is bounded, so past its reach this list is part of the workspace
   // rather than the workspace. Unsaid, a picker missing colleagues reads as a
   // workspace that has none — on the one control a lead uses to reach somebody.
   it("admits it when the roster walk stopped short", async () => {
     stubRosterWalk([], { endless: true });
-    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+    renderUnderAToastRegion(
+      <OwnerPicker owner="" onOwner={() => {}} scope="mine" />,
+    );
 
     expect(await screen.findByText(en["state.partial"])).toBeTruthy();
   });
@@ -496,7 +514,9 @@ describe("whose queue the page is answering", () => {
   it("says nothing about the list when the walk reached the end", async () => {
     stubRosterWalk([{ id: MINH, display_name: "Minh Tran" }]);
     const user = userEvent.setup();
-    renderUnderAToastRegion(<OwnerPicker owner="" onOwner={() => {}} />);
+    renderUnderAToastRegion(
+      <OwnerPicker owner="" onOwner={() => {}} scope="mine" />,
+    );
 
     await user.click(await screen.findByRole("combobox"));
     await screen.findByRole("option", { name: "Minh Tran" });

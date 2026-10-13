@@ -5,12 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { throwProblem } from "../screens/common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import {
   embedReindexStatusQueryKey,
   useEmbedReindexAvailable,
 } from "../screens/embedreindex";
-import { useCan } from "./capability";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
 // on an identity mismatch (configured_identity ≠ populated_identity) — the
@@ -36,10 +36,7 @@ export function EmbedReindexBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data, error } = await api.GET("/embeddings/reindex/status");
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(await api.GET("/embeddings/reindex/status"));
       if (!data) {
         throw new Error("malformed reindex status response");
       }

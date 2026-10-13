@@ -97,7 +97,12 @@ describe("the runtime chip", () => {
     const page = (dialogOpen: boolean) => (
       <>
         {chip()}
-        <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+        <Modal
+          open={dialogOpen}
+          onClose={onDialogClose}
+          labelledBy="edit"
+          intent="form"
+        >
           <Heading size="large" id="edit">
             Edit deal
           </Heading>

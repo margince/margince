@@ -9,7 +9,9 @@ package agents
 var queryWorkspaceCopy = toolCopy{
 	Purpose: "Answer a question that has STRUCTURE — a record type, conditions on its fields, a " +
 		"hop to a related record, or a likeness to describe — by sending a plan and reading back " +
-		"the records that satisfy it, together with what kind of answer it is.",
+		"the records that satisfy it, together with what kind of answer it is. It also finds " +
+		"where records are: an address is filtered by its city (address.city) or by distance " +
+		"(within_radius).",
 	Limits: "Every name in a plan comes from the published vocabulary; one outside it is refused " +
 		"by name. The margince://schema/query resource — not this description — says which " +
 		"record types, fields, operators and relationships can be asked about. At most one " +
@@ -24,7 +26,12 @@ var queryWorkspaceCopy = toolCopy{
 		"says which. Keep each row's record_type and id for any follow-up call, and its `evidence` " +
 		"for the related record that admitted it. A row's `owner` is the colleague who holds that " +
 		"company: rows come back from across the whole workspace, so most of them belong to " +
-		"someone other than the contact asking. When `owner.is_you` is false, say whose it is when " +
-		"you report the record, and treat contacting it as theirs to decide rather than advising " +
-		"an approach as though the record were unowned.",
+		"someone other than the contact asking. " + sayWhoseItIs,
 }
+
+// sayWhoseItIs is what every record-serving tool tells a model to do with the
+// `owner` its rows carry, spliced in so the four give the same advice.
+const sayWhoseItIs = "When `owner.is_you` is false, say whose it is when you report the record " +
+	"(or that its owner could not be named, when `owner.name` is absent), " +
+	"and treat contacting it as theirs to decide rather than advising an approach as though " +
+	"the record were unowned."

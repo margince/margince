@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -44,6 +45,10 @@ type Registry struct {
 	// supplied value to it, so `minimum`/`maximum` bind the surface instead of
 	// describing an intention.
 	numArgs map[string][]numBound
+	// enumArgs[tool] is the closed vocabulary its schema declares for each text
+	// argument, read off the schema once at registration. Invoke holds a
+	// supplied word to it, so `enum` binds the surface as `minimum` does.
+	enumArgs map[string][]enumArg
 	// requiredArgs[tool] is what that tool's schema says it cannot run without,
 	// read off the schema once at registration. Invoke holds a call to it, so
 	// `required` binds the surface rather than describing an intention that
@@ -83,6 +88,9 @@ type Registry struct {
 	// language writes every staged summary in the installation's base
 	// language (summarycopy.go). Nil writes English.
 	language baselanguage.Resolver
+	// seats names the owner every served record row carries (queryowner.go).
+	// Nil leaves owners unnamed but still disclosed.
+	seats SeatNamer
 }
 
 // NewRegistry builds the tool surface over its approvals engine and admission
@@ -94,6 +102,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		specs:        map[string]mcp.ToolSpec{},
 		idArgs:       map[string]idArgSpec{},
 		numArgs:      map[string][]numBound{},
+		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
@@ -116,17 +125,37 @@ var _ mcp.Registry = (*Registry)(nil)
 // (idempotency.go): the claim is taken AFTER admission, so a caller the gate
 // turns away never occupies a key, and the effect is what the claim protects.
 func (r *Registry) Invoke(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, error) {
-	out, _, err := r.InvokeServing(ctx, name, in)
-	return out, err
+	served, err := r.InvokeServed(ctx, name, in)
+	return served.Output, err
+}
+
+// InvokeServed is Invoke for a caller that also needs the tool that ran: the
+// router's target when name is a router. A caller that records the call by
+// tool, or checks its answer against a tool's schema, needs that name and not
+// the one it called.
+func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMessage) (Served, error) {
+	target, args, err := r.resolve(name, in)
+	if err != nil {
+		return Served{Tool: name}, err
+	}
+	served := Served{Tool: target}
+	if target != name {
+		served.Router = name
+	}
+	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
+	return served, err
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
 //
-// The count exists for exactly one caller: a surface that RECORDS the answer
-// and may serve it again later. What an answer cost is what its replay costs,
-// and only the frame that ran the tool can see it — deriving it afterwards from
-// the envelope's evidence would undercount every answer that hands over more
-// than it can name, making a repeat cheaper than the call.
+// The count exists for one caller: a surface that records the answer and may
+// serve it again later. What an answer cost is what its replay costs, and only
+// the frame that ran the tool can see it. Deriving it afterwards from the
+// envelope's evidence would undercount an answer that hands over more than it
+// can name. A repeat would then cost less than the call.
+//
+// It serves name as given and resolves no router. Callers holding a name a
+// client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
@@ -155,6 +184,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 
+	if err := withinArgsBound(spec, in); err != nil {
+		return nil, 0, err
+	}
 	res, err := splitReserved(in)
 	if err != nil {
 		return nil, 0, err
@@ -338,13 +370,26 @@ func (r *Registry) tierResolverFor(ctx context.Context, t mcp.Tool, name string,
 	}
 }
 
+// ErrFileCannotWait answers a confirm-first call that carries a file: staging it
+// would keep the file's bytes in the approval, so nothing is staged.
+var ErrFileCannotWait = errors.New("this call carries a file, which cannot wait for an approval")
+
+// FileCannotWait is that answer on both doors, over the refusal that asked for
+// an approval. So a caller reads one code wherever it sent the file.
+func FileCannotWait(refusal error) error {
+	return fmt.Errorf("%w: %w", ErrFileCannotWait, refusal)
+}
+
 // stageRefusedCall parks a 🟡 call the gate refused as a staged approval, so
 // the human decision the refusal asks for has somewhere to land; a retry
 // carrying its approval_id redeems it. A tool that cannot describe its own
 // staging target has nothing to park, so the refusal stands as the answer.
 func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string, args json.RawMessage, diffHash string, refusal error) error {
 	stageable, ok := t.(stageableTool)
-	if !ok {
+	switch {
+	case !ok && t.Spec().MaxArgsBytes > httperr.MaxBodyBytes:
+		return FileCannotWait(refusal)
+	case !ok:
 		return refusal
 	}
 	info, err := stageable.StageInfo(ctx, args)
@@ -353,7 +398,7 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		// that is the real answer, not "needs approval".
 		return err
 	}
-	id, alreadyApproved, err := r.approvals.StageCall(ctx, StageRequest{
+	req := StageRequest{
 		Tool:           tool,
 		ProposedChange: args,
 		DiffHash:       diffHash,
@@ -363,11 +408,13 @@ func (r *Registry) stageRefusedCall(ctx context.Context, t mcp.Tool, tool string
 		CoTargetType:   info.CoTargetType,
 		CoTargetID:     info.CoTargetID,
 		Summary:        info.Summary,
-	})
+	}
+	id, alreadyApproved, err := r.approvals.StageCall(ctx, req)
 	if err != nil {
 		return err
 	}
 	return &workflow.StagedApprovalError{
 		ApprovalID: id, AlreadyApproved: alreadyApproved, Summary: info.Summary,
+		ReleasableByCaller: r.approvals.ReleasableByCaller(ctx, req),
 	}
 }

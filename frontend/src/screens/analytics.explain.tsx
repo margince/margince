@@ -7,7 +7,7 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Stack } from "../design-system/stack";
-import { SurfaceState } from "../design-system/surfacestate";
+import { rowsState, SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
   formatMoneyOrAbsent,
@@ -15,8 +15,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { throwProblem } from "./common";
+import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
 import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
@@ -64,7 +65,9 @@ export function parseDerivationQuery(
   const extra: Record<string, string | string[]> = {};
   for (const key of new Set(qs.keys())) {
     const values = qs.getAll(key);
-    extra[key] = values.length > 1 ? values : values[0];
+    const [only] = values;
+    if (only === undefined) continue;
+    extra[key] = values.length > 1 ? values : only;
   }
   return { ...extra, by: qs.getAll("by"), agg: qs.getAll("agg") };
 }
@@ -82,16 +85,14 @@ function useDerivation(url: string | null) {
     queryFn: async () => {
       // Every predicate is forwarded: dropping one explains a broader slice
       // than the figure, or 422s on a bound grouping dimension.
-      const { data, error } = await api.GET("/reports/{report}/derivation", {
-        params: {
-          path: { report: derivationReportKey(url ?? "") },
-          query: parseDerivationQuery(url ?? ""),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/reports/{report}/derivation", {
+          params: {
+            path: { report: derivationReportKey(url ?? "") },
+            query: parseDerivationQuery(url ?? ""),
+          },
+        }),
+      );
     },
   });
 }
@@ -151,14 +152,25 @@ export function derivationColumns(
 
 const IDENTITY_COLUMNS = ["label", "id"];
 
-// A `_base_minor` measure was converted into the base currency; a plain `_minor`
-// is the deal's OWN amount, in the currency its row carries beside it.
+// Which currency a money cell is counted in.
+//
+// Read from the declared native set rather than from the column's name.
+//
+// Two project measures are named `_minor` and are already folded into the base
+// currency. A name-based rule labelled them with whatever currency the row
+// carried beside them.
+//
+// A `_base_minor` name still answers base: it says so, and nothing native is
+// spelled that way.
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
   baseCurrency: string | null,
 ): string | null {
   if (col.endsWith("_base_minor")) {
+    return baseCurrency;
+  }
+  if (isMoneyField(col) && !isNativeMoneyField(col)) {
     return baseCurrency;
   }
   const own = row.currency;
@@ -208,11 +220,11 @@ function DerivationPipelineName({
   const pipeline = useQuery({
     queryKey: ["pipeline", pipelineId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines/{id}", {
-        params: { path: { id: pipelineId } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/pipelines/{id}", {
+          params: { path: { id: pipelineId } },
+        }),
+      );
     },
   });
   if (pipeline.isPending) return <>{t("common.loading")}</>;
@@ -237,13 +249,13 @@ function DerivationRows({
   const { locale } = useLocale();
   const columns = derivationColumns(derivation);
   const { rows } = derivation;
-  const remaining = (derivation.total_rows ?? 0) - rows.length;
+  const { state, remaining } = rowsState(rows.length, derivation.total_rows);
   const position = new Map(rows.map((row, index) => [row, index]));
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       <SurfaceState
-        state={rowsState(rows.length, remaining)}
+        state={state}
         emptyLabel={t("common.empty")}
         loadingLabel={t("explain.sources")}
         detail={{ remaining }}
@@ -268,16 +280,6 @@ function DerivationRows({
       </SurfaceState>
     </>
   );
-}
-
-// "None" only when the server matched none: a capped answer that returned no
-// rows still matched some, and says how many are not shown.
-function rowsState(
-  shown: number,
-  remaining: number,
-): "empty" | "partial" | "ready" {
-  if (remaining > 0) return "partial";
-  return shown === 0 ? "empty" : "ready";
 }
 
 // A field mask took these records out of the figure AND the rows, so the two

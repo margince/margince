@@ -195,7 +195,8 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	var id string
 	var version int64
 	if err := inTx(t, app, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`INSERT INTO contact (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
 		).Scan(&id, &version)
 	}); err != nil {
@@ -261,10 +262,9 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 			_, err := tx.Exec(ctx, stmt, id)
 			return err
 		})
-		var pgErr *pgconn.PgError
 		if err == nil {
 			t.Errorf("%q succeeded; audit_log must be append-only", stmt)
-		} else if !errors.As(err, &pgErr) {
+		} else if _, ok := errors.AsType[*pgconn.PgError](err); !ok {
 			t.Errorf("%q failed with %v, want a loud database error", stmt, err)
 		}
 	}

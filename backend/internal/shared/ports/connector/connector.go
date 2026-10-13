@@ -293,6 +293,11 @@ type NormalizedRecord struct {
 	// (mailmap.TopDeliveredTo); empty is the safe answer and the common one.
 	DeliveredTo string
 
+	// SenderAuthentication is what the receiving server's topmost
+	// Authentication-Results header said about the From domain
+	// (mailmap.TopSenderAuthentication). Zero when the message carries none.
+	SenderAuthentication SenderAuthentication
+
 	// ProviderReceivedAt is when the mailbox PROVIDER says this message arrived
 	// in the seat's mailbox: Gmail's internalDate, Graph's receivedDateTime. It
 	// comes off the provider's API response, never out of the message, so a
@@ -344,6 +349,11 @@ type NormalizedRecord struct {
 	// and one that resolves to nobody is still kept — an attendee without a
 	// record is a fact about the meeting.
 	Participants []MessageParticipant
+
+	// The parties the MaxParticipants cap withheld from Participants. Capture
+	// binds the workspace's own seats from this list and nothing else, and only
+	// when the provider attested it; every external name on it stays refused.
+	WithheldParties []MessageParticipant
 
 	// Reports that the PROVIDER enumerated Participants, so binding one to a
 	// colleague's user_id records what the provider stated rather than what a

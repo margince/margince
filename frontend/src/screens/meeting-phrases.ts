@@ -62,12 +62,11 @@ function daysPhrase(
   const week = WEEK.filter((day) => days.includes(day));
   const names = week.map((day) => t(dayLabelKey(day)));
   const run = week.every(
-    (day, index) => index === 0 || day === week[index - 1] + 1,
+    (day, index) => index === 0 || day === (week[index - 1] ?? 0) + 1,
   );
-  if (week.length >= 3 && run)
-    return t("scheduling.dayRange", {
-      from: names[0],
-      until: names[names.length - 1],
-    });
+  const first = names[0];
+  const last = names.at(-1);
+  if (week.length >= 3 && run && first && last)
+    return t("scheduling.dayRange", { from: first, until: last });
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(names);
 }

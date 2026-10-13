@@ -36,7 +36,7 @@ type ListContactsInput struct {
 	OwnerID *ids.UserID
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
-	// listFilters.ownershipClause, which also refuses two of them at once.
+	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID     *ids.TeamID
 	Unassigned      *bool
 	IncludeArchived bool
@@ -71,7 +71,7 @@ var contactListFields = map[string]storekit.SortField{
 	createdAtColumn:    storekit.Column(storekit.KindTimestamp),
 	updatedAtColumn:    storekit.Column(storekit.KindTimestamp),
 	contactNameColumn:  storekit.Column(fieldcatalog.TypeText),
-	ownerIDColumn:      storekit.Column(storekit.KindUUID),
+	ownerIDColumn:      storekit.OwnerNameSort(contactEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	// The Company header, by the employer the row prints.
 	contactEmployerField: {Kind: fieldcatalog.TypeText, Expr: orderByCurrentEmployer},
@@ -173,10 +173,10 @@ func contactEmployerClause(ctx context.Context, companyID *ids.CompanyID, arg fu
 		  AND rel.company_id = $%d)`, arg(*companyID)), nil
 }
 
-// ListContacts is the row-scoped contact list read: quick-find, owner, tag and
-// custom-field filters, keyset pagination under the validated sort.
-func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
-	shared := listFilters{
+// contactCommonFilters is the shared filter chain a contact list narrows by,
+// the twin of companyCommonFilters.
+func contactCommonFilters(in ListContactsInput) listFilters {
+	return listFilters{
 		IncludeArchived: in.IncludeArchived,
 		CapturedByKind:  in.CapturedByKind,
 		AiWritten:       in.AiWritten,
@@ -188,11 +188,15 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      contactNameColumn,
-		identifier: storekit.Identifier{
-			Table: "contact_email", FK: contactFK, Column: emailColumn,
-		},
-		Membership: in.Membership,
+		identifier:      storekit.ContactEmails,
+		Membership:      in.Membership,
 	}
+}
+
+// ListContacts is the row-scoped contact list read: quick-find, owner, tag and
+// custom-field filters, keyset pagination under the validated sort.
+func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
+	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
 		entity:  contactEntity,
 		columns: contactColumns,

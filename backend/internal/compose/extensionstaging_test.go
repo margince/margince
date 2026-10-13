@@ -131,8 +131,7 @@ func TestStagingRefusesACallThatNamesNoSubject(t *testing.T) {
 			t.Errorf("%s: staged, and it must not", name)
 			continue
 		}
-		var badArgs *agents.BadArgsError
-		if !errors.As(err, &badArgs) {
+		if _, ok := errors.AsType[*agents.BadArgsError](err); !ok {
 			t.Errorf("%s: err = %v, want a caller-fixable refusal", name, err)
 		}
 	}
@@ -155,8 +154,7 @@ func TestStagingDecidesTheGrantBeforeItReadsTheArguments(t *testing.T) {
 	if err == nil {
 		t.Fatal("a caller with no grant staged an approval")
 	}
-	var badArgs *agents.BadArgsError
-	if errors.As(err, &badArgs) {
+	if _, ok := errors.AsType[*agents.BadArgsError](err); ok {
 		t.Fatalf("a caller with no grant at all was told about its arguments (%v) — the grant is what "+
 			"decides whether this caller may park a row here, and it must be asked first", err)
 	}

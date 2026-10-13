@@ -29,8 +29,16 @@ func (stubImports) ReadRun(context.Context, ids.UUID) (crmcontracts.ImportRun, e
 	return crmcontracts.ImportRun{Status: awaitingApproval}, nil
 }
 
-func (stubImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRunReport, error) {
-	return crmcontracts.ImportRunReport{}, nil
+func (stubImports) ReadReport(context.Context, ids.UUID) (crmcontracts.ImportRun, *crmcontracts.ImportRunReport, error) {
+	return crmcontracts.ImportRun{Status: awaitingApproval}, &crmcontracts.ImportRunReport{}, nil
+}
+
+func (stubImports) DescribeFormat(context.Context) (crmcontracts.ImportFormat, error) {
+	return crmcontracts.ImportFormat{}, nil
+}
+
+func (stubImports) ProfileFiles(context.Context, []ImportFile) (crmcontracts.ImportSourceProfile, error) {
+	return crmcontracts.ImportSourceProfile{}, nil
 }
 
 func (stubImports) Commit(context.Context, ids.UUID) (crmcontracts.ImportRun, error) {

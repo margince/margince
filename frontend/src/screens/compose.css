@@ -5,14 +5,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: 12px;
 }
 
-/* The card that says a machine wrote what is below it. The indigo edge, the
-   indigo head band and its ink are `Panel tone="ai"` — the one spelling of
-   machine authorship in the product — so all that is left here is how its block
-   stacks inside it. The space around it is the column's own gap: a margin on
-   top of that doubled it and pushed the fields under the card further down. */
+/* Supporting fields keep their height; the message gets a usable writing floor. */
+.compose-fields > * {
+  flex-shrink: 0;
+}
+.compose-fields > .richtext {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  min-block-size: clamp(22rem, 50dvh, 40rem);
+}
+.compose-fields > .richtext > .richtext-input {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  scroll-margin-block-end: calc(var(--controlHeight) + var(--space-3));
+}
+.compose-fields > .richtext > .richtext-foot {
+  flex-shrink: 0;
+}
+
+@media (max-height: 32rem) {
+  .compose-fields > .richtext {
+    flex: 0 0 auto;
+    block-size: 35dvh;
+    min-block-size: 0;
+  }
+}
+
 .compose-band-body {
   display: flex;
   flex-direction: column;
@@ -79,7 +100,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
-  margin-block-end: var(--space-4);
 }
 @media (min-width: 40rem) {
   .schedule-pick {
@@ -132,11 +152,13 @@
 
 .compose-draftbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 .compose-draftbar .input {
-  flex: 1;
+  flex: 1 1 12rem;
+  min-inline-size: 0;
 }
 
 /* The AI provenance notice card: the offer surface's banner treatment, stacked to
@@ -170,7 +192,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  background: var(--bgCard);
+  background: var(--bgInset);
   border-radius: var(--r-md);
 }
 .compose-reasons .chips {
@@ -181,5 +203,24 @@
    the small size the rest of the dialog's secondary lines use: it is context
    for the fields below, not a field of its own. */
 .mw-answering {
-  margin: 0 0 var(--space-2);
+  margin: 0;
+}
+
+/* The sign-off a send appends, under the body: the server's text, kept to its
+ * own line breaks and spacing, in the muted ink of something the reader does not edit. */
+.compose-signoff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.compose-signoff-text {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--textSecondary);
+}
+
+/* Drawn as updating while the words have moved on and the answer has not. */
+.compose-signoff.is-stale .compose-signoff-text {
+  opacity: 0.5;
 }

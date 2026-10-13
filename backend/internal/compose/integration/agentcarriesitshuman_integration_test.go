@@ -183,7 +183,7 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	}
 }
 
-// TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissed through
+// TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissals through
 // the real assembly rather than asserting auth.RequireHuman in isolation.
 //
 // This is the arm that matters: an agent CAN already assemble a contact page
@@ -247,5 +247,58 @@ func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 		t.Errorf("an agent's page lost the moment its granting human dismissed "+
 			"(got %+v, want claim %q) — a dismissal belongs to a contact's screen, "+
 			"and a passport reading on their behalf consumed it", theirs.Moment, claim)
+	}
+}
+
+// An agent does not read its human's last visit, and the page says so by
+// carrying no baseline at all.
+//
+// The same shape as the dismissal above, and the disclosure is sharper. The
+// section projects baseline_at, so an agent admitted to the human's mark
+// learns when that human last opened this contact.
+//
+// The fixture acknowledges as the human first. A baseline nobody has set makes
+// both arms answer nil, and the test would pass on an empty table.
+func TestAnAgentDoesNotReadItsHumansLastVisit(t *testing.T) {
+	e := Setup(t)
+	contact := e.SeedContact(t, "Siri Gesehen", &e.Rep1)
+
+	perms := principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true}, "activity": {Read: true, Create: true},
+			"relationship": {Read: true}, "company": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
+	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, perms)
+	svc := contactRoomService(e)
+
+	// Acknowledged through the real writer. The mark's correctness is a
+	// GREATEST over the stored value, held to one statement by its own gate.
+	//
+	// A fixture writing its own INSERT would assert against a baseline the
+	// product never sets.
+	if _, err := svc.Acknowledge(human, ids.From[ids.ContactKind](contact)); err != nil {
+		t.Fatalf("acknowledging the visit as the human: %v", err)
+	}
+
+	mine, err := svc.Assemble(human, ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatalf("assembling the human's page: %v", err)
+	}
+	if mine.SinceLastVisit == nil || mine.SinceLastVisit.BaselineAt == nil {
+		t.Fatal("the human's own baseline is absent, so the agent arm below would " +
+			"pass against an empty table rather than against the guard")
+	}
+
+	theirs, err := svc.Assemble(agent, ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatalf("assembling the agent's page: %v", err)
+	}
+	if theirs.SinceLastVisit != nil && theirs.SinceLastVisit.BaselineAt != nil {
+		t.Errorf("the agent read its human's last visit (%v), which is a fact about "+
+			"the human and not about the contact", *theirs.SinceLastVisit.BaselineAt)
 	}
 }

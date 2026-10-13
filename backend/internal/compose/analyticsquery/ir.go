@@ -13,6 +13,7 @@ package analyticsquery
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -266,13 +267,11 @@ func validateAliases(q Query) error {
 	}
 	for _, m := range q.Measures {
 		name := measureAlias(m)
-		for _, reserved := range ReservedColumns {
-			if name == reserved {
-				return &RefusalError{
-					Kind:    RefusalInvalid,
-					Message: fmt.Sprintf("%s is the engine's own column", httperr.QuoteCaller(name)),
-					Suggest: "name the result something else",
-				}
+		if slices.Contains(ReservedColumns, name) {
+			return &RefusalError{
+				Kind:    RefusalInvalid,
+				Message: fmt.Sprintf("%s is the engine's own column", httperr.QuoteCaller(name)),
+				Suggest: "name the result something else",
 			}
 		}
 		if seen[name] {
@@ -311,7 +310,7 @@ func validateFilters(entity Entity, filters []Filter) error {
 		}
 		field, ok := entity.Lookup(f.Field)
 		if !ok {
-			return unknownField(entity, f.Field, KindDimension)
+			return unknownFilterField(entity, f.Field)
 		}
 		if valuelessOps[f.Op] != (f.Value == nil) {
 			return &RefusalError{
@@ -352,6 +351,18 @@ func valueShape(op FilterOp) string {
 // somebody a column exists, which is the disclosure the grant was for. What
 // they get instead is the list of what they CAN name, which is both more
 // useful and says nothing about the rest.
+// unknownFilterField answers a filter naming nothing, and lists the whole
+// vocabulary rather than one kind of it. Suggesting the dimensions alone sent
+// a caller looking for a narrowing the entity does offer, under a name the
+// list did not carry.
+func unknownFilterField(entity Entity, name string) error {
+	return &RefusalError{
+		Kind:    RefusalUnsupported,
+		Message: fmt.Sprintf("no field named %s on %s", httperr.QuoteCaller(name), entity.Name),
+		Suggest: fmt.Sprintf("filter on one of: %s", strings.Join(entity.FilterableNames(), ", ")),
+	}
+}
+
 func unknownField(entity Entity, name string, kind FieldKind) error {
 	return &RefusalError{
 		Kind:    RefusalUnsupported,

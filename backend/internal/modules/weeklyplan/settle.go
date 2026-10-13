@@ -54,6 +54,11 @@ func (s *Store) SetState(ctx context.Context, commitmentID ids.UUID, state strin
 		if err != nil {
 			return err
 		}
+		// A repeat is the same fact twice: it must not re-stamp completed_at or
+		// file a change that did not happen.
+		if current.State == state {
+			return nil
+		}
 		// completed_at moves with the state, because the CHECK ties them: a
 		// done commitment says when, and one reopened stops claiming to.
 		var completed any
@@ -209,6 +214,9 @@ func (s *Store) Respond(ctx context.Context, commitmentID ids.UUID, answer strin
 //
 // Ownership is the predicate, not a check after the read: a commitment on
 // somebody else's plan is not a thing this caller may learn exists.
+//
+// The row comes back locked, so a caller deciding whether a write changes
+// anything judges it against the row as it stands, not as it read earlier.
 func ownCommitmentTx(
 	ctx context.Context, tx pgx.Tx, commitmentID, owner ids.UUID,
 ) (ids.UUID, Commitment, error) {
@@ -220,7 +228,8 @@ func ownCommitmentTx(
 		       c.manager_user_id, c.responded_at, c.completed_at
 		  FROM weekly_plan_commitment c
 		  JOIN weekly_plan p ON p.id = c.plan_id
-		 WHERE c.id = $1 AND p.owner_id = $2`, commitmentID, owner).
+		 WHERE c.id = $1 AND p.owner_id = $2
+		   FOR UPDATE OF c`, commitmentID, owner).
 		Scan(&planID, &status, &current.State, &current.HelpRequested,
 			&current.ManagerResponse, &current.ManagerUserID,
 			&current.RespondedAt, &current.CompletedAt)

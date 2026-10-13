@@ -4,7 +4,7 @@
 // The shapes the Questions stories and suites answer with, in one place so a
 // story and a test cannot come to model two different servers.
 
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import type {
   AnalyticsAnswer,
   AnalyticsEntity,
@@ -75,23 +75,27 @@ export const QUERY: AnalyticsQuery = {
   limit: 100,
 };
 
+const QUALIFYING_ROW = {
+  stage_id: "s-qual",
+  currency: "EUR",
+  count: 8,
+  sum_amount_minor: 86_200_000,
+  _withheld: false,
+};
+
+const PROPOSAL_ROW = {
+  stage_id: "s-prop",
+  currency: "EUR",
+  count: 10,
+  sum_amount_minor: 908_834_000,
+  _withheld: false,
+};
+
 export const ANSWER: AnalyticsAnswer = {
   columns: ["stage_id", "currency", "count", "sum_amount_minor"],
   rows: [
-    {
-      stage_id: "s-qual",
-      currency: "EUR",
-      count: 8,
-      sum_amount_minor: 86_200_000,
-      _withheld: false,
-    },
-    {
-      stage_id: "s-prop",
-      currency: "EUR",
-      count: 10,
-      sum_amount_minor: 908_834_000,
-      _withheld: false,
-    },
+    QUALIFYING_ROW,
+    PROPOSAL_ROW,
     {
       stage_id: null,
       currency: "USD",
@@ -119,9 +123,9 @@ export const WITHHELD_ANSWER: AnalyticsAnswer = {
   ...ANSWER,
   rows: [
     WITHHELD_ROW,
-    ANSWER.rows[0],
+    QUALIFYING_ROW,
     WITHHELD_ROW,
-    ANSWER.rows[1],
+    PROPOSAL_ROW,
     WITHHELD_ROW,
   ],
   withheld: true,

@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
-import { type GrantSpec, meFixture } from "./mefixture";
 
 // THE PANEL'S SHAPE, which is the half of it no other suite asserts.
 //

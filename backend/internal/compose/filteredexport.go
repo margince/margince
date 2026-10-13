@@ -9,7 +9,7 @@ package compose
 // pieces that already ship rather than growing a fourth filter/scope/format
 // path:
 //
-//   - the ONE predicate engine (storekit.Query.SelectIDs, resolved through
+//   - the ONE predicate engine (storekit.Query.SelectExportIDs, resolved through
 //     the collections store's SegmentEngine — the same method the list and
 //     the dynamic-list validator resolve it through) forces
 //     auth.ScopeClauseFor, so the slice is exactly the rows the caller could
@@ -268,13 +268,17 @@ func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []st
 	}
 	selects := make([]string, len(columns))
 	for i, col := range columns {
+		source := "t." + col
+		if derived, ok := derivedColumnExpr(table, col); ok {
+			source = derived
+		}
 		switch {
 		case alwaysMasked[col]:
 			selects[i] = fmt.Sprintf("NULL AS %s", col)
 		case conditioned[col]:
-			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN t.%s END AS %s", writablePos, col, col)
+			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN %s END AS %s", writablePos, source, col)
 		default:
-			selects[i] = "t." + col
+			selects[i] = source + " AS " + col
 		}
 	}
 	return selects, args, nil
@@ -455,18 +459,15 @@ func (h filteredExportHandlers) resolveSource(ctx context.Context, req filteredE
 // BadInputError) all become a 422 naming the offending field; everything
 // else rides the sentinels (403 object denial, 404 existence-hiding, 5xx).
 func writeFilteredExportError(w http.ResponseWriter, r *http.Request, err error) {
-	var bad *exportBadRequest
-	if errors.As(err, &bad) {
+	if bad, ok := errors.AsType[*exportBadRequest](err); ok {
 		httperr.Write(w, r, httperr.Validation(bad.field, codeInvalid, bad.reason))
 		return
 	}
-	var pred *storekit.PredicateError
-	if errors.As(err, &pred) {
+	if pred, ok := errors.AsType[*storekit.PredicateError](err); ok {
 		httperr.Write(w, r, httperr.Validation(pred.Field, pred.Code, pred.Message))
 		return
 	}
-	var source *collections.BadInputError
-	if errors.As(err, &source) {
+	if source, ok := errors.AsType[*collections.BadInputError](err); ok {
 		httperr.Write(w, r, httperr.Validation(source.Field, codeInvalid, source.Reason))
 		return
 	}

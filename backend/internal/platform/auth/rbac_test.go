@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -31,6 +32,33 @@ func TestRequireHumanRejectsOnlyAgents(t *testing.T) {
 		if err := RequireHuman(ctx); err != nil {
 			t.Errorf("RequireHuman(%s) = %v, want nil", typ, err)
 		}
+	}
+}
+
+func TestAnAgentPassesTheDraftingGateOnlyWithTheScopeNamed(t *testing.T) {
+	agent := func(scopes ...principal.Scope) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalAgent, ID: "agent:test", Scopes: principal.NewScopeSet(scopes...),
+		})
+	}
+	if err := RequireHumanOrAgentScope(agent(principal.ScopeDraft), principal.ScopeDraft); err != nil {
+		t.Errorf("an agent holding draft was refused: %v", err)
+	}
+	if err := RequireHumanOrAgentScope(agent(principal.ScopeRead), principal.ScopeDraft); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an agent holding only read = %v, want ErrPermissionDenied", err)
+	}
+	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:test"})
+	if err := RequireHumanOrAgentScope(human, principal.ScopeDraft); err != nil {
+		t.Errorf("a human was refused: %v", err)
+	}
+	buyer := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalBuyer, ID: "buyer:test", Scopes: principal.NewScopeSet(principal.ScopeDraft),
+	})
+	if err := RequireHumanOrAgentScope(buyer, principal.ScopeDraft); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a buyer = %v, want ErrPermissionDenied", err)
+	}
+	if err := RequireHumanOrAgentScope(context.Background(), principal.ScopeDraft); err == nil {
+		t.Error("a context with no actor was admitted")
 	}
 }
 
@@ -112,5 +140,16 @@ func TestRequireAnyNeedsAnActor(t *testing.T) {
 	err := RequireAny(context.Background(), "fx_rate", principal.ActionCreate)
 	if err == nil {
 		t.Fatal("RequireAny(no actor) = nil, want an error")
+	}
+}
+
+// A seat that may create a type and not read it learns that a duplicate
+// exists, never which row it is: the dedupe probe reads as not visible before
+// any row is consulted.
+func TestVisibleToRefusesACallerWithoutTheReadGrant(t *testing.T) {
+	ctx := grantedCtx("lead", principal.ObjectGrant{Create: true})
+	visible, err := VisibleTo(ctx, nil, "lead", ids.NewV7())
+	if err != nil || visible {
+		t.Fatalf("VisibleTo(create-only seat) = %v, %v; want false, nil", visible, err)
 	}
 }

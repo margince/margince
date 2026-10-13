@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,16 +11,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import {
-  LeadDisqualifyReasonsCard,
-  LeadHandlingCard,
-  LeadSourcesCard,
-} from "./leadvocab";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { LeadHandlingCard } from "./leadvocab";
+import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
+import { LeadSourcesCard } from "./leadvocab.sources";
 
-// Settings › Lead handling: the lead vocabularies and the reply deadline.
+// Settings › Data model: the lead vocabularies and the lead-handling posture.
 // Every role reads them; the custom_field write verbs decide who may change
 // them, and the cards disable rather than hide.
 
@@ -56,15 +55,24 @@ function source(
 
 type Call = { url: string; method: string; body: unknown };
 
-// `slaOn` seeds the stored first-response posture: the target box is inert
-// while the target is off, so a case about the NUMBER has to start from an
-// installation that tracks one. The stub answers the same body every read, so
-// flipping the switch inside a test would not enable the box.
+const CONFLICT = {
+  type: "about:blank",
+  title: "Conflict",
+  status: 409,
+  code: "conflict",
+  detail: "conflict",
+};
+
+// `slaOn` seeds the stored first-response posture. The target box is inert
+// while the target is off, so a case about the number starts with it on.
 function backend(
   allow: GrantSpec,
   calls: Call[] = [],
-  slaOn = false,
-  rows?: ReturnType<typeof source>[],
+  options: Readonly<{
+    slaOn?: boolean;
+    rows?: ReturnType<typeof source>[];
+    refuseWrite?: boolean;
+  }> = {},
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -76,31 +84,33 @@ function backend(
     let status = 200;
     if (url.endsWith("/v1/me")) {
       body = meFixture({ allow });
+    } else if (options.refuseWrite && method !== "GET") {
+      body = CONFLICT;
+      status = 409;
+    } else if (method === "DELETE") {
+      status = 204;
     } else if (url.includes("/lead-sources") && method === "GET") {
       body = {
-        data: rows ?? [
+        data: options.rows ?? [
           source("manual", "Created manually", { system: true, lead_count: 3 }),
           source("trade_show", "Trade show", { intent: "high" }),
         ],
         discovered: [{ key: "connector:apollo", lead_count: 7 }],
       };
-    } else if (url.includes("/lead-sources") && method === "DELETE") {
-      body = null;
-      status = 204;
     } else if (url.includes("/lead-sources")) {
       body = source("trade_show", "Messe");
     } else if (url.includes("/lead-disqualify-reasons") && method === "GET") {
       body = {
-        data: rows ?? [
-          { ...source("r1", "Bad timing", { system: true, lead_count: 2 }) },
-          { ...source("r2", "Went quiet") },
+        data: options.rows ?? [
+          source("r1", "Bad timing", { system: true, lead_count: 2 }),
+          source("r2", "Went quiet"),
         ],
       };
     } else if (url.includes("/lead-disqualify-reasons")) {
       body = source("r2", "Went quiet");
     } else if (url.endsWith("/leads/settings")) {
       body = {
-        first_response_enabled: slaOn,
+        first_response_enabled: options.slaOn ?? false,
         first_response_target_minutes: 240,
       };
     }
@@ -122,138 +132,304 @@ function Providers({ children }: { children: ReactNode }) {
   );
 }
 
+function wrote(calls: Call[], method: string, path: string, body: unknown) {
+  return calls.some(
+    (c) =>
+      c.method === method &&
+      c.url.endsWith(path) &&
+      JSON.stringify(c.body) === JSON.stringify(body),
+  );
+}
+
+async function openMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["table.rowActions"].replace("{name}", label),
+    }),
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
 describe("LeadSourcesCard", () => {
-  it("lists the sources as a table with counts and built-ins, and offers removal only where the server would allow it", async () => {
+  it("names each source over its key, counts its leads and marks a built-in for a seat that may remove", async () => {
     vi.stubGlobal("fetch", backend(ADMIN));
     render(
       <Providers>
         <LeadSourcesCard />
       </Providers>,
     );
-    const manualRow = (await screen.findByText("Created manually")).closest(
-      "tr",
+    const manual = await screen.findByTestId("lead-source-manual");
+    expect(within(manual).getByText("Created manually")).toBeTruthy();
+    expect(within(manual).getByText("manual")).toBeTruthy();
+    expect(within(manual).getByText("Built-in")).toBeTruthy();
+    expect(within(manual).getByText("3")).toBeTruthy();
+    // No always-open text box: a rename goes through the row's menu.
+    expect(within(manual).queryByRole("textbox")).toBeNull();
+    expect(
+      screen.getAllByRole("columnheader", {
+        name: en["leadSources.colActions"],
+      }),
+    ).not.toHaveLength(0);
+  });
+
+  it("folds each row onto a title line with its menu at the end, and the count keeps its unit", async () => {
+    vi.stubGlobal("fetch", backend(ADMIN));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
     );
-    expect(manualRow?.textContent).toContain("Built-in");
-    expect(manualRow?.textContent).toContain("3");
-    // The internal key is not shown to the reader.
-    expect(screen.queryByText("manual")).toBeNull();
-    expect(screen.getByText("2 sources")).toBeTruthy();
-    // The built-in source's menu explains why it stays; the unused custom one
-    // offers Remove.
-    await userEvent.click(
-      screen.getByRole("button", { name: "More actions for Created manually" }),
+    const manual = await screen.findByTestId("lead-source-manual");
+    const cells = [...manual.querySelectorAll("td")];
+    expect(cells[0]?.getAttribute("data-fold")).toBe("title");
+    expect(cells.at(-1)?.getAttribute("data-fold")).toBe("end");
+    expect(within(manual).getByText("3 leads")).toBeTruthy();
+  });
+
+  it("renames through the menu's dialog, starting from the current label", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Trade show");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const field = dialog.getByLabelText(en["leadSources.labelField"]);
+    expect(field).toHaveValue("Trade show");
+    await user.clear(field);
+    await user.type(field, "Messe{Enter}");
+    await waitFor(() =>
+      expect(
+        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+          label: "Messe",
+        }),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("re-weights through the intent select and flips the active switch, one PATCH each", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await user.click(
+      await screen.findByRole("combobox", { name: "Intent of Trade show" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Low intent" }));
+    await user.click(
+      screen.getByRole("switch", { name: "Trade show is active" }),
+    );
+    await waitFor(() => {
+      expect(
+        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+          intent: "low",
+        }),
+      ).toBe(true);
+      expect(
+        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+          active: false,
+        }),
+      ).toBe(true);
+    });
+  });
+
+  it("removes an unused source only after the confirmation", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Trade show");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await user.click(dialog.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.method === "DELETE" &&
+            c.url.endsWith("/lead-sources/src-trade_show"),
+        ),
+      ).toBe(true),
+    );
+    // The row and its menu go, so focus lands on the card's own verb.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+      ).toHaveFocus(),
+    );
+  });
+
+  it("hands focus back to the row a later Remove was cancelled from", async () => {
+    const user = userEvent.setup();
+    const rows = [source("webinar", "Webinar"), source("fair", "Fair")];
+    vi.stubGlobal("fetch", backend(ADMIN, [], { rows }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Webinar");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Remove",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+      ).toHaveFocus(),
+    );
+    await openMenu(user, "Fair");
+    const fairMenu = document.getElementById(
+      screen
+        .getByRole("button", {
+          name: en["table.rowActions"].replace("{name}", "Fair"),
+        })
+        .getAttribute("aria-controls") ?? "",
+    );
+    if (!fairMenu) throw new Error("the menu for Fair drew no items");
+    const fairRemove = within(fairMenu).getByRole("button", { name: "Remove" });
+    await user.click(fairRemove);
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: en["create.cancel"],
+      }),
+    );
+    // The menu stays open under a dialog, so focus goes back to the item.
+    await waitFor(() => expect(fairRemove).toHaveFocus());
+  });
+
+  it("hands focus to the card's title when the seat may remove but not add", async () => {
+    const user = userEvent.setup();
+    const rows = [source("webinar", "Webinar")];
+    vi.stubGlobal(
+      "fetch",
+      backend({ custom_field: ["read", "delete"] }, [], { rows }),
+    );
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Webinar");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Remove",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText(en["leadSources.title"])).toHaveFocus(),
+    );
+  });
+
+  it("refuses removing a built-in in words beside the verb", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await openMenu(user, "Created manually");
+    const remove = screen.getByRole("button", { name: "Remove" });
+    expect(remove).toBeDisabled();
+    const reason = screen.getByText(en["leadSources.builtInKept"]);
+    expect(remove.getAttribute("aria-describedby")).toContain(reason.id);
+  });
+
+  it("adds a source through the header verb's dialog and adopts a discovered value", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await user.click(await screen.findByRole("button", { name: "New source" }));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.type(dialog.getByTestId("lead-source-new-label"), "Webinar");
+    await user.click(dialog.getByRole("button", { name: "Add source" }));
+    await waitFor(() =>
+      expect(
+        wrote(calls, "POST", "/lead-sources", {
+          label: "Webinar",
+          intent: "neutral",
+        }),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const found = screen.getByTestId("lead-source-discovered-connector:apollo");
+    expect(within(found).getByText("connector:apollo")).toBeTruthy();
+    await user.click(
+      within(found).getByRole("button", { name: "Add to list" }),
+    );
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.method === "POST" &&
+            (c.body as { key?: string }).key === "connector:apollo",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("says a duplicate source name on the field and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["leadSources.addOpen"] }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    const field = dialog.getByTestId("lead-source-new-label");
+    await user.type(field, "Trade show{Enter}");
+    expect(await dialog.findByText(en["leadSources.duplicate"])).toBeTruthy();
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
+  });
+
+  it("names the discovered value each Add to list adopts", async () => {
+    vi.stubGlobal("fetch", backend(ADMIN));
+    render(
+      <Providers>
+        <LeadSourcesCard />
+      </Providers>,
+    );
+    const found = await screen.findByTestId(
+      "lead-source-discovered-connector:apollo",
     );
     expect(
-      await screen.findByText(
-        "Built-in sources cannot be removed. Switch off Offered to hide this one from reps.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(
-      screen.getByRole("button", { name: "More actions for Trade show" }),
-    );
-    expect(await screen.findByRole("button", { name: "Remove" })).toBeTruthy();
-  });
-
-  it("renames through the menu on Enter, re-weights through the score select and flips Offered, one PATCH each", async () => {
-    const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(ADMIN, calls));
-    render(
-      <Providers>
-        <LeadSourcesCard />
-      </Providers>,
-    );
-    const patched = (body: unknown) =>
-      calls.some(
-        (c) =>
-          c.method === "PATCH" &&
-          c.url.endsWith("/lead-sources/src-trade_show") &&
-          JSON.stringify(c.body) === JSON.stringify(body),
-      );
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: "More actions for Trade show",
-      }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Rename" }),
-    );
-    const dialog = within(screen.getByRole("dialog"));
-    // The key integrations match on is named in the rename dialog only.
-    expect(dialog.getByText(/its key, trade_show/)).toBeTruthy();
-    const input = dialog.getByTestId("lead-vocab-rename") as HTMLInputElement;
-    await userEvent.clear(input);
-    await userEvent.type(input, "Messe{Enter}");
-    await waitFor(() => expect(patched({ label: "Messe" })).toBe(true));
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    await userEvent.click(
-      screen.getByRole("combobox", {
-        name: "Effect on lead score for Trade show",
-      }),
-    );
-    await userEvent.click(screen.getByRole("option", { name: "Lowers score" }));
-    await waitFor(() => expect(patched({ intent: "low" })).toBe(true));
-    await userEvent.click(
-      screen.getByRole("switch", { name: "Offer Trade show" }),
-    );
-    await waitFor(() => expect(patched({ active: false })).toBe(true));
-  });
-
-  it("adds a source with a name and a score effect, and adopts a discovered connector family", async () => {
-    const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(ADMIN, calls));
-    render(
-      <Providers>
-        <LeadSourcesCard />
-      </Providers>,
-    );
-    // The verb and the submit read differently on purpose, "New source"
-    // against "Add source", so neither query finds the other.
-    await userEvent.click(
-      await screen.findByRole("button", { name: "New source" }),
-    );
-    const dialog = within(screen.getByRole("dialog"));
-    await userEvent.type(
-      dialog.getByTestId("lead-source-new-label"),
-      "Webinar",
-    );
-    await userEvent.click(dialog.getByRole("radio", { name: /Raises score/ }));
-    await userEvent.click(dialog.getByRole("button", { name: "Add source" }));
-    await waitFor(() =>
-      expect(
-        calls.some(
-          (c) =>
-            c.method === "POST" &&
-            c.url.endsWith("/lead-sources") &&
-            JSON.stringify(c.body) ===
-              JSON.stringify({ label: "Webinar", intent: "high" }),
-        ),
-      ).toBe(true),
-    );
-    // The dialog goes on success: the list behind it is where the answer is.
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    const discovered = screen.getByTestId("lead-source-discovered");
-    expect(discovered.textContent).toContain("7");
-    await userEvent.click(
-      within(discovered).getByRole("button", { name: "Add to list" }),
-    );
-    await waitFor(() =>
-      expect(
-        calls.some(
-          (c) =>
-            c.method === "POST" &&
-            c.url.endsWith("/lead-sources") &&
-            (c.body as { key?: string }).key === "connector:apollo" &&
-            (c.body as { intent?: string }).intent === "neutral",
-        ),
-      ).toBe(true),
-    );
+      within(found).getByRole("button", { name: en["leadSources.adopt"] }),
+    ).toHaveAccessibleDescription(/connector:apollo/);
   });
 
   it("leaves every control inert for a reader and says why", async () => {
@@ -263,42 +439,49 @@ describe("LeadSourcesCard", () => {
         <LeadSourcesCard />
       </Providers>,
     );
-    const offered = (await screen.findByRole("switch", {
-      name: "Offer Trade show",
-    })) as HTMLButtonElement;
-    expect(offered.disabled).toBe(true);
-    expect(
-      screen
-        .getByRole("combobox", { name: "Effect on lead score for Trade show" })
-        .hasAttribute("disabled") ||
-        screen
-          .getByRole("combobox", {
-            name: "Effect on lead score for Trade show",
-          })
-          .getAttribute("aria-disabled") === "true",
-    ).toBe(true);
-    expect(
-      screen.getByText(
-        "Only an administrator or operations user can change this list",
-      ),
-    ).toBeTruthy();
-    // Read from the catalog under the keys the card renders, so the wording
-    // cannot drift out from under the query.
+    const toggle = await screen.findByRole("switch", {
+      name: "Trade show is active",
+    });
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText(en["leadSources.readOnlyTitle"])).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: en["leadSources.addOpen"] }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: en["leadSources.add"] }),
+      screen.queryByRole("button", {
+        name: en["table.rowActions"].replace("{name}", "Trade show"),
+      }),
     ).toBeNull();
-    // No rename and no remove grant: the row offers no menu at all.
+    // Built-in changes nothing a reader can do, so it is not said.
+    expect(screen.queryByText("Built-in")).toBeNull();
+    // The discovered table has no verb for a reader either.
     expect(
-      screen.queryByRole("button", { name: "More actions for Trade show" }),
+      screen.queryByRole("columnheader", {
+        name: en["leadSources.colActions"],
+      }),
     ).toBeNull();
   });
 });
 
 describe("LeadDisqualifyReasonsCard", () => {
-  it("lists the reasons, keeps the built-in, in-use one from removal, and adds one from the panel foot", async () => {
+  it("lists reasons by name with no key, and refuses removing the built-in one in words", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
+    );
+    const timing = await screen.findByTestId("lead-reason-src-r1");
+    expect(within(timing).getByText("Bad timing")).toBeTruthy();
+    expect(within(timing).queryByText("r1")).toBeNull();
+    await openMenu(user, "Bad timing");
+    expect(screen.getByRole("button", { name: "Remove" })).toBeDisabled();
+    expect(screen.getByText(en["leadReasons.builtInKept"])).toBeTruthy();
+  });
+
+  it("removes a reason and hands focus to the card's verb", async () => {
+    const user = userEvent.setup();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
@@ -306,36 +489,89 @@ describe("LeadDisqualifyReasonsCard", () => {
         <LeadDisqualifyReasonsCard />
       </Providers>,
     );
-    await screen.findByText("Bad timing");
-    expect(screen.getByText("2 reasons")).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: "More actions for Bad timing" }),
+    await openMenu(user, "Went quiet");
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: en["leadReasons.newLabel"] }),
+      ).toHaveFocus(),
     );
     expect(
-      await screen.findByText(
-        "Built-in reasons cannot be removed. Switch off Offered to hide this one from reps.",
+      calls.some(
+        (c) =>
+          c.method === "DELETE" &&
+          c.url.endsWith("/lead-disqualify-reasons/src-r2"),
       ),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(
-      screen.getByRole("button", { name: "More actions for Went quiet" }),
+    ).toBe(true);
+  });
+
+  it("adds a reason through the header verb's dialog", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
     );
-    expect(await screen.findByRole("button", { name: "Remove" })).toBeTruthy();
-    await userEvent.keyboard("{Escape}");
-    await userEvent.type(
-      screen.getByTestId("lead-reason-new-label"),
-      "Already a customer{Enter}",
+    await user.click(
+      await screen.findByRole("button", { name: en["leadReasons.newLabel"] }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(
+      dialog.getByLabelText(en["leadReasons.labelField"]),
+      " No champion {Enter}",
     );
     await waitFor(() =>
       expect(
-        calls.some(
-          (c) =>
-            c.method === "POST" &&
-            c.url.endsWith("/lead-disqualify-reasons") &&
-            JSON.stringify(c.body) ===
-              JSON.stringify({ label: "Already a customer" }),
-        ),
+        wrote(calls, "POST", "/lead-disqualify-reasons", {
+          label: "No champion",
+        }),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("says a duplicate name on the field and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
+    );
+    await openMenu(user, "Went quiet");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const field = dialog.getByLabelText(en["leadReasons.labelField"]);
+    await user.clear(field);
+    await user.type(field, "Bad timing{Enter}");
+    expect(await dialog.findByText(en["leadReasons.duplicate"])).toBeTruthy();
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    // A changed name is a new attempt, so the refusal leaves the field.
+    await user.type(field, "!");
+    expect(dialog.queryByText(en["leadReasons.duplicate"])).toBeNull();
+  });
+
+  it("flips a reason's switch through one PATCH", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadDisqualifyReasonsCard />
+      </Providers>,
+    );
+    await user.click(
+      await screen.findByRole("switch", { name: "Went quiet is active" }),
+    );
+    await waitFor(() =>
+      expect(
+        wrote(calls, "PATCH", "/lead-disqualify-reasons/src-r2", {
+          active: false,
+        }),
       ).toBe(true),
     );
   });
@@ -348,32 +584,34 @@ const IN_USE = [
 ];
 
 it.each([
-  [LeadSourcesCard, "1 lead uses this source", "2 leads use this source"],
+  [LeadSourcesCard, "1 lead uses this source.", "2 leads use this source."],
   [
     LeadDisqualifyReasonsCard,
-    "1 lead has this reason",
-    "2 leads have this reason",
+    "1 lead has this reason.",
+    "2 leads have this reason.",
   ],
-])("counts the leads holding an entry (%#)", async (Card, one, many) => {
-  vi.stubGlobal("fetch", backend(ADMIN, [], false, IN_USE));
-  render(
-    <Providers>
-      <Card />
-    </Providers>,
-  );
-  await userEvent.click(
-    await screen.findByRole("button", { name: "More actions for Webinar" }),
-  );
-  expect(await screen.findByText(new RegExp(`^${one}, so`))).toBeTruthy();
-  await userEvent.keyboard("{Escape}");
-  await userEvent.click(
-    screen.getByRole("button", { name: "More actions for Referral" }),
-  );
-  expect(await screen.findByText(new RegExp(`^${many}, so`))).toBeTruthy();
-});
+])(
+  "counts the leads holding an entry it refuses to remove (%#)",
+  async (Card, one, many) => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { rows: IN_USE }));
+    render(
+      <Providers>
+        <Card />
+      </Providers>,
+    );
+    const suffix = " Deactivate it instead.";
+    await openMenu(user, "Webinar");
+    expect(screen.getByText(one + suffix)).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await openMenu(user, "Referral");
+    expect(screen.getByText(many + suffix)).toBeTruthy();
+  },
+);
 
 describe("LeadHandlingCard", () => {
   it("shows the target off by default, flips it through one PATCH, and keeps the minutes field inert while off", async () => {
+    const user = userEvent.setup();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
@@ -388,23 +626,20 @@ describe("LeadHandlingCard", () => {
     ) as HTMLInputElement;
     expect(minutes.disabled).toBe(true);
     expect(minutes.value).toBe("240");
-    await userEvent.click(toggle);
+    await user.click(toggle);
     await waitFor(() =>
       expect(
-        calls.some(
-          (c) =>
-            c.method === "PATCH" &&
-            c.url.endsWith("/leads/settings") &&
-            JSON.stringify(c.body) ===
-              JSON.stringify({ first_response_enabled: true }),
-        ),
+        wrote(calls, "PATCH", "/leads/settings", {
+          first_response_enabled: true,
+        }),
       ).toBe(true),
     );
   });
 
   it("refuses a target outside the server's bounds without writing, and says what it wants", async () => {
+    const user = userEvent.setup();
     const calls: Call[] = [];
-    vi.stubGlobal("fetch", backend(ADMIN, calls, true));
+    vi.stubGlobal("fetch", backend(ADMIN, calls, { slaOn: true }));
     render(
       <Providers>
         <LeadHandlingCard />
@@ -414,10 +649,9 @@ describe("LeadHandlingCard", () => {
       "lead-first-response-target",
     )) as HTMLInputElement;
     expect(minutes.disabled).toBe(false);
-    await userEvent.clear(minutes);
-    await userEvent.type(minutes, "2{Tab}");
-    // The refusal is announced and attached to the control that holds the
-    // value, so a reader who cannot see the row still hears the rule.
+    await user.clear(minutes);
+    await user.type(minutes, "2{Tab}");
+    // Announced and attached to the control, so a reader who cannot see the row hears it.
     const refusal = await screen.findByRole("alert");
     expect(refusal.textContent).toContain("from 15 to 10,080");
     expect(minutes.getAttribute("aria-invalid")).toBe("true");
@@ -442,10 +676,6 @@ describe("LeadHandlingCard", () => {
       "lead-first-response-switch",
     )) as HTMLButtonElement;
     expect(toggle.disabled).toBe(true);
-    expect(
-      screen.getByText(
-        "Only an administrator or operations user can change this list.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(en["leadSources.readOnly"])).toBeTruthy();
   });
 });

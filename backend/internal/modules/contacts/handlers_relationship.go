@@ -4,6 +4,8 @@
 package contacts
 
 import (
+	"fmt"
+	"math"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -72,7 +74,12 @@ func (h Handlers) CreateRelationship(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rel, err := h.store.CreateRelationship(r.Context(), relationshipCreateInput(req))
+	in, err := relationshipCreateInput(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	rel, err := h.store.CreateRelationship(r.Context(), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -89,7 +96,12 @@ func (h Handlers) UpdateRelationship(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rel, err := h.store.UpdateRelationship(r.Context(), ids.UUID(id), relationshipUpdateInput(req, ifVersion))
+	in, err := relationshipUpdateInput(req, ifVersion, httperr.ClearedFields(r))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	rel, err := h.store.UpdateRelationship(r.Context(), ids.UUID(id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -151,13 +163,22 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		in.NextStepDueAt = &req.NextStepDueAt.Time
 	}
 	in.ServedSegments = req.ServedSegments
+	in.Cleared = httperr.ClearedFields(r)
 	if req.GateMetrics != nil {
 		if staff, ok := (*req.GateMetrics)["certified_staff"].(float64); ok {
-			v := int16(staff)
+			v, err := gateMetricInt16(staff, metricCertifiedStaff, 0, certifiedStaffCeiling)
+			if err != nil {
+				httperr.Write(w, r, err)
+				return
+			}
 			in.CertifiedStaff = &v
 		}
 		if rate, ok := (*req.GateMetrics)["retention_rate"].(float64); ok {
-			v := int16(rate)
+			v, err := gateMetricInt16(rate, metricRetentionRate, 0, 100)
+			if err != nil {
+				httperr.Write(w, r, err)
+				return
+			}
 			in.RetentionRate = &v
 		}
 	}
@@ -197,4 +218,35 @@ func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params cr
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": partners, "page": pageInfo(page)})
+}
+
+// Gate metrics arrive as JSON numbers, which decode to float64 and reach
+// smallint columns.
+const (
+	metricCertifiedStaff = "gate_metrics.certified_staff"
+	metricRetentionRate  = "gate_metrics.retention_rate"
+	// certifiedStaffCeiling is what the column can hold. A seat count past it
+	// is a typo rather than a programme, and the cast below would wrap it.
+	certifiedStaffCeiling = 32767
+)
+
+// gateMetricInt16 narrows one metric to the column that stores it.
+//
+// A plain int16(f) wraps: 1e30 lands as -1, which then reads as a partner
+// failing a gate it was never measured against. A negative seat count and a
+// retention rate above a hundred are the same kind of nonsense arriving by a
+// different route.
+//
+// Refused with the field named, so the caller is told which number the
+// programme cannot use.
+func gateMetricInt16(f float64, field string, low, high int16) (int16, error) {
+	if math.IsNaN(f) || math.IsInf(f, 0) || f != math.Trunc(f) {
+		return 0, httperr.Validation(field, "invalid_value",
+			field+" must be a whole number")
+	}
+	if f < float64(low) || f > float64(high) {
+		return 0, httperr.Validation(field, "out_of_range",
+			fmt.Sprintf("%s must be between %d and %d", field, low, high))
+	}
+	return int16(f), nil
 }

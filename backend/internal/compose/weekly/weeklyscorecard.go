@@ -102,6 +102,11 @@ type DealBlock struct {
 	// its counts are the current-state figures they always were — and folding
 	// that to 0 would claim those old weeks were fully reconstructed.
 	Unreconstructible *int
+
+	// Open deals whose close date was still provisional when the week ended.
+	// Nil on a scorecard frozen before it was counted: zero would claim a
+	// measurement that was never taken.
+	CloseDateProvisional *int
 }
 
 // multiThreadWindow is how far back a deal's second contact may be and still
@@ -224,9 +229,7 @@ func scoreLeads(
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	// Activities carry no owner, so their visibility comes from the records
 	// they link to and the audience the writer set — never hand-rolled.
 	meetingScope, err := auth.ActivityContentClause(ctx, "m", arg)
@@ -314,9 +317,7 @@ func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bo
 	if err != nil {
 		return false, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 	var present bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM lead l
@@ -383,9 +384,7 @@ func scoreDeals(
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = sqlUnbounded
-	}
+	scope = orUnbounded(scope)
 
 	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
 	if err != nil {
@@ -409,7 +408,7 @@ func scoreDeals(
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,
 			&block.CloseDateSound, &block.ForecastUp, &block.ForecastDown,
-			&block.Unreconstructible)
+			&block.Unreconstructible, &block.CloseDateProvisional)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's deals: %w", err)
 	}

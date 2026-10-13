@@ -56,24 +56,33 @@ func (m attentionMeetings) Today(
 		if !meetingStillWorthPreparing(row) {
 			continue
 		}
-		// The store was asked for readable rows only, so a withheld one here
-		// would be a gate that did not hold. Checked rather than assumed: this
-		// lane names the meeting in a reader's brief, and the cost of being
-		// wrong is a subject on a screen it does not belong on.
-		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+		if !meetingReadable(row) {
 			continue
 		}
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-			NeedsPrep: needsPrep, PrepKnown: known, ContactID: contactOnMeeting(row),
-			HostUserID: hostOfMeeting(row),
+			NeedsPrep: needsPrep, PrepKnown: known, HostUserID: hostOfMeeting(row),
 		})
+	}
+	with, err := m.store.MeetingCounterparties(ctx, meetingIDs(ahead, func(meeting attention.Meeting) ids.UUID { return meeting.ID }))
+	if err != nil {
+		return nil, err
+	}
+	for i := range ahead {
+		ahead[i].ContactID = with[ahead[i].ID]
 	}
 	// Soonest first: the lane is a countdown, and the store returns activities
 	// newest-first, which is the opposite order for a day still ahead.
 	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
 	return ahead, nil
+}
+
+// meetingReadable re-checks a row the store was asked to return readable only.
+// A withheld one here would be a gate that did not hold, and the cost is a
+// subject on a screen it does not belong on, so it is checked, not assumed.
+func meetingReadable(row crmcontracts.Activity) bool {
+	return row.ContentState == nil || *row.ContentState == crmcontracts.ActivityContentStateAvailable
 }
 
 // applyMeetingScope turns the lane's scope into the store's meeting dials.
@@ -150,7 +159,7 @@ func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 // every colleague's meeting as unprepared, to a reader who cannot open it to
 // find out. Absent beats wrong: the caller draws nothing.
 func meetingPrep(row crmcontracts.Activity) (needsPrep bool, known bool) {
-	if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+	if !meetingReadable(row) {
 		return false, false
 	}
 	if row.Body != nil && strings.TrimSpace(*row.Body) != "" {
@@ -176,28 +185,15 @@ func subjectOfMeeting(row crmcontracts.Activity) string {
 	return ""
 }
 
-// contactOnMeeting is whose page this meeting's brief is read on.
-//
-// The FIRST contact link in the row's own order, which is the store's, so two
-// reads of an unchanged meeting choose the same page. A meeting with several
-// attendees has several honest answers and the row shows one link; picking by
-// anything cleverer here would be a ranking this lane has no basis for, and
-// picking a different one each read would move a control under the reader.
-//
-// Zero where the meeting links no contact at all — an internal meeting, or one
-// whose attendees this reader may not see, since the links come back already
-// scoped. The row then offers no brief rather than a link to somebody's page
-// chosen at random.
-func contactOnMeeting(row crmcontracts.Activity) ids.UUID {
-	if row.Links == nil {
-		return ids.UUID{}
+// meetingIDs lists the meetings a lane kept, for the one read that says who
+// each was with (activities.Store.MeetingCounterparties). Both lanes ask it, so
+// one meeting names the same customer before and after it starts.
+func meetingIDs[M any](meetings []M, id func(M) ids.UUID) []ids.UUID {
+	out := make([]ids.UUID, 0, len(meetings))
+	for _, meeting := range meetings {
+		out = append(out, id(meeting))
 	}
-	for _, link := range *row.Links {
-		if link.EntityType == crmcontracts.ActivityLinkEntityTypeContact {
-			return ids.UUID(link.EntityId)
-		}
-	}
-	return ids.UUID{}
+	return out
 }
 
 // attentionMeetingsAwaitingOutcome reads the meetings that already started and
@@ -243,7 +239,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, Limit: &deep, ReadableOnly: true,
+		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &deep, ReadableOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -254,8 +250,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	}
 	over := make([]attention.MeetingAwaitingOutcome, 0, len(rows))
 	for _, row := range rows {
-		// Same defensive check the forward lane makes, for the same reason.
-		if row.ContentState != nil && *row.ContentState != crmcontracts.ActivityContentStateAvailable {
+		if !meetingReadable(row) {
 			continue
 		}
 		over = append(over, attention.MeetingAwaitingOutcome{
@@ -273,6 +268,13 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	// the lane by what it renders, and the truncation flag counts this slice.
 	if len(over) > limit {
 		over = over[:limit]
+	}
+	with, err := m.store.MeetingCounterparties(ctx, meetingIDs(over, func(meeting attention.MeetingAwaitingOutcome) ids.UUID { return meeting.ID }))
+	if err != nil {
+		return nil, err
+	}
+	for i := range over {
+		over[i].ContactID = with[over[i].ID]
 	}
 	return over, nil
 }

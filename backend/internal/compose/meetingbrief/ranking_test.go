@@ -55,9 +55,9 @@ func TestClaimsRankByWhatTheRecordSays(t *testing.T) {
 	in := fullInput()
 	in.Commitments = []ClaimIn{
 		{Kind: kindDecision, Body: "settled", Status: "done"},
-		{Kind: kindCommitmentOurs, Body: "inside its date", Status: statusOpen, DueAt: ptr(at(18))},
+		{Kind: kindCommitmentOurs, Body: "inside its date", Status: statusOpen, DueAt: new(at(18))},
 		{Kind: kindOpenQuestion, Body: "a question", Status: statusOpen},
-		{Kind: kindCommitmentOurs, Body: "overdue", Status: statusOpen, DueAt: ptr(at(8))},
+		{Kind: kindCommitmentOurs, Body: "overdue", Status: statusOpen, DueAt: new(at(8))},
 	}
 	ranked := rankClaims(in)
 	want := []string{"overdue", "a question", "inside its date", "settled"}
@@ -101,8 +101,8 @@ func bodies(claims []ClaimIn) []string {
 func TestAnOlderOverduePromiseOutranksANewerOne(t *testing.T) {
 	in := fullInput()
 	in.Commitments = []ClaimIn{
-		{Kind: kindCommitmentOurs, Body: "a day late", Status: statusOpen, DueAt: ptr(at(9))},
-		{Kind: kindCommitmentOurs, Body: "a month late", Status: statusOpen, DueAt: ptr(at(-20))},
+		{Kind: kindCommitmentOurs, Body: "a day late", Status: statusOpen, DueAt: new(at(9))},
+		{Kind: kindCommitmentOurs, Body: "a month late", Status: statusOpen, DueAt: new(at(-20))},
 	}
 	ranked := rankClaims(in)
 	if ranked.claims[0].Body != "a month late" {

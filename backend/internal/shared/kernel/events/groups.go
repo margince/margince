@@ -134,6 +134,12 @@ func Groups() []Group {
 		// note that says the buyer just asked something. It listens on the deal
 		// stream, where every deal_room event rides.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
+		// A commitment and the task it became, settled together: a task marked
+		// done settles its claim, a claim settled done completes its task. The
+		// activity stream carries the task's update and the contact stream the
+		// claim's change. Its own group because it writes on both sides, and a
+		// projection's backlog must not leave a kept commitment reading as owed.
+		{Name: "cg:commitment-settle", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// The AI-activity projection (ai_task_run): what the rail and the
 		// activity feed read. Its own group because a projection backlog must
 		// not be able to stall anything that spends money or moves a record,

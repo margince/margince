@@ -125,7 +125,7 @@ func TestABackfillIsReadRatherThanMarkedRead(t *testing.T) {
 	// the same six.
 	second := settledThread{
 		Key: key, Newest: base.Add(7 * time.Hour), Count: 11,
-		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+		ReadTo: new(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	if len(second.Messages) == 0 {
@@ -165,7 +165,7 @@ func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
 
 	second := settledThread{
 		Key: key, Newest: reply, Count: 9,
-		ReadTo: timePtr(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+		ReadTo: new(base.Add(7 * time.Hour)), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	newest := second.Messages[len(second.Messages)-1].At
@@ -174,8 +174,6 @@ func TestNewMailIsReadBeforeTheOlderRange(t *testing.T) {
 			"read that before walking back through its history", newest, reply)
 	}
 }
-
-func timePtr(at time.Time) *time.Time { return &at }
 
 // seedThreadMailAt places one message on a thread at an exact instant, which is
 // what a window test needs: the ordering IS the subject, and "minutes ago"
@@ -239,7 +237,7 @@ func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
 
 	second := settledThread{
 		Key: key, Newest: at, Count: 2,
-		ReadTo: timePtr(at), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
+		ReadTo: new(at), ReadFrom: &firstOldest, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 	if len(second.Messages) != 2 {
@@ -277,7 +275,7 @@ func TestAWindowOfMessagesAtOneInstantIsNotSplit(t *testing.T) {
 	// is only expressible as a pair, since every one of them shares its instant.
 	second := settledThread{
 		Key: key, Newest: at, Count: group,
-		ReadTo: timePtr(at), ReadFrom: first.ReadFromNow, ReadFromID: first.ReadFromIDNow,
+		ReadTo: new(at), ReadFrom: first.ReadFromNow, ReadFromID: first.ReadFromIDNow,
 	}
 	read(t, e, &second)
 

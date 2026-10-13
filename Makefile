@@ -66,7 +66,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -291,7 +291,7 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln tools tools-go infra-logs infra-reset:
+build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
 	$(MAKE) -C backend $@
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
@@ -319,6 +319,10 @@ gen-types-check: drift
 ## fe-lint — Biome lint the frontend.
 fe-lint:
 	cd frontend && pnpm install --frozen-lockfile && pnpm lint
+## fe-compiler-lint — the React Compiler's rules (eslint-plugin-react-hooks),
+## ratcheted per file and rule via frontend/scripts/compiler-lint-waivers.txt.
+fe-compiler-lint:
+	cd frontend && pnpm install --frozen-lockfile && pnpm lint:compiler
 ## fe-build — production build of the web app.
 fe-build:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build
@@ -490,6 +494,7 @@ frontend-check:
 	$(MAKE) fe-drift
 	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
+	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
 
@@ -615,6 +620,14 @@ fe-clock-drift:
 	cd frontend && pnpm install --frozen-lockfile && \
 		FE_CLOCK_SKEW_DAYS=$(FE_CLOCK_SKEW_DAYS) pnpm exec vitest run
 
+## backend-clock-drift — the same suites at a moved clock, required to reach the
+## same verdict. BACKEND_CLOCK_SKEW names the applier beside the amount
+## (`machine:200` in CI, `database:200` or `fixture:200` locally) and has no
+## default, because the three do not compose; internal/shared/clockskew says
+## what each reaches. Not in `make check`: time passing breaks these, not a diff.
+backend-clock-drift:
+	@BACKEND_CLOCK_SKEW=$(BACKEND_CLOCK_SKEW) ./scripts/backend-clock-drift.sh
+
 ## fe-quality — every leg of the frontend gate EXCEPT the unit suite and the
 ## bundle, which CI runs beside this one. Needs Go: the composed lane composes.
 fe-quality: fe-typecheck-composed
@@ -622,6 +635,7 @@ fe-quality: fe-typecheck-composed
 	$(MAKE) fe-drift
 	$(MAKE) fe-file-length
 	$(MAKE) fe-lint
+	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-test-ext
 
 ## fe-bundle — the production bundle plus the Storybook catalog, the two legs
@@ -763,7 +777,26 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ## deterministic — each scenario runs three times and passes at two, because one
 ## bad run is the weather and two is a defect. Never touches :8080; it boots,
 ## seeds and tears down its own DEV_SLUG stack.
+## A scenario stops once its verdict is settled; E2E_LLM_ALL_RUNS=1 makes every run.
 ## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+##
+## THE CANDIDATE IS CHOSEN: E2E_LLM_CANDIDATE=claude|gpt|mistral, each pinned
+## to the model its consumer app defaults to (e2e/llm/candidates.json), and
+## E2E_LLM_VIA=api|openrouter|cli. api and openrouter run e2e/llm/drive.py, the
+## neutral bridge that offers every vendor the same tools under the server's own
+## instructions — the comparable route. cli runs `claude -p` or `codex exec`,
+## each with its own system prompt, filed apart under <model>@<cli>. The judge
+## is reached by E2E_LLM_JUDGE_VIA=cli|api|openrouter. Codex reports no list of
+## the tools it offered, so its run is held against the lane's own tools/list;
+## a codex release that renames a switched-off feature key fails every run with
+## exit 2, a harness stop, until e2e/llm/drive.py's list follows it.
+## Before the world is snapshotted, search_context must rank by meaning
+## (e2e/llm/stackready.py), or the lane stops: every candidate would be measured
+## on a degraded tool. E2E_LLM_STACK_PRESET=config/presets/<name>.yaml binds the
+## stack to a committed preset first (its key in .env.local);
+## E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files the verdict as lexical.
+## E2E_LLM_VERDICTS=<dir> writes the verdicts there instead of the committed
+## records tree, so the run publishes nothing.
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria
@@ -843,7 +876,8 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
-## Optional: ARGS="--allow-missing".
+## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
+## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
@@ -878,26 +912,22 @@ fe-edge-padding:
 		pnpm exec playwright install chromium >/dev/null 2>&1 && \
 		node scripts/check-edge-padding.mjs $(ARGS)
 
-## craft-static — the deterministic code-craftsmanship gate (ADR-0045) over
-## every hand-written Go tree, strict: BLOCKER and MAJOR findings both fail it.
-## The pre-push hook (.githooks/pre-push) runs the same bar diff-scoped; this
-## target is the full manual sweep, and it is green — the backlog was cleared
-## to arm it. extensions/ and fixtures/ are their own Go modules, so `./...`
-## never reaches them and the bar has to name them: a first-party unit ships
-## the same product, and the fixture is the worked example a unit author copies.
+## craft-static — the deterministic code-craftsmanship gate (ADR-0045), strict:
+## BLOCKER and MAJOR findings both fail it. The code checks judge every
+## hand-written Go file, and they are green because the backlog was cleared to
+## arm them. The comment checks read Go and TypeScript and judge only the lines
+## added since origin/main, so old comments improve as files are touched; with
+## no origin/main the gate fails instead of judging nothing. The pre-push hook
+## runs the same bar over the files a push changes.
 ##
-## The gate is a pinned binary (scripts/craft-pin.sh), not source in this tree.
-## Roots are written from the REPOSITORY ROOT, which is where the binary runs —
-## they used to lead with ../../ because the gate was built and run from its own
-## directory, which changed the working directory first. A leftover ../../
-## resolves outside the repository and reports a clean sweep of nothing, which
-## reads exactly like a pass.
+## extensions/ and fixtures/ are their own Go modules, so `./...` never reaches
+## them and the bar has to name them: a first-party unit ships the same product,
+## and the fixture is the worked example a unit author copies. The gate is a
+## pinned binary (scripts/craft-pin.sh), and the paths are written from the
+## repository root, where it runs.
 craft-static: test-craft-pin
-	@bin="$$(./scripts/craft-pin.sh)" && \
-		"$$bin" static --strict --root backend && \
-		"$$bin" static --strict --root extensions && \
-		"$$bin" static --strict --root fixtures && \
-		"$$bin" static --strict --root desktop
+	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
+		backend extensions fixtures desktop frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
 ## this branch's diff to an external model API and get a reading of what a
@@ -1001,6 +1031,17 @@ test-secret-scan:
 ## what is under test is which files reach it.
 test-sbom-sign:
 	@./scripts/test-sbom-sign.sh
+
+## test-sbom-census — prove `sbom-census` refuses an SBOM that lists fewer npm
+## packages than the lockfiles resolve: one with only the first YAML document,
+## one without it, one that swaps a package or a version for another, and one
+## that misses a second lockfile. It also refuses a document that resolves
+## nothing or declares another lockfileVersion, and a lockfile that is empty or
+## does not parse. The YAML reader is the real pinned one, because reading every
+## document is what is under test, so this needs Docker and network; the
+## license-gate job runs it.
+test-sbom-census:
+	@./scripts/test-sbom-census.sh
 
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
@@ -1247,7 +1288,7 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go only; `doc.go` and generated
+## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:
@@ -1258,6 +1299,30 @@ comment-budget:
 ## comment-budget, which judges one diff and cannot see the tree.
 comment-density:
 	@./scripts/check-comment-density.sh
+
+## comment-stats — the shape of the tree's comments may get better and never
+## worse: words per sentence, long sentences, lines in long blocks, tone words
+## and comment-heavy Go functions, pinned in scripts/comment-stats-baseline.json.
+## The comment checks judge only added lines, so this is what shows the old
+## comments improving. A run that measures under 10,000 files fails, because a
+## wrong path would otherwise report a pass. Re-pin with `make comment-stats-pin`
+## in the change that lowers a number.
+COMMENT_STATS_PATHS := backend extensions fixtures desktop frontend tools
+comment-stats: test-craft-pin
+	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 \
+		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
+## comment-stats-pin — write the current comment numbers to the baseline.
+comment-stats-pin: test-craft-pin
+	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 --write-baseline \
+		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
+
+## slop-trend — record the tree's slop scores (`craft slop`) and comment
+## numbers (`craft stats`) in .tmp/slop-trend, as JSON and as a Markdown table.
+## With PREV=<dir> holding an earlier run's JSON, the table shows the change. A
+## report for trends: it fails only when it cannot measure. Needs the frontend
+## packages, because TypeScript is scored with the frontend's compiler.
+slop-trend: test-craft-pin
+	@./scripts/slop-trend.sh $(PREV)
 
 ## test-comment-budget — prove the budget gate fails an over-budget change.
 ## A budget nothing can trip reads exactly like a change within budget.
@@ -1276,7 +1341,7 @@ rls-store-path:
 ## from a run that never reached the model: a refused credential is named as
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
-## judge that agreed with everything fails 22 of these cases, and a judge that
+## judge that agreed with everything fails every defect fixture, and a judge that
 ## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-check.sh
@@ -1521,7 +1586,7 @@ desktop-win-dist:
 # comments — bump tag and digest together. Override SYFT/GRANT/COSIGN to use
 # host binaries (e.g. `make sbom SYFT=syft GRANT=grant`).
 SBOM_DIR     := sboms
-SYFT_IMAGE   ?= anchore/syft@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026 # v1.50.0
+SYFT_IMAGE   ?= anchore/syft@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c # v1.54.0
 GRANT_IMAGE  ?= anchore/grant@sha256:172463611795f43b77302cdfbd7b3f81295492a7330e0820cfe41c3674920237 # v0.6.8
 COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738226498393e34e2f9ca83cb959e51c230e4ad7 # v2.4.3
 # Per-format validators (sbom-validate). No single tool covers all three, so:
@@ -1589,6 +1654,7 @@ sbom:
 	@$(MAKE) sbom-normalize
 	@$(MAKE) sbom-supplement
 	@$(MAKE) sbom-parity
+	@$(MAKE) sbom-census
 	@$(MAKE) sbom-validate
 	@echo "wrote $(SBOM_FILES)"
 
@@ -1599,9 +1665,8 @@ sbom:
 ## lives in sbom-schemas/license-supplement.json (key = purl without version,
 ## so every pinned action version matches — and that directory is in the
 ## license gate's classifier scope, so editing the map re-runs the gate); it
-## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc, so both
-## license-bearing SBOMs agree; syft v1.50 emits no per-package license in SPDX
-## 3.0, so there is nothing to supplement there. SonarSource's action is left
+## sets the license on the CycloneDX doc the gate reads and on the SPDX 2.2 doc,
+## and leaves the SPDX 3.0 doc as syft wrote it. SonarSource's action is left
 ## unset on purpose — it is LGPL-3.0-only and ignored in .grant.yaml, not shipped.
 ## Idempotent; keep the map in step with the workflows and the SPDX-tools deps.
 sbom-supplement:
@@ -1621,7 +1686,7 @@ sbom-supplement:
 ## Both filters are idempotent, so re-running (or a future syft that already emits
 ## relative names / no directories) is a no-op. The zero SHA1 is syft's directory
 ## placeholder; a real file always carries a non-zero SHA-256/512 alongside it. That
-## placeholder is the only signal syft gives — v1.50 labels every SPDX element,
+## placeholder is the only signal syft gives — v1.54 labels every SPDX element,
 ## directories included, software_fileKind == "file", so the kind field cannot single
 ## a directory out; the empty name / lone zero SHA1 pair is what distinguishes them.
 sbom-normalize:
@@ -1649,6 +1714,24 @@ sbom-parity:
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
 
+## sbom-census — the license gate's coverage check: every package a committed
+## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,
+## because grant judges only what the SBOM lists. A scanner that reads the first
+## YAML document of the lockfile and stops lists pnpm's own binaries and none of
+## the web app, and that SBOM passes parity, validation and grant alike.
+## scripts/sbom-census.sh reads every document with a YAML reader that shares no
+## code with syft. It fails on a package the SBOM lacks, and on a document that
+## resolves nothing or declares a lockfile version neither reader was checked
+## against. `make sbom` runs it after parity; its verdict goes to stderr, which
+## sbom-gate keeps.
+##
+## An empty SBOM_LOCKFILES reads every pnpm-lock.yaml committed at HEAD, the
+## tree `make sbom` scanned; scripts/test-sbom-census.sh points it at planted files.
+SBOM_LOCKFILES ?=
+sbom-census:
+	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
+	@./scripts/sbom-census.sh $(SBOM_PYTHON_IMAGE) $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt $(SBOM_DIR)/margince.cdx.json $(SBOM_LOCKFILES)
+
 ## sbom-validate — conformance gate: each SBOM must validate against its own format,
 ## so a syft bump, a config change, or a normalization filter that emitted a malformed
 ## document fails here rather than being signed and shipped. sbom-parity proves the
@@ -1672,7 +1755,9 @@ sbom-validate:
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
-	@$(JSONSCHEMA) validate $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
+	@# --fast: exhaustive mode keeps an evaluation trace per node and exhausts the runner's memory on a
+	@# document that digests every committed file; fast mode still fails an invalid document (exit 2).
+	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
 	@echo "OK: three SBOMs valid against their formats"
 
 ## sbom-sign — keyless-sign each generated SBOM with cosign (writes *.cosign.bundle; needs an OIDC token).
@@ -1722,7 +1807,7 @@ sbom-check:
 
 # SBOM_GATE_ATTEMPTS is how many times the scan-and-judge pair may run before a
 # denial is believed. Three: enough that two independent registry failures have
-# to coincide, few enough that a real denial costs six minutes rather than an
+# to coincide, few enough that a real denial costs three scans rather than an
 # afternoon.
 SBOM_GATE_ATTEMPTS ?= 3
 

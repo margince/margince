@@ -5,7 +5,7 @@
 
 package gates
 
-// The queue's verdict standings ARE the deal card's, and this derives them from
+// The queue's verdict standings are the deal card's, and this derives them from
 // the card rather than keeping a second list of them.
 //
 // Two schemas in one contract name the same four words. `DealStatusCardVerdict`

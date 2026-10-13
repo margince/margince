@@ -4,9 +4,9 @@
 import { MarginceCoreScene } from "../design-system/margince-core";
 import { formatNumber, formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { liveCapture } from "../lib/capture-progress";
+import { useImportRunOnScreen } from "../lib/import-onscreen";
 import { useConnectors } from "../screens/connectors";
-import { liveCapture } from "./capture-progress";
-import { useImportRunOnScreen } from "./import-onscreen";
 import "./capture-chip.css";
 
 /** Where the chip leads: the connections card, which holds the run in full. */
@@ -31,9 +31,9 @@ const CONNECTIONS_HREF = "#/settings/connections";
  * the work. Both read the same connections body, so they cannot disagree
  * about the share.
  *
- * It stands down wherever the run is already drawn in full — the connections
- * card, onboarding's backread step — and those surfaces say so themselves
- * (app/import-onscreen.ts) rather than being listed here as routes.
+ * It stands down wherever the run is already drawn in full (the connections
+ * card, onboarding's backread step). Those surfaces say so themselves
+ * (lib/import-onscreen.ts) rather than being listed here as routes.
  */
 export function CaptureChip({
   linked,

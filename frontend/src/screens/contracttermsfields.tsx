@@ -29,7 +29,7 @@ export function ContractTermsFields({
 }>) {
   const t = useT();
   return (
-    <>
+    <div className="form-stack">
       <Field label={t("contracts.form.name")} required>
         {(props) => (
           <TextInput
@@ -193,6 +193,6 @@ export function ContractTermsFields({
           />
         )}
       </Field>
-    </>
+    </div>
   );
 }

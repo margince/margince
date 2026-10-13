@@ -256,7 +256,12 @@ it("leaves Escape to a dialog raised over the open menu", async () => {
   const page = (dialogOpen: boolean) => (
     <LocaleProvider initial="en">
       <Surface />
-      <Modal open={dialogOpen} onClose={onDialogClose} labelledBy="edit">
+      <Modal
+        open={dialogOpen}
+        onClose={onDialogClose}
+        labelledBy="edit"
+        intent="form"
+      >
         <Heading size="large" id="edit">
           Edit deal
         </Heading>

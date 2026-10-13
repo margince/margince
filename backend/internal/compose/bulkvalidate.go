@@ -5,12 +5,19 @@ package compose
 
 import (
 	"fmt"
-	"strings"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// The contract's caps on a bulk change's free text, in characters.
+const (
+	maxBulkTaskSubject = 500
+	maxBulkNote        = 500
 )
 
 // The parameters a bulk change can name beside its verb and items.
@@ -32,6 +39,7 @@ var bulkVerbNeeds = map[crmcontracts.BulkVerb]struct{ param, why string }{
 	crmcontracts.BulkVerbAddTag:         {bulkParamTag, "the tag to put on"},
 	crmcontracts.BulkVerbRemoveTag:      {bulkParamTag, "the tag to take off"},
 	crmcontracts.BulkVerbCreateTask:     {bulkParamTask, "the task to file under each record"},
+	crmcontracts.BulkVerbComplete:       {},
 }
 
 // validateBulkChange refuses what the contract refuses, for the tool door
@@ -41,7 +49,7 @@ func validateBulkChange(change bulkChange) error {
 	need, known := bulkVerbNeeds[change.verb]
 	if !known {
 		return httperr.Validation("verb", "unknown_verb", fmt.Sprintf(
-			"verb %q is none of reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag or create_task", change.verb))
+			"verb %q is none of reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task or complete", change.verb))
 	}
 	if err := validateBulkParams(change, need.param, need.why); err != nil {
 		return err
@@ -81,8 +89,41 @@ func validateBulkParams(change bulkChange, need, why string) error {
 			return httperr.Validation(p.param, "not_allowed", fmt.Sprintf("%s takes no %s", change.verb, p.param))
 		}
 	}
-	if change.task != nil && strings.TrimSpace(change.task.Subject) == "" {
+	if change.task != nil && !values.HasVisibleText(change.task.Subject) {
 		return httperr.Validation("task.subject", "required", "create_task needs a subject: what has to be done")
+	}
+	return checkBulkTextLimits(change)
+}
+
+// checkBulkTextLimits holds the free text of a change to the contract's caps.
+func checkBulkTextLimits(change bulkChange) error {
+	if change.task != nil && utf8.RuneCountInString(change.task.Subject) > maxBulkTaskSubject {
+		return httperr.Validation("task.subject", "too_long",
+			fmt.Sprintf("a task subject holds at most %d characters", maxBulkTaskSubject))
+	}
+	if change.note != nil && utf8.RuneCountInString(*change.note) > maxBulkNote {
+		return httperr.Validation(bulkParamNote, "too_long",
+			fmt.Sprintf("a note holds at most %d characters", maxBulkNote))
+	}
+	return nil
+}
+
+// admitKind refuses a verb the record type does not take: archive for a type
+// with no archive, and complete for any type but a Worklist item, which takes
+// complete alone.
+func admitKind(target bulkTarget, change bulkChange) error {
+	_, archives := target.(bulkArchiver)
+	_, worklist := target.(worklistBulkTarget)
+	switch {
+	case change.verb == crmcontracts.BulkVerbArchive && !archives:
+		return httperr.Validation("verb", "verb_not_for_record_type",
+			fmt.Sprintf("a %s has no archive; archive is none of its verbs", change.recordType))
+	case worklist && change.verb != crmcontracts.BulkVerbComplete:
+		return httperr.Validation("verb", "verb_not_for_record_type",
+			fmt.Sprintf("a %s takes complete alone; %s is none of its verbs", change.recordType, change.verb))
+	case !worklist && change.verb == crmcontracts.BulkVerbComplete:
+		return httperr.Validation("verb", "verb_not_for_record_type",
+			fmt.Sprintf("complete marks a worklist_item done; a %s takes other verbs", change.recordType))
 	}
 	return nil
 }

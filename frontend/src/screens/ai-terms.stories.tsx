@@ -4,11 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
-  ModelChain,
   ModelRef,
   PanelTitle,
   TermChip,
   TermLegend,
+  TierChips,
 } from "./ai-terms";
 import { StoryProviders } from "./story-utils";
 
@@ -23,18 +23,12 @@ function Terms() {
         <PanelBody>
           <TermLegend />
           <p>
-            <TermChip term="provider">openai_compatible</TermChip>{" "}
-            <TermChip term="tier">cheap_cloud</TermChip>{" "}
+            <TermChip term="provider">OpenAI-compatible</TermChip>{" "}
+            <TermChip term="tier">Everyday cloud</TermChip>{" "}
             <TermChip term="task">17 tasks</TermChip>
           </p>
+          <TierChips tiers={["cheap_cloud", "premium", "embeddings"]} />
           <ModelRef provider="gemini" model="gemini-3.5-flash" />
-          <ModelChain
-            steps={[
-              { provider: "jev_compatible", model: "typesafe/jev-1.13" },
-              { provider: "openai_compatible", model: "openai/gpt-oss-120b" },
-            ]}
-            connector="then"
-          />
         </PanelBody>
       </Panel>
     </StoryProviders>

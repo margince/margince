@@ -5,7 +5,7 @@
 
 package gates
 
-// The deal money pairing rule is decided in ONE function, and this fails when a
+// The deal money pairing rule is decided in one function, and this fails when a
 // second place decides it.
 //
 // The rule is: a deal's currency is present exactly when at least one of its

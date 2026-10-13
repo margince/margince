@@ -1,11 +1,11 @@
 import { type ReactNode, useState } from "react";
-import { useCan } from "../app/capability";
 import { StatCard } from "../design-system/atoms";
 import { formatMoney, formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useProviderKeys } from "./ai-provider-keys";
+import { useCan } from "../lib/capability";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import { boundProviders, useRouting } from "./ai-routing-query";
 import { type LastCall, useLastCallAt } from "./aicalls";
 import { currentMonth, useAiUsage } from "./aiusage";

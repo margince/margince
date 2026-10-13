@@ -671,6 +671,135 @@
       "warnings"
     ]
   },
+  "attach_document": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "attachment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "byte_size": {
+            "type": "integer"
+          },
+          "captured_by": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entity_type": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "attachment_id",
+          "byte_size",
+          "captured_by",
+          "checksum",
+          "content_type",
+          "created_at",
+          "entity_id",
+          "entity_type",
+          "filename"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "book_meeting": {
     "type": "object",
     "properties": {
@@ -855,6 +984,9 @@
                     "archived": {
                       "type": "boolean"
                     },
+                    "done": {
+                      "type": "boolean"
+                    },
                     "listed": {
                       "type": "boolean"
                     },
@@ -878,6 +1010,9 @@
                   "type": "object",
                   "properties": {
                     "archived": {
+                      "type": "boolean"
+                    },
+                    "done": {
                       "type": "boolean"
                     },
                     "listed": {
@@ -1188,6 +1323,7 @@
       "warnings"
     ]
   },
+  "change_lead_state": null,
   "change_lists": {
     "type": "object",
     "properties": {
@@ -1283,6 +1419,7 @@
       "warnings"
     ]
   },
+  "change_tags": null,
   "check_availability": {
     "type": "object",
     "properties": {
@@ -1820,6 +1957,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "candidate_id": {
+                  "type": "string"
+                },
                 "confidence": {
                   "type": "number"
                 },
@@ -1854,6 +1994,7 @@
                 }
               },
               "required": [
+                "candidate_id",
                 "confidence",
                 "evidence",
                 "other_record_id"
@@ -1869,6 +2010,29 @@
           },
           "record_type": {
             "type": "string"
+          },
+          "tag_offer": {
+            "type": "object",
+            "properties": {
+              "exists": {
+                "type": "boolean"
+              },
+              "may_create": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              },
+              "tag_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "exists",
+              "may_create",
+              "name"
+            ]
           },
           "trust_tier": {
             "type": "string"
@@ -2618,6 +2782,102 @@
       "warnings"
     ]
   },
+  "decide_approvals": null,
+  "decide_duplicate": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "candidate_id": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "disposition"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "demote_lead": {
     "type": "object",
     "properties": {
@@ -2725,6 +2985,185 @@
         },
         "required": [
           "vocabulary"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "describe_import_format": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "custom": {
+                            "type": "boolean"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "example": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "options": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "required_on_new_row": {
+                            "type": "boolean"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "custom",
+                          "description",
+                          "example",
+                          "name",
+                          "required_on_new_row"
+                        ]
+                      }
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "columns",
+                    "file",
+                    "object"
+                  ]
+                }
+              },
+              "key_rules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "order": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "size_limit_mb": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "files",
+              "key_rules",
+              "order",
+              "size_limit_mb",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "format"
         ]
       },
       "evidence": {
@@ -3168,6 +3607,7 @@
       "warnings"
     ]
   },
+  "describe_vocabulary": null,
   "disqualify_lead": {
     "type": "object",
     "properties": {
@@ -3266,6 +3706,12 @@
       "data": {
         "type": "object",
         "properties": {
+          "ai_disclosure": {
+            "type": "string"
+          },
+          "ai_generated": {
+            "type": "boolean"
+          },
           "body": {
             "type": "string"
           },
@@ -3292,8 +3738,21 @@
               ]
             }
           },
+          "not_saved": {
+            "type": "string"
+          },
+          "saved_draft_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "subject": {
             "type": "string"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -3513,6 +3972,7 @@
       "warnings"
     ]
   },
+  "draft_outbound": null,
   "enrich": {
     "type": "object",
     "properties": {
@@ -3938,6 +4398,28 @@
           "scope_limited": {
             "type": "boolean"
           },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "taken_at": {
+                  "type": "string"
+                },
+                "trigger": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "taken_at",
+                "trigger"
+              ]
+            }
+          },
           "timezone": {
             "type": "string"
           },
@@ -3961,6 +4443,7 @@
           "period_start",
           "priced_count",
           "scope_kind",
+          "snapshots",
           "timezone",
           "weighted_minor",
           "won_minor"
@@ -4188,6 +4671,9 @@
           "deals": {
             "type": "integer"
           },
+          "leads": {
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -4200,6 +4686,7 @@
           "companies",
           "contacts",
           "deals",
+          "leads",
           "name",
           "tag_id"
         ]
@@ -4994,6 +5481,149 @@
       "warnings"
     ]
   },
+  "list_documents": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attachment_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "byte_size": {
+                  "type": "integer"
+                },
+                "captured_by": {
+                  "type": "string"
+                },
+                "checksum": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "contract_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "entity_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entity_type": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "attachment_id",
+                "byte_size",
+                "captured_by",
+                "checksum",
+                "content_type",
+                "created_at",
+                "entity_id",
+                "entity_type",
+                "filename"
+              ]
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "documents"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "list_input_checks": {
     "type": "object",
     "properties": {
@@ -5301,6 +5931,25 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
                 },
                 "record_type": {
                   "type": "string"
@@ -6781,6 +7430,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "sections_omitted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stakeholders": {
             "type": "array",
             "items": {
@@ -6817,6 +7472,7 @@
           "open_commitments",
           "phase",
           "project_id",
+          "sections_omitted",
           "stakeholders"
         ]
       },
@@ -6909,6 +7565,48 @@
               "type": "string"
             }
           },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "columns": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "name": {
+                  "type": "string"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "part": {
+                  "type": "string"
+                },
+                "unmapped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "columns",
+                "mapping",
+                "name",
+                "object",
+                "part"
+              ]
+            }
+          },
           "mapping": {
             "type": "object",
             "additionalProperties": {
@@ -6949,8 +7647,6 @@
           }
         },
         "required": [
-          "columns",
-          "mapping",
           "run"
         ]
       },
@@ -7992,12 +8688,43 @@
       "warnings"
     ]
   },
+  "read_directory": null,
+  "read_forecast": null,
+  "read_import": null,
   "read_import_report": {
     "type": "object",
     "properties": {
       "data": {
         "type": "object",
         "properties": {
+          "checkpoint": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {
+                  "type": "string"
+                },
+                "object": {
+                  "type": "string"
+                },
+                "row_count": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "file",
+                "object",
+                "row_count"
+              ]
+            }
+          },
           "report": {
             "type": "object",
             "properties": {
@@ -8038,15 +8765,23 @@
                     "column": {
                       "type": "string"
                     },
+                    "file": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
                     "line": {
                       "type": "integer"
                     },
                     "reason": {
                       "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
                     }
                   },
                   "required": [
-                    "line",
                     "reason"
                   ]
                 }
@@ -8087,6 +8822,61 @@
                   "applied",
                   "offered"
                 ]
+              },
+              "mapping": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "disposition": {
+                      "type": "object",
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "duplicates": {
+                          "type": "integer"
+                        },
+                        "skipped": {
+                          "type": "integer"
+                        },
+                        "unchanged": {
+                          "type": "integer"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "created",
+                        "skipped",
+                        "unchanged",
+                        "updated"
+                      ]
+                    },
+                    "file": {
+                      "type": "string"
+                    },
+                    "object": {
+                      "type": "string"
+                    },
+                    "rows_read": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "disposition",
+                    "file",
+                    "object",
+                    "rows_read"
+                  ]
+                }
               },
               "rows_read": {
                 "type": "integer"
@@ -8155,6 +8945,9 @@
                   },
                   "status": {
                     "type": "string"
+                  },
+                  "updates_not_reversed": {
+                    "type": "integer"
                   }
                 },
                 "required": [
@@ -8174,103 +8967,6 @@
               "source_key_used",
               "status"
             ]
-          }
-        },
-        "required": [
-          "report"
-        ]
-      },
-      "evidence": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "captured_by": {
-              "type": "string"
-            },
-            "record_id": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "record_type": {
-              "type": "string"
-            },
-            "source": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "record_id",
-            "record_type"
-          ]
-        }
-      },
-      "freshness": {
-        "type": "object",
-        "properties": {
-          "authoritative": {
-            "type": "boolean"
-          },
-          "last_synced_at": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "authoritative"
-        ]
-      },
-      "schema_version": {
-        "type": "string"
-      },
-      "trace_id": {
-        "type": "string"
-      },
-      "trust": {
-        "type": "string"
-      },
-      "warnings": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "code": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "code",
-            "message"
-          ]
-        }
-      }
-    },
-    "required": [
-      "data",
-      "evidence",
-      "freshness",
-      "schema_version",
-      "trace_id",
-      "trust",
-      "warnings"
-    ]
-  },
-  "read_import_run": {
-    "type": "object",
-    "properties": {
-      "data": {
-        "type": "object",
-        "properties": {
-          "checkpoint": {
-            "type": "integer"
-          },
-          "error": {
-            "type": "string"
-          },
-          "object": {
-            "type": "string"
           },
           "run_id": {
             "type": "string"
@@ -8281,7 +8977,6 @@
         },
         "required": [
           "checkpoint",
-          "object",
           "run_id",
           "state"
         ]
@@ -8363,6 +9058,7 @@
       "warnings"
     ]
   },
+  "read_input_checks": null,
   "read_lists": {
     "type": "object",
     "properties": {
@@ -8458,6 +9154,7 @@
       "warnings"
     ]
   },
+  "read_project": null,
   "read_project_360": {
     "type": "object",
     "properties": {
@@ -9050,6 +9747,25 @@
             "type": "string",
             "format": "uuid"
           },
+          "owner": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_you": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "is_you"
+            ]
+          },
           "record_type": {
             "type": "string"
           },
@@ -9143,6 +9859,7 @@
       "warnings"
     ]
   },
+  "read_relationships": null,
   "read_reporting": {
     "type": "object",
     "properties": {
@@ -9253,6 +9970,7 @@
       "warnings"
     ]
   },
+  "read_tags": null,
   "relink_activities": {
     "type": "object",
     "properties": {
@@ -9632,6 +10350,7 @@
       "warnings"
     ]
   },
+  "resolve_duplicates": null,
   "resolve_entities": {
     "type": "object",
     "properties": {
@@ -10389,6 +11108,25 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "owner": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "is_you": {
+                      "type": "boolean"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "is_you"
+                  ]
+                },
                 "record_type": {
                   "type": "string"
                 },
@@ -11051,6 +11789,7 @@
       "warnings"
     ]
   },
+  "send_outbound": null,
   "update_record": {
     "type": "object",
     "properties": {

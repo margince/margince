@@ -70,7 +70,6 @@ const EVERY_LANE: MagicReceipt = {
         values: { target: "Anna Weber" },
       },
       consequence: "magic.consequence.awaits_your_decision",
-      undo: { undoable: false, reason: "no_completed_change" },
       actor: { type: "agent", id: "runner" },
     },
   ],

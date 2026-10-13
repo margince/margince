@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -75,7 +76,8 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int, sco
 		// like any other, and the obstacle is read on the contact's own screen.
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule), OwnerID: duty.OwnerID,
-			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt,
+			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt, OpenedAt: duty.OpenedAt,
+			Acquisition: duty.Acquisition.Wire(),
 		})
 	}
 	return out, nil
@@ -105,6 +107,7 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
+			Calendar:     slices.Contains(calendarProviders, concern.Provider),
 			FailingSince: concern.FailingSince,
 		})
 	}

@@ -78,7 +78,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			t.Errorf("the egress page says local-only-enforced=%v for %q; the contract says %v. "+
 				"Run make gen", got, name, def.LocalOnly)
 		}
-		if got := egressCell(row, 6) != "—"; got != def.Decision {
+		if got := egressCell(row, 6) != "none"; got != def.Decision {
 			t.Errorf("the egress page says a decision model may read %q's text=%v; the contract "+
 				"declares decision=%v. Run make gen", name, got, def.Decision)
 		}
@@ -88,7 +88,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 // rowFor finds the table row whose FIRST cell names this task.
 func rowFor(page, task string) (string, bool) {
 	want := "| `" + task + "` |"
-	for _, line := range strings.Split(page, "\n") {
+	for line := range strings.SplitSeq(page, "\n") {
 		if strings.HasPrefix(line, want) {
 			return line, true
 		}

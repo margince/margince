@@ -29,7 +29,11 @@ func (h Handlers) MergeContact(w http.ResponseWriter, r *http.Request, id crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	survivor, err := h.store.MergeContact(r.Context(), pathID[ids.ContactKind](id), ids.From[ids.ContactKind](ids.UUID(req.TargetId)))
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	survivor, err := h.store.MergeContact(r.Context(), pathID[ids.ContactKind](id), ids.From[ids.ContactKind](ids.UUID(req.TargetId)), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

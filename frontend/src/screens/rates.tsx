@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { type FormEvent, Fragment, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanUpsert } from "../app/capability";
 import {
   Button,
   EmptyState,
@@ -10,25 +9,35 @@ import {
   Modal,
   TextInput,
 } from "../design-system/atoms";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelGroupHead,
+  PanelIntro,
+} from "../design-system/panel";
+import {
+  QueryGate,
+  QueryStates,
+  WriteRefused,
+} from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { today } from "../format/calendarday";
-import { useT } from "../i18n";
-import {
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  useMe,
-  WriteRefused,
-} from "./common";
+import { forReader } from "../format/collate";
+import { formatDate, formatUsdPerMTok } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
+import { useCan, useCanUpsert } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
+import { providerName } from "./ai-provider-names";
 import {
   RefreshModelPricesButton,
   RefreshSummary,
   useRefreshModelPrices,
 } from "./rate-catalogue-refresh";
-import { ModelPriceDialog } from "./rate-manual";
+import { isPricedProvider, ModelPriceDialog } from "./rate-manual";
 import { RefreshFromSources } from "./rate-refresh";
 import "./rates.css";
 
@@ -100,12 +109,11 @@ export function FxRatesCard() {
     queryKey: ["fx-rates"],
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/fx-rates", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/fx-rates", {
+          params: { query: {} },
+        }),
+      );
       return data.data;
     },
   });
@@ -219,6 +227,7 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const qc = useQueryClient();
   const labelId = useId();
+  const formId = useId();
   const [from, setFrom] = useState("");
   const [rate, setRate] = useState("");
   const [effectiveDate, setEffectiveDate] = useState(today());
@@ -226,16 +235,15 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error: err } = await api.POST("/fx-rates", {
-        body: {
-          from_currency: from.trim().toUpperCase(),
-          rate: rate.trim(),
-          effective_date: effectiveDate,
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST("/fx-rates", {
+          body: {
+            from_currency: from.trim().toUpperCase(),
+            rate: rate.trim(),
+            effective_date: effectiveDate,
+          },
+        }),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["fx-rates"] });
@@ -243,22 +251,20 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
     },
     onError: (err: Error) => setError(problemMessageOf(err, t)),
   });
+  const ready = from.trim() !== "" && rate.trim() !== "";
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!ready || save.isPending) return;
+    setError(null);
+    save.mutate();
+  }
 
   return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
-      {/* A dialog is portalled to the body, so it is its own region and its
-          title starts the outline at level 2 — the spelling ConfirmModal uses
-          for every other dialog in the tree. `.modal-title` is the catalog's
-          own name for the interval under it. */}
+    <Modal open onClose={onClose} labelledBy={labelId} intent="form">
       <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("settings.rates.fxModalTitle")}
       </Heading>
-      {/* `Field` owns each box's id and hands it to the input, so the label a
-          reader sees and the name the control announces are one string written
-          once. The stack owns the interval between them: a `.field` sets no
-          margin of its own, deliberately, and a dialog is not the place to
-          invent a second answer to that. */}
-      <div className="form-stack">
+      <form id={formId} className="form-stack" onSubmit={submit}>
         <Field label={t("settings.rates.colFrom")}>
           {(control) => (
             <TextInput
@@ -292,23 +298,19 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           )}
         </Field>
         <WriteRefused titleKey="settings.rates.notSaved" message={error} />
-        <div className="form-actions">
-          <Button variant="ghost" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setError(null);
-              save.mutate();
-            }}
-            disabled={
-              save.isPending || from.trim() === "" || rate.trim() === ""
-            }
-          >
-            {t("settings.rates.setRate")}
-          </Button>
-        </div>
+      </form>
+      <div className="actions">
+        <Button variant="ghost" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={!ready || save.isPending}
+        >
+          {t("settings.rates.setRate")}
+        </Button>
       </div>
     </Modal>
   );
@@ -331,15 +333,16 @@ export function ModelCostsCard() {
     queryKey: ["ai-model-rates"],
     enabled: canRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/ai-model-rates", {
-        params: { query: {} },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/ai-model-rates", {
+          params: { query: {} },
+        }),
+      );
       return data.data;
     },
   });
+
+  const priced = query.data?.filter((row) => isPricedProvider(row.provider));
 
   // After every hook, as in FxRatesCard.
   if (!canRead) {
@@ -369,89 +372,96 @@ export function ModelCostsCard() {
     >
       <PanelBody className="form-stack">
         <PanelIntro>{t("settings.rates.modelIntro")}</PanelIntro>
-        {/* A sheet whose write affordances are all withheld says so ONCE, here,
-            rather than annotating each absent control. The rule (design-system
-            README): a permission-withheld SURFACE states it, while individual
-            write affordances inside a readable surface may simply be absent —
-            provided the surface has said what a reader is looking at. Without
-            this the page was a rate table with no editor and no reason given,
-            which reads as a bug rather than as a permission.
-            This is the READ-GRANTED case alone: the withheld branch has already
-            returned, so `!canManage` here means the reader may see the sheet and
-            not change it — no write verb on the object, or a read licensing seat.
-            On the withheld body these two lines would explain one denial twice,
-            in two different ways. */}
+        {/* Said once for the sheet, for the reason on FxRatesCard. */}
         {!canManage && <p>{t("settings.rates.readOnly")}</p>}
-        <SettingList>
-          {/* Stacked for the reason spelled out on FxRatesCard: the price sheet
-              is the subject, and this row names which prices they are. */}
-          <SettingRow
-            label={t("settings.rates.modelTableLabel")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("settings.rates.modelTableLabel")}
-              >
-                {(rows) =>
-                  rows.length === 0 ? (
-                    <EmptyState>
-                      <b>{t("settings.rates.modelEmpty")}</b>
-                    </EmptyState>
-                  ) : (
-                    <DataTable<AiModelRate>
-                      label={t("settings.rates.modelTableLabel")}
-                      rows={rows}
-                      rowKey={(row) => `${row.provider}/${row.model_id}`}
-                      columns={[
-                        {
-                          key: "provider",
-                          header: t("settings.rates.colProvider"),
-                          render: (row) => row.provider,
-                        },
-                        {
-                          key: "model",
-                          header: t("settings.rates.colModel"),
-                          render: (row) => row.model_id,
-                        },
-                        {
-                          key: "in",
-                          header: t("settings.rates.colInput"),
-                          render: (row) => row.input_per_mtok,
-                        },
-                        {
-                          key: "out",
-                          header: t("settings.rates.colOutput"),
-                          render: (row) => row.output_per_mtok,
-                        },
-                        {
-                          key: "cr",
-                          header: t("settings.rates.colCacheRead"),
-                          render: (row) => row.cache_read_per_mtok,
-                        },
-                        {
-                          key: "cw",
-                          header: t("settings.rates.colCacheWrite"),
-                          render: (row) => row.cache_write_per_mtok,
-                        },
-                        {
-                          key: "effective",
-                          header: t("settings.rates.colEffective"),
-                          render: (row) => row.effective_date,
-                        },
-                      ]}
-                    />
-                  )
-                }
-              </QueryGate>
-            }
-          />
-        </SettingList>
-        {open ? <ModelPriceDialog onClose={() => setOpen(false)} /> : null}
+        {query.data === undefined && (
+          <QueryStates
+            query={query}
+            pendingLabel={t("settings.rates.modelTableLabel")}
+          >
+            {null}
+          </QueryStates>
+        )}
+        {priced?.length === 0 && (
+          <EmptyState>
+            <b>{t("settings.rates.modelEmpty")}</b>
+          </EmptyState>
+        )}
       </PanelBody>
+      {priced && <ModelPriceGroups rows={priced} />}
+      {open ? <ModelPriceDialog onClose={() => setOpen(false)} /> : null}
       {/* Under the sheet and above the band that holds the button: what the
           last refresh did, or why it was refused. */}
       <RefreshSummary refresh={refresh} />
     </Panel>
   );
+}
+
+function ModelPriceGroups({
+  rows,
+}: Readonly<{ rows: readonly AiModelRate[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const groups = new Map<string, AiModelRate[]>();
+  for (const row of rows) {
+    groups.set(row.provider, [...(groups.get(row.provider) ?? []), row]);
+  }
+  const named = [...groups]
+    .map(([provider, prices]) => ({
+      provider,
+      name: providerName(provider, t),
+      prices,
+    }))
+    .sort((a, b) => forReader(a.name, b.name, locale));
+  const price = (
+    key: string,
+    header: string,
+    pick: (row: AiModelRate) => string,
+  ): DataTableColumn<AiModelRate> => ({
+    key,
+    header,
+    align: "end",
+    render: (row) => formatUsdPerMTok(pick(row), locale),
+  });
+  const columns: DataTableColumn<AiModelRate>[] = [
+    {
+      key: "model",
+      header: t("settings.rates.colModel"),
+      grow: true,
+      render: (row) => <code>{row.model_id}</code>,
+    },
+    price("in", t("settings.rates.colIn"), (row) => row.input_per_mtok),
+    price("out", t("settings.rates.colOut"), (row) => row.output_per_mtok),
+    price(
+      "cacheRead",
+      t("settings.rates.colCacheReadShort"),
+      (row) => row.cache_read_per_mtok,
+    ),
+    price(
+      "cacheWrite",
+      t("settings.rates.colCacheWriteShort"),
+      (row) => row.cache_write_per_mtok,
+    ),
+    {
+      key: "effective",
+      header: t("settings.rates.colEffective"),
+      render: (row) => formatDate(row.effective_date, locale, viewerZone()),
+    },
+  ];
+  return named.map((group) => (
+    <Fragment key={group.provider}>
+      <PanelGroupHead title={group.name} level="h3" />
+      <DataTable<AiModelRate>
+        bleed
+        stickyFirst
+        label={t("settings.rates.modelGroupLabel", { provider: group.name })}
+        rows={group.prices}
+        rowKey={(row) => `${row.model_id}/${row.effective_date}`}
+        rowTestId={(row) =>
+          `price-${group.provider}-${row.model_id}-${row.effective_date}`
+        }
+        columns={columns}
+      />
+    </Fragment>
+  ));
 }

@@ -7,7 +7,7 @@ import type {
   DecisionDeckItem,
   StagedDecision,
 } from "../design-system/decisiondeck";
-import { isAlreadyDecided, ProblemError, throwProblem } from "./common";
+import { isAlreadyDecided, ProblemError, unwrap } from "../lib/problem";
 
 // Sending the Brief's staging tray: what one verdict does, and what a whole
 // tray does.
@@ -40,6 +40,8 @@ export type CommitResult = Readonly<{
    * landed.
    */
   failure: unknown | null;
+  /** The failed approval's kind, which words its failure; null for a bundle. */
+  failedKind: string | null;
 }>;
 
 /**
@@ -56,13 +58,12 @@ async function sendOne(
   const path =
     verdict === "accept" ? "/approvals/{id}/approve" : "/approvals/{id}/reject";
   try {
-    const { error } = await api.POST(path, {
-      params: { path: { id: approval.id } },
-      ...(verdict === "reject" ? { body: { reason: "" } } : {}),
-    });
-    if (error) {
-      throwProblem(error);
-    }
+    unwrap(
+      await api.POST(path, {
+        params: { path: { id: approval.id } },
+        ...(verdict === "reject" ? { body: { reason: "" } } : {}),
+      }),
+    );
     return { alreadyDecided: false };
   } catch (error) {
     if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
@@ -105,12 +106,11 @@ async function sendBundle(
       : "/approval-bundles/{bundle_id}/reject";
   // No body at all on a rejection: the deck takes no reason, and an empty
   // string would be recorded as one the reader gave.
-  const { data, error } = await api.POST(path, {
-    params: { path: { bundle_id: bundleId } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.POST(path, {
+      params: { path: { bundle_id: bundleId } },
+    }),
+  );
   // Deciding a bundle is not all-or-nothing: the response reports each member,
   // and a member somebody else answered first comes back `already_decided`
   // rather than as an error. Reading `false` here regardless — which this did —
@@ -154,6 +154,7 @@ export async function commitTray(input: {
   let alreadyDecided = false;
   let edits = 0;
   let failure: unknown | null = null;
+  let failedKind: string | null = null;
   for (const decision of input.staged) {
     const item = byId.get(decision.id);
     if (!item || decision.verdict === "skip") {
@@ -172,8 +173,9 @@ export async function commitTray(input: {
       // whatever made this one fail. What already went, went, and the result
       // says so rather than the throw erasing it.
       failure = error;
+      failedKind = item.kind === "single" ? item.approval.kind : null;
       break;
     }
   }
-  return { alreadyDecided, edits, failure };
+  return { alreadyDecided, edits, failure, failedKind };
 }

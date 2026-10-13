@@ -138,6 +138,15 @@ func (h HiddenWork) Clear() bool {
 
 // WaitingCustomer is one message nobody has answered.
 type WaitingCustomer struct {
+	// EarlierRequests counts the conversation's earlier unanswered requests
+	// folded into this card; FirstAskedAt is when the first arrived.
+	EarlierRequests int
+	FirstAskedAt    time.Time
+	// MeetingBookedAt is when the soonest booked meeting with the sender
+	// starts; nil when none is booked. It does not settle the wait — the card
+	// stays — but it says the work is scheduled, so the card stops counting
+	// waiting days and stops claiming Focus priority.
+	MeetingBookedAt *time.Time
 	// ActivityID is the message itself — what a reply would be drafted to.
 	ActivityID ids.UUID
 	// EmailSummary is the canonical email row, present exactly when this wait
@@ -217,7 +226,7 @@ func (s *Service) waitingCustomers(
 	}
 	var rows []WaitingCustomer
 	var cut bool
-	err := s.degradable(ctx, func(ctx context.Context) error {
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
 		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
 		return err
@@ -232,7 +241,7 @@ func (s *Service) waitingCustomers(
 		// nothing in the log leaves an operator with a warning they cannot act
 		// on — which is how this one went a whole verification round without
 		// anybody being able to say what broke.
-		slog.ErrorContext(ctx, "the who-is-waiting read failed", "error", err)
+		slog.Log(ctx, laneFailureLevel(ctx), "the who-is-waiting read failed", "error", err)
 		return waitingRead{}, &crmcontracts.WorklistSourceUnavailable{
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
@@ -304,9 +313,10 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 // answer for the same reason: a reader without the tier must be told they may
 // not ask, rather than handed an empty list they would read as a clear queue.
 //
-// An unknown rule reaches the module, which refuses it. Validating the word
-// here too would be a second list of the rules to keep in step with the one
-// that measures them.
+// An unknown rule reaches the module, which refuses it with the field named.
+//
+// Validating the word here too would be a second list of the rules to keep in
+// step with the one that measures them.
 func (s *Service) HiddenBacklogRows(
 	ctx context.Context, rule string,
 ) (crmcontracts.HiddenBacklogRows, error) {

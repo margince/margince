@@ -53,7 +53,7 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
 		Description:   forecastReadingsCopy.render(),
 		Instead:       forecastReadingsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
@@ -117,6 +117,17 @@ type ForecastReadingsResult struct {
 	// CurrentCall is the standing call for this period, when somebody has made
 	// one. Absent means nobody has, which is a real answer.
 	CurrentCall json.RawMessage `json:"current_call,omitempty"`
+
+	// Snapshots are this period's frozen states, newest first — the ids
+	// forecast_movement takes. Empty is a real answer: nothing was frozen.
+	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
+}
+
+// ForecastSnapshotRefResult is one frozen state a movement can start or end at.
+type ForecastSnapshotRefResult struct {
+	ID      string `json:"id"`
+	TakenAt string `json:"taken_at"`
+	Trigger string `json:"trigger"`
 }
 
 // MovementRequest is one movement's arguments, validated by this surface's own
@@ -145,7 +156,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
 		Description:   forecastMovementCopy.render(),
 		Instead:       forecastMovementCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
@@ -212,14 +223,17 @@ func (t forecastInputChecks) Spec() mcp.ToolSpec {
 		Version:       toolVersionV1,
 		Description:   forecastInputChecksCopy.render(),
 		Instead:       forecastInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastAssuranceResult](),
 	}
 }
 
-func (t forecastInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t forecastInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }
@@ -271,14 +285,17 @@ func (t listInputChecks) Spec() mcp.ToolSpec {
 		Version:       toolVersionV1,
 		Description:   listInputChecksCopy.render(),
 		Instead:       listInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "listInputChecks",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[InputChecksResult](),
 	}
 }
 
-func (t listInputChecks) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t listInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }
@@ -331,14 +348,17 @@ func (t dataCoverage) Spec() mcp.ToolSpec {
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
 		Description:   dataCoverageCopy.render(),
 		Instead:       dataCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DataCoverageResult](),
 	}
 }
 
-func (t dataCoverage) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t dataCoverage) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := decodeNoArguments(in); err != nil {
+		return nil, err
+	}
 	noteDerivedContent(ctx)
 	return t.read(ctx)
 }

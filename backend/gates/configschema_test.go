@@ -5,8 +5,8 @@
 
 package gates
 
-// The margince.yaml schema is editor tooling, and editor tooling that lies is
-// worse than none: an operator trusts the squiggle. These hold it to the loader.
+// The margince.yaml editor schema agrees with the config loader on what a file
+// may contain. These hold it to the loader.
 
 import (
 	"encoding/json"
@@ -121,7 +121,7 @@ func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parse schema: %v", err)
 	}
-	missing := missingFields(reflect.TypeOf(deployconfig.Config{}), doc, "")
+	missing := missingFields(reflect.TypeFor[deployconfig.Config](), doc, "")
 	for _, m := range missing {
 		t.Errorf("margince.yaml accepts %s and the schema does not — an editor would flag a key the server reads", m)
 	}
@@ -133,8 +133,7 @@ func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
 func missingFields(t reflect.Type, node map[string]any, path string) []string {
 	props, _ := node["properties"].(map[string]any)
 	var missing []string
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		name, ok := schemaFieldName(f)
 		if !ok {
 			continue
@@ -152,7 +151,7 @@ func missingFields(t reflect.Type, node map[string]any, path string) []string {
 		if inner.Kind() == reflect.Pointer {
 			inner = inner.Elem()
 		}
-		if inner.Kind() == reflect.Struct && inner != reflect.TypeOf(deployconfig.Secret{}) {
+		if inner.Kind() == reflect.Struct && inner != reflect.TypeFor[deployconfig.Secret]() {
 			missing = append(missing, missingFields(inner, child, here)...)
 		}
 	}
@@ -205,5 +204,42 @@ uploads:
 	}
 	if err := compiledConfigSchema(t).Validate(value); err != nil {
 		t.Errorf("the schema rejects a null the loader accepts:\n%v", err)
+	}
+}
+
+// The security.txt block is where the schema says more than the shape: the
+// loader refuses a block with no contact or no expiry, so the editor does too,
+// and both accept the minimal block RFC 9116 allows.
+func TestTheSchemaAndTheLoaderAgreeOnTheSecurityTxtBlock(t *testing.T) {
+	t.Parallel()
+	schema := compiledConfigSchema(t)
+	for name, tc := range map[string]struct {
+		block string
+		ok    bool
+	}{
+		"minimal":       {`{ contact: ["mailto:a@example.org"], expires: "2030-01-01T00:00:00Z" }`, true},
+		"no contact":    {`{ expires: "2030-01-01T00:00:00Z" }`, false},
+		"empty contact": {`{ contact: [], expires: "2030-01-01T00:00:00Z" }`, false},
+		"no expires":    {`{ contact: ["mailto:a@example.org"] }`, false},
+	} {
+		src := "version: 1\nweb:\n  security_txt: " + tc.block + "\n"
+		if _, err := deployconfig.Parse([]byte(src)); (err == nil) != tc.ok {
+			t.Fatalf("%s: the loader's answer is not %v (%v) — this test's premise is gone", name, tc.ok, err)
+		}
+		var doc any
+		if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
+			t.Fatalf("%s: probe yaml: %v", name, err)
+		}
+		encoded, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatalf("%s: probe will not round-trip: %v", name, err)
+		}
+		var value any
+		if err := json.Unmarshal(encoded, &value); err != nil {
+			t.Fatalf("%s: probe: %v", name, err)
+		}
+		if err := schema.Validate(value); (err == nil) != tc.ok {
+			t.Errorf("%s: the schema's answer differs from the loader's (want ok=%v): %v", name, tc.ok, err)
+		}
 	}
 }

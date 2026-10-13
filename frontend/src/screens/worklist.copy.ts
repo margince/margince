@@ -1,9 +1,8 @@
+import { heldText } from "./worklist.held";
 import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
 
-import { ENTITY, recordRoute } from "../app/entity";
-import { routeHash } from "../app/router";
 import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import { floorFigure } from "../format/figure";
 import {
@@ -15,6 +14,8 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { isMessageKey, translatePlural } from "../i18n";
+import { ENTITY, recordRoute } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -22,6 +23,7 @@ import {
 } from "./contactpage.address";
 import { caseHref } from "./privacy.caselink";
 import { settingsHref } from "./settingsrouting";
+import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
@@ -43,14 +45,15 @@ type T = ReturnType<typeof useT>;
 // reader in English, so what travels is `{kind, value}` and the phrase is the
 // client's to write.
 
-// Which record an item points at, as an address the router understands.
-//
-// Through `recordRoute`, which is the one place the product decides whether a
+// Which record an item or a receipt points at, as a router address. Through
+// `recordRoute`, which is the one place the product decides whether a
 // typed reference off the wire may be linked at all — the approval undo and the
 // notification centre ask it too. A switch written here would be a second
 // spelling of the record types, and the reader it sent to a page that does not
 // exist would have no way of telling which copy was wrong.
-export function subjectHref(item: WorklistItem): string | undefined {
+export function subjectHref(
+  item: Pick<WorklistItem, "subject">,
+): string | undefined {
   const route = recordRoute(item.subject?.type, item.subject?.id);
   return route === undefined ? undefined : routeHash(route);
 }
@@ -152,7 +155,10 @@ function valueText(
         ? null
         : formatMoney(value.minor, value.currency, locale);
     case "days":
-      return value.days == null ? null : formatNumber(value.days, locale);
+    case "count": {
+      const figure = value.days ?? value.count;
+      return figure == null ? null : formatNumber(figure, locale);
+    }
     case "level":
       return value.level == null ? null : formatNumber(value.level, locale);
     default:
@@ -160,22 +166,18 @@ function valueText(
   }
 }
 
-// The reasons that read differently with a figure in them and whose figure is
-// a currency amount, not a count — a money figure never needs the reader's
-// plural rule, which is what sets these apart from DAYS_VALUED_REASONS below.
-// Spelled as a set rather than inferred from whether a value arrived: a value
-// can travel for a reason whose sentence has nowhere to put it, and a key
-// composed from that would not exist.
+// Reasons that read with an amount or a moment, needing no plural rule (counts
+// are DAYS_VALUED_REASONS). A set, since a key composed for a reason whose
+// sentence has nowhere to put an arrived value would not exist.
 const VALUED_REASONS = {
   expected_revenue: true,
   material: true,
   below_material: true,
-  // The lead's own deadline, which is a MOMENT rather than a figure: valueText
-  // renders a date value in the reader's locale and zone, so the sentence says
-  // when without this file composing one.
+  // MOMENTS rather than figures: valueText renders a date in the reader's zone.
   response_due_soon: true,
+  first_asked: true,
+  meeting_booked: true,
 } as const;
-
 type ValuedReason = keyof typeof VALUED_REASONS;
 
 function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
@@ -188,6 +190,7 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
 const DAYS_VALUED_REASONS = {
   waiting_days: true,
   quiet_days: true,
+  earlier_requests: true,
 } as const;
 
 function daysValued(
@@ -298,11 +301,11 @@ export function reasonText(
   if (
     value !== null &&
     daysValued(reason.kind) &&
-    reason.value?.kind === "days" &&
-    reason.value.days != null
+    (reason.value?.days ?? reason.value?.count) != null
   ) {
     const base = `worklist.because.${reason.kind}.value` as const;
-    return translatePlural(locale, base, reason.value.days, { value });
+    const figure = reason.value?.days ?? reason.value?.count ?? 0;
+    return translatePlural(locale, base, figure, { value });
   }
   if (value !== null && valued(reason.kind)) {
     return t(`worklist.because.${reason.kind}.value` as const, { value });
@@ -356,14 +359,6 @@ export function comparisonText(
   });
 }
 
-// What happens if the reader does nothing.
-export function consequenceText(item: WorklistItem, t: T): string | null {
-  if (item.consequence === "none") {
-    return null;
-  }
-  return t(`worklist.consequence.${item.consequence}` as const);
-}
-
 // The deal's own figures, in one line: what it is worth, and when it closes.
 //
 // The concept's sharpest example was a €160,100 deal reduced to "no contact for
@@ -404,7 +399,7 @@ export function dealFactsText(
 }
 
 // Notices retain the original change date even when delivery happens later.
-// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
+// A meeting's start uses the reader's clock; a held meeting and a task, the record's.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
@@ -426,6 +421,8 @@ export function whenText(
 ): string | null {
   if (item.source === "notice" && item.notice_origin)
     return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
+  const held = heldText(item, t, locale, record);
+  if (held) return held;
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }
@@ -441,14 +438,10 @@ export function whenText(
   return t(key, { when: momentText(item.due_at, locale, zone, now) });
 }
 
-// Which sentence the moment goes in — and null for a row whose `due_at` is not
-// a clock the reader is racing.
-//
-// An approval's `due_at` is when the proposal LAPSES, which is a fact about the
-// staged work rather than a deadline the rep owes; the contract says so where
-// the field is declared. Drawing it as "due" would turn "this offer goes stale"
-// into "you are late", which is the row telling the reader something untrue
-// about their own day.
+// Which sentence the moment goes in, or null for a row whose `due_at` is not a
+// clock the reader is racing. An approval's `due_at` is when the proposal
+// LAPSES (the contract says so): drawn as "due", "this offer goes stale" would
+// read as "you are late", which is untrue about the reader's own day.
 function whenKeyFor(
   item: WorklistItem,
 ): "worklist.when.starts" | "worklist.when.due" | null {
@@ -484,9 +477,9 @@ function momentText(
 
 // Where the row's suggested step leads.
 //
-// The RECORD the thread belongs to, not the message: an activity is a timeline
-// entry with no page of its own — `app/entity.ts` says so in as many words —
-// so `#/activities/<id>` would be a control that goes nowhere.
+// The record the thread belongs to, not the message. An activity is a timeline
+// entry with no page of its own (`lib/entity.ts` says so), so
+// `#/activities/<id>` would be a control that goes nowhere.
 //
 // A `draft_reply` row whose subject is a CONTACT opens the composer, through
 // `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything
@@ -660,7 +653,10 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
     // Typed as a plural base, so a batch kind the catalog carries no pair for
     // fails the build; only the incident sentence reads `cause`.
     const base = `worklist.batch.${item.batch.key}` as const;
-    const cause = item.batch.label ?? t("worklist.batch.unnamedCause");
+    const cause =
+      item.batch.label ??
+      connectionName(item, t) ??
+      t("worklist.batch.unnamedCause");
     // A kind from a newer server has no pair here: its own label, else the
     // generic group name, rather than a lookup that throws.
     if (!isMessageKey(`${base}_other`)) {
@@ -681,7 +677,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
   }
-  const title = t(`worklist.untitled.${item.source}` as const);
+  const title = t(
+    connectionTitleKey(item) ?? (`worklist.untitled.${item.source}` as const),
+  );
   return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
 
@@ -707,8 +705,6 @@ export function sourceUnavailableText(
     : t("worklist.source.failed", { source: name });
 }
 
-// One source, in the reader's words.
-//
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
@@ -723,11 +719,14 @@ export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   deal_suggestion: true,
+  tag_suggestion: true,
   task: true,
   weekly_commitment: true,
   brief_item: true,
   conversation_claim: true,
   customer_waiting: true,
+  awaiting_reply: true,
+  meeting_follow_up: true,
   lead_response: true,
   deal_at_risk: true,
   meeting: true,
@@ -743,9 +742,7 @@ export const KNOWN_SOURCES = {
   automation_run: true,
   notice: true,
   introduction_request: true,
-  // An undecided domain: it names no record, and is answered in place.
   domain_question: true,
-  // A group of routine decisions, which names no single record.
   batch: true,
 } as const;
 

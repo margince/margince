@@ -1,0 +1,41 @@
+name: customer_promises_data_by_a_date
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+commitment_band: firm
+fixture:
+  - direction: outbound
+    subject: 'Graz onboarding checklist'
+    sent: '2026-09-07'
+    body: |
+      Hi Ines,
+
+      to price the Graz scope we need your monthly pallet volumes.
+
+      Lars
+  - direction: inbound
+    subject: 'Re: Graz onboarding checklist'
+    sent: '2026-09-08'
+    body: |
+      Hi Lars,
+
+      understood. I will send you the monthly pallet volumes on 2026-09-12.
+
+      Ines
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 2
+  rubric: >
+    The customer makes one dated promise: sending the monthly pallet volumes on
+    2026-09-12. It is a commitment_made cited on message 2, with the due date
+    2026-09-12. A promise by the other side is as much a commitment as ours, and
+    it is stated as plainly. Reporting it on message 1, which only asks for the
+    data, is wrong. Score the confidence as a real judgement and the summary as
+    one plain sentence a colleague could act on.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

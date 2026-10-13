@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The in-memory/spill threshold for the upload parse, deliberately far below
@@ -93,7 +94,15 @@ func (h companyHandlers) uploadCompanyMark(w http.ResponseWriter, r *http.Reques
 	// writers of one company's mark must never write the same object, or the
 	// stored image and the record's provenance end up describing different
 	// pictures.
-	key, err := contacts.PutLogo(r.Context(), h.blob, companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID), png)
+	markKey := companyLogoKey(ids.From[ids.WorkspaceKind](workspace), company.CompanyID)
+	// Declared before the bytes exist, because a failed persist below leaves them
+	// deliberately: deleting an object the row may already name would show a broken
+	// image, so the ledger collects it instead.
+	if err := h.store.RecordLogoIntent(r.Context(), markKey); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	key, err := contacts.PutLogo(r.Context(), h.blob, markKey, png)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -209,11 +218,8 @@ func boundedFilename(name string) string {
 	// Cut by RUNE. A byte cut through a multi-byte character leaves a fragment
 	// that is not text at all, and the name is stored as a string and rendered
 	// back to a contact.
-	runes := []rune(strings.TrimSpace(name))
-	if len(runes) > companyLogoNameMax {
-		return string(runes[:companyLogoNameMax])
-	}
-	return string(runes)
+	// The conversion re-encodes a broken byte as U+FFFD whether or not the cut happens.
+	return textcut.Runes(string([]rune(strings.TrimSpace(name))), companyLogoNameMax)
 }
 
 // collectLogoObject deletes bytes nothing references any more, through the same

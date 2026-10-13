@@ -5,14 +5,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { isOption } from "../app/options";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { isOption } from "../lib/options";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // RECORDING a decision about a domain: the form, what it refuses to send, and
 // the write itself.
@@ -71,13 +71,11 @@ function useSetBlockedDomain() {
     // handler belongs to the committed render, so what it passes cannot be
     // older than the control the operator pressed.
     mutationFn: async (decision: Decision) => {
-      const { data, error } = await api.PUT("/capture/blocked-domains", {
-        body: decision,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.PUT("/capture/blocked-domains", {
+          body: decision,
+        }),
+      );
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["blocked-domains"] });
@@ -105,6 +103,7 @@ export function DecisionDialog({
 }: Readonly<{ initial: Decision; set: SetDecision; onClose: () => void }>) {
   const t = useT();
   const headingId = useId();
+  const formId = useId();
   const [domain, setDomain] = useState(initial.domain);
   const [admission, setAdmission] = useState<Admission>(initial.admission);
   const [reason, setReason] = useState(initial.reason);
@@ -112,11 +111,12 @@ export function DecisionDialog({
   const trimmedReason = reason.trim();
   const ready = trimmedDomain !== "" && trimmedReason !== "";
   return (
-    <Modal open onClose={onClose} labelledBy={headingId}>
+    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("blockedDomains.record")}
       </Heading>
       <form
+        id={formId}
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
@@ -188,19 +188,20 @@ export function DecisionDialog({
             {problemMessageOf(set.error, t)}
           </Callout>
         )}
-        <div className="form-actions">
-          <Button type="button" onClick={onClose}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={set.isPending || !ready}
-          >
-            {t("blockedDomains.save")}
-          </Button>
-        </div>
       </form>
+      <div className="actions">
+        <Button type="button" onClick={onClose}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          form={formId}
+          variant="primary"
+          disabled={set.isPending || !ready}
+        >
+          {t("blockedDomains.save")}
+        </Button>
+      </div>
     </Modal>
   );
 }

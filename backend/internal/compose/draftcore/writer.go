@@ -92,6 +92,9 @@ type Input interface {
 	// GreetingNames are the first and last name a greeting-line repair looks
 	// for. Both, because the register decides which one opens the message.
 	GreetingNames() (first, last string)
+	// CoRecipientNames are the further readers a greeting may also name.
+	// Any at all makes the floor greet the group.
+	CoRecipientNames() []string
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
 	// Threaded says whether this draft continues an existing subject line.
@@ -219,7 +222,12 @@ func writeChecked(
 	if err != nil {
 		return Draft{}, err
 	}
-	return applyVoiceFloor(ctx, lane, surface, in, voice, draft)
+	served, err := applyVoiceFloor(ctx, lane, surface, in, voice, draft)
+	if err != nil {
+		return Draft{}, err
+	}
+	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, groundsOf(in))
+	return served, nil
 }
 
 func writeWithModel(
@@ -382,7 +390,11 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 
 // groundsOf is what the caller's record and intent let a draft claim.
 func groundsOf(in Input) draftcheck.Grounds {
-	return draftcheck.Grounds{Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering())}
+	first, last := in.GreetingNames()
+	return draftcheck.Grounds{
+		Booked: in.Booked(), Met: draftcheck.IntentNamesMeeting(in.Steering()),
+		FirstName: first, LastName: last, CoRecipients: in.CoRecipientNames(),
+	}
 }
 
 // DraftText is the prose a phrasing check judges: the body, and the reason

@@ -107,14 +107,14 @@ function announcementFor(
  * it. Never a filled coloured box — colour on a page means one thing at a time,
  * and a tinted plate shouts over the record it sits in.
  *
- * ONE anatomy, and the heading is part of it rather than a choice: icon,
- * heading over an OPTIONAL body, `actions` in a column at the end which drops
- * below the words on a phone, then the dismiss. A heading alone is a complete
- * callout, and it is the commonest shape — most notices are one sentence, and
- * that sentence is the heading. What the two faces this replaced bought was
- * density; what they cost was a notice whose first words were sometimes a
- * heading and sometimes not, so no two of them scanned the same way down a page
- * and the tone reached the ink of one and not the other.
+ * One anatomy, and the heading is part of it rather than a choice. Icon,
+ * heading over an optional body, `actions` at the end, then the dismiss. In a
+ * narrow card the actions drop below the words. A heading alone is a complete
+ * callout, and the commonest shape: most notices are one sentence, and that
+ * sentence is the heading. The two faces this replaced bought density. They
+ * cost a notice whose first words were sometimes a heading and sometimes not.
+ * So no two of them scanned alike down a page, and the tone reached the ink of
+ * one and not the other.
  *
  * `accent` is the emphasised information notice, in the brand accent: the same
  * role `Panel tone="accent"` plays — a lead, an ask, the one notice on a screen

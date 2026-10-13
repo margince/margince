@@ -1,0 +1,141 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package main
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestTheBenchmarkPageMatchesItsGolden(t *testing.T) {
+	assertGolden(t, "benchmark.golden.md", renderPlain(fixtureRecords(t)))
+}
+
+func TestTheBenchmarkPageAnswersInPlainWords(t *testing.T) {
+	page := renderPlain(fixtureRecords(t))
+	for _, want := range []string{
+		"## How fast does my morning start?",
+		"🟡 About 3.1 seconds",
+		"we are working on it ([#4912](https://github.com/margince/margince/issues/4912))",
+		"🟢 Under a quarter of a second",
+		"⚪ Not measured",
+		"first open after a restart: about 5.2 seconds",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the benchmark page lacks %q", want)
+		}
+	}
+}
+
+func TestTheBenchmarkPageKeepsTechnicalWordsInsideItsDetails(t *testing.T) {
+	page := renderPlain(fixtureRecords(t))
+	start, end := strings.Index(page, "<details>"), strings.Index(page, "</details>")
+	if start < 0 || end < start {
+		t.Fatal("the page has no collapsible How this page is made")
+	}
+	outside := page[:start] + page[end:]
+	for _, word := range []string{" ms", "p95", "PERF-", "—"} {
+		if strings.Contains(outside, word) {
+			t.Errorf("%q appears outside the details block", word)
+		}
+	}
+	if head := strings.Join(strings.SplitN(page, "\n", 6)[:5], "\n"); !strings.Contains(head, "<!-- ") || !strings.Contains(head, "do not edit by hand") {
+		t.Error("the first five lines must carry the do-not-edit HTML comment")
+	}
+}
+
+func TestTheBenchmarkPageWithNoRecordSaysSo(t *testing.T) {
+	page := renderPlain(map[string]record{})
+	if !strings.Contains(page, "Nobody has measured this yet") || strings.Contains(page, "## How fast does my morning start?") {
+		t.Errorf("a checkout with no daily record must say so and show no answers:\n%s", page)
+	}
+}
+
+func TestATimeIsRoundedTheWayItIsSaidAloud(t *testing.T) {
+	for _, c := range []struct {
+		ms   float64
+		want string
+	}{
+		{0, "Under a quarter of a second"},
+		{249, "Under a quarter of a second"},
+		{250, "Under a second"},
+		{999, "Under a second"},
+		{1000, "About 1 second"},
+		{1040, "About 1 second"},
+		{3100, "About 3.1 seconds"},
+		{9949, "About 9.9 seconds"},
+		{12400, "About 12 seconds"},
+	} {
+		if got := spokenTime(c.ms); got != c.want {
+			t.Errorf("spokenTime(%v) = %q, want %q", c.ms, got, c.want)
+		}
+	}
+}
+
+func TestAServerErrorIsRedEvenWithinBudget(t *testing.T) {
+	failed := measurement{Name: "contact_360", Seat: "rep", P95Ms: 40, BudgetMs: 300, Samples: 30, Verdict: storedWithin, Status5xx: 2}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{failed}}})
+	if !strings.Contains(page, "| A contact's whole story | 🔴 Under a quarter of a second | ⚪ Not measured | Too slow: some tries failed. |") {
+		t.Errorf("a 5xx must turn the moment red:\n%s", page)
+	}
+	if got := verdict(failed); got != "**FAILED**: 2 server errors" {
+		t.Errorf("budgets page verdict %q, want the failure named", got)
+	}
+}
+
+func TestADevelopmentScaleRunIsNeverGreen(t *testing.T) {
+	trial := measurement{Name: "lists", Seat: "rep", P95Ms: 40, BudgetMs: 150, Samples: 30, Verdict: storedWithin, Caveat: "development scale 0.05"}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{trial}, Corpus: &corpus{Scale: 0.05}}})
+	if strings.Contains(page, "| A list of 50 records | 🟢") || !strings.Contains(page, "This run is a trial.") {
+		t.Errorf("a development-scale pass must not read as fast:\n%s", page)
+	}
+}
+
+func TestANoteNeverMakesARunATrial(t *testing.T) {
+	noted := measurement{Name: "lists", Flow: "lists", Seat: "rep", P95Ms: 40, BudgetMs: 150, Samples: 30, Verdict: storedWithin, Note: "empty on the seeded corpus"}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{noted}, Corpus: &corpus{Scale: 1}}})
+	if strings.Contains(page, "This run is a trial.") || !strings.Contains(page, "| A list of 50 records | 🟢 Under a quarter of a second |") {
+		t.Errorf("a note informs and never doubts a verdict:\n%s", page)
+	}
+	if got := verdict(noted); got != storedWithin {
+		t.Errorf("budgets page verdict %q, want %q", got, storedWithin)
+	}
+}
+
+func TestTheTestCompanyIsDescribedFromTheRecord(t *testing.T) {
+	page := renderPlain(fixtureRecords(t))
+	want := "The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000 leads,\n500 projects and 500,000 activities, owned by 12 reps under 2 managers."
+	if !strings.Contains(page, want) {
+		t.Errorf("the details must state the record's corpus; want\n%s", want)
+	}
+	if strings.Contains(renderPlain(map[string]record{}), "contacts at") {
+		t.Error("with no record the page must not state a corpus size")
+	}
+}
+
+func TestThousandsAreGroupedInThrees(t *testing.T) {
+	for n, want := range map[int]string{0: "0", 999: "999", 1000: "1,000", 250000: "250,000", 1234567: "1,234,567"} {
+		if got := thousands(n); got != want {
+			t.Errorf("thousands(%d) = %q, want %q", n, got, want)
+		}
+	}
+}
+
+func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
+	burst := measurement{
+		Name: "morning_load_cheap_route", Flow: "morning_load", Seat: "team", P95Ms: 700, BudgetMs: 150, Samples: 40,
+		Verdict: storedOverKnown, KnownIssue: 7068, Status5xx: 1, Allowed5xx: true,
+	}
+	if got := verdict(burst); got != "over budget (#7068)" {
+		t.Errorf("budgets page verdict %q, want the listed issue, not a failure", got)
+	}
+	if got := dailyNotes(burst); !strings.Contains(got, "1 server errors") {
+		t.Errorf("notes %q; the server errors must still be counted", got)
+	}
+	unallowed := burst
+	unallowed.Allowed5xx = false
+	if got := verdict(unallowed); got != "**FAILED**: 1 server errors" {
+		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
+	}
+}

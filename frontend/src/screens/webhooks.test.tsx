@@ -11,9 +11,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { subscribableEventTypeValues } from "../api/public-events";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
 // The Settings → Integrations subscription list: renders from the typed
@@ -558,11 +559,7 @@ describe("WebhooksCard — pause/resume + re-target (EditAction)", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
-      expect(
-        screen.getByText(
-          "This record changed since it was opened. Reload and retry.",
-        ),
-      ).toBeTruthy(),
+      expect(screen.getByText(en["common.versionSkew"])).toBeTruthy(),
     );
     expect(
       screen.queryByText("if-match version 1 does not match current version 2"),
@@ -602,7 +599,11 @@ describe("WebhooksCard — archive", () => {
 
     await openRowActions(user);
     await user.click(await screen.findByTestId("archive-record"));
-    await user.click(screen.getByTestId("archive-confirm"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
 
     await waitFor(() => expect(deleted).toBe(true));
   });

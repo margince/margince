@@ -159,11 +159,27 @@ func deleteConsentCapabilities(
 	// Keyed only on contact_id this delete walks straight past those rows, and
 	// an erased subject's address survives in plaintext in a table nothing will
 	// ever clean.
+	// Merged-away records too, for the reason the override delete below gives.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM communication_suppression
-		 WHERE contact_id = $1 OR lower(address) = ANY($2)`,
+		 WHERE contact_id = $1
+		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		    OR lower(address) = ANY($2)`,
 		contactID, lowerAll(emails)); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
+	}
+	// An override is a rep vouching FOR this contact and carries no address, so
+	// nothing machine-written names it without a contact_id. The contact-keyed
+	// delete reaches the subject's own rows and those of the records merged into
+	// them, which a merge copied forward and left in place. Lead-held rows (the
+	// table's CHECK keeps contact_id NULL on those) are anonymizeLeadTwins' CTE
+	// in erasure_leadtwins.go, not this statement.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM communication_override
+		 WHERE contact_id = $1
+		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`,
+		contactID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's send overrides: %w", err)
 	}
 	return nil
 }

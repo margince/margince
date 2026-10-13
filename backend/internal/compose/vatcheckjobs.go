@@ -190,7 +190,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	// contact editing the field repeatedly must not turn one job into an
 	// unbounded run of consultations. Past the bound the next write's own
 	// enqueue picks it up, which is no longer deduplicated once this job ends.
-	for round := 0; round < vatCheckRoundsPerJob; round++ {
+	for round := range vatCheckRoundsPerJob {
 		number, ok, err := store.VatNumberForCheck(wsCtx, companyID)
 		if err != nil {
 			return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
@@ -245,7 +245,11 @@ func (w *vatCheckWorker) consult(
 		return nil
 	}
 
-	result, err := w.checker.Check(wsCtx, number)
+	requester, err := store.RequesterVatNumber(wsCtx)
+	if err != nil {
+		return jobs.FaultContext(wsCtx, err)
+	}
+	result, err := w.checker.Check(wsCtx, number, requester)
 	if errors.Is(err, vatcheck.ErrMalformedNumber) {
 		// The stated value is not a VAT ID, so no request was made — and the
 		// answer a reader needs is INVALID.

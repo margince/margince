@@ -12,7 +12,6 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { watchStartedAiRun } from "../app/ai-activity";
-import { navigate } from "../app/router";
 import { Badge, Button, Skeleton } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -21,7 +20,8 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { factsKey } from "./companyfactspanel";
 import "./companydeepread.css";
 import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
@@ -200,14 +200,11 @@ function SiteReadPanel({
   const reportQuery = useQuery({
     queryKey: ["site-read", companyId, readId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/companies/{id}/site-reads/{readId}",
-        { params: { path: { id: companyId, readId } } },
+      return unwrap(
+        await api.GET("/companies/{id}/site-reads/{readId}", {
+          params: { path: { id: companyId, readId } },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     refetchInterval: (query) => {
       const status = query.state.data?.status;

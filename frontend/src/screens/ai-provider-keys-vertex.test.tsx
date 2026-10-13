@@ -11,9 +11,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { serviceAccountProblem } from "../design-system/serviceaccountkeyfield";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
 // The one vendor keyed by a FILE: Gemini on Vertex takes a Google
@@ -56,6 +56,7 @@ function backendFor(configured: boolean) {
               provider: "gemini_vertex",
               configured,
               env_var: "GEMINI_VERTEX_SA_JSON",
+              usable: configured,
               optional: false,
               credential_kind: "service_account",
             },
@@ -88,7 +89,9 @@ const render = (ui: ReactNode) => {
 // The credential lives on the vendor's sheet, one click past the list.
 async function openSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Manage gemini_vertex" }),
+    within(
+      await screen.findByTestId("ai-provider-row-gemini_vertex"),
+    ).getByRole("button", { name: /^Edit/ }),
   );
   return screen.findByTestId("ai-provider-key-gemini_vertex");
 }
@@ -120,6 +123,9 @@ describe("a service-account provider key", () => {
     expect(box.tagName).toBe("TEXTAREA");
     expect(box).toHaveValue("");
     expect(within(row).queryByPlaceholderText(/paste the api key/i)).toBeNull();
+    expect(
+      within(row).getByText(/needs the Vertex AI User role/),
+    ).toBeInTheDocument();
   });
 
   it("reads a picked key file into the box and sends it as service_account_json", async () => {

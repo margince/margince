@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import {
+  type AccountVendor,
+  VENDOR_SERVICES,
+} from "../format/connectorprovider";
 import { DEFAULT_IMPORT_WINDOW } from "./backfill-run";
 import type { ConnectAccountInput, ImportWindow } from "./connect-account";
-import { type AccountVendor, VENDOR_SERVICES } from "./connectorproviders";
 
 // What the connect dialog has been told so far, and the one request it turns
 // into. Kept apart from the drawing so the request has a single spelling.

@@ -7,6 +7,7 @@ import { Badge, Button, Disclosure, Modal } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
+import { QueryStates } from "../design-system/querystates";
 import {
   formatDateTime,
   formatDecimal,
@@ -14,19 +15,24 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
-import { attemptReasonLabel, tierLabel } from "./ai-decision-labels";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
+import {
+  attemptReasonLabel,
+  callCodeName,
+  callCodeTone,
+  tierLabel,
+} from "./ai-decision-labels";
+import { providerName } from "./ai-provider-names";
 import {
   type AiCallSummary,
   costLabel,
-  identitySourceLabel,
   ladderAttempts,
   OUTCOME_TONE,
   outcomeLabel,
-  sentinelLabel,
-  taskLabel,
+  taskName,
 } from "./aicalls-vocab";
-import { QueryStates, throwProblem } from "./common";
 
 export type AiCallRecord = components["schemas"]["AiCall"];
 type AiCallAttempt = components["schemas"]["AiCallAttempt"];
@@ -38,24 +44,34 @@ function payloadText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
 }
 
-// One attempt's binding as `provider/model`. A row with no provider still names
-// its model rather than a stray slash.
-function attemptBinding(attempt: AiCallAttempt): string {
-  return attempt.provider
-    ? `${attempt.provider}/${attempt.model_id}`
-    : (attempt.model_id ?? "");
+// One attempt's model and its vendor's name, the pair the call row shows.
+function attemptBinding(attempt: AiCallAttempt, t: Translator): string {
+  return [
+    attempt.model_id,
+    attempt.provider && providerName(attempt.provider, t),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+const IDENTITY_SOURCE: Readonly<Record<string, MessageKey>> = {
+  response: "aicalls.detail.source.response",
+  echo: "aicalls.detail.source.echo",
+  configured: "aicalls.detail.source.configured",
+};
+
+// How far to trust the served model named above. A source this screen does
+// not know yet is shown as sent.
+function identitySource(source: string, t: Translator): string {
+  const key = IDENTITY_SOURCE[source];
+  return key ? t(key) : t("aicalls.detail.source", { source });
 }
 
 function useCallDetail(id: string) {
   return useQuery({
     queryKey: ["ai-call", id],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/ai/calls/{id}", {
-        params: { path: { id } },
-      });
-      if (error) throwProblem(error);
-      return data;
-    },
+    queryFn: async () =>
+      unwrap(await api.GET("/ai/calls/{id}", { params: { path: { id } } })),
   });
 }
 
@@ -89,7 +105,11 @@ function summaryFacts(
       term: t("aicalls.fact.configured"),
       value: call.model_id || t("aicalls.fact.none"),
     },
-    { key: "provider", term: t("aicalls.fact.provider"), value: call.provider },
+    {
+      key: "provider",
+      term: t("aicalls.fact.provider"),
+      value: providerName(call.provider, t),
+    },
     !!call.tier && {
       key: "tier",
       term: t("aicalls.fact.tier"),
@@ -98,7 +118,7 @@ function summaryFacts(
     !!call.error_sentinel && {
       key: "error",
       term: t("aicalls.fact.error"),
-      value: sentinelLabel(call.error_sentinel, t),
+      value: callCodeName(call.error_sentinel, t),
     },
     {
       key: "tokens",
@@ -139,7 +159,7 @@ function summaryFacts(
     !!detail && {
       key: "source",
       term: t("aicalls.fact.source"),
-      value: identitySourceLabel(detail.served_identity_source, t),
+      value: identitySource(detail.served_identity_source, t),
     },
     !!detail && {
       key: "context",
@@ -183,7 +203,10 @@ function AttemptLine({ attempt }: Readonly<{ attempt: AiCallAttempt }>) {
     attempt.decision_confidence !== undefined;
   const parts = [
     attempt.tier ? tierLabel(attempt.tier, t) : "",
-    attempt.model_id ? attemptBinding(attempt) : "",
+    attempt.model_id ? attemptBinding(attempt, t) : "",
+    attempt.served_provider
+      ? t("aicalls.detail.servedBy", { host: attempt.served_provider })
+      : "",
     attempt.attempt_reason ? attemptReasonLabel(attempt.attempt_reason, t) : "",
     t("aicalls.ms", { value: formatNumber(attempt.latency_ms, locale) }),
     answered
@@ -205,7 +228,9 @@ function AttemptLine({ attempt }: Readonly<{ attempt: AiCallAttempt }>) {
       )}
       <span className="aicalls-attempt-text">{parts.join(" · ")}</span>
       {attempt.error_sentinel && (
-        <Badge tone="danger">{sentinelLabel(attempt.error_sentinel, t)}</Badge>
+        <Badge tone={callCodeTone(attempt.error_sentinel)}>
+          {callCodeName(attempt.error_sentinel, t)}
+        </Badge>
       )}
     </li>
   );
@@ -322,15 +347,9 @@ export function CallDrawer({
   const outcome = call.outcome;
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      placement="right"
-      size="wide"
-    >
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
       <Heading size="large" id={titleId} className="modal-title">
-        {taskLabel(call.task)}
+        {taskName(call)}
       </Heading>
       <div className="aicalls-drawer-head">
         <Badge tone={OUTCOME_TONE[outcome]}>{outcomeLabel(outcome, t)}</Badge>
@@ -378,6 +397,16 @@ export function CallDrawer({
                 ))}
               </ol>
             </Section>
+            {/* The request settings the attempts were configured with, fixed
+                per tier rather than per call. */}
+            {query.data.config?.provider_params &&
+              Object.keys(query.data.config.provider_params).length > 0 && (
+                <Section title={t("aicalls.detail.settings")}>
+                  <pre className="code-block aicalls-code">
+                    {payloadText(query.data.config.provider_params)}
+                  </pre>
+                </Section>
+              )}
             <Section title={t("aicalls.detail.payload")}>
               <Payload
                 key={query.data.id}

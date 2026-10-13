@@ -73,7 +73,7 @@ func TestMergingIntoARetiredPartnerLeavesTheSurvivorUntyped(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.store.MergeCompany(ctx,
-		ids.From[ids.CompanyKind](ids.UUID(source.Id)), survivorID); err != nil {
+		ids.From[ids.CompanyKind](ids.UUID(source.Id)), survivorID, nil); err != nil {
 		t.Fatalf("merging into the retired partner: %v", err)
 	}
 
@@ -118,7 +118,7 @@ func TestMergingALivePartnerMakesTheSurvivorOne(t *testing.T) {
 	}
 
 	survivorID := ids.From[ids.CompanyKind](ids.UUID(survivor.Id))
-	if _, err := e.store.MergeCompany(ctx, sourceID, survivorID); err != nil {
+	if _, err := e.store.MergeCompany(ctx, sourceID, survivorID, nil); err != nil {
 		t.Fatalf("merging the live partner away: %v", err)
 	}
 

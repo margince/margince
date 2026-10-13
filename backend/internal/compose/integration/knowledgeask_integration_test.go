@@ -45,7 +45,7 @@ type steeredEmbedder struct {
 
 func newSteeredEmbedder() *steeredEmbedder {
 	return &steeredEmbedder{
-		identity: "fake/steer@4",
+		identity: "gemini/gemini-embedding-001@4",
 		dims:     4,
 		vectors:  map[string][]float32{},
 		fallback: []float32{1, 0, 0, 0},
@@ -191,7 +191,7 @@ func TestNoEmbedLaneBoundIsRetrievalUnavailable(t *testing.T) {
 // check and re-open exactly the hole the floor exists to close.
 func TestAQuestionBelowTheFloorIsNotCoveredWithoutAModelCall(t *testing.T) {
 	ae := newAskEnv(t)
-	// Orthogonal to the stored passage: cosine 0, far below the 0.35 default.
+	// Orthogonal to the stored passage: cosine 0, far below the binding's measured floor.
 	ae.embedder.vectors["what is the capital of France"] = []float32{0, 1, 0, 0}
 	callsBefore := ae.embedder.calls
 
@@ -209,9 +209,9 @@ func TestAQuestionBelowTheFloorIsNotCoveredWithoutAModelCall(t *testing.T) {
 
 func TestAQuestionJustAboveTheFloorRetrievesPassages(t *testing.T) {
 	ae := newAskEnv(t)
-	// cos = 0.6 / (1 * sqrt(0.6² + 0.8²)) = 0.6, comfortably over the 0.35
-	// default and chosen rather than hoped for.
-	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
+	// cos = 0.8 / (1 * sqrt(0.8² + 0.6²)) = 0.8, comfortably over the binding's
+	// measured floor and chosen rather than hoped for.
+	ae.embedder.vectors["how is a message filed"] = []float32{0.8, 0.6, 0, 0}
 
 	state, passages := ae.ask(t, "how is a message filed")
 	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
@@ -226,16 +226,48 @@ func TestAQuestionJustAboveTheFloorRetrievesPassages(t *testing.T) {
 	if p.DocumentName != "operating.md" || p.DocumentID.String() != ae.doc.String() {
 		t.Fatalf("the passage cites %s / %s, want operating.md / %s", p.DocumentName, p.DocumentID, ae.doc)
 	}
-	if p.Similarity < 0.35 {
+	if p.Similarity < knowledge.BindingFloor(ae.embedder.identity) {
 		t.Fatalf("similarity %v is below the floor it was supposed to clear", p.Similarity)
 	}
 }
 
 // The floor is the CORPUS's, not a constant: raising it turns the same question
 // into a refusal, which is what the setting is for.
+// The override is the workspace's number and is taken as given: below the
+// binding's measured floor it lets through what the binding would refuse.
+func TestACorpusOverrideBelowTheBindingFloorLetsThroughWhatTheBindingRefuses(t *testing.T) {
+	ae := newAskEnv(t)
+	// cos 0.6: under gemini's measured 0.65.
+	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
+	state, _ := ae.ask(t, "how is a message filed")
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered)
+
+	floor := 0.5
+	if _, err := ae.store.EditCorpus(ae.ctx, ae.corpus, knowledge.UpdateCorpus{MinSimilarity: &floor}); err != nil {
+		t.Fatalf("lower the floor: %v", err)
+	}
+	state, passages := ae.ask(t, "how is a message filed")
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
+	if len(passages) != 1 {
+		t.Fatalf("an override of %v retrieved %d passages, want 1", floor, len(passages))
+	}
+}
+
+// A binding whose bands overlap has no floor, so nothing is refused on cosine.
+func TestABindingWithNoSeparatingFloorRefusesNothingOnCosine(t *testing.T) {
+	ae := newAskEnv(t)
+	ae.embedder.identity = "openai_compatible/mistralai/mistral-embed-2312@4"
+	if _, err := ae.store.EmbedDocument(ae.ctx, ae.doc, ae.embedder); err != nil {
+		t.Fatalf("re-embed under the new binding: %v", err)
+	}
+	ae.embedder.vectors["what is the capital of France"] = []float32{0, 1, 0, 0}
+	state, _ := ae.ask(t, "what is the capital of France")
+	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
+}
+
 func TestRaisingTheFloorTurnsTheSameQuestionIntoARefusal(t *testing.T) {
 	ae := newAskEnv(t)
-	ae.embedder.vectors["how is a message filed"] = []float32{0.6, 0.8, 0, 0}
+	ae.embedder.vectors["how is a message filed"] = []float32{0.8, 0.6, 0, 0}
 	state, _ := ae.ask(t, "how is a message filed")
 	wantOutcome(t, state, crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered)
 

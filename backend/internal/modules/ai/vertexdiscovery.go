@@ -245,7 +245,7 @@ func (s *RoutingStore) probeAvailability(ctx context.Context, bound ProviderConf
 	lane := probeLane(q.Tier)
 	switch err := s.probeBinding(ctx, bound, q.Model, lane); {
 	case err == nil:
-		out.Models = []AvailableModel{{Info: model.Info{ID: q.Model, Lane: lane}}}
+		out.Models = []AvailableModel{{ID: q.Model, Lane: lane}}
 	case errors.Is(err, errModelNotFound):
 		out.Unavailable = AvailabilityNoEndpoint
 	case isKeyFault(err):
@@ -306,6 +306,9 @@ type labelledProbe struct {
 // vertexProbesOf lists the distinct questions a config's gemini_vertex
 // bindings raise, each under the first lane that raised it.
 func vertexProbesOf(cfg RoutingConfig) []labelledProbe {
+	// Read resolved, so a stored document, whose lanes carry no location of
+	// their own, asks the same questions as the binding it serves.
+	cfg = cfg.canonical().resolveProviders()
 	var out []labelledProbe
 	seen := map[vertexProbe]bool{}
 	add := func(label string, binding ProviderConfig, id, lane string) {
@@ -315,7 +318,7 @@ func vertexProbesOf(cfg RoutingConfig) []labelledProbe {
 			out = append(out, labelledProbe{vertexProbe: probe, label: label})
 		}
 	}
-	for _, tier := range sortedTiers(cfg.Tiers) {
+	for _, tier := range cfg.sortedTiers() {
 		binding := cfg.Tiers[tier]
 		add("tier "+string(tier), binding, binding.Model, model.LaneChat)
 	}

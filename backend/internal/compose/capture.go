@@ -104,6 +104,12 @@ type CaptureConfig struct {
 	// which is both the shipped behaviour and what the zero-value
 	// constructions below mean.
 	MaxBackfillMonths int
+	// SkipReservedDomainProposals is capture.skip_reserved_domain_proposals,
+	// already resolved: the review sweep raises no contact proposal for a
+	// sender on an RFC 2606 reserved name. ON for a booted role; the zero value
+	// is off, so every test that builds this struct by hand keeps proposing the
+	// .test and .example senders it uses as ordinary customers.
+	SkipReservedDomainProposals bool
 	// Logger carries the process logger to the post-commit steps the Sink
 	// drives, where a fault is reported rather than returned (nothing may fail
 	// a capture). Nil falls back to the default logger — the site_lead accept
@@ -172,6 +178,8 @@ func CaptureConfigFromDeploy(c deployconfig.Capture, log *slog.Logger) CaptureCo
 		TracePayloads:      c.TracesPayloads(),
 		MaxBackfillMonths:  c.BackfillCeiling(),
 		Logger:             log,
+
+		SkipReservedDomainProposals: c.SkipsReservedDomainProposals(),
 	}
 }
 
@@ -345,6 +353,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// and a row planted under a guessed Message-ID would make the real
 		// message unreachable.
 		WithAssertedTakeOver(activities.TakeOverAssertedActivityTx).
+		WithOwnSentMailClaim(activities.ClaimOwnSentMailTx).
 		// The identity both ingestion doors agree on. Without it each door
 		// files under its own natural key, those keys never meet, and a
 		// customer who imports their history and THEN connects the mailbox

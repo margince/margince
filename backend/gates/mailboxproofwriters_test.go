@@ -5,8 +5,8 @@
 
 package gates
 
-// A MailboxProof is set in exactly one place, and that place spends the token
-// that earns it.
+// A MailboxProof is set in one place, and that place spends the token that
+// earns it.
 //
 // The proof lets a marketing grant complete without a confirmation mail. What
 // makes that defensible is not the constant — it is that the caller redeemed a

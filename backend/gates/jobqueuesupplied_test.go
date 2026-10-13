@@ -5,7 +5,7 @@
 
 package gates
 
-// A job's queue is SUPPLIED from api/jobs.yaml, never written at the insert.
+// A job's queue is supplied from api/jobs.yaml, never written at the insert.
 //
 // The declaration is what the fleet surfaces publish and what jobqueues.go
 // sizes a worker pool against. For an insert built by hand it was also, until

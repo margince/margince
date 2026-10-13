@@ -34,9 +34,10 @@ export type Crumb = {
  * page. Every decision that one made by position is a rule here: the LAST item
  * is the current page and is never a link even when it carries an `href`,
  * because a link to the page you are already on is a control that does nothing;
- * and it is the only item that gives way under pressure, because ancestors are
- * short nav labels of the product's own choosing while the last one is user
- * data of unbounded length.
+ * and it is the item that gives way under pressure, because it is user data of
+ * unbounded length while the first stop is a nav label of the product's own
+ * choosing. A stop between them may be user data too, so it is capped, and it
+ * folds away at phone width (breadcrumb.css).
  *
  * Separators are `<span aria-hidden>` INSIDE the list item they lead — never
  * list items of their own, which would make a three-stop trail announce as five

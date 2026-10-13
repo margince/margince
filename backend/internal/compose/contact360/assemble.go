@@ -255,7 +255,7 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		// page is not showing, and a section withheld for want of a grant
 		// contributes no moments rather than leaking through one.
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedMoments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
-			return s.momentsSection(ctx, tx, contactID, now, out)
+			return s.momentsSection(ctx, tx, contactID, now, opts, out)
 		}},
 	}
 }

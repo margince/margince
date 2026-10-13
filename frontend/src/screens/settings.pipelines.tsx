@@ -14,21 +14,23 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Disclosure } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { SortableList } from "../design-system/sortablelist";
 import { StageStrip } from "../design-system/stagestrip";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useUrlParams } from "../lib/urlstate";
 import { CreateAction, type CreateField } from "./create";
 import { EditAction } from "./edit";
 import { SETTINGS_PIPELINES, usePipelineOrder } from "./settings.pipelineorder";
 import { MakeDefault, PipelineRetirement } from "./settings.pipelineverbs";
-import { ladderOf, StageLadderEditor, str } from "./settings.stages";
+import { StageLadderEditor, StageLadderIntro } from "./settings.stages";
+import { ladderOf, str } from "./settings.stageverbs";
 import "./settings.pipelines.css";
 
 type Pipeline = components["schemas"]["Pipeline"];
@@ -136,13 +138,14 @@ function CatalogList({
   const order = usePipelineOrder();
   const inUse = pipelines.filter((each) => !each.archived_at);
   const retired = pipelines.filter((each) => each.archived_at);
+  const orders = canEdit && inUse.length > 1;
   const place = (position: number, count: number) => ({
     position: formatNumber(position, locale),
     total: formatNumber(count, locale),
   });
   return (
     <>
-      {canEdit && inUse.length > 1 && (
+      {orders && (
         <p id={hintId} className="t-caption stage-hint">
           {t("pipeline.orderHint")}
         </p>
@@ -151,10 +154,10 @@ function CatalogList({
         label={t("pipeline.inUse")}
         items={inUse.map((pipeline) => ({ key: pipeline.id, pipeline }))}
         selectedKey={openId}
-        hintId={canEdit ? hintId : undefined}
+        hintId={orders ? hintId : undefined}
         busy={order.pending}
         onReorder={
-          canEdit ? (keys) => order.reorder(pipelines, keys) : undefined
+          orders ? (keys) => order.reorder(pipelines, keys) : undefined
         }
         labels={{
           handle: (item, position, count) =>
@@ -231,31 +234,29 @@ function PipelineCatalog({
             // A new pipeline lands at the end of the catalog and already holds
             // the two ways out, so its ladder is open stages plus the close.
             create={async (values) => {
-              const { data, error } = await api.POST("/pipelines", {
-                body: {
-                  name: str(values.name),
-                  is_default: values.is_default === "true",
-                  position: lastPosition + 1,
-                  stages: [
-                    {
-                      name: t("stage.semWon"),
-                      semantic: "won",
-                      position: 1,
-                      win_probability: 100,
-                    },
-                    {
-                      name: t("stage.semLost"),
-                      semantic: "lost",
-                      position: 2,
-                      win_probability: 0,
-                    },
-                  ],
-                },
-              });
-              if (error) {
-                throwProblem(error);
-              }
-              return data;
+              return unwrap(
+                await api.POST("/pipelines", {
+                  body: {
+                    name: str(values.name),
+                    is_default: values.is_default === "true",
+                    position: lastPosition + 1,
+                    stages: [
+                      {
+                        name: t("stage.semWon"),
+                        semantic: "won",
+                        position: 1,
+                        win_probability: 100,
+                      },
+                      {
+                        name: t("stage.semLost"),
+                        semantic: "lost",
+                        position: 2,
+                        win_probability: 0,
+                      },
+                    ],
+                  },
+                }),
+              );
             }}
             fields={createFields(t)}
           />
@@ -297,6 +298,7 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
   const canRetire = useCanWrite("pipeline", "delete");
   const retired = Boolean(pipeline.archived_at);
   const retireBlockedId = useId();
+  const hintId = useId();
   return (
     <Panel
       title={pipeline.name}
@@ -320,58 +322,58 @@ function PipelineDetail({ pipeline }: Readonly<{ pipeline: Pipeline }>) {
               record={{ id: pipeline.id, name: pipeline.name }}
               fields={RENAME_FIELDS}
               update={async (values) => {
-                const { data, error } = await api.PATCH("/pipelines/{id}", {
-                  params: { path: { id: pipeline.id } },
-                  body: { name: str(values.name) },
-                });
-                if (error) {
-                  throwProblem(error);
-                }
-                return data;
+                return unwrap(
+                  await api.PATCH("/pipelines/{id}", {
+                    params: { path: { id: pipeline.id } },
+                    body: { name: str(values.name) },
+                  }),
+                );
               }}
             />
           )}
         </span>
       }
     >
-      <PanelBody className="pipeline-detail">
-        {retired && <PanelIntro>{t("pipeline.retiredNote")}</PanelIntro>}
-        <StageLadderEditor pipeline={pipeline} canEdit={canEdit} />
-        {(retired ? canEdit : canRetire) && (
-          <SettingList>
-            <SettingRow
-              label={retired ? t("pipeline.restore") : t("pipeline.retire")}
-              description={
-                retired ? undefined : (
-                  <>
-                    {t("pipeline.retireNote")}
-                    {/* Why the verb is refused sits in the description, which
-                        wraps; the control column is sized to its content. */}
-                    {pipeline.is_default && (
-                      <>
-                        {" "}
-                        <span id={retireBlockedId}>
-                          {t("pipeline.retireBlocked")}
-                        </span>
-                      </>
-                    )}
-                  </>
-                )
-              }
-              control={
-                <span className="pipeline-standing">
-                  <PipelineRetirement
-                    pipeline={pipeline}
-                    canRetire={canRetire}
-                    canRestore={canEdit}
-                    blockedReasonId={retireBlockedId}
-                  />
-                </span>
-              }
-            />
-          </SettingList>
-        )}
-      </PanelBody>
+      <StageLadderIntro pipeline={pipeline} canEdit={canEdit} hintId={hintId} />
+      <StageLadderEditor
+        pipeline={pipeline}
+        canEdit={canEdit}
+        hintId={hintId}
+      />
+      {(retired ? canEdit : canRetire) && (
+        <SettingList bleed="settings">
+          <SettingRow
+            label={retired ? t("pipeline.restore") : t("pipeline.retire")}
+            description={
+              retired ? undefined : (
+                <>
+                  {t("pipeline.retireNote")}
+                  {/* Why the verb is refused sits in the description, which
+                      wraps; the control column is sized to its content. */}
+                  {pipeline.is_default && (
+                    <>
+                      {" "}
+                      <span id={retireBlockedId}>
+                        {t("pipeline.retireBlocked")}
+                      </span>
+                    </>
+                  )}
+                </>
+              )
+            }
+            control={
+              <span className="pipeline-standing">
+                <PipelineRetirement
+                  pipeline={pipeline}
+                  canRetire={canRetire}
+                  canRestore={canEdit}
+                  blockedReasonId={retireBlockedId}
+                />
+              </span>
+            }
+          />
+        </SettingList>
+      )}
     </Panel>
   );
 }
@@ -385,12 +387,11 @@ export function PipelinesCard() {
   const query = useQuery({
     queryKey: SETTINGS_PIPELINES,
     queryFn: async () => {
-      const { data, error } = await api.GET("/pipelines", {
-        params: { query: { include_archived: true } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: { include_archived: true } },
+        }),
+      );
       return data.data;
     },
   });

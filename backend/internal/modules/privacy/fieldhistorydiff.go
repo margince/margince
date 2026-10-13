@@ -105,9 +105,12 @@ type auditDiffRow struct {
 	// the member is gone — no name is honest where an invented one would not be.
 	actorName      *string
 	onBehalfOfName *string
-	occurredAt     time.Time
-	before         map[string]any
-	after          map[string]any
+	// agentClientName is the tool a delegated change was typed through, read
+	// from the row's own passport so a rotated token still names it.
+	agentClientName *string
+	occurredAt      time.Time
+	before          map[string]any
+	after           map[string]any
 }
 
 // diffAuditRowFields projects one audit row into per-field entries:
@@ -183,6 +186,7 @@ func makeFieldHistoryEntry(row auditDiffRow, field string, oldValue, newValue *s
 		ActorID:         row.actorID,
 		ActorName:       row.actorName,
 		OnBehalfOfName:  row.onBehalfOfName,
+		AgentClient:     row.agentClientName,
 		PassportID:      passportID,
 		Evidence:        evidence,
 		UndidAuditLogID: row.undidAuditLogID,

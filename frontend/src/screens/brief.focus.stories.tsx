@@ -69,6 +69,10 @@ function Chosen({
   start,
 }: Readonly<{ rows: WorklistItem[]; start: number }>) {
   const [at, setAt] = useState(start);
+  const lead = rows[at];
+  if (lead === undefined) {
+    return null;
+  }
   return (
     <div id="brief-today">
       {/* The panel's own band, because the card is judged against it: INDIGO,
@@ -83,7 +87,7 @@ function Chosen({
         <Triage
           rows={rows}
           at={at}
-          lead={rows[at]}
+          lead={lead}
           onChoose={(item) => setAt(rows.indexOf(item))}
           onOpenEmail={() => undefined}
           onContext={() => undefined}
@@ -108,6 +112,24 @@ export const Pressed: Story = {
     );
     await expect(canvas.getByText("4 of 6")).toBeTruthy();
   },
+};
+
+/** A row about an account in hand: the account linked, and its own pair. */
+export const AccountInHand: Story = {
+  render: panel([
+    {
+      ...taskRow("renewal", "Send the renewal terms"),
+      subject: { type: "company", id: "company-nordwind", label: "Nordwind" },
+      company: {
+        id: "company-nordwind",
+        touch: {
+          last_inbound_at: "2026-03-12T10:05:00Z",
+          last_outbound_at: null,
+        },
+      },
+    },
+    taskRow("one", "Call the buyer"),
+  ]),
 };
 
 /** The last row of a short day: one behind it, so the stack is one edge deep. */

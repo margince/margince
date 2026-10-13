@@ -34,8 +34,10 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -66,12 +68,7 @@ func judgesSQLLiterals(file *ast.File) bool {
 	if !walksLiterals(file) {
 		return false
 	}
-	for _, text := range gatekit.SQLStatementsOf(file) {
-		if judgesSQL.MatchString(text) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(gatekit.SQLStatementsOf(file), judgesSQL.MatchString)
 }
 
 // walksLiterals reports whether the file names *ast.BasicLit at all.
@@ -310,12 +307,7 @@ func typeSwitchName(stmt *ast.TypeSwitchStmt) string {
 }
 
 func clauseBindsLiteral(clause *ast.CaseClause) bool {
-	for _, typ := range clause.List {
-		if isBasicLitType(typ) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(clause.List, isBasicLitType)
 }
 
 // withStatementBinding extends the bindings if the statement is an assignment.
@@ -359,9 +351,7 @@ func withLiteralParams(bound map[string]bool, sig *ast.FuncType) map[string]bool
 
 func copyBindings(bound map[string]bool) map[string]bool {
 	next := make(map[string]bool, len(bound)+1)
-	for name, isLiteral := range bound {
-		next[name] = isLiteral
-	}
+	maps.Copy(next, bound)
 	return next
 }
 

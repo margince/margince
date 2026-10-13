@@ -7,10 +7,13 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { requireVersion } from "../api/version";
+import { throwProblem } from "../lib/problem";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
-import { throwProblem } from "./common";
 
 type BulkChangePreview = components["schemas"]["BulkChangePreview"];
+
+/** The contract's bound on one bulk selection (`BulkChangePreviewRequest.items`). */
+export const BULK_MAX_ITEMS = 500;
 type BulkChangeResult = components["schemas"]["BulkChangeResult"];
 
 // The one request body both halves send. The preview and the execute must name

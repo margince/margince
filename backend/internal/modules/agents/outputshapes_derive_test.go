@@ -19,9 +19,9 @@ import (
 // still a schema this surface cannot honestly publish.
 func TestTheDeriverRefusesATypeItCannotDescribe(t *testing.T) {
 	for name, typ := range map[string]reflect.Type{
-		"a bare channel":      reflect.TypeOf(make(chan int)),
-		"a slice of channels": reflect.TypeOf([]chan int(nil)),
-		"a map of channels":   reflect.TypeOf(map[string]chan int(nil)),
+		"a bare channel":      reflect.TypeFor[chan int](),
+		"a slice of channels": reflect.TypeFor[[]chan int](),
+		"a map of channels":   reflect.TypeFor[map[string]chan int](),
 		"a struct holding one": reflect.TypeOf(struct {
 			Ch chan int `json:"ch"`
 		}{}),
@@ -71,7 +71,7 @@ func TestFieldsTheWireNeverCarriesAreNotDescribed(t *testing.T) {
 // schema for it says "an object" and stops — describing it as the []byte it is
 // would advertise an array of integers.
 func TestARawMessageIsDescribedAsAnObjectAndNotAsItsBytes(t *testing.T) {
-	schema, err := describeType(reflect.TypeOf(json.RawMessage(nil)))
+	schema, err := describeType(reflect.TypeFor[json.RawMessage]())
 	if err != nil {
 		t.Fatalf("describing a raw message: %v", err)
 	}
@@ -127,8 +127,9 @@ func TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt(t *testing.T) {
 	record := wireRecord{RecordType: "deal", ID: id, Fields: json.RawMessage(`{"name":"Acme"}`), Version: 3}
 
 	for name, value := range map[string]any{
-		"SearchRecordsResult":  SearchRecordsResult{Records: []wireRecord{record}, NextCursor: "cursor"},
-		"SearchRecordsEmpty":   SearchRecordsResult{Records: []wireRecord{}},
+		"SearchRecordsResult":  SearchRecordsResult{Records: []recordWithOwner{{wireRecord: record, Owner: &RecordOwner{ID: id, Name: "Sofia Meier"}}}, NextCursor: "cursor"},
+		"SearchRecordsEmpty":   SearchRecordsResult{Records: []recordWithOwner{}},
+		"recordWithOwner":      recordWithOwner{wireRecord: record},
 		"wireRecord":           record,
 		"ArchiveResult":        ArchiveResult{Archived: true, RecordType: "contact", ID: id},
 		"PromoteLeadResult":    PromoteLeadResult{Merged: true, Contact: record},

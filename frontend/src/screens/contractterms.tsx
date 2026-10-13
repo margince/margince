@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../format/format";
 import { monthlyEquivalent } from "../format/recurring";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 
 type Contract = components["schemas"]["Contract"];
 

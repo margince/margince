@@ -26,6 +26,7 @@ import (
 )
 
 type openAICompatClient struct {
+	model.NoHealth
 	http         *http.Client
 	baseURL      string
 	apiKey       string // "" ⇒ send no Authorization header (local vLLM)
@@ -71,8 +72,8 @@ type openAICompatChatWire struct {
 	// binding names no preference — an absent object leaves the broker's own
 	// behaviour untouched, while an object of zero values would silently turn
 	// off its load balancing.
-	Provider  *openAICompatProviderWire  `json:"provider,omitempty"`
-	Reasoning *openAICompatReasoningWire `json:"reasoning,omitempty"`
+	Provider  *OpenRouterProvider  `json:"provider,omitempty"`
+	Reasoning *OpenRouterReasoning `json:"reasoning,omitempty"`
 }
 
 // openAICompatResponseFormat / openAICompatJSONSchema mirror the OpenAI
@@ -127,9 +128,7 @@ type openAICompatChatResponse struct {
 }
 
 func (c *openAICompatClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	ctx, attempt := trackHTTPAttempt(ctx)
-	resp, err := c.completeChat(ctx, req)
-	return reportSchemaDowngrade(resp, err, strictDowngrade(req.ResponseSchema), attempt)
+	return completeOnOpenAIWire(ctx, req, c.completeChat)
 }
 
 func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request) (model.Response, error) {
@@ -144,7 +143,7 @@ func (c *openAICompatClient) completeChat(ctx context.Context, req model.Request
 		return model.Response{}, fmt.Errorf("ai: openai-compat: decode response: %w", err)
 	}
 	if len(out.Choices) == 0 {
-		return model.Response{}, fmt.Errorf("ai: openai-compat: response has no choices")
+		return model.Response{}, errors.New("ai: openai-compat: response has no choices")
 	}
 	resp := model.Response{
 		InputTokens:     out.Usage.PromptTokens,
@@ -397,6 +396,9 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 		return nil, err
 	}
 	wire := c.chatWire(req, stream)
+	if level := c.adminReasoning(ctx, wire.Model, req.ThinkingLevel); level != nil {
+		wire.Reasoning = level
+	}
 	if wire.Reasoning == nil {
 		wire.Reasoning = c.reasoningFloor(ctx, wire.Model, req.ThinkingFloor, len(req.Tools))
 	}

@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 
@@ -44,7 +45,13 @@ func watcherServing(t *testing.T, cfg ai.RoutingConfig) (*RoutingWatcher, *ai.Ro
 	if err != nil {
 		t.Fatalf("NewRouter: %v", err)
 	}
-	return &RoutingWatcher{target: r, log: slog.New(slog.DiscardHandler)}, r
+	// A seeder that plants nothing: these tests judge the rebind decision, and
+	// the marker needs a database. The retry test below injects one that
+	// fails.
+	return &RoutingWatcher{
+		target: r, log: slog.New(slog.DiscardHandler),
+		seedMarker: func(context.Context) error { return nil },
+	}, r
 }
 
 // A tick that finds the same binding must do nothing. A rebind drops every
@@ -120,4 +127,66 @@ func TestAWatcherWithNothingToRebindIsInert(t *testing.T) {
 	var nothing *RoutingWatcher
 	nothing.Recheck(context.Background())
 	nothing.Run(context.Background())
+}
+
+// The overrides ride the same tick as the binding, so the same rule holds: an
+// unchanged revision publishes nothing, and a changed one reaches the Router.
+func TestTaskOverridesAreAdoptedOnlyWhenTheyChange(t *testing.T) {
+	w, router := watcherServing(t, routingFixture(t, "steady"))
+	if w.adoptTaskOverrides(context.Background(), ai.TaskOverrides{}) {
+		t.Error("republished an empty set over the empty set the Router starts with")
+	}
+
+	next := ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}
+	if !w.adoptTaskOverrides(context.Background(), next) {
+		t.Fatal("a changed set of overrides was not adopted")
+	}
+	if router.TaskOverridesRevision() != next.Revision() {
+		t.Errorf("the Router serves revision %q, want %q", router.TaskOverridesRevision(), next.Revision())
+	}
+	if w.adoptTaskOverrides(context.Background(), ai.TaskOverrides{ai.TaskCaptureClassify: {Thinking: "low"}}) {
+		t.Error("republished an equal set; the revision is over the value, not the map's identity")
+	}
+}
+
+// A marker that cannot be planted is retried, and the binding serves meanwhile.
+//
+// The adoption that owes the marker happens once. A failure that cleared the
+// debt would leave the drift sweep unable to heal until the next binding
+// change or a restart.
+func TestAFailedMarkerSeedIsRetriedAndStillAdopts(t *testing.T) {
+	w, router := watcherServing(t, routingFixture(t, "before"))
+	attempts := 0
+	w.seedMarker = func(context.Context) error {
+		attempts++
+		if attempts < 3 {
+			return errors.New("the marker table is unreachable")
+		}
+		return nil
+	}
+	next := routingFixture(t, "after")
+
+	if !w.applyIfChanged(context.Background(), next) {
+		t.Fatal("a changed binding was not adopted")
+	}
+	w.markerOwed = true
+	// Three ticks: the first two fail and the third lands.
+	for range 3 {
+		w.seedTheEmbedMarker(context.Background())
+	}
+	if attempts != 3 {
+		t.Errorf("the marker was attempted %d times, want one per tick until it landed", attempts)
+	}
+	if w.markerOwed {
+		t.Error("the marker landed and the debt is still outstanding")
+	}
+	// A fourth tick asks for nothing, because nothing is owed.
+	w.seedTheEmbedMarker(context.Background())
+	if attempts != 3 {
+		t.Errorf("a planted marker was seeded again (%d attempts), which is a write per tick forever", attempts)
+	}
+	if router.RoutingVersion() != next.RoutingVersion() {
+		t.Errorf("serving %q after a failed marker seed, want %q",
+			router.RoutingVersion(), next.RoutingVersion())
+	}
 }

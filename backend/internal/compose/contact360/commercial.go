@@ -63,7 +63,7 @@ func (s *Service) commercialSection(ctx context.Context, tx pgx.Tx, contactID id
 		return nil
 	}
 	commercial.Deal = &seat.deal
-	commercial.Role = &seat.role
+	commercial.Role = seat.role
 	committee, err := s.committeeFor(ctx, tx, contactID, seat.dealID)
 	if err != nil {
 		return err
@@ -76,8 +76,11 @@ func (s *Service) commercialSection(ctx context.Context, tx pgx.Tx, contactID id
 // dealSeat is one contact's seat on one deal, with the deal's own figures.
 type dealSeat struct {
 	dealID ids.UUID
-	role   string
-	deal   crmcontracts.Contact360CommercialDeal
+	// role is nil when the seat was recorded without one: a stakeholder edge
+	// may carry no role at all, and the page then says nothing about the seat
+	// rather than failing to render.
+	role *string
+	deal crmcontracts.Contact360CommercialDeal
 }
 
 // leadingDealSeat picks the open deal this contact sits on that the page should
@@ -186,9 +189,14 @@ func (s *Service) committeeFor(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	for rows.Next() {
 		var member crmcontracts.Contact360CommitteeMember
 		var id ids.UUID
-		var photoKey *string
-		if err := rows.Scan(&id, &member.FullName, &member.Role, &photoKey); err != nil {
+		var role, photoKey *string
+		if err := rows.Scan(&id, &member.FullName, &role, &photoKey); err != nil {
 			return nil, fmt.Errorf("scan a committee member: %w", err)
+		}
+		// A colleague seated without a role is still on the committee; the
+		// wire field is required, so an unrecorded role travels as empty.
+		if role != nil {
+			member.Role = *role
 		}
 		member.ContactId = openapi_types.UUID(id)
 		member.PhotoUrl = contactPhotoURL(id, photoKey)

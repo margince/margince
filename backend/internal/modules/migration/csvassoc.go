@@ -37,18 +37,24 @@ import (
 // spelling it again, so both sides are one value by construction.
 const AssocTargetCompanyName = "company_name"
 
+// AssocTargetCompanyRef is the `To` endpoint kind for an edge naming a company
+// by its ref in the source system. The company is a row of this upload or of an
+// earlier import, or one Margince already holds.
+const AssocTargetCompanyRef = "company_ref"
+
+// employerTargets are the mapping targets whose column names a contact's
+// employer, each emitted as an edge of its own kind.
+var employerTargets = []string{AssocTargetCompanyName, AssocTargetCompanyRef}
+
 // assocCategoryEmployment is what the edge means: this contact works here.
 const assocCategoryEmployment = "employment"
 
 // Associations answers one edge per row naming an employer.
 //
-// It re-walks the file, which is the same thing every other read of this source
-// does — Counts walks it, and each page of Rows walks it from the top. The whole
-// file is bounded by the upload cap, and one edge is two short strings, so the
-// all-at-once shape the Source interface asks for costs a few hundred kilobytes
-// on the largest file this door accepts. It does not need paging; a later reader
-// tempted to add some should know the bound is the upload limit, not the row
-// count.
+// It walks the file once, as Counts does. The upload cap bounds the file and one
+// edge is two short strings, so the whole answer costs a few hundred kilobytes
+// at most. The bound is the upload limit, not the row count, so it needs no
+// paging.
 //
 // Empty for every object but a contact run, and for a contact run whose mapping
 // names no company column: a company or lead import is unaffected by this
@@ -57,8 +63,13 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 	if s.object != ObjectContact {
 		return nil, nil
 	}
-	column := s.columnFor(AssocTargetCompanyName)
-	if column == "" {
+	columns := map[string]string{}
+	for _, target := range employerTargets {
+		if column := s.columnFor(target); column != "" {
+			columns[target] = column
+		}
+	}
+	if len(columns) == 0 {
 		return nil, nil
 	}
 
@@ -82,30 +93,32 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 			return nil
 		}
 		claimed[row.ExternalID] = true
-
-		at, ok := index[column]
-		if !ok || at >= len(record) {
-			return nil
+		for _, target := range employerTargets {
+			if edge, ok := employerEdge(row.ExternalID, target, columns[target], record, index); ok {
+				out = append(out, edge)
+			}
 		}
-		name := strings.TrimSpace(record[at])
-		if name == "" {
-			// The file said nothing about this contact's employer, which is not
-			// the same as saying they have none. No edge, no disclosure.
-			return nil
-		}
-		out = append(out, Assoc{
-			FromType: ObjectContact,
-			FromID:   row.ExternalID,
-			ToType:   AssocTargetCompanyName,
-			ToID:     name,
-			Category: assocCategoryEmployment,
-		})
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("reading the employer column: %w", err)
 	}
 	return out, nil
+}
+
+// employerEdge is the edge one employer column of one row names. An empty cell
+// says nothing about the contact's employer, which is not the same as saying
+// they have none: no edge, no disclosure.
+func employerEdge(from, target, column string, record []string, index map[string]int) (Assoc, bool) {
+	at, ok := index[column]
+	if column == "" || !ok || at >= len(record) {
+		return Assoc{}, false
+	}
+	to := strings.TrimSpace(record[at])
+	if to == "" {
+		return Assoc{}, false
+	}
+	return Assoc{FromType: ObjectContact, FromID: from, ToType: target, ToID: to, Category: assocCategoryEmployment}, true
 }
 
 // columnFor answers which source column was mapped onto a target.

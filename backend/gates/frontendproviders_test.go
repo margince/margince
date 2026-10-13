@@ -7,7 +7,8 @@
 
 package gates
 
-// The routing form offers exactly the adapters and profiles the server accepts.
+// The routing form offers the adapters and profiles the server accepts, and no
+// others.
 //
 // `PROVIDERS` in `frontend/src/screens/ai-routing-fields.tsx` is a declared
 // mirror of the provider registry's chat adapters, `DECISION_PROVIDERS` one of

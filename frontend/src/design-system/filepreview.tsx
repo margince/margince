@@ -13,7 +13,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
-import { downloadFrom } from "../screens/download";
+import { downloadFrom } from "../lib/download";
 import { EmptyState, Modal, PendingBody } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./filepreview.css";
@@ -133,7 +133,7 @@ function FilePreviewDialog({
     <Modal
       open={file !== null}
       onClose={onClose}
-      placement="full"
+      intent="full"
       labelledBy={TITLE_ID}
     >
       {file !== null && (

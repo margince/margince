@@ -30,12 +30,22 @@ func (h Handlers) ListTransitionPolicies(
 		writeStoreErr(w, r, err)
 		return
 	}
+	// The kill switch travels with the rules, because a rule's mode means nothing
+	// without it: while the installation has automation off, StageAutopilotModeTx
+	// forces every transition to propose whatever its own row says. A screen given
+	// only the rows shows `auto` on a transition that will never move a deal, and
+	// has no reason to show for why.
+	enabled, err := h.store.StageAutomationEnabled(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	out := make([]crmcontracts.TransitionPolicy, 0, len(rules))
 	for _, rule := range rules {
 		out = append(out, transitionPolicyWire(rule))
 	}
 	httperr.WriteJSON(w, http.StatusOK,
-		crmcontracts.TransitionPolicyList{Data: out})
+		crmcontracts.TransitionPolicyList{Data: out, AutomationEnabled: enabled})
 }
 
 // SetTransitionPolicy records what an admin wants for one transition.
@@ -125,9 +135,10 @@ func checkPolicyBounds(body crmcontracts.SetTransitionPolicyRequest) error {
 		return httperr.Validation("mode", "unknown_mode",
 			"a transition either proposes its moves or applies them; there is no third answer")
 	}
-	if body.WindowDays != nil && (*body.WindowDays < 1 || *body.WindowDays > 365) {
-		return httperr.Validation("window_days", "out_of_range",
-			"a rate is counted over 1 to 365 days")
+	if body.WindowDays != nil {
+		if err := checkWindowDays(*body.WindowDays); err != nil {
+			return err
+		}
 	}
 	if body.UndoWindowHours != nil &&
 		(*body.UndoWindowHours < 1 || *body.UndoWindowHours > 8760) {
@@ -138,6 +149,16 @@ func checkPolicyBounds(body crmcontracts.SetTransitionPolicyRequest) error {
 		return err
 	}
 	return checkRate("correction_reversal_threshold", body.CorrectionReversalThreshold)
+}
+
+// checkWindowDays holds a rate window to the contract's 1 to 365 days. The
+// report and the policy share it, so a window one accepts the other does too.
+func checkWindowDays(days int) error {
+	if days < 1 || days > 365 {
+		return httperr.Validation("window_days", "out_of_range",
+			"a rate is counted over 1 to 365 days")
+	}
+	return nil
 }
 
 // checkRate refuses a threshold outside 0..1.

@@ -270,8 +270,8 @@ func lockDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) error 
 const admissionWriteIdentity = "domain_admission"
 
 // SuppressBulkSenderDomainTx refuses a domain a company because its mail was
-// judged bulk or automated, on the caller's transaction so the refusal commits
-// with the verdict that concluded it.
+// judged bulk or automated, and senderKind names which. It runs on the caller's
+// transaction, so the refusal commits with the verdict that concluded it.
 //
 // A consumer-mail domain is skipped. Nobody's employer is gmail.com, so there
 // is no company to refuse, and recording one would put a mail provider in the
@@ -279,7 +279,7 @@ const admissionWriteIdentity = "domain_admission"
 // workspace's own carve-outs travel with the check, exactly as they do in the
 // ensure path — an admin who declared a shared domain corporate must see it
 // judged that way on both sides.
-func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domain, reason string) error {
+func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domain, senderKind string) error {
 	base, ok := freemail.Hostname(domain)
 	if !ok {
 		return nil
@@ -294,7 +294,7 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 	// The sticky rule may decline this write, which is the point of it: a
 	// human's decision stands. The verdict engine records its own conclusion
 	// either way, so which happened is not this caller's to report.
-	_, _, err = setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, reason, AdmissionSourceVerdict)
+	_, _, err = setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, bulkSenderReason(senderKind), AdmissionSourceVerdict)
 	return err
 }
 
@@ -362,10 +362,10 @@ func admitClaimedDomainTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET admission = $2, admission_source = $3, admission_at = now(),
-		       admission_reason = 'a contact put this domain on a company they created',
+		       admission_reason = $5,
 		       updated_at = now()
 		 WHERE domain = $1 AND admission = $4`,
-		base, DomainAdmitted, AdmissionSourceHuman, DomainSuppressed); err != nil {
+		base, DomainAdmitted, AdmissionSourceHuman, DomainSuppressed, claimedDomainReason); err != nil {
 		return fmt.Errorf("contacts: admitting the claimed domain %s: %w", base, err)
 	}
 	return nil
@@ -409,18 +409,17 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 // decision time is the database's.
 func readDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedDomain, error) {
 	var d BlockedDomain
-	var companyID *ids.UUID
+	var company standingCompany
 	err := tx.QueryRow(ctx, `
-		SELECT id, domain, COALESCE(admission, ''), COALESCE(admission_reason, ''),
-		       COALESCE(admission_source, ''), admission_at, company_id
-		  FROM company_domain_disposition WHERE domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &companyID)
+		SELECT d.id, d.domain, COALESCE(d.admission, ''), COALESCE(d.admission_reason, ''),
+		       COALESCE(d.admission_source, ''), d.admission_at, d.company_id, c.display_name
+		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name)
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading back the admission of %s: %w", domain, err)
 	}
-	if companyID != nil {
-		typed := ids.From[ids.CompanyKind](*companyID)
-		d.CompanyID = &typed
+	if err := withVisibleCompanyTx(ctx, tx, &d, company); err != nil {
+		return BlockedDomain{}, err
 	}
 	return d, nil
 }

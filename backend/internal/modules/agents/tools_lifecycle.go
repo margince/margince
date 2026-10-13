@@ -41,7 +41,7 @@ func RegisterLifecycleTools(
 	advancer ProjectPhaseAdvancer,
 ) {
 	r.Register(relinkActivity{relinker: relinker, p: p, language: r.language})
-	r.Register(relinkThread{relinker: relinker, p: p, language: r.language})
+	r.Register(relinkThread{relinker: relinker})
 	r.Register(relinkActivities{relinker: relinker, p: p, language: r.language})
 	r.Register(disqualifyLead{p: p, disqualifier: disqualifier, language: r.language})
 	r.Register(demoteLead{p: p, demoter: demoter, language: r.language})
@@ -127,8 +127,8 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		Description: relinkActivityCopy.render(),
 		Instead:     relinkActivityCopy.Instead,
 		// Dynamic because filing under a PROJECT classifies the activity as
-		// commercial correspondence — write-once and monotonic — while every
-		// other destination is an association a member can undo. See
+		// commercial correspondence, which a contact confirms first; every
+		// other destination is an association that runs at once. See
 		// relinkActivityTier.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
 		TierResolver: relinkActivityTier,
@@ -248,7 +248,7 @@ func (t disqualifyLead) Spec() mcp.ToolSpec {
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
 		Description:   disqualifyLeadCopy.render(),
 		Instead:       disqualifyLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "disqualifyLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead to disqualify"},
@@ -304,7 +304,7 @@ func (t demoteLead) Spec() mcp.ToolSpec {
 		Name: "demote_lead", Title: "Reverse a lead promotion", Version: toolVersionV1,
 		Description:   demoteLeadCopy.render(),
 		Instead:       demoteLeadCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "demoteLead",
 		InputSchema: schema(`{"type":"object","required":["lead_id","reason"],"properties":{
 			"lead_id":{"type":"string","format":"uuid","description":"The lead whose promotion is being reversed"},

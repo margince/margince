@@ -184,6 +184,8 @@ type oidcClaims struct {
 	// sign-in adapters hand on, never an error, because most Google tokens
 	// carry no such claim and a token naming no groups simply grants nothing.
 	Groups []string `json:"groups"`
+	// GivenName is the standard `given_name` claim; absent decodes as "".
+	GivenName string `json:"given_name"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed
@@ -394,7 +396,7 @@ func (v *oidcTokenVerifier) fetchJWKS(ctx context.Context) (map[string]*rsa.Publ
 // with a 1h default when absent — the JWKS is safe to reuse between rotations.
 func cacheTTL(cacheControl string) time.Duration {
 	ttl := time.Hour
-	for _, part := range strings.Split(cacheControl, ",") {
+	for part := range strings.SplitSeq(cacheControl, ",") {
 		part = strings.TrimSpace(part)
 		if v, ok := strings.CutPrefix(part, "max-age="); ok {
 			if secs, err := strconv.Atoi(v); err == nil {

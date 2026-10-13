@@ -4,17 +4,17 @@
 import { useState } from "react";
 import type { components } from "../api/schema";
 import type { ChecklistStepState } from "../design-system/checklist";
-import { missingCalendarWriteGrant } from "../screens/connector-status";
 import {
   isMailbox,
   VENDOR_SERVICES,
   vendorOf,
-} from "../screens/connectorproviders";
+} from "../format/connectorprovider";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { missingCalendarWriteGrant } from "../screens/connector-status";
 import { type ConnectorsResult, useConnectors } from "../screens/connectors";
 import { useSchedulingProfile } from "../screens/scheduling-profile-query";
 import type { SettingsPageId, SettingsReach } from "../screens/settingscatalog";
 import { useVoiceProfile } from "../screens/voice-profile";
-import { readStored, STORAGE_KEYS, writeStored } from "./storage";
 
 // The setup checklist the topbar reminder and the settings home both draw.
 // Every step is read off what the product can already see, never stored, so a

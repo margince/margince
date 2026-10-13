@@ -167,7 +167,7 @@ func TestWithdrawingEndsTheAuthorityRatherThanTheReference(t *testing.T) {
 
 func TestReGrantingLeavesExactlyOneLiveCredential(t *testing.T) {
 	re := setupRunner(t)
-	for pass := 0; pass < 3; pass++ {
+	for pass := range 3 {
 		if status := re.answerGrant(t, true); status != http.StatusOK {
 			t.Fatalf("grant %d → %d", pass+1, status)
 		}

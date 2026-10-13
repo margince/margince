@@ -5,7 +5,7 @@
 
 package gates
 
-// The AI provenance notice has ONE spelling, and it is
+// The AI provenance notice has one spelling, and it is
 // draftfloor.AIProvenanceNotice.
 //
 // The sentence a model-written draft carries to say a model wrote it is what

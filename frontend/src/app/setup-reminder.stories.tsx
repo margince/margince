@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { parseHash } from "../lib/router";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../screens/story-utils";
-import { parseHash } from "./router";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" chip and the checklist behind it, served the

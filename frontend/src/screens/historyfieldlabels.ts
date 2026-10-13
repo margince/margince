@@ -10,13 +10,13 @@ import type { MessageKey } from "../i18n/en";
 // about one field.
 //
 // It is its own map rather than a reuse of the three that already exist,
-// because none of them is about this subject: `COLD_FIELD_LABELS`
-// (screens/common.tsx) names the enrichment vocabulary, `PROFILE_FIELD_LABELS`
-// (screens/companies.tsx) names company profile facts, and today.merge's
-// map names the fields a merge compares. This one names the columns a record's
-// UPDATE writes, and `historyfieldlabels.test.ts` derives that set from the
-// contract so a field added upstream fails the gate instead of reaching a
-// reader raw.
+// because none of them is about this subject. `COLD_FIELD_LABELS`
+// (screens/coldfieldlabels.ts) names the enrichment vocabulary.
+// `PROFILE_FIELD_LABELS` (screens/companies.tsx) names company profile facts,
+// and today.merge's map names the fields a merge compares. This one names the
+// columns a record's UPDATE writes. `historyfieldlabels.test.ts` derives that
+// set from the contract, so a field added upstream fails the gate instead of
+// reaching a reader raw.
 //
 // A Map, not an object: `get` answers `MessageKey | undefined` with no cast,
 // and no prototype key can answer for a field the server never sent.
@@ -35,6 +35,8 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["due_at", "history.field.due_at"],
   ["email", "history.field.email"],
   ["emails", "history.field.emails"],
+  // A lead's one number, beside the contact's `phones` list below.
+  ["phone", "history.field.phone"],
   ["ended_at", "history.field.ended_at"],
   ["expected_close_date", "history.field.expected_close_date"],
   ["first_name", "history.field.first_name"],
@@ -123,6 +125,8 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["lifted_suppression", "history.field.lifted_suppression"],
   ["note", "history.field.note"],
   ["nudge_dismissal", "history.field.nudge_dismissal"],
+  ["override_category", "history.field.override_category"],
+  ["overrides_carried", "history.field.overrides_carried"],
   ["provider_claims_received", "history.field.provider_claims_received"],
   ["qualifying_event", "history.field.qualifying_event"],
   ["reachability", "history.field.reachability"],
@@ -132,6 +136,10 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["reply_verdict_by", "history.field.reply_verdict_by"],
   ["research_claims_accepted", "history.field.research_claims_accepted"],
   ["resolved_category", "history.field.resolved_category"],
+  ["revoked_by", "history.field.revoked_by"],
+  ["revoked_by_level", "history.field.revoked_by_level"],
+  ["revoked_override", "history.field.revoked_override"],
+  ["revoked_rows", "history.field.revoked_rows"],
   ["scope", "history.field.scope"],
   ["stopped", "history.field.stopped"],
   ["stops_carried", "history.field.stops_carried"],

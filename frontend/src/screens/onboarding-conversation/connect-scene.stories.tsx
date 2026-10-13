@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { GrantSpec } from "../../app/mefixture";
+import { userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -204,4 +205,16 @@ export const MicrosoftAppMissingAdmin: Story = {
 export const MicrosoftAppMissingAdminDark: Story = {
   ...MicrosoftAppMissingAdmin,
   globals: { theme: "dark" },
+};
+
+/** The LinkedIn ask, opened: the profile address and why it is wanted. */
+export const LinkedinAsk: Story = {
+  render: NothingConnected.render,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Add profile" }),
+    );
+    await body.findByRole("dialog");
+  },
 };

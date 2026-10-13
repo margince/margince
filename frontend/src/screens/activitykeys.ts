@@ -1,5 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
-import type { EntityKind } from "../app/entity";
+import type { EntityKind } from "../lib/entity";
 
 // Which cached reads render a record's timeline. Writing an activity has to
 // invalidate ALL of them, and they are not the same set for every record kind:
@@ -13,11 +13,17 @@ import type { EntityKind } from "../app/entity";
 // Derived here once rather than spelled at each mutation site, so a new screen
 // that renders a timeline from a different read is fixed in one place.
 
+// The record's own timeline read, which every record kind has.
+export const timelineBaseKey = (
+  entityType: EntityKind,
+  entityId: string,
+): QueryKey => ["activities", entityType, entityId];
+
 export function entityTimelineKeys(
   entityType: EntityKind,
   entityId: string,
 ): QueryKey[] {
-  const keys: QueryKey[] = [["activities", entityType, entityId]];
+  const keys = [timelineBaseKey(entityType, entityId)];
   const seed = TIMELINE_SEED_KEYS[entityType]?.(entityId);
   if (seed) {
     keys.push(seed);
@@ -123,9 +129,30 @@ const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   relationship: () => [DEAL_COVERAGE_KEY],
 };
 
-// A task is also a row in the standing work queue, which is keyed per workspace
-// rather than per record — so completing or logging one has to reach further
-// than the record's own timeline.
+// What a logged activity makes stale: the record's timeline, or its task reads.
+// A meeting also reaches each attendee's timeline, and their employer's through
+// the employer walk. The form does not know those employers, so every company
+// timeline is refreshed by prefix.
+export function loggedActivityKeys(
+  kind: string,
+  entityType: EntityKind,
+  entityId: string,
+  attendeeIds: readonly string[] = [],
+): QueryKey[] {
+  return [
+    ...(kind === "task"
+      ? taskWriteKeys(entityType, entityId)
+      : entityTimelineKeys(entityType, entityId)),
+    ...attendeeIds.flatMap((id) => entityTimelineKeys("contact", id)),
+    ...(attendeeIds.length > 0 ? EVERY_COMPANY_TIMELINE : []),
+  ];
+}
+
+const EVERY_COMPANY_TIMELINE: QueryKey[] = [
+  ["activities", "company"],
+  ["company360"],
+];
+
 export const TASK_QUEUE_KEY: QueryKey = ["tasks"];
 
 export function taskWriteKeys(
@@ -251,6 +278,9 @@ export function isRecordRead(key: QueryKey): boolean {
   // every minute, and a reviews list that did not would leave the two halves of
   // one comparison on different clocks.
   shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
+  // The row is what says a contact or company was archived. The 360 then only
+  // answers 404, so a page re-reading the 360 alone could never learn why.
+  shapes.push(["contact", SHAPE_ID], ["company", SHAPE_ID]);
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 
@@ -259,3 +289,14 @@ export function isRecordRead(key: QueryKey): boolean {
 // key do not fail loudly: they fail as a drawer that quietly stops refreshing
 // after somebody changes who may read the message.
 export { emailDetailKey as emailPresentationKey } from "../design-system/emaildetail";
+
+/** The cache prefix every deal's watch card reads under. */
+export const DEAL_COMMITMENTS_KEY = ["deal-commitments"] as const;
+
+/** What a settled claim leaves stale: the contact's own page and a deal's watch
+ *  card list the same open claims. Read by the single settle and the bulk one. */
+export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
+  ["contact"],
+  ["contact360"],
+  DEAL_COMMITMENTS_KEY,
+];

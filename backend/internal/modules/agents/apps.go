@@ -26,6 +26,7 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -71,15 +72,7 @@ func declaresUI(capabilities json.RawMessage) bool {
 	if err := json.Unmarshal(members["mimeTypes"], &offeredTypes); err != nil {
 		return false
 	}
-	for _, offered := range offeredTypes {
-		// Compared exactly. The profile parameter is the whole discriminator —
-		// a client declaring bare `text/html` is declaring it can show a
-		// document, which is not the same as being able to run an App.
-		if offered == mcp.AppMIMEType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(offeredTypes, mcp.AppMIMEType)
 }
 
 // assertViewDeclaration holds a tool's own view declaration to the three things
@@ -147,12 +140,7 @@ func assertViewDeclaration(spec mcp.ToolSpec) error {
 // exactly as it did before any view existed, which is the same conditional
 // wiring every other injected capability takes.
 func (s *Dispatcher) appsServed() bool {
-	for _, spec := range s.registry.Specs() {
-		if s.viewIsHeld(spec) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(s.registry.Specs(), s.viewIsHeld)
 }
 
 // viewIsHeld reports whether THIS tool's view is one the server is serving.
@@ -200,7 +188,7 @@ func (s *Dispatcher) appsOffered(fr framing) bool {
 // toolUIWire is one tool's `_meta.ui` as a client reads it.
 type toolUIWire struct {
 	//nolint:tagliatelle // resourceUri is the extension's wire member, camelCase by the specification
-	ResourceURI string   `json:"resourceUri"`
+	ResourceURI string   `json:"resourceUri,omitempty"`
 	Visibility  []string `json:"visibility"`
 }
 
@@ -217,6 +205,30 @@ func toolUIMeta(spec mcp.ToolSpec) *toolUIWire {
 		ResourceURI: spec.UI.ResourceURI,
 		Visibility:  visibilityOrBoth(spec.UI.Visibility),
 	}
+}
+
+// toolMeta is a tool's `_meta.ui` for a request that is offered views: its own
+// declaration when its view is held, nothing for a tool a view acts through
+// (the default audience, both, is what it needs), and model-only for every
+// other tool.
+func (s *Dispatcher) toolMeta(spec mcp.ToolSpec, actionTools map[string]struct{}) *toolUIWire {
+	if s.viewIsHeld(spec) {
+		if ui := toolUIMeta(spec); ui != nil {
+			return ui
+		}
+	}
+	if _, acts := actionTools[spec.Name]; acts {
+		return nil
+	}
+	return viewOnlyModelMeta()
+}
+
+// viewOnlyModelMeta is what a tool no view acts through is declared as: the
+// model's alone. The extension's default audience is both, so without this a
+// rendered view could ask its host to run ANY tool on the surface; with it, the
+// only tools a view can reach are the ones apps.ActionTools names.
+func viewOnlyModelMeta() *toolUIWire {
+	return &toolUIWire{Visibility: []string{mcp.VisibilityModel}}
 }
 
 // visibilityOrBoth resolves an undeclared audience list to BOTH audiences.

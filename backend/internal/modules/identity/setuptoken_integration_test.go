@@ -36,7 +36,9 @@ func newSetupService(t *testing.T) *Service {
 // on this path — the form asks for them, so an absent one is a client that
 // stopped asking rather than an operator who declined to answer.
 func claimInput(company string) InstallationBootstrap {
+	noPack := ""
 	return InstallationBootstrap{
+		Country:       &noPack,
 		CompanyName:   company,
 		BaseCurrency:  "EUR",
 		BaseLanguage:  "en",

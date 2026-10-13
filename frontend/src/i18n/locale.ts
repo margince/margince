@@ -4,7 +4,7 @@
 // Which language a reader gets, kept apart from the catalogs so a page that
 // must stay small (the offline page) can ask without carrying every string.
 
-import { readStored, STORAGE_KEYS } from "../app/storage";
+import { readStored, STORAGE_KEYS } from "../lib/storage";
 
 export type Locale = "en" | "de" | "vi";
 
@@ -34,7 +34,7 @@ export function detectLocale(
     (globalThis.navigator?.language ? [globalThis.navigator.language] : []),
 ): Locale {
   for (const tag of languages) {
-    const base = tag.toLowerCase().split("-")[0];
+    const [base = ""] = tag.toLowerCase().split("-");
     if (isLocale(base)) {
       return base;
     }

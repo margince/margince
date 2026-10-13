@@ -13,6 +13,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -71,6 +72,7 @@ func (s *Service) grantPage(ctx context.Context, tx pgx.Tx, in ListGrantsInput, 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := "(expires_at IS NULL OR expires_at > now())"
+	var whereSb74 strings.Builder
 	for _, f := range []struct {
 		column string
 		value  any
@@ -82,9 +84,10 @@ func (s *Service) grantPage(ctx context.Context, tx pgx.Tx, in ListGrantsInput, 
 		{"subject_id", derefOr(in.SubjectID), in.SubjectID != nil},
 	} {
 		if f.set {
-			where += storekit.SQLf(" AND "+f.column+" = $%d", arg(f.value))
+			whereSb74.WriteString(storekit.SQLf(" AND "+f.column+" = $%d", arg(f.value)))
 		}
 	}
+	where += whereSb74.String()
 	if in.Cursor != nil && *in.Cursor != "" {
 		cursor, err := storekit.DecodeCursor(*in.Cursor)
 		if err != nil {

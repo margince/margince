@@ -42,13 +42,6 @@ type Migration struct {
 	DownSQL string
 }
 
-// Namespace is one migration ownership domain with its own tracking table.
-type Namespace struct {
-	// Name keys the tracking table: schema_migrations_<name>.
-	Name       string
-	Migrations []Migration
-}
-
 // Digest is the content fingerprint of one migration, recorded alongside its
 // tracking row so a later reader can tell "this database applied version X"
 // from "this database applied the migration this binary calls X".
@@ -156,6 +149,12 @@ func Load(fsys fs.FS, dir string) ([]Migration, error) {
 // row, so a failure leaves the database at the last good version, never
 // half-applied. Idempotent: a second run is a no-op.
 //
+// UNLESS THE FILE ASKED OTHERWISE. A migration carrying NoTransactionMarker runs
+// on the connection instead, which is what makes a concurrent index build
+// sayable and which gives up both guarantees above — notransaction.go states
+// what it costs, and a gate keeps such a file to the shape that survives it.
+// Everything below is about the ordinary wrapped path.
+//
 // ONE FILE IS ONE TRANSACTION, and that is the fact several migration comments
 // have got wrong. Adding a constraint NOT VALID and validating it lower down
 // the SAME file buys nothing: the ACCESS EXCLUSIVE that ADD CONSTRAINT took is
@@ -206,15 +205,9 @@ func Up(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) (applied i
 			if _, isDone := done[m.Version]; isDone {
 				continue
 			}
-			if err := inTx(ctx, conn, func(tx pgx.Tx) error {
-				if _, err := tx.Exec(ctx, m.UpSQL); err != nil {
-					return err
-				}
-				_, err := tx.Exec(ctx,
-					fmt.Sprintf(`INSERT INTO %s (version, name, content_digest) VALUES ($1, $2, $3)`, table),
-					m.Version, m.Name, Digest(m))
-				return err
-			}); err != nil {
+			if err := apply(ctx, conn, m, m.UpSQL,
+				fmt.Sprintf(`INSERT INTO %s (version, name, content_digest) VALUES ($1, $2, $3)`, table),
+				[]any{m.Version, m.Name, Digest(m)}); err != nil {
 				return applied, fmt.Errorf("pgmigrate: %s %s_%s: %w", ns.Name, m.Version, m.Name, err)
 			}
 			applied++
@@ -258,14 +251,9 @@ func Down(ctx context.Context, conn *pgx.Conn, ns Namespace, n int) (reverted in
 		if err := assertContentMatches(ns.Name, done, m); err != nil {
 			return reverted, err
 		}
-		if err := inTx(ctx, conn, func(tx pgx.Tx) error {
-			if _, err := tx.Exec(ctx, m.DownSQL); err != nil {
-				return err
-			}
-			_, err := tx.Exec(ctx,
-				fmt.Sprintf(`DELETE FROM %s WHERE version = $1`, table), m.Version)
-			return err
-		}); err != nil {
+		if err := apply(ctx, conn, m, m.DownSQL,
+			fmt.Sprintf(`DELETE FROM %s WHERE version = $1`, table),
+			[]any{m.Version}); err != nil {
 			return reverted, fmt.Errorf("pgmigrate: %s revert %s_%s: %w", ns.Name, m.Version, m.Name, err)
 		}
 		reverted++
@@ -349,7 +337,8 @@ func assertLedgerMatches(namespace string, done map[string]appliedRow, m Migrati
 		"pgmigrate: %s %s: applied as %q, but the source at that version is %q — this database "+
 			"applied a migration that has since been renumbered, so %q would be skipped as done. "+
 			"It cannot be repaired forward; rebuild the database (make dev-fresh)",
-		namespace, m.Version, recorded.name, m.Name, m.Name)
+		namespace, m.Version, recorded.name, m.Name, m.Name,
+	)
 }
 
 // assertContentMatches refuses a version whose recorded digest is not the
@@ -393,7 +382,8 @@ func assertContentMatches(namespace string, done map[string]appliedRow, m Migrat
 			"rather than what the database has, and delete the only record of what it applied. "+
 			"Applied core migrations are never edited (CLAUDE.md); rebuild the database "+
 			"(make dev-fresh), or revert the edit to the migration's committed content",
-		namespace, m.Version, m.Name)
+		namespace, m.Version, m.Name,
+	)
 }
 
 func inTx(ctx context.Context, conn *pgx.Conn, fn func(pgx.Tx) error) error {

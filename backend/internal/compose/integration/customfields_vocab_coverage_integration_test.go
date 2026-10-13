@@ -5,23 +5,13 @@
 
 package integration
 
-// The list sort/cursor machinery's branch-coverage sweep (arc 2a-ii,
-// task 4): customfields_vocab_integration_test.go proves the cf_
-// vocabulary's day-one behavior; this file reaches the storekit
-// listquery.go branches only a less common shape exercises — the
-// default-sort cursor continuation, the NULL-tail-to-NULL-tail
-// continuation, a descending custom sort's own cursor walk, the two core
-// vocabulary kinds the day-one suite never sorts by (owner_id's uuid,
-// created_at's timestamptz), and the currency/date equality matches.
+// Branch coverage for storekit's list sort and cursor code, through shapes
+// the cf_ suite (customfields_vocab_integration_test.go) never reaches. They
+// are the default-sort cursor, NULL tails, a descending custom sort, the
+// owner name and created_at sorts, and currency and date equality.
 //
-// Every one of those WALKS REAL ROWS, and that is now the whole membership
-// rule for this file. The refusals that used to sit here — an error message's
-// wording, an undecodable token, a cursor reused under the opposite
-// direction, three filter values that do not parse — are decided before any
-// query runs, and they are asserted in storekit's own suite where the
-// functions deciding them live. Reaching them through a composed app and a
-// migrated Postgres proved nothing about them that a unit test does not, and
-// it made a branch sweep on a platform package read as compose's work.
+// Every test here walks real rows. A refusal decided before any query runs
+// belongs in storekit's own unit suite.
 
 import (
 	"testing"
@@ -158,11 +148,9 @@ func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 	})
 }
 
-// TestCustomFieldVocab_SortByOwnerIDWithCursor: owner_id is the one core
-// vocabulary field of kind uuid (DM-VOCAB-1); sorting by it and
-// continuing the page exercises the uuid branch of parsesAsKind and
-// listBindCast in KeysetClause, which no cf_ column (the six closed
-// types) ever reaches.
+// TestCustomFieldVocab_SortByOwnerIDWithCursor: owner_id sorts by the
+// owner's name, which is an expression and not a column of the row. So the
+// second page walks KeysetClause through that expression and its tie-break.
 func TestCustomFieldVocab_SortByOwnerIDWithCursor(t *testing.T) {
 	f := setupCFV(t)
 	owner := ids.From[ids.UserKind](f.e.Rep1)

@@ -1,14 +1,15 @@
 import { type ReactNode, useId, useState } from "react";
-import { useRecordZone } from "../app/recordzone";
 import { Button } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import { entryFieldChanges } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { netChanges, type PairRow } from "./historyreversal";
 import { historyValue } from "./historyvalues";
+import "./history.css";
 
 // The reversal and the change it reversed, drawn as ONE line the reader can
 // open.

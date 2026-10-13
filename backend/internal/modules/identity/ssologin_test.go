@@ -17,7 +17,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -36,11 +35,15 @@ type fixedVerifier struct {
 	emailVerified bool
 	// groups stands in for the token's `groups` claim; the zero value is the
 	// groupless token most providers mint.
-	groups []string
+	groups    []string
+	givenName string
 }
 
-func (f fixedVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
-	return f.email, f.sub, f.emailVerified, f.groups, nil
+func (f fixedVerifier) Verify(context.Context, string) (OIDCClaims, error) {
+	return OIDCClaims{
+		Email: f.email, Subject: f.sub, EmailVerified: f.emailVerified,
+		Groups: f.groups, GivenName: f.givenName,
+	}, nil
 }
 
 type fixedExchanger struct{ idToken string }
@@ -67,14 +70,12 @@ func (erroringExchanger) Exchange(context.Context, string, string, string) (stri
 
 type unverifiedEmailVerifier struct{}
 
-func (unverifiedEmailVerifier) Verify(context.Context, string) (string, string, bool, []string, error) {
-	return "carol@example.com", "sub-carol", false, nil, nil
+func (unverifiedEmailVerifier) Verify(context.Context, string) (OIDCClaims, error) {
+	return OIDCClaims{Email: "carol@example.com", Subject: "sub-carol"}, nil
 }
 
-func oidcStrPtr(s string) *string { return &s }
-
 func callbackParams(code, state string) crmcontracts.OidcSignInCallbackParams {
-	return crmcontracts.OidcSignInCallbackParams{Code: oidcStrPtr(code), State: oidcStrPtr(state)}
+	return crmcontracts.OidcSignInCallbackParams{Code: new(code), State: new(state)}
 }
 
 func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
@@ -173,7 +174,7 @@ func TestOidcSignInCallbackProviderDenialIsRefusedEvenWhenEverythingElseWouldSuc
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+		State: new("y"), Error: new("access_denied"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -209,7 +210,7 @@ func TestOidcSignInCallbackProviderErrorWithNoCookieNeverClearsOneEither(t *test
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("y"), Error: oidcStrPtr("access_denied"),
+		State: new("y"), Error: new("access_denied"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -327,26 +328,6 @@ func TestOidcSignInCallbackUnverifiedEmailIsRefused(t *testing.T) {
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
 		t.Fatalf("status=%d location=%q, want 302 to the failure URL", rec.Code, rec.Header().Get("Location"))
-	}
-}
-
-// TestTruncateForLogNeverSplitsAMultiByteRune matters because the result is
-// written to system_log as jsonb text: Postgres rejects invalid UTF-8
-// outright (error 22021), so a raw byte cut landing mid-rune would fail that
-// best-effort write silently and lose the very refusal record truncation
-// exists to keep — for exactly the attacker-controlled value (Google's
-// `error` query parameter) this function bounds.
-func TestTruncateForLogNeverSplitsAMultiByteRune(t *testing.T) {
-	s := strings.Repeat("é", 40) // each "é" is 2 bytes; a cut at byte 63 lands mid-rune
-	got := truncateForLog(s, 63)
-	if !utf8.ValidString(got) {
-		t.Fatalf("truncateForLog(_, 63) = %q, not valid UTF-8", got)
-	}
-	if len(got) > 63 {
-		t.Fatalf("len(got) = %d, want <= 63", len(got))
-	}
-	if got := truncateForLog("short", 63); got != "short" {
-		t.Fatalf("a string under the limit must be returned unchanged, got %q", got)
 	}
 }
 
@@ -513,7 +494,7 @@ func TestOidcSignInCallbackRefusesAClientChangedMidFlow(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+		State: new("n"), Code: new("c"),
 	})
 
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/#/login?oidc=failed" {
@@ -562,7 +543,7 @@ func TestOidcSignInCallbackAdmitsTheClientTheFlowStartedOn(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	h.OidcSignInCallback(rec, req, "google", crmcontracts.OidcSignInCallbackParams{
-		State: oidcStrPtr("n"), Code: oidcStrPtr("c"),
+		State: new("n"), Code: new("c"),
 	})
 
 	// The exchange itself fails here (there is no token endpoint), so this

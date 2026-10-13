@@ -53,7 +53,6 @@ func TestRefuseNonPublicAnswersOnTheAddressItIsAboutToDial(t *testing.T) {
 		"::ffff:0:a9fe:a9fe":   false, // IPv4-translated onto the metadata address
 		"::ffff:127.0.0.1":     false, // IPv4-mapped loopback
 	} {
-		address := address
 		t.Run(address, func(t *testing.T) {
 			if net.ParseIP(address) == nil {
 				t.Fatalf("%q is not an address — the fixture is wrong, which would make this row pass for free", address)

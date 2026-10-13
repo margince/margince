@@ -11,8 +11,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
@@ -250,7 +250,7 @@ it("restores the selected period and close window after reopening performance", 
   );
   await pickOption(
     user,
-    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
+    screen.getByRole("combobox", { name: "Expected close window" }),
     "Fiscal quarter",
   );
   first.unmount();
@@ -263,7 +263,7 @@ it("restores the selected period and close window after reopening performance", 
     await screen.findByRole("combobox", { name: "Date range" }),
   ).toHaveTextContent("Last month");
   expect(
-    screen.getByRole("combobox", { name: "Open pipeline · expected close" }),
+    screen.getByRole("combobox", { name: "Expected close window" }),
   ).toHaveTextContent("Fiscal quarter");
 });
 

@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -278,6 +279,14 @@ func (a *Adapter) call(ctx context.Context, cred provider.Credential, method, pa
 	if readErr != nil {
 		return resp.StatusCode, fmt.Errorf("surfe: reading the response: %w", readErr)
 	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		// A refusal carries the vendor's own prose, which may be HTML from a
+		// gateway rather than their documented JSON. Decoding it would report
+		// a shape fault where the status is the answer, and the status is what
+		// every caller here branches on. So a wrong key reads as refused
+		// rather than as a vendor whose API changed.
+		return resp.StatusCode, nil
+	}
 	if len(raw) == 0 {
 		return resp.StatusCode, nil
 	}
@@ -285,7 +294,7 @@ func (a *Adapter) call(ctx context.Context, cred provider.Credential, method, pa
 		// The vendor's body is NOT echoed: it may quote a fragment of the
 		// key we just sent, and an error a customer sees must carry a closed
 		// product reason instead.
-		return resp.StatusCode, fmt.Errorf("surfe: the response was not the documented JSON shape")
+		return resp.StatusCode, errors.New("surfe: the response was not the documented JSON shape")
 	}
 	return resp.StatusCode, nil
 }

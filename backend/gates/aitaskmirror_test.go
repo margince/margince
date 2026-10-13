@@ -5,7 +5,7 @@
 
 package gates
 
-// api/ai-tasks.yaml is a MIRROR, and until this gate nothing failed when it
+// api/ai-tasks.yaml is a mirror, and until this gate nothing failed when it
 // stopped being one.
 //
 // The file's own header states the relationship: the AI task contract is

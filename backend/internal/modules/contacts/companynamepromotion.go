@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -62,11 +63,27 @@ const (
 // companyNamePromotionSource is the DM-CONV-11 channel on the audit row.
 const companyNamePromotionSource = "signature_promotion"
 
-// SignatureCompanyName is one contact's accepted `company_name` signature evidence:
-// the company that contact's own mail signature names.
+// SignatureCompanyName is one contact's `company_name` signature evidence: the
+// company that contact's own mail signature names.
+//
+// A verdict a human recorded about this field reaches every reader of its
+// value, this one included — a signature a human called wrong corroborates
+// nothing, whatever it is asked to corroborate. The ledger is consulted one
+// layer up, in compose, because that is where the edge between this module and
+// the feedback store lives; what arrives here is already ruled on:
+//
+//   - suppressed — the human said this observation is wrong. Not here at all.
+//   - corrected  — Value is the human's value, not the machine's.
+//   - confirmed  — Confirmed is set, and the claim outranks an unreviewed one.
 type SignatureCompanyName struct {
 	ContactID ids.ContactID
 	Value     string
+	// CapturedAt is the stored value's own stamp, which is what decides whether
+	// a recorded verdict is still about the value in hand.
+	CapturedAt time.Time
+	// Confirmed marks a value a human looked at and agreed with — strictly more
+	// than the unreviewed signatures that already count.
+	Confirmed bool
 }
 
 // CompanyNameCandidate is one provisionally-named company together with
@@ -127,6 +144,8 @@ type nameClaim struct {
 	key      string
 	spelling map[string]int
 	contacts map[ids.ContactID]bool
+	// confirmed counts the contacts whose signature a human agreed with.
+	confirmed int
 	// corroboration is filled by bestNameClaim, which is where the dossier is
 	// known; until then a claim is just a claim.
 	corroboration string
@@ -161,16 +180,25 @@ func groupSignatureNames(signatures []SignatureCompanyName, current string) map[
 			claims[key] = c
 		}
 		c.spelling[s.Value]++
+		if !c.contacts[s.ContactID] && s.Confirmed {
+			c.confirmed++
+		}
 		c.contacts[s.ContactID] = true
 	}
 	return claims
 }
 
 // bestNameClaim ranks the claims and returns the winner with its corroboration
-// resolved: corroborated beats uncorroborated, more contacts beats fewer, and the
+// resolved: corroborated beats uncorroborated, more contacts beats fewer, a
+// claim a human has confirmed beats one nobody has looked at, and the
 // normalized name breaks the remaining tie — so two workers reading the same
 // evidence always reach the same answer rather than renaming the company
 // back and forth.
+//
+// Confirmation ranks BELOW the count on purpose: agreement between contacts is
+// the corroboration this sweep exists to find, and one reviewed signature is
+// not more than two independent ones. It separates claims the count has already
+// tied.
 func bestNameClaim(claims map[string]*nameClaim, dossier map[string]bool) *nameClaim {
 	ranked := make([]*nameClaim, 0, len(claims))
 	for _, c := range claims {
@@ -185,6 +213,9 @@ func bestNameClaim(claims map[string]*nameClaim, dossier map[string]bool) *nameC
 		}
 		if len(ranked[i].contacts) != len(ranked[j].contacts) {
 			return len(ranked[i].contacts) > len(ranked[j].contacts)
+		}
+		if ranked[i].confirmed != ranked[j].confirmed {
+			return ranked[i].confirmed > ranked[j].confirmed
 		}
 		return ranked[i].key < ranked[j].key
 	})
@@ -314,7 +345,7 @@ func loadSignatureCompanyNames(ctx context.Context, tx pgx.Tx, companyIDs []ids.
 	out []CompanyNameCandidate, byID map[ids.CompanyID]int,
 ) error {
 	rows, err := tx.Query(ctx, `
-		SELECT r.company_id, p.id, f.value
+		SELECT r.company_id, p.id, f.value, f.updated_at
 		FROM relationship r
 		JOIN contact p ON p.id = r.contact_id
 		  AND p.archived_at IS NULL AND p.merged_into_id IS NULL
@@ -327,7 +358,7 @@ func loadSignatureCompanyNames(ctx context.Context, tx pgx.Tx, companyIDs []ids.
 	for rows.Next() {
 		var companyID ids.CompanyID
 		var sig SignatureCompanyName
-		if err := rows.Scan(&companyID, &sig.ContactID, &sig.Value); err != nil {
+		if err := rows.Scan(&companyID, &sig.ContactID, &sig.Value, &sig.CapturedAt); err != nil {
 			return err
 		}
 		if i, ok := byID[companyID]; ok {

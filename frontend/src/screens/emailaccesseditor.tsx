@@ -32,6 +32,7 @@ import { VisibilityLine } from "../design-system/visibility";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf } from "../lib/problem";
 import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,
@@ -42,7 +43,6 @@ import {
   useAudienceCandidates,
 } from "./audiencemembers";
 import { useMessageAudience, useThreadAudience } from "./audienceservice";
-import { problemMessageOf } from "./common";
 import "./emailaccesseditor.css";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
@@ -284,6 +284,7 @@ function MessageAudience({
         open={open}
         onClose={() => setOpen(false)}
         title={t("compose.audienceTitle")}
+        intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
           unchanged || (choice === "selected" && members.length === 0)

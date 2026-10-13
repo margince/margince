@@ -5,7 +5,7 @@
 
 package gates
 
-// The browser and the server split a mail body by the SAME rules, or a row's
+// The browser and the server split a mail body by the same rules, or a row's
 // preview and the message it opens disagree about where the sender stopped
 // writing.
 //

@@ -5,7 +5,7 @@
 
 package gates
 
-// A field the server can withhold is drawn as WITHHELD, or the screen states
+// A field the server can withhold is drawn as withheld, or the screen states
 // something false.
 //
 // The wire says it twice: the value comes back null and `masked_fields` names
@@ -186,7 +186,7 @@ func maskedFieldsDrawnUnder(root string) (map[string][]maskDrawing, error) {
 func declarationsIn(source string) []string {
 	var declarations []string
 	current := strings.Builder{}
-	for _, line := range strings.Split(tsComment.ReplaceAllString(source, " "), "\n") {
+	for line := range strings.SplitSeq(tsComment.ReplaceAllString(source, " "), "\n") {
 		if current.Len() > 0 && line != "" && !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
 			declarations = append(declarations, current.String())
 			current.Reset()

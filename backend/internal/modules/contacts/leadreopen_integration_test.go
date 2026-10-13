@@ -73,8 +73,7 @@ func TestReopeningALeadRestoresTheStatusItWasClosedAt(t *testing.T) {
 	if _, err := e.store.ReopenLead(e.ctx, lead); err == nil {
 		t.Error("reopening an open lead succeeded, want a conflict")
 	} else {
-		var notDisqualified *NotDisqualifiedError
-		if !errors.As(err, &notDisqualified) {
+		if _, ok := errors.AsType[*NotDisqualifiedError](err); !ok {
 			t.Errorf("second reopen: err = %v, want NotDisqualifiedError", err)
 		}
 	}
@@ -110,5 +109,23 @@ func TestALeadWhoseClosureIsNoLongerOnTheTrailReopensAsEngaged(t *testing.T) {
 	}
 	if reopened.ArchivedAt != nil {
 		t.Error("archived_at survived the reopen")
+	}
+}
+
+// Reopening a closed lead whose address a live lead has since taken is the same
+// duplicate-email conflict create and update answer.
+func TestReopeningALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
+	e := setupPromoteConsent(t)
+	first := e.seedLead(t, "taken-while-closed@example.test")
+	if _, err := e.store.DisqualifyLead(e.ctx, first, DisqualifyLeadInput{}); err != nil {
+		t.Fatalf("disqualify: %v", err)
+	}
+	// Allowed while the first is away.
+	e.seedLead(t, "taken-while-closed@example.test")
+
+	_, err := e.store.ReopenLead(e.ctx, first)
+
+	if _, ok := errors.AsType[*DuplicateLeadError](err); !ok {
+		t.Fatalf("reopen answered %v, want a duplicate-email conflict", err)
 	}
 }

@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { useRoute } from "../app/router";
 import { PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
+import { useRoute } from "../lib/router";
+import { useMe } from "../lib/session";
 import { needsAttention, useCalendarStanding } from "./booking-calendar-state";
-import { problemMessageOf, QueryGate, useMe } from "./common";
 import { useConnectAccount } from "./connect-account";
 import { useConnectors } from "./connectors";
 import { OAuthOutcomeNote } from "./connectors.notices";

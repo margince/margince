@@ -1,15 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCan, useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate, useRoute } from "../app/router";
 import { Button, SegmentedControl } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { QueryGate, throwProblem } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate, useRoute } from "../lib/router";
+import { openAnalyticsSection } from "./analytics.address";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { ReportingReportDetail } from "./reporting.report";
@@ -27,17 +29,17 @@ export function ReportingLibrary() {
   const query = useQuery({
     queryKey: ["reporting-reports", cursor, filter],
     queryFn: async () => {
-      const { data, error } = await api.GET("/analytics/reports", {
-        params: {
-          query: {
-            cursor,
-            limit: 30,
-            scheduled: filter === "scheduled" || undefined,
+      return unwrap(
+        await api.GET("/analytics/reports", {
+          params: {
+            query: {
+              cursor,
+              limit: 30,
+              scheduled: filter === "scheduled" || undefined,
+            },
           },
-        },
-      });
-      if (error) throwProblem(error);
-      return data;
+        }),
+      );
     },
   });
   if (route.id2)
@@ -52,13 +54,22 @@ export function ReportingLibrary() {
     <Panel
       title={t("reporting.reports")}
       titleAction={
-        canCreate ? (
-          <Button
-            onClick={() => navigate({ screen: "analytics", id: "performance" })}
-          >
-            {t("reporting.createReport")}
+        <>
+          {/* The two ways a report starts: a Performance view kept as it is,
+              or a question of the reader's own. */}
+          {canCreate ? (
+            <Button
+              onClick={() =>
+                navigate({ screen: "analytics", id: "performance" })
+              }
+            >
+              {t("reporting.createReport")}
+            </Button>
+          ) : null}
+          <Button onClick={() => openAnalyticsSection("questions")}>
+            {t("reporting.newCustomReport")}
           </Button>
-        ) : undefined
+        </>
       }
     >
       <PanelBody>

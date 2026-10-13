@@ -47,7 +47,7 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	}
 	src, tgt := ContactIDOf(ids.UUID(source.Id)), ContactIDOf(ids.UUID(target.Id))
 
-	survivor, err := e.Contacts.MergeContact(admin, src, tgt)
+	survivor, err := e.Contacts.MergeContact(admin, src, tgt, nil)
 	if err != nil {
 		t.Fatalf("merge: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestMergeContact_consentMergesRestrictively(t *testing.T) {
 	e.WsExec(t, `INSERT INTO contact_consent (contact_id, purpose_id, state) VALUES ($1, $2, 'withdrawn')`, source, purpose)
 	e.WsExec(t, `INSERT INTO contact_consent (contact_id, purpose_id, state) VALUES ($1, $2, 'granted')`, target, purpose)
 
-	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(source), ContactIDOf(target)); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(source), ContactIDOf(target), nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -148,7 +148,7 @@ func TestMergeCompany_hierarchyReparenting(t *testing.T) {
 		t.Fatalf("create child: %v", err)
 	}
 
-	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -183,7 +183,7 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	e.WsExec(t, `INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
 		VALUES ($1, 'partner', 'manual', 'human:test')`, srcID)
 
-	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID); err != nil {
+	if _, err := e.Contacts.MergeCompany(admin, srcID, tgtID, nil); err != nil {
 		t.Fatalf("merge: %v", err)
 	}
 
@@ -221,17 +221,17 @@ func TestMerge_errorPaths(t *testing.T) {
 
 	// Self-merge.
 	var selfErr *contacts.MergeSelfError
-	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(a)); !errors.As(err, &selfErr) {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(a), nil); !errors.As(err, &selfErr) {
 		t.Fatalf("self-merge → %v, want contacts.MergeSelfError", err)
 	}
 
 	// First merge succeeds; a second merge OF the same source answers
 	// AlreadyMerged with the redirect pointer.
-	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(b)); err != nil {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(b), nil); err != nil {
 		t.Fatalf("first merge: %v", err)
 	}
 	var already *contacts.AlreadyMergedError
-	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(c)); !errors.As(err, &already) {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(c), nil); !errors.As(err, &already) {
 		t.Fatalf("re-merge of a merged-away source → %v, want contacts.AlreadyMergedError", err)
 	} else if already.IntoID != b {
 		t.Errorf("AlreadyMerged points at %s, want the first survivor %s", already.IntoID, b)
@@ -239,7 +239,7 @@ func TestMerge_errorPaths(t *testing.T) {
 
 	// Merging INTO a merged-away (archived) target is refused.
 	var deadTarget *contacts.MergedTargetError
-	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(c), ContactIDOf(a)); !errors.As(err, &deadTarget) {
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(c), ContactIDOf(a), nil); !errors.As(err, &deadTarget) {
 		t.Fatalf("merge into a dead target → %v, want contacts.MergedTargetError", err)
 	}
 }

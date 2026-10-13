@@ -207,30 +207,16 @@ func extensionRouteHandler(v extension.Verb, implemented bool, invoke toolInvoke
 		//     if it were the answer.
 		// The envelope stays on the agent path, which is where the trust tier
 		// and the evidence set are the point.
-		payload, trace, err := unwrapToolEnvelope(out)
-		if err != nil {
-			httperr.Write(w, r, err)
-			return
-		}
-		// The trace id is the one part of the envelope a REST caller genuinely
-		// loses, and it is the handle that makes a call findable in the audit
-		// log. It moves to a header rather than into the body, because the body
-		// belongs to the unit's declared schema and nothing else may appear in
-		// it.
-		if trace != "" {
-			w.Header().Set(extensionTraceHeader, trace)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report a write failure to the client anymore
-		_, _ = w.Write(payload)
+		writeToolPayload(w, r, out)
 	})
 }
 
-// extensionTraceHeader carries the governed call's correlation id on the REST
-// surface. `X-` prefixes are deprecated (RFC 6648) and the product's own header
-// vocabulary is unprefixed.
-const extensionTraceHeader = "Trace-Id"
+// toolTraceHeader carries the governed call's correlation id on the REST
+// surface. It is the one part of the envelope a REST caller would otherwise
+// lose, and it makes a call findable in the audit log. It is a header because
+// the body belongs to the operation's declared schema. `X-` prefixes are
+// deprecated (RFC 6648).
+const toolTraceHeader = "Trace-Id"
 
 // unwrapToolEnvelope takes the unit's own payload out of the sealed result.
 //

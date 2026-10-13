@@ -25,6 +25,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -167,19 +168,15 @@ func fileUsesALoadedVoice(t *testing.T, path string) bool {
 			// Handed back to a caller: return draftvoice.Load(...). The reply
 			// drafter's loadVoice is this shape, and a reader that knew only
 			// about arguments and assignments would report it as unwired.
-			for _, result := range node.Results {
-				if isVoiceLoadCall(result) {
-					used = true
-					return false
-				}
+			if slices.ContainsFunc(node.Results, isVoiceLoadCall) {
+				used = true
+				return false
 			}
 		case *ast.CallExpr:
 			// Passed straight into another call: Write(ctx, lane, in, Load(...)).
-			for _, arg := range node.Args {
-				if isVoiceLoadCall(arg) {
-					used = true
-					return false
-				}
+			if slices.ContainsFunc(node.Args, isVoiceLoadCall) {
+				used = true
+				return false
 			}
 		case *ast.AssignStmt:
 			// Bound to a name, which must then be read somewhere in the file.

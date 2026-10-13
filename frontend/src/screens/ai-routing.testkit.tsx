@@ -17,8 +17,8 @@ import {
 import type userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { expect, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 
 // Settings → AI → Model routing: which vendor this installation's text is sent
 // to. The server is the RBAC authority; this screen mirrors it by disabling
@@ -93,19 +93,41 @@ export const SHEET = [
 // so its absence never lights a row: the pill follows the ROUTING, and a vendor
 // nobody points at is not this installation's problem.
 export const PROVIDER_KEYS = [
-  { provider: "gemini", configured: true, env_var: "GEMINI_API_KEY" },
-  { provider: "anthropic", configured: false, env_var: "ANTHROPIC_API_KEY" },
-  { provider: "openai", configured: false, env_var: "OPENAI_API_KEY" },
+  {
+    provider: "gemini",
+    configured: true,
+    env_var: "GEMINI_API_KEY",
+    usable: true,
+  },
+  {
+    provider: "anthropic",
+    configured: false,
+    env_var: "ANTHROPIC_API_KEY",
+    usable: false,
+  },
+  {
+    provider: "openai",
+    configured: false,
+    env_var: "OPENAI_API_KEY",
+    usable: false,
+  },
   {
     provider: "openai_compatible",
     configured: true,
     env_var: "OPENAI_COMPATIBLE_API_KEY",
+    usable: true,
   },
-  { provider: "jev", configured: true, env_var: "TYPESAFE_API_KEY" },
+  {
+    provider: "jev",
+    configured: true,
+    env_var: "TYPESAFE_API_KEY",
+    usable: true,
+  },
   {
     provider: "jev_compatible",
     configured: false,
     env_var: "JEV_COMPATIBLE_API_KEY",
+    usable: true,
     optional: true,
   },
 ];
@@ -163,6 +185,7 @@ export function backendFor(
       provider: string;
       configured: boolean;
       env_var: string;
+      usable: boolean;
       optional?: boolean;
     }[];
   } = {},
@@ -190,9 +213,8 @@ export function backendFor(
       if (req.url.includes("/ai/available-models/")) {
         // The lane rides along as a query parameter, so the provider is the
         // path segment before it — the vendor is what this stub answers for.
-        const provider = req.url
-          .split("/ai/available-models/")[1]
-          .split("?")[0];
+        const provider =
+          req.url.split("/ai/available-models/")[1]?.split("?")[0] ?? "";
         return jsonResponse(
           VENDOR_MODELS[provider] ?? { provider, models: [] },
         );
@@ -263,7 +285,7 @@ export const CHANGED_ELSEWHERE = {
 export async function openEditor(
   user: ReturnType<typeof userEvent.setup>,
   testId: string,
-  verb: RegExp = /^edit$/i,
+  verb: RegExp = /^edit\b/i,
 ) {
   const lane = await screen.findByTestId(testId);
   await user.click(within(lane).getByRole("button", { name: verb }));

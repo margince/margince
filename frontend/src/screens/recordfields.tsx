@@ -10,9 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { EntityKind } from "../app/entity";
 import { useDetailsFieldTarget } from "../app/pageaside";
-import type { Route } from "../app/router";
 import { useUnsavedGuard } from "../app/unsaved";
 import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
@@ -20,14 +18,16 @@ import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
-import { derivedRecordKeys } from "./activitykeys";
+import { useLocale, useT } from "../i18n";
+import type { EntityKind } from "../lib/entity";
+import { sameEditValue } from "../lib/independentedit";
 import {
   ProblemError,
-  problemCodeOf,
   problemExistingId,
   problemMessageOf,
-} from "./common";
+} from "../lib/problem";
+import type { Route } from "../lib/router";
+import { derivedRecordKeys } from "./activitykeys";
 import {
   type CreateField,
   type FormRows,
@@ -36,7 +36,6 @@ import {
   usePublishedValues,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
-import { sameEditValue } from "./independentedit";
 import { groupValue, selectOptions } from "./recordfieldvalues";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -111,14 +110,18 @@ export function RecordFields(props: Readonly<Props>) {
       <PanelBody>
         {props.notice && <p>{props.notice}</p>}
         <FieldGrid>
-          {sections.map((section) => (
-            <RecordField
-              key={`${props.record.id}:${section.fields[0].key}`}
-              {...props}
-              label={section.label}
-              fields={section.fields}
-            />
-          ))}
+          {sections.map(({ label, fields }) => {
+            const [first] = fields;
+            return first ? (
+              <RecordField
+                key={`${props.record.id}:${first.key}`}
+                {...props}
+                label={label}
+                field={first}
+                fields={fields}
+              />
+            ) : null;
+          })}
           {props.extraRows}
         </FieldGrid>
       </PanelBody>
@@ -128,16 +131,18 @@ export function RecordFields(props: Readonly<Props>) {
 
 function RecordField({
   label,
+  field,
   ...props
 }: Readonly<
   Props & {
     label: string;
+    field: CreateField;
   }
 >) {
   const t = useT();
   const qc = useQueryClient();
   const opened = useRef(props.record);
-  const target = useDetailsFieldTarget(props.fields[0].key);
+  const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
@@ -163,18 +168,7 @@ function RecordField({
       rows: FormRows;
       baseline: FieldRecord;
       save: RecordFieldSave;
-    }) => {
-      try {
-        return await save(values, rows, baseline);
-      } catch (error) {
-        if (problemCodeOf(error) === "version_skew")
-          throw new ProblemError({
-            code: "version_skew",
-            detail: t("edit.versionSkew"),
-          });
-        throw error;
-      }
-    },
+    }) => save(values, rows, baseline),
     onSuccess: async () => {
       await Promise.all([
         invalidateRecord(qc, props.kind, props.record.id),
@@ -187,7 +181,6 @@ function RecordField({
       ]);
     },
   });
-  const field = props.fields[0];
   const values = prefillFromRecord(
     props.fields,
     editing ? opened.current : props.record,
@@ -246,6 +239,7 @@ function RecordField({
         ) : (
           <GroupReading
             props={props}
+            field={field}
             editable={editable}
             canEdit={canEdit}
             reason={reason}
@@ -278,6 +272,7 @@ function RecordField({
 
 function GroupReading({
   props,
+  field,
   editable,
   canEdit,
   reason,
@@ -285,6 +280,7 @@ function GroupReading({
   onEdit,
 }: Readonly<{
   props: Props;
+  field: CreateField;
   editable: boolean;
   canEdit: boolean;
   reason?: string;
@@ -292,11 +288,17 @@ function GroupReading({
   onEdit: () => void;
 }>) {
   const t = useT();
-  const key = props.fields[0].key;
+  const { locale } = useLocale();
+  const { key, editLabel } = field;
   const rendered = props.renderValues?.[key];
   if (rendered)
     return editable ? (
-      <InlineEditVerb label={label} disabled={!canEdit} onClick={onEdit} />
+      <InlineEditVerb
+        label={label}
+        text={editLabel && t(editLabel)}
+        disabled={!canEdit}
+        onClick={onEdit}
+      />
     ) : null;
   const value =
     (props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
@@ -304,6 +306,7 @@ function GroupReading({
       props.fields,
       props.record,
       t,
+      locale,
       props.maskedFields,
       props.readOnlyFields,
     );
@@ -314,7 +317,9 @@ function GroupReading({
       className="inline-editable"
       data-empty={!value}
       onClick={onEdit}
-      aria-label={t("inlineChoice.change", { field: label })}
+      aria-label={
+        editLabel ? t(editLabel) : t("inlineChoice.change", { field: label })
+      }
     >
       {value || t("field.unset")}
     </Button>

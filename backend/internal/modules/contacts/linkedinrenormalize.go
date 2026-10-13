@@ -26,6 +26,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -100,7 +101,7 @@ func renormalizeGhostKeysTx(ctx context.Context, tx pgx.Tx, onlyOwner ids.UUID) 
 		return out, err
 	}
 	groups, wanted := groupByCurrentKey(all)
-	for _, group := range groups {
+	for _, group := range workInLockOrder(groups, wanted) {
 		merged, rekeyed, err := collapseGroup(ctx, tx, group, wanted)
 		if err != nil {
 			return out, err
@@ -168,7 +169,24 @@ func groupByCurrentKey(all []ghostKeyRow) (map[string][]ghostKeyRow, map[ids.UUI
 // Dropping the copy that carried the address would quietly downgrade a
 // confirmable match to a guess. So every field is folded into the survivor
 // first, and only then are the others deleted.
+// The grouping is decided before the rows are held, so the group is re-read under a
+// lock and left alone if it moved: an import commits a new company_name for one
+// owner's rows while the sweep is mid-pass, and a row whose name moved out of the
+// group is no longer the duplicate the grouping took it for. Folding and deleting it
+// on the stale reading destroys a record nothing restores.
+//
+// The WHOLE group waits, survivor included. Skipping only the doomed row would leave
+// it holding the natural key the survivor is about to be re-keyed onto, and the
+// re-key then fails the unique constraint and takes the entire pass down with it. The
+// next pass regroups on the committed names and collapses what is still duplicate.
 func collapseGroup(ctx context.Context, tx pgx.Tx, group []ghostKeyRow, wanted map[ids.UUID]string) (merged, rekeyed int, err error) {
+	held, err := holdsItsGrouping(ctx, tx, group, wanted)
+	if err != nil {
+		return 0, 0, err
+	}
+	if !held {
+		return 0, 0, nil
+	}
 	keep := survivor(group)
 	for _, r := range group {
 		if r.id == keep.id {
@@ -192,6 +210,96 @@ func collapseGroup(ctx context.Context, tx pgx.Tx, group []ghostKeyRow, wanted m
 		rekeyed++
 	}
 	return merged, rekeyed, nil
+}
+
+// holdsItsGrouping takes the group's rows in id order and answers whether every one
+// still carries the company_name the grouping was decided on.
+//
+// Id order is what every merge-shaped flow here locks in, so a pass and an import
+// contending over one pair wait rather than deadlock. A row another pass already
+// collapsed is simply gone, and a group missing a member is one this pass has nothing
+// left to say about.
+func holdsItsGrouping(ctx context.Context, tx pgx.Tx, group []ghostKeyRow, wanted map[ids.UUID]string) (bool, error) {
+	ofGroup := make([]ids.UUID, 0, len(group))
+	for _, r := range group {
+		ofGroup = append(ofGroup, r.id)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, company_name
+		  FROM linkedin_connection
+		 WHERE id = ANY($1)
+		 ORDER BY id
+		   FOR UPDATE`, ofGroup)
+	if err != nil {
+		return false, fmt.Errorf("contacts: holding a LinkedIn duplicate group: %w", err)
+	}
+	defer rows.Close()
+	committed := map[ids.UUID]*string{}
+	for rows.Next() {
+		var id ids.UUID
+		var company *string
+		if err := rows.Scan(&id, &company); err != nil {
+			return false, err
+		}
+		committed[id] = company
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+	if len(committed) != len(group) {
+		return false, nil
+	}
+	// The KEY is what grouped these rows, so the key is what has to still agree. An
+	// import that appends a tagline or changes the casing commits a different name
+	// that normalizes the same, and such a row never left the group.
+	for _, r := range group {
+		if currentKey(committed[r.id]) != wanted[r.id] {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// currentKey derives the company key a name produces. The grouping asks the same
+// question of a name, and asks it here, because a re-read that answered differently
+// would compare a key against one it never meant.
+func currentKey(company *string) string {
+	if company == nil {
+		return ""
+	}
+	return NormalizeCompanyName(cleanLinkedInCompany(*company))
+}
+
+// workInLockOrder keeps the groups that will write and orders them by their lowest id.
+//
+// A group that is already one row at its current key needs neither a fold nor a
+// re-key, and locking it anyway would hold a row for the rest of the sweep's
+// transaction to prove there was nothing to do — turning the caught-up pass that
+// writes nothing into one that blocks every import behind it.
+//
+// The order is the lock order. Groups are disjoint, so two passes that request them in
+// the same sequence wait on each other rather than deadlock, and an import's narrower
+// set is the same sequence with gaps. Map iteration gave neither.
+func workInLockOrder(groups map[string][]ghostKeyRow, wanted map[ids.UUID]string) [][]ghostKeyRow {
+	work := make([][]ghostKeyRow, 0, len(groups))
+	for _, group := range groups {
+		if len(group) > 1 || stored(group[0].stored) != wanted[group[0].id] {
+			work = append(work, group)
+		}
+	}
+	sort.Slice(work, func(a, b int) bool { return lowestID(work[a]).String() < lowestID(work[b]).String() })
+	return work
+}
+
+// lowestID is the group's place in the lock order, and the first row it locks.
+func lowestID(group []ghostKeyRow) ids.UUID {
+	low := group[0].id
+	for _, r := range group[1:] {
+		if r.id.String() < low.String() {
+			low = r.id
+		}
+	}
+	return low
 }
 
 // foldGhostInto copies whatever the doomed row knows and the survivor does not

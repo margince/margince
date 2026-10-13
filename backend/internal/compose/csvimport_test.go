@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -32,28 +34,36 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	// target that no longer exists.
 	defer nonFieldTargets.AssertAllMatched(t)
 	defer createOnlyTargets.AssertAllMatched(t)
-	for object, build := range map[string]func(map[string]string) (created, patched map[string]bool){
-		migration.ObjectLead: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := leadCreateFrom(fields, "import:csv", "ext-1", "src")
-			up := leadUpdateFrom(fields)
+	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
+		migration.ObjectLead: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := leadCreateFrom(fields, typed, "import:csv", "ext-1", "src")
+			up := leadUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":    in.FullName != nil,
 				"email":        in.Email != nil,
+				"phone":        in.Phone != nil,
 				"title":        in.Title != nil,
 				"company_name": in.CompanyName != nil,
+				"linkedin_url": in.LinkedInURL != nil,
 				"author":       in.Author.AuthorName != nil,
+				"owner_email":  in.OwnerID != nil,
+				"cf_tier":      in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
 				"full_name":    up.FullName != nil,
 				"email":        up.Email != nil,
+				"phone":        up.Phone != nil,
 				"title":        up.Title != nil,
 				"company_name": up.CompanyName != nil,
+				"linkedin_url": up.LinkedInURL != nil,
+				"owner_email":  up.OwnerID != nil,
+				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 			}
 			return created, patched
 		},
-		migration.ObjectCompany: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := companyCreateFrom(fields, "src")
-			up := companyUpdateFrom(fields)
+		migration.ObjectCompany: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := companyCreateFrom(fields, typed, importSourceSystem(""), "src")
+			up := companyUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"display_name":        in.DisplayName != "",
 				"legal_name":          in.LegalName != nil,
@@ -61,20 +71,26 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"size_band":           in.SizeBand != nil,
 				"description":         in.Description != nil,
 				"domain":              len(in.Domains) > 0,
+				"linkedin_url":        in.LinkedInURL != nil,
 				"author":              in.Author.AuthorName != nil,
+				"owner_email":         in.OwnerID != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
 				"address.region":      in.Address != nil && in.Address.Region != nil,
 				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
 				"address.country":     in.Address != nil && in.Address.Country != nil,
+				"cf_tier":             in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
+				"cf_tier":      up.CustomFields["cf_tier"] != nil,
 				"display_name": up.DisplayName != nil,
 				"legal_name":   up.LegalName != nil,
 				"industry":     up.Industry != nil,
 				"size_band":    up.SizeBand != nil,
 				"description":  up.Description != nil,
+				"linkedin_url": up.LinkedInURL != nil,
+				"owner_email":  up.OwnerID != nil,
 				// The replace-set behind a pointer: non-nil means the file
 				// carried a domain column, and only then is the stored set
 				// rewritten.
@@ -88,24 +104,29 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			return created, patched
 		},
-		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := contactCreateFrom(fields, "src")
-			up := contactUpdateFrom(fields)
+		migration.ObjectContact: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
+			in := contactCreateFrom(fields, typed, importSourceSystem(""), "src")
+			up := contactUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":           in.FullName != "",
 				"first_name":          in.FirstName != nil,
 				"last_name":           in.LastName != nil,
 				"title":               in.Title != nil,
 				"email":               len(in.Emails) > 0,
+				"phone":               len(in.Phones) > 0,
+				"linkedin_url":        in.Social["linkedin"] != nil,
 				"author":              in.Author.AuthorName != nil,
+				"owner_email":         in.OwnerID != nil,
 				"address.line1":       in.Address != nil && in.Address.Line1 != nil,
 				"address.line2":       in.Address != nil && in.Address.Line2 != nil,
 				"address.city":        in.Address != nil && in.Address.City != nil,
 				"address.region":      in.Address != nil && in.Address.Region != nil,
 				"address.postal_code": in.Address != nil && in.Address.PostalCode != nil,
 				"address.country":     in.Address != nil && in.Address.Country != nil,
+				"cf_tier":             in.CustomFields["cf_tier"] != nil,
 			}
 			patched := map[string]bool{
+				"cf_tier":    up.CustomFields["cf_tier"] != nil,
 				"full_name":  up.FullName != nil,
 				"first_name": up.FirstName != nil,
 				"last_name":  up.LastName != nil,
@@ -114,6 +135,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				// contact's emails are child rows, and the patch input
 				// carried no member for them at all.
 				"email":               len(up.Emails) > 0,
+				"phone":               len(up.Phones) > 0,
+				"linkedin_url":        up.Social["linkedin"] != nil,
+				"owner_email":         up.OwnerID != nil,
 				"address.line1":       up.Address != nil && up.Address.Line1 != nil,
 				"address.line2":       up.Address != nil && up.Address.Line2 != nil,
 				"address.city":        up.Address != nil && up.Address.City != nil,
@@ -125,15 +149,22 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 		},
 	} {
 		t.Run(object, func(t *testing.T) {
-			targets, err := importTargets(object)
+			targets, err := importTargets(object, tierCatalog())
 			if err != nil {
 				t.Fatalf("importTargets: %v", err)
 			}
-			fields := make(map[string]string, len(targets))
+			fields, typed := make(map[string]string, len(targets)), map[string]any{}
 			for _, target := range targets {
 				fields[target] = "value"
+				if strings.HasPrefix(target, customFieldPrefix) {
+					typed[target] = "value"
+				}
+				if target == csvTargetOwner {
+					// The seat the run resolved the address to.
+					typed[target] = ids.NewV7()
+				}
 			}
-			created, patched := build(fields)
+			created, patched := build(fields, typed)
 			for _, target := range targets {
 				if nonFieldTargets.Waived(t, target) {
 					// Not a field, so the round-trip rule does not apply. Each
@@ -163,25 +194,11 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				assertNonFieldTarget(t, object, csvEmployerName, targets, created, patched,
 					"it names the company a contact works AT, and writing it would put a company's name in a field on the contact",
 					"a contact file naming employers would be refused")
+				assertNonFieldTarget(t, object, csvTargetCompanyRef, targets, created, patched,
+					"it names the company a contact works AT by its ref, and writing it would put a ref in a field on the contact",
+					"a contact file naming employers by ref would be refused")
 			}
 		})
-	}
-}
-
-// A custom-field column is not offered, because the caller-opened transaction
-// the import writes through refuses custom fields: offering one would accept a
-// column, report the row as written, and drop the value.
-func TestImportTargetsOfferNoCustomFields(t *testing.T) {
-	for _, object := range []string{migration.ObjectLead, migration.ObjectCompany, migration.ObjectContact} {
-		targets, err := importTargets(object)
-		if err != nil {
-			t.Fatalf("importTargets(%s): %v", object, err)
-		}
-		for _, target := range targets {
-			if len(target) > 3 && target[:3] == "cf_" {
-				t.Errorf("%s advertises %q, which the import write path cannot carry", object, target)
-			}
-		}
 	}
 }
 
@@ -190,7 +207,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 
 	// The store lowercases email on write. Compared raw, a file spelling it
 	// differently would rewrite the row on every single re-import.
-	changed, err := changedFields(stored, map[string]string{"email": "Ada@Lovelace.Example"})
+	changed, err := changedFields(stored, map[string]string{"email": "Ada@Lovelace.Example"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}
@@ -199,7 +216,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 	}
 
 	// A real change is still a change.
-	changed, err = changedFields(stored, map[string]string{"email": "ada@newplace.example"})
+	changed, err = changedFields(stored, map[string]string{"email": "ada@newplace.example"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}
@@ -208,7 +225,7 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 	}
 
 	// Case is NOT folded on a field the store keeps verbatim.
-	changed, err = changedFields(stored, map[string]string{"full_name": "ADA LOVELACE"})
+	changed, err = changedFields(stored, map[string]string{"full_name": "ADA LOVELACE"}, nil)
 	if err != nil {
 		t.Fatalf("changedFields: %v", err)
 	}
@@ -218,18 +235,14 @@ func TestChangedFieldsComparesEmailAsTheStoreWillHoldIt(t *testing.T) {
 }
 
 func TestMappingFromRefusesTwoColumnsOntoOneField(t *testing.T) {
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Work Email": "email", "Personal Email": "email"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Work Email": "email", "Personal Email": "email"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("two columns onto one field were accepted; the row builder would pick one at random")
 	}
 }
 
 func TestMappingFromRefusesATargetTheObjectDoesNotHave(t *testing.T) {
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Revenue": "annual_revenue"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Revenue": "annual_revenue"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("an unknown target was accepted; the run would fail at the first row instead")
 	}
@@ -279,7 +292,7 @@ func TestMappingComparesColumnsTheWayTheRowBuilderDoes(t *testing.T) {
 // caller who guesses wrong has nowhere to look. An agent driving this over MCP
 // cannot open the field catalog the way a screen can.
 func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
-	targets, err := importTargets(migration.ObjectCompany)
+	targets, err := importTargets(migration.ObjectCompany, importCatalog{})
 	if err != nil {
 		t.Fatalf("importTargets: %v", err)
 	}
@@ -294,9 +307,7 @@ func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
 
 	for name, mapping := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-				Mapping: mapping,
-			})
+			_, err := mappingFor(migration.ObjectCompany, mapping, crmcontracts.CreateImportRunRequest{})
 			if err == nil {
 				t.Fatal("the mapping was accepted; expected a refusal")
 			}
@@ -312,9 +323,7 @@ func TestMappingRefusalsNameTheFieldsTheObjectAccepts(t *testing.T) {
 func TestMappingFromNeedsAColumnThatIdentifiesARow(t *testing.T) {
 	// Nothing maps to email, and no explicit source key is given, so no row
 	// could be recognized on a re-import or found by an undo.
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Name": "full_name"},
-	})
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Name": "full_name"}, crmcontracts.CreateImportRunRequest{})
 	if err == nil {
 		t.Fatal("a mapping with no identifying column was accepted")
 	}
@@ -322,8 +331,7 @@ func TestMappingFromNeedsAColumnThatIdentifiesARow(t *testing.T) {
 
 func TestMappingFromRefusesASourceKeyThatIsNotMapped(t *testing.T) {
 	key := "Some Other Column"
-	_, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping:   map[string]string{"Email": "email"},
+	_, err := mappingFor(migration.ObjectLead, map[string]string{"Email": "email"}, crmcontracts.CreateImportRunRequest{
 		SourceKey: &key,
 	})
 	if err == nil {
@@ -332,11 +340,9 @@ func TestMappingFromRefusesASourceKeyThatIsNotMapped(t *testing.T) {
 }
 
 func TestMappingFromDefaultsTheSourceKeyToTheIdentifyingColumn(t *testing.T) {
-	mapping, err := mappingFrom(migration.ObjectLead, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"E-mail": "email", "Name": "full_name"},
-	})
+	mapping, err := mappingFor(migration.ObjectLead, map[string]string{"E-mail": "email", "Name": "full_name"}, crmcontracts.CreateImportRunRequest{})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.SourceKey != "E-mail" {
 		t.Fatalf("source key = %q, want the column mapped onto email", mapping.SourceKey)
@@ -395,8 +401,9 @@ func TestTheDispositionAlwaysSumsToTheRowsRead(t *testing.T) {
 		{migration.StatusFailed, 3, 1},
 	} {
 		t.Run(tc.status, func(t *testing.T) {
+			// The failed run stopped after walking every row, in its link phase.
 			got := toContractImportReport(migration.Run{
-				Status: tc.status, Report: &merged,
+				Status: tc.status, Report: &merged, Checkpoint: 5,
 				Mapping: &migration.RunMapping{Object: migration.ObjectLead},
 			})
 			d := got.Disposition
@@ -442,6 +449,26 @@ func TestToContractReportNeverSumsAPredictionWithAnOutcome(t *testing.T) {
 	}
 }
 
+// A report says where each column went, not only how many rows landed: a
+// caller reporting a finished import from it alone can name the fields.
+func TestTheReportCarriesTheMappingTheRunUsed(t *testing.T) {
+	fields := map[string]string{"Company": "display_name", "Site": "domain"}
+	report := migration.Report{Objects: []migration.ObjectReport{{Object: migration.ObjectCompany}}}
+
+	done := toContractImportReport(migration.Run{
+		Status: migration.StatusComplete, Report: &report,
+		Mapping: &migration.RunMapping{Object: migration.ObjectCompany, Fields: fields},
+	})
+	if done.Mapping == nil || !maps.Equal(*done.Mapping, fields) {
+		t.Fatalf("report mapping = %v, want the %v the run was staged with", done.Mapping, fields)
+	}
+
+	unmapped := toContractImportReport(migration.Run{Status: migration.StatusComplete, Report: &report})
+	if unmapped.Mapping != nil {
+		t.Errorf("a run carrying no mapping reports one: %v", *unmapped.Mapping)
+	}
+}
+
 // A flat file carries no edges, so an edge reaching the writer came from
 // somewhere it does not understand. It is disclosed as not applied, never
 // swallowed as done.
@@ -474,8 +501,12 @@ func TestCSVWritersHaveNoIdentitiesToReconcile(t *testing.T) {
 // being imported.
 func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 	w := &csvWriters{object: migration.ObjectLead, nativeIDs: map[string]ids.UUID{}}
+	// Granted the run's own object, so the refusal can only be the mismatch.
+	ctx := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{migration.ObjectLead: {Create: true, Read: true, Update: true}},
+	}})
 
-	if _, err := w.Ensure(t.Context(), migration.ObjectCompany, migration.Row{ExternalID: "x"}); err == nil {
+	if _, err := w.Ensure(ctx, migration.ObjectCompany, migration.Row{ExternalID: "x"}); err == nil {
 		t.Fatal("a row for an object this run does not carry was accepted")
 	}
 }
@@ -484,7 +515,7 @@ func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 // wire mappers refuse — so a client cannot pre-plant a row under a guessed
 // import id and have the store hand it back as already imported.
 func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectLead}
+	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importSourceSystem("hubspot")}
 
 	stamp := w.provenanceOf("ada@lovelace.example")
 	if !strings.HasPrefix(stamp, provenance.ReservedSourceSystemPrefix) {
@@ -493,8 +524,8 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 	if !strings.Contains(stamp, migration.ObjectLead) || !strings.Contains(stamp, "ada@lovelace.example") {
 		t.Fatalf("provenance %q does not name the object and the source row", stamp)
 	}
-	if !strings.HasPrefix(csvSourceSystem(), provenance.ReservedSourceSystemPrefix) {
-		t.Fatalf("source system %q is not reserved", csvSourceSystem())
+	if !strings.HasPrefix(importSourceSystem("hubspot"), provenance.ReservedSourceSystemPrefix) {
+		t.Fatalf("source system %q is not reserved", importSourceSystem("hubspot"))
 	}
 }
 
@@ -545,8 +576,11 @@ func TestColumnProfileReachesTheWireWithSamplesAndRate(t *testing.T) {
 // rather than left behind. A target absent from here must reach both the create
 // and the update input.
 var nonFieldTargets = gatekit.Waive(map[string]string{
-	csvTargetID:     "names the RECORD the row is — a selector, not a value",
-	csvEmployerName: "names an EDGE from the record to a company — written as a relationship, not a column",
+	csvTargetID:         "names the RECORD the row is — a selector, not a value",
+	csvEmployerName:     "names an EDGE from the record to a company — written as a relationship, not a column",
+	csvTargetCompanyRef: "names an EDGE from the record to a company by its ref — written as a relationship, not a column",
+	csvTargetRef:        "the row's id in the source system — the part's source key, not a value",
+	csvTargetTags:       "names tags applied beside the write and only ever added — never a column",
 })
 
 // createOnlyTargets are columns the import writes when it creates a record and
@@ -620,20 +654,43 @@ func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
 func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 	var issues []crmcontracts.ImportRowIssue
 	seen := map[string]bool{}
-	added := appendIssues(&issues, seen, []migration.SkippedRow{
+	lead := migration.ObjectReport{Object: migration.ObjectLead}
+	appendIssues(&issues, seen, issueKey, lead, []migration.SkippedRow{
 		// What the source writes for a row with no key at all, on line 7.
 		{ExternalID: "line 7", Line: 7, Reason: "no key"},
 		// A row on line 12 whose key column really does hold that text.
 		{ExternalID: "line 7", Line: 12, Reason: "not-a-uuid"},
 	})
-	if added != 2 || len(issues) != 2 {
-		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a contact must go fix",
-			issues, added)
+	if len(issues) != 2 {
+		t.Fatalf("issues = %+v, want both rows — they are two rows a contact must go fix", issues)
 	}
 	// And the fold that DOES belong still happens: one row skipped twice.
-	added = appendIssues(&issues, seen, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
-	if added != 0 {
+	appendIssues(&issues, seen, issueKey, lead, []migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if len(issues) != 2 {
 		t.Errorf("the same row was reported twice; the dry run's skip and the commit's are one row")
+	}
+	// Two files of a ZIP each have their own line 7.
+	appendIssues(&issues, seen, issueKey, migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"},
+		[]migration.SkippedRow{{ExternalID: "line 7", Line: 7, Reason: "no key"}})
+	if len(issues) != 3 || issues[2].File == nil || *issues[2].File != "companies.csv" {
+		t.Errorf("issues = %+v, want a third issue naming companies.csv", issues)
+	}
+}
+
+func TestAProblemOfAWholeFileIsReportedWithNoLine(t *testing.T) {
+	var issues []crmcontracts.ImportRowIssue
+	companies := migration.ObjectReport{Object: migration.ObjectCompany, File: "companies.csv"}
+	appendIssues(&issues, map[string]bool{}, warningKey, companies, []migration.SkippedRow{
+		{Kind: string(crmcontracts.ImportProblemKindNewTag), Value: "vip", Reason: "a new tag"},
+		{Kind: string(crmcontracts.ImportProblemKindNewTag), Value: "partner", Reason: "a new tag"},
+	})
+	if len(issues) != 2 {
+		t.Fatalf("issues = %+v, want one per new tag", issues)
+	}
+	for _, issue := range issues {
+		if issue.Line != nil {
+			t.Errorf("issue %q has line %d, want none: a new tag belongs to the file, not a row", *issue.Value, *issue.Line)
+		}
 	}
 }
 
@@ -694,12 +751,11 @@ func TestMappingCarriesTheContextTagToTheCommit(t *testing.T) {
 	t.Parallel()
 
 	word := openapi_types.UUID(ids.NewV7())
-	mapping, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping:      map[string]string{"Name": "display_name"},
+	mapping, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{
 		ContextTagId: &word,
 	})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.ContextTag != word.String() {
 		t.Fatalf("the run's word did not reach the stored mapping: got %q, want %q",
@@ -714,8 +770,7 @@ func TestMappingRefusesTheZeroContextTag(t *testing.T) {
 	t.Parallel()
 
 	var zero openapi_types.UUID
-	_, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping:      map[string]string{"Name": "display_name"},
+	_, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{
 		ContextTagId: &zero,
 	})
 	if err == nil {
@@ -727,11 +782,9 @@ func TestMappingRefusesTheZeroContextTag(t *testing.T) {
 func TestMappingWithoutAContextTagFilesNothing(t *testing.T) {
 	t.Parallel()
 
-	mapping, err := mappingFrom(migration.ObjectCompany, crmcontracts.CreateImportRunRequest{
-		Mapping: map[string]string{"Name": "display_name"},
-	})
+	mapping, err := mappingFor(migration.ObjectCompany, map[string]string{"Name": "display_name"}, crmcontracts.CreateImportRunRequest{})
 	if err != nil {
-		t.Fatalf("mappingFrom: %v", err)
+		t.Fatalf("stagedMappingFrom: %v", err)
 	}
 	if mapping.ContextTag != "" {
 		t.Fatalf("a run naming no word carried one anyway: %q", mapping.ContextTag)
@@ -782,4 +835,13 @@ func TestNoContextTagAsksNothing(t *testing.T) {
 	if err := h.contextTagIsApplicable(context.Background(), ""); err != nil {
 		t.Fatalf("a run naming no word was refused: %v", err)
 	}
+}
+
+// mappingFor stages a single-CSV request for one object, as a create does.
+func mappingFor(
+	object string, mapping map[string]string, req crmcontracts.CreateImportRunRequest,
+) (migration.RunMapping, error) {
+	obj := crmcontracts.ImportObject(object)
+	req.Object, req.Mapping = &obj, &mapping
+	return stagedMappingFrom(req, nil)
 }

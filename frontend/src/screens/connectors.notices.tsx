@@ -6,15 +6,15 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout, type CalloutTone } from "../design-system/callout";
 import { ErrorLine } from "../design-system/errorline";
-import { type Translator, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import type { PairedCalendar } from "./connect-account";
 import {
   ACCOUNT_NAME,
   type AccountVendor,
   VENDOR_SERVICES,
   vendorOf,
-} from "./connectorproviders";
+} from "../format/connectorprovider";
+import { type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import type { PairedCalendar } from "./connect-account";
 
 // What a page says about a consent round trip that has just come back. It
 // takes the landing as props so Connections and Meetings draw the same answer.
@@ -67,6 +67,7 @@ function importRunning(
 function readVendorLanding(
   t: Translator,
   outcome: string,
+  note: MessageKey,
   vendor: AccountVendor,
   provider: string | undefined,
   connections: readonly CaptureConnection[],
@@ -103,7 +104,7 @@ function readVendorLanding(
         ? "connectors.oauthCalendarDeclined"
         : "connectors.oauthCalendarFailed",
     ),
-    body: declined ? null : t(OAUTH_OUTCOME_NOTE[outcome]),
+    body: declined ? null : t(note),
     calendar: services.calendar,
   };
 }
@@ -111,12 +112,14 @@ function readVendorLanding(
 function readLanding(
   t: Translator,
   outcome: string,
+  note: MessageKey,
   provider: string | undefined,
   connections: readonly CaptureConnection[],
 ): Reading {
   const vendor = vendorOf(provider);
   const vendorReading =
-    vendor && readVendorLanding(t, outcome, vendor, provider, connections);
+    vendor &&
+    readVendorLanding(t, outcome, note, vendor, provider, connections);
   if (vendorReading) {
     return vendorReading;
   }
@@ -124,7 +127,7 @@ function readLanding(
   return {
     tone: ok ? "success" : "danger",
     title: t(ok ? "connectors.oauthConnected" : "connectors.oauthNotConnected"),
-    body: t(OAUTH_OUTCOME_NOTE[outcome]),
+    body: t(note),
     calendar: null,
   };
 }
@@ -163,15 +166,14 @@ export function OAuthOutcomeNote({
   const [dismissed, setDismissed] = useState<string | null>(null);
   // Object.hasOwn, not a bare index: a segment like "constructor" would
   // otherwise resolve to an inherited member and render an empty note.
-  if (
-    !outcome ||
-    !connections ||
-    landing === dismissed ||
-    !Object.hasOwn(OAUTH_OUTCOME_NOTE, outcome)
-  ) {
+  const note =
+    outcome && Object.hasOwn(OAUTH_OUTCOME_NOTE, outcome)
+      ? OAUTH_OUTCOME_NOTE[outcome]
+      : undefined;
+  if (!outcome || !note || !connections || landing === dismissed) {
     return null;
   }
-  const reading = readLanding(t, outcome, provider, connections);
+  const reading = readLanding(t, outcome, note, provider, connections);
   const calendar = reading.calendar;
   const connectError = calendar ? connectCalendar?.error : null;
   return (

@@ -11,7 +11,10 @@
 // metadata stays inside modules/customfields.
 package fieldcatalog
 
-import "context"
+import (
+	"context"
+	"slices"
+)
 
 // The six closed field types (custom-fields.md), spelled the way
 // modules/customfields' own type constants and the custom_field.type
@@ -136,10 +139,5 @@ func Targets() []Target {
 // carrying anything else is a row written by a version this binary cannot
 // reason about, and the catalog refuses rather than guesses.
 func (t Target) Valid() bool {
-	for _, known := range Targets() {
-		if t == known {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(Targets(), t)
 }

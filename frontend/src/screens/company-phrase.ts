@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useT } from "../i18n";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 
 /**
  * The company's name for a sentence that reads "everyone at {company}", or

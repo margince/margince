@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { NotificationSettingsCard } from "./notification-settings";
 
 // Settings → Me → Notifications: where each class of notice reaches this seat.

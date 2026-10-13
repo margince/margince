@@ -258,3 +258,8 @@ export const ReadOnly: Story = {
     "read",
   ),
 };
+
+export const ReadyAtPhoneWidth: Story = {
+  ...Ready,
+  tags: ["uat-phone"],
+};

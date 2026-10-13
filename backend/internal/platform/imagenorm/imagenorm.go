@@ -37,6 +37,11 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
+// MaxMarkBytes is what a company mark may arrive as. Generous because refusing a
+// contact's own file costs them image software, while accepting it costs one decode
+// of an image this server immediately shrinks.
+const MaxMarkBytes = 5_000_000
+
 // ContentType is the media type of every normalized image this package
 // produces. Callers store it beside the bytes rather than carrying the
 // source's own type: the source format is not what gets served.
@@ -185,10 +190,7 @@ func SquarePNG(img image.Image, maxEdge int) ([]byte, error) {
 		return nil, fmt.Errorf("%w: it decoded to a %dx%d canvas", ErrUnsupported, width, height)
 	}
 
-	edge := max(width, height)
-	if edge > maxEdge {
-		edge = maxEdge
-	}
+	edge := min(max(width, height), maxEdge)
 	scale := float64(edge) / float64(max(width, height))
 	// Rounding up keeps a 1px source side from scaling to a 0px destination.
 	fitWidth := max(1, int(float64(width)*scale+0.5))

@@ -408,7 +408,13 @@ function RecommendedStep() {
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <NextSteps
           view={recommending}
-          proposed={<ProposedNextSteps companyId="o-1" view={recommending} />}
+          proposed={
+            <ProposedNextSteps
+              companyId="o-1"
+              view={recommending}
+              onOpenReceipt={() => undefined}
+            />
+          }
         />
       </div>
     </StoryProviders>

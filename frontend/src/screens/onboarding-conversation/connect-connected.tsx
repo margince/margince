@@ -13,9 +13,15 @@ import {
   ProviderRow,
   type ProviderRowTone,
 } from "../../design-system/providerrow";
+import {
+  ACCOUNT_NAME,
+  type ConnectionAccount,
+  VENDOR_SERVICES,
+  vendorOf,
+} from "../../format/connectorprovider";
 import { useT } from "../../i18n";
+import { problemMessageOf } from "../../lib/problem";
 import { IMPORT_WINDOW_LABELS } from "../../mail-history/window-picker";
-import { problemMessageOf } from "../common";
 import { notConfiguredProvider, useConnectAccount } from "../connect-account";
 import { ConnectPostureStep } from "../connect-posture";
 import {
@@ -23,12 +29,6 @@ import {
   missingCalendarWriteGrant,
   serviceHealth,
 } from "../connector-status";
-import {
-  ACCOUNT_NAME,
-  type ConnectionAccount,
-  VENDOR_SERVICES,
-  vendorOf,
-} from "../connectorproviders";
 import {
   type BackreadChoice,
   BackreadPanel,

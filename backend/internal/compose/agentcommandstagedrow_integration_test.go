@@ -164,8 +164,7 @@ func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
 
 	_, invokeErr := archiveRegistry(e).Invoke(agent, "archive_record",
 		json.RawMessage(`{"record_type":"contact","id":"`+hidden.ID.String()+`"}`))
-	var staged *workflow.StagedApprovalError
-	if errors.As(invokeErr, &staged) {
+	if staged, ok := errors.AsType[*workflow.StagedApprovalError](invokeErr); ok {
 		t.Errorf("the tool door staged approval %s for a row outside the agent's scope, where the REST door "+
 			"refused — one credential, two answers", staged.ApprovalID)
 	}
@@ -242,7 +241,7 @@ func archiveRegistry(e *integration.Env) *agents.Registry {
 	// than latent — the tool refuses on the terms an unreadable list refuses
 	// on, so an accidental call here would fail loudly instead of deriving a
 	// company from the compiled-in baseline.
-	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil, nil)
+	agents.RegisterCoreTools(reg, native, native, nil, fieldOwnership{pool: e.Pool}, nil, nil, nil)
 	return reg
 }
 

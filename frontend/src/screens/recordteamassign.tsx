@@ -16,7 +16,7 @@ import {
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   type AssignmentRecordType,
   type AssignmentSubjectKind,
@@ -26,7 +26,7 @@ import {
   useRecordRoles,
   useUpdateRecordAssignment,
 } from "./recordassignments.queries";
-import "./common.css";
+import "../design-system/querystates.css";
 
 const SUBJECT_KINDS: readonly AssignmentSubjectKind[] = ["user", "team"];
 
@@ -166,7 +166,7 @@ export function RecordTeamAssign({
   }
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {existing ? t("assignments.changeTitle") : t("assignments.addTitle")}
       </Heading>
@@ -209,17 +209,17 @@ export function RecordTeamAssign({
         </Field>
         <p className="t-caption">{t("assignments.noAccessNote")}</p>
         <ErrorLine error={write.error} />
-        <div className="actions">
-          <Button variant="ghost" onClick={close} disabled={write.isPending}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={write.isPending || !subject || roleId === ""}
-          >
-            {existing ? t("assignments.saveChange") : t("assignments.saveAdd")}
-          </Button>
-        </div>
+      </div>
+      <div className="actions">
+        <Button variant="ghost" onClick={close} disabled={write.isPending}>
+          {t("deals.cancel")}
+        </Button>
+        <Button
+          onClick={() => void submit()}
+          disabled={write.isPending || !subject || roleId === ""}
+        >
+          {existing ? t("assignments.saveChange") : t("assignments.saveAdd")}
+        </Button>
       </div>
     </Modal>
   );

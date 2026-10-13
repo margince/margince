@@ -15,10 +15,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // subjectBound and bodyBound cap what a producer can put in front of a
@@ -183,8 +185,8 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	if err != nil {
 		return Notice{}, err
 	}
-	subject := truncate(in.Subject, subjectBound)
-	body := truncate(in.Body, bodyBound)
+	subject := textcut.Runes(in.Subject, subjectBound)
+	body := textcut.Runes(in.Body, bodyBound)
 	id := ids.NewV7()
 	var createdAt time.Time
 	var dedupe *string
@@ -317,7 +319,7 @@ const notTheReadersOwnStageMove = `NOT coalesce(
 // The muted kinds arrive as one text[] argument rather than a rendered list, so
 // nothing off a preference row is ever formatted into a statement.
 func inTheReadersLane(mutedAt int) string {
-	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d) AND retracted_at IS NULL", mutedAt)
+	return notTheReadersOwnStageMove + fmt.Sprintf(" AND kind <> ALL($%d) AND retracted_at IS NULL", mutedAt) + " AND (kind <> 'lead_sla' OR NOT EXISTS (SELECT 1 FROM lead ld WHERE target_type = 'lead' AND ld.id = target_id AND NOT (" + auth.LiveLeadInquiryClause("ld") + ")))"
 }
 
 // UnreadFor answers the CALLING contact's own unread notices, newest first,
@@ -426,14 +428,6 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 			NoticeId: openapi_types.UUID(id),
 		})
 	})
-}
-
-// truncate bounds s to at most n runes.
-func truncate(s string, n int) string {
-	if runes := []rune(s); len(runes) > n {
-		return string(runes[:n])
-	}
-	return s
 }
 
 // Retract takes back every seat's copy of one announcement: the thing it asked

@@ -121,6 +121,18 @@ describe("the syntax the shipped handbook uses", () => {
   });
 });
 
+describe("an ordered list's numbering", () => {
+  it("starts from the number its source was written from", () => {
+    const { container } = render(<Markdown source={"5. Fifth\n6. Sixth"} />);
+    expect(container.querySelector("ol")?.getAttribute("start")).toBe("5");
+  });
+
+  it("carries no start when the list begins at one", () => {
+    const { container } = render(<Markdown source={"1. First\n2. Second"} />);
+    expect(container.querySelector("ol")?.hasAttribute("start")).toBe(false);
+  });
+});
+
 describe("a link is only a link when its scheme is one we allow", () => {
   it("renders an http link, opening it away from the answer", () => {
     render(<Markdown source="See [the docs](https://example.com/a)." />);
@@ -414,5 +426,140 @@ describe("the highlight has three outcomes and says which", () => {
     render(<Markdown source="A paragraph." onHighlight={onHighlight} />);
     expect(onHighlight).toHaveBeenCalledWith("none");
     expect(scrolled).toEqual([]);
+  });
+});
+
+describe("autolink", () => {
+  const SOURCE =
+    "See https://example.com/a, or [the terms](https://example.com/t).\n\n`https://example.com/code`";
+
+  it("leaves a bare address as text unless asked", () => {
+    render(<Markdown source={SOURCE} />);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "the terms",
+    ]);
+  });
+
+  it("links a bare address in prose and nothing in code or inside a link", () => {
+    render(<Markdown source={SOURCE} autolink />);
+    expect(
+      screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+    ).toEqual(["https://example.com/a", "https://example.com/t"]);
+    expect(screen.getByText("https://example.com/code").tagName).toBe("CODE");
+  });
+});
+
+describe("autolink shows where every link goes", () => {
+  it("keeps a label as text and makes the real address the link", () => {
+    const { container } = render(
+      <Markdown source="[Your bank](https://evil.example/login)" autolink />,
+    );
+    const link = screen.getByRole("link");
+    expect(link.textContent).toBe("https://evil.example/login");
+    expect(link.getAttribute("href")).toBe("https://evil.example/login");
+    expect(screen.queryByRole("link", { name: "Your bank" })).toBeNull();
+    expect(visibleText(container)).toBe(
+      "Your bank (https://evil.example/login)",
+    );
+  });
+
+  it("renders a javascript: link as its label and nothing to press", () => {
+    const { container } = render(
+      <Markdown source="[Verify](javascript:alert(1))" autolink />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(visibleText(container)).toBe("Verify");
+  });
+
+  it("leaves a link whose label is its address as one link", () => {
+    render(
+      <Markdown
+        source="[https://example.com/t](https://example.com/t)"
+        autolink
+      />,
+    );
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual([
+      "https://example.com/t",
+    ]);
+  });
+});
+
+describe("a link to a Margince page stays in this tab", () => {
+  const own = () =>
+    `${window.location.origin}${window.location.pathname}#/deals/42`;
+  const other = "https://example.com/#/deals/42";
+
+  it.each([
+    ["a bare address", (href: string) => href],
+    ["a written link", (href: string) => `[the deal](${href})`],
+  ])(
+    "opens %s on this origin in place, and one elsewhere in a new tab",
+    (_, write) => {
+      render(
+        <Markdown source={`${write(own())}\n\n${write(other)}`} autolink />,
+      );
+      const [inApp, outbound] = screen.getAllByRole("link");
+      expect(inApp).toHaveAttribute("href", own());
+      expect(inApp).not.toHaveAttribute("target");
+      expect(inApp).toHaveAttribute("rel", "noopener noreferrer");
+      expect(outbound).toHaveAttribute("href", other);
+      expect(outbound).toHaveAttribute("target", "_blank");
+    },
+  );
+
+  it.each([
+    ["an API address", "/v1/attachments/7"],
+    ["a hash route on another path", "/v1/export#/deals/42"],
+    ["a page path with no hash route", "#section"],
+  ])("opens %s on this origin in a new tab", (_, tail) => {
+    const href = tail.startsWith("#")
+      ? `${window.location.origin}${window.location.pathname}${tail}`
+      : `${window.location.origin}${tail}`;
+    render(<Markdown source={href} autolink />);
+    expect(screen.getByRole("link")).toHaveAttribute("target", "_blank");
+  });
+
+  it("still shows the real address behind a label on this origin", () => {
+    const { container } = render(
+      <Markdown source={`[Your bank](${own()})`} autolink />,
+    );
+    expect(screen.getByRole("link").textContent).toBe(own());
+    expect(visibleText(container)).toBe(`Your bank (${own()})`);
+  });
+});
+
+describe("which characters a bare address takes", () => {
+  const linked = (source: string) => {
+    render(<Markdown source={source} autolink />);
+    return screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+  };
+
+  it("keeps a balanced parenthesis inside the address", () => {
+    expect(linked("Reset at https://example.test/reset/(token) today")).toEqual(
+      ["https://example.test/reset/(token)"],
+    );
+  });
+
+  it("leaves the parenthesis that closes the prose around it", () => {
+    expect(linked("(see https://x.test/a) and https://x.test/b.")).toEqual([
+      "https://x.test/a",
+      "https://x.test/b",
+    ]);
+  });
+
+  it("links no scheme glued to the word before it", () => {
+    render(
+      <Markdown
+        source="wordhttps://example.com/x and überhttps://example.com/y"
+        autolink
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("reads the scheme in any case", () => {
+    expect(linked("Open HTTPS://Example.test/Path now")).toEqual([
+      "HTTPS://Example.test/Path",
+    ]);
   });
 });

@@ -7,8 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "../roles.testkit";
 import { installFetchStub, jsonResponse } from "../story-utils";
 import type { ConversationState } from "./conversation-machine";
@@ -136,8 +136,8 @@ describe("TeamAct", () => {
       screen.getByRole("button", { name: "Finish setup" }),
     ).toBeInTheDocument();
     // The set-password link, in the same dialog the roster hands it over in.
-    expect(
-      await screen.findByDisplayValue("https://crm.example/set-password?t=abc"),
-    ).toBeInTheDocument();
+    expect((await screen.findByTestId("password-link-url")).textContent).toBe(
+      "https://crm.example/set-password?t=abc",
+    );
   });
 });

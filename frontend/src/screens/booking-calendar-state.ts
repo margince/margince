@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
+import { providerName } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useConnectAccount } from "./connect-account";
 import { missingCalendarWriteGrant } from "./connector-status";
-import { VENDOR_SERVICES } from "./connectorproviders";
+import { VENDOR_SERVICES } from "../format/connectorprovider";
 import { useConnectors } from "./connectors";
 
 type Profile = components["schemas"]["SchedulingProfile"];
@@ -31,11 +31,11 @@ export function useBookingCalendar(provider: string, loadCalendars = true) {
     refetchOnWindowFocus: "always",
     queryFn: async () => {
       if (provider !== "gcal" && provider !== "graphcal") return [];
-      const { data, error } = await api.GET("/scheduling/calendars", {
-        params: { query: { provider } },
-      });
-      if (error) throwProblem(error);
-      return data;
+      return unwrap(
+        await api.GET("/scheduling/calendars", {
+          params: { query: { provider } },
+        }),
+      );
     },
   });
   return { connections, connection, ready, calendars };
@@ -43,14 +43,9 @@ export function useBookingCalendar(provider: string, loadCalendars = true) {
 
 export type CalendarProvider = "gcal" | "graphcal";
 
-const CALENDAR_NAME: Readonly<Record<CalendarProvider, MessageKey>> = {
-  gcal: "connectors.provGcal",
-  graphcal: "connectors.provGraphCal",
-};
-
 export function calendarName(t: Translator, provider: string): string {
   return provider === "gcal" || provider === "graphcal"
-    ? t(CALENDAR_NAME[provider])
+    ? providerName(provider, t)
     : "";
 }
 
@@ -129,15 +124,19 @@ export function calendarToConnect(
       live.has(VENDOR_SERVICES[vendor].mail) ||
       live.has(VENDOR_SERVICES[vendor].calendar),
   );
-  if (used.length === 1) return VENDOR_SERVICES[used[0]].calendar;
+  const [usedFirst] = used;
   if (used.length > 1) return null;
+  if (usedFirst) return VENDOR_SERVICES[usedFirst].calendar;
   const ready = vendors.filter((vendor) =>
     data.providers.some(
       (row) =>
         row.provider === VENDOR_SERVICES[vendor].mail && row.reason === "ready",
     ),
   );
-  return ready.length === 1 ? VENDOR_SERVICES[ready[0]].calendar : null;
+  const [readyFirst] = ready;
+  return ready.length === 1 && readyFirst
+    ? VENDOR_SERVICES[readyFirst].calendar
+    : null;
 }
 
 /** Connect or reconnect a calendar from Meetings, landing back on Meetings. */
@@ -165,7 +164,7 @@ export function useMeetingCalendar(form: Profile, baseline: Profile) {
         (item.provider === "gcal" || item.provider === "graphcal") &&
         item.status !== "disconnected",
     ) ?? [];
-  const sole = providers.length === 1 ? providers[0].provider : "";
+  const sole = providers.length === 1 ? (providers[0]?.provider ?? "") : "";
   const provider = providers.some((item) => item.provider === form.provider)
     ? form.provider
     : sole === "gcal" || sole === "graphcal"

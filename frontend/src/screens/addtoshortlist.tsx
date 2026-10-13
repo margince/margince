@@ -10,7 +10,7 @@ import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import {
   type ListRecordType,
   useChangeMember,
@@ -35,7 +35,13 @@ type AddInput = Readonly<{
 export function AddToShortlistAction({
   entityType,
   entityId,
-}: Readonly<{ entityType: ListRecordType; entityId: string }>) {
+  reasonId,
+}: Readonly<{
+  entityType: ListRecordType;
+  entityId: string;
+  // The page's sentence for a record that takes no changes, by id.
+  reasonId?: string;
+}>) {
   const t = useT();
   const available = useListsAvailable();
   const [open, setOpen] = useState(false);
@@ -44,7 +50,9 @@ export function AddToShortlistAction({
   }
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.addToShortlist")}</Button>
+      <Button reasonId={reasonId} onClick={() => setOpen(true)}>
+        {t("lists.addToShortlist")}
+      </Button>
       {open && (
         <AddToShortlistDialog
           entityType={entityType}
@@ -101,6 +109,7 @@ function AddToShortlistDialog({
     <ConfirmModal
       open
       onClose={onClose}
+      intent="form"
       title={t("lists.addToShortlist")}
       confirmLabel={t("lists.add")}
       confirmDisabled={

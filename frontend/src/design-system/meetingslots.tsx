@@ -52,6 +52,8 @@ export type MeetingDay = Readonly<{
 // A week of free times read as columns, one per day, so a host compares days
 // at a glance instead of scanning one long list of full date strings. `label`
 // is the slot's accessible name; `time` is the short face drawn in the column.
+// Without `onSelect` the week is a preview of times somebody else will choose
+// from: the same columns at the same size, the times drawn but not pressable.
 export function MeetingWeek({
   days,
   selected,
@@ -61,7 +63,7 @@ export function MeetingWeek({
 }: Readonly<{
   days: readonly MeetingDay[];
   selected: readonly string[];
-  onSelect: (slot: { start: string; end: string }) => void;
+  onSelect?: (slot: { start: string; end: string }) => void;
   emptyDay: string;
   disabled?: boolean;
 }>) {
@@ -78,6 +80,13 @@ export function MeetingWeek({
             <p className="t-caption meeting-week-empty">{emptyDay}</p>
           )}
           {day.slots.map((slot) => {
+            if (!onSelect)
+              return (
+                <span key={slot.start} className="meeting-week-time t-num">
+                  <span aria-hidden="true">{slot.time}</span>
+                  <span className="sr-only">{slot.label}</span>
+                </span>
+              );
             const on = selected.includes(slot.start);
             return (
               <Button

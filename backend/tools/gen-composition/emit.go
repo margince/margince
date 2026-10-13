@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/format"
 	"os"
@@ -118,7 +119,7 @@ export type ExtensionVerbDescriptor = {
    * The RBAC object the operation gates on, or "" when it gates on none.
    *
    * A plain string, not a union: this file is generated, and the generator
-   * cannot enumerate what a unit will declare. app/extensions.ts narrows it
+   * cannot enumerate what a unit will declare. lib/extensions.ts narrows it
    * into the capability vocabulary, which is where the ext_ grammar is
    * checked once.
    */
@@ -128,6 +129,11 @@ export type ExtensionVerbDescriptor = {
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
+  /**
+   * The unit's copy key for its own name, or "" when its copy carries none
+   * in every locale. A screen shows what it resolves to, else the unit name.
+   */
+  readonly title: ` + "`ext${string}.title`" + ` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
@@ -220,7 +226,7 @@ func composedFiles(root string) (composition, error) {
 		goWorkFile:                   work,
 		"backend/go.mod":             composedGoMod(goVersion),
 		"backend/extensions_gen.go":  wiring,
-		"frontend/extensions.gen.ts": frontendGen(manifests, verbs),
+		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
 		"frontend/extscreens.gen.ts": extScreensGen(units),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
 	}
@@ -263,14 +269,14 @@ func composedWork(root string, units []extensionUnit) ([]byte, string, error) {
 		return nil, "", fmt.Errorf("root go.work: %w", err)
 	}
 	if rootWork.Go == nil {
-		return nil, "", fmt.Errorf("root go.work carries no go directive")
+		return nil, "", errors.New("root go.work carries no go directive")
 	}
 	// Only go + use are carried over; silently dropping a replace,
 	// toolchain or godebug directive would make the composed lane resolve
 	// differently from the bare one. Support arrives when a directive is
 	// actually needed — until then, refuse loudly.
 	if len(rootWork.Replace) > 0 || rootWork.Toolchain != nil || len(rootWork.Godebug) > 0 {
-		return nil, "", fmt.Errorf("root go.work carries replace/toolchain/godebug directives gen-composition does not compose yet — extend composedWork before using them")
+		return nil, "", errors.New("root go.work carries replace/toolchain/godebug directives gen-composition does not compose yet — extend composedWork before using them")
 	}
 	goVersion := rootWork.Go.Version
 

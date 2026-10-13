@@ -9,8 +9,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { AddDocumentDialog } from "./adddocument";
-import { throwProblem } from "./common";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
@@ -45,13 +45,11 @@ export function useRoomDocuments(roomId: string) {
   return useQuery({
     queryKey: ["deal-room-documents", roomId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deal-rooms/{id}/documents", {
-        params: { path: { id: roomId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deal-rooms/{id}/documents", {
+          params: { path: { id: roomId } },
+        }),
+      );
     },
   });
 }
@@ -62,7 +60,7 @@ export function AddDocument({
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
   const [attachmentId, setAttachmentId] = useState("");
-  const [group, setGroup] = useState(DOCUMENT_GROUPS[0].key);
+  const [group, setGroup] = useState(DOCUMENT_GROUPS[0]?.key ?? "");
   const [uploading, setUploading] = useState(false);
   // The deal's Files area — uploads and the files its emails carried, hidden
   // ones excluded — is what a room may share; the server refuses anything else.
@@ -70,13 +68,11 @@ export function AddDocument({
     queryKey: ["deal-documents", room.deal_id, false],
     enabled: refusal === undefined,
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/documents", {
-        params: { path: { id: room.deal_id }, query: { limit: 100 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/documents", {
+          params: { path: { id: room.deal_id }, query: { limit: 100 } },
+        }),
+      );
     },
   });
   const add = useAddDocument(room.id);
@@ -158,18 +154,17 @@ function useAddDocument(roomId: string) {
   return useMutation({
     mutationKey: ["deal-room-document-add"],
     mutationFn: async (input: { attachmentId: string; group: string }) => {
-      const { data, error } = await api.POST("/deal-rooms/{id}/documents", {
-        params: { path: { id: roomId } },
-        body: {
-          attachment_id: input.attachmentId,
-          group_key: input.group,
-          source: "manual",
-        },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/deal-rooms/{id}/documents", {
+          params: { path: { id: roomId } },
+          body: {
+            attachment_id: input.attachmentId,
+            group_key: input.group,
+            source: "manual",
+          },
+        }),
+        t,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -188,19 +183,15 @@ export function useRemoveDocument(roomId: string) {
       documentId: string;
       version: number | undefined;
     }) => {
-      const { data, error } = await api.DELETE(
-        "/deal-rooms/{id}/documents/{documentId}",
-        {
+      return unwrap(
+        await api.DELETE("/deal-rooms/{id}/documents/{documentId}", {
           params: {
             path: { id: roomId, documentId: input.documentId },
             ...ifMatch(requireVersion(input.version)),
           },
-        },
+        }),
+        t,
       );
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

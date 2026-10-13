@@ -10,15 +10,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { LeadScreen } from "./leads";
 
-// The lead header's Log activity / Add task pair, and the Answer row's own
-// Reply verb opening the SAME composer as the header's Email verb. Kept out
-// of leads.test.tsx, already at its own line ceiling, the way leadheader.test.tsx
-// keeps the rest of the head out of it.
+// Explicit outreach controls remain available without inventing work.
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -148,6 +145,7 @@ function stubLead(
 
 describe("the lead header's Log activity and Add task", () => {
   it("opens the drawer on a note from Log activity, and on a task from Add task", async () => {
+    const user = userEvent.setup();
     stubLead();
     render(<LeadScreen id="l-1" />);
 
@@ -157,18 +155,16 @@ describe("the lead header's Log activity and Add task", () => {
     await vi.waitFor(() =>
       expect(logButton.hasAttribute("disabled")).toBe(false),
     );
-    await userEvent.click(logButton);
+    await user.click(logButton);
     expect((await screen.findByLabelText("Type")).textContent).toContain(
       "Note",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Add task" }),
-    );
-    expect((await screen.findByLabelText("Type")).textContent).toContain(
-      "Task",
-    );
+    await user.click(await screen.findByRole("button", { name: "Add task" }));
+    const drawer = await screen.findByRole("dialog", { name: "Add task" });
+    expect(within(drawer).getByLabelText("Due date")).toBeTruthy();
+    expect(within(drawer).queryByLabelText("Type")).toBeNull();
   });
 
   it("refuses both verbs with the same reason the header's Email verb reads on a terminal lead", async () => {
@@ -194,8 +190,9 @@ describe("the lead header's Log activity and Add task", () => {
   });
 });
 
-describe("the Answer row's Reply verb", () => {
-  it("opens the exact composer the header's Email verb opens", async () => {
+describe("the lead header's Email verb", () => {
+  it("allows outreach without inventing a reply obligation", async () => {
+    const user = userEvent.setup();
     stubLead(
       { first_response_at: null },
       {
@@ -206,8 +203,9 @@ describe("the Answer row's Reply verb", () => {
     );
     render(<LeadScreen id="l-1" />);
 
-    const reply = await screen.findByRole("button", { name: "Reply" });
-    await userEvent.click(reply);
+    const email = await screen.findByRole("button", { name: "Email" });
+    expect(screen.queryByRole("button", { name: "Reply" })).toBeNull();
+    await user.click(email);
 
     const dialog = await screen.findByRole("dialog", {
       name: /Send email/,

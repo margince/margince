@@ -7,7 +7,6 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { EvidenceMark } from "../design-system/evidencemark";
@@ -16,7 +15,8 @@ import { PanelRow } from "../design-system/panel";
 import { provenanceLabel } from "../design-system/trust";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { settleFacts } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
 import { EvidenceVerdict, factClaim } from "./evidenceverdict";
@@ -154,18 +154,17 @@ function RemoveFactConfirm({
     // click belongs to the committed render, so what it passes cannot be
     // older than the row that carried it.
     mutationFn: async (doomed: CompanyFact) => {
-      const { error } = await api.DELETE("/companies/{id}/facts/{factKey}", {
-        params: {
-          path: {
-            id: companyId,
-            factKey: `${doomed.field}:${doomed.value_key}`,
+      unwrap(
+        await api.DELETE("/companies/{id}/facts/{factKey}", {
+          params: {
+            path: {
+              id: companyId,
+              factKey: `${doomed.field}:${doomed.value_key}`,
+            },
+            ...ifMatch(requireVersion(doomed.version)),
           },
-          ...ifMatch(requireVersion(doomed.version)),
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+        }),
+      );
     },
     onSuccess: async () => {
       await settleFacts(queryClient, companyId);

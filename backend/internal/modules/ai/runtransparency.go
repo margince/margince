@@ -70,6 +70,7 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 		}
 	}
 	calls := []runCall{}
+	fallbackFrom, fallbackTo := rateFallbacks()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.task, c.tier, c.provider, c.model_id, c.served_model,
@@ -82,14 +83,9 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 				COALESCE(r.cache_read_per_mtok_microusd, 0),
 				COALESCE(r.cache_write_per_mtok_microusd, 0)
 			FROM ai_call c
-			LEFT JOIN LATERAL (
-				SELECT mr.* FROM ai_model_rate mr
-				WHERE mr.provider = c.provider AND mr.model_id = c.model_id
-				  AND mr.effective_date <= c.occurred_at::date
-				ORDER BY mr.effective_date DESC LIMIT 1
-			) r ON true
+			LEFT JOIN LATERAL (`+rateMatch("c.provider", "c.model_id", "c.occurred_at::date", 2, 3)+`) r ON true
 			WHERE c.correlation_id = $1
-			ORDER BY c.occurred_at ASC, c.attempt ASC`, correlationID)
+			ORDER BY c.occurred_at ASC, c.attempt ASC`, correlationID, fallbackFrom, fallbackTo)
 		if err != nil {
 			return err
 		}

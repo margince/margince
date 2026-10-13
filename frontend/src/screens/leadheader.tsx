@@ -9,7 +9,6 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ContactLink } from "../design-system/contactlink";
 import { ErrorLine } from "../design-system/errorline";
@@ -19,7 +18,8 @@ import { Select } from "../design-system/select";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { useMe } from "../lib/session";
 import {
   EntityRef,
   RosterPartialNote,
@@ -164,9 +164,9 @@ function AssigneePicker({
 }
 
 // Ownership: who holds the lead, and reassignment to any workspace user. The
-// owner reads as a NAME: EntityRef resolves it off the shared `/users`
-// roster and falls back to the id only while that load is in flight or when
-// the viewer cannot see the roster, so a reader is never handed a bare uuid.
+// owner reads as a NAME: EntityRef resolves it by id and falls back to the id
+// only once that read has settled without one, so a reader is never handed a
+// bare uuid while a name is still on its way.
 // Reassignment is a plain owner change (UC-E13-04): the server audits it and
 // keeps whatever routing decision it overrides, so the only thing this
 // control owes the reader is an honest list of who they can hand it to.

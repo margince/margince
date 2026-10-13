@@ -85,7 +85,7 @@ func pricedWorklist(t *testing.T, fx BaseMoney, day crmcontracts.Attention) crmc
 		t.Fatalf("pricing the day: %v", err)
 	}
 	reader.money = money
-	return reader.worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	return reader.worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 }
 
 // The ordering compares what deals are WORTH, not what their integers say.
@@ -215,7 +215,7 @@ func TestAnUnboundSeamNamesNoBaseCurrency(t *testing.T) {
 		),
 	}
 
-	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	if out.Summary.MaterialThresholdMinor == nil {
 		t.Fatal("raw amounts still take a median; the bar should stand")
@@ -365,7 +365,7 @@ func TestAnUnboundSeamCarriesNoExpectedMinorBase(t *testing.T) {
 		AtRisk: lane(item("d", "deal_at_risk", withDeal(40_000))),
 	}
 
-	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, leadRead{}, worklistCursor{}, nil)
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 	if deal := out.Queue[0].Deal; deal != nil && deal.ExpectedMinorBase != nil {
 		t.Fatalf("expected_minor_base = %v with no FX seam bound at all", *deal.ExpectedMinorBase)

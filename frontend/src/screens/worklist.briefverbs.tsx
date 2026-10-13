@@ -14,9 +14,9 @@ import { useToast } from "../design-system/toast";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import type { BriefMarkRequest } from "./brief.queries";
 import { useBriefItemMark } from "./brief.queries";
-import { problemMessageOf } from "./common";
 import type { WorklistItem } from "./worklist.queries";
 
 /**
@@ -170,6 +170,7 @@ export function BriefSetAsides({
         }),
         {
           action: {
+            kind: "undo",
             label: t("brief.snooze.undo"),
             // A failed take-back is reported by `answer` itself, which raises
             // the server's own message as a second toast — better than a fixed

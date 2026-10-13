@@ -872,3 +872,25 @@ func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
 			queue[0].ID, soonID)
 	}
 }
+
+func TestSuggestingSomebodyElseNamesAThirdColleague(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	decide := func(suggested *ids.UUID) error {
+		return e.store.Decide(e.asUser(e.introducer), id, StatusSuggestOther, "", suggested, 1)
+	}
+	// A refusal leaves the ask as it was, so one ask meets every case in turn.
+	for name, suggested := range map[string]*ids.UUID{
+		"the introducer answering": &e.introducer, "the requester": &e.requester,
+	} {
+		if got := refusedField(t, decide(suggested)); got != "suggested_user_id" {
+			t.Errorf("%s refused on %q, want suggested_user_id", name, got)
+		}
+	}
+	if err := decide(&e.stranger); err != nil {
+		t.Errorf("naming a third colleague was refused: %v", err)
+	}
+}

@@ -50,6 +50,7 @@ func setupConsent(t *testing.T) *consentEnv {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source":    "manual",
 		"full_name": "Consent Subject",
 		"emails":    []AnyMap{{"email": "subject@consent.test"}},
 	}, nil, &contact); status != http.StatusCreated {

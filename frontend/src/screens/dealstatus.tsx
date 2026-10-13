@@ -3,12 +3,13 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryStates, throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useDealSignals } from "./dealsignals";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -16,6 +17,7 @@ import {
   EvidenceSources,
   FoundMove,
   fromDealMove,
+  openCitation,
   SentenceList,
   SignalStrip,
   type StandingTone,
@@ -70,9 +72,10 @@ const VERDICT_TONE: Record<string, StandingTone> = {
 // must show, and colouring it green would report an unreadable word as good
 // news in the loudest element on the page.
 function verdictTone(standing: string): StandingTone {
-  return Object.hasOwn(VERDICT_TONE, standing)
+  const tone = Object.hasOwn(VERDICT_TONE, standing)
     ? VERDICT_TONE[standing]
-    : "unknown";
+    : undefined;
+  return tone ?? "unknown";
 }
 
 // The card's read, shared. Deal360 draws the briefing from it and the email
@@ -84,13 +87,12 @@ export function useDealStatusCard(dealId: string) {
   return useQuery({
     queryKey: ["deal-status", dealId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId }, query: { facts_only: true } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/status", {
+          params: { path: { id: dealId }, query: { facts_only: true } },
+        }),
+        t,
+      );
     },
   });
 }
@@ -123,13 +125,12 @@ export function DealStatusCardPanel({
   const rewrite = useMutation({
     mutationKey: ["deal-status-refresh", dealId],
     mutationFn: async () => {
-      const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId }, query: { refresh: true } },
-      });
-      if (error) {
-        throwProblem(error, t);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/deals/{id}/status", {
+          params: { path: { id: dealId }, query: { refresh: true } },
+        }),
+        t,
+      );
     },
     onSuccess: (data) =>
       queryClient.setQueryData(["deal-status", dealId], data),
@@ -206,13 +207,6 @@ function Briefing({
   rewriting: boolean;
 }>) {
   const t = useT();
-  const open = (entityType: string, entityId: string) => {
-    if (entityType === "deal") {
-      navigate({ screen: "deals", id: entityId });
-    } else if (entityType === "contact") {
-      navigate({ screen: "contacts", id: entityId });
-    }
-  };
   // The findings ride the coverage card's own query, so this costs no second
   // request and the two cannot disagree about what is wrong with the deal.
   const coverage = useDealSignals(dealId);
@@ -238,7 +232,7 @@ function Briefing({
           because.length > 0 ? (
             <SentenceList
               sentences={because.slice(0, 1)}
-              onOpenRecord={open}
+              onOpenRecord={openCitation}
               onOpenEmail={onOpenEmail}
             />
           ) : undefined
@@ -297,7 +291,7 @@ function Briefing({
       >
         <Section
           section={card.story}
-          onOpenRecord={open}
+          onOpenRecord={openCitation}
           onOpenEmail={onOpenEmail}
           lead
         />
@@ -306,14 +300,14 @@ function Briefing({
           <Section
             heading={t("deal360.blocker")}
             section={card.blocker}
-            onOpenRecord={open}
+            onOpenRecord={openCitation}
             onOpenEmail={onOpenEmail}
             tone="warning"
           />
           <Section
             heading={t("deal360.buyer")}
             section={card.buyer}
-            onOpenRecord={open}
+            onOpenRecord={openCitation}
             onOpenEmail={onOpenEmail}
           />
           {/* The rest of the verdict's reasoning. Its first line is already in
@@ -321,7 +315,7 @@ function Briefing({
           {because.length > 1 ? (
             <Section
               section={{ sentences: because.slice(1) }}
-              onOpenRecord={open}
+              onOpenRecord={openCitation}
               onOpenEmail={onOpenEmail}
             />
           ) : null}

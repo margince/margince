@@ -173,7 +173,7 @@ func TestVoiceEvalDraftCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 // once out of three times.
 func TestVoiceEvalDraftCaseSendsTheVariationItWasGiven(t *testing.T) {
 	seen := map[string]bool{}
-	for repeat := 0; repeat < voiceEvalRepeatsPerPrompt; repeat++ {
+	for repeat := range voiceEvalRepeatsPerPrompt {
 		prepared, err := voiceEvalDraftCases{}.Prepare(
 			voiceEvalDraftFixtureAt(t, repeat), voiceEvalDraftFloor(t, voiceEvalClearedFloor))
 		if err != nil {

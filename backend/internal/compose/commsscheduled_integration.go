@@ -46,13 +46,12 @@ func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspac
 	// The origin the worker role composes. Without it this harness assembles a
 	// worker production does not have, and a message carrying an unsubscribe
 	// link refuses here for a reason no deployment would hit.
-	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, SendPacing{}, origin)
+	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, origin)
 	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: scheduledSendMaxAttempts},
 		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
 	})
-	var snooze *river.JobSnoozeError
-	if errors.As(err, &snooze) {
+	if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
 		// Its moment moved: the alarm asked to come back later, which is an
 		// outcome and not a failure.
 		return nil

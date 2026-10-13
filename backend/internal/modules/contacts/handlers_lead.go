@@ -28,7 +28,15 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		Source:          params.Source,
 		SLAState:        params.SlaState,
 		Sort:            params.Sort,
+		TagIDs:          uuidArgs(params.TagId),
+		FromContactID:   idArg[ids.ContactKind](params.FromContactId),
 	}
+	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
+		return
+	}
+	in.TagMode = mode
 	if params.Status != nil {
 		s := string(*params.Status)
 		in.Status = &s
@@ -36,7 +44,6 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
-	var err error
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, leadEntity); err != nil {
 			writeStoreErr(w, r, err)

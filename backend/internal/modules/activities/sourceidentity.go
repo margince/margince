@@ -336,13 +336,13 @@ func trailingIDOf(capturedBy string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	idx := strings.LastIndex(rest, ":")
-	if idx < 0 {
+	_, after, ok := strings.CutLast(rest, ":")
+	if !ok {
 		// 'connector:gmail' with no seat behind it names a provider, not a
 		// colleague.
 		return "", false
 	}
-	return strings.TrimSpace(rest[idx+1:]), true
+	return strings.TrimSpace(after), true
 }
 
 // ResolveBindableIdentity answers which activity holds an external identity AND

@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { SettingsScreen } from "./settings";
 import { IDLE_JOB_HEALTH, jsonResponse, render } from "./settings.testkit";
 import { settingsHref } from "./settingsrouting";

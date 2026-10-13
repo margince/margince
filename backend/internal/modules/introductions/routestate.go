@@ -167,7 +167,7 @@ func (s *Store) RouteStates(
 // Held by: TestRouteStatesReportsEveryOpenStatus (routestate_test.go)
 func statesWorthReporting() []string {
 	out := []string{string(StatusDeclined)}
-	for _, s := range everyStatus() {
+	for _, s := range EveryStatus() {
 		if Open(s) {
 			out = append(out, string(s))
 		}

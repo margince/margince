@@ -39,8 +39,8 @@ func SeedWorkspaceDefaultsTx(ctx context.Context, tx pgx.Tx, now time.Time) erro
 				provider, model_id,
 				input_per_mtok_microusd, output_per_mtok_microusd,
 				cache_read_per_mtok_microusd, cache_write_per_mtok_microusd,
-				effective_date, lane
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				effective_date, lane, source
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed')
 			ON CONFLICT (provider, model_id, effective_date) DO NOTHING`,
 			r.Provider, r.ModelID,
 			r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,

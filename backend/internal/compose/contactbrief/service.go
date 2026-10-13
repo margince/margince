@@ -250,10 +250,24 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, contactID ids.Con
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		// Written THROUGH the contact row, which is what stops a brief composed
+		// before an erasure from landing after it. Generation reads the record,
+		// waits on a model, and saves — a window wide enough for the erasure to
+		// run in whole, and this payload still holds the name it destroyed.
+		//
+		// FOR SHARE is the half that closes it and is not decoration: a bare
+		// archived_at test reads the pre-erasure row under MVCC and writes
+		// anyway. The lock waits on the erasure's own row lock instead, and the
+		// row is re-checked when that commits, so the CTE yields nothing and
+		// this writes nothing. Erasure takes the contact before the cache, so
+		// taking them in that order here cannot deadlock against it.
 		_, err := tx.Exec(ctx, `
+			WITH live AS (
+			    SELECT id FROM contact WHERE id = $2 AND archived_at IS NULL FOR SHARE
+			)
 			INSERT INTO contact_brief (user_id, contact_id, fingerprint,
 			                          generated_at, generated_by, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			SELECT $1, live.id, $3, $4, $5, $6 FROM live
 			ON CONFLICT (user_id, contact_id) DO UPDATE
 			SET fingerprint = EXCLUDED.fingerprint,
 			    generated_at = EXCLUDED.generated_at,

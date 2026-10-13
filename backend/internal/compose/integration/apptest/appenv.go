@@ -11,11 +11,13 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // AppEnv is the heaviest of the three exported fixtures: a real compose handler
@@ -52,6 +55,14 @@ type AppEnv struct {
 	// placeholder, so a suite that needs the link the SUBJECT would receive
 	// reads the same bytes the dispatcher substitutes.
 	Vault keyvault.Vault
+
+	// wiring is the suite's extra compose options, kept so Reboot recomposes
+	// the same application rather than the default one.
+	wiring func(origin string) []compose.Option
+	// ownPool is set on an env from Reboot, whose pool no other env shares.
+	ownPool bool
+	// importJobs are the import workers over this server's own object store.
+	importJobs compose.ImportJobWorkers
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -114,24 +125,62 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 
+	applyRiverSchema(t)
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatalf("cookie jar: %v", err)
+	}
+	e := &AppEnv{Owner: owner, Pool: pool, Vault: keyvault.NewMemory(), wiring: opts}
+	return e.serve(t, jar)
+}
+
+// Reboot is the first load after a restart: the same database, untouched, behind
+// a freshly composed handler over a new pool, so app caches and pooled
+// connections start empty. The receiver keeps serving; both close with t.
+//
+// The vault and the cookie jar carry over because both outlive a real restart:
+// the vault is durable storage, and a browser keeps its cookies.
+func (e *AppEnv) Reboot(t *testing.T) *AppEnv {
+	t.Helper()
+	pool, err := testdb.OwnPool(context.Background(), AppDSN(t))
+	if err != nil {
+		t.Fatalf("opening the rebooted app pool: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, wiring: e.wiring, ownPool: true}
+	return next.serve(t, e.Client.Jar)
+}
+
+// Close stops the server now rather than at test end, and the pool when Reboot
+// opened it; SetupApp's pool is shared by the package and outlives any one env.
+func (e *AppEnv) Close() {
+	e.TS.Close()
+	if e.ownPool {
+		e.Pool.Close()
+	}
+}
+
+// serve composes the harness handler over e.Pool, starts it behind TLS and
+// fills in TS and Client. SetupApp and Reboot both boot through it, so a
+// rebooted app is wired the same as the one it replaces.
+func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
+	t.Helper()
 	// The delivery machinery every send transport is composed with in the api
 	// role. Without it a send refuses rather than log an activity claiming a
 	// message went out, so a harness missing it would test the refusal in
 	// every suite that sends — including the consent and preference-center
 	// suites, whose subject is what happens AFTER a send is accepted.
-	applyRiverSchema(t)
-	sendInserter, err := jobs.NewInserter(pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	sendInserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
-	vault := keyvault.NewMemory()
 	// Unstarted, so the listener's port is known before the handler is
 	// composed: StartTLS below serves the same handler NewTLSServer would.
 	ts := httptest.NewUnstartedServer(nil)
 	origin := "https://" + ts.Listener.Addr().String()
 	allOpts := append([]compose.Option{
 		compose.WithPublicBaseURL("https://mail.example.test"),
-		compose.WithDelivery(compose.NewDeliveryStager(pool, sendInserter)),
+		compose.WithDelivery(compose.NewDeliveryStager(e.Pool, sendInserter)),
 		// The alarm a deferred send is accepted against, on the same inserter
 		// as the delivery. A role that can promise a send can promise a later
 		// one; without it every scheduling request refuses as a wiring fault,
@@ -160,21 +209,25 @@ func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.
 		// every send in this harness as "mailbox not send capable" — a check
 		// that is correct in production and would be answering a question none
 		// of these suites is asking.
-		compose.WithConfirmLinkVault(vault),
+		compose.WithConfirmLinkVault(e.Vault),
 		compose.WithControllerMail(sendInserter),
-	}, opts(origin)...)
-	ts.Config.Handler = compose.New(pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+		// An approve or an undo queues its job, as the api role does; the
+		// suite works the job through importjobtest.
+		compose.WithImportJobs(sendInserter),
+	}, e.wiring(origin)...)
+	var importJobsErr error
+	allOpts = append(allOpts, compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr))
+	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+	if importJobsErr != nil {
+		t.Fatalf("building the import workers: %v", importJobsErr)
+	}
 	ts.StartTLS()
 	t.Cleanup(ts.Close)
 
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		t.Fatalf("cookie jar: %v", err)
-	}
-	client := ts.Client()
-	client.Jar = jar
-
-	return &AppEnv{TS: ts, Client: client, Owner: owner, Pool: pool, Vault: vault}
+	e.TS = ts
+	e.Client = ts.Client()
+	e.Client.Jar = jar
+	return e
 }
 
 // BootstrapWorkspace provisions the company + admin (the A107 boot
@@ -215,8 +268,44 @@ func (e *AppEnv) SetWorkspaceSeat(t *testing.T, seat string) {
 // Call issues one API request with the dev workspace header and decodes
 // the JSON response into out (when non-nil), returning the status code.
 //
+// A create body that lacks the `source` the contract requires gets one, as
+// every real client sends it. CallVerbatim sends the body untouched.
+//
 //craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
 func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
+	t.Helper()
+	return e.CallVerbatim(t, method, path, withRecordSource(method, path, body), headers, out)
+}
+
+// recordCreateRoutes matches the create routes whose contract body requires
+// `source` and whose scenarios mostly care about something other than it.
+var recordCreateRoutes = regexp.MustCompile(`^/v1/(` +
+	`leads|relationships|activities|tasks|custom-fields|products|signals|deal-rooms|` +
+	`deals/[^/]+/offers|deal-rooms/[^/]+/(participants|documents))$`)
+
+// withRecordSource returns body with a `source` added when it is a create map
+// for one of recordCreateRoutes without one. Any other body is returned as is.
+//
+//craft:ignore naked-any the test transport seam: body is whichever request shape the scenario exercises
+func withRecordSource(method, path string, body any) any {
+	fields, ok := body.(map[string]any)
+	if !ok || method != http.MethodPost || !recordCreateRoutes.MatchString(path) {
+		return body
+	}
+	if _, stated := fields["source"]; stated {
+		return body
+	}
+	withSource := make(map[string]any, len(fields)+1)
+	maps.Copy(withSource, fields)
+	withSource["source"] = provenance.RecordSourceManual
+	return withSource
+}
+
+// CallVerbatim is Call without the default source, for a scenario about what a
+// body leaves out.
+//
+//craft:ignore naked-any the test transport seam: body/out are whichever request/response shapes the scenario exercises
+func (e *AppEnv) CallVerbatim(t *testing.T, method, path string, body any, headers map[string]string, out any) int {
 	t.Helper()
 	var reqBody io.Reader
 	if body != nil {
@@ -342,6 +431,12 @@ func applyRiverSchema(t *testing.T) {
 	if err := testdb.EnsureRiverSchema(ctx, ownerPool, jobs.Migrate); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// ImportJobs answers the import workers over the object store this server
+// holds, as the worker role registers them.
+func (e *AppEnv) ImportJobs() compose.ImportJobWorkers {
+	return e.importJobs
 }
 
 // DB is the app harness's installation-bound pool.

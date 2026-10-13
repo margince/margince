@@ -154,7 +154,7 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// activity list runs through here, and the spread is a percentile over
 		// a year — a scan no read that never mentions waiting should pay for.
 		if in.WaitingReplyAsOf != nil {
-			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
+			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
 				return err
 			}
 		}
@@ -199,7 +199,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
 			` FROM activity a WHERE `+strings.Join(where, " AND ")+
 			order+sprintf(" LIMIT %d", limit+1),
-		args...)
+		waitingListArgs(in, args)...)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -453,7 +453,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, args...).Scan(&total)
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 	})
 	return total, err
 }

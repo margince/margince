@@ -5,8 +5,8 @@
 
 package gates
 
-// The two source censuses that used to be awk, and the corpus that holds both
-// halves of each of them to the same cases.
+// The two source censuses written in Go, and the corpus that holds both halves
+// of each of them to the same cases.
 //
 // The rule is singular and the PARSER is not: Go is read by go/ast here and
 // TypeScript by ts.createSourceFile in frontend/src/quality/moneyscale.test.ts.

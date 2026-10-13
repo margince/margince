@@ -18,7 +18,7 @@ import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 import { NewProjectAction } from "./companyactions";
 import { PhaseBadge } from "./projects";
 import type { ProjectPhase } from "./projects.form";
@@ -53,13 +53,11 @@ export function roleKey(role: string): MessageKey {
 export function CompanyProjects({
   companyId,
   projects,
-  readOnly,
   create,
   bare,
 }: Readonly<{
   companyId: string;
   projects: readonly Company360Project[] | undefined;
-  readOnly?: boolean;
   // The create verb, handed to the section's own verb row.
   create?: ReactNode;
   // As a group inside the pane the caller holds — see ProjectLinks.
@@ -91,28 +89,23 @@ export function CompanyProjects({
       projectId: string;
       role: string;
     }) => {
-      const { error } = await api.PUT("/projects/{id}/companies", {
-        params: { path: { id: projectId } },
-        body: { company_id: companyId, role },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/projects/{id}/companies", {
+          params: { path: { id: projectId } },
+          body: { company_id: companyId, role },
+        }),
+      );
     },
     onSuccess: settled,
   });
 
   const detach = useMutation({
     mutationFn: async (projectId: string) => {
-      const { error } = await api.DELETE(
-        "/projects/{id}/companies/{company_id}",
-        {
+      unwrap(
+        await api.DELETE("/projects/{id}/companies/{company_id}", {
           params: { path: { id: projectId, company_id: companyId } },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: settled,
   });
@@ -126,7 +119,6 @@ export function CompanyProjects({
         <PhaseBadge phase={project.phase as ProjectPhase} />
       ) : null,
     })),
-    readOnly,
     // A company can be on any number of projects — that is the whole point of
     // the edge this section writes.
     allowsMany: true,
@@ -162,7 +154,6 @@ export function CompanyProjectsPanel({
   view,
   loading,
   failed,
-  readOnly,
 }: Readonly<{
   companyId: string;
   view?: Company360;
@@ -171,7 +162,6 @@ export function CompanyProjectsPanel({
   // answers, and `sectionState` can tell neither from the other on its own.
   loading?: boolean;
   failed?: boolean;
-  readOnly?: boolean;
 }>) {
   const t = useT();
   const projects = view?.projects;
@@ -195,7 +185,6 @@ export function CompanyProjectsPanel({
       <CompanyProjects
         companyId={companyId}
         projects={projects}
-        readOnly={readOnly}
         create={
           company && (
             <NewProjectAction
@@ -229,12 +218,11 @@ export function CompanyProjectsPanel({
 export async function searchProjects(
   query: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/projects", {
-    params: { query: { q: query, limit: 10 } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
+  const data = unwrap(
+    await api.GET("/projects", {
+      params: { query: { q: query, limit: 10 } },
+    }),
+  );
   // The key rides in the NAME because a candidate carries no second line: a
   // reader picking between two "Rollout" projects needs the handle that tells
   // them apart, and dropping it would make the list ambiguous exactly when it

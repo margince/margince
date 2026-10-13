@@ -73,12 +73,12 @@ function firstControlIn(dialog: HTMLElement | null): HTMLElement | null {
 // can operate a surface the dialog is covering.
 function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   const stops = focusableWithin(dialog);
-  if (stops.length === 0) {
+  const [first] = stops;
+  const last = stops.at(-1);
+  if (first === undefined || last === undefined) {
     event.preventDefault();
     return;
   }
-  const first = stops[0];
-  const last = stops[stops.length - 1];
   const active = document.activeElement;
   // Focus already outside the dialog is the case both directions have to
   // catch, not just Shift+Tab: it happens whenever something on the page
@@ -121,21 +121,34 @@ function openPanelIn(
   dialog: HTMLElement | null,
   needsTabStops = true,
 ): HTMLElement | null {
-  const panels = [
-    ...(dialog?.querySelectorAll<HTMLElement>(
-      '[aria-expanded="true"][aria-controls]',
-    ) ?? []),
-  ]
-    .map((trigger) =>
-      document.getElementById(trigger.getAttribute("aria-controls") ?? ""),
-    )
-    .filter((panel): panel is HTMLElement => panel !== null);
+  const panels = panelsOpenedFrom(dialog);
   const active = document.activeElement;
   const held = panels.find((panel) => panel.contains(active));
   const panel = held ?? panels[0];
   return panel && (!needsTabStops || focusableWithin(panel).length > 0)
     ? panel
     : null;
+}
+
+/**
+ * The panels an expanded trigger inside `container` names through
+ * `aria-controls`, where they sit outside it — portalled to the body. A panel
+ * inside the container is already the container's own: a sheet's search box
+ * expanding its listbox is a control in the sheet, not a layer over it.
+ */
+export function panelsOpenedFrom(container: HTMLElement | null): HTMLElement[] {
+  return [
+    ...(container?.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"][aria-controls]',
+    ) ?? []),
+  ]
+    .map((trigger) =>
+      document.getElementById(trigger.getAttribute("aria-controls") ?? ""),
+    )
+    .filter(
+      (panel): panel is HTMLElement =>
+        panel !== null && !container?.contains(panel),
+    );
 }
 
 /** The modal dialogs that are up, in document order. */

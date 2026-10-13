@@ -38,11 +38,11 @@ func TestAllowanceReadingsPreserveTheirIndependentPermissions(t *testing.T) {
 		t.Fatalf("diagnostics alone exposed allowance configuration: %v", err)
 	}
 	perms.Objects = map[string]principal.ObjectGrant{"ai_routing": {Read: true, Update: true}}
-	if _, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("routing preview without allowance read: %v", err)
 	}
 	perms.Objects["ai_budget"] = principal.ObjectGrant{Read: true}
-	routingPreview, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{})
+	routingPreview, err := store.PreviewRouting(e.As(e.Rep1, nil, perms), ai.RoutingConfig{}, nil)
 	if err != nil {
 		t.Fatalf("routing preview with allowance read: %v", err)
 	}

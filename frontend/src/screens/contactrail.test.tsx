@@ -10,9 +10,9 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider, type Translator, translate } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { ContactRail, contactStanding } from "./contactrail";
 
 // The rail's words are short verdicts — "One-sided", "Never", "No inbound",

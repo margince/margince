@@ -1,17 +1,22 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Card, Disclosure } from "../design-system/atoms";
+import { Button, Card, Disclosure } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
-import { formatDate, formatNumber, identifierNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
-import "./voice-dna.css";
+import { PanelBody, PanelGroupHead } from "../design-system/panel";
+import { useLastSubject } from "../design-system/presence";
+import { QueryGate } from "../design-system/querystates";
 import { SurfaceState } from "../design-system/surfacestate";
+import { formatNumber, identifierNumber } from "../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
+import { changeColumns, versionColumns } from "./voice-versions.tables";
+import "./voice-dna.css";
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 type VoiceProfileDelta = components["schemas"]["VoiceProfileDelta"];
@@ -32,12 +37,11 @@ export function useVoiceVersions(profileId: string | undefined) {
     queryKey: ["voice-versions", profileId],
     enabled: Boolean(profileId),
     queryFn: async (): Promise<VoiceProfileVersion[]> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/versions", {
-        params: { path: { id: profileId as string } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/versions", {
+          params: { path: { id: profileId as string } },
+        }),
+      );
       return data.data;
     },
   });
@@ -153,15 +157,14 @@ function CandidateBanner({
         action === "apply"
           ? ("/voice-profiles/{id}/versions/{profileVersion}/apply" as const)
           : ("/voice-profiles/{id}/versions/{profileVersion}/reject" as const);
-      const { error: err } = await api.POST(path, {
-        params: {
-          path: { id: profileId, profileVersion: candidate.profile_version },
-          header: { "If-Match": String(candidate.version) },
-        },
-      });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(
+        await api.POST(path, {
+          params: {
+            path: { id: profileId, profileVersion: candidate.profile_version },
+            header: { "If-Match": String(candidate.version) },
+          },
+        }),
+      );
     },
     onSuccess: () => {
       setError(null);
@@ -225,14 +228,7 @@ function CandidateBanner({
   );
 }
 
-// VoiceHistory is the append-only record: every version with its rollback, and
-// the learning-signal counters underneath them. It draws no heading of its own
-// — the settings row that holds it names it, and a list that also titled itself
-// would say it twice.
-//
-// The "what changed" delta timeline is its own component below: it is the
-// diagnostic half of the same record, and the card keeps it behind a
-// Disclosure rather than in front of every reader.
+// Stands straight in the builds panel so its table bleeds, under its own group head.
 export function VoiceHistory({
   profileId,
   canEdit,
@@ -243,21 +239,26 @@ export function VoiceHistory({
   onChanged: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const [versionCursor, setVersionCursor] = useState<string | undefined>();
   const [allVersions, setAllVersions] = useState<VoiceProfileVersion[]>([]);
+  const [restoring, setRestoring] = useState<VoiceProfileVersion | null>(null);
+  // A rolled-back version turns active and loses its menu; focus lands on the head.
+  const rolledBack = useRef(false);
+  const headingId = useId();
   const versions = useQuery({
     queryKey: ["voice-versions", profileId, versionCursor ?? ""],
     queryFn: async (): Promise<VersionsPage> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/versions", {
-        params: {
-          path: { id: profileId },
-          query: versionCursor ? { cursor: versionCursor } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/versions", {
+          params: {
+            path: { id: profileId },
+            query: versionCursor ? { cursor: versionCursor } : {},
+          },
+        }),
+      );
       setAllVersions((prev) => mergeById(prev, data.data));
       return { items: data.data, next: data.page.next_cursor ?? null };
     },
@@ -265,123 +266,160 @@ export function VoiceHistory({
   const learning = useQuery({
     queryKey: ["voice-learning", profileId],
     queryFn: async (): Promise<VoiceLearningSummary> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/learning", {
-        params: { path: { id: profileId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/voice-profiles/{id}/learning", {
+          params: { path: { id: profileId } },
+        }),
+      );
     },
   });
+  const rollback = useMutation({
+    mutationFn: async (profileVersion: number) => {
+      unwrap(
+        await api.POST(
+          "/voice-profiles/{id}/versions/{profileVersion}/rollback",
+          { params: { path: { id: profileId, profileVersion } } },
+        ),
+      );
+    },
+    onSuccess: () => {
+      rolledBack.current = true;
+      setRestoring(null);
+      onChanged();
+    },
+  });
+  const asked = useLastSubject(restoring);
+  const restoringLabel = identifierNumber(asked?.profile_version ?? 0);
 
   return (
-    // `settingrow-measure` is the row primitive's hook for a control that takes
-    // a stacked row's full width, which is the only place this list is drawn.
-    <div className="settingrow-measure">
+    <>
+      <PanelGroupHead
+        level="h3"
+        title={
+          <span id={headingId} tabIndex={-1}>
+            {t("voice.history.label")}
+          </span>
+        }
+      />
       <QueryGate query={versions} pendingLabel={t("voice.history.label")}>
         {(page) =>
           allVersions.length === 0 ? (
-            <SurfaceState
-              state="empty"
-              emptyLabel={t("voice.history.empty")}
-              loadingLabel={t("voice.history.label")}
-            >
-              {null}
-            </SurfaceState>
+            <PanelBody>
+              <SurfaceState
+                state="empty"
+                emptyLabel={t("voice.history.empty")}
+                loadingLabel={t("voice.history.label")}
+              >
+                {null}
+              </SurfaceState>
+            </PanelBody>
           ) : (
-            <div>
-              <ul className="vdna-list">
-                {[...allVersions]
-                  .sort((a, b) => b.profile_version - a.profile_version)
-                  .map((version) => (
-                    <VersionRow
-                      key={version.id}
-                      profileId={profileId}
-                      version={version}
-                      canEdit={canEdit}
-                      onChanged={onChanged}
-                    />
-                  ))}
-              </ul>
+            <>
+              <DataTable
+                bleed
+                fold
+                label={t("voice.history.label")}
+                columns={versionColumns({
+                  t,
+                  plural,
+                  locale,
+                  zone,
+                  canEdit,
+                  onRestore: (version) => {
+                    rollback.reset();
+                    rolledBack.current = false;
+                    setRestoring(version);
+                  },
+                })}
+                rows={[...allVersions].sort(
+                  (a, b) => b.profile_version - a.profile_version,
+                )}
+                rowKey={(version) => version.id}
+              />
               {page.next && (
-                <Button
-                  onClick={() => setVersionCursor(page.next ?? undefined)}
-                >
-                  {t("voice.history.loadMore")}
-                </Button>
+                <PanelBody>
+                  <Button
+                    onClick={() => setVersionCursor(page.next ?? undefined)}
+                  >
+                    {t("voice.history.loadMore")}
+                  </Button>
+                </PanelBody>
               )}
-            </div>
+            </>
           )
         }
       </QueryGate>
-      <QueryGate query={learning} pendingLabel={t("voice.history.label")}>
-        {(summary) => (
-          <p className="t-caption vdna-learning">
-            {t("voice.history.learning", {
-              drafted: formatNumber(summary.drafted, locale),
-              edited: formatNumber(summary.edited_sent, locale),
-              rejected: formatNumber(summary.rejected, locale),
-            })}
-          </p>
-        )}
-      </QueryGate>
-    </div>
+      <PanelBody>
+        <QueryGate query={learning} pendingLabel={t("voice.history.label")}>
+          {(summary) => (
+            <p className="t-caption">
+              {t("voice.history.learning", {
+                drafted: formatNumber(summary.drafted, locale),
+                edited: formatNumber(summary.edited_sent, locale),
+                rejected: formatNumber(summary.rejected, locale),
+              })}
+            </p>
+          )}
+        </QueryGate>
+      </PanelBody>
+      <ConfirmModal
+        open={restoring !== null}
+        title={t("voice.history.rollbackConfirm.title", { n: restoringLabel })}
+        confirmLabel={t("voice.history.rollback", { n: restoringLabel })}
+        pending={rollback.isPending}
+        error={rollback.isError ? problemMessageOf(rollback.error, t) : null}
+        onClose={() => setRestoring(null)}
+        returnFocusTo={() =>
+          rolledBack.current ? document.getElementById(headingId) : null
+        }
+        onConfirm={() =>
+          restoring && rollback.mutate(restoring.profile_version)
+        }
+      >
+        <p>{t("voice.history.rollbackConfirm.body", { n: restoringLabel })}</p>
+      </ConfirmModal>
+    </>
   );
 }
 
-// VoiceChangeLog is what each build CHANGED, version to version: the
-// classification the evaluator gave it and how it was activated. Diagnostic
-// rather than actionable — nothing here is a control — which is why the card
-// keeps it behind a Disclosure. It draws no heading either: the summary the
-// reader opened is the heading.
-//
-// Its own component, and its own keyset cursor, so the version list beside it
-// pages independently: one list running out of pages must not stop the other.
+// What each build changed, kept behind a Disclosure because nothing here acts.
+// Its own cursor pages it apart from the versions.
 export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const [deltaCursor, setDeltaCursor] = useState<string | undefined>();
   const [allDeltas, setAllDeltas] = useState<VoiceProfileDelta[]>([]);
   const deltas = useQuery({
     queryKey: ["voice-deltas", profileId, deltaCursor ?? ""],
     queryFn: async (): Promise<DeltasPage> => {
-      const { data, error } = await api.GET("/voice-profiles/{id}/deltas", {
-        params: {
-          path: { id: profileId },
-          query: deltaCursor ? { cursor: deltaCursor } : {},
-        },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.GET("/voice-profiles/{id}/deltas", {
+          params: {
+            path: { id: profileId },
+            query: deltaCursor ? { cursor: deltaCursor } : {},
+          },
+        }),
+      );
       setAllDeltas((prev) => mergeById(prev, data.data));
       return { items: data.data, next: data.page.next_cursor ?? null };
     },
   });
   return (
-    <QueryGate query={deltas} pendingLabel={t("voice.history.label")}>
+    <QueryGate query={deltas} pendingLabel={t("voice.history.deltasLabel")}>
       {(page) =>
         allDeltas.length === 0 ? (
           <p>{t("voice.history.deltasEmpty")}</p>
         ) : (
-          <div>
-            <ul className="vdna-list">
-              {[...allDeltas]
-                .sort((a, b) => b.to_version - a.to_version)
-                .map((delta) => (
-                  <li key={delta.id} className="vdna-row">
-                    <span>
-                      {t("voice.history.deltaRow", {
-                        from: identifierNumber(delta.from_version ?? 0),
-                        to: identifierNumber(delta.to_version),
-                      })}
-                      {" · "}
-                      {classificationLabel(t, delta.classification)} ·{" "}
-                      {outcomeLabel(t, delta.activation_outcome)}
-                    </span>
-                  </li>
-                ))}
-            </ul>
+          <div className="form-stack">
+            <DataTable
+              fold
+              label={t("voice.history.deltasLabel")}
+              columns={changeColumns({ t, plural, locale, zone })}
+              rows={[...allDeltas].sort((a, b) => b.to_version - a.to_version)}
+              rowKey={(delta) => delta.id}
+            />
             {page.next && (
               <Button onClick={() => setDeltaCursor(page.next ?? undefined)}>
                 {t("voice.history.loadMore")}
@@ -392,125 +430,4 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
       }
     </QueryGate>
   );
-}
-
-function VersionRow({
-  profileId,
-  version,
-  canEdit,
-  onChanged,
-}: Readonly<{
-  profileId: string;
-  version: VoiceProfileVersion;
-  canEdit: boolean;
-  onChanged: () => void;
-}>) {
-  const t = useT();
-  const [error, setError] = useState<string | null>(null);
-  const rollback = useMutation({
-    mutationFn: async () => {
-      const { error: err } = await api.POST(
-        "/voice-profiles/{id}/versions/{profileVersion}/rollback",
-        {
-          params: {
-            path: { id: profileId, profileVersion: version.profile_version },
-          },
-        },
-      );
-      if (err) {
-        throwProblem(err);
-      }
-    },
-    onSuccess: () => {
-      setError(null);
-      onChanged();
-    },
-    onError: (e: Error) => setError(problemMessageOf(e, t)),
-  });
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  return (
-    <li className="vdna-row">
-      <span>
-        {t("voice.history.versionRow", {
-          n: identifierNumber(version.profile_version),
-        })}{" "}
-        <Badge>{versionStatusLabel(t, version.status)}</Badge>
-        {" · "}
-        {/* `locale` is the app's own code ("en") — a valid BCP-47 tag, but a
-            language-only one, and an unspecified region is exactly the gap
-            A100 exists to close. Handed straight to Intl it resolves to en-US
-            defaults and prints 8/21/2026 where every other date in this
-            product prints 21/08/2026. The regioned tag comes from format/, and
-            the record's zone with it: a profile version is stamped by the
-            record, not by where its reader sits. */}
-        {formatDate(version.created_at, locale, recordZone)}
-      </span>
-      {canEdit && version.status === "superseded" && (
-        <button
-          type="button"
-          className="iconbtn vdna-row-verb"
-          aria-label={t("voice.history.rollback", {
-            n: identifierNumber(version.profile_version),
-          })}
-          disabled={rollback.isPending}
-          onClick={() => rollback.mutate()}
-        >
-          <RotateCcw aria-hidden />
-        </button>
-      )}
-      {error && <ErrorLine inline>{error}</ErrorLine>}
-    </li>
-  );
-}
-
-// The wire vocabularies rendered through i18n; an unknown value (a newer
-// server) renders verbatim rather than hiding the row.
-function versionStatusLabel(
-  t: ReturnType<typeof useT>,
-  status: string,
-): string {
-  switch (status) {
-    case "active":
-      return t("voice.status.active");
-    case "candidate":
-      return t("voice.status.candidate");
-    case "superseded":
-      return t("voice.status.superseded");
-    case "rejected":
-      return t("voice.status.rejected");
-    default:
-      return status;
-  }
-}
-
-function classificationLabel(
-  t: ReturnType<typeof useT>,
-  value: string,
-): string {
-  switch (value) {
-    case "routine":
-      return t("voice.classification.routine");
-    case "material":
-      return t("voice.classification.material");
-    default:
-      return value;
-  }
-}
-
-function outcomeLabel(t: ReturnType<typeof useT>, value: string): string {
-  switch (value) {
-    case "auto_activated":
-      return t("voice.outcome.autoActivated");
-    case "review_required":
-      return t("voice.outcome.reviewRequired");
-    case "manually_activated":
-      return t("voice.outcome.manuallyActivated");
-    case "rejected":
-      return t("voice.outcome.rejected");
-    case "rollback":
-      return t("voice.outcome.rollback");
-    default:
-      return value;
-  }
 }

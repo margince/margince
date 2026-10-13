@@ -7,13 +7,18 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { formatNumber, ordinalNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, usePlural, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 import { ContactProviderSection } from "./contactprovider";
 
 // The research drawer the contact page opens over itself.
@@ -131,7 +136,7 @@ function ClaimMapRow({
             encodes — the model returned prose, and only a human decides it means
             "Role: X". Picking a field reveals the value and citation it will be
             stored under, prefilled from the run and editable. */}
-        <div className="pe-claim-map">
+        <div className="pe-claim-map form-stack">
           <Field label={t("contact.research.mapField")}>
             {(control) => (
               <Select
@@ -234,13 +239,11 @@ export function ContactResearchDrawer({
     enabled: open,
     queryKey: ["contactResearch", contactId],
     queryFn: async () => {
-      const { data, error } = await api.POST("/contacts/{id}/research", {
-        params: { path: { id: contactId } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.POST("/contacts/{id}/research", {
+          params: { path: { id: contactId } },
+        }),
+      );
     },
   });
 
@@ -249,13 +252,12 @@ export function ContactResearchDrawer({
     // state: the click belongs to the committed render, so what it carries
     // cannot be older than the button that carried it.
     mutationFn: async (claims: SaveClaim[]) => {
-      const { data, error } = await api.POST("/contacts/{id}/research/save", {
-        params: { path: { id: contactId } },
-        body: { claims },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      const data = unwrap(
+        await api.POST("/contacts/{id}/research/save", {
+          params: { path: { id: contactId } },
+          body: { claims },
+        }),
+      );
       return data?.saved ?? claims.length;
     },
     onSuccess: async (saved) => {
@@ -296,19 +298,18 @@ export function ContactResearchDrawer({
       open={open}
       onClose={onClose}
       labelledBy="contact-research-title"
-      size="wide"
-      placement="right"
+      intent="drawer-reading"
     >
-      <div className="drawer-head">
+      <DrawerHead>
         <div className="pe-drawer-title">
           <Heading size="large" id="contact-research-title">
             {t("contact.research.title", { name: contactName })}
           </Heading>
         </div>
         <Badge>{t("contact.research.publicOnly")}</Badge>
-      </div>
+      </DrawerHead>
 
-      <div className="drawer-body">
+      <DrawerBody>
         {/* What was BOUGHT sits above what a public read found: it cost
             money, it is the firmer of the two, and a rep looking somebody up
             should see it before a page crawl's guesses. */}
@@ -352,9 +353,9 @@ export function ContactResearchDrawer({
             ))}
           </>
         )}
-      </div>
+      </DrawerBody>
 
-      <div className="drawer-foot">
+      <DrawerFoot className="pe-research-foot">
         <span className="pe-disclosure t-caption">
           {t("contact.research.evidenceOrOmit")}
         </span>
@@ -371,7 +372,7 @@ export function ContactResearchDrawer({
             })}
           </Button>
         </div>
-      </div>
+      </DrawerFoot>
     </Modal>
   );
 }

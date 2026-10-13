@@ -35,7 +35,7 @@ export type Inline =
   | { kind: "code"; text: string }
   | { kind: "strong"; children: Inline[] }
   | { kind: "em"; children: Inline[] }
-  | { kind: "link"; href: string; external: boolean; children: Inline[] }
+  | { kind: "link"; href: string; children: Inline[] }
   | { kind: "mark"; children: Inline[] };
 
 /**
@@ -61,7 +61,7 @@ export type Block = Located &
     | { kind: "paragraph"; run: Run }
     | { kind: "code"; run: Run }
     | { kind: "rule" }
-    | { kind: "list"; ordered: boolean; items: Run[] }
+    | { kind: "list"; ordered: boolean; start: number; items: Run[] }
     | { kind: "quote"; blocks: Block[] }
     | { kind: "table"; header: Run[]; rows: Run[][] }
   );
@@ -106,13 +106,17 @@ export function readMarkdown(
 
 type Taken = { block: Block; next: number };
 
+function lineAt(lines: string[], i: number): string {
+  return lines[i] ?? "";
+}
+
 /** `first` is the 1-based source line that `lines[0]` is, so a blockquote's
  *  inner blocks keep the line numbers the document counts, not their own. */
 function parseBlocks(lines: string[], first: number): Block[] {
   const blocks: Block[] = [];
   let i = 0;
   while (i < lines.length) {
-    if (lines[i].trim() === "") {
+    if (lineAt(lines, i).trim() === "") {
       i++;
       continue;
     }
@@ -124,7 +128,7 @@ function parseBlocks(lines: string[], first: number): Block[] {
 }
 
 function takeBlock(lines: string[], i: number, first: number): Taken {
-  const line = lines[i];
+  const line = lineAt(lines, i);
   if (FENCE.test(line)) return takeFence(lines, i, first);
   if (HEADING.test(line)) return takeHeading(lines, i, first);
   if (RULE.test(line)) {
@@ -141,7 +145,7 @@ function takeBlock(lines: string[], i: number, first: number): Taken {
 
 /** Whether line `i` opens a block of its own, and so ends the one above it. */
 function startsBlock(lines: string[], i: number): boolean {
-  const line = lines[i];
+  const line = lineAt(lines, i);
   return (
     FENCE.test(line) ||
     HEADING.test(line) ||
@@ -154,9 +158,9 @@ function startsBlock(lines: string[], i: number): boolean {
 }
 
 function takeFence(lines: string[], i: number, first: number): Taken {
-  const open = lines[i].trim().slice(0, 3);
+  const open = lineAt(lines, i).trim().slice(0, 3);
   let j = i + 1;
-  while (j < lines.length && lines[j].trim() !== open) j++;
+  while (j < lines.length && lineAt(lines, j).trim() !== open) j++;
   const body = lines.slice(i + 1, j).join("\n");
   // An unclosed fence ends at the document's end rather than swallowing the
   // rest as a paragraph: a truncated upload is a corpus document too.
@@ -173,9 +177,9 @@ function takeFence(lines: string[], i: number, first: number): Taken {
 }
 
 function takeHeading(lines: string[], i: number, first: number): Taken {
-  const match = HEADING.exec(lines[i]);
-  const level = match === null ? 1 : match[1].length;
-  const text = match === null ? lines[i] : match[2].replace(/\s+#+\s*$/, "");
+  const match = HEADING.exec(lineAt(lines, i));
+  const level = match?.[1]?.length ?? 1;
+  const text = match?.[2]?.replace(/\s+#+\s*$/, "") ?? lineAt(lines, i);
   return {
     block: {
       kind: "heading",
@@ -191,8 +195,8 @@ function takeHeading(lines: string[], i: number, first: number): Taken {
 function takeQuote(lines: string[], i: number, first: number): Taken {
   let j = i;
   const inner: string[] = [];
-  while (j < lines.length && QUOTE.test(lines[j])) {
-    inner.push(lines[j].replace(QUOTE, ""));
+  while (j < lines.length && QUOTE.test(lineAt(lines, j))) {
+    inner.push(lineAt(lines, j).replace(QUOTE, ""));
     j++;
   }
   return {
@@ -209,24 +213,26 @@ function takeQuote(lines: string[], i: number, first: number): Taken {
 }
 
 function takeList(lines: string[], i: number, first: number): Taken {
-  const ordered = ORDERED.test(lines[i]);
+  const ordered = ORDERED.test(lineAt(lines, i));
   const pattern = ordered ? ORDERED : BULLET;
   const items: string[][] = [];
   let j = i;
-  while (j < lines.length && lines[j].trim() !== "") {
-    const match = pattern.exec(lines[j]);
-    if (match !== null) items.push([match[1]]);
+  while (j < lines.length && lineAt(lines, j).trim() !== "") {
+    const item = pattern.exec(lineAt(lines, j))?.[1];
+    if (item !== undefined) items.push([item]);
     else if (startsBlock(lines, j) || items.length === 0) break;
     // A wrapped line belongs to the item above it. Deeper indentation reads the
     // same way: this tier ships no nested list, so a nested one arrives as the
     // text it is rather than as a level nothing would draw.
-    else items[items.length - 1].push(lines[j].trim());
+    else items.at(-1)?.push(lineAt(lines, j).trim());
     j++;
   }
   return {
     block: {
       kind: "list",
       ordered,
+      // The number the list was written from: "5. Fifth" is the fifth step.
+      start: ordered ? Number.parseInt(lineAt(lines, i).trim(), 10) : 1,
       items: items.map((item) => ({ nodes: parseInline(item.join("\n")) })),
       line: first + i,
       endLine: first + j - 1,
@@ -237,7 +243,7 @@ function takeList(lines: string[], i: number, first: number): Taken {
 
 /** A GFM table is a header row and the dashed rule under it, together. */
 function startsTable(lines: string[], i: number): boolean {
-  if (!lines[i].includes("|")) return false;
+  if (!lineAt(lines, i).includes("|")) return false;
   const under = lines[i + 1] ?? "";
   return (
     under.includes("|") &&
@@ -249,14 +255,18 @@ function startsTable(lines: string[], i: number): boolean {
 function takeTable(lines: string[], i: number, first: number): Taken {
   let j = i + 2;
   const rows: Run[][] = [];
-  while (j < lines.length && lines[j].includes("|") && lines[j].trim() !== "") {
-    rows.push(cellsOf(lines[j]));
+  while (
+    j < lines.length &&
+    lineAt(lines, j).includes("|") &&
+    lineAt(lines, j).trim() !== ""
+  ) {
+    rows.push(cellsOf(lineAt(lines, j)));
     j++;
   }
   return {
     block: {
       kind: "table",
-      header: cellsOf(lines[i]),
+      header: cellsOf(lineAt(lines, i)),
       rows,
       line: first + i,
       endLine: first + j - 1,
@@ -276,7 +286,11 @@ function cellsOf(line: string): Run[] {
 
 function takeParagraph(lines: string[], i: number, first: number): Taken {
   let j = i + 1;
-  while (j < lines.length && lines[j].trim() !== "" && !startsBlock(lines, j)) {
+  while (
+    j < lines.length &&
+    lineAt(lines, j).trim() !== "" &&
+    !startsBlock(lines, j)
+  ) {
     j++;
   }
   return {
@@ -382,7 +396,7 @@ function takeWrapped(
   const match = pattern.exec(rest);
   if (match === null) return null;
   return {
-    node: { kind, children: parseInline(match[2]) },
+    node: { kind, children: parseInline(match[2] ?? "") },
     length: match[0].length,
   };
 }
@@ -390,8 +404,8 @@ function takeWrapped(
 function takeLink(rest: string): { node: Inline; length: number } | null {
   const match = LINK.exec(rest);
   if (match === null) return null;
-  const href = safeHref(match[2]);
-  const children = parseInline(match[1]);
+  const href = safeHref(match[2] ?? "");
+  const children = parseInline(match[1] ?? "");
   // A refused href leaves the LABEL standing, and nothing else. The target of a
   // `javascript:` link is not information a reader wants beside the words it
   // was hidden behind, and printing it would put the payload back on the page
@@ -400,7 +414,7 @@ function takeLink(rest: string): { node: Inline; length: number } | null {
     return { node: { kind: "em", children }, length: match[0].length };
   }
   return {
-    node: { kind: "link", href, external: /^https?:/i.test(href), children },
+    node: { kind: "link", href, children },
     length: match[0].length,
   };
 }

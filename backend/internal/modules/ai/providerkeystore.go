@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -51,7 +52,14 @@ type ProviderKeyStatus struct {
 	Optional bool
 	// CredentialKind is which ProviderCredential field this vendor takes.
 	CredentialKind string
+	// PricedBy is the provider whose prices this one's unpriced models take,
+	// so its sheet can show them; empty for one that borrows none.
+	PricedBy string
 }
+
+// Usable reports whether this vendor can be called: a key is held, the adapter
+// needs none, or it takes no key. The sync's scope and the badge both read it.
+func (s ProviderKeyStatus) Usable() bool { return s.Configured || s.Optional || s.EnvVar == "" }
 
 // The two credential kinds. A property of the vendor, so List answers it
 // without opening the vault.
@@ -148,6 +156,7 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 			EnvVar:         KeyEnvVarFor(provider),
 			Optional:       keyIsOptional(provider),
 			CredentialKind: credentialKindFor(provider),
+			PricedBy:       pricedByFor(provider),
 		})
 	}
 	return out, nil
@@ -362,8 +371,6 @@ func (s *ProviderKeyStore) retire(ctx context.Context, ws ids.WorkspaceID, ref, 
 // caller read unchanged.
 func copyRefs(in map[string]string) map[string]string {
 	out := make(map[string]string, len(in)+1)
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }

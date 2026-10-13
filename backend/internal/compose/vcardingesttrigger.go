@@ -141,7 +141,7 @@ func (t *VCardIngestTrigger) carriesCard(ctx context.Context, activity ids.UUID)
 		SELECT EXISTS (
 			SELECT 1 FROM attachment
 			 WHERE entity_type = 'activity' AND entity_id = $1
-			   AND archived_at IS NULL
+			   AND archived_at IS NULL AND NOT bytes_withheld
 			   AND (lower(content_type) IN ('text/vcard', 'text/x-vcard', 'text/directory')
 			        OR lower(filename) LIKE '%.vcf')
 		)`, activity).Scan(&found)

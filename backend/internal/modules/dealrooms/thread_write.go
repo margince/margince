@@ -46,6 +46,9 @@ type OpenThreadInput struct {
 	Body           string
 	RequiredChange bool
 	Source         string
+	// RequestID is the client's own id for this attempt, so a repeated delivery
+	// lands once. Nil means the caller asked for no protection.
+	RequestID *ids.UUID
 }
 
 // cleanBody trims a comment and refuses an empty one.
@@ -115,19 +118,60 @@ func openThreadTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, in
 		return crmcontracts.DealRoomThread{}, &fieldError{field: "required_change", code: "needs_document", msg: "only a thread on a document can require a change"}
 	}
 	threadID := ids.NewV7()
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_room_thread (id, room_id, document_id, attachment_id, required_change, author_participant_id, author_user_id, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		threadID, roomID, in.DocumentID, attachmentID, in.RequiredChange, by.participantID, by.userID, in.Source, capturedBy); err != nil {
+	// Conflict-first, because the alternative loses the race. A read-then-insert
+	// pair lets two deliveries of one attempt both find nothing and both write —
+	// which is exactly the double-click this exists to stop, arriving on two
+	// connections instead of one. The index decides, not a prior read.
+	//
+	// The inference list mirrors uq_deal_room_thread_request, predicate included:
+	// Postgres matches a partial index only when the statement repeats its WHERE,
+	// and a caller that sent no id is outside the index and so conflicts with
+	// nobody.
+	inserted, err := tx.Exec(ctx,
+		`INSERT INTO deal_room_thread (id, room_id, document_id, attachment_id, required_change, author_participant_id, author_user_id, source, captured_by, request_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		 ON CONFLICT (room_id, request_id) WHERE request_id IS NOT NULL DO NOTHING`,
+		threadID, roomID, in.DocumentID, attachmentID, in.RequiredChange, by.participantID, by.userID, in.Source, capturedBy, in.RequestID)
+	if err != nil {
 		return crmcontracts.DealRoomThread{}, fmt.Errorf("insert deal room thread: %w", err)
+	}
+	// Nothing written means a previous delivery of this attempt opened the thread.
+	// Returning here is what keeps the audit row and the first comment from
+	// happening twice for something the buyer did once.
+	if inserted.RowsAffected() == 0 {
+		return threadOfRequest(ctx, tx, roomID, in.RequestID)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", threadObject, threadID, nil,
 		map[string]any{fieldRoomID: roomID.UUID, "document_id": in.DocumentID, "required_change": in.RequiredChange}); err != nil {
 		return crmcontracts.DealRoomThread{}, fmt.Errorf("audit deal room thread: %w", err)
 	}
+	// NO key on the opening comment. The thread row above already carries this
+	// attempt's id and both writes are in one transaction, so the thread's own index
+	// settles the whole opening — while a second copy of the id on the comment table
+	// would collide with a reply that used the same id earlier, which a client is
+	// free to do and which would fail a post that is perfectly legitimate.
 	first := commentPlacement{threadID: threadID, documentID: in.DocumentID, opensThread: true, requiredChange: in.RequiredChange}
+	// Carries no key, so its insert cannot be the one that does nothing.
 	if err := postCommentTx(ctx, tx, room, first, in.Body, in.Source, by); err != nil {
 		return crmcontracts.DealRoomThread{}, err
+	}
+	return readThread(ctx, tx, roomID, threadID)
+}
+
+// threadOfRequest answers with the thread a previous delivery of this attempt
+// opened. Only reached when the insert above conflicted, so the row is there.
+//
+// Keyed the way uq_deal_room_thread_request is keyed, because it answers the
+// conflict that index raised: if the two disagreed about what "the same attempt"
+// means, this would miss the row the insert was refused for.
+func threadOfRequest(
+	ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, requestID *ids.UUID,
+) (crmcontracts.DealRoomThread, error) {
+	var threadID ids.UUID
+	if err := tx.QueryRow(ctx, `
+		SELECT id FROM deal_room_thread WHERE room_id = $1 AND request_id = $2`,
+		roomID, requestID).Scan(&threadID); err != nil {
+		return crmcontracts.DealRoomThread{}, fmt.Errorf("read the thread a replayed request opened: %w", err)
 	}
 	return readThread(ctx, tx, roomID, threadID)
 }
@@ -156,6 +200,9 @@ type commentPlacement struct {
 	documentID     *ids.UUID
 	opensThread    bool
 	requiredChange bool
+	// requestID is the client's own id for this attempt. Carried on the row so a
+	// repeated delivery is recognised rather than appended.
+	requestID *ids.UUID
 }
 
 // postCommentTx inserts one comment and announces it. The caller has settled
@@ -166,11 +213,22 @@ func postCommentTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, a
 		return err
 	}
 	commentID := ids.NewV7()
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_room_comment (id, room_id, thread_id, body, author_participant_id, author_user_id, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		commentID, ids.UUID(room.Id), at.threadID, body, by.participantID, by.userID, source, capturedBy); err != nil {
+	// Conflict-first for the same reason the thread insert is: two deliveries of
+	// one attempt race, and the index is the only thing that sees both.
+	inserted, err := tx.Exec(ctx,
+		`INSERT INTO deal_room_comment (id, room_id, thread_id, body, author_participant_id, author_user_id, source, captured_by, request_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 ON CONFLICT (room_id, request_id) WHERE request_id IS NOT NULL DO NOTHING`,
+		commentID, ids.UUID(room.Id), at.threadID, body, by.participantID, by.userID, source, capturedBy, at.requestID)
+	if err != nil {
 		return fmt.Errorf("insert deal room comment: %w", err)
+	}
+	// A previous delivery already posted it, which only a RACE reaches now — the
+	// caller settles an ordinary replay before it gets here. Returning without the
+	// audit row and the announcement below is what keeps one message from ringing
+	// twice.
+	if inserted.RowsAffected() == 0 {
+		return nil
 	}
 	auditID, err := storekit.Audit(ctx, tx, "create", commentObject, commentID, nil,
 		map[string]any{fieldRoomID: ids.UUID(room.Id), "thread_id": at.threadID, fieldSide: by.side()})
@@ -270,8 +328,19 @@ var errThreadResolved = &stateError{
 }
 
 // replyTx appends to an open thread of the room.
-func replyTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, threadID ids.UUID, body, source string, by threadAuthor) (crmcontracts.DealRoomThread, error) {
+func replyTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, threadID ids.UUID, body, source string, by threadAuthor, requestID *ids.UUID) (crmcontracts.DealRoomThread, error) {
 	roomID := ids.From[ids.DealRoomKind](ids.UUID(room.Id))
+	// Before the state check, because a comment that is ALREADY STORED is not a new
+	// post and the thread's state cannot make it one. A buyer whose first delivery
+	// landed and whose retry arrives after the seller resolved the thread would
+	// otherwise be told their message failed, with no way to send it again.
+	//
+	// A found row is proof of a replay; an absent one proves nothing, because a
+	// concurrent first delivery may not have committed yet. That half stays with the
+	// insert's ON CONFLICT — this read answers only the case it can settle.
+	if landed, err := commentOfRequest(ctx, tx, roomID, threadID, requestID); err != nil || landed {
+		return readThread(ctx, tx, roomID, threadID)
+	}
 	if _, err := storekit.LockRow(ctx, tx, threadObject, threadID, storekit.NoArchiveColumn); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
@@ -287,14 +356,16 @@ func replyTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, threadI
 		u := ids.UUID(*current.DocumentId)
 		documentID = &u
 	}
-	if err := postCommentTx(ctx, tx, room, commentPlacement{threadID: threadID, documentID: documentID}, body, source, by); err != nil {
+	// A replay answers with the thread as it stands. Nothing further to do: the
+	// comment is already in it, from the delivery that got here first.
+	if err := postCommentTx(ctx, tx, room, commentPlacement{threadID: threadID, documentID: documentID, requestID: requestID}, body, source, by); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
 	return readThread(ctx, tx, roomID, threadID)
 }
 
 // Reply is the seller's side answering in a thread.
-func (s *Store) Reply(ctx context.Context, roomID ids.DealRoomID, threadID ids.UUID, body, source string) (crmcontracts.DealRoomThread, error) {
+func (s *Store) Reply(ctx context.Context, roomID ids.DealRoomID, threadID ids.UUID, body, source string, requestID *ids.UUID) (crmcontracts.DealRoomThread, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
@@ -308,7 +379,7 @@ func (s *Store) Reply(ctx context.Context, roomID ids.DealRoomID, threadID ids.U
 		if err != nil {
 			return err
 		}
-		out, err = replyTx(ctx, tx, room, threadID, body, source, threadAuthor{userID: &userID})
+		out, err = replyTx(ctx, tx, room, threadID, body, source, threadAuthor{userID: &userID}, requestID)
 		return err
 	})
 	return out, err
@@ -376,4 +447,39 @@ func (s *Store) ResolveThread(ctx context.Context, roomID ids.DealRoomID, thread
 		return err
 	})
 	return out, err
+}
+
+// errRequestIDNamesAnotherThread says an attempt id has already been used for a
+// comment somewhere else in this room.
+var errRequestIDNamesAnotherThread = fmt.Errorf(
+	"%w: this request_id was already used for a comment on another thread", apperrors.ErrConflict)
+
+// commentOfRequest reports whether a previous delivery of this attempt already left
+// a comment on this thread.
+//
+// Keyed the way uq_deal_room_comment_request is keyed — (room_id, request_id) — so
+// the row it finds is the row the insert would conflict with. The thread is then
+// checked SEPARATELY: the index is scoped to the room, so the same id used on a
+// different thread is a client reusing an id for two different posts, and answering
+// with this thread would silently drop the second one.
+func commentOfRequest(
+	ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threadID ids.UUID, requestID *ids.UUID,
+) (bool, error) {
+	if requestID == nil {
+		return false, nil
+	}
+	var storedOn ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT thread_id FROM deal_room_comment WHERE room_id = $1 AND request_id = $2`,
+		roomID, *requestID).Scan(&storedOn)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read the comment a replayed request left: %w", err)
+	}
+	if storedOn != threadID {
+		return false, errRequestIDNamesAnotherThread
+	}
+	return true, nil
 }

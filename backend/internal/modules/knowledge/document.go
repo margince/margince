@@ -13,13 +13,12 @@ import (
 	"io"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -34,6 +33,10 @@ type NewDocument struct {
 	ContentType string
 	Content     io.ReadSeeker
 }
+
+// ErrDocumentShipped is a delete aimed at a page that ships with Margince. The
+// next boot's reconciliation would file it again, so the delete could only hide it.
+var ErrDocumentShipped = errors.New("this page ships with Margince, so it cannot be deleted; it comes back with every update")
 
 // QueueIngest is how the composition layer enqueues the ingest job inside the
 // transaction that writes the document row. The module declares the seam and
@@ -54,7 +57,15 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 	}
 
 	id := ids.NewV7()
-	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)), "knowledge", id.String())
+	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)),
+		string(storedobjects.KindKnowledge), id.String())
+	// Declared BEFORE the put, on its own transaction, so the declaration survives
+	// the failure of the one below. The cleanup after this transaction covers the
+	// ordinary refusal; what it cannot cover is this process dying between here and
+	// there, or the delete itself being refused.
+	if err := storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindKnowledge, key); err != nil {
+		return crmcontracts.KnowledgeDocument{}, err
+	}
 	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
 		return crmcontracts.KnowledgeDocument{}, fmt.Errorf("store the corpus document: %w", err)
 	}
@@ -78,8 +89,16 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		if err != nil {
 			return err
 		}
-		if existing != "" {
-			return &AlreadyFiledError{Filename: existing}
+		if existing.found && !existing.failed {
+			return &AlreadyFiledError{Filename: existing.filename}
+		}
+		if existing.failed {
+			// Discarded, so the insert below files these bytes as a new
+			// document. That is the manual step the advice already requires:
+			// a re-upload only worked once somebody deleted the failed row.
+			if err := discardFailedDocument(ctx, tx, existing.id); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_document
@@ -115,8 +134,14 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		if err := queue(ctx, tx, id); err != nil {
 			return fmt.Errorf("queue the corpus document's ingest: %w", err)
 		}
+		// Retired on THIS transaction, so the clear and the row commit together: a
+		// clear that committed separately could land while this then failed, which
+		// is the orphan the ledger exists to catch, one step along.
+		if err := storedobjects.Clear(ctx, tx, key); err != nil {
+			return err
+		}
 		var rerr error
-		out, rerr = readDocument(ctx, tx, id)
+		out, rerr = readDocument(ctx, tx, id, s.embedIdentity())
 		return rerr
 	})
 	if err != nil {
@@ -124,15 +149,33 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		// now names them. The ordinary case is the duplicate race: two uploads
 		// of identical bytes both clear the pre-flight, both call Put, and the
 		// loser is refused by the unique index — leaving its own object behind
-		// with nothing pointing at it and nothing that will ever collect it,
-		// because every sweep in this module walks ROWS.
+		// with nothing pointing at it. The ledger would collect it a grace
+		// period later, since every sweep in this module walks ROWS and only
+		// that one walks keys; deleting it here is what makes the ordinary
+		// refusal cost nothing rather than wait a day.
 		//
 		// Reported rather than swallowed, and joined rather than substituted:
 		// the caller's refusal is the answer they need, and a storage backend
 		// that would not delete is a separate fault an operator needs to see.
 		if derr := s.blob.Delete(ctx, key); derr != nil {
+			// The intent STAYS when the delete fails, which is the ledger's whole
+			// contract: a key is retired only once its bytes are gone, so the sweep
+			// finishes what this could not.
 			return crmcontracts.KnowledgeDocument{}, errors.Join(err,
 				fmt.Errorf("delete the corpus document's stored object after a failed write: %w", derr))
+		}
+		// The bytes are gone, so the declaration has nothing left to describe: left
+		// standing it would occupy a slot in every sweep's limit for a day, to be
+		// adjudicated as an orphan whose object is already deleted.
+		//
+		// Cleared on a transaction of this store's own, not Retire: retiring is the
+		// SWEEP's act and takes the system principal, and this path runs as the
+		// contact who uploaded the file. Reaching for it here answered their server
+		// fault with a 403.
+		if rerr := s.tx(ctx, func(tx pgx.Tx) error {
+			return storedobjects.Clear(ctx, tx, key)
+		}); rerr != nil {
+			return crmcontracts.KnowledgeDocument{}, errors.Join(err, rerr)
 		}
 		return crmcontracts.KnowledgeDocument{}, err
 	}
@@ -173,7 +216,10 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		corpus, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		if err == nil && corpus.corpus.Shipped {
+			return errUploadShippedCorpus
+		}
 		return err
 	}); err != nil {
 		return "", "", 0, err
@@ -190,10 +236,54 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if err != nil {
 		return "", "", 0, err
 	}
-	if existing != "" {
-		return "", "", 0, &AlreadyFiledError{Filename: existing}
+	// A failed row holds no bytes, so it is not a reason to refuse.
+	//
+	// The write discards it and files these bytes fresh.
+	if existing.found && !existing.failed {
+		return "", "", 0, &AlreadyFiledError{Filename: existing.filename}
 	}
 	return media, checksum, size, nil
+}
+
+// holdingRow is the live document already carrying these bytes, if one is.
+//
+// `failed` is carried because such a row holds no bytes: FailIngest deletes the
+// stored object and keeps the row.
+//
+// The advice on screen is to upload the file again, and a re-upload refused as
+// already filed made that impossible to follow.
+type holdingRow struct {
+	id       ids.UUID
+	filename string
+	failed   bool
+	found    bool
+}
+
+func documentHoldingIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, checksum string) (holdingRow, error) {
+	var row holdingRow
+	switch err := tx.QueryRow(ctx,
+		`SELECT id, filename, ingest_status = 'failed' FROM knowledge_document
+		  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
+		  LIMIT 1`, corpusID, checksum).Scan(&row.id, &row.filename, &row.failed); {
+	case err == nil:
+		row.found = true
+		return row, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		return holdingRow{}, nil
+	default:
+		return holdingRow{}, fmt.Errorf("look for a document already holding these bytes: %w", err)
+	}
+}
+
+// documentHolding names the live document in this corpus already holding these
+// exact bytes, or "" when none does.
+func (s *Store) documentHolding(ctx context.Context, corpusID ids.UUID, checksum string) (holdingRow, error) {
+	var existing holdingRow
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		existing, err = documentHoldingIn(ctx, tx, corpusID, checksum)
+		return err
+	})
+	return existing, err
 }
 
 // ListDocuments returns one corpus's live documents, newest first, whatever
@@ -208,6 +298,7 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 		return nil, err
 	}
 	out := []crmcontracts.KnowledgeDocument{}
+	identity := s.embedIdentity()
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// The corpus read first, so an unknown or archived corpus is absent
 		// rather than an empty list — "no documents" and "no such corpus" are
@@ -216,15 +307,15 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 			return err
 		}
 		rows, err := tx.Query(ctx,
-			`SELECT `+documentColumns+` FROM knowledge_document
-			 WHERE corpus_id = $1 AND archived_at IS NULL
-			 ORDER BY created_at DESC, id DESC`, corpusID)
+			`SELECT `+documentColumns+` FROM knowledge_document d
+			 WHERE d.corpus_id = $1 AND d.archived_at IS NULL
+			 ORDER BY d.created_at DESC, d.id DESC`, corpusID)
 		if err != nil {
 			return fmt.Errorf("list corpus documents: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
-			doc, err := scanDocument(rows)
+			doc, err := scanDocument(rows, identity)
 			if err != nil {
 				return err
 			}
@@ -233,34 +324,6 @@ func (s *Store) ListDocuments(ctx context.Context, corpusID ids.UUID) ([]crmcont
 		return rows.Err()
 	})
 	return out, err
-}
-
-const documentColumns = `id, corpus_id, filename, content_type, byte_size,
-	ingest_status, ingest_detail, chunk_count, created_at`
-
-func readDocument(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.KnowledgeDocument, error) {
-	doc, err := scanDocument(tx.QueryRow(ctx,
-		`SELECT `+documentColumns+` FROM knowledge_document WHERE id = $1 AND archived_at IS NULL`, id))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.KnowledgeDocument{}, apperrors.ErrNotFound
-	}
-	return doc, err
-}
-
-func scanDocument(row pgx.Row) (crmcontracts.KnowledgeDocument, error) {
-	var doc crmcontracts.KnowledgeDocument
-	var id, corpusID ids.UUID
-	var status string
-	var chunkCount int
-	if err := row.Scan(&id, &corpusID, &doc.Filename, &doc.ContentType, &doc.ByteSize,
-		&status, &doc.IngestDetail, &chunkCount, &doc.CreatedAt); err != nil {
-		return crmcontracts.KnowledgeDocument{}, err
-	}
-	doc.Id = openapi_types.UUID(id)
-	doc.CorpusId = openapi_types.UUID(corpusID)
-	doc.IngestStatus = crmcontracts.KnowledgeDocumentIngestStatus(status)
-	doc.ChunkCount = &chunkCount
-	return doc, nil
 }
 
 // DeleteDocument removes a document, its passages, their vectors and its
@@ -294,17 +357,23 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 	if err := auth.Require(ctx, "knowledge_document", principal.ActionDelete); err != nil {
 		return err
 	}
-	if s.blob == nil {
-		return ErrBlobstoreUnconfigured
-	}
 	var storageKey string
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		var doc deletedDocument
+		var shipped bool
 		if err := tx.QueryRow(ctx,
-			`SELECT storage_key, filename, checksum, content_type, chunk_count
+			`SELECT storage_key, filename, checksum, content_type, chunk_count, managed_source IS NOT NULL
 			   FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
-			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount); err != nil {
+			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount, &shipped); err != nil {
 			return notFoundOr(err, "read the document to delete")
+		}
+		// Before the blobstore check: a handbook page is refused on every
+		// installation, including the ones with no object storage.
+		if shipped {
+			return ErrDocumentShipped
+		}
+		if s.blob == nil {
+			return ErrBlobstoreUnconfigured
 		}
 		storageKey = doc.storageKey
 		// The chunks go explicitly rather than by the FK's ON DELETE CASCADE.
@@ -327,7 +396,7 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
 			map[string]any{
 				filenameKey:      doc.filename,
-				"checksum":       doc.checksum,
+				checksumKey:      doc.checksum,
 				contentTypeKey:   doc.contentType,
 				chunkCountColumn: doc.chunkCount,
 			}, nil); err != nil {
@@ -355,28 +424,38 @@ type deletedDocument struct {
 	chunkCount  int
 }
 
-// documentHolding names the live document in this corpus already holding these
-// exact bytes, or "" when none does.
-func (s *Store) documentHolding(ctx context.Context, corpusID ids.UUID, checksum string) (string, error) {
-	var existing string
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		existing, err = documentHoldingIn(ctx, tx, corpusID, checksum)
-		return err
-	})
-	return existing, err
-}
-
-func documentHoldingIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, checksum string) (string, error) {
-	var existing string
-	switch err := tx.QueryRow(ctx,
-		`SELECT filename FROM knowledge_document
-		  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
-		  LIMIT 1`, corpusID, checksum).Scan(&existing); {
-	case err == nil:
-		return existing, nil
-	case errors.Is(err, pgx.ErrNoRows):
-		return "", nil
-	default:
-		return "", fmt.Errorf("look for a document already holding these bytes: %w", err)
+// UnreferencedDocumentKeys answers which of these keys no knowledge_document carries.
+//
+// Answered here because knowledge_document is this module's table. The stored-object
+// sweep holds the ledger and asks each kind's owner, since no module may read
+// another's rows and the ledger sits below all of them.
+func (s *Store) UnreferencedDocumentKeys(ctx context.Context, keys []string) ([]string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
 	}
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	var out []string
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT k FROM unnest($1::text[]) AS k
+			 WHERE NOT EXISTS (SELECT 1 FROM knowledge_document d WHERE d.storage_key = k)`, keys)
+		if err != nil {
+			return fmt.Errorf("check which corpus document keys are unreferenced: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var key string
+			if err := rows.Scan(&key); err != nil {
+				return fmt.Errorf("read an unreferenced corpus document key: %w", err)
+			}
+			out = append(out, key)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

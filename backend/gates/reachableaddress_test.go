@@ -5,8 +5,7 @@
 
 package gates
 
-// Which address a contact is known by is ONE question, and it used to have
-// three answers.
+// Which address a contact is known by is one question with one answer.
 //
 // A contact carries a LIST of addresses, each with a position and an is_primary
 // flag, some archived — so naming one is a decision, and the decision is the
@@ -288,7 +287,7 @@ func readsOneRelation(statement string) bool {
 
 // firstAddressLine is the line a reader should open the file at.
 func firstAddressLine(sql string) string {
-	for _, line := range strings.Split(sql, "\n") {
+	for line := range strings.SplitSeq(sql, "\n") {
 		if trimmed := strings.TrimSpace(line); strings.Contains(strings.ToLower(trimmed), "contact_email") {
 			return trimmed
 		}

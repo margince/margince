@@ -248,3 +248,29 @@ func activityFields(t *testing.T, rec connector.NormalizedRecord) capture.Activi
 	}
 	return fields
 }
+
+// An event whose end no zone can render, or whose length the duration column
+// cannot hold, is mapped with no duration. A real hour-long event keeps its own.
+func TestAnEventTooLongToStoreCarriesNoDuration(t *testing.T) {
+	start := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
+	cases := map[string]struct {
+		ends time.Time
+		want *int
+	}{
+		"one hour":           {ends: start.Add(time.Hour), want: new(3600)},
+		"until 2100":         {ends: time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC)},
+		"past the year 9999": {ends: time.Date(9999, 12, 31, 23, 0, 0, 0, time.UTC)},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			m := Classify(Event{
+				ID: "evt-long", Subject: "Standing", StartsAt: start, EndsAt: tc.ends,
+				Organizer: Actor{Email: "host@acme.test"}, Attendees: []Actor{{Email: owner}},
+			}, owner)
+			got := activityFields(t, m.ToRecord("graphcal", []byte(`{"id":"evt-long"}`))).DurationSeconds
+			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
+				t.Errorf("DurationSeconds = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

@@ -22,6 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// zipContentType is the media type of every ZIP the API sends or stores.
+const zipContentType = "application/zip"
+
 type exportBundleHandlers struct {
 	writer *ExportWriter
 	log    *slog.Logger
@@ -63,8 +66,30 @@ func (h exportBundleHandlers) DownloadExportBundle(w http.ResponseWriter, r *htt
 	// Headers before the first byte: the bundle streams, so this is the last
 	// moment a header is settable. Size is unknown — the archive is written as
 	// it is produced — so Content-Length is deliberately omitted.
-	httperr.Download{ContentType: "application/zip", Filename: "margince-export.zip"}.WriteHeaders(w)
-	if _, err := h.writer.WriteBundle(r.Context(), w); err != nil {
+	httperr.Download{ContentType: zipContentType, Filename: "margince-export.zip"}.WriteHeaders(w)
+	body := &startedWriter{ResponseWriter: w}
+	_, err := h.writer.WriteBundle(r.Context(), body)
+	switch {
+	case err == nil:
+	case !body.started:
+		// Nothing is on the wire yet, so the failure can still be answered.
+		httperr.DropSuccessHeaders(w.Header())
+		httperr.Write(w, r, err)
+	default:
 		h.log.ErrorContext(r.Context(), "export bundle: the bundle failed mid-stream; the client's download is truncated", "err", err)
+		// A plain return would end the chunked body as if the archive were whole.
+		panic(http.ErrAbortHandler)
 	}
+}
+
+// startedWriter records whether the bundle put a byte on the wire. Before that
+// byte a failure can be answered; after it the response must be aborted.
+type startedWriter struct {
+	http.ResponseWriter
+	started bool
+}
+
+func (s *startedWriter) Write(chunk []byte) (int, error) {
+	s.started = s.started || len(chunk) > 0
+	return s.ResponseWriter.Write(chunk)
 }

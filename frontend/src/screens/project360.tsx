@@ -5,12 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan } from "../app/capability";
 import { usePageAside } from "../app/pageaside";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { QueryGate } from "../design-system/querystates";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -20,9 +18,13 @@ import { RecordView } from "../design-system/recordview";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
-import { QueryGate, throwProblem, useMe } from "./common";
 import { NewDealAction } from "./companyactions";
 import { CustomFieldsPanel } from "./customfields.card";
 import {
@@ -91,13 +93,11 @@ export function useProject360(id: string) {
     // invalidate, so a saved name reaches the page without a second key.
     queryKey: ["project", id, "360"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/projects/{id}/360", {
-        params: { path: { id } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/projects/{id}/360", {
+          params: { path: { id } },
+        }),
+      );
     },
   });
 }
@@ -382,23 +382,21 @@ function ProjectActions({
           ]}
           record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
           update={async (values, _rows, opened) => {
-            const { data, error } = await api.PATCH("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              // Diffed against what the form OPENED on: no cf_ column is
-              // clearable, so a snapshot diff sends every untouched empty one
-              // as a clear and the save is refused outright.
-              body: {
-                ...mapProjectUpdate(values),
-                ...cf.toPatch(values, opened ?? {}),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return unwrap(
+              await api.PATCH("/projects/{id}", {
+                params: {
+                  path: { id: project.id },
+                  ...ifMatch(requireVersion(opened?.version)),
+                },
+                // Diffed against what the form opened on. No cf_ column is clearable, so a
+                // snapshot diff would send every untouched empty one as a clear and the
+                // save would be refused.
+                body: {
+                  ...mapProjectUpdate(values),
+                  ...cf.toPatch(values, opened ?? {}),
+                },
+              }),
+            );
           }}
           invalidate="projects"
           recordKey="project"
@@ -422,15 +420,14 @@ function ProjectActions({
           archive={async () => {
             // Archive answers 204: the archived record is the one the page
             // already holds, so its id is what the shared choreography gets.
-            const { error } = await api.DELETE("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(project.version)),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
+            unwrap(
+              await api.DELETE("/projects/{id}", {
+                params: {
+                  path: { id: project.id },
+                  ...ifMatch(requireVersion(project.version)),
+                },
+              }),
+            );
             return { id: project.id };
           }}
           invalidate="projects"
@@ -451,11 +448,10 @@ type ChronologySlots = Readonly<{
 }>;
 
 /**
- * The chronology zone: the activities the 360 already carries (capped, with
- * `has_more` beside them), folded with the field-history feed under the same
- * Activities / Changes / All filter the company page offers. The 360's own
- * page of activities is what is drawn, so the list cannot disagree with the
- * rollup figures read in the same transaction.
+ * The chronology zone, with the same filter the company page offers. All draws
+ * the activities the 360 already carries (capped, with `has_more` beside
+ * them), and Changes the field-history feed. Drawing the 360's own page keeps
+ * the list in step with the rollup figures read in the same transaction.
  */
 function useProjectChronology(view: Project360): ChronologySlots {
   const t = useT();
@@ -482,9 +478,6 @@ function useProjectChronology(view: Project360): ChronologySlots {
     kind: "project",
     recordId: view.project.id,
     filter,
-    // A narrowed read is a question about what was said, so the record's own
-    // edits stand down: they are not meetings, and not what the reader asked.
-    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -501,8 +494,7 @@ function useProjectChronology(view: Project360): ChronologySlots {
     ),
   });
   // A withheld activities section is not an empty timeline, and the change
-  // feed is a separate grant: Activities and All say withheld, Changes still
-  // reads.
+  // feed is a separate grant: All says withheld, Changes still reads.
   if (activitiesState === "withheld" && filter !== "changes") {
     return {
       timeline: [],
@@ -542,20 +534,17 @@ function useProjectChronology(view: Project360): ChronologySlots {
     ),
     timelineNotice: chronologyNotice(
       "project.timeline.empty",
+      filter,
+      history,
       {
-        // The 360 is already on screen here, so for the unfiltered read only
-        // the change feed can still be loading or failed; a narrowed read is
-        // the list's own and has its own wait.
-        loading: history.loading || timeline.isPending,
-        failed: history.failed || timeline.isError,
-        assembled:
-          filter === "changes" ||
-          (hasTimelineFilters(filters)
-            ? timeline.isSuccess
-            : Boolean(activities)),
-        filter,
+        // A narrowed read is the list's own and has its own wait; the
+        // unfiltered one is the 360's section, already on screen.
+        loading: timeline.isPending,
+        failed: timeline.isError,
+        assembled: hasTimelineFilters(filters)
+          ? timeline.isSuccess
+          : Boolean(activities),
       },
-      history.entries.length,
       t,
     ),
   };

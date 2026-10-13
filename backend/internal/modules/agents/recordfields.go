@@ -85,11 +85,11 @@ func recordFieldsUnkeyed() map[string]string {
 // and is described separately, since its accepted keys are per-workspace.
 func contractFieldNames(t reflect.Type) []string {
 	names := make([]string, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		tag := t.Field(i).Tag.Get("json")
+	for field := range t.Fields() {
+		tag := field.Tag.Get("json")
 		name := tag
-		if comma := strings.IndexByte(tag, ','); comma >= 0 {
-			name = tag[:comma]
+		if before, _, ok := strings.Cut(tag, ","); ok {
+			name = before
 		}
 		if name == "" || name == "-" {
 			continue
@@ -128,7 +128,7 @@ func contractFieldNames(t reflect.Type) []string {
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
+	RecordFieldsURI + ", and answered by describe_vocabulary (topic record_fields) — that document, not this " +
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
@@ -263,7 +263,7 @@ const proseLanguageSeeSubject = `"Prose a colleague reads. Same language rule as
 // semantic half is here because it is what decides the tier — a caller that
 // picks a stage without reading it cannot tell an immediate move from one that
 // will wait on a human.
-const stageIDNote = `,"description":"The target stage, by id — obtain it from list_pipelines, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval."`
+const stageIDNote = `,"description":"The target stage, by id — obtain it from ` + pipelinesSource + `, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval."`
 
 // jsonString renders s as a JSON string literal so a description built at init
 // time can be spliced into a hand-written schema literal safely.

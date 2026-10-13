@@ -1,158 +1,16 @@
-/* Settings → Lead handling: the two lead vocabularies as terms tables and the
-   reply deadline. One table shape for both vocabularies, so a source row and a
-   reason row line up under each other. */
+/* Settings → Data model: the two lead vocabularies and the lead-handling
+   posture. */
 
-/* The table runs edge to edge inside the panel, and its first and last cells
-   take the panel's own inset so the names line up with the intro above. */
-.lead-vocab-table .table :is(th, td):first-child {
-  padding-inline-start: var(--padPanel);
-}
-.lead-vocab-table .table :is(th, td):last-child {
-  padding-inline-end: var(--padPanel);
-}
-
-.lead-vocab-table .table td {
-  vertical-align: middle;
-}
-
+/* The name, then the Built-in badge on the same line when it has one. */
 .lead-vocab-name {
-  font-weight: var(--fontWeightMedium);
-}
-
-/* `Select`'s face is an `.input`, which is `width: 100%`; in a content-sized
-   column that collapses, so the score picker holds its own measure. */
-.lead-vocab-table .select-control {
-  min-width: 10rem;
-}
-
-/* The discovered values sit between the intro and the administered list, under
-   their own small heading; the table below them carries its hairline. */
-.lead-vocab-discovered > .panel-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-bottom: var(--space-2);
-}
-
-/* The card's own band above the table: the read-only posture and a write the
-   server refused. It pays for its own interval, the same one `.panel-intro`
-   pays, because nothing above or below it owns one. */
-.lead-vocab-notices {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-.panel-body > .lead-vocab-notices:first-child {
-  margin-top: 0;
-  margin-bottom: var(--space-4);
-}
-
-/* The New source dialog: the three score effects, then the note on when a
-   change lands, read as one group. */
-.lead-vocab-score {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* The add-reason form in the panel's action band reads as one line: the box,
-   then the verb that submits it. */
-.lead-vocab-add {
-  flex: 1 1 auto;
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   flex-wrap: wrap;
-  align-items: center;
   gap: var(--space-2);
 }
 
-.lead-vocab-add > .input {
-  flex: 0 1 20rem;
-  min-width: 12rem;
-}
-
-/* The target's refusal, under the box it is about. */
-.lead-handling-target {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* The add-reason band follows the table's last row, which draws no rule, so
-   the band draws the one that closes the list. */
-.lead-vocab-table + .panel-actions {
-  padding-block: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-
-/* On a phone the scored table cannot hold five columns: the lead count goes,
-   since the menu still says when a source is kept for being in use, and the
-   Offered switch and the menu stay on screen. */
-.lead-vocab-table {
-  container-type: inline-size;
-}
-@container (max-width: 30rem) {
-  .lead-vocab-scored .table :is(th, td):nth-child(3) {
-    display: none;
-  }
-  .lead-vocab-scored .table :is(th, td) {
-    padding-inline: var(--space-1);
-  }
-  .lead-vocab-scored .table th:nth-child(2):not(.datatable-grow) {
-    white-space: normal;
-  }
-  /* A name folds onto a second line before a control leaves the screen. */
-  .lead-vocab-scored .table .datatable-grow {
-    min-width: 0;
-  }
-  .lead-vocab-scored .select-control {
-    min-width: 0;
-  }
-}
-
-/* The sources head carries a title, a count and a verb; on a phone the count
-   gives way so the title is not cut to its first word. */
-@media (max-width: 30rem) {
-  .lead-vocab-count {
-    display: none;
-  }
-}
-
-/* The list shape the acquisition-source and record-role cards still draw: one
-   record per line, wrapping on a narrow column, hairlines only between rows. */
-.lead-vocab-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.lead-vocab-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.lead-vocab-list > .lead-vocab-row:last-child {
-  border-bottom: 0;
-}
-
-.lead-vocab-row > .select-control {
-  flex: 0 1 10rem;
-  min-width: 0;
-  width: auto;
-}
-
-.lead-vocab-key {
-  flex: 0 0 auto;
-}
-
-.lead-vocab-flags {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+/* `Select`'s face is `width: 100%`, which an auto-sized cell would resolve to
+   the narrowest option; the intent column holds one fixed measure instead. */
+.lead-vocab-intent .select-control {
+  inline-size: 10rem;
 }

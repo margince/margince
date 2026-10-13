@@ -3,22 +3,25 @@
 
 import { CalendarDays, Check, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useCanWrite } from "../../app/capability";
 import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { ProviderMark } from "../../design-system/provider-mark";
+import {
+  type AccountVendor,
+  VENDOR_SERVICES,
+} from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCanWrite } from "../../lib/capability";
+import { problemMessageOf } from "../../lib/problem";
 import { CaptureNotice } from "../capture-notice";
-import { problemMessageOf } from "../common";
 import {
   type ConnectAccountInput,
   notConfiguredProvider,
   useConnectAccount,
 } from "../connect-account";
-import { type AccountVendor, VENDOR_SERVICES } from "../connectorproviders";
 import {
   ImapConnectPanel,
   markOAuthAttempt,

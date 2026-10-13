@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "Cannot verify that the named causes (Vorort Systeme Ausbau and valantic Migrationsprojekt) and their amounts match what the tool actually reported without access to the tool's output.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer gives the opening and closing open-pipeline figures (EUR 179,000 and EUR 164,500) and the causes add up to the difference between them, as the tool reports them. Answer no if it gives figures that do not match those, names causes that are not in the tool's answer, or says it cannot explain the change.",
+  "answer": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."
+}

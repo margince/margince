@@ -2,17 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CalendarDays, Mail, Send } from "lucide-react";
-import { useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Button, Card } from "../design-system/atoms";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderRow } from "../design-system/providerrow";
 import { Chip } from "../design-system/readings";
+import { ACCOUNT_NAME, type AccountVendor } from "../format/connectorprovider";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
+import { routeHash } from "../lib/router";
 import { type Availability, accountUnwired } from "./connect-flow-draft";
 import { ConnectStrip } from "./connect-flow-trail";
-import { ACCOUNT_NAME, type AccountVendor } from "./connectorproviders";
 import { settingsHref } from "./settingsrouting";
 import "./connection-empty.css";
 

@@ -29,6 +29,7 @@ package gates
 
 import (
 	"go/ast"
+	"slices"
 	"strings"
 	"testing"
 
@@ -67,11 +68,8 @@ func TestTheInstallationLanguageHasOneReader(t *testing.T) {
 		if _, owns := languageKeyOwners[path]; owns || strings.HasSuffix(path, "_test.go") {
 			return
 		}
-		for _, text := range gatekit.SQLStatementsOf(file) {
-			if readsTheLanguageKey(text) {
-				found = append(found, path)
-				break
-			}
+		if slices.ContainsFunc(gatekit.SQLStatementsOf(file), readsTheLanguageKey) {
+			found = append(found, path)
 		}
 	})
 

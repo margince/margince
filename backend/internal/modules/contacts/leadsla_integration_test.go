@@ -33,7 +33,9 @@ func (e *promoteConsentEnv) seedLeadCreatedAt(t *testing.T, email string, create
 		id, email, e.user, createdAt); err != nil {
 		t.Fatal(err)
 	}
-	return ids.From[ids.LeadKind](id)
+	lead := ids.From[ids.LeadKind](id)
+	e.seedLeadTouch(t, lead, "email", "inbound", "human:x", "manual", createdAt)
+	return lead
 }
 
 // enableFirstResponseSLA switches the opt-in target on through the real
@@ -219,7 +221,7 @@ func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
-		 VALUES ($1, 'Found On A Website', 'found@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		 VALUES ($1, 'Found On A Website', 'found@example.test', 'new', 'siteread', 'connector:siteread', NULL, $2)`,
 		id, weekAgo); err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +274,7 @@ func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id, created_at)
-		 VALUES ($1, 'Found On A Website', 'claimed@example.test', 'new', 'siteread', 'agent:siteread', NULL, $2)`,
+		 VALUES ($1, 'Found On A Website', 'claimed@example.test', 'new', 'siteread', 'connector:siteread', NULL, $2)`,
 		id, weekAgo); err != nil {
 		t.Fatal(err)
 	}
@@ -316,7 +318,7 @@ func TestALeadNobodyAskedForIsNotEscalatedForAFirstResponse(t *testing.T) {
 	// administered vocabulary value beside it that the scorer weighs.
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, email, status, source, source_system, captured_by, owner_id, created_at)
-		 VALUES ($1, 'Found On A Website', 'unowned@example.test', 'new', 'siteread', 'siteread', 'agent:siteread', NULL, $2)`,
+		 VALUES ($1, 'Found On A Website', 'unowned@example.test', 'new', 'siteread', 'siteread', 'connector:siteread', NULL, $2)`,
 		id, longAgo); err != nil {
 		t.Fatal(err)
 	}
@@ -582,7 +584,7 @@ func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
 	if err != nil || state.SlaDeadlineAt == nil {
 		t.Fatalf("read the lead's deadline: %v (%v)", err, state.SlaDeadlineAt)
 	}
-	e.seedLeadTouch(t, lead, "email", "outbound", "agent:scheduler", "connector", state.SlaDeadlineAt.Add(-time.Minute))
+	e.seedLeadTouch(t, lead, "email", "outbound", "agent:scheduler", "connector", state.SlaDeadlineAt.Add(-DefaultFirstResponseTarget-time.Minute))
 
 	breaches, err := e.store.ScanLeadSLA(e.ctx, time.Now().UTC())
 	if err != nil {
@@ -636,7 +638,9 @@ func (e *promoteConsentEnv) seedOwnerlessLeadCreatedAt(t *testing.T, email strin
 		id, email, createdAt); err != nil {
 		t.Fatal(err)
 	}
-	return ids.From[ids.LeadKind](id)
+	lead := ids.From[ids.LeadKind](id)
+	e.seedLeadTouch(t, lead, "email", "inbound", "human:x", "manual", createdAt)
+	return lead
 }
 
 // breachStampOf reads the column the scan itself admits on, which is why

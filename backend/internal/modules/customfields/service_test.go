@@ -85,8 +85,7 @@ func TestRename_RequiresUpdateGrant(t *testing.T) {
 func TestRename_EmptyLabelRefused(t *testing.T) {
 	svc := NewService(nil, nil)
 	_, err := svc.Rename(ctxAs(fullGrant()), ids.NewV7(), "   ", nil)
-	var verr *ValidationError
-	if !errors.As(err, &verr) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("blank label must return *ValidationError, got %v", err)
 	}
 }
@@ -109,8 +108,7 @@ func TestSetOptions_EmptySetRefused(t *testing.T) {
 func TestSetOptions_MalformedOptionTextRefused(t *testing.T) {
 	svc := NewService(nil, nil)
 	_, err := svc.SetOptions(ctxAs(fullGrant()), ids.NewV7(), []string{"ok", "bad\x00opt"})
-	var verr *ValidationError
-	if !errors.As(err, &verr) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("a NUL-carrying option must return *ValidationError, got %v", err)
 	}
 }
@@ -134,8 +132,7 @@ func TestList_RequiresReadGrant(t *testing.T) {
 func TestList_UnsupportedObjectRefused(t *testing.T) {
 	svc := NewService(nil, nil)
 	_, _, err := svc.List(ctxAs(fullGrant()), ListInput{Object: "widget"})
-	var verr *ValidationError
-	if !errors.As(err, &verr) {
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("unknown object must return *ValidationError, got %v", err)
 	}
 }

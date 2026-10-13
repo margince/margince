@@ -20,6 +20,10 @@ import (
 // VAT ID sends a test suite's traffic at a real register.
 const someVAT = "DE123456789"
 
+// ownVAT is the installation's own number, the requester a consultation is
+// made under.
+const ownVAT = "DE999999999"
+
 // serveVIES stands in for the Commission's endpoint and records what it was
 // asked, so the request this package builds is provable rather than assumed.
 func serveVIES(t *testing.T, status int, answer map[string]any) (*VIES, *checkRequest) {
@@ -42,7 +46,7 @@ func serveVIES(t *testing.T, status int, answer map[string]any) (*VIES, *checkRe
 		}
 	}))
 	t.Cleanup(server.Close)
-	client := NewVIES(server.URL, "DE999999999", server.Client())
+	client := NewVIES(server.URL, server.Client())
 	// The floor is real time, and no assertion here is about pacing, so it is
 	// removed rather than waited out.
 	client.pacer = NewPacer(0)
@@ -88,7 +92,7 @@ func TestTheThreeAnswersAreToldApart(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			client, _ := serveVIES(t, tc.status, tc.answer)
-			got, err := client.Check(context.Background(), someVAT)
+			got, err := client.Check(context.Background(), someVAT, ownVAT)
 			if err != nil {
 				t.Fatalf("Check returned an error for an answered consultation: %v", err)
 			}
@@ -110,7 +114,7 @@ func TestTheConsultationNumberIsKept(t *testing.T) {
 		"address":           "Musterstr. 1, Berlin",
 	})
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, ownVAT)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
@@ -128,7 +132,7 @@ func TestTheConsultationNumberIsKept(t *testing.T) {
 func TestTheRequestNamesThisInstallationSoAReceiptIsIssued(t *testing.T) {
 	client, asked := serveVIES(t, http.StatusOK, map[string]any{"valid": true})
 
-	if _, err := client.Check(context.Background(), "DE 123.456-789"); err != nil {
+	if _, err := client.Check(context.Background(), "DE 123.456-789", ownVAT); err != nil {
 		t.Fatalf("Check: %v", err)
 	}
 	if asked.RequesterMemberState != "DE" || asked.RequesterNumber != "999999999" {
@@ -155,10 +159,10 @@ func TestAnInstallationWithNoVatNumberStillGetsAnAnswer(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	client := NewVIES(server.URL, "", server.Client())
+	client := NewVIES(server.URL, server.Client())
 	client.pacer = NewPacer(0)
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, "")
 	if err != nil {
 		t.Fatalf("Check without a requester number: %v", err)
 	}
@@ -178,10 +182,10 @@ func TestARefusalIsDistinctAndCarriesItsSchedule(t *testing.T) {
 		w.WriteHeader(http.StatusTooManyRequests)
 	}))
 	defer server.Close()
-	client := NewVIES(server.URL, "DE999999999", server.Client())
+	client := NewVIES(server.URL, server.Client())
 	client.pacer = NewPacer(0)
 
-	_, err := client.Check(context.Background(), someVAT)
+	_, err := client.Check(context.Background(), someVAT, ownVAT)
 	var refused *ProviderRefusedError
 	if !errors.As(err, &refused) {
 		t.Fatalf("a 429 gave %v, want a ProviderRefusedError the caller can schedule against", err)
@@ -197,7 +201,7 @@ func TestARefusalIsDistinctAndCarriesItsSchedule(t *testing.T) {
 func TestARefusedRequestIsNotAnUnavailableRegister(t *testing.T) {
 	client, _ := serveVIES(t, http.StatusBadRequest, nil)
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, ownVAT)
 	if err == nil {
 		t.Fatalf("a 400 answered %q with no error, want an error: a malformed request is not a register that declined", got.Status)
 	}
@@ -214,7 +218,7 @@ func TestTheConsultationDateComesFromTheRegister(t *testing.T) {
 		"requestDate": "2026-08-20+01:00",
 	})
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, ownVAT)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
@@ -231,7 +235,7 @@ func TestTheConsultationDateComesFromTheRegister(t *testing.T) {
 func TestAnAbsentConsultationDateIsNotAFailure(t *testing.T) {
 	client, _ := serveVIES(t, http.StatusOK, map[string]any{"valid": true})
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, ownVAT)
 	if err != nil {
 		t.Fatalf("Check without a request date: %v", err)
 	}
@@ -252,11 +256,11 @@ func TestAMalformedNumberIsRefusedWithoutAsking(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
-	client := NewVIES(server.URL, "DE999999999", server.Client())
+	client := NewVIES(server.URL, server.Client())
 	client.pacer = NewPacer(0)
 
 	for _, bad := range []string{"", "  ", "12", "123456789", "D1234"} {
-		if _, err := client.Check(context.Background(), bad); !errors.Is(err, ErrMalformedNumber) {
+		if _, err := client.Check(context.Background(), bad, ownVAT); !errors.Is(err, ErrMalformedNumber) {
 			t.Errorf("Check(%q) = %v, want ErrMalformedNumber", bad, err)
 		}
 	}
@@ -272,7 +276,7 @@ func TestAnUndisclosedFieldIsAbsentRatherThanAPlaceholder(t *testing.T) {
 		"valid": true, "name": "---", "address": "---",
 	})
 
-	got, err := client.Check(context.Background(), someVAT)
+	got, err := client.Check(context.Background(), someVAT, ownVAT)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
@@ -337,10 +341,10 @@ func TestTheConsultationIsPostedToTheCheckEndpoint(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	client := NewVIES(server.URL, "DE999999999", server.Client())
+	client := NewVIES(server.URL, server.Client())
 	client.pacer = NewPacer(0)
 
-	if _, err := client.Check(context.Background(), someVAT); err != nil {
+	if _, err := client.Check(context.Background(), someVAT, ownVAT); err != nil {
 		t.Fatalf("Check: %v", err)
 	}
 	if method != http.MethodPost || !strings.HasSuffix(path, "/check-vat-number") {

@@ -1,34 +1,4 @@
-/* The redirect address table, and the setup drawer that holds it. */
-
-.oauthapp-redirects {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.oauthapp-redirects-head {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.oauthapp-address {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* An address is pasted character for character, so it wraps anywhere rather
- * than pushing its copy control off the table. */
-.oauthapp-address-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.oauthapp-address-line > code {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
+/* The OAuth app setup drawer and the card that opens it. */
 
 .oauthapp-drawer-heading {
   display: flex;

@@ -1,3 +1,5 @@
+import { providerName } from "../format/connectorprovider";
+import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -26,6 +28,8 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")
     return "worklist.source.weekly_commitment";
+  if (item.source === "awaiting_reply" || item.source === "meeting_follow_up")
+    return "worklist.source.awaiting_reply";
   if (item.source === "brief_item" && item.kind) {
     const signal = item.kind;
     if ((BRIEF_SIGNALS as readonly string[]).includes(signal)) {
@@ -36,39 +40,14 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   return `worklist.category.${item.category}` as MessageKey;
 }
 
-/**
- * The eyebrow as WORDS, which is `cause_label` where the row has one.
- *
- * `system` is the category that needed this. It is the queue's catch-all — the
- * product reporting on ITSELF: a mailbox that stopped, an automation that
- * failed, mail that bounced, a privacy deadline. Six categories name a kind of
- * work a reader recognises and the seventh named the software, so a column of
- * different broken things all read "System" and a reader ran down it learning
- * nothing about any of them.
- *
- * `cause_label` is the server's own words for the condition — minted by the
- * lane that knows which record IS the condition, never sampled from a member's
- * title. Nothing drew it before this.
- *
- * MOST SYSTEM ROWS STILL SAY "System", and that is the honest state rather than
- * an oversight. Three producers mint a label today — capture health names the
- * account, AI work health names the task, a failed automation names the rule
- * (renderhealthlanes.go). Sync health, bounces, undelivered mail, failed
- * approvals, privacy deadlines and relationship decay mint none, so those rows
- * keep the category word. Naming them needs each producer to say which record
- * IS its condition, which is work in the lane and not here; a browser inventing
- * a name from a row's title would be the sampled-member guess the contract
- * refuses. A folded incident is the same case: the fold mints a fresh row and
- * puts the group's name in `batch.label`, not here, so it keeps the word too —
- * and its headline already reads "{cause} failed {count} times".
- *
- * Null where the row has none, and the caller keeps the category word: absent
- * is a real answer here, and an empty eyebrow would be worse than a vague one.
- */
-export function conditionOf(item: WorklistItem): string | null {
-  return item.category === "system" && item.cause_label
-    ? item.cause_label
-    : null;
+// A system row's named condition, or null so the caller keeps the category
+// word: an empty eyebrow would be worse than a vague one.
+export function conditionOf(item: WorklistItem, t: Translator): string | null {
+  if (item.category !== "system") return null;
+  // A capture connection is named by its provider, and its account rides the
+  // row's detail.
+  if (item.connection) return providerName(item.connection.provider, t);
+  return item.cause_label ?? null;
 }
 
 /**

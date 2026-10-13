@@ -8,7 +8,6 @@ import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Badge,
   Button,
@@ -27,12 +26,15 @@ import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
+import { QueryGate } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { BuyableRefused } from "./integrations-provider.notices";
 import { LookupPostureRow } from "./integrations-provider-posture";
 import { categoryName } from "./provider-categories";
@@ -474,17 +476,12 @@ function usePatchCategories() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ provider, version, categories }: CategoryPatch) => {
-      const { data, error } = await api.PATCH(
-        "/provider-connections/{provider}",
-        {
+      return unwrap(
+        await api.PATCH("/provider-connections/{provider}", {
           params: { path: { provider }, ...ifMatch(version) },
           body: { configuration: { categories } },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
     },
     // RETURNED, not fired and forgotten. This mutation writes under If-Match
     // with the version the card was rendered from, so it stays pending until
@@ -656,13 +653,12 @@ function CredentialRow({
     // dialog's state: the press belongs to the committed render, so what it
     // carries cannot be older than the field the reader typed into.
     mutationFn: async (apiKey: string) => {
-      const { error } = await api.PUT("/provider-connections/{provider}", {
-        params: { path: { provider: connection.provider } },
-        body: { api_key: apiKey },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.PUT("/provider-connections/{provider}", {
+          params: { path: { provider: connection.provider } },
+          body: { api_key: apiKey },
+        }),
+      );
     },
     onSuccess: () => {
       // Closing unmounts the dialog, which is what discards the typed key: it
@@ -677,12 +673,11 @@ function CredentialRow({
 
   const disconnect = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE("/provider-connections/{provider}", {
-        params: { path: { provider: connection.provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
+      unwrap(
+        await api.DELETE("/provider-connections/{provider}", {
+          params: { path: { provider: connection.provider } },
+        }),
+      );
     },
     onSuccess: () => {
       setDisconnecting(false);
@@ -694,15 +689,11 @@ function CredentialRow({
 
   const deleteData = useMutation({
     mutationFn: async () => {
-      const { error } = await api.DELETE(
-        "/provider-connections/{provider}/data",
-        {
+      unwrap(
+        await api.DELETE("/provider-connections/{provider}/data", {
           params: { path: { provider: connection.provider } },
-        },
+        }),
       );
-      if (error) {
-        throwProblem(error);
-      }
     },
     onSuccess: () => {
       setDeleting(false);

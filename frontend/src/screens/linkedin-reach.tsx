@@ -7,9 +7,11 @@ import type { components } from "../api/schema";
 import { EmptyState, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { DataTable } from "../design-system/datatable";
+import { RowOpen } from "../design-system/rowopen";
 import { formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import "./linkedin-reach.css";
 
 // Which accounts a member's imported network reaches: the answer the whole
@@ -33,13 +35,11 @@ function useLinkedInReach() {
   return useQuery({
     queryKey: REACH_KEY,
     queryFn: async (): Promise<LinkedInReach> => {
-      const { data, error } = await api.GET("/me/linkedin-reach", {
-        params: { query: { limit: REACH_PAGE_LIMIT } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
+      return unwrap(
+        await api.GET("/me/linkedin-reach", {
+          params: { query: { limit: REACH_PAGE_LIMIT } },
+        }),
+      );
     },
   });
 }
@@ -113,58 +113,78 @@ export function LinkedInReachSection() {
   );
 }
 
-// Every cell stays `white-space: nowrap` (`.li-reach-cell`): an account name
-// plus two counts is wider than a phone, so DataTable's own scroller takes the
-// sideways scroll and the page does not.
 function ReachTable({
   accounts,
 }: Readonly<{ accounts: readonly ReachAccount[] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const open = (account: ReachAccount) =>
+    navigate({ screen: "companies", id: account.company_id });
+  const onFile = (account: ReachAccount) =>
+    t("linkedinReach.onFileOf", {
+      onFile: formatNumber(account.contacts_on_file, locale),
+      total: formatNumber(account.connections, locale),
+    });
   return (
     <DataTable
+      fold
       label={t("linkedinReach.accountsLabel")}
+      rows={[...accounts]}
+      rowKey={(account) => account.company_id}
+      onRowClick={open}
       columns={[
         {
           key: "account",
           header: t("linkedinReach.account"),
+          grow: true,
           render: (account: ReachAccount) => (
-            <a
-              className="li-reach-cell "
-              href={`#/companies/${account.company_id}`}
+            <button
+              type="button"
+              className="cell-link"
+              onClick={() => open(account)}
             >
               {account.display_name}
-            </a>
+            </button>
           ),
         },
         {
           key: "connections",
           header: t("linkedinReach.connections"),
-          render: (account: ReachAccount) => (
-            <span className="li-reach-cell li-reach-figure">
-              {/* Grouped, like the pair in the column beside it: two spellings
-                  of one count in one table is the drift this closes. */}
-              {formatNumber(account.connections, locale)}
-            </span>
-          ),
+          align: "end",
+          render: (account: ReachAccount) =>
+            formatNumber(account.connections, locale),
+          folded: (account: ReachAccount) =>
+            plural("linkedinReach.connectionsCount", account.connections, {
+              count: formatNumber(account.connections, locale),
+            }),
         },
         {
+          // The gap is the finding: contacts you know there who are not
+          // contacts on file.
           key: "onFile",
-          // The GAP is the finding: contacts you know there who are not
-          // contacts. Rendering only the total would hide it.
           header: t("linkedinReach.onFile"),
+          align: "end",
+          render: onFile,
+          folded: (account: ReachAccount) =>
+            t("linkedinReach.onFileFolded", { figure: onFile(account) }),
+        },
+        {
+          key: "open",
+          header: t("table.actions"),
+          headerHidden: true,
+          align: "end",
+          fold: "end",
           render: (account: ReachAccount) => (
-            <span className="li-reach-cell li-reach-figure">
-              {t("linkedinReach.onFileOf", {
-                onFile: formatNumber(account.contacts_on_file, locale),
-                total: formatNumber(account.connections, locale),
+            <RowOpen
+              label={t("linkedinReach.openNamed", {
+                name: account.display_name,
               })}
-            </span>
+              onOpen={() => open(account)}
+            />
           ),
         },
       ]}
-      rows={[...accounts]}
-      rowKey={(account) => account.company_id}
     />
   );
 }

@@ -1,0 +1,27 @@
+/* The four text and layout shapes the Foundations stories share. Layout lives
+ * here and not in a style object because a style object is a second home for
+ * it (inlinelayout.test.ts). */
+
+.specimen-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.specimen-note {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+.specimen-token {
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
+.specimen-intro {
+  font: var(--fontBody);
+  color: var(--textPrimary);
+  margin: 0;
+  max-width: 720px;
+}

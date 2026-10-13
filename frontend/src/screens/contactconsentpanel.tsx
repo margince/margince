@@ -1,11 +1,11 @@
 import { Mail, Phone } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Button, Modal, Skeleton } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type Translator, useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { useProviderLabel } from "./channelproviders";
 import { ConfirmDetailsAction, ConsentSection } from "./consent";
 import { consentWord } from "./contactreadings";
@@ -149,7 +149,7 @@ export function ConsentAndChannels({
         open={manage}
         onClose={() => setManage(false)}
         labelledBy={titleId}
-        placement="right"
+        intent="drawer"
       >
         <div className="pe-drawer-title">
           <Heading size="large" id={titleId}>

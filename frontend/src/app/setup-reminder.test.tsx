@@ -8,9 +8,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { type GrantSpec, meFixture } from "./mefixture";
-import { parseHash } from "./router";
-import { forgetSeat, readStored, STORAGE_KEYS } from "./storage";
+import { parseHash } from "../lib/router";
+import { forgetSeat, readStored, STORAGE_KEYS } from "../lib/storage";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
 import { TopBar } from "./topbar";
 
@@ -32,6 +32,7 @@ function gmail(): CaptureConnection {
   return {
     id: "00000000-0000-4000-8000-000000000011",
     provider: "gmail",
+    can_backfill: true,
     status: "connected",
     scopes: [],
     account_label: "ada@example.test",

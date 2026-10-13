@@ -14,10 +14,20 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// The claim keys the promise cards are stored under. A dismissal matches its
+// key exactly, so these spellings are shipped data and never change.
+const (
+	openTaskKey      = "moment:open_promise"
+	overdueTaskKey   = "moment:overdue_task"
+	overdueClaimRung = "moment:overdue_promise"
+	openClaimRung    = "moment:open_promise_claim"
 )
 
 // openPromiseMoment: something is owed and its date has not passed. Dated or
@@ -67,7 +77,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	observed := task.OccurredAt
 	evidence := []crmcontracts.ContactMomentEvidence{{
 		Type:       crmcontracts.ContactMomentEvidenceTypeTask,
-		Id:         ptr(task.Id),
+		Id:         new(task.Id),
 		Label:      subject,
 		ObservedAt: &observed,
 	}}
@@ -79,9 +89,9 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 	// suppressing it — hiding the promise at the moment it became theirs to
 	// deliver.
 	return crmcontracts.ContactMoment{
-		ClaimKey:            "moment:open_promise",
+		ClaimKey:            openTaskKey,
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence) + heldMarker(ctx, task),
 		Headline:            openPromiseHeadline(ctx, task, subject),
 		WhyNow:              openPromiseWhyNow(now, task),
@@ -98,7 +108,7 @@ func openPromiseFrom(ctx context.Context, now time.Time, task crmcontracts.Activ
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": subject}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: subject}),
 			},
 		},
 	}
@@ -130,11 +140,18 @@ func heldMarker(ctx context.Context, task crmcontracts.Activity) string {
 }
 
 // heldByAnother reports whether a named colleague, and not the reader, holds
-// this task. A call carrying no user (an agent reading through a passport)
-// claims nobody's work as its own.
+// this task.
+//
+// An agent claims nobody's work as its own. A passport carries its granting
+// human's UserID, so comparing ids would answer about that human and the
+// phrasing would call their task "ours". auth.RequireHuman is what tells the
+// two apart, which a check for a non-zero id does not.
 func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 	if task.AssigneeId == nil {
 		return false
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return true
 	}
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
@@ -197,11 +214,10 @@ func overduePromiseMoment(ctx context.Context, now time.Time, page *crmcontracts
 // (internal/compose/contact360/moments_test.go), which fail if either source
 // stops reaching the card.
 //
-// A UNION, NOT A JOIN. Nothing writes conversation_claim.task_activity_id, so
-// an extracted commitment and a task about the same thing are two unlinked
-// rows here. A reader who filed a task for a promise an extractor also read
-// may therefore see both, which is the honest answer until that link is
-// written — the alternative is guessing which pairs mean one promise.
+// A claim that became a task is left to its task, so the promise is counted
+// once. A task a rep typed for a promise an extractor also read stays a second
+// row: nothing links the two, and guessing which pairs mean one promise would
+// be this card inventing a fact.
 func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	var items []owedwork.Item
 	if page.NextSteps != nil {
@@ -228,7 +244,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind != crmcontracts.ConversationClaimKindCommitmentOurs ||
-				claim.Status != crmcontracts.ConversationClaimStatusOpen {
+				claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.TaskActivityId != nil {
 				continue
 			}
 			items = append(items, owedwork.Item{
@@ -250,7 +266,7 @@ func owedPromises(page *crmcontracts.Contact360) []owedwork.Item {
 // says something different about it.
 func overdueTaskCard(ctx context.Context, now time.Time, task crmcontracts.Activity) crmcontracts.ContactMoment {
 	moment := openPromiseFrom(ctx, now, task)
-	moment.ClaimKey = "moment:overdue_task"
+	moment.ClaimKey = overdueTaskKey
 	moment.Rule = crmcontracts.ContactMomentRuleOverduePromise
 	return moment
 }
@@ -273,9 +289,9 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 		ObservedAt: claim.DueAt,
 	}}
 	return crmcontracts.ContactMoment{
-		ClaimKey:            claimMomentKey("moment:overdue_promise", claim),
+		ClaimKey:            claimMomentKey(overdueClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOverduePromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
 		WhyNow:              whyNow,
@@ -288,7 +304,7 @@ func overdueClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmco
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: claim.Body}),
 			},
 		},
 	}
@@ -328,9 +344,9 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 		ObservedAt: claim.OccurredAt,
 	}}
 	return crmcontracts.ContactMoment{
-		ClaimKey:            claimMomentKey("moment:open_promise_claim", claim),
+		ClaimKey:            claimMomentKey(openClaimRung, claim),
 		Rule:                crmcontracts.ContactMomentRuleOpenPromise,
-		RuleVersion:         ptr(ruleVersion),
+		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
 		Headline:            fmt.Sprintf("You owe them: %s", claim.Body),
 		WhyNow:              openClaimWhyNow(now, claim),
@@ -343,7 +359,7 @@ func openClaimCard(now time.Time, claim crmcontracts.ConversationClaim) crmcontr
 			State: crmcontracts.ContactMomentActionStateWillConfirm,
 			Destination: &crmcontracts.ContactMomentDestination{
 				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: prefill(map[string]string{prefillIntent: "deliver_commitment", "subject": claim.Body}),
+				Prefill: new(map[string]string{prefillIntent: deliverCommitmentIntent, prefillSubject: claim.Body}),
 			},
 		},
 	}

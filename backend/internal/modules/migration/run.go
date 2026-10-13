@@ -20,15 +20,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// importRunObject is the RBAC object every store entry point gates on —
-// admin/ops-only on every verb (identity/internal/policy).
-// ImportRunObject is the RBAC object every run entry point admits on. Exported
-// because the transport that drives the engine lives in compose (a module may
-// not import a sibling), and it must gate on the same object name the store
-// does rather than a second copy of the string.
+// ImportRunObject is the RBAC object every run entry point admits on, held by
+// admin and ops only (identity/internal/policy). Exported because compose
+// drives the engine and must gate on the store's own name for it.
 const ImportRunObject = "import_run"
-
-const importRunObject = ImportRunObject
 
 // auditFieldStatus names the run status in an import_run audit row.
 const auditFieldStatus = "status"
@@ -68,6 +63,8 @@ type Run struct {
 	CapturedBy string
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	// Session is read only by the staged reads; the flip's runs carry none.
+	Session
 }
 
 // RunStore owns the import_run table; every status transition rides the
@@ -99,7 +96,7 @@ type CreateRunInput struct {
 // confirm-first gate (typed phrase + sealed preflight) happens before
 // this call; recording the run IS the audited start gate.
 func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return Run{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -116,7 +113,7 @@ func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}
-		_, err := storekit.Audit(ctx, tx, "create", importRunObject, run.ID, nil, map[string]any{
+		_, err := storekit.Audit(ctx, tx, "create", ImportRunObject, run.ID, nil, map[string]any{
 			"connector": run.Connector, auditFieldStatus: run.Status, "source_ref": run.SourceRef,
 		})
 		return err
@@ -129,7 +126,7 @@ func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
 
 // Get reads one run; a foreign workspace's run answers not-found (RLS).
 func (s *RunStore) Get(ctx context.Context, id RunID) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Run{}, err
 	}
 	var run Run
@@ -166,7 +163,7 @@ func (s *RunStore) Get(ctx context.Context, id RunID) (Run, error) {
 
 // Latest returns the newest run for a connector, or ErrNotFound.
 func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Run{}, err
 	}
 	var run Run
@@ -190,6 +187,12 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 	return run, nil
 }
 
+// Binding is a landed identity and the state of the run that landed it.
+type Binding struct {
+	NativeID  ids.UUID
+	RunStatus string
+}
+
 // LookupIdentity resolves an external id to the native row a previous
 // (or the current) run landed for it. The engine-owned map is the ONLY
 // authority for "already imported": the rows' own source/source_system
@@ -197,17 +200,25 @@ func (s *RunStore) Latest(ctx context.Context, connector string) (Run, error) {
 // would let a caller pre-plant a row under a source id and have the
 // import treat the real record as already landed.
 func (s *RunStore) LookupIdentity(ctx context.Context, sourceSystem, object, externalID string) (ids.UUID, bool, error) {
-	if err := auth.Require(ctx, importRunObject, principal.ActionRead); err != nil {
-		return ids.UUID{}, false, err
+	binding, found, err := s.LookupBinding(ctx, sourceSystem, object, externalID)
+	return binding.NativeID, found, err
+}
+
+// LookupBinding is LookupIdentity plus the status of the run that made the
+// binding, which decides whether the key may be taken over.
+func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, externalID string) (Binding, bool, error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
+		return Binding{}, false, err
 	}
-	var id ids.UUID
+	var binding Binding
 	found := false
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			-- The workspace predicate is the lookup's own: tenant isolation
-			SELECT native_id FROM import_record_map
-			WHERE source_system = $1 AND object = $2 AND external_id = $3`,
-			sourceSystem, object, externalID).Scan(&id)
+			SELECT m.native_id, r.status FROM import_record_map m
+			  JOIN import_run r ON r.id = m.import_run_id
+			WHERE m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
+			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -218,16 +229,16 @@ func (s *RunStore) LookupIdentity(ctx context.Context, sourceSystem, object, ext
 		return nil
 	})
 	if err != nil {
-		return ids.UUID{}, false, err
+		return Binding{}, false, err
 	}
-	return id, found, nil
+	return binding, found, nil
 }
 
 // RecordIdentity records the external→native identity a run just landed.
 // Idempotent: a resumed run replaying its last page re-asserts the same
 // pair rather than failing.
 func (s *RunStore) RecordIdentity(ctx context.Context, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -240,7 +251,7 @@ func (s *RunStore) RecordIdentity(ctx context.Context, runID RunID, sourceSystem
 // same commit, so a crash cannot leave a record the resume has no name for.
 // Same gate, same statement; only the transaction is borrowed.
 func (s *RunStore) RecordIdentityTx(ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return err
 	}
 	return recordIdentityInTx(ctx, tx, runID, sourceSystem, object, externalID, nativeID)
@@ -248,6 +259,15 @@ func (s *RunStore) RecordIdentityTx(ctx context.Context, tx pgx.Tx, runID RunID,
 
 // recordIdentityInTx is the statement both entry points run.
 func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
+	// A finished undo frees its keys; a paused one still pages them by offset.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM import_record_map m
+		 USING import_run r
+		 WHERE r.id = m.import_run_id AND r.status = $4
+		   AND m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
+		sourceSystem, object, externalID, StatusUndone); err != nil {
+		return fmt.Errorf("migration: releasing the %s %s identity: %w", object, externalID, err)
+	}
 	// The run is resolved BY the statement rather than trusted from the
 	// argument, so a mapping can never be written under a run that does not
 	// exist: the SELECT finds no row, the INSERT writes none, and the caller
@@ -292,7 +312,7 @@ type IdentityPair struct {
 // binding stands, so repairing twice is a no-op and a binding this run
 // already holds is never overwritten.
 func (s *RunStore) RecordIdentities(ctx context.Context, runID RunID, sourceSystem, object string, pairs []IdentityPair) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
 		return err
 	}
 	if len(pairs) == 0 {
@@ -375,10 +395,14 @@ func (s *RunStore) advanceCheckpoint(ctx context.Context, id RunID, checkpoint i
 	})
 }
 
-// complete records the finished run with its report, audited.
+// complete records the finished run with its report, audited, and releases
+// its uploaded file: undo reads the identity map, never the file.
 func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 	return s.transition(ctx, id, StatusComplete, func(tx pgx.Tx) error {
-		return storeReport(ctx, tx, id, rep)
+		if err := storeReport(ctx, tx, id, rep); err != nil {
+			return err
+		}
+		return releaseSource(ctx, tx, id)
 	})
 }
 
@@ -389,7 +413,7 @@ func (s *RunStore) complete(ctx context.Context, id RunID, rep Report) error {
 // record, understating a one-way cutover to the operator reading it.
 func (s *RunStore) failRun(ctx context.Context, id RunID, rep Report, cause error) error {
 	return s.transition(ctx, id, StatusFailed, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, cause.Error()); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE import_run SET error = $2 WHERE id = $1`, id, StopCause(cause)); err != nil {
 			return err
 		}
 		return storeReport(ctx, tx, id, rep)
@@ -422,7 +446,7 @@ func storeReport(ctx context.Context, tx pgx.Tx, id RunID, rep Report) error {
 // Resume flips a failed run back to running so Engine.Run re-enters it
 // from its checkpoint.
 func (s *RunStore) Resume(ctx context.Context, id RunID) error {
-	if err := auth.Require(ctx, importRunObject, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
@@ -435,7 +459,7 @@ func (s *RunStore) Resume(ctx context.Context, id RunID) error {
 		if tag.RowsAffected() == 0 {
 			return fmt.Errorf("import run %s is not failed, nothing to resume: %w", id, apperrors.ErrConflict)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id, map[string]any{auditFieldStatus: StatusFailed}, map[string]any{auditFieldStatus: StatusRunning})
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id, map[string]any{auditFieldStatus: StatusFailed}, map[string]any{auditFieldStatus: StatusRunning})
 		return err
 	})
 }
@@ -456,7 +480,7 @@ func (s *RunStore) transition(ctx context.Context, id RunID, to string, extra fu
 				return fmt.Errorf("recording import run %s payload: %w", to, err)
 			}
 		}
-		_, err = storekit.Audit(ctx, tx, "update", importRunObject, id, map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: to})
+		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id, map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: to})
 		return err
 	})
 }

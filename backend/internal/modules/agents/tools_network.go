@@ -211,6 +211,9 @@ func RegisterNetworkTools(r *Registry, whoKnows WhoKnowsLister, coverage Coverag
 	if atRisk != nil {
 		r.Register(atRiskTool{list: atRisk})
 	}
+	if whoKnows != nil && coverage != nil && intro != nil {
+		r.Register(readRelationships{})
+	}
 }
 
 // --- company_coverage (🟢 read) ---
@@ -222,7 +225,7 @@ func (t companyCoverageTool) Spec() mcp.ToolSpec {
 		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
 		Description:   companyCoverageCopy.render(),
 		Instead:       companyCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
 			"deal_id":{"type":"string","format":"uuid","description":"The deal to assess"}},
@@ -283,8 +286,8 @@ func (t introPathTool) Spec() mcp.ToolSpec {
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
 		Description:   introPathToCopy.render(),
 		Instead:       introPathToCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getCompanyGraph",
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		OpenAPIOp: "listIntroPaths",
 		InputSchema: schema(`{"type":"object","properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},
 			"required":["company_id"],"additionalProperties":false}`),
@@ -345,7 +348,7 @@ func (t atRiskTool) Spec() mcp.ToolSpec {
 		Description:   atRiskRelationshipsCopy.render(),
 		Instead:       atRiskRelationshipsCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "listDeals + getDealCoverage",
+		OpenAPIOp: "listAtRiskRelationships",
 		// No arguments. The question is about the caller's own book, and the
 		// row scope already decides what that is — an owner or team filter here
 		// would be a second, weaker spelling of the same rule.

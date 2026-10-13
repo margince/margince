@@ -44,3 +44,15 @@ func startDealRoomTimeline(
 	_, _ = fmt.Fprintln(stdout, "worker writing Deal Room activity onto the deal timeline")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:deal-room-timeline", notes.HandleEvent, logger, 0) })
 }
+
+// startCommitmentSettle subscribes the consumer that keeps a commitment and the
+// task it became settled together. Deterministic, so it runs on every worker:
+// without it a kept commitment keeps reading as owed.
+func startCommitmentSettle(
+	ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client,
+	background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer,
+) {
+	settle := compose.NewCommitmentSettleTrigger(pool, logger)
+	_, _ = fmt.Fprintln(stdout, "worker settling commitments with their tasks (cg:commitment-settle)")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:commitment-settle", settle.HandleEvent, logger, 0) })
+}

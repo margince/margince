@@ -27,6 +27,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
@@ -144,6 +145,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"whoami", `{}`},
 		{"list_colleagues", `{}`},
 		{"list_colleagues", `{"q":"nothing here matches this"}`},
+		// A record's files, read through each tab's own library: empty here, which is the
+		// answer whose list must stay an array.
+		{"list_documents", `{"entity_type":"company","entity_id":"` + company.String() + `"}`},
+		{"list_documents", `{"entity_type":"deal","entity_id":"` + deal.String() + `"}`},
+		{"list_documents", `{"entity_type":"contact","entity_id":"` + contact.String() + `","limit":5}`},
 
 		// An enumeration, narrowed and unnarrowed. The narrowed one is the
 		// answer worth holding to the shape: a filter that reached no SQL still
@@ -240,11 +246,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"check_availability", `{"from":"2026-01-05T09:00:00Z","to":"2026-01-05T17:00:00Z"}`},
 		{"relink_activity", `{"activity_id":"` + activity.String() + `","entity_type":"contact","entity_id":"` +
 			contact.String() + `"}`},
-		// The batch forms answer a count-and-ids shape of their own. The thread
-		// one names a key no activity carries, which is a well-formed empty
-		// answer; the set one names the activity above, onto a company.
-		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"contact","entity_id":"` +
-			contact.String() + `"}`},
+		// The set form answers a count shape of its own: it names the activity
+		// above, onto a company. relink_thread is absent because it never runs for
+		// an assistant, so it has no answer to hold against a schema.
 		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"company","entity_id":"` +
 			company.String() + `"}`},
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
@@ -358,17 +362,22 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 // listed here and then made reachable fails as loudly as one that was never
 // covered, so the list cannot quietly outlive its reason.
 var unreachableInThisLane = gatekit.Waive(map[string]string{
+	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +
+		"TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination (modules/agents) holds the refusal itself",
 	"read_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
 		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"change_lists": "needs lists switched on (lists.enabled), which this lane's registry is not composed with; " +
 		"TestAUserAndTheirAgentReadOneListTheSameWay (lists_http_integration_test.go) calls it through the served MCP surface and holds its answer to its schema",
 	"preview_import": "needs an object store to put the source file in; this lane composes none, " +
 		"so the call would exercise the refusal rather than the handler",
-	"read_import_run": "needs a seat holding import_run.read, which this lane's seat does not " +
-		"carry — a migration run is an admin-scoped object, and granting it here would widen the " +
-		"authority every other tool in the sweep runs under",
-	"read_import_report":   "needs a run that has been dry-run, which needs the object store above",
-	"commit_import":        "confirm-first, and needs the object store above to reach a committable run",
+	"read_import_report": "needs a run that has been dry-run, which needs the object store above",
+	"commit_import":      "confirm-first, and needs the object store above to reach a committable run",
+	"describe_import_format": "needs a seat holding import_run.read, which this lane's seat does not carry; " +
+		"TestImportFormatRouteAnswersAsItsTool (workflowreadroutes_integration_test.go) calls it with that grant",
+	"attach_document": "needs an object store to keep the file in; " +
+		"TestAnAgentAttachesAPDFToEveryRecordKindAndListsItWhereTheTabDoes (compose/documentseam_integration_test.go) holds its answer to its schema",
+	"decide_duplicate": "needs a filed review-queue pair, which a create under a second passport produces; " +
+		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"book_meeting":         "needs a live calendar provider",
 	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",
@@ -398,7 +407,8 @@ func twoFrozenForecasts(ctx context.Context, t *testing.T, e *Env) (ids.UUID, id
 	t.Helper()
 	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
 	period, err := forecasting.ResolvePeriod(
-		forecasting.PeriodQuarter, time.Now().UTC(), 1, time.UTC)
+		forecasting.PeriodQuarter, time.Now().UTC(), 1, time.UTC,
+	)
 	if err != nil {
 		t.Fatalf("resolving the period the snapshots describe: %v", err)
 	}
@@ -493,6 +503,15 @@ func assertEveryRegisteredToolIsAccountedFor(t *testing.T, registry *agents.Regi
 	invoked := map[string]bool{"create_record": true, "create_tag": true}
 	for _, call := range calls {
 		invoked[call.tool] = true
+	}
+	// A router answers as the target it picks, so it is held here when each of
+	// its targets is invoked or excused.
+	for _, spec := range registry.Specs() {
+		if targets, isRouter := registry.RouteTargets(spec.Name); isRouter {
+			invoked[spec.Name] = !slices.ContainsFunc(targets, func(target string) bool {
+				return !invoked[target] && !unreachableInThisLane.Waived(t, target)
+			})
+		}
 	}
 	for _, spec := range registry.Specs() {
 		excused := unreachableInThisLane.Waived(t, spec.Name)

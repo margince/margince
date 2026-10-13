@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { TableScroll } from "../design-system/atoms";
+import { Badge, TableScroll } from "../design-system/atoms";
+import type { ScrollRegionName } from "../design-system/scrollregion";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import type { ObjectGrant, Role } from "./roles.queries";
@@ -46,8 +47,8 @@ export function grantOf(role: Role, object: string): ObjectGrant {
 export type GrantMatrixRow = Readonly<{
   key: string;
   name: string;
-  /** A second line under the name, such as "Built-in". */
-  note?: string;
+  /** A label beside the name, for the rows that differ from the rest. */
+  badge?: string;
   grant: ObjectGrant;
   /** Each switch's full accessible name, identifiable out of context. */
   cellLabel: (action: CrudAction) => string;
@@ -75,8 +76,8 @@ export function GrantMatrix({
   readOnlyReason,
   turnOnReason,
   busy = false,
-  labelledBy,
-  scrollLabel,
+  name,
+  bleed,
 }: Readonly<{
   /** The first column's header: what the rows are. */
   rowHeader: string;
@@ -87,15 +88,19 @@ export function GrantMatrix({
   turnOnReason?: string;
   /** Whether another write on the same subject is in flight. */
   busy?: boolean;
-  /** The id of the label naming the grid. */
-  labelledBy: string;
-  /** The name the scroll region announces once the grid overflows. */
-  scrollLabel: string;
+  /** Names the table and its scroll region: a phrase, or the heading over it. */
+  name: ScrollRegionName;
+  /** `TableScroll`'s `bleed`, for a grid standing straight in a `Panel`. */
+  bleed?: boolean;
 }>) {
   const t = useT();
   return (
-    <TableScroll label={scrollLabel}>
-      <table className="grant-matrix" aria-labelledby={labelledBy}>
+    <TableScroll label={name} bleed={bleed} stickyFirst>
+      <table
+        className="table grant-matrix"
+        aria-labelledby={typeof name === "string" ? undefined : name.labelledBy}
+        aria-label={typeof name === "string" ? name : undefined}
+      >
         <thead>
           <tr>
             <th scope="col">{rowHeader}</th>
@@ -110,10 +115,10 @@ export function GrantMatrix({
           {rows.map((row) => (
             <tr key={row.key}>
               <th scope="row">
-                <span className="grant-row-name">{row.name}</span>
-                {row.note ? (
-                  <span className="t-caption grant-row-note">{row.note}</span>
-                ) : null}
+                <span className="grant-row-head">
+                  <span>{row.name}</span>
+                  {row.badge ? <Badge>{row.badge}</Badge> : null}
+                </span>
               </th>
               {CRUD.map((action) => {
                 const refusal = !canManage

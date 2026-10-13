@@ -114,6 +114,48 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
+// ReopenQuietRemindersStillQuietAround reopens the closed quiet reminders on
+// the records this activity touches whose silence never actually ended.
+//
+// A meeting logged while booked closes a reminder. Called off afterwards, no
+// contact took place and the reminder stayed closed.
+//
+// The scan cannot raise a replacement. Its anchor falls back to the older
+// activity, a run for that anchor already exists, and the engine skips it.
+//
+// It asks whether the record is quiet now, not which touch closed the
+// reminder. Nothing records that, and causation is the wrong question: a
+// reminder whose record has since been touched must stay closed.
+//
+// The quiet test is genuineEngagement, the predicate the scan's anchor and the
+// completion also read. One helper, so what ends a silence is answered in one
+// place.
+func (s *Store) ReopenQuietRemindersStillQuietAround(
+	ctx context.Context, activityID ids.ActivityID,
+) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	touched := arg(activityID)
+	sameRecord := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
+			      l.deal_id IN (SELECT t.deal_id FROM activity_link t WHERE t.activity_id = $%[1]d)
+			   OR l.contact_id IN (SELECT t.contact_id FROM activity_link t WHERE t.activity_id = $%[1]d)
+			   OR l.company_id IN (SELECT reach.company_id FROM (%[2]s) reach
+			                       WHERE reach.activity_id = $%[1]d)))`,
+		touched, CompanyReachSet())
+	where := storekit.SQLf(`a.source_system = ANY($%[1]d) AND %[2]s
+			AND NOT EXISTS (
+			    SELECT 1 FROM activity touch
+			     JOIN activity_link tl ON tl.activity_id = touch.id
+			     JOIN activity_link al ON al.activity_id = a.id
+			      AND (al.deal_id = tl.deal_id OR al.contact_id = tl.contact_id
+			           OR al.company_id = tl.company_id)
+			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity'))`,
+		arg(provenance.EngineReminderSources()), sameRecord,
+		genuineEngagement("touch", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
+		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))
+	return s.flipSystemTasks(ctx, where, arg, &args, true)
+}
+
 // reminderAnchor reads a quiet reminder's anchor back out of its source_id,
 // or NULL when the key carries none that parses — a key written on a failed
 // anchor decode (":anchor-error:"). A NULL anchor keeps the plain close: any
@@ -179,7 +221,8 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 		// that has since been deleted makes the subquery NULL, so nothing
 		// matches and nothing is completed — the safe direction.
 		where += storekit.SQLf(
-			" AND a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $%d)", linkPos)
+			" AND a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $%d)", linkPos,
+		)
 	}
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
@@ -196,6 +239,17 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 func (s *Store) completeOpenSystemTasks(
 	ctx context.Context, where string, arg func(any) int, args *[]any,
 ) (int, error) {
+	return s.flipSystemTasks(ctx, where, arg, args, false)
+}
+
+// flipSystemTasks selects the system-minted tasks a caller's predicate names
+// that are currently `done` and flips each to the other state.
+//
+// One selector for both directions, so which tasks are the system's to move is
+// answered in one place.
+func (s *Store) flipSystemTasks(
+	ctx context.Context, where string, arg func(any) int, args *[]any, done bool,
+) (int, error) {
 	type openTask struct {
 		id      ids.ActivityID
 		version int64
@@ -206,11 +260,11 @@ func (s *Store) completeOpenSystemTasks(
 			SELECT a.id, a.version FROM activity a
 			WHERE %s AND a.kind = $%d AND a.source = $%d
 			  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
-			  AND a.is_done = false AND a.archived_at IS NULL
+			  AND a.is_done = $%d AND a.archived_at IS NULL
 			ORDER BY a.id`,
 			where,
 			arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
-			arg(systemCapturedBy), arg(systemCapturedByPattern))
+			arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))
 		rows, err := tx.Query(ctx, query, (*args)...)
 		if err != nil {
 			return err
@@ -230,9 +284,9 @@ func (s *Store) completeOpenSystemTasks(
 	}
 	completed := 0
 	for _, task := range open {
-		flipped, err := s.completeSystemTask(ctx, task.id, task.version)
+		flipped, err := s.setSystemTaskDone(ctx, task.id, task.version, !done)
 		if err != nil {
-			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
+			return 0, fmt.Errorf("moving system task %s: %w", task.id, err)
 		}
 		if flipped {
 			completed++
@@ -272,9 +326,10 @@ const completionAttempts = 3
 // So skew is a re-read, not a skip. Skipping unconditionally trades a noisy
 // history for a follow-up task that can stay open forever, which is the worse
 // of the two.
-func (s *Store) completeSystemTask(ctx context.Context, id ids.ActivityID, version int64) (bool, error) {
-	done := true
-	for attempt := 0; attempt < completionAttempts; attempt++ {
+func (s *Store) setSystemTaskDone(
+	ctx context.Context, id ids.ActivityID, version int64, done bool,
+) (bool, error) {
+	for range completionAttempts {
 		_, err := s.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: &done, IfVersion: &version})
 		if err == nil {
 			return true, nil
@@ -296,7 +351,13 @@ func (s *Store) completeSystemTask(ctx context.Context, id ids.ActivityID, versi
 		if err != nil {
 			return false, err
 		}
-		if current.IsDone != nil && *current.IsDone {
+		// Already where this call was taking it: a sibling firing got there
+		// first and nothing is left to do.
+		//
+		// Compared against the target rather than against done-ness. Reopening
+		// wants the opposite answer from completing, so a hard-coded
+		// `*current.IsDone` skipped every reopen whose task was still closed.
+		if current.IsDone != nil && *current.IsDone == done {
 			return false, nil
 		}
 		if current.Version == nil {

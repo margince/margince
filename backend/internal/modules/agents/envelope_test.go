@@ -15,6 +15,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +86,7 @@ type recordTool struct {
 func (r recordTool) Spec() mcp.ToolSpec { return r.spec }
 
 func (r recordTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
-	return json.Marshal(searchResult(ctx, datasource.SearchResult{Records: r.records}))
+	return json.Marshal(searchResult(ctx, nil, datasource.SearchResult{Records: r.records}))
 }
 
 // derivedTool answers the way an aggregate does: from records it read and does
@@ -130,7 +131,11 @@ func recordWrittenBy(entity datasource.EntityType, syncedAt time.Time, authorita
 // populates them — is the integration lane's, because only a real call can
 // prove it.
 func TestEveryToolAdvertisesTheWholeEnvelope(t *testing.T) {
-	for _, spec := range fullRegistry(t).Specs() {
+	r := fullRegistry(t)
+	for _, spec := range r.Specs() {
+		if _, isRouter := r.RouteTargets(spec.Name); isRouter {
+			continue // answers in its target's envelope, checked as that target
+		}
 		var declared struct {
 			Properties map[string]json.RawMessage `json:"properties"`
 			Required   []string                   `json:"required"`
@@ -538,12 +543,7 @@ func warningNamed(env Envelope, code string) (Warning, bool) {
 }
 
 func slicesContains(haystack []string, needle string) bool {
-	for _, candidate := range haystack {
-		if candidate == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(haystack, needle)
 }
 
 // readingAgent is the caller these tests dispatch as; how much of the workspace

@@ -5,9 +5,9 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
-import { STORAGE_KEYS, writeStored } from "../app/storage";
 import { newClient, renderWith } from "../app/testing/shellharness";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { settingsReach } from "./settingscatalog";
 import { SettingsHome } from "./settingshome";
 

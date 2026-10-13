@@ -40,11 +40,13 @@ const fromSubjectMail = `
 	AND a.archived_at IS NULL AND NOT a.bulk_mail_attested
 	AND starts_with(a.captured_by, 'connector:')`
 
-// capturedAcquisition is the provenance of an acquisition capture wrote. Only
-// those are settled by a later mail: an unknown source a seat or an import
-// stated is a claim about somewhere else, and the contact writing to us later
-// says nothing about where that address came from.
-const capturedAcquisition = ` starts_with(e.captured_by, 'connector:')`
+// capturedAcquisition is the provenance of an acquisition capture wrote: a
+// connector's, or the counterparty verdict's, which mints contacts from captured
+// mail after the fact. Only those are settled by a later mail: an unknown source
+// a seat or an import stated is a claim about somewhere else, and the contact
+// writing to us later says nothing about where that address came from.
+const capturedAcquisition = ` (starts_with(e.captured_by, 'connector:')
+	OR e.captured_by = 'agent:capture_counterparty_verdict')`
 
 // contactWroteToUsTx reports that a mail from one of this contact's addresses
 // has been captured.

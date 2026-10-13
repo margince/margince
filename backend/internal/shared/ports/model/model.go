@@ -180,6 +180,10 @@ type Client interface {
 	// Caps reports what the provider supports so callers route correctly
 	// (cheap/local for capture+classify, premium when quality demands).
 	Caps() Capabilities
+
+	// Health reports whether the provider is answering for everyone. Layers
+	// above skip a blocked provider rather than spend an attempt on it.
+	Health() ProviderHealthStatus
 }
 
 type Request struct {
@@ -205,6 +209,11 @@ type Request struct {
 	// raises a model that thinks less by default and never lowers one that
 	// thinks more (docs/reference/ai-thinking.md has the per-provider table).
 	ThinkingFloor string
+	// ThinkingLevel is the exact level an admin chose for the request's task
+	// (minimal | low | medium | high); empty chooses none. It outranks the
+	// binding's own level and the floor; only the request's ProviderOptions
+	// outrank it. A model with no thinking control ignores it.
+	ThinkingLevel string
 	// ContextBytes and ContextTokensEstimate describe only the final delimited
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int

@@ -6,9 +6,9 @@
 package gates
 
 // A page token a caller hands back is either one this server minted or it is
-// not, and that is ONE question with one answer on the wire: the contract's
-// `422 code: malformed_cursor`, which tells the caller to re-issue the request
-// without the token.
+// not, and that question has one answer on the wire: the contract's `422 code:
+// malformed_cursor`, which tells the caller to re-issue the request without the
+// token.
 //
 // A module that invents its own refusal answers a different question. `required`
 // tells a caller to supply a field it just supplied, so acting on it means
@@ -31,6 +31,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -638,10 +639,8 @@ func mentionsAnError(expr ast.Expr) bool {
 // purpose: a cursor without the count prefix is the start of paging.
 func refuses(returns [][]ast.Expr) bool {
 	for _, statement := range returns {
-		for _, returned := range statement {
-			if looksLikeAnError(returned) {
-				return true
-			}
+		if slices.ContainsFunc(statement, looksLikeAnError) {
+			return true
 		}
 	}
 	return false
@@ -705,12 +704,7 @@ func buildsMalformedCursor(expr ast.Expr, inStorekit bool) bool {
 
 func callsADecoder(call *ast.CallExpr) bool {
 	name := decoderName(call)
-	for _, decoder := range cursorDecoders {
-		if name == decoder {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(cursorDecoders, name)
 }
 
 // namesACursor reads the expression's own vocabulary. A token the code calls a

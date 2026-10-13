@@ -193,6 +193,21 @@ func RequireHuman(ctx context.Context) error {
 	return nil
 }
 
+// RequireHumanOrAgentScope is RequireHuman that also admits an agent whose
+// passport holds scope. It is for an engine both a human's screen and an agent
+// tool reach: the agent acts under its granting human's row scope, so what it
+// may read through the engine is what that human could open.
+func RequireHumanOrAgentScope(ctx context.Context, scope principal.Scope) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if p.Type == principal.PrincipalAgent && p.Scopes.Has(scope) {
+		return nil
+	}
+	return RequireHuman(ctx)
+}
+
 // RequireMember admits any SEATED principal and refuses everyone else. It is
 // the gate for a read whose whole boundary is membership: the roster and the
 // colleague list answer "who works here", which every seat may ask and nobody

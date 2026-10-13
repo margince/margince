@@ -35,7 +35,7 @@ func seedScoutedCompany(t *testing.T, e *apptest.AppEnv) (companyID, suggestionI
 func seedScoutedNamed(t *testing.T, e *apptest.AppEnv, companyName, contactName string) (companyID, suggestionID string) {
 	t.Helper()
 	var company, contact, meeting AnyMap
-	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"display_name": companyName}, nil, &company); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": companyName}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company = %d %v", status, company)
 	}
 	companyID, _ = company["id"].(string)

@@ -73,6 +73,6 @@ describe("Checklist", () => {
     });
     expect(button.closest(".checklist-action")).not.toBeNull();
     const body = within(open).getByText("Your link already exists.");
-    expect(body.closest(".checklist-text > .checklist-body")).not.toBeNull();
+    expect(body.closest(".checklist-text")).not.toBeNull();
   });
 });

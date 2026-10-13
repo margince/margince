@@ -12,15 +12,7 @@ import { StoryProviders } from "./story-utils";
 // which loads it.
 import "./compose.css";
 
-// The card that says a MACHINE wrote the words below, and the rewrites offered
-// over them. What differs between the frames is what the band has to ADMIT: a
-// disclosure the server omitted, a voice that could not be looked up, a profile
-// still provisional. None of those makes the draft weaker, and none may be
-// quietly dropped — the rep is about to send these words under their own name,
-// which is why this card is the loudest thing in the drawer.
-//
-// The band's child is the offer the composer puts there, so a frame shows the
-// block as the drawer assembles it rather than a slot filled for the picture.
+// Provenance stays visible above the controls that request another draft.
 
 type EmailDraft = components["schemas"]["EmailDraft"];
 type DraftReason = components["schemas"]["AccountDraftReason"];
@@ -113,7 +105,7 @@ export const NoVoiceProfile: Story = {
   render: band({ ...WROTE_IT, voice_profile_version: null }, undefined),
 };
 
-/** The server sent no disclosure line. The card discloses anyway: a missing
+/** The server sent no disclosure line. The notice discloses anyway: a missing
  *  line may not silently become a missing disclosure. */
 export const DisclosureLineMissing: Story = {
   render: band({ ...WROTE_IT, ai_disclosure: null }, "building"),
@@ -148,4 +140,9 @@ export const RewritesBarred: Story = {
       <RewriteRow onRewrite={() => {}} disabled />
     </StoryProviders>
   ),
+};
+
+export const Dark: Story = {
+  render: band(WROTE_IT, "provisional"),
+  globals: { theme: "dark" },
 };

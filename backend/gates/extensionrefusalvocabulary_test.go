@@ -5,8 +5,8 @@
 
 package gates
 
-// The refusal vocabulary is spelled on both sides of the wire, so it is ONE
-// item.
+// The refusal vocabulary is spelled on both sides of the wire, so it is held as
+// one item.
 //
 // `extension.RecordRefusal` is what the core writes and what a unit branches
 // on; `ExtensionIngestRefusalRefusal` is what the contract publishes to the

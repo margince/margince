@@ -5,9 +5,9 @@
 
 package compose
 
-// The routing surface's wire carries no upstream preferences, so an admin who
-// reads the binding and writes it straight back sends none. What the store
-// holds afterwards is the claim, and only a real settings row can show it.
+// An admin who reads the binding and writes it straight back sends no
+// providers and no pins: the wire predates them. What the store holds
+// afterwards is the claim, and only a real settings row can show it.
 //
 // In package compose because the handlers are unexported and the claim is about
 // what THEY do with a document the contract cannot express a pin in.
@@ -117,21 +117,26 @@ func TestReadingTheBindingAndWritingItBackKeepsEveryResidencyPin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the binding back: %v", err)
 	}
-	lanes := map[string]ai.ProviderConfig{"embeddings": stored.Embeddings.ProviderConfig}
-	for tier, binding := range stored.Tiers {
+	served, err := ai.FromStored(stored, config.Static(nil))
+	if err != nil {
+		t.Fatalf("serving the stored binding: %v", err)
+	}
+	lanes := map[string]ai.ProviderConfig{"embeddings": served.Embeddings.ProviderConfig}
+	for tier, binding := range served.Tiers {
 		lanes[string(tier)] = binding
 	}
 	for lane, binding := range lanes {
-		if binding.Routing == nil || !slices.Equal(binding.Routing.Only, []string{"mistral/eu"}) {
+		if binding.Routing == nil || !slices.Equal(binding.Routing.Provider.Only, []string{"mistral/eu"}) {
 			t.Errorf("%s routing = %+v after GET → PUT, want the stored only: [mistral/eu] kept", lane, binding.Routing)
 		}
 	}
 }
 
-// A pin names hosts that serve ONE model, so re-pointing a lane at another
-// model does not carry it: under eu_hosted the write is then refused, naming
-// the residency rule, rather than stored pinned to hosts that cannot serve it.
-func TestRepointingAPinnedLaneAtAnotherModelDoesNotCarryItsPin(t *testing.T) {
+// Pins are the provider's, so a lane re-pointed at another model on the same
+// provider is still served under them; what the old model's tier said about
+// how it is served (here its `{}` opt-out of the product default) is not
+// carried to the new one.
+func TestRepointingALaneKeepsItsProvidersPinsButNotItsServingPreferences(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := routingAdmin(e)
 	store := ai.NewRoutingStore(NewSettingsStore(e.Pool), config.Static(nil))
@@ -159,8 +164,23 @@ func TestRepointingAPinnedLaneAtAnotherModelDoesNotCarryItsPin(t *testing.T) {
 		}
 		return string(edited)
 	})
-	if put.Code != http.StatusUnprocessableEntity || !strings.Contains(put.Body.String(), "under profile eu_hosted") {
-		t.Fatalf("PUT = %d %s, want 422 naming the eu_hosted residency rule", put.Code, put.Body)
+	if put.Code != http.StatusOK {
+		t.Fatalf("PUT = %d %s, want the re-pointed lane saved under its provider's pin", put.Code, put.Body)
+	}
+
+	stored, err := store.Get(ctx)
+	if err != nil {
+		t.Fatalf("reading the binding back: %v", err)
+	}
+	if r := stored.Tiers[ai.TierPremium].Routing; r != nil {
+		t.Errorf("re-pointed premium stored with routing %+v, want the old model's opt-out left behind", r)
+	}
+	served, err := ai.FromStored(stored, config.Static(nil))
+	if err != nil {
+		t.Fatalf("serving the stored binding: %v", err)
+	}
+	if r := served.Tiers[ai.TierPremium].Routing; r == nil || !slices.Equal(r.Provider.Only, []string{"mistral/eu"}) || r.Provider.Sort == nil {
+		t.Errorf("served premium routing = %+v, want the provider's pin over the product default", r)
 	}
 }
 

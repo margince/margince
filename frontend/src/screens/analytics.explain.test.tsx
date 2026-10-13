@@ -48,9 +48,7 @@ type User = ReturnType<typeof userEvent.setup>;
 
 // The report cards live behind the Deals tab; Forecast is where a reader lands.
 async function openPipeline(user: User) {
-  await user.click(
-    await screen.findByRole("button", { name: "Pipeline analysis" }),
-  );
+  await user.click(await screen.findByRole("button", { name: "Pipeline" }));
 }
 
 // Every card on the Deals tab carries its own panel toggle, so the first one
@@ -280,7 +278,6 @@ describe("a row's explain drawer", () => {
     expect(
       screen.getByRole("button", { name: "Explain No company USD" }),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "More analysis" }));
     await user.click(screen.getByRole("button", { name: "Delivery" }));
     expect(
       await screen.findByRole("button", { name: "Explain Project" }),
@@ -496,6 +493,22 @@ describe("drill-through money", () => {
   it("writes an unconverted measure in the deal's own currency", () => {
     const row = { amount_minor: 500000, currency: "USD" };
     expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
+  });
+
+  // The two project measures are named `_minor` and are already folded into
+  // the base currency. The name says native and the declaration says
+  // converted.
+  //
+  // The declaration is the one that is right. A row carrying a currency beside
+  // them would otherwise stamp it on a converted total.
+  it("writes a converted measure named _minor in the base currency", () => {
+    const row = { open_deal_value_minor: 500000, currency: "USD" };
+    expect(derivationCellCurrency("open_deal_value_minor", row, "EUR")).toBe(
+      "EUR",
+    );
+    expect(derivationCellCurrency("won_deal_value_minor", row, "EUR")).toBe(
+      "EUR",
+    );
   });
 
   // A row that names no currency has nothing to write the figure in. Falling

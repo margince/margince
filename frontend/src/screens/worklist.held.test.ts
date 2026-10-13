@@ -1,0 +1,28 @@
+import { describe, expect, it } from "vitest";
+import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
+import { translate } from "../i18n";
+import { heldText } from "./worklist.held";
+import { row } from "./worklist.testkit";
+
+const zone = viewerZone();
+
+const t = (key: "worklist.when.held", values: { when: string }) =>
+  translate("en", key, values);
+
+describe("heldText — when a meeting owing an outcome took place", () => {
+  it("names when the meeting was held", () => {
+    const item = row({
+      source: "meeting_outcome",
+      occurred_at: "2026-09-22T09:00:00Z",
+    });
+    expect(heldText(item, t, "en", zone)).toBe(
+      `held ${formatDateTime("2026-09-22T09:00:00Z", "en", zone)}`,
+    );
+  });
+
+  it("says nothing for any other row", () => {
+    const item = row({ source: "task", occurred_at: "2026-09-22T09:00:00Z" });
+    expect(heldText(item, t, "en", zone)).toBeNull();
+  });
+});

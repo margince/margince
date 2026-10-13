@@ -3,13 +3,14 @@
 
 import { Circle, CircleCheck, CircleX } from "lucide-react";
 import type { components } from "../api/schema";
-import { BusyMark, Button } from "../design-system/atoms";
+import { Badge, BusyMark, Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { type Fact, FactList } from "../design-system/factlist";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type Translator, useT } from "../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "./booking-video";
+import { INVITATION_IN_FLIGHT } from "./meeting-invitation-query";
 
 type Invitation = components["schemas"]["MeetingInvitation"];
 type Provider = NonNullable<Invitation["provider"]>;
@@ -30,6 +31,29 @@ const OPEN_CALENDAR: Readonly<
 
 export function openCalendarLabel(t: Translator, provider?: Provider) {
   return t(provider ? OPEN_CALENDAR[provider] : "scheduling.openCalendar");
+}
+
+const STATUS_TONE: Readonly<
+  Record<Invitation["status"], "info" | "success" | "warning" | "default">
+> = {
+  pending: "info",
+  confirmed: "success",
+  needs_attention: "warning",
+  rescheduling: "info",
+  canceling: "info",
+  canceled: "default",
+};
+
+/** Where the calendar invitation stands, in the words the meeting page uses. */
+export function InvitationBadge({
+  status,
+}: Readonly<{ status: Invitation["status"] }>) {
+  const t = useT();
+  return (
+    <Badge tone={STATUS_TONE[status]} live={INVITATION_IN_FLIGHT.has(status)}>
+      {t(`scheduling.${status}`)}
+    </Badge>
+  );
 }
 
 // The step's words carry its state; the mark is there to be scanned.

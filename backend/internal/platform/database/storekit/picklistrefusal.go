@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -93,10 +94,8 @@ func refuseStranger(field string, value any, options []string) error {
 		// A non-string operand on a picklist is the type check's refusal.
 		return nil
 	}
-	for _, option := range options {
-		if text == option {
-			return nil
-		}
+	if slices.Contains(options, text) {
+		return nil
 	}
 	return &PredicateError{
 		Field:   field,

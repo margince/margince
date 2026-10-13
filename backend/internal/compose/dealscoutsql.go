@@ -58,7 +58,7 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	      UNION
 	      SELECT reach.company_id FROM (` + activities.CompanyReachSet() + `) reach
 	       WHERE reach.activity_id = a.id AND at.company_id IS NULL) filed ON true
-	   WHERE at.archived_at IS NULL AND a.kind = 'email' AND a.direction = 'outbound'
+	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
 	     AND ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
 	     AND ` + document + `
 	     AND ` + scoutCandidate("filed.company_id", "a.occurred_at") + `

@@ -55,10 +55,8 @@ func isOAuthProvider(provider string) bool {
 // answered "this mailbox type cannot be backfilled". A reader took that as the
 // product refusing to import their mail.
 //
-// Held equal to frontend/src/screens/connectorproviders.ts's MAIL_PROVIDERS by
-// backend/gates/frontendmailproviders_test.go: a screen that drew a mail row
-// against a calendar and a server that refused it would disagree in front of a
-// user, which is how this was reported.
+// Held equal to frontend/src/format/connectorprovider.ts's MAIL_PROVIDERS by
+// backend/gates/frontendmailproviders_test.go.
 func MailProviders() []string { return []string{providerGmail, providerGraph, providerIMAP} }
 
 // IsMailProvider reports whether this provider connects a mailbox.
@@ -95,7 +93,7 @@ var listedProviders = MailProviders()
 
 // pairedCalendar is the calendar a mail consent may chain straight into: the
 // same vendor, the same OAuth app, a separate grant. Held equal to
-// connectorproviders.ts's VENDOR_SERVICES by
+// format/connectorprovider.ts's VENDOR_SERVICES by
 // backend/gates/frontendvendorservices_test.go.
 var pairedCalendar = map[string]string{providerGmail: providerGcal, providerGraph: providerGraphCal}
 

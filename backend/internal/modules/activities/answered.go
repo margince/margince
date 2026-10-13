@@ -22,12 +22,14 @@ import (
 type answerArm struct {
 	from string
 	at   string
+	id   string
 }
 
 // answerArms are the answers an inbound message can get strictly after it
 // arrived and no later than until:
 //
-//   - our reply on the same thread;
+//   - our reply on the same thread, sent to the sender: its counterparty or a
+//     To/Cc row is their address or one of their contact's;
 //   - our sent mail to the sender with the same subject once reply prefixes
 //     are stripped. The sender is their address or their contact, so any of
 //     the contact's addresses counts; the mail must name them as its
@@ -47,11 +49,22 @@ type answerArm struct {
 // row disappearing would disclose that the private evidence exists; and a
 // captured message whose From merely names our mailbox proves nothing.
 func answerArms(inbound, until string) []answerArm {
-	later := func(row string) string {
-		return row + `.archived_at IS NULL
+	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
+		offThreadAnswerArms(inbound, until)...)
+}
+
+// answerLater is a row that is live and happened strictly after the inbound
+// row and no later than until.
+func answerLater(row, inbound, until string) string {
+	return row + `.archived_at IS NULL
 	    AND ` + row + `.occurred_at <= ` + until + `
 	    AND ` + row + `.occurred_at > ` + inbound + `.occurred_at`
-	}
+}
+
+// offThreadAnswerArms are the answers of answerArms that sit outside the
+// inbound row's thread.
+func offThreadAnswerArms(inbound, until string) []answerArm {
+	later := func(row string) string { return answerLater(row, inbound, until) }
 	everyoneReads := func(row string) string {
 		return row + `.restricted_at IS NULL` + auth.AudienceWorkspaceOnly(row)
 	}
@@ -63,6 +76,13 @@ func answerArms(inbound, until string) []answerArm {
 	    AND ` + later("answer_mail") + `
 	    AND ` + normalisedSubject(inbound+".subject") + ` <> ''
 	    AND ` + normalisedSubject("answer_mail.subject") + ` = ` + normalisedSubject(inbound+".subject")
+	// The clauses of idx_activity_answer_mail, inside the lateral so the index
+	// qualifies with the address as its leading key.
+	ourMailIndexed := `answer_mail.kind = ` + inbound + `.kind
+	       AND answer_mail.direction = 'outbound'
+	       AND answer_mail.counterparty_outbound_attested
+	       AND ` + everyoneReads("answer_mail") + `
+	       AND ` + later("answer_mail")
 	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	// The sender's own address and every live address of their contact.
 	senderAddresses := `CROSS JOIN LATERAL (
@@ -84,16 +104,19 @@ func answerArms(inbound, until string) []answerArm {
 	// planner proving its index applies, and the arm walks every activity of
 	// the contact again.
 	// OFFSET 0 keeps the planner walking from the sender to the mail they were
-	// named on: flattened, it scanned every later outbound and ran the subject
-	// expression on each.
+	// named on, in both same-subject arms: flattened, the planner ranged
+	// idx_activity_answer_mail on kind and time alone and applied the address
+	// afterwards, so every message read every later attested mail of the
+	// installation and ran the subject expression on each.
 	return []answerArm{
-		threadAnswerArm(inbound, later("answer_thread")),
-		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
+		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  JOIN activity answer_mail ON answer_mail.counterparty_email = answer_address.address
+	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity answer_mail
+	     WHERE answer_mail.counterparty_email = answer_address.address
+	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
-		{at: "answer_mail.occurred_at", from: `FROM activity_participant answer_asker
+		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
 	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity_participant answer_told
 	     JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
@@ -101,29 +124,70 @@ func answerArms(inbound, until string) []answerArm {
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
-		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
-	  JOIN activity_link answer_link ON answer_link.contact_id = answer_asker.contact_id
-	  JOIN activity answer_touch ON answer_touch.id = answer_link.activity_id
-	  WHERE ` + asker + `
-	    AND ` + touch},
-		{at: "answer_touch.occurred_at", from: `FROM activity_participant answer_asker
-	  JOIN activity_participant answer_attendee ON answer_attendee.contact_id = answer_asker.contact_id
-	  JOIN activity answer_touch ON answer_touch.id = answer_attendee.activity_id
-	  WHERE ` + asker + `
-	    AND ` + touch},
+		touchAnswerArm(asker, touch, `SELECT answer_link.activity_id FROM activity_link answer_link
+	     WHERE answer_link.contact_id = answer_asker.contact_id`),
+		touchAnswerArm(asker, touch, `SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
+	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
+}
+
+// touchAnswerArm is a logged call or held meeting among the activities walk
+// names for the sender's contact.
+//
+// Walked from the contact and in that order: walk reads the contact's own links
+// or attendances through idx_alink_contact or idx_aparticipant_contact, and
+// each activity it names is probed by id for the touch. The second lateral
+// takes the walked id as its parameter, so no plan can start from the
+// activity side; and OFFSET 0 keeps both from being flattened. Flattened, the
+// planner ranged idx_activity_answer_touch on occurred_at alone, so every
+// inbound read every later call and meeting of the workspace and joined each
+// back to the sender: a cost of messages times activity, where this one is
+// bounded by the contact's own history.
+func touchAnswerArm(asker, touch, walk string) answerArm {
+	return answerArm{at: "answer_touch.occurred_at", id: "answer_touch.id", from: `FROM activity_participant answer_asker
+	  CROSS JOIN LATERAL (` + walk + ` OFFSET 0) answer_walk
+	  CROSS JOIN LATERAL (SELECT answer_touch.id, answer_touch.occurred_at FROM activity answer_touch
+	     WHERE answer_touch.id = answer_walk.activity_id
+	       AND ` + touch + ` OFFSET 0) answer_touch
+	  WHERE ` + asker}
 }
 
 // threadAnswerArm is our reply on the same thread. It reads the reply whoever
 // may open it, as the waiting lane always has: a reply on the conversation
 // answered the customer whether or not this reader may see it.
+//
+// The reply must be sent to the sender. One thread can hold our mail to a
+// second correspondent, and that answers nobody else on it. A Bcc copy is not
+// an answer either, even when a colleague's copy took it as its counterparty.
+// A message with no sender address, a chat, binds on the thread alone.
+//
+// ourOutboundInThisThread asks a narrower question, for settlement evidence:
+// attested mail to one stored counterparty. It decides no badge, so it keeps
+// neither the To/Cc rows nor the Bcc test read here.
 func threadAnswerArm(inbound, later string) answerArm {
-	return answerArm{at: "answer_thread.occurred_at", from: `FROM activity answer_thread
+	// The off-thread arms' senderAddresses starts from the `from` row for its
+	// index plan. Here the folded counterparty counts too: an inbound row may
+	// have no `from` row.
+	sender := `SELECT ` + inbound + `.counterparty_email
+	     UNION
+	    SELECT lower(btrim(answer_known.email)) FROM activity_participant answer_asker
+	      JOIN contact_email answer_known ON answer_known.contact_id = answer_asker.contact_id
+	       AND answer_known.archived_at IS NULL
+	     WHERE answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
+	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
 	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
 	    AND answer_thread.kind = ` + inbound + `.kind
 	    AND answer_thread.kind IN ('email', 'message')
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
+	    AND (` + inbound + `.counterparty_email IS NULL
+	      OR (answer_thread.counterparty_email IN (` + sender + `)
+	        AND NOT EXISTS (SELECT 1 FROM activity_participant answer_blind
+	             WHERE answer_blind.activity_id = answer_thread.id AND answer_blind.role = 'bcc'
+	               AND lower(btrim(answer_blind.address)) = answer_thread.counterparty_email))
+	      OR EXISTS (SELECT 1 FROM activity_participant answer_told
+	           WHERE answer_told.activity_id = answer_thread.id AND answer_told.role IN ('to', 'cc')
+	             AND lower(btrim(answer_told.address)) IN (` + sender + `)))
 	    AND ` + later}
 }
 
@@ -146,6 +210,20 @@ func answeredSQL(inbound, until string) string {
 	return "(" + strings.Join(exists, "\n\t OR ") + ")"
 }
 
+// offThreadAnswersSQL selects, as (id, occurred_at), every answer to the
+// inbound row under alias that sits outside its thread: our attested mail to
+// the sender with the same subject, and a logged call or held meeting with
+// their contact. Each arm carries its own audience, attestation and
+// strictly-later rules.
+func offThreadAnswersSQL(inbound, until string) string {
+	arms := offThreadAnswerArms(inbound, until)
+	selects := make([]string, 0, len(arms))
+	for _, arm := range arms {
+		selects = append(selects, "SELECT "+arm.id+" AS id, "+arm.at+" AS occurred_at "+arm.from)
+	}
+	return strings.Join(selects, "\n\t UNION ")
+}
+
 // firstAnswerAtSQL is when the inbound row got its first answer, or NULL when
 // it has none. The response time is measured to it.
 func firstAnswerAtSQL(inbound, until string) string {
@@ -165,7 +243,8 @@ func firstAnswerAtSQL(inbound, until string) string {
 // commitment mail) stays owed through replies until it is completed, settled
 // or dismissed: a reply is not proof the request was met. Any other inbound
 // is owed while it is the newest inbound on its thread and unanswered. Mail
-// from an address no human reads is owed only as a confirmed request.
+// from an address no human reads, and a calendar response, are owed only as a
+// confirmed request.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -174,13 +253,19 @@ func firstAnswerAtSQL(inbound, until string) string {
 // OR-ed in front of them; the hidden-backlog reading passes TRUE to count
 // what one hides, every other caller passes neverRelaxed.
 //
+// unjudgedResponseStillOwed admits an unjudged calendar response. Only the
+// owed-verdict backlog passes TRUE: a sender can mark any request REPLY, so
+// such mail must still be judged before it leaves the lane.
+//
 // The newer-inbound walk names its kinds for the index, as answerArms does.
-func owedSQL(asOf, dismissedStillOwed, informsStillOwed string) string {
+func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
+	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarResponseSQL + `
+	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
 	         WHERE newer.thread_key = a.thread_key

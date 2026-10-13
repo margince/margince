@@ -9,6 +9,7 @@ import {
 } from "../src/screens/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
+import { openedAt } from "./waits";
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);
@@ -69,8 +70,7 @@ test("reconnecting in another tab refreshes permissions without losing the draft
   await page.getByLabel(de["scheduling.agenda"]).fill("Keep this draft");
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
-  const popup = await popupPromise;
-  await expect(popup).toHaveURL(/settings\/meetings/);
+  const popup = await openedAt(popupPromise, /settings\/meetings/);
   await expect(
     popup.getByText(de["scheduling.readOnlyCalendar"]),
   ).toBeVisible();
@@ -391,7 +391,9 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  await expect.poll(() => availability.length).toBe(2);
+  // October in Berlin holds the clock going back, so it runs past the
+  // server's 31-day bound and is read in two windows after September's one.
+  await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
   await slot.click();

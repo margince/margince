@@ -21,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -84,8 +86,12 @@ func WithControllerMail(runner *jobs.Runner) Option {
 // way the delivery row does.
 type mailerRelay struct{ m mailer.Mailer }
 
-// SendControllerMail hands one rendered message to the operator relay.
+// SendControllerMail hands one rendered message to the operator relay, under
+// the delivery row's own Message-ID so a bounce of it can find that row.
 func (r mailerRelay) SendControllerMail(ctx context.Context, msg comms.ControllerMessage) error {
+	if identified, ok := r.m.(mailer.IdentifiedSender); ok {
+		return identified.SendIdentified(ctx, msg.To, msg.Subject, msg.TextBody, msg.MessageID)
+	}
 	return r.m.Send(ctx, msg.To, msg.Subject, msg.TextBody)
 }
 
@@ -151,11 +157,11 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	if s.controllerRelay == nil || s.vault == nil || s.confirmLinkBase == "" || s.confirmRunner == nil {
 		return
 	}
-	s.consentHandlers = s.WithConfirmationLane(
-		NewControllerMailQueue(pool, s.confirmRunner),
-		confirmLinkVault{s.vault},
-		s.confirmLinkBase,
-	)
+	queue := NewControllerMailQueue(pool, s.confirmRunner)
+	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
+	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

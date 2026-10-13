@@ -21,6 +21,7 @@ function member(
   return {
     user_id: `id-${display_name}`,
     display_name,
+    activation: "active",
     counts: { waiting: 0, at_risk: 0, overdue: 0, promises_due: 0, ...counts },
   };
 }
@@ -71,6 +72,25 @@ export const OnePromiseDue: Story = {
     <StoryProviders>
       <CoachingMoves
         members={[member("Mara Voss", { promises_due: 1 })]}
+        onOwner={() => undefined}
+      />
+    </StoryProviders>
+  ),
+};
+
+/** An invited seat beside a loaded teammate: only the teammate is named,
+ *  because the seat's counts were never measured. */
+export const BesideAnInvitedSeat: Story = {
+  render: () => (
+    <StoryProviders>
+      <CoachingMoves
+        members={[
+          {
+            ...member("Lena Fischer", { promises_due: 2 }),
+            activation: "invited",
+          },
+          member("Mara Voss", { waiting: 9 }),
+        ]}
         onOwner={() => undefined}
       />
     </StoryProviders>

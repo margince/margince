@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { unwrap } from "../lib/problem";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
 // `/teams`, cached once, and the hooks that read it. Split out of entityref.tsx,
@@ -26,6 +26,13 @@ type Team = components["schemas"]["Team"];
 type RosterEntry = User | Team;
 
 // HOW THE ROSTER IS READ, AND WHERE IT STOPS.
+//
+// This walk is the PICKER's list: who a reader may choose as an owner, a
+// subject, a filter value. Naming somebody a record already points at is a
+// separate read (`useMemberName`, membernames.ts), a by-id lookup that never
+// walks and never runs out of budget, which is what makes it safe to leave
+// invited and deactivated seats off this list entirely: they may be pointed at
+// but never chosen.
 //
 // Both list endpoints are keyset-paged and the contract caps `limit` at 200, so
 // ONE page is not the roster: past 200 members an owner on the second page
@@ -53,28 +60,25 @@ async function readRosterPage(
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
-    // WITH the invited seats: this walk also NAMES colleagues, and an imported
-    // record's owner is often a colleague who has not signed in yet — left off,
-    // their owner column showed a raw id. `useRoster`, which the pickers read,
-    // filters them back out, so nobody is offered work they cannot open.
-    const { data, error } = await api.GET("/users", {
-      params: {
-        query: {
-          limit: ROSTER_PAGE_SIZE,
-          include_invited: true,
-          ...(cursor ? { cursor } : {}),
+    const data = unwrap(
+      await api.GET("/users", {
+        params: {
+          query: {
+            limit: ROSTER_PAGE_SIZE,
+            ...(cursor ? { cursor } : {}),
+          },
         },
-      },
-    });
-    if (error) throwProblem(error);
+      }),
+    );
     return { entries: data.data, next: data.page.next_cursor ?? null };
   }
-  const { data, error } = await api.GET("/teams", {
-    params: {
-      query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
-    },
-  });
-  if (error) throwProblem(error);
+  const data = unwrap(
+    await api.GET("/teams", {
+      params: {
+        query: { limit: ROSTER_PAGE_SIZE, ...(cursor ? { cursor } : {}) },
+      },
+    }),
+  );
   return { entries: data.data, next: data.page.next_cursor ?? null };
 }
 
@@ -82,7 +86,7 @@ async function walkRoster(kind: RosterKind): Promise<Roster> {
   const entries: RosterEntry[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < ROSTER_WALK_PAGES; page += 1) {
-    // A page that fails throws out of the whole walk (through `throwProblem`
+    // A page that fails throws out of the whole walk (through `unwrap`
     // inside `readRosterPage`), so react-query holds the read as an error.
     // Caught and dropped here it would come back as a SHORT list that reads as
     // complete — the one shape a caller cannot tell from a small workspace.
@@ -118,42 +122,24 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
 }
 
 /**
- * The roster's entries.
+ * The roster's entries: everyone a picker may offer.
  *
- * Exported so the Share subject picker and the owner pickers
- * picker all build off the exact same cache entry EntityRef's own user/team
- * resolution reads — one walk, one cache key, every consumer.
+ * Exported so the Share subject picker, the owner pickers and a team's own
+ * name resolution all build off the exact same cache entry: one walk, one
+ * cache key, every consumer. Invited and deactivated seats never reach this
+ * list: the server leaves them out because nothing here asks for them, which
+ * is what keeps the walk's budget spent on colleagues who can actually be
+ * chosen.
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
- * the end, and a picker missing contacts looks exactly like a small workspace.
+ * the end, and a picker missing colleagues looks just like a small workspace.
  */
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({
     ...rosterQueryOptions(kind, enabled),
-    select: offerable,
-  });
-}
-
-/**
- * Every member the walk read, invited seats included — for NAMING someone a
- * record already points at (a header's owner, a column), never for offering
- * choices. `useRoster` is the offerable list; an owner who is invited is on
- * this one and not on that one.
- */
-export function useRosterNames(kind: RosterKind, enabled: boolean) {
-  return useQuery({
-    ...rosterQueryOptions(kind, enabled),
     select: (roster: Roster) => roster.entries,
   });
-}
-
-// The members a picker may OFFER: everyone the walk read except invited seats,
-// who sign in nowhere yet. The walk keeps them for naming only.
-function offerable(roster: Roster): RosterEntry[] {
-  return roster.entries.filter(
-    (entry) => !("status" in entry) || entry.status !== "invited",
-  );
 }
 
 /**
@@ -221,13 +207,4 @@ export function RosterPartialNote({
       {hint}
     </p>
   );
-}
-
-/** The display name of one member of a roster read, or undefined. */
-export function memberName(
-  entries: readonly RosterEntry[] | undefined,
-  id: string,
-): string | undefined {
-  const found = entries?.find((entry) => entry.id === id);
-  return found && "display_name" in found ? found.display_name : undefined;
 }

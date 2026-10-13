@@ -109,8 +109,8 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 			optedOut++
 			continue
 		}
-		if binding.Routing.Sort == ai.SortThroughput && binding.Routing.RequireParameters != nil &&
-			*binding.Routing.RequireParameters {
+		if p := binding.Routing.Provider; p.Sort != nil && p.Sort.By == ai.SortThroughput && p.RequireParameters != nil &&
+			*p.RequireParameters {
 			inherited++
 		}
 	}
@@ -122,144 +122,13 @@ func TestABrokerPresetInheritsTheDefaultAndCanOptOut(t *testing.T) {
 	}
 }
 
-// residencyGaps names every lane of cfg whose text could be read outside the EU:
-// a lane on a binding that cannot carry a host pin, and a broker lane whose
-// `only:` is absent or admits a host that is not an EU-region endpoint. An empty
-// `routing: {}` is the broker's own price-weighted choice of host, anywhere.
-//
-// The broker half, and a Vertex lane's location, are ai.EURegionPinGap, the
-// rule the parser holds every eu_hosted config to. The first half is this
-// gate's own and is stricter: the parser admits a native vendor under
-// eu_hosted because it cannot tell where an operator's host runs, but a
-// SHIPPED preset is one the repository vouches for, and a binding that carries
-// no pin is not one it can vouch for. A Vertex location is a pin: the host and
-// the place Google processes the call both follow from it.
-func residencyGaps(cfg ai.RoutingConfig) []string {
-	lanes := map[string]ai.ProviderConfig{"embeddings": cfg.Embeddings.ProviderConfig}
-	for tier, binding := range cfg.Tiers {
-		lanes[string(tier)] = binding
-	}
-	var gaps []string
-	for lane, binding := range lanes {
-		if !ai.UpstreamPreferencesApply(binding) && binding.Location == "" {
-			host := binding.BaseURL
-			if host == "" {
-				host = "its vendor's own host"
-			}
-			gaps = append(gaps, lane+": bound to "+binding.Provider+" at "+host+", which carries no host pin")
-			continue
-		}
-		if gap := ai.EURegionPinGap(binding); gap != "" {
-			gaps = append(gaps, lane+": "+gap)
-		}
-	}
-	sort.Strings(gaps)
-	return gaps
-}
-
-// A preset that declares eu_hosted pins every lane to an EU-region endpoint.
-//
-// Selected by the profile the preset DECLARES, not by its file name: the
-// profile is what an operator copies into their deployment and what every
-// certification record from it is filed under, so it is the promise. A broker
-// serves one model id from several regions and, without a pin, picks among
-// them itself, so the pin is the whole residency guarantee. The embeddings lane
-// is held too, because it reads every document the chat tiers do.
-//
-// Held by: TestAResidencyPresetPinsEveryLaneToAnEURegion (backend/gates/configpresets_test.go) — this test.
-func TestAResidencyPresetPinsEveryLaneToAnEURegion(t *testing.T) {
-	t.Parallel()
-	checked := 0
-	for _, path := range presetFiles(t) {
-		cfg := routingFromPreset(t, path)
-		if cfg.Profile != ai.ProfileEUHosted {
-			continue
-		}
-		checked++
-		for _, gap := range residencyGaps(cfg) {
-			t.Errorf("%s: %s", filepath.Base(path), gap)
-		}
-	}
-	if checked == 0 {
-		t.Fatalf("no preset in %s declares %s, so this gate is vouching for nothing", presetDir, ai.ProfileEUHosted)
-	}
-}
-
-// Every shape of an unpinned lane is caught, each by the finding that names it.
-//
-// The planted configs declare cloud_frontier because the parser refuses an
-// unpinned broker lane under eu_hosted before this gate could see it;
-// residencyGaps reads the lanes and never the profile, so the planted shapes
-// are the same ones.
-func TestResidencyGapsSeesEveryUnpinnedShape(t *testing.T) {
-	t.Parallel()
-	const pinned = "{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}"
-	const embeddings = "embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu]}}\n"
-	withPremium := func(premium string) string {
-		return "profile: cloud_frontier\ntiers:\n  cheap_cloud: " + pinned + "\n  premium: " + premium + "\n" + embeddings
-	}
-	for name, tc := range map[string]struct {
-		yaml string
-		want string
-	}{
-		"an inherited default": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api'}"), "premium: no `only:`",
-		},
-		"an explicit opt-out": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {}}"), "premium: no `only:`",
-		},
-		"a base slug": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral]}}"),
-			"premium: `only:` admits mistral,",
-		},
-		"a policy variant": {
-			withPremium("{provider: openai_compatible, model: m, base_url: 'https://openrouter.ai/api', routing: {only: [mistral/eu, mistral/zdr]}}"),
-			"premium: `only:` admits mistral/zdr,",
-		},
-		"a direct vendor": {withPremium("{provider: gemini, model: m}"), "premium: bound to gemini"},
-		"a Vertex location outside the EU": {
-			withPremium("{provider: gemini_vertex, location: europe-west2, model: m}"), "premium: location \"europe-west2\" is not an EU location",
-		},
-		"an unpinned embeddings lane": {
-			"profile: cloud_frontier\ntiers:\n  premium: " + pinned + "\n" +
-				"embeddings: {provider: openai_compatible, model: e, base_url: 'https://openrouter.ai/api'}\n",
-			"embeddings: no `only:`",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			cfg, err := ai.ParseRouting([]byte(tc.yaml))
-			if err != nil {
-				t.Fatalf("the planted config does not parse, so it proves nothing: %v", err)
-			}
-			gaps := residencyGaps(cfg)
-			if len(gaps) != 1 || !strings.HasPrefix(gaps[0], tc.want) {
-				t.Errorf("gaps = %q, want exactly one starting %q", gaps, tc.want)
-			}
-		})
-	}
-	cfg, err := ai.ParseRouting([]byte(withPremium(pinned)))
-	if err != nil {
-		t.Fatalf("the control does not parse: %v", err)
-	}
-	if gaps := residencyGaps(cfg); len(gaps) != 0 {
-		t.Errorf("a config pinned on every lane reports %q", gaps)
-	}
-	cfg, err = ai.ParseRouting([]byte(withPremium("{provider: gemini_vertex, location: eu, model: m}")))
-	if err != nil {
-		t.Fatalf("the Vertex control does not parse: %v", err)
-	}
-	if gaps := residencyGaps(cfg); len(gaps) != 0 {
-		t.Errorf("a Vertex lane at an EU location reports %q", gaps)
-	}
-}
-
 // hostedLocalOnlyBindings ratifies each shipped configuration that binds a
 // local-only task's every rung to a hosted provider — under which that task's
 // prompt leaves the machine, which is what `local_only` says it must not do.
 //
 // Nothing refuses it. The tier a ladder names is a capability class the
-// deployment binds, and `local_small` carries two jobs that pull apart:
-// docs/explanation/ai-runtime.md calls it "on-box, zero-egress", and degradeTo
+// deployment binds, and `local_small` carries two jobs that pull apart.
+// docs/explanation/ai-runtime.md says it runs "on the same box". And degradeTo
 // makes it the floor every other rung falls to when a budget is spent. A
 // cloud-only deployment has no local model and still needs a floor, so it
 // binds the cheapest hosted one it has and the tier quietly stops meaning
@@ -277,6 +146,7 @@ var hostedLocalOnlyBindings = gatekit.Waive(map[string]string{
 	"presets/openrouter_cloud.yaml": "a broker deployment has no local rung to offer",
 	"presets/openrouter_cloud_eu.yaml": "the same, pinned to EU endpoints — which bounds the REGION the " +
 		"prompt reaches but not the machine, and local_only is about the machine",
+	"presets/openrouter_openai.yaml": "a broker deployment has no local rung to offer",
 	"presets/consumer_class_brokered.yaml": "it exists to measure consumer-class WEIGHTS through a broker " +
 		"before the Ollama binding of those same weights exists; its own header says so, and names the " +
 		"endpoints it actually reaches",

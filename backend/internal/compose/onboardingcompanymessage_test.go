@@ -68,8 +68,6 @@ func (b *validatedOnboardingBrainStub) CompleteValidated(_ context.Context, req 
 	return b.response, nil
 }
 
-func stringPtr(value string) *string { return &value }
-
 func TestOnboardingCompanyMessageAnswersAndReturnsTheDeterministicNextField(t *testing.T) {
 	stateID := ids.NewV7()
 	brain := &validatedOnboardingBrainStub{response: model.Response{Text: `{
@@ -82,7 +80,7 @@ func TestOnboardingCompanyMessageAnswersAndReturnsTheDeterministicNextField(t *t
 		state: onboardingStateReaderStub{state: identity.OnboardingState{
 			ID: stateID,
 			CompanyDraft: identity.OnboardingCompanyDraft{
-				OfferSummary: stringPtr("CRM software"), ICP: stringPtr("Revenue teams"),
+				OfferSummary: new("CRM software"), ICP: new("Revenue teams"),
 			},
 		}},
 		contacts: onboardingSiteReadReaderStub{}, brain: brain, runtime: runtime,
@@ -143,7 +141,7 @@ func TestOnboardingCompanyStatusReportsLiveResearchWithoutCallingTheModel(t *tes
 func TestOnboardingCompanyStatusOffersConfirmationOnlyWhenComplete(t *testing.T) {
 	readID := ids.NewV7()
 	complete := identity.OnboardingCompanyDraft{
-		DisplayName: stringPtr("Acme"), OfferSummary: stringPtr("CRM software"), ICP: stringPtr("Revenue teams"),
+		DisplayName: new("Acme"), OfferSummary: new("CRM software"), ICP: new("Revenue teams"),
 	}
 	assistant := onboardingCompanyAssistant{
 		state:    onboardingStateReaderStub{state: identity.OnboardingState{ID: ids.NewV7(), SiteReadID: &readID, CompanyDraft: complete}},

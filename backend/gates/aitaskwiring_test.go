@@ -5,7 +5,7 @@
 
 package gates
 
-// The census says a site EXISTS; this says a process role runs it.
+// The census says a site exists; this says a process role runs it.
 //
 // Those are two claims, and only the first one had a gate. A site can be
 // registered, bound to a certification case, scored by the corpus and written
@@ -105,9 +105,8 @@ func TestEveryCensusedSiteRidesALaneAProcessRoleWires(t *testing.T) {
 // name; this only needs to find the lane.
 func laneNameFor(task string) (string, bool) {
 	flattened := strings.ReplaceAll(task, "_", "")
-	pathType := reflect.TypeOf(compose.ModelPath{})
-	for i := range pathType.NumField() {
-		field := pathType.Field(i)
+	pathType := reflect.TypeFor[compose.ModelPath]()
+	for field := range pathType.Fields() {
 		if field.IsExported() && strings.EqualFold(field.Name, flattened) {
 			return field.Name, true
 		}

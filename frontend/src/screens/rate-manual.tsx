@@ -2,18 +2,25 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { ComboBox } from "../design-system/combobox";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { WriteRefused } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { today } from "../format/calendarday";
 import { PER_MTOK_PRICE } from "../format/priceinput";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import type { ModelLane } from "./ai-models";
 import {
   offeredModels,
@@ -21,7 +28,7 @@ import {
   useAvailableModels,
 } from "./ai-models";
 import { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
-import { problemMessageOf, throwProblem, WriteRefused } from "./common";
+import "./rates.css";
 
 type SheetRow = components["schemas"]["AiModelRate"];
 type PriceWrite = components["schemas"]["SetAiModelRateRequest"];
@@ -45,11 +52,22 @@ export function ModelPriceDialog({
   const t = useT();
   const labelId = useId();
   return (
-    <Modal open onClose={onClose} labelledBy={labelId}>
-      <Heading size="large" id={labelId} className="t-h2 modal-title">
-        {t("settings.rates.modelModalTitle")}
-      </Heading>
-      <PriceForm onDone={onClose} onCancel={onClose} />
+    <Modal open onClose={onClose} labelledBy={labelId} intent="drawer">
+      <DrawerHead>
+        <Heading size="large" id={labelId} className="t-h2 modal-title">
+          {t("settings.rates.modelModalTitle")}
+        </Heading>
+      </DrawerHead>
+      <PriceForm
+        onDone={onClose}
+        onCancel={onClose}
+        frame={(fields, actions) => (
+          <>
+            <DrawerBody>{fields}</DrawerBody>
+            <DrawerFoot className="actions">{actions}</DrawerFoot>
+          </>
+        )}
+      />
     </Modal>
   );
 }
@@ -71,6 +89,7 @@ export function PriceForm({
   boundModels,
   onDone,
   onCancel,
+  frame = inlineFrame,
 }: Readonly<{
   provider?: string;
   // A model to start the form on, for one that is in use and has no price.
@@ -81,6 +100,8 @@ export function PriceForm({
   initial?: SheetRow;
   onDone: () => void;
   onCancel: () => void;
+  // Where the fields and the verbs go: a drawer pins the verbs in its foot.
+  frame?: (fields: ReactNode, actions: ReactNode) => ReactNode;
 }>) {
   const t = useT();
   const qc = useQueryClient();
@@ -123,10 +144,7 @@ export function PriceForm({
 
   const save = useMutation({
     mutationFn: async (body: PriceWrite) => {
-      const { error: err } = await api.POST("/ai-model-rates", { body });
-      if (err) {
-        throwProblem(err);
-      }
+      unwrap(await api.POST("/ai-model-rates", { body }));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ai-model-rates"] });
@@ -170,7 +188,7 @@ export function PriceForm({
     </Field>
   );
 
-  return (
+  const fields = (
     <div className="form-stack">
       {initial ? (
         <p className="t-sub">
@@ -221,42 +239,45 @@ export function PriceForm({
         <ErrorLine>{t("aiRates.manual.malformed")}</ErrorLine>
       ) : null}
       <WriteRefused titleKey="settings.rates.notSaved" message={error} />
-      <div className="actions rates-manual-actions">
-        <Button variant="ghost" onClick={onCancel}>
-          {t("create.cancel")}
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            setError(null);
-            save.mutate({
-              provider: provider.trim(),
-              model_id: modelId.trim(),
-              input_per_mtok: input.trim(),
-              output_per_mtok: output.trim(),
-              cache_read_per_mtok: cacheRead.trim() || "0",
-              cache_write_per_mtok: cacheWrite.trim() || "0",
-              lane,
-              effective_date: effectiveDate,
-            });
-          }}
-          // A cleared date box reports "", and the server refuses an empty
-          // effective date; the refusal is spelled here, before the write.
-          disabled={
-            save.isPending ||
-            malformed ||
-            provider.trim() === "" ||
-            modelId.trim() === "" ||
-            input.trim() === "" ||
-            output.trim() === "" ||
-            effectiveDate === ""
-          }
-        >
-          {t("settings.rates.setRate")}
-        </Button>
-      </div>
     </div>
   );
+  const actions = (
+    <>
+      <Button variant="ghost" onClick={onCancel}>
+        {t("create.cancel")}
+      </Button>
+      <Button
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          save.mutate({
+            provider: provider.trim(),
+            model_id: modelId.trim(),
+            input_per_mtok: input.trim(),
+            output_per_mtok: output.trim(),
+            cache_read_per_mtok: cacheRead.trim() || "0",
+            cache_write_per_mtok: cacheWrite.trim() || "0",
+            lane,
+            effective_date: effectiveDate,
+          });
+        }}
+        // A cleared date box reports "", and the server refuses an empty
+        // effective date; the refusal is spelled here, before the write.
+        disabled={
+          save.isPending ||
+          malformed ||
+          provider.trim() === "" ||
+          modelId.trim() === "" ||
+          input.trim() === "" ||
+          output.trim() === "" ||
+          effectiveDate === ""
+        }
+      >
+        {t("settings.rates.setRate")}
+      </Button>
+    </>
+  );
+  return frame(fields, actions);
 }
 
 // Who and what a NEW price is for. A vendor's own sheet fixes the provider; the
@@ -314,10 +335,23 @@ function NewPriceIdentity({
   );
 }
 
-// The vendors a price can be filed under: the chat adapters and the decision
-// ones, without the test adapter.
+// Not a fragment: in the provider sheet's gap column the footer would gain that
+// gap on top of its own margin.
+function inlineFrame(fields: ReactNode, actions: ReactNode) {
+  return (
+    <div>
+      {fields}
+      <div className="actions rates-manual-actions">{actions}</div>
+    </div>
+  );
+}
+
+export function isPricedProvider(provider: string): boolean {
+  return provider !== "fake";
+}
+
 const PRICED_PROVIDERS: readonly string[] = [
-  ...PROVIDERS.filter((p) => p !== "fake"),
+  ...PROVIDERS.filter(isPricedProvider),
   ...DECISION_PROVIDERS,
 ];
 

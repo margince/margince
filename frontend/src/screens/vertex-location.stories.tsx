@@ -45,7 +45,7 @@ const LOCATIONS = {
   ],
 };
 
-function story(profile: string, body: unknown = LOCATIONS, initial = "eu") {
+function story(body: unknown = LOCATIONS, initial = "eu") {
   return function Render() {
     installFetchStub({
       "GET /ai/provider-locations/gemini_vertex": () => jsonResponse(body),
@@ -56,7 +56,6 @@ function story(profile: string, body: unknown = LOCATIONS, initial = "eu") {
         <div style={{ maxWidth: "480px" }}>
           <VertexLocationField
             value={value}
-            profile={profile}
             disabled={false}
             onChange={setValue}
           />
@@ -73,24 +72,23 @@ const meta: Meta<typeof VertexLocationField> = {
 export default meta;
 type Story = StoryObj<typeof VertexLocationField>;
 
-export const EuHosted: Story = { render: story("eu_hosted") };
+export const Default: Story = { render: story() };
 
-export const CloudFrontier: Story = { render: story("cloud_frontier") };
-
-// A stored location this profile refuses: the hint says so before Save does.
-export const StoredOutsideResidency: Story = {
-  render: story("eu_hosted", LOCATIONS, "europe-west2"),
+// A stored location the list does not name still shows, so the field never
+// holds a value it has no option for.
+export const StoredLocationNotInTheList: Story = {
+  render: story(LOCATIONS, "europe-west1"),
 };
 
 export const NoKey: Story = {
-  render: story("eu_hosted", {
+  render: story({
     provider: "gemini_vertex",
     locations: [],
     unavailable: "no_key",
   }),
 };
 
-export const EuHostedDark: Story = {
+export const DefaultDark: Story = {
   globals: { theme: "dark" },
-  render: story("eu_hosted"),
+  render: story(),
 };

@@ -30,6 +30,57 @@ func (e PublicEventActivityChangedFieldsAudience) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityChangedFieldsCalendarMethod.
+const (
+	CalendarMethodAdd            PublicEventActivityChangedFieldsCalendarMethod = "ADD"
+	CalendarMethodCancel         PublicEventActivityChangedFieldsCalendarMethod = "CANCEL"
+	CalendarMethodCounter        PublicEventActivityChangedFieldsCalendarMethod = "COUNTER"
+	CalendarMethodDeclineCounter PublicEventActivityChangedFieldsCalendarMethod = "DECLINECOUNTER"
+	CalendarMethodPublish        PublicEventActivityChangedFieldsCalendarMethod = "PUBLISH"
+	CalendarMethodRefresh        PublicEventActivityChangedFieldsCalendarMethod = "REFRESH"
+	CalendarMethodReply          PublicEventActivityChangedFieldsCalendarMethod = "REPLY"
+	CalendarMethodRequest        PublicEventActivityChangedFieldsCalendarMethod = "REQUEST"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsCalendarMethod enum.
+func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
+	switch e {
+	case CalendarMethodAdd:
+		return true
+	case CalendarMethodCancel:
+		return true
+	case CalendarMethodCounter:
+		return true
+	case CalendarMethodDeclineCounter:
+		return true
+	case CalendarMethodPublish:
+		return true
+	case CalendarMethodRefresh:
+		return true
+	case CalendarMethodReply:
+		return true
+	case CalendarMethodRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PublicEventActivityChangedFieldsDirection.
+const (
+	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsDirection enum.
+func (e PublicEventActivityChangedFieldsDirection) Valid() bool {
+	switch e {
+	case DirectionBecameOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityChangedFieldsMeetingStatus.
 const (
 	MeetingWasBooked   PublicEventActivityChangedFieldsMeetingStatus = "booked"
@@ -434,9 +485,13 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
+	AttachmentArchived                    SubscribableEventType = "attachment.archived"
+	AttachmentCreated                     SubscribableEventType = "attachment.created"
+	AttachmentUpdated                     SubscribableEventType = "attachment.updated"
 	AuditAppended                         SubscribableEventType = "audit.appended"
 	ColdstartAccepted                     SubscribableEventType = "coldstart.accepted"
 	ColdstartReadBackProposed             SubscribableEventType = "coldstart.read_back_proposed"
@@ -450,6 +505,8 @@ const (
 	CompanyRestored                       SubscribableEventType = "company.restored"
 	CompanyUpdated                        SubscribableEventType = "company.updated"
 	ConsentChanged                        SubscribableEventType = "consent.changed"
+	ConsentOverrideLifted                 SubscribableEventType = "consent.override_lifted"
+	ConsentOverrideRecorded               SubscribableEventType = "consent.override_recorded"
 	ConsentSuppressed                     SubscribableEventType = "consent.suppressed"
 	ConsentSuppressionLifted              SubscribableEventType = "consent.suppression_lifted"
 	ContactArchived                       SubscribableEventType = "contact.archived"
@@ -544,6 +601,7 @@ const (
 	UserDeactivated                       SubscribableEventType = "user.deactivated"
 	UserDeliveryChanged                   SubscribableEventType = "user_delivery.changed"
 	UserDisplayNameChanged                SubscribableEventType = "user_display_name.changed"
+	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
@@ -568,11 +626,19 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case ActivityDispositionRecorded:
 		return true
+	case ActivityMarkedHandled:
+		return true
 	case ActivityUpdated:
 		return true
 	case ApprovalDecided:
 		return true
 	case ApprovalRequested:
+		return true
+	case AttachmentArchived:
+		return true
+	case AttachmentCreated:
+		return true
+	case AttachmentUpdated:
 		return true
 	case AuditAppended:
 		return true
@@ -599,6 +665,10 @@ func (e SubscribableEventType) Valid() bool {
 	case CompanyUpdated:
 		return true
 	case ConsentChanged:
+		return true
+	case ConsentOverrideLifted:
+		return true
+	case ConsentOverrideRecorded:
 		return true
 	case ConsentSuppressed:
 		return true
@@ -788,6 +858,8 @@ func (e SubscribableEventType) Valid() bool {
 		return true
 	case UserDisplayNameChanged:
 		return true
+	case UserGreetingNameChanged:
+		return true
 	case UserInvited:
 		return true
 	case UserLocaleChanged:
@@ -852,7 +924,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -862,6 +934,12 @@ type PublicEventActivityChangedFields struct {
 
 	// Body Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire).
 	Body *bool `json:"body,omitempty"`
+
+	// CalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+	CalendarMethod *PublicEventActivityChangedFieldsCalendarMethod `json:"calendar_method,omitempty"`
+
+	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
 
 	// DueAt The activity's new due_at (absent when this update did not touch it).
 	DueAt *time.Time `json:"due_at,omitempty"`
@@ -874,6 +952,12 @@ type PublicEventActivityChangedFields struct {
 
 	// OccurredAt The activity's new occurred_at (absent when this update did not touch it).
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+
+	// OutboundAttested True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise).
+	OutboundAttested *bool `json:"outbound_attested,omitempty"`
+
+	// ProjectFilingUndone True when a member undid the activity's filing under a project: the project link and the retention class that filing gave it are gone (absent otherwise). Who decided and why is audit-log material, not published.
+	ProjectFilingUndone *bool `json:"project_filing_undone,omitempty"`
 
 	// Relinked The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 	Relinked *PublicEventActivityRelinkedRef `json:"relinked,omitempty"`
@@ -891,19 +975,30 @@ type PublicEventActivityChangedFields struct {
 // PublicEventActivityChangedFieldsAudience The activity's new audience (absent when this update did not touch it). Who is named is not carried: a subscriber that must know re-reads the row under its own audience, exactly as a human does.
 type PublicEventActivityChangedFieldsAudience string
 
+// PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
+type PublicEventActivityChangedFieldsCalendarMethod string
+
+// PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+type PublicEventActivityChangedFieldsDirection string
+
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
 type PublicEventActivityChangedFieldsMeetingStatus string
 
-// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded — somebody decided what to do about a waiting message and the Worklist stopped showing it (activities/disposition.go). WHO it stopped showing it to is not on the wire, and the omission is deliberate: `not_sales` settles what the message is and holds for everybody, while `snoozed` and `not_mine` belong to the one reader who set them. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
+// PublicEventActivityDispositionRecorded Payload for activity.disposition_recorded. Somebody decided what to do about a waiting message, and the Worklist stopped showing it (activities/disposition.go). Who it stopped showing it to is not on the wire. `not_sales` settles what the message is and holds for everybody. `snoozed` and `not_mine` belong to the one reader who set them. A reader marking a message done is announced as activity.marked_handled, since this enum is closed at v1. A consumer reading this as a workspace-wide fact would report a colleague's private set-aside as the thread's own state. The reader stays on the row, for a caller entitled to it.
 type PublicEventActivityDispositionRecorded struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
-	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+	// Disposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 	Disposition PublicEventActivityDispositionRecordedDisposition `json:"disposition"`
 }
 
-// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the two reader states — a decision withdrawn is itself a decision, and a consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
+// PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked a waiting message done: they dealt with it another way, by phone, in a meeting, or with no reply owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
+type PublicEventActivityMarkedHandled struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+}
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -916,7 +1011,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
@@ -969,6 +1064,56 @@ type PublicEventApprovalRequested struct {
 
 	// TargetEntityType The polymorphic entity type the staged action targets.
 	TargetEntityType string `json:"target_entity_type"`
+}
+
+// PublicEventAttachmentArchived Payload for attachment.archived. A file was archived off a record.
+// Archiving is this subsystem's delete: the row and the stored bytes stay, and the file leaves every live listing. It carries the same shape as the other two so a subscriber routes all three the same way, and the same omissions for the same reasons.
+type PublicEventAttachmentArchived struct {
+	// ByteSize The stored size.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hung off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hung off.
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentCreated Payload for attachment.created. A file was uploaded against a record.
+// The attachment's own id is the envelope's `entity.id` and the uploader is its `actor`, so neither is repeated here.
+// No filename, and no content. A filename is text a stranger or a rep typed, and it can be the sensitive part by itself: "redundancy letter Weber.pdf" states a fact about a named human to every subscriber of the workspace. A subscriber that needs the name reads the attachment back through the API under its own reader's permissions, which is the rule the envelope follows for every record body.
+// An attachment that arrives with captured mail emits no event of its own. The mail's own activity.captured covers it, and a second event for one arrival would make one delivery look like two.
+type PublicEventAttachmentCreated struct {
+	// ByteSize The size counted while storing the bytes, not the length the upload declared. Null on a row stored before the column was counted, because the column is nullable and this mirrors it rather than inventing a zero.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off. A subscriber routes on this rather than on the attachment.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentUpdated Payload for attachment.updated. A file's metadata was edited: its category, title, document state, pinning, or which document it supersedes.
+// It carries which file changed and not what it now says. The omission is the one attachment.created makes: a title is typed text just as a filename is, so a delta carrying the new title would publish what the filename rule withholds. A subscriber that needs the current metadata reads the attachment back under its own permissions.
+type PublicEventAttachmentUpdated struct {
+	// ByteSize The stored size. A metadata edit does not change it.
+	ByteSize *int64 `json:"byte_size,omitempty"`
+
+	// ContentType The MIME type as stored, or null where the upload declared none. A metadata edit does not change it.
+	ContentType *string `json:"content_type,omitempty"`
+
+	// ParentId The record the file hangs off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off.
+	ParentType string `json:"parent_type"`
 }
 
 // PublicEventAuditAppended Payload for audit.appended — not currently delivered: there is no emit site for this type, and none is planned for V1. It exists so the §5 catalog (events.Types()) is completely covered by a payload schema (the whole-catalog coverage gate), never carrying a subscribable type with no contract. An empty payload by design — the audit ledger row it would announce is workspace-level (its subject is resolved back under the receiver's own scope), so no record detail rides the event.
@@ -1106,6 +1251,36 @@ type PublicEventConsentChanged struct {
 
 	// PurposeId The consent purpose this state change applies to.
 	PurposeId openapi_types.UUID `json:"purpose_id"`
+}
+
+// PublicEventConsentOverrideLifted Payload for consent.override_lifted — somebody with the authority to do so took back ONE standing override (consent/override.go's RevokeOverride).
+// That is not the same as "the refusal now applies again for every category" — a contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event.
+// ONE PER ROW TAKEN BACK, and the entity says which. A merge COPIES a vouch onto the survivor under a new id and announces the copy with its own consent.override_recorded on the survivor's stream; revoking the original takes back every copy, and each gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it is holding rather than about one it was never given.
+// It carries BOTH levels: the one the override was recorded at and the one that revoked it, the same pairing consent.suppression_lifted carries and for the same reason — an auditor needs to see that the second was allowed to take back the first without joining a row that no longer says so. Allowed, not outranked: a vouch is the one decision an admin may take back from a peer admin, because admin is the top human authority and nothing higher exists to reach an admin-recorded override.
+// It never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail; the reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to.
+type PublicEventConsentOverrideLifted struct {
+	// OverrideId Which override was revoked. Without it a consumer holding several overrides for one contact cannot tell which one this event describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
+
+	// RecordedAtLevel The authority the override was originally recorded at (user | admin). Paired with revoked_by_level so an auditor can see the second was allowed to take back the first without joining a row that no longer says so.
+	RecordedAtLevel string `json:"recorded_at_level"`
+
+	// RevokedByLevel The authority that revoked it (user | admin).
+	RevokedByLevel string `json:"revoked_by_level"`
+}
+
+// PublicEventConsentOverrideRecorded Payload for consent.override_recorded — a rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). Its own event rather than a consent.changed: an override is not consent and not a lawful basis, it outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row.
+// The subject is a contact and only a contact: the write door names that object as a literal, so this is a static entity whose delivery scope the fan-out gate proves mechanically rather than by hand-ratification.
+// It names WHAT category was vouched for and at WHICH authority, never the reason the rep gave: that explanation belongs to the audit trail a rep reviewing the contact reads, not to every subscriber the event reaches.
+type PublicEventConsentOverrideRecorded struct {
+	// Category Which category of send this vouch covers. The engine resolves every send to exactly one category, and the override applies to that one only.
+	Category string `json:"category"`
+
+	// DecidedByLevel Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name.
+	DecidedByLevel string `json:"decided_by_level"`
+
+	// OverrideId Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke), and a contact can hold several live vouches at once — one per category, and after a merge more than one for a single category — so a consumer with no id cannot say which of them any later consent.override_lifted describes.
+	OverrideId openapi_types.UUID `json:"override_id"`
 }
 
 // PublicEventConsentSuppressed Payload for consent.suppressed — somebody recorded that we may not write to a subject (consent/suppress.go's Suppress). Its own event rather than a consent.changed, because a suppression is not the absence of consent: it outranks a grant, it does not expire on its own, and a later re-grant must not silently erase it. A consumer that folded the two would resume mail the subject asked us to stop.
@@ -2212,6 +2387,12 @@ type PublicEventUserDisplayNameChanged struct {
 	DisplayName string `json:"display_name"`
 }
 
+// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+type PublicEventUserGreetingNameChanged struct {
+	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name.
+	GreetingName *string `json:"greeting_name"`
+}
+
 // PublicEventUserInvited Payload for user.invited — an admin provisioned a new active member with a single-use set-password token (identity/users.go's InviteUser).
 type PublicEventUserInvited struct {
 	// By The admin who issued the invite.
@@ -2439,6 +2620,10 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
+func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
+
+func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
+
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
 func (PublicEventActivityUpdated) EntityType() string { return "activity" }
@@ -2450,6 +2635,18 @@ func (PublicEventApprovalDecided) EntityType() string { return "approval" }
 func (PublicEventApprovalRequested) EventType() string { return "approval.requested" }
 
 func (PublicEventApprovalRequested) EntityType() string { return "approval" }
+
+func (PublicEventAttachmentArchived) EventType() string { return "attachment.archived" }
+
+func (PublicEventAttachmentArchived) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentCreated) EventType() string { return "attachment.created" }
+
+func (PublicEventAttachmentCreated) EntityType() string { return "attachment" }
+
+func (PublicEventAttachmentUpdated) EventType() string { return "attachment.updated" }
+
+func (PublicEventAttachmentUpdated) EntityType() string { return "attachment" }
 
 func (PublicEventAuditAppended) EventType() string { return "audit.appended" }
 
@@ -2502,6 +2699,14 @@ func (PublicEventCompanyUpdated) EntityType() string { return "company" }
 func (PublicEventConsentChanged) EventType() string { return "consent.changed" }
 
 func (PublicEventConsentChanged) EntityType() string { return "dynamic" }
+
+func (PublicEventConsentOverrideLifted) EventType() string { return "consent.override_lifted" }
+
+func (PublicEventConsentOverrideLifted) EntityType() string { return "contact" }
+
+func (PublicEventConsentOverrideRecorded) EventType() string { return "consent.override_recorded" }
+
+func (PublicEventConsentOverrideRecorded) EntityType() string { return "contact" }
 
 func (PublicEventConsentSuppressed) EventType() string { return "consent.suppressed" }
 
@@ -2889,6 +3094,10 @@ func (PublicEventUserDisplayNameChanged) EventType() string { return "user_displ
 
 func (PublicEventUserDisplayNameChanged) EntityType() string { return "user" }
 
+func (PublicEventUserGreetingNameChanged) EventType() string { return "user_greeting_name.changed" }
+
+func (PublicEventUserGreetingNameChanged) EntityType() string { return "user" }
+
 func (PublicEventUserInvited) EventType() string { return "user.invited" }
 
 func (PublicEventUserInvited) EntityType() string { return "user" }
@@ -2950,9 +3159,13 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.marked_handled":                   1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.requested":                        1,
+	"attachment.archived":                       1,
+	"attachment.created":                        1,
+	"attachment.updated":                        1,
 	"audit.appended":                            1,
 	"coldstart.accepted":                        1,
 	"coldstart.read_back_proposed":              1,
@@ -2966,6 +3179,8 @@ var PublicEventVersions = map[string]int{
 	"company.restored":                          1,
 	"company.updated":                           1,
 	"consent.changed":                           1,
+	"consent.override_lifted":                   1,
+	"consent.override_recorded":                 1,
 	"consent.suppressed":                        1,
 	"consent.suppression_lifted":                1,
 	"contact.archived":                          1,
@@ -3063,6 +3278,7 @@ var PublicEventVersions = map[string]int{
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
 	"user_display_name.changed":                 1,
+	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,

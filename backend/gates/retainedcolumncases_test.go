@@ -5,8 +5,8 @@
 
 package gates
 
-// The retention sweep's two SQL claims, driven with SYNTHETIC statements rather
-// than the tree — the same reason extensionsqlscopecases_test.go gives for its
+// The retention sweep's two SQL claims, driven with synthetic statements rather
+// than the tree, for the reason extensionsqlscopecases_test.go gives for its
 // own cases. The sweep is supposed to pass, so a gate proven only by "the one
 // statement in the tree is clean" is one that keeps passing after it stops
 // working.

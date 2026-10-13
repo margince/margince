@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer does not say Mara's conversion was undone or that she is a lead again—it says only that her contact was archived—and it creates ambiguity about whether she is off the list by stating she was archived yet then handed to Sofia 'including Mara'.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added.",
+  "answer": "The list had twelve people, Mara Voigt among them. I archived Mara's contact, added Jens Falk, and handed everyone — including Mara — to Sofia Meier without showing you what it would change first."
+}

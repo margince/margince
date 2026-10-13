@@ -58,6 +58,7 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		JudgeBand:           caseJudgeBand(stats),
 		JudgeScores:         stats.scores,
 		JudgeNone:           set.Mechanical,
+		CommitmentBand:      sc.CommitmentBand,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,
 		ReportedWrongAnswer: tally.wrongAnswer,
@@ -74,6 +75,7 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		if r.Abandoned {
 			row.Abandoned++
 		}
+		row.foldConfidence(r.AnswerConfidence)
 		if r.Withheld != "" {
 			row.Withheld++
 			if !slices.Contains(row.WithheldReasons, r.Withheld) {
@@ -83,6 +85,20 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 	}
 	slices.Sort(row.WithheldReasons)
 	return row
+}
+
+// foldConfidence widens the row's confidence range to cover one kept run's.
+func (sc *ScenarioRecord) foldConfidence(r *ConfidenceRange) {
+	if r == nil {
+		return
+	}
+	low, high := r.Min, r.Max
+	if sc.AnswerConfidenceMin == nil || low < *sc.AnswerConfidenceMin {
+		sc.AnswerConfidenceMin = &low
+	}
+	if sc.AnswerConfidenceMax == nil || high > *sc.AnswerConfidenceMax {
+		sc.AnswerConfidenceMax = &high
+	}
 }
 
 // runOutcome is one scored run plus the identity fields Record needs
@@ -156,6 +172,7 @@ func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecor
 		output: validated.output, outcome: entry.outcome, passed: entry.passed,
 		scope: aitasks.ScopeOf(factory), pooled: pooled,
 	})
+	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
@@ -232,6 +249,21 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 	return validation{
 		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
 	}, nil
+}
+
+// keptConfidence reads the confidence off a run the tally counts as passed. A
+// run that did not pass — refused, wrong, or cut off mid-answer — has no reading
+// worth bounding a threshold with.
+func keptConfidence(prepared aitasks.PreparedCase, trace aitasks.Trace, kept bool) *ConfidenceRange {
+	reporter, ok := prepared.(aitasks.ConfidenceCase)
+	if !ok || !kept {
+		return nil
+	}
+	low, high, reported := reporter.AnswerConfidence(trace)
+	if !reported {
+		return nil
+	}
+	return &ConfidenceRange{Min: low, Max: high}
 }
 
 // tallyEntry is how one run enters its scenario's tally: the outcome counted,

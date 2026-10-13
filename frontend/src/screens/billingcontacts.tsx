@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCanWrite } from "../lib/capability";
 import { BillingContactModal } from "./billingcontactmodal";
 import { useBillingContactActions } from "./billingcontacts.queries";
 
@@ -33,31 +33,21 @@ const ROLE_LABEL: Record<BillingContactRole, MessageKey> = {
 export function BillingContactsPanel({
   contacts,
   companyId,
-  readOnly = false,
 }: Readonly<{
   contacts?: readonly BillingContact[];
   companyId: string;
-  // The company's own write refusal — archived, or not this caller's to
-  // write. The panel does not re-derive it: the server refuses an
-  // unauthorized write whatever this says, and a second implementation of the
-  // gate here is the defect rather than the protection.
-  readOnly?: boolean;
 }>) {
   const t = useT();
-  // Naming somebody, moving them, or taking them off are all writes to a
-  // RELATIONSHIP — not to the company, whose own archive state arrives as
-  // `readOnly` above. Both have to hold: the caller's grant plus a seat that
-  // may mutate at all, and a company that still takes changes. Without the
-  // grant half, a read-seat colleague was shown three enabled buttons and
-  // learned they could not use them from a refusal after submitting.
-  const mayWrite = useCanWrite("relationship", "create") && !readOnly;
+  // Naming somebody, moving them or taking them off writes a relationship, not
+  // the company, so the relationship grant decides whether the verbs show.
+  const mayWrite = useCanWrite("relationship", "create");
   // TAKING SOMEBODY OFF IS ITS OWN VERB, and the default seat is exactly where
   // sharing the create gate showed. `rep` holds `writeNoDelete` on
   // relationship, so it passes the check above and is refused by the server on
   // Remove alone — the most common seat in the product, learning from an error
   // after pressing that the button was never for it. The fix above closed this
   // for read-only seats and left it open for the one that writes.
-  const mayRemove = useCanWrite("relationship", "delete") && !readOnly;
+  const mayRemove = useCanWrite("relationship", "delete");
   const actions = useBillingContactActions(
     companyId,
     t("billing.versionUnresolved"),

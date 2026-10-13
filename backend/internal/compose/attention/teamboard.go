@@ -61,7 +61,7 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 
 func (s *Service) boardForRoster(ctx context.Context, roster []TeamMember, rosterCut bool) (crmcontracts.TeamBoard, error) {
 	asOf := s.now()
-	load, err := s.teamLoad(ctx, roster, asOf)
+	load, err := s.teamLoad(ctx, activeMembers(roster), asOf)
 	if err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
@@ -76,11 +76,18 @@ func (s *Service) boardForRoster(ctx context.Context, roster []TeamMember, roste
 		Truncated: load.truncated || rosterCut,
 	}
 	for _, member := range roster {
-		board.Members = append(board.Members, crmcontracts.TeamBoardMember{
+		row := crmcontracts.TeamBoardMember{
 			UserId:      openapi_types.UUID(member.UserID),
 			DisplayName: member.DisplayName,
+			Activation:  crmcontracts.TeamBoardMemberActivationActive,
 			Counts:      load.counts[member.UserID],
-		})
+		}
+		if member.Invited {
+			// Unmeasured, so no figure is carried: the contract says a client draws "not measured".
+			row.Activation = crmcontracts.TeamBoardMemberActivationInvited
+			row.Counts = crmcontracts.TeamBoardCounts{}
+		}
+		board.Members = append(board.Members, row)
 	}
 	// By name, because a manager scans the board for a contact they already have
 	// in mind. Ordering by load would move a row every time the numbers moved,
@@ -92,6 +99,17 @@ func (s *Service) boardForRoster(ctx context.Context, roster []TeamMember, roste
 		return board.Members[a].UserId.String() < board.Members[b].UserId.String()
 	})
 	return board, nil
+}
+
+// activeMembers is the part of a roster whose workload the board measures.
+func activeMembers(roster []TeamMember) []TeamMember {
+	active := make([]TeamMember, 0, len(roster))
+	for _, member := range roster {
+		if !member.Invited {
+			active = append(active, member)
+		}
+	}
+	return active
 }
 
 // teamCounts holds the three figures per owner, plus whether any of them is a

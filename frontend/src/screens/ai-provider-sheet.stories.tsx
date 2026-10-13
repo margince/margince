@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -17,30 +17,35 @@ const KEYS = {
       provider: "gemini",
       configured: true,
       env_var: "GEMINI_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai_compatible",
       configured: true,
       env_var: "OPENAI_COMPATIBLE_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "anthropic",
       configured: true,
       env_var: "ANTHROPIC_API_KEY",
+      usable: true,
       optional: false,
     },
     {
       provider: "openai",
       configured: false,
       env_var: "OPENAI_API_KEY",
+      usable: false,
       optional: false,
     },
     {
       provider: "jev",
       configured: false,
       env_var: "TYPESAFE_API_KEY",
+      usable: false,
       optional: false,
     },
   ],
@@ -56,6 +61,8 @@ const ROUTING = {
     },
     cheap_cloud: { provider: "gemini", model: "gemini-3.5-flash" },
     premium: { provider: "jev", model: "jev-1" },
+    frontier: { provider: "anthropic", model: "claude-opus-4-1" },
+    local_large: { provider: "anthropic", model: "claude-opus-4-1" },
   },
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
@@ -117,7 +124,12 @@ const openSheet =
   async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: `Manage ${name}` }),
+      within(await body.findByTestId(`ai-provider-row-${name}`)).getByRole(
+        "button",
+        {
+          name: /^Edit/,
+        },
+      ),
     );
   };
 
@@ -165,7 +177,7 @@ export const RemovingAPrice: Story = {
   },
 };
 
-/** A vendor with a price page but no prices on the sheet: the table says so. */
+/** No prices on the sheet: the table says so, and a model two tiers share is named once. */
 export const NoPrices: Story = { ...List, play: openSheet("anthropic") };
 
 /** The phone: the sheet is a full-screen layer. */

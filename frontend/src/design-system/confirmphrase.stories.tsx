@@ -68,7 +68,6 @@ function InDialog() {
       open
       onClose={() => setTyped("")}
       title={`Reset all data for ${COMPANY}?`}
-      size="wide"
       confirmLabel="Delete all data"
       confirmVariant="danger"
       confirmDisabled={!phraseMatches(typed, COMPANY)}

@@ -11,9 +11,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// NamedTeams resolves a live roster within the caller’s team authority.
+// NamedTeams resolves a named team's active and invited seats within the
+// caller’s team authority.
 type NamedTeams interface {
-	LiveMembersOfTeam(context.Context, ids.UUID) ([]TeamMember, bool, error)
+	MembersOfTeam(context.Context, ids.UUID) ([]TeamMember, bool, error)
 }
 
 // WithNamedTeams binds the same roster authority used by the weekly review.
@@ -33,7 +34,7 @@ func (s *Service) NamedTeamBoard(ctx context.Context, team ids.UUID) (crmcontrac
 	if s.namedTeams == nil {
 		return crmcontracts.TeamBoard{}, apperrors.ErrPermissionDenied
 	}
-	roster, cut, err := s.namedTeams.LiveMembersOfTeam(ctx, team)
+	roster, cut, err := s.namedTeams.MembersOfTeam(ctx, team)
 	if err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}

@@ -5,7 +5,7 @@
 
 package gates
 
-// The address a buyer invitation MAILS is an address this app serves.
+// The address a buyer invitation mails is an address this app serves.
 //
 // The link is minted by the server and opened by a browser, so the route and
 // its query parameter are one invariant spelled on both sides of a wire. Left
@@ -32,7 +32,7 @@ import (
 
 const (
 	inviteMailSource = "internal/modules/dealrooms/invitemail.go"
-	routerSource     = "../frontend/src/app/router.tsx"
+	routerSource     = "../frontend/src/lib/router.tsx"
 	navSource        = "../frontend/src/app/nav.ts"
 	// PUBLIC_SCREENS lives with the shell that enforces it rather than with the
 	// route table, because it is a question about the SESSION and not about the
