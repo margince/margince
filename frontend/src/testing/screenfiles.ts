@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stable } from "../format/collate";
 
 /** The frontend's `src/`, which every path below is relative to. */
 export const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -16,7 +17,7 @@ export function screenFiles(): string[] {
     .filter((path) => path.endsWith(".tsx"))
     .filter((path) => !/\.(test|stories)\.tsx$/.test(path))
     .map((path) => relative(SRC_ROOT, path).split(sep).join("/"))
-    .sort((a, b) => a.localeCompare(b));
+    .sort(stable);
 }
 
 function filesUnder(dir: string): string[] {
