@@ -251,8 +251,11 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 // version. It first supersedes every unwritten run of the same source name, and
 // queues the job in the same transaction. It answers whether it moved the run.
 // A run already validating that version is left as it stands, so a second
-// request starts no second test and fences off none.
-func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int, enqueue Enqueue) (Run, bool, error) {
+// request starts no second test and fences off none. derived is the mapping the
+// test checked; the move fills from it each default the run left empty.
+func (s *RunStore) QueueValidation(
+	ctx context.Context, id RunID, version int, derived RunMapping, enqueue Enqueue,
+) (Run, bool, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, false, err
 	}
@@ -275,9 +278,14 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int, e
 		if err := supersedeName(ctx, tx, id, state.sourceName, CauseSuperseded); err != nil {
 			return err
 		}
-		if err := stageTransition(ctx, tx, id, moveValidate, runChange{
+		change := runChange{
 			version: version, queue: true, literals: []string{"report = NULL", "error = NULL"},
-		}); err != nil {
+			before: map[string]any{}, after: map[string]any{},
+		}
+		if err := change.fillDefaults(state.mapping, derived); err != nil {
+			return err
+		}
+		if err := stageTransition(ctx, tx, id, moveValidate, change); err != nil {
 			return err
 		}
 		moved = true

@@ -45,7 +45,14 @@ func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request
 		httperr.WriteJSON(w, http.StatusOK, toContractImportRun(run))
 		return
 	}
-	queued, moved, err := h.testRun(ctx, run, req.Version, requestOfRun(run))
+	// The run's own choices have nothing to save, so the version the client
+	// was shown stays the one a second click sends.
+	enqueue, mapping, err := h.checkedTest(ctx, run, requestOfRun(run))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	queued, moved, err := h.queueTest(ctx, run.ID, req.Version, mapping, enqueue)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -57,37 +64,54 @@ func (h importHandlers) ValidateImportRun(w http.ResponseWriter, r *http.Request
 	httperr.WriteJSON(w, status, queued)
 }
 
-// testRun saves req's choices on run at version and queues their test on that
-// run, in the transaction that moves it. Both doors arrive here, so the choices
-// a report describes are the ones the run keeps for its commit. The worker
-// reads the rows; the request checks only what the choices must satisfy. A run
-// already being tested at that version is answered unmoved, which makes a
-// double click start one test.
+// testRun saves req's choices on run and queues their test on that run. Both
+// doors queue through queueTest, so the choices a report describes are the ones
+// the run keeps for its commit. The worker reads the rows; the request checks
+// only what the choices must satisfy.
 func (h importHandlers) testRun(
-	ctx context.Context, run migration.Run, version int, req crmcontracts.CreateImportRunRequest,
-) (crmcontracts.ImportRun, bool, error) {
+	ctx context.Context, run migration.Run, req crmcontracts.CreateImportRunRequest,
+) (crmcontracts.ImportRun, error) {
+	enqueue, mapping, err := h.checkedTest(ctx, run, req)
+	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+	saved, err := migration.NewRunStore(h.db).UpdateDraft(ctx, run.ID, run.Version, draftPatchOf(mapping))
+	if err != nil {
+		return crmcontracts.ImportRun{}, err
+	}
+	queued, _, err := h.queueTest(ctx, saved.ID, saved.Version, mapping, enqueue)
+	return queued, err
+}
+
+// checkedTest checks req's choices against run's file, and answers the
+// mapping they test and the queue that test goes on.
+func (h importHandlers) checkedTest(
+	ctx context.Context, run migration.Run, req crmcontracts.CreateImportRunRequest,
+) (migration.Enqueue, migration.RunMapping, error) {
 	queue, ws, err := h.jobQueue(ctx)
 	if err != nil {
-		return crmcontracts.ImportRun{}, false, err
+		return nil, migration.RunMapping{}, err
 	}
 	mapping, err := h.checkedMapping(ctx, req)
 	if err != nil {
-		return crmcontracts.ImportRun{}, false, err
+		return nil, migration.RunMapping{}, err
 	}
 	source, _, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
 	if err != nil {
-		return crmcontracts.ImportRun{}, false, importProblem(err)
+		return nil, migration.RunMapping{}, importProblem(err)
 	}
 	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
-		return crmcontracts.ImportRun{}, false, err
+		return nil, migration.RunMapping{}, err
 	}
+	return queue.validates(ws), mapping, nil
+}
 
-	runs := migration.NewRunStore(h.db)
-	saved, err := runs.UpdateDraft(ctx, run.ID, version, draftPatchOf(mapping))
-	if err != nil {
-		return crmcontracts.ImportRun{}, false, err
-	}
-	queued, moved, err := runs.QueueValidation(ctx, saved.ID, saved.Version, queue.validates(ws))
+// queueTest queues the test of the run at version. A run already being tested
+// at that version is answered unmoved, which makes a double click start one test.
+func (h importHandlers) queueTest(
+	ctx context.Context, id migration.RunID, version int, mapping migration.RunMapping, enqueue migration.Enqueue,
+) (crmcontracts.ImportRun, bool, error) {
+	queued, moved, err := migration.NewRunStore(h.db).QueueValidation(ctx, id, version, mapping, enqueue)
 	if err != nil {
 		return crmcontracts.ImportRun{}, false, h.sessionRefusal(ctx, err)
 	}

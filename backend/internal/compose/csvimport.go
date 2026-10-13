@@ -233,8 +233,7 @@ func (h importHandlers) stageRun(
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	queued, _, err := h.testRun(ctx, run, run.Version, req)
-	return queued, err
+	return h.testRun(ctx, run, req)
 }
 
 // GetImportRun reports the lifecycle (IEM-WIRE-6): a failed run carries its

@@ -60,7 +60,7 @@ func newDraft(ctx context.Context, t *testing.T, s *RunStore, sourceName string)
 // toReport takes a draft through its test run to a report awaiting approval.
 func toReport(ctx context.Context, t *testing.T, s *RunStore, run Run) Run {
 	t.Helper()
-	queued, _, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing)
+	queued, _, err := s.QueueValidation(ctx, run.ID, run.Version, RunMapping{}, queueNothing)
 	if err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestVersionMismatchIsAConflict(t *testing.T) {
 		!errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("a patch against the old version = %v, want ErrVersionMismatch, a conflict", err)
 	}
-	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing); !errors.Is(err, ErrVersionMismatch) {
+	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, RunMapping{}, queueNothing); !errors.Is(err, ErrVersionMismatch) {
 		t.Errorf("a test run of the old version = %v, want ErrVersionMismatch", err)
 	}
 	if got := mustGetStaged(ctx, t, s, run.ID); got.Status != StatusPending || got.Mapping.SourceKey != key {
@@ -208,7 +208,7 @@ func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 	draft := newDraft(ctx, t, s, "Fair 2026")
 	newer := newDraft(ctx, t, s, "Fair 2026")
 
-	queued, moved, err := s.QueueValidation(ctx, newer.ID, newer.Version, queueNothing)
+	queued, moved, err := s.QueueValidation(ctx, newer.ID, newer.Version, RunMapping{}, queueNothing)
 	if err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
@@ -225,15 +225,46 @@ func TestValidatingANameSupersedesItsUnwrittenRuns(t *testing.T) {
 	}
 }
 
+func TestATestFillsTheDraftsDefaultsWithoutSpendingAVersion(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
+		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv",
+		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, OnBrokenLink: "drop_link"},
+	})
+	if err != nil {
+		t.Fatalf("CreateDraftRun: %v", err)
+	}
+	derived := RunMapping{
+		Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email",
+		OnDuplicate: "create", OnBrokenLink: "skip_row",
+	}
+	q := &jobQueue{}
+	for i, wantMoved := range []bool{true, false} {
+		run, moved, err := s.QueueValidation(ctx, draft.ID, draft.Version, derived, q.enqueue)
+		if err != nil || moved != wantMoved || run.Version != draft.Version {
+			t.Fatalf("test %d = (version %d, moved %t, %v), want version %d, moved %t",
+				i+1, run.Version, moved, err, draft.Version, wantMoved)
+		}
+	}
+	if len(q.attempts) != 1 {
+		t.Errorf("queued jobs %v, want one", q.attempts)
+	}
+	got := mustGetStaged(ctx, t, s, draft.ID).Mapping
+	if got == nil || got.SourceKey != "Email" || got.OnDuplicate != "create" || got.OnBrokenLink != "drop_link" {
+		t.Errorf("the tested mapping = %+v, want the defaults filled and the chosen drop_link kept", got)
+	}
+}
+
 func TestASecondTestRunOfOneVersionSaysItDidNotMove(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "Fair 2026")
-	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing); err != nil {
+	if _, _, err := s.QueueValidation(ctx, run.ID, run.Version, RunMapping{}, queueNothing); err != nil {
 		t.Fatalf("QueueValidation: %v", err)
 	}
 	audits := auditCount(ctx, t, db, run.ID)
-	again, moved, err := s.QueueValidation(ctx, run.ID, run.Version, queueNothing)
+	again, moved, err := s.QueueValidation(ctx, run.ID, run.Version, RunMapping{}, queueNothing)
 	if err != nil || moved || again.Status != StatusValidating {
 		t.Fatalf("a repeated test run = (%s, moved %t, %v), want the validating run, not moved", again.Status, moved, err)
 	}
@@ -265,7 +296,7 @@ func TestTestRunsOfOneNameAtOnceEachSupersedeTheLast(t *testing.T) {
 	for i, draft := range drafts {
 		done.Go(func() {
 			start.Wait()
-			_, _, errs[i] = s.QueueValidation(ctx, draft.ID, draft.Version, queueNothing)
+			_, _, errs[i] = s.QueueValidation(ctx, draft.ID, draft.Version, RunMapping{}, queueNothing)
 		})
 	}
 	start.Done()
@@ -301,7 +332,7 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 	}
 	draft := newDraft(ctx, t, s, "Fair 2026")
 
-	_, _, err := s.QueueValidation(ctx, draft.ID, draft.Version, queueNothing)
+	_, _, err := s.QueueValidation(ctx, draft.ID, draft.Version, RunMapping{}, queueNothing)
 	var busy *SourceBusyError
 	if !errors.As(err, &busy) || busy.RunID != writing.ID || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a test run beside a writing run of its name = %v, want SourceBusyError naming %s", err, writing.ID)

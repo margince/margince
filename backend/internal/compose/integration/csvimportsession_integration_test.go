@@ -90,6 +90,33 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 	}
 }
 
+func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
+	e := setupImportApp(t)
+	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	var saved importRunDTO
+	if status := e.Call(t, http.MethodPatch, "/v1/imports/"+profile.RunID, AnyMap{
+		"version": 1, "object": "lead", "mapping": profile.SuggestedMapping,
+		"source_name": "saved-draft", "on_broken_link": "skip_row",
+	}, nil, &saved); status != http.StatusOK || saved.Version != 2 {
+		t.Fatalf("PATCH → %d %+v, want 200 at version 2", status, saved)
+	}
+
+	for i, want := range []int{http.StatusAccepted, http.StatusOK} {
+		var run importRunDTO
+		status := e.Call(t, http.MethodPost, "/v1/imports/"+saved.ID+"/validate", AnyMap{"version": saved.Version}, nil, &run)
+		if status != want || run.Status != "validating" || run.Version != saved.Version {
+			t.Fatalf("validate %d → %d %+v, want %d validating at version %d", i+1, status, run, want, saved.Version)
+		}
+	}
+	if queued := importjobtest.Queued(t, e, compose.ImportValidateArgs{}.Kind()); len(queued) != 1 {
+		t.Fatalf("%d test jobs are queued, want one", len(queued))
+	}
+	importjobtest.Drain(t, e)
+	if run := readImportRun(t, e, saved.ID); run.Status != "awaiting_approval" || run.Version != saved.Version {
+		t.Fatalf("the tested draft = %+v, want awaiting approval at version %d", run, saved.Version)
+	}
+}
+
 func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)

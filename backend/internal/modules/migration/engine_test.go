@@ -105,7 +105,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
-		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1, queueNothing); return err }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1, RunMapping{}, queueNothing); return err }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
 		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},

@@ -29,7 +29,7 @@ func (q *jobQueue) enqueue(_ context.Context, _ pgx.Tx, run Run) error {
 // startTest queues the draft's test run and answers the lease its job holds.
 func startTest(ctx context.Context, t *testing.T, s *RunStore, draft Run, q *jobQueue) Lease {
 	t.Helper()
-	run, moved, err := s.QueueValidation(ctx, draft.ID, draft.Version, q.enqueue)
+	run, moved, err := s.QueueValidation(ctx, draft.ID, draft.Version, RunMapping{}, q.enqueue)
 	if err != nil || !moved {
 		t.Fatalf("QueueValidation = (moved %t, %v), want the draft moved", moved, err)
 	}
@@ -53,7 +53,7 @@ func TestASecondValidateNeverStrandsTheRun(t *testing.T) {
 	q := &jobQueue{}
 	l := startTest(ctx, t, s, draft, q)
 
-	again, moved, err := s.QueueValidation(ctx, draft.ID, draft.Version, q.enqueue)
+	again, moved, err := s.QueueValidation(ctx, draft.ID, draft.Version, RunMapping{}, q.enqueue)
 	if err != nil || moved || again.JobAttempt != l.Attempt {
 		t.Fatalf("a second validate = (attempt %d, moved %t, %v), want attempt %d left as it was",
 			again.JobAttempt, moved, err, l.Attempt)
@@ -192,7 +192,7 @@ func TestAnAgentsSecondTestRunNamesItsFirst(t *testing.T) {
 
 	second := newDraft(ctx, t, s, "")
 	q := &jobQueue{}
-	_, _, err := s.QueueValidation(agent, second.ID, second.Version, q.enqueue)
+	_, _, err := s.QueueValidation(agent, second.ID, second.Version, RunMapping{}, q.enqueue)
 	busy, ok := errors.AsType[*AgentBusyError](err)
 	if !ok || busy.RunID != first.Run || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("an agent's second test run = %v, want AgentBusyError naming %s", err, first.Run)
