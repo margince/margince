@@ -46,6 +46,11 @@ def semantic_problem(session):
         return "search_context is ranking by word overlap alone (lexical): no embedding model serves it", True
     if not hits:
         return "search_context answered with no hits: nothing is indexed yet", False
+    # Records are embedded after the seed, a few at a time, and the probe's
+    # meaning matches seeded activities. A world snapshotted before they are
+    # in reaches every run with only names to search.
+    if not any(isinstance(hit, dict) and (hit.get("record") or {}).get("record_type") == "activity" for hit in hits):
+        return f"search_context ranked {len(hits)} hits and no activity: the seeded activities are not indexed yet", False
     return "", False
 
 
