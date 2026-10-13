@@ -22,6 +22,7 @@ func TestAStaleTestRunIsRequeuedAsANewAttempt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
+	readSomeRows(ctx, t, s, l)
 	setRunColumn(ctx, t, db, l.Run, `heartbeat_at = now() - interval '1 hour'`)
 
 	q := &jobQueue{}
@@ -33,7 +34,37 @@ func TestAStaleTestRunIsRequeuedAsANewAttempt(t *testing.T) {
 		t.Errorf("the resumed test run reads %s at attempt %d with jobs %v, want validating with one job of attempt %d",
 			got.Status, got.JobAttempt, q.attempts, l.Attempt+1)
 	}
+	if got.Phase != "" || got.Progress != nil {
+		t.Errorf("the resumed test run reads phase %q progress %+v, want the dead attempt's cleared", got.Phase, got.Progress)
+	}
 	assertResumes(ctx, t, db, l.Run, 1)
+}
+
+// A stopped test yields its attempt and starts again from the top, so no
+// reader sees how far the stopped read had come.
+func TestAYieldedTestRunShowsNoProgressOfItsStoppedRead(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	l := claimedTest(ctx, t, s)
+	readSomeRows(ctx, t, s, l)
+
+	if err := s.Yield(ctx, l); err != nil {
+		t.Fatalf("Yield: %v", err)
+	}
+	got := mustGetStaged(ctx, t, s, l.Run)
+	if got.Status != StatusValidating || got.JobAttempt != l.Attempt || got.Phase != "" || got.Progress != nil {
+		t.Errorf("the yielded test run reads %s at attempt %d, phase %q progress %+v; want validating at attempt %d with neither",
+			got.Status, got.JobAttempt, got.Phase, got.Progress, l.Attempt)
+	}
+}
+
+// readSomeRows records that the attempt's read has come part of the way.
+func readSomeRows(ctx context.Context, t *testing.T, s *RunStore, l Lease) {
+	t.Helper()
+	progress := Progress{Attempt: l.Attempt, Objects: []ObjectProgress{{Object: ObjectLead, RowsDone: 8000, RowsTotal: 12000}}}
+	if err := s.FlushTestProgress(ctx, l, progress, PhaseReading, ObjectLead); err != nil {
+		t.Fatalf("FlushTestProgress: %v", err)
+	}
 }
 
 func TestPastTheResumeLimitATestRunReturnsToDraft(t *testing.T) {

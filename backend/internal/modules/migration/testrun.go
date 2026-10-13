@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,8 +25,19 @@ import (
 // testRunEnded is what every move out of `validating` clears: no job is
 // queued or claimed, and the phase and progress describe a read that is over.
 // A commit seeds its counts from progress, so a test run's must never reach it.
-var testRunEnded = []string{
-	"job_status = NULL", "claimed_attempt = NULL", "phase = NULL", "phase_object = NULL", "progress = NULL",
+var testRunEnded = append([]string{"job_status = NULL", "claimed_attempt = NULL"}, testReadForgotten...)
+
+// testReadForgotten clears how far a test's read had come. An attempt that
+// stops reads again from the top, so that progress describes no read going on.
+var testReadForgotten = []string{"phase = NULL", "phase_object = NULL", "progress = NULL"}
+
+// restartingTest adds testReadForgotten to set when l is a test run, whose
+// next attempt starts its read from the top.
+func restartingTest(l Lease, set string) string {
+	if l.Status != StatusValidating {
+		return set
+	}
+	return set + ", " + strings.Join(testReadForgotten, ", ")
 }
 
 // fencedOff is testRunEnded for a move a human makes while a job may still

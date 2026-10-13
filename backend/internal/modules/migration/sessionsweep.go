@@ -283,8 +283,8 @@ func lockGuarded(ctx context.Context, tx pgx.Tx, l Lease, guard string, age time
 // reopenStale fences off the stale attempt the caller locked, opens the next
 // one with its own trace, and queues it.
 func reopenStale(ctx context.Context, tx pgx.Tx, l Lease, requeue Requeue) error {
-	if err := execFenced(ctx, tx, l, `job_attempt = job_attempt + 1, attempt_correlation_id = $4,
-		resume_count = resume_count + 1, updated_at = now()`, ids.NewV7()); err != nil {
+	if err := execFenced(ctx, tx, l, restartingTest(l, `job_attempt = job_attempt + 1, attempt_correlation_id = $4,
+		resume_count = resume_count + 1, updated_at = now()`), ids.NewV7()); err != nil {
 		return err
 	}
 	run, err := readStaged(ctx, tx, l.Run)

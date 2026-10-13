@@ -188,7 +188,7 @@ func (s *RunStore) Yield(ctx context.Context, l Lease) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return execFenced(ctx, tx, l, `claimed_attempt = NULL, updated_at = now()`)
+		return execFenced(ctx, tx, l, restartingTest(l, `claimed_attempt = NULL, updated_at = now()`))
 	})
 }
 
