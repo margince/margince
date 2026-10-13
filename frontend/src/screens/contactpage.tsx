@@ -20,7 +20,6 @@ import { RecordView } from "../design-system/recordview";
 import { useTooltip } from "../design-system/tooltip";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useMemberName } from "../lib/membernames";
 import { unwrap } from "../lib/problem";
 import { useFoldedViewport } from "../lib/viewport";
 import { BriefQueue } from "./brief.queue";

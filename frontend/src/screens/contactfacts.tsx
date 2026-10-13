@@ -13,10 +13,10 @@ import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
+import { useMemberName } from "../lib/membernames";
 import { useViewerId } from "../lib/session";
 import { buyingRoleLabel } from "./companycontacts/summary";
 import { rosterOwnerName } from "./entityref";
-import { useMemberName } from "./membernames";
 
 type Contact = components["schemas"]["Contact"];
 
