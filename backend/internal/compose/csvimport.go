@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"path"
@@ -70,9 +71,9 @@ type importHandlers struct {
 	testRunBudget time.Duration
 }
 
-// UploadImportSource stores a file and describes it (IEM-WIRE-8). Nothing is
-// imported, validated against the estate, or written here — the response is
-// the evidence a human makes the mapping on.
+// UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its
+// draft run. Nothing is imported or validated against the estate here. The
+// response is the evidence a human makes the mapping on.
 func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -106,8 +107,7 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 	if migration.IsZip(upload.Body) {
 		out, err = h.profileBundle(ctx, upload)
 	} else {
-		out, err = h.profileAndStore(ctx, upload.Object, upload.Body)
-		out.FileName = &upload.FileName
+		out, err = h.profileAndStore(ctx, upload.Object, upload.FileName, upload.Body)
 	}
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -116,8 +116,10 @@ func (h importHandlers) UploadImportSource(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// discardSource removes a stored import source. Keyed the same way it was
-// written, so a ref from another workspace names a key this one never wrote.
+// discardSource ends the draft a stored import source opened, which releases
+// the file to the reaper. A source no run holds is deleted at once. Keyed the
+// same way it was written, so a ref from another workspace names a key this
+// one never wrote.
 func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if h.blobs == nil {
 		return fmt.Errorf("this role stores no objects, so it holds no import source: %w", apperrors.ErrConflict)
@@ -131,19 +133,21 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 	if err := h.ownsSource(ctx, ref); err != nil {
 		return err
 	}
-	return h.blobs.Delete(ctx, ref)
+	err := migration.NewRunStore(h.db).DiscardOwnDraft(ctx, ref)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return h.blobs.Delete(ctx, ref)
+	}
+	return err
 }
 
-// profileAndStore is everything the upload does once it HAS the bytes: read the
-// header, propose a mapping, put the file where a run can find it.
+// profileAndStore is everything the upload does once it has the bytes. It reads
+// the header and counts the rows, proposes a mapping, stores the file and opens
+// its run. fileName is empty for pasted text.
 //
-// It is separate from the transport because two doors arrive at this point with
-// bytes in hand. The REST one reads a multipart file. The tool surface takes
-// CSV as text, since an assistant holding a spreadsheet's contents cannot
-// perform a file upload — and asking it to invent a multipart body would be a
-// worse door than none.
+// Two doors share it. The REST one reads a multipart file; the tool surface
+// takes CSV as text, since an assistant cannot perform a file upload.
 func (h importHandlers) profileAndStore(
-	ctx context.Context, object string, body []byte,
+	ctx context.Context, object, fileName string, body []byte,
 ) (crmcontracts.ImportSourceProfile, error) {
 	if err := migration.CheckUTF8(body); err != nil {
 		return crmcontracts.ImportSourceProfile{}, importProblem(err)
@@ -151,6 +155,13 @@ func (h importHandlers) profileAndStore(
 	profile, err := migration.ProfileCSV(bytes.NewReader(body), migration.ProfileRowLimit)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+	}
+	rows, err := migration.CountRecords(bytes.NewReader(body))
+	if err != nil {
+		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+	}
+	if err := refuseTooManyRows(rows); err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
 	}
 	cat, err := readImportCatalog(ctx, h.db, object)
 	if err != nil {
@@ -164,15 +175,18 @@ func (h importHandlers) profileAndStore(
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	obj := crmcontracts.ImportObject(object)
-	return crmcontracts.ImportSourceProfile{
+	suggested := suggestImportMapping(profile, targets, cat)
+	out := crmcontracts.ImportSourceProfile{
 		SourceRef:        key,
-		Object:           &obj,
+		Object:           new(crmcontracts.ImportObject(object)),
+		FileName:         sentText(fileName),
 		Columns:          toContractColumns(profile),
 		RowsProfiled:     profile.RowsProfiled,
-		SuggestedMapping: suggestImportMapping(profile, targets, cat),
+		RowCount:         rows,
+		SuggestedMapping: suggested,
 		Targets:          targets,
-	}, nil
+	}
+	return h.openDraft(ctx, out, migration.RunMapping{Object: object, Fields: suggested, FileName: fileName})
 }
 
 // CreateImportRun validates a mapped file against the estate and writes
@@ -208,9 +222,8 @@ func (h importHandlers) CreateImportRun(w http.ResponseWriter, r *http.Request) 
 	httperr.WriteJSON(w, http.StatusAccepted, staged)
 }
 
-// stageRun is everything createImportRun does once it HAS the request: check
-// the source belongs to this workspace, validate the mapping, dry-run it, and
-// park the result for a human to approve.
+// stageRun is everything createImportRun does once it HAS the request. It
+// checks the source is this workspace's, then tests the mapping on its run.
 //
 // It is separate from the transport because the tool surface arrives here too,
 // and the dry run is the part that must be identical on both doors — G stays
@@ -222,56 +235,11 @@ func (h importHandlers) stageRun(
 	if err := h.ownsSource(ctx, req.SourceRef); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	catalogs, err := readImportCatalogs(ctx, h.db, requestedObjects(req))
+	run, err := h.draftOfSource(ctx, req)
 	if err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	mapping, err := stagedMappingFrom(req, catalogs)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	if err := refuseAuthorFromNonImporter(ctx, mapping); err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	if err := h.contextTagIsApplicable(ctx, mapping.ContextTag); err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-
-	source, skipped, err := bundleSourceFor(h.blobs, mapping, req.SourceRef, h.uploadLimit)
-	if err != nil {
-		return crmcontracts.ImportRun{}, importProblem(err)
-	}
-	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-
-	runs := migration.NewRunStore(h.db)
-	run, err := runs.CreateStagedRun(ctx, migration.CreateStagedRunInput{
-		Connector: string(req.Connector),
-		SourceRef: req.SourceRef,
-		Source:    importSourceProvenance,
-		Mapping:   mapping,
-	})
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-
-	report, err := h.dryRun(ctx, runs, run.ID, source, skipped, &mapping)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	if err := runs.AwaitApproval(ctx, run.ID, report); err != nil {
-		// A run that cannot be parked for a human is a run in `validating`
-		// that neither approve nor resume will ever move.
-		failValidation(ctx, runs, run.ID, err)
-		return crmcontracts.ImportRun{}, err
-	}
-
-	staged, err := runs.GetStaged(ctx, run.ID)
-	if err != nil {
-		return crmcontracts.ImportRun{}, err
-	}
-	return toContractImportRun(staged), nil
+	return h.testRun(ctx, run, run.Version, req)
 }
 
 // GetImportRun reports the lifecycle (IEM-WIRE-6): a failed run carries its
@@ -297,9 +265,18 @@ func (h importHandlers) GetImportRunReport(w http.ResponseWriter, r *http.Reques
 }
 
 // ApproveImportRun commits a validated run (IEM-WIRE-5). It answers with the
-// run as it stands once the commit has been handed off.
+// run as it stands once the commit has been handed off. The body is optional.
 func (h importHandlers) ApproveImportRun(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	out, err := h.commitRun(r.Context(), id)
+	var req crmcontracts.ApproveImportRunRequest
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return
+	}
+	version := 0
+	if req.Version != nil {
+		version = *req.Version
+	}
+	out, err := h.commitRun(r.Context(), id, version)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -307,14 +284,15 @@ func (h importHandlers) ApproveImportRun(w http.ResponseWriter, r *http.Request,
 	httperr.WriteJSON(w, http.StatusAccepted, out)
 }
 
-// commitRun is the approval and the write, without the transport.
+// commitRun is the approval and the write, without the transport. A version
+// other than zero must be the run's.
 //
 // Shared with the tool surface for the reason the whole import seam is shared:
 // this is the call that writes a customer's estate, and two paths that both
 // "commit an approved run" would be two chances to disagree about what an
 // approved run is.
 func (h importHandlers) commitRun(
-	ctx context.Context, id openapi_types.UUID,
+	ctx context.Context, id openapi_types.UUID, version int,
 ) (crmcontracts.ImportRun, error) {
 	run, err := h.stagedFor(ctx, id)
 	if err != nil {
@@ -349,9 +327,9 @@ func (h importHandlers) commitRun(
 	}
 
 	runs := migration.NewRunStore(h.db)
-	approved, err := h.startOrResume(ctx, runs, run)
+	approved, err := h.startOrResume(ctx, runs, run, version)
 	if err != nil {
-		return crmcontracts.ImportRun{}, err
+		return crmcontracts.ImportRun{}, h.sessionRefusal(ctx, err)
 	}
 	// The tags the file names exist before any row that carries them lands,
 	// and only once the approval is accepted.
@@ -377,14 +355,16 @@ func (h importHandlers) commitRun(
 // startOrResume begins an approved run, or continues one that failed part-way.
 //
 // A failed run is resumable by contract (IEM-WIRE-6), and approve is the only
-// door onto the engine, so pressing it again on a failure continues from the
-// checkpoint rather than refusing. Every other state falls through to Approve,
-// which refuses anything but awaiting_approval.
-func (h importHandlers) startOrResume(ctx context.Context, runs *migration.RunStore, run migration.Run) (migration.Run, error) {
+// door onto the engine. Pressing it again on a failure continues from the
+// checkpoint, unless nobody ever approved the run. Every other state falls
+// through to Approve, which refuses anything but awaiting_approval.
+func (h importHandlers) startOrResume(
+	ctx context.Context, runs *migration.RunStore, run migration.Run, version int,
+) (migration.Run, error) {
 	if run.Status == migration.StatusFailed {
-		return runs.ResumeApproved(ctx, run.ID)
+		return runs.ResumeApproved(ctx, run.ID, version)
 	}
-	return runs.Approve(ctx, run.ID)
+	return runs.Approve(ctx, run.ID, version)
 }
 
 // staged is the read every id-bearing operation starts from: the store's own

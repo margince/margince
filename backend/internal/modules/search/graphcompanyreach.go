@@ -42,6 +42,13 @@ var participantEmployerArm = `EXISTS (
 		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
+// participantEntry is where the participant branch starts: every activity an
+// employee of the account is on, for participantEmployerArm to decide.
+var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
+		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
+		    JOIN activity a ON a.id = p0.activity_id
+		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `
+
 // activityReachesCompany is "this activity belongs to the account", for a query
 // that aliases activity as a.
 //
@@ -58,17 +65,19 @@ var participantEmployerArm = `EXISTS (
 // (ADR-0054), so this is its deliberate copy, held against it by
 // TestTheAccountReachWalkIsOneAnswer rather than by anybody remembering.
 //
-// It stays an EXISTS rather than a join against a reach set: EXISTS stops at
-// the first arm that matches, and this is a hot read.
+// It is a membership test against one branch per arm, the shape the activities
+// copy has. Correlated `EXISTS` joined by `OR` leave Postgres walking activity
+// newest-first, so a quiet account costs the whole table.
 //
 // companyPos is the bind position carrying the company id; every arm reads the
 // same one.
 func activityReachesCompany(companyPos int) string {
 	operand := fmt.Sprintf("$%d", companyPos)
-	linked := fmt.Sprintf(`EXISTS (
-		    SELECT 1 %s
-		    WHERE l.activity_id = a.id
-		      AND (l.company_id = %[2]s OR d.company_id = %[2]s OR r.company_id = %[2]s))`,
-		companyArms, operand)
-	return "(" + linked + "\n\t\t    OR " + fmt.Sprintf(participantEmployerArm, operand) + ")"
+	linkBranch := func(column string) string {
+		return fmt.Sprintf("SELECT l.activity_id, %[1]s %[2]s\n\t\t    WHERE %[1]s = %[3]s", column, companyArms, operand)
+	}
+	participantBranch := fmt.Sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
+	return "a.id IN (SELECT reach.id FROM (" + linkBranch("l.company_id") +
+		"\n\t\t    UNION " + linkBranch("d.company_id") + "\n\t\t    UNION " + linkBranch("r.company_id") +
+		"\n\t\t    UNION " + participantBranch + ") reach(id, company_id))"
 }

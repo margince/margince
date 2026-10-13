@@ -1384,19 +1384,16 @@ kinds:
     opts_owner: caller
     cadence: 15m
     reason: >-
-      An import's commit runs after its request has answered, so a process
-      that stops mid-commit leaves the run `running` with nothing left to move
-      it, and approve refuses a running run. This pass fails a running import
-      that has not reached a checkpoint within the commit budget, so approve
-      resumes it from its checkpoint. Every 15 minutes, because the budget it
-      waits out is 30 minutes and a stuck run should not wait much longer than
-      that. One statement over a status filter; on an idle installation it
-      finds nothing.
-    fault:
-      nil_after_logging: >-
-        the warn line is this pass's FINDING, not a failure: it counts the runs
-        it moved to failed, which approve now resumes. A pass that could not
-        read or move them returns that through jobs.Fault.
+      Settles every import run nothing else will move. A commit whose process
+      stopped is still `running`, and approve refuses a running run: past the
+      30-minute commit budget it is failed, so approve resumes it from its
+      checkpoint. A test run whose request ended without recording returns to
+      draft; a draft or report untouched for 7 days is cancelled; and every run
+      that will not read its uploaded file again releases it, so the
+      stored-object reaper deletes the bytes. Every 15 minutes, because the
+      commit budget is 30 minutes and a stuck run should not wait much longer
+      than that. Each rule selects its runs by status, so on an idle
+      installation it finds nothing.
 
   employment_import_sweep:
     role: worker

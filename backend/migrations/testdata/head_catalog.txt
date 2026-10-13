@@ -4655,22 +4655,33 @@ public.import_record_map.object text NOT NULL gen=- def=-
 public.import_record_map.source_system text NOT NULL gen=- def=-
 public.import_record_map_pkey CREATE UNIQUE INDEX import_record_map_pkey ON public.import_record_map USING btree (source_system, object, external_id)
 public.import_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.import_run.approved_at timestamp with time zone gen=- def=-
+public.import_run.approved_by text gen=- def=-
 public.import_run.captured_by text NOT NULL gen=- def=-
 public.import_run.checkpoint integer NOT NULL gen=- def=0
 public.import_run.connector text NOT NULL gen=- def=-
 public.import_run.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.import_run.draft_step text gen=- def=-
 public.import_run.error text gen=- def=-
 public.import_run.id uuid NOT NULL gen=- def=uuidv7()
 public.import_run.import_run_connector_check CHECK ((connector = ANY (ARRAY['csv'::text, 'salesforce'::text])))
+public.import_run.import_run_draft_step_check CHECK ((draft_step = ANY (ARRAY['files'::text, 'map'::text])))
 public.import_run.import_run_pkey PRIMARY KEY (id)
-public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'validating'::text, 'awaiting_approval'::text, 'running'::text, 'complete'::text, 'failed'::text, 'undoing'::text, 'undone'::text])))
+public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'validating'::text, 'awaiting_approval'::text, 'running'::text, 'complete'::text, 'failed'::text, 'undoing'::text, 'undone'::text, 'cancelled'::text])))
 public.import_run.mapping jsonb NOT NULL gen=- def='{}'::jsonb
+public.import_run.profile jsonb gen=- def=-
 public.import_run.report jsonb gen=- def=-
 public.import_run.source text NOT NULL gen=- def=-
+public.import_run.source_name text gen=s def=COALESCE((mapping ->> 'source_name'::text), ''::text)
 public.import_run.source_ref text NOT NULL gen=- def=-
+public.import_run.source_released_at timestamp with time zone gen=- def=-
 public.import_run.status text NOT NULL gen=- def='pending'::text
+public.import_run.superseded_by uuid gen=- def=-
 public.import_run.undo_report jsonb gen=- def=-
 public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.import_run.version integer NOT NULL gen=- def=1
+public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_active_per_source_name ON public.import_run USING btree (source_name) WHERE ((connector = 'csv'::text) AND (source_name <> ''::text) AND (status = ANY (ARRAY['validating'::text, 'awaiting_approval'::text, 'running'::text, 'undoing'::text])))
+public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
 public.intro_request acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.intro_request.archived_at timestamp with time zone gen=- def=-

@@ -30,7 +30,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
@@ -41,6 +40,8 @@ type importColumnDTO struct {
 }
 
 type importProfileDTO struct {
+	RunID            string            `json:"run_id"`
+	RowCount         int               `json:"row_count"`
 	SourceRef        string            `json:"source_ref"`
 	Object           string            `json:"object"`
 	Columns          []importColumnDTO `json:"columns"`
@@ -56,6 +57,11 @@ type importRunDTO struct {
 	Object     string `json:"object"`
 	Checkpoint int    `json:"checkpoint"`
 	Error      string `json:"error"`
+	Version    int    `json:"version"`
+	// Released is the run's source_released.
+	Released     bool   `json:"source_released"`
+	OnBrokenLink string `json:"on_broken_link"`
+	SupersededBy string `json:"superseded_by"`
 }
 
 type importDispositionDTO struct {
@@ -431,15 +437,10 @@ func TestCSVImportPredictsUnchangedRatherThanUpdatingEverything(t *testing.T) {
 	}
 }
 
-// A run whose validation could not finish is recorded as failed. Left in
-// `validating` it would be an orphan: approve refuses it, resume refuses it,
-// and nothing else could ever move it.
-//
-// The two ways staging can fail on the file are asserted together, because they
-// differ in whether a run exists to orphan. A header that cannot be read is
-// caught before the run row is written, so there is nothing to record; a file
-// that breaks PAST its header is only discovered by the walk, which is the case
-// the failed-run record exists for.
+// A test run that could not finish returns its run to the draft, with the
+// reason the importer reads beside the choices they can change. Left in
+// `validating` it would be an orphan nothing could ever move, and `failed`
+// means a commit stopped.
 func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	e, store := setupImportAppWithStore(t)
 
@@ -452,31 +453,24 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 		strings.NewReader(brokenRows), int64(len(brokenRows)), "text/csv"); err != nil {
 		t.Fatalf("replacing the stored upload: %v", err)
 	}
+	var refusal struct {
+		Detail string `json:"detail"`
+	}
 	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": map[string]string{"Email": "email"},
-	}, nil, nil); status != http.StatusUnprocessableEntity {
+	}, nil, &refusal); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a file that breaks past its header → %d, want 422", status)
 	}
-
-	runs := importRuns(t, e)
-	if len(runs) != 1 {
-		t.Fatalf("runs = %+v, want the one this attempt opened", runs)
+	if runs := importRuns(t, e); len(runs) != 1 || runs[0].ID != profile.RunID {
+		t.Fatalf("runs = %+v, want only the upload's own", runs)
 	}
-	if runs[0].Status != "failed" {
-		t.Fatalf("status = %q, want failed — a validating run nothing can move is an orphan", runs[0].Status)
-	}
-	var failed importRunDTO
-	if status := e.Call(t, http.MethodGet, "/v1/imports/"+runs[0].ID, nil, nil, &failed); status != http.StatusOK {
-		t.Fatalf("read the failed run → %d, want 200", status)
-	}
-	if failed.Error != migration.CauseValidationStopped {
-		t.Fatalf("error = %q, want the fixed sentence; the parser's message stays in the log", failed.Error)
+	if draft := readImportRun(t, e, profile.RunID); draft.Status != "pending" || draft.Error != refusal.Detail {
+		t.Fatalf("run = %+v, want pending with the refusal's reason %q", draft, refusal.Detail)
 	}
 
-	// A vanished upload cannot be read at all, so it is refused before a run
-	// row is written. Nothing is left behind to orphan — and a run recorded
-	// against a file that no longer exists could never be resumed anyway.
+	// A vanished upload cannot be read at all, so it is refused before the
+	// test run starts, and its draft is left as it was.
 	second, _ := uploadCSV(t, e, "lead", prospectCSV)
 	if err := store.Delete(context.Background(), second.SourceRef); err != nil {
 		t.Fatalf("removing the stored upload: %v", err)
@@ -487,8 +481,8 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("a vanished upload → %d, want 404", status)
 	}
-	if after := importRuns(t, e); len(after) != 1 {
-		t.Fatalf("runs = %+v, want only the first attempt's: a refusal before staging writes no run", after)
+	if draft := readImportRun(t, e, second.RunID); draft.Status != "pending" || draft.Version != 1 {
+		t.Fatalf("the vanished upload's draft = %+v, want it untouched", draft)
 	}
 }
 

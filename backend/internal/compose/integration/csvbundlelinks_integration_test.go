@@ -326,7 +326,8 @@ func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
 	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
 	ctx := e.DealWriterContext(t)
 	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE import_run SET status = 'failed', checkpoint = 1 WHERE id = $1`, run.ID)
+		_, err := tx.Exec(ctx, `
+			UPDATE import_run SET status = 'failed', checkpoint = 1, approved_at = now() WHERE id = $1`, run.ID)
 		return err
 	}); err != nil {
 		t.Fatalf("failing the run after its company row: %v", err)

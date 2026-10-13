@@ -8,36 +8,19 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// importTestRunRowCap is the most rows one test run reads. A mixed company,
-// contact and lead file was read at about 1,000 rows a second on a developer
-// machine, so the budget reaches near 22,000 rows. The cap keeps a third of the
-// budget for an estate each row is matched against.
+// importTestRunRowCap is the most rows one upload may hold, because one test
+// run reads them all. A mixed company, contact and lead file was read at about
+// 1,000 rows a second on a developer machine, so the budget reaches near
+// 22,000 rows. The cap keeps a third of the budget for an estate each row is
+// matched against.
 const importTestRunRowCap = 15_000
-
-// refuseOversizedTestRun refuses a file the test run cannot finish inside its
-// budget, before the test run reads any row against the estate.
-func refuseOversizedTestRun(ctx context.Context, source migration.Source) error {
-	counts, err := source.Counts(ctx)
-	if err != nil {
-		return importProblem(err)
-	}
-	rows := 0
-	for _, n := range counts {
-		rows += n
-	}
-	if rows <= importTestRunRowCap {
-		return nil
-	}
-	return httperr.Validation("file", "too_many_rows_for_test_run", fmt.Sprintf(
-		"this upload has %d rows; a test run takes at most %d, so split it into smaller files and import each one",
-		rows, importTestRunRowCap))
-}
 
 // dryRun validates every part of a staged run inside the test-run budget. A
 // failure is recorded on the run before it is answered, so the run never stays
@@ -46,10 +29,6 @@ func (h importHandlers) dryRun(
 	ctx context.Context, runs *migration.RunStore, id migration.RunID, source migration.Source,
 	skipped func(object string) []migration.SkippedLine, mapping *migration.RunMapping,
 ) (migration.Report, error) {
-	if err := refuseOversizedTestRun(ctx, source); err != nil {
-		failValidation(ctx, runs, id, err)
-		return migration.Report{}, err
-	}
 	budget := cmp.Or(h.testRunBudget, importTestRunBudget)
 	testCtx, release := context.WithTimeout(ctx, budget)
 	defer release()
@@ -57,13 +36,15 @@ func (h importHandlers) dryRun(
 	if err == nil {
 		return report, nil
 	}
-	failValidation(ctx, runs, id, err)
 	if testCtx.Err() != nil {
-		return migration.Report{}, httperr.Validation("file", "test_run_too_long", fmt.Sprintf(
+		err = httperr.Validation("file", "test_run_too_long", fmt.Sprintf(
 			"the test run did not finish within %d seconds; split the file into smaller files and import each one",
 			int(budget.Seconds())))
+	} else {
+		err = importProblem(err)
 	}
-	return migration.Report{}, importProblem(err)
+	returnToDraft(ctx, runs, id, err)
+	return migration.Report{}, err
 }
 
 // validateParts is the dry run proper. The writers read every row once for
@@ -96,14 +77,24 @@ func validateParts(
 	return report, err
 }
 
-// failValidation records a dry run that could not finish, so the run it was
-// opened for does not sit in `validating`. The dry run may have stopped because
-// the request's deadline passed, so the record cannot borrow that context.
-func failValidation(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
-	slog.ErrorContext(ctx, "import validation stopped", "run", id, "err", cause)
+// returnToDraft ends a test run that stopped, keeping why on the draft so the
+// importer reads it beside the choices they can change. The test may have
+// stopped on the request's deadline, so the record cannot borrow that context.
+func returnToDraft(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
+	slog.ErrorContext(ctx, "import test run stopped", "run", id, "err", cause)
 	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), importRecordStopTimeout)
 	defer release()
-	if err := runs.FailValidation(ctx, id); err != nil {
-		slog.ErrorContext(ctx, "recording a failed import validation", "run", id, "err", err)
+	if err := runs.ReturnToDraft(ctx, id, testStopCause(cause)); err != nil {
+		slog.ErrorContext(ctx, "returning a stopped import test run to its draft", "run", id, "err", err)
 	}
+}
+
+// testStopCause is what a draft says about its last test. A refusal the
+// importer can act on keeps its answer. Anything else may hold a driver
+// message, so it becomes a fixed sentence.
+func testStopCause(err error) string {
+	if fault, ok := httperr.Classify(err); ok && fault.Status < http.StatusInternalServerError {
+		return fault.Detail
+	}
+	return migration.CauseTestRunStopped
 }

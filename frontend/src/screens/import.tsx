@@ -18,13 +18,14 @@ import { UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
+import { handOverUpload } from "./importflow";
 import {
-  handOverUpload,
   useImportFormat,
   useLandedRecords,
   useRecentImports,
   useUndoImport,
-} from "./importflow";
+  wroteNothing,
+} from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import { useMemberNames } from "./membernames";
 import {
@@ -165,6 +166,7 @@ const STATUS_TONE = {
   failed: "danger",
   undoing: "info",
   undone: "default",
+  cancelled: "default",
 } as const satisfies Record<ImportRun["status"], string>;
 
 // The rows a run holds, once a dry run has counted them.
@@ -179,7 +181,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const recent = useRecentImports();
-  const runs = recent.data ?? [];
+  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
   useLandedRecords(runs.map((one) => one.status));
   const names = useMemberNames(runs.map((one) => one.captured_by));
   const undo = useUndoImport();

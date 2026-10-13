@@ -1871,8 +1871,16 @@ func (stubs) GetImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id opena
 	httperr.NotImplemented(w, r, "GetImportRun")
 }
 
+func (stubs) UpdateImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UpdateImportRun")
+}
+
 func (stubs) ApproveImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ApproveImportRun")
+}
+
+func (stubs) CancelImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CancelImportRun")
 }
 
 func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
@@ -1885,6 +1893,10 @@ func (stubs) GetImportRunReport(w nethttp.ResponseWriter, r *nethttp.Request, id
 
 func (stubs) UndoImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "UndoImportRun")
+}
+
+func (stubs) ValidateImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "ValidateImportRun")
 }
 
 func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Request) {

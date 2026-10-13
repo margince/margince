@@ -7,9 +7,9 @@ package migration
 // transitions keep such a run movable when its work dies. A failed run is
 // resumable by approve, and an undoing run by undo.
 //
-// Only `running` and `validating` are ever moved to `failed`. An `undoing` run
-// is already resumable, and failing it would make approve re-run the commit
-// over a half-undone run.
+// Only `running` is ever moved to `failed` here. An `undoing` run is already
+// resumable, and failing it would make approve re-run the commit over a
+// half-undone run.
 
 import (
 	"context"
@@ -51,13 +51,6 @@ func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) erro
 // cutoff is taken on the database clock that wrote updated_at.
 func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
 	return s.failStale(ctx, StatusRunning, idle, cause)
-}
-
-// FailStaleValidating fails every test run opened longer ago than idle. A test
-// run lives inside its request, so one older than that lost its process before
-// it could record how it ended.
-func (s *RunStore) FailStaleValidating(ctx context.Context, idle time.Duration) (int, error) {
-	return s.failStale(ctx, StatusValidating, idle, CauseValidationStopped)
 }
 
 func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duration, cause string) (int, error) {

@@ -346,11 +346,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
 | `merge_records` | 1.00 | 3 | `case33_two_cards_for_one_company` |
 | `archive_record` | 1.00 | 3 | `case33_two_cards_for_one_company` |
+| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
-| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `relink_activities` | 1.00 | 6 | `case48_that_whole_thread_is_filed_wrong`, `case9_filed_in_the_wrong_place` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
@@ -381,11 +381,11 @@ Every run of every case requiring this tool passed, for the model named.
 | `search_context` | 1.00 | 3 | `case6_ask_the_company` |
 | `check_availability` | 1.00 | 3 | `case23_find_us_a_slot` |
 | `relink_activity` | 1.00 | 3 | `case9_filed_in_the_wrong_place` |
+| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `draft_follow_ups_for` | 1.00 | 3 | `case44_chase_what_is_slipping` |
 | `whats_slipping_this_week` | 1.00 | 3 | `case58_quiet_for_three_weeks` |
 | `list_approvals` | 1.00 | 3 | `case8_whats_waiting` |
 | `invite_meeting` | 1.00 | 3 | `case46_get_us_in_a_room` |
-| `commit_import` | 1.00 | 3 | `case10_finish_the_import` |
 | `at_risk_relationships` | 1.00 | 3 | `case49_who_can_introduce_us` |
 | `decide_duplicate` | 1.00 | 3 | `case56_not_the_same` |
 | `merge_tags` | 1.00 | 3 | `case32_two_words_for_one_thing` |

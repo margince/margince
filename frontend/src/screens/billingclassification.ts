@@ -47,11 +47,9 @@ export function billingOf(values: Record<string, unknown>): {
  * The same classification for an UPDATE, where saying nothing needs a word.
  *
  * On a create, a null model is unambiguous: the product is born unclassified.
- * On a patch it is not — the generated field is a pointer, so a JSON null and
- * an omitted field both arrive as nil, and an omitted field has to keep meaning
- * "leave the classification alone". Without `not_specified`, the form's "Not
- * specified" option would be a control that silently does nothing, and a
- * product once classified could never be un-classified.
+ * On a patch, a null model would clear one half of a pair the server stores
+ * together, and it refuses that. `not_specified` un-classifies both halves at
+ * once; the null interval beside it is read as part of the pair.
  */
 export function billingPatchOf(values: Record<string, unknown>): {
   billing_model: "one_time" | "recurring" | "not_specified";
