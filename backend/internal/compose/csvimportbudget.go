@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 const (
@@ -42,6 +43,13 @@ const (
 	// importDraftTTL is how long a draft or a report keeps its uploaded file
 	// while nobody touches it.
 	importDraftTTL = 7 * 24 * time.Hour
+	// importLegacyIdleAfter is when a running run that moved no checkpoint has
+	// no process left working it, by the rule that held before commits sliced.
+	importLegacyIdleAfter = 30 * time.Minute
+	// importTestRunBudget bounds a test run, which answers inside its request.
+	// It ends a quarter before the response deadline, so the refused run is
+	// written while the caller still waits.
+	importTestRunBudget = httpserver.ResponseDeadline * 3 / 4
 	// importRowCap is the most rows one upload may hold, summed over its files,
 	// because one test run reads them all. A mixed company, contact and lead
 	// file was read at about 1,000 rows a second on a developer machine. The

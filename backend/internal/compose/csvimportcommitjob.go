@@ -16,6 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
+// importTagsFailedCause is the error a run carries when the tags its file names
+// could not be created before its first row.
+const importTagsFailedCause = "the import could not create the tags its file names; approve it again to retry"
+
 // importCommitWorker works one slice of an approved run's commit.
 type importCommitWorker struct {
 	slicer importSlicer

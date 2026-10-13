@@ -73,14 +73,14 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 		t.Fatalf("runs = %+v, want only %s", runs, tested.ID)
 	}
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+tested.ID+"/approve", AnyMap{
+	if status := importCall(t, e, tested.ID, "approve", AnyMap{
 		"version": retested.Version - 1,
-	}, nil, nil); status != http.StatusConflict {
+	}, nil); status != http.StatusConflict {
 		t.Fatalf("approving an older version → %d, want 409", status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+tested.ID+"/approve", AnyMap{
+	if status := importCall(t, e, tested.ID, "approve", AnyMap{
 		"version": retested.Version,
-	}, nil, nil); status != http.StatusAccepted {
+	}, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if done := readImportRun(t, e, tested.ID); done.Status != "complete" || !done.Released {
@@ -160,12 +160,12 @@ func testFairRun(t *testing.T, e *apptest.AppEnv) importRunDTO {
 func TestAnUndoClosesAWaitingReportOfItsName(t *testing.T) {
 	e := setupImportApp(t)
 	done := testFairRun(t, e)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+done.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, done.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	waiting := testFairRun(t, e)
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+done.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, done.ID, "undo", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo beside a report of the name → %d, want 202", status)
 	}
 	if got := readImportRun(t, e, waiting.ID); got.Status != "cancelled" || got.SupersededBy != done.ID || !got.Released {
@@ -183,7 +183,7 @@ func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
 			RunID string `json:"run_id"`
 		} `json:"details"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+older.ID+"/approve", nil, nil, &refusal); status != http.StatusConflict ||
+	if status := importCall(t, e, older.ID, "approve", nil, &refusal); status != http.StatusConflict ||
 		refusal.Details.RunID != newer.ID {
 		t.Fatalf("approving the replaced report → %d naming %q, want 409 naming %s", status, refusal.Details.RunID, newer.ID)
 	}

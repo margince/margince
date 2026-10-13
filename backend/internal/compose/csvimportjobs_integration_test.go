@@ -33,12 +33,15 @@ func approvedLeadRun(t *testing.T, e *integration.Env) (importHandlers, ImportCo
 	}); err != nil {
 		t.Fatalf("testing the run: %v", err)
 	}
-	approved, err := migration.NewRunStore(e.DB()).Approve(importAdmin(e), migration.RunID(profile.RunId), 0)
+	approved, err := migration.NewRunStore(e.DB()).Approve(importAdmin(e), migration.RunID(profile.RunId), 0, workedByHand)
 	if err != nil {
 		t.Fatalf("approving the run: %v", err)
 	}
 	return h, ImportCommitArgs{Workspace: e.WS, RunID: approved.ID, Attempt: approved.JobAttempt}
 }
+
+// workedByHand queues nothing: these tests call Work with the attempt's args.
+func workedByHand(context.Context, pgx.Tx, migration.Run) error { return nil }
 
 func commitWorkerFor(e *integration.Env, h importHandlers) *importCommitWorker {
 	return &importCommitWorker{
@@ -103,12 +106,9 @@ func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 		t.Fatalf("committing the run: %v", err)
 	}
 	runs := migration.NewRunStore(e.DB())
-	if err := runs.ClaimUndo(importAdmin(e), args.RunID); err != nil {
-		t.Fatalf("starting the undo: %v", err)
-	}
-	undoing, err := runs.GetStaged(importAdmin(e), args.RunID)
+	undoing, err := runs.ClaimUndo(importAdmin(e), args.RunID, workedByHand)
 	if err != nil {
-		t.Fatalf("reading the run: %v", err)
+		t.Fatalf("starting the undo: %v", err)
 	}
 
 	worker := &importUndoWorker{slicer: commitWorkerFor(e, h).slicer}
@@ -122,5 +122,25 @@ func TestAnUndoSliceReversesTheCommittedRun(t *testing.T) {
 	}
 	if run.Status != migration.StatusUndone || run.UndoReport == nil || run.UndoReport.ReversedCount != 1 {
 		t.Fatalf("run = %s with undo report %+v, want undone with the one lead reversed", run.Status, run.UndoReport)
+	}
+}
+
+func TestAPanicFailsTheRunWithItsCause(t *testing.T) {
+	e := integration.Setup(t)
+	h, args := approvedLeadRun(t, e)
+	slicer := commitWorkerFor(e, h).slicer
+
+	result, err := slicer.slice(context.Background(), args, func(context.Context, importSlice) (bool, error) {
+		panic("a writer's invariant broke")
+	})
+	if err != nil || result.stopped == nil || result.end != importSliceSettled {
+		t.Fatalf("the panicking slice settled %+v, %v; want a stop it logs, and no error for River to retry", result, err)
+	}
+	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), args.RunID)
+	if err != nil {
+		t.Fatalf("reading the run: %v", err)
+	}
+	if run.Status != migration.StatusFailed || run.Error != migration.CauseStopped {
+		t.Fatalf("run = %s %q, want failed with %q and the panic kept to the log", run.Status, run.Error, migration.CauseStopped)
 	}
 }

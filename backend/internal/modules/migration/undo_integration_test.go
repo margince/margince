@@ -58,7 +58,7 @@ func (w *fakeUndoWriters) Reverse(_ context.Context, _ string, nativeID ids.UUID
 func completeCSVRun(ctx context.Context, t *testing.T, s *RunStore) Run {
 	t.Helper()
 	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
-	if _, err := s.Approve(ctx, run.ID, run.Version); err != nil {
+	if _, err := s.Approve(ctx, run.ID, run.Version, queueNothing); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	if err := s.complete(ctx, run.ID, Report{Imported: 2}); err != nil {
@@ -303,7 +303,7 @@ func TestUndoResumesFromAPersistedCheckpointAcrossPages(t *testing.T) {
 	// Simulate a crash after one page (here, one row) already reversed and
 	// its checkpoint persisted: begin the reversal directly, then advance
 	// the cursor past `first` without going through the public loop.
-	if _, _, err := s.beginUndo(ctx, run.ID); err != nil {
+	if _, _, err := s.beginUndo(ctx, run.ID, nil); err != nil {
 		t.Fatalf("beginUndo: %v", err)
 	}
 	partial := UndoReport{ReversedCount: 1}

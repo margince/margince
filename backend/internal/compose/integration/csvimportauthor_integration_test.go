@@ -55,7 +55,7 @@ func importAndApprove(t *testing.T, e *apptest.AppEnv, object, csv string, mappi
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	return run
@@ -118,7 +118,7 @@ func TestAnAuthoredImportStillUndoes(t *testing.T) {
 	run := importAndApprove(t, e, "lead", "Email,Full Name,Author\nlead@authored.example,Lead Authored,Anna Müller\n",
 		map[string]string{"Email": "email", "Full Name": "full_name", "Author": "author"})
 
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
 	var report importReportWithUndoDTO

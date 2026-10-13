@@ -279,7 +279,7 @@ func TestAWritingRunOfTheSameNameIsAConflictNamingIt(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	writing := toReport(ctx, t, s, newDraft(ctx, t, s, "Fair 2026"))
-	if _, err := s.Approve(ctx, writing.ID, writing.Version); err != nil {
+	if _, err := s.Approve(ctx, writing.ID, writing.Version, queueNothing); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	draft := newDraft(ctx, t, s, "Fair 2026")
@@ -305,20 +305,43 @@ func TestResumeRefusesARunThatWasNeverApproved(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("clearing the approval: %v", err)
 	}
-	if _, err := s.ResumeApproved(ctx, unapproved, 0); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ResumeApproved(ctx, unapproved, 0, queueNothing); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("resuming a failed run nobody approved = %v, want a conflict: it never reached a commit", err)
 	}
 
 	approved := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
-	if _, err := s.Approve(ctx, approved.ID, approved.Version); err != nil {
+	if _, err := s.Approve(ctx, approved.ID, approved.Version, queueNothing); err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
 	if err := s.FailRunning(ctx, approved.ID, CauseStopped); err != nil {
 		t.Fatalf("FailRunning: %v", err)
 	}
-	resumed, err := s.ResumeApproved(ctx, approved.ID, 0)
+	resumed, err := s.ResumeApproved(ctx, approved.ID, 0, queueNothing)
 	if err != nil || resumed.Status != StatusRunning || resumed.Error != "" || resumed.ApprovedAt == nil {
 		t.Errorf("resuming an approved failure = (%+v, %v), want running with its approval kept", resumed, err)
+	}
+}
+
+func TestAMoveWhoseJobCannotBeQueuedStaysWhereItWas(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	report := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
+	refused := errors.New("the queue refused the insert")
+	if _, err := s.Approve(ctx, report.ID, report.Version, func(context.Context, pgx.Tx, Run) error { return refused }); !errors.Is(err, refused) {
+		t.Fatalf("Approve with a refusing queue = %v, want the queue's refusal", err)
+	}
+	if got := mustGetStaged(ctx, t, s, report.ID); got.Status != StatusAwaitingApproval || got.JobAttempt != report.JobAttempt {
+		t.Fatalf("after a refused queue the run is %s at attempt %d, want %s at %d", got.Status, got.JobAttempt, StatusAwaitingApproval, report.JobAttempt)
+	}
+
+	var queued Run
+	approved, err := s.Approve(ctx, report.ID, report.Version, func(_ context.Context, _ pgx.Tx, run Run) error { queued = run; return nil })
+	if err != nil {
+		t.Fatalf("Approve: %v", err)
+	}
+	if queued.Status != StatusRunning || queued.JobAttempt != report.JobAttempt+1 || approved.JobAttempt != queued.JobAttempt {
+		t.Fatalf("the queue saw %s at attempt %d and Approve answered attempt %d; want running at %d both times",
+			queued.Status, queued.JobAttempt, approved.JobAttempt, report.JobAttempt+1)
 	}
 }
 

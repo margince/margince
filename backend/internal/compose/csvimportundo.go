@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -30,26 +29,21 @@ func (h importHandlers) UndoImportRun(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 
-	runs := migration.NewRunStore(h.db)
-	writers, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, nil)
+	queue, ws, err := h.jobQueue(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	// Moved to undoing before the answer, so a refused undo is still refused
-	// here; the reversal runs detached and holds its own claim.
-	if err := runs.ClaimUndo(ctx, run.ID); err != nil {
+	// Built before the move, so an undo whose writers cannot be built is
+	// refused while the run is still complete.
+	if _, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, nil); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	undoing, err := migration.NewRunStore(h.db).ClaimUndo(ctx, run.ID, queue.undos(ws))
+	if err != nil {
 		httperr.Write(w, r, h.sessionRefusal(ctx, err))
 		return
 	}
-	h.runDetached(ctx, run.ID, "undo", func(undoCtx context.Context) error {
-		_, err := runs.Undo(undoCtx, run.ID, writers)
-		return err
-	})
-	final, err := runs.GetStaged(ctx, run.ID)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusAccepted, toContractImportRun(final))
+	httperr.WriteJSON(w, http.StatusAccepted, toContractImportRun(undoing))
 }

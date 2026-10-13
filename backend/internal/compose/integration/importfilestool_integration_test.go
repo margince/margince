@@ -9,15 +9,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // Two pasted files land as one run through the seam the upload uses. The
 // contact links to the other file's company by its ref. read_import answers the
 // finished run with both parts and their counts.
 func TestAnAgentImportsTwoLinkedFilesAsOneRun(t *testing.T) {
-	d := newTwoDoorsWith(t, "import-files-tool",
-		[]compose.Option{compose.WithImportCommitRunner(compose.RunImportInline)}, "read", "write")
+	d := newTwoDoorsWith(t, "import-files-tool", nil, "read", "write")
 	var preview struct {
 		Run struct {
 			RunID string `json:"run_id"`
@@ -46,6 +45,7 @@ func TestAnAgentImportsTwoLinkedFilesAsOneRun(t *testing.T) {
 	}
 
 	d.tool(t, "commit_import", map[string]any{"run_id": preview.Run.RunID})
+	importjobtest.Drain(t, d.e)
 	var read struct {
 		State  string            `json:"state"`
 		Parts  []json.RawMessage `json:"parts"`

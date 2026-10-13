@@ -78,7 +78,7 @@ var errProcessDied = errors.New("the worker process died")
 func approvedRun(ctx context.Context, t *testing.T, s *RunStore) Lease {
 	t.Helper()
 	run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))
-	approved, err := s.Approve(ctx, run.ID, run.Version)
+	approved, err := s.Approve(ctx, run.ID, run.Version, queueNothing)
 	if err != nil {
 		t.Fatalf("Approve: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestASupersededAttemptCannotFailTheRun(t *testing.T) {
 	if err := s.FailLease(ctx, first, CauseStopped); err != nil {
 		t.Fatalf("FailLease: %v", err)
 	}
-	resumed, err := s.ResumeApproved(ctx, first.Run, 0)
+	resumed, err := s.ResumeApproved(ctx, first.Run, 0, queueNothing)
 	if err != nil {
 		t.Fatalf("ResumeApproved: %v", err)
 	}
@@ -272,7 +272,7 @@ func TestUndoReversesARowTheImportItselfLinked(t *testing.T) {
 	}
 	markHumanTouched(ctx, t, db, "update", edited)
 
-	if err := s.ClaimUndo(ctx, run.ID); err != nil {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); err != nil {
 		t.Fatalf("ClaimUndo: %v", err)
 	}
 	undoing := mustGetStaged(ctx, t, s, run.ID)
@@ -310,7 +310,7 @@ func TestTwoAttemptsNeverHoldTheRunLockTogether(t *testing.T) {
 		t.Errorf("a second commit slice taking the lock = %v, want ErrRunWritesHeld", err)
 	}
 	// The undo of the run takes the same key as its commit.
-	if err := s.ClaimUndo(ctx, run.ID); !errors.Is(err, ErrRunWritesHeld) || !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := s.ClaimUndo(ctx, run.ID, queueNothing); !errors.Is(err, ErrRunWritesHeld) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("an undo while a commit slice holds the run = %v, want ErrRunWritesHeld, a conflict", err)
 	}
 	release()

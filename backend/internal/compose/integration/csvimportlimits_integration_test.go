@@ -77,7 +77,7 @@ func TestAnOverlongCellInAnyTargetIsReportedByTheTestRunAndNotTheCommit(t *testi
 			}
 			predicted := readImportReport(t, e, run.ID).Disposition
 
-			e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil)
+			importCall(t, e, run.ID, "approve", nil, nil)
 			if after := readRun(t, e, run.ID); after.Status != "complete" {
 				t.Fatalf("the commit ended %q (%s); every cell it refuses must be a problem of the test run", after.Status, after.Error)
 			}

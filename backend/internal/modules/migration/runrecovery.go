@@ -82,18 +82,18 @@ func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duratio
 	return failed, err
 }
 
-// ClaimUndo moves a complete run to undoing, or confirms one already undoing,
-// so the caller can answer before the reversal runs. It refuses while another
-// undo of the run holds the claim, as Undo does.
-func (s *RunStore) ClaimUndo(ctx context.Context, id RunID) error {
+// ClaimUndo moves a complete run to undoing, or opens a new attempt of one
+// already undoing, and queues that attempt's job in the same transaction. It
+// refuses while a slice of the run holds its write lock.
+func (s *RunStore) ClaimUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
+		return Run{}, err
 	}
 	release, err := s.acquireRunWrites(ctx, id)
 	if err != nil {
-		return err
+		return Run{}, err
 	}
 	defer release()
-	_, _, err = s.beginUndo(ctx, id)
-	return err
+	run, _, err := s.beginUndo(ctx, id, enqueue)
+	return run, err
 }

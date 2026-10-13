@@ -61,6 +61,8 @@ type AppEnv struct {
 	wiring func(origin string) []compose.Option
 	// ownPool is set on an env from Reboot, whose pool no other env shares.
 	ownPool bool
+	// importJobs are the import workers over this server's own object store.
+	importJobs compose.ImportJobWorkers
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -209,8 +211,16 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		// of these suites is asking.
 		compose.WithConfirmLinkVault(e.Vault),
 		compose.WithControllerMail(sendInserter),
+		// An approve or an undo queues its job, as the api role does; the
+		// suite works the job through importjobtest.
+		compose.WithImportJobs(sendInserter),
 	}, e.wiring(origin)...)
+	var importJobsErr error
+	allOpts = append(allOpts, compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr))
 	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
+	if importJobsErr != nil {
+		t.Fatalf("building the import workers: %v", importJobsErr)
+	}
 	ts.StartTLS()
 	t.Cleanup(ts.Close)
 
@@ -421,6 +431,12 @@ func applyRiverSchema(t *testing.T) {
 	if err := testdb.EnsureRiverSchema(ctx, ownerPool, jobs.Migrate); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// ImportJobs answers the import workers over the object store this server
+// holds, as the worker role registers them.
+func (e *AppEnv) ImportJobs() compose.ImportJobWorkers {
+	return e.importJobs
 }
 
 // DB is the app harness's installation-bound pool.

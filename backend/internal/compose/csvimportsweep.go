@@ -55,7 +55,7 @@ type importSweepRule struct {
 
 var importSweepRules = []importSweepRule{
 	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
-		return runs.FailStaleRunning(ctx, importCommitTimeout, staleImportCause)
+		return runs.FailStaleRunning(ctx, importLegacyIdleAfter, staleImportCause)
 	}},
 	{"test_runs_returned", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.ReturnStaleTestRuns(ctx, staleValidationAfter)

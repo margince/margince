@@ -34,9 +34,10 @@ func sweepImportRuns(t *testing.T, e *apptest.AppEnv) {
 }
 
 func TestTheSweepFailsARunWhoseProcessStoppedAndApproveResumesIt(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	// Its commit job is never worked, as when the process that held it stopped.
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
@@ -57,7 +58,6 @@ func TestTheSweepFailsARunWhoseProcessStoppedAndApproveResumesIt(t *testing.T) {
 		t.Fatalf("after the sweep: %q %q, want failed saying the server restarted", failed.Status, failed.Error)
 	}
 
-	runner.inline = true
 	approveAndRead(t, e, run.ID)
 	if n := leadCount(t, e); n != 3 {
 		t.Fatalf("%d leads after the resumed commit, want 3", n)
@@ -65,13 +65,11 @@ func TestTheSweepFailsARunWhoseProcessStoppedAndApproveResumesIt(t *testing.T) {
 }
 
 func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
-	runner.inline = true
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
 
-	runner.inline = false
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
@@ -83,7 +81,7 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 }
 
 func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
-	e, _ := setupImportAppHeld(t)
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if _, err := e.Owner.Exec(t.Context(),
@@ -104,8 +102,7 @@ func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
 }
 
 func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
-	runner.inline = true
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
@@ -132,7 +129,7 @@ func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
 	if polled := readRun(t, e, run.ID); polled.Status != "complete" {
 		t.Fatalf("releasing the source moved the run to %q, want it complete", polled.Status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo of a released run → %d, want 202: undo reads the map, never the file", status)
 	}
 	if polled := readRun(t, e, run.ID); polled.Status != "undone" {

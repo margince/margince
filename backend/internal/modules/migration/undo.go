@@ -104,7 +104,8 @@ func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoRepor
 	}
 	defer release()
 
-	run, rep, err := s.beginUndo(ctx, id)
+	// Undo reverses the rows itself, so it queues no job.
+	run, rep, err := s.beginUndo(ctx, id, nil)
 	if err != nil {
 		return UndoReport{}, err
 	}
@@ -229,7 +230,7 @@ func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), erro
 // returning the run as it stood and the report to carry forward: fresh
 // when starting, or a resumed attempt's own progress when continuing one
 // `undoing` already.
-func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, error) {
+func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, UndoReport, error) {
 	var run Run
 	var rep UndoReport
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -259,26 +260,10 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 			return fmt.Errorf("import run %s is a %s run, and undo is built for csv only: %w", id, run.Connector, apperrors.ErrConflict)
 		}
 		before := run.Status
-		switch run.Status {
-		case StatusComplete:
-			if err := supersedeName(ctx, tx, id, sourceName, CauseReplacedByUndo); err != nil {
-				return err
-			}
-			updated, err := updatesInRun(reportRaw)
-			if err != nil {
-				return fmt.Errorf("reading import run %s's own report: %w", id, err)
-			}
-			rep = UndoReport{UpdatesNotReversed: updated}
-			run.Checkpoint = 0
-		case StatusUndoing:
-			if len(undoReportRaw) == 0 {
-				return fmt.Errorf("import run %s is undoing with no recorded progress: %w", id, apperrors.ErrConflict)
-			}
-			if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
-				return fmt.Errorf("decoding import run %s undo progress: %w", id, err)
-			}
-		default:
-			return fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", id, run.Status, apperrors.ErrConflict)
+		var err error
+		rep, err = undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
+		if err != nil {
+			return err
 		}
 		encoded, err := json.Marshal(rep)
 		if err != nil {
@@ -296,8 +281,14 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7()); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing})
+		if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
+			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing}); err != nil {
+			return err
+		}
+		if enqueue == nil {
+			return nil
+		}
+		run, err = queueMoved(ctx, tx, id, enqueue)
 		return err
 	})
 	if err != nil {
@@ -305,6 +296,34 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 	}
 	run.Status = StatusUndoing
 	return run, rep, nil
+}
+
+// undoStartReport is the report an undo of run carries forward: fresh for a
+// complete run, whose name it supersedes, or an undoing run's own progress.
+func undoStartReport(ctx context.Context, tx pgx.Tx, run *Run, reportRaw, undoReportRaw []byte, sourceName string) (UndoReport, error) {
+	var rep UndoReport
+	switch run.Status {
+	case StatusComplete:
+		if err := supersedeName(ctx, tx, run.ID, sourceName, CauseReplacedByUndo); err != nil {
+			return UndoReport{}, err
+		}
+		updated, err := updatesInRun(reportRaw)
+		if err != nil {
+			return UndoReport{}, fmt.Errorf("reading import run %s's own report: %w", run.ID, err)
+		}
+		run.Checkpoint = 0
+		return UndoReport{UpdatesNotReversed: updated}, nil
+	case StatusUndoing:
+		if len(undoReportRaw) == 0 {
+			return UndoReport{}, fmt.Errorf("import run %s is undoing with no recorded progress: %w", run.ID, apperrors.ErrConflict)
+		}
+		if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
+			return UndoReport{}, fmt.Errorf("decoding import run %s undo progress: %w", run.ID, err)
+		}
+		return rep, nil
+	default:
+		return UndoReport{}, fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", run.ID, run.Status, apperrors.ErrConflict)
+	}
 }
 
 // mapRowsForRun reads one page of the rows this run created, past the prefix

@@ -109,6 +109,20 @@ func (e importEnqueuer) enqueue(ctx context.Context, tx pgx.Tx, args importJobAr
 	return nil
 }
 
+// commits queues the commit job of the attempt a move into running opened.
+func (e *importEnqueuer) commits(ws ids.UUID) migration.Enqueue {
+	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
+		return e.enqueue(ctx, tx, ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+	}
+}
+
+// undos queues the undo job of the attempt a move into undoing opened.
+func (e *importEnqueuer) undos(ws ids.UUID) migration.Enqueue {
+	return func(ctx context.Context, tx pgx.Tx, run migration.Run) error {
+		return e.enqueue(ctx, tx, ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt})
+	}
+}
+
 // importSliceEnd is how one slice ended, which Work turns into River's answer.
 type importSliceEnd int
 

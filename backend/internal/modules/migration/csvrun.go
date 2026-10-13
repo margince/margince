@@ -110,7 +110,7 @@ func (s *RunStore) AwaitApproval(ctx context.Context, id RunID, report Report) e
 // a run that is already running, complete or failed means the approver is
 // acting on a state that is not the one they judged. The conflict says so
 // rather than starting a second pass over the same file.
-func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, error) {
+func (s *RunStore) Approve(ctx context.Context, id RunID, version int, enqueue Enqueue) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
@@ -118,8 +118,9 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 	if err != nil {
 		return Run{}, err
 	}
+	var run Run
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveApprove, runChange{
+		err := stageTransition(ctx, tx, id, moveApprove, runChange{
 			version: version,
 			queue:   true,
 			values:  []runValue{{"approved_by", approver}},
@@ -127,11 +128,29 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 			literals: []string{"approved_at = now()", "profile = NULL"},
 			after:    map[string]any{"approved_by": approver},
 		})
+		if err != nil {
+			return err
+		}
+		run, err = queueMoved(ctx, tx, id, enqueue)
+		return err
 	})
+	return run, err
+}
+
+// Enqueue inserts the job of the attempt a move just opened, on the move's own
+// transaction, so a run is never queued without its job.
+type Enqueue func(ctx context.Context, tx pgx.Tx, run Run) error
+
+// queueMoved reads the run a move just queued and hands it to enqueue.
+func queueMoved(ctx context.Context, tx pgx.Tx, id RunID, enqueue Enqueue) (Run, error) {
+	run, err := readStaged(ctx, tx, id)
 	if err != nil {
 		return Run{}, err
 	}
-	return s.GetStaged(ctx, id)
+	if err := enqueue(ctx, tx, run); err != nil {
+		return Run{}, fmt.Errorf("queueing import run %s attempt %d: %w", id, run.JobAttempt, err)
+	}
+	return run, nil
 }
 
 // ResumeApproved continues a run that failed part-way, from its checkpoint.
@@ -141,19 +160,22 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 // abandoned and re-uploaded. Only an approved run resumes: a failed run
 // nobody approved never reached a commit. A version other than zero must equal
 // the run's, as it must for Approve.
-func (s *RunStore) ResumeApproved(ctx context.Context, id RunID, version int) (Run, error) {
+func (s *RunStore) ResumeApproved(ctx context.Context, id RunID, version int, enqueue Enqueue) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
 	}
+	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveResume, runChange{
+		err := stageTransition(ctx, tx, id, moveResume, runChange{
 			version: version, approved: true, queue: true, literals: []string{"error = NULL"},
 		})
+		if err != nil {
+			return err
+		}
+		run, err = queueMoved(ctx, tx, id, enqueue)
+		return err
 	})
-	if err != nil {
-		return Run{}, err
-	}
-	return s.GetStaged(ctx, id)
+	return run, err
 }
 
 // GetStaged reads one run with its mapping and report — everything the status

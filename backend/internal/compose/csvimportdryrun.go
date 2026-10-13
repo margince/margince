@@ -75,7 +75,7 @@ func validateParts(
 // stopped on the request's deadline, so the record cannot borrow that context.
 func returnToDraft(ctx context.Context, runs *migration.RunStore, id migration.RunID, cause error) {
 	slog.ErrorContext(ctx, "import test run stopped", "run", id, "err", cause)
-	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), importRecordStopTimeout)
+	ctx, release := context.WithTimeout(context.WithoutCancel(ctx), importStopFlushTimeout)
 	defer release()
 	if err := runs.ReturnToDraft(ctx, id, testStopCause(cause)); err != nil {
 		slog.ErrorContext(ctx, "returning a stopped import test run to its draft", "run", id, "err", err)

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -75,8 +77,8 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"RunOfSource", func() error { _, err := s.RunOfSource(ctx, "x"); return err }},
 		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
-		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0); return err }},
-		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0); return err }},
+		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0, queueNothing); return err }},
+		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0, queueNothing); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
 		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {
@@ -93,7 +95,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
-		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
+		{"ClaimUndo", func() error { _, err := s.ClaimUndo(ctx, runID, queueNothing); return err }},
 		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
 		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
@@ -238,6 +240,9 @@ type fakeRuns struct {
 	// checkpoints records the cursors the loop advanced to, in order.
 	checkpoints []int
 }
+
+// queueNothing stands in for the job queue, which lives in compose.
+func queueNothing(context.Context, pgx.Tx, Run) error { return nil }
 
 func newFakeRuns() *fakeRuns {
 	return &fakeRuns{run: Run{Status: StatusRunning}}

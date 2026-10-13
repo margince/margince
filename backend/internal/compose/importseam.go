@@ -230,9 +230,6 @@ func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.Impor
 	if err := i.ready(); err != nil {
 		return crmcontracts.ImportRun{}, err
 	}
-	if i.door().queue == nil {
-		return crmcontracts.ImportRun{}, errNoImportQueue
-	}
 	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
 
