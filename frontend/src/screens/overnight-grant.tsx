@@ -5,12 +5,6 @@ import type { components } from "@composition/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
-import {
-  readStored,
-  removeStored,
-  STORAGE_KEYS,
-  writeStored,
-} from "../lib/storage";
 import { Checkbox } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -18,6 +12,12 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../lib/storage";
 import "./overnight-grant.css";
 import { problemMessageOf, QueryGate, unwrap } from "./common";
 

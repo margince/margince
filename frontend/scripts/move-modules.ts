@@ -174,21 +174,32 @@ function main(argv: readonly string[]) {
   const moves = planMoves(pairs, (dir) => filesMatching(dir, /./), isDirectory);
   const isFile = (path: string) => existsSync(path) && statSync(path).isFile();
 
-  let rewritten = 0;
+  const rewritten: string[] = [];
   for (const file of corpus()) {
     const text = readFileSync(file, "utf8");
     const next = rewriteImports(file, text, moves, isFile);
     if (next !== text) {
       writeFileSync(file, next);
-      rewritten += 1;
+      rewritten.push(moves.get(file) ?? file);
     }
   }
   for (const [from, to] of moves) {
     execFileSync("mkdir", ["-p", dirname(to)]);
     execFileSync("git", ["mv", from, to], { cwd: frontendDir });
   }
+  // A new path can sort differently, so the edited files are re-sorted the way
+  // fe-lint wants them.
+  const sortable = rewritten.filter((file) =>
+    file.startsWith(join(frontendDir, "src")),
+  );
+  if (sortable.length > 0) {
+    execFileSync("pnpm", ["exec", "biome", "check", "--write", ...sortable], {
+      cwd: frontendDir,
+      stdio: "inherit",
+    });
+  }
   process.stdout.write(
-    `moved ${moves.size} file(s), rewrote imports in ${rewritten} file(s)\n`,
+    `moved ${moves.size} file(s), rewrote imports in ${rewritten.length} file(s)\n`,
   );
 
   const repoDir = join(frontendDir, "..");

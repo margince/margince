@@ -8,9 +8,9 @@ import {
   useMemo,
   useState,
 } from "react";
-import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { pluralCategory } from "../format/plural";
 import { useDateTimePreferences } from "../format/preferences";
+import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
 import {

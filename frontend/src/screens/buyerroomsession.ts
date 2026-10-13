@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { useT } from "../i18n";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
 } from "../lib/storage";
-import type { useT } from "../i18n";
 import { throwProblem } from "./common";
 
 // The buyer's session, as this tab holds it: the token the credential exchange

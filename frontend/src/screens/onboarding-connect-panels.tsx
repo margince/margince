@@ -8,15 +8,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
+import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
 } from "../lib/storage";
-import { Badge, Button, Disclosure, Field } from "../design-system/atoms";
-import { useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { CaptureNotice } from "./capture-notice";
 import { problemMessageOf, unwrap } from "./common";
 import { ConnectPostureStep } from "./connect-posture";
