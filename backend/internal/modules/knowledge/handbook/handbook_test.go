@@ -150,12 +150,15 @@ func TestEveryEmbeddedPageOpensWithAHeading(t *testing.T) {
 // page's heading. A page opening with either is still named by its H1.
 func TestFirstHeadingSkipsFencesAndComments(t *testing.T) {
 	for name, tc := range map[string]struct{ page, want string }{
-		"a plain H1":                 {"<!-- prose:plain -->\n# Settings\n", "Settings"},
-		"a fence before the H1":      {"```bash\n# not a title\n```\n# Real\n", "Real"},
-		"a tilde fence":              {"~~~\n# code\n~~~\n# Real\n", "Real"},
-		"a multi-line comment":       {"<!--\n# a note\n-->\n# Real\n", "Real"},
-		"a comment closing mid-line": {"<!-- a\n# note --> x\n# Real\n", "Real"},
-		"an H2 only":                 {"## Section\n", ""},
+		"a plain H1":                           {"<!-- prose:plain -->\n# Settings\n", "Settings"},
+		"a fence before the H1":                {"```bash\n# not a title\n```\n# Real\n", "Real"},
+		"a tilde fence":                        {"~~~\n# code\n~~~\n# Real\n", "Real"},
+		"a multi-line comment":                 {"<!--\n# a note\n-->\n# Real\n", "Real"},
+		"a comment closing mid-line":           {"<!-- a\n# note --> x\n# Real\n", "Real"},
+		"a tilde line inside a backtick fence": {"```\n~~~\n# code\n```\n# Real\n", "Real"},
+		"a shorter closing fence":              {"````\n```\n# code\n````\n# Real\n", "Real"},
+		"a closing fence with text after it":   {"```\n``` x\n# code\n```\n# Real\n", "Real"},
+		"an H2 only":                           {"## Section\n", ""},
 	} {
 		if got := firstHeading(tc.page); got != tc.want {
 			t.Errorf("%s: firstHeading = %q, want %q", name, got, tc.want)

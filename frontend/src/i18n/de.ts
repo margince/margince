@@ -6035,7 +6035,7 @@ export const de = {
   "jobs.kind.comms_scheduled_send_recovery":
     "Wiederherstellung geplanter Sendungen",
   "jobs.kind.comms_send_email": "E-Mail-Versand",
-  "jobs.kind.company_name_promotion": "Firmennamen aus Signaturen",
+  "jobs.kind.company_name_promotion": "Unternehmensnamen aus Signaturen",
   "jobs.kind.deal_scout": "Deal Scout",
   "jobs.kind.document_extract": "Dokumentauswertung",
   "jobs.kind.embed_drift_sweep": "Nachholen des Suchindex",
