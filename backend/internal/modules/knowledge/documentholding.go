@@ -32,14 +32,13 @@ func discardFailedDocument(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	var filename, checksum string
 	switch err := tx.QueryRow(ctx,
 		`DELETE FROM knowledge_document
-		  WHERE id = $1 AND archived_at IS NULL AND ingest_status = 'failed'
+		  WHERE id = $1 AND archived_at IS NULL AND ingest_status = 'failed' AND managed_source IS NULL
 		  RETURNING filename, checksum`, id).Scan(&filename, &checksum); {
 	case err == nil:
 	case errors.Is(err, pgx.ErrNoRows):
-		// A concurrent upload of the same bytes got here first, so there is
-		// nothing to discard. The insert that follows meets its live row and
-		// answers already-filed, where refusing here would answer not-found
-		// for an upload.
+		// A concurrent upload of the same bytes got here first, or the row ships
+		// with Margince and only the boot replaces it. The insert that follows
+		// meets the live row and answers already-filed.
 		return nil
 	default:
 		return fmt.Errorf("discard the failed document to replace it: %w", err)

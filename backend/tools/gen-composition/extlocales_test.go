@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -182,5 +184,44 @@ func TestComposedLocalesMatchTheCatalogue(t *testing.T) {
 	}
 	if got, want := strings.Count(declared, `"`)/2, len(composedLocales); got != want {
 		t.Errorf("the catalogue ships %d locale(s) and composedLocales lists %d — a unit would be refused a locale the product has, or allowed one it does not", got, want)
+	}
+}
+
+// A unit named `access` derives extAccess., which core already owns. Core wins
+// a lookup, so the unit's title would read "Extensions and access".
+func TestMergeUnitLocalesRefusesACoreCopyNamespace(t *testing.T) {
+	_, err := mergeUnitLocales([]unitLocale{
+		{Unit: "access", Locale: "en", Keys: map[string]string{"extAccess.title": "Access"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "core catalogue's own") {
+		t.Fatalf("err = %v, want the core-namespace refusal", err)
+	}
+}
+
+// coreNamespace is a catalogue key's prefix in the shape localeKeyPrefix emits.
+var coreNamespace = regexp.MustCompile(`(?m)^\s*"(ext[A-Z][A-Za-z0-9_]*\.)`)
+
+// The refusal list is en.ts's own ext<Camel>. prefixes, in both directions: a
+// core namespace missing here lets a unit shadow it, and a stale one refuses a
+// name for nothing.
+func TestCoreCopyNamespacesMatchTheCatalogue(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "frontend/src/i18n/en.ts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []string
+	for _, m := range coreNamespace.FindAllStringSubmatch(string(raw), -1) {
+		if !slices.Contains(found, m[1]) {
+			found = append(found, m[1])
+		}
+	}
+	if len(found) == 0 {
+		t.Fatal("en.ts yielded no ext<Camel>. keys; this gate would compare nothing")
+	}
+	slices.Sort(found)
+	want := slices.Clone(coreCopyNamespaces)
+	slices.Sort(want)
+	if !slices.Equal(found, want) {
+		t.Fatalf("en.ts owns %v and coreCopyNamespaces lists %v", found, want)
 	}
 }

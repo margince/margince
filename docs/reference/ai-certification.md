@@ -35,10 +35,10 @@ setup instead, go to [Can I use this preset?](#can-i-use-this-preset).
 | Family | Models we tested | Can I trust it? | In plain words |
 |---|---|---|---|
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.5-flash` | 🟡 Mostly | Ready for 38 of the 47 features we tested; 8 more work if someone looks over the result; 1 not reliable yet. |
+| GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready for 33 of the 46 features we tested; 11 more work if someone looks over the result; 2 not reliable yet. |
 | Gemma | `gemma4:12b`, `gemma-4-26b-a4b-it`, `gemma-4-31b-it` | 🟡 Mostly | Ready for 27 of the 46 features we tested; 16 more work if someone looks over the result; 3 not reliable yet. |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready for 25 of the 46 features we tested; 13 more work if someone looks over the result; 8 not reliable yet. |
 | Qwen | `Qwen3-14B-4bit` | 🔴 Not yet | Ready for 9 of the 45 features we tested; 8 more work if someone looks over the result; 28 not reliable yet. |
-| GPT | `gpt-oss-120b` | 🔴 Not yet | Ready for 16 of the 44 features we tested; 17 more work if someone looks over the result; 11 not reliable yet. |
 
 A family rated **Yes** is ready for every feature we tested. One rated **Mostly** has at least 80 in every 100 tested features ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it on under half of the features. A family is judged on its best model for each feature, and only on the models a preset uses, each on the features that preset sends to it.
 
@@ -47,7 +47,7 @@ A family rated **Yes** is ready for every feature we tested. One rated **Mostly*
 A [preset](../../config/presets/README.md) picks which AI model runs each feature, so the same
 feature can be ready under one preset and not under another.
 
-25 of the 203 grades below were measured on an older version of the product and
+25 of the 232 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
@@ -58,6 +58,7 @@ are waiting to be re-checked; each is marked below.
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 8 | 5 | 15 | 2 | 8 of 30 features ready (8 re-checks pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 15 | 8 | 6 | 1 | 15 of 30 features ready (1 re-check pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 12 | 2 | 15 | 1 | 12 of 30 features ready (1 re-check pending) |
+| [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 5 | 3 | 1 | 21 of 30 features ready |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 8 | 1 | 19 | 2 | 8 of 30 features ready (12 re-checks pending) |
 
 **What the grades mean**
@@ -589,6 +590,91 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
+### `openrouter_openai`
+
+Your data goes to: global cloud. 21 of 30 features ready. Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
+
+| Feature | Can I use it? | In plain words |
+|---|---|---|
+| Agent reasoning loop <sub>`agent_loop`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right in 32 of 39 tries |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (12 of 12) |
+| Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
+| Did our reply settle it <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) |
+| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium</sub> | Not measured yet |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 56 of 60 tries; one test case wrong too often; answer quality below the bar in one test case |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ❌ Not reliable yet</sub> | Right in 35 of 39 tries; answer quality below the bar in one test case |
+| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (9 of 9) |
+| Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (33 of 33) |
+| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
+| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (12 of 12) |
+| Record summary <sub>`summarize`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right in 51 of 54 tries |
+| Reply drafting <sub>`draft_reply`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right in 38 of 39 tries |
+| Signal extraction <sub>`signal_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right in 28 of 30 tries |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (12 of 12) |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right every time (27 of 27) |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) |
+| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care</sub> | Right in 35 of 36 tries; answer quality below the bar in one test case |
+| Website deep read <sub>`site_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (36 of 36); answer quality below the bar in 2 test cases |
+| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
+
+<details>
+<summary>Which models this preset uses</summary>
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `openai/gpt-6-luna` |
+| `cheap_cloud` | `openai_compatible` | `openai/gpt-6-luna` |
+| `premium` | `openai_compatible` | `openai/gpt-6-sol` |
+| `frontier` | `openai_compatible` | `openai/gpt-6.1-sol` |
+
+Each feature walks its own ladder of tiers until it reaches one this preset
+binds; this is the rung and the model it lands on, and the record behind its grade.
+
+| Task | Served on | Model | Grade | Measurement |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+| `brief_ranking` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `capture_classify` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | current |
+| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | current |
+| `capture_counterparty_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | current |
+| `cert_judge` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `cold_start` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+| `corpus_ask` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `deal_health` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `document_extract` | `premium` | `openai/gpt-6-sol` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `enrich` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `growth_fit` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `nl_search` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `offer_draft` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `owed_verdict` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `propose_roles` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `rate_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `request_settlement` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `signal_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `site_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `site_fact_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `site_triage` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `summarize` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `transcript_propose` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+| `voice_build` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+| `weekly_learnings` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `weekly_review` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+
+</details>
+
 ### `qwen3_local_vllm`
 
 Your data goes to: your own servers. 8 of 30 features ready (12 re-checks pending). Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
@@ -844,6 +930,72 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 </details>
 
+### GPT
+
+🟡 Mostly: Ready for 33 of the 46 features we tested; 11 more work if someone looks over the result; 2 not reliable yet.
+
+1 of these results were measured on an older version of the product and are re-check pending.
+
+| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
+|---|---|---:|---:|---:|---:|---|
+| `openai/gpt-6-luna` | `cloud_frontier` | 44 | 24 | 16 | 4 | 0.95 |
+| `openai/gpt-6-sol` | `cloud_frontier` | 40 | 25 | 13 | 2 | 0.96 |
+| `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 16 | 17 | 11 | 0.91 |
+
+<details>
+<summary>Best model for each feature</summary>
+
+| Feature | Best model in the family | Grade | Right in |
+|---|---|---|---|
+| [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
+| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 48 of 54 tries |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ❌ Not reliable yet | 56 of 60 tries |
+| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`cold_start/acts`](#cold_startacts) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 18 of 18 tries |
+| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 9 of 9 tries |
+| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 12 of 12 tries |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 33 of 33 tries |
+| [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 18 of 18 tries |
+| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 18 of 18 tries |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 28 of 30 tries |
+| [`site_extract/profile`](#site_extractprofile) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 15 of 15 tries |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 27 of 27 tries |
+| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 12 of 12 tries |
+| [`summarize/company_brief`](#summarizecompany_brief) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 17 of 18 tries |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 37 of 39 tries |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ⚠️ Usable with care | 9 of 9 tries |
+| [`voice_build/derive`](#voice_buildderive) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ❌ Not reliable yet | 9 of 9 tries |
+| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | ✅ Ready | 18 of 18 tries |
+
+</details>
+
 ### Gemma
 
 🟡 Mostly: Ready for 27 of the 46 features we tested; 16 more work if someone looks over the result; 3 not reliable yet.
@@ -1040,68 +1192,6 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 </details>
 
-### GPT
-
-🔴 Not yet: Ready for 16 of the 44 features we tested; 17 more work if someone looks over the result; 11 not reliable yet.
-
-1 of these results were measured on an older version of the product and are re-check pending.
-
-| Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
-|---|---|---:|---:|---:|---:|---|
-| `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 16 | 17 | 11 | 0.91 |
-
-<details>
-<summary>Best model for each feature</summary>
-
-| Feature | Best model in the family | Grade | Right in |
-|---|---|---|---|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
-| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 48 of 54 tries |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 49 of 63 tries |
-| [`cert_judge/judge`](#cert_judgejudge) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`cold_start/acts`](#cold_startacts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 20 of 21 tries |
-| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 9 of 9 tries |
-| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 16 of 18 tries |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 21 of 21 tries |
-| [`draft_reply/account`](#draft_replyaccount) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
-| [`draft_reply/contact`](#draft_replycontact) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 6 of 6 tries |
-| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 9 of 9 tries |
-| [`draft_reply/intro`](#draft_replyintro) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 18 of 18 tries |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 18 of 18 tries |
-| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 27 of 27 tries |
-| [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 12 of 12 tries |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 33 of 33 tries |
-| [`offer_draft/draft`](#offer_draftdraft) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 44 of 45 tries |
-| [`owed_verdict/owed`](#owed_verdictowed) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 18 of 18 tries |
-| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 20 of 27 tries |
-| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 18 of 18 tries |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 30 of 39 tries |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 15 of 15 tries |
-| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 65 of 81 tries |
-| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 16 of 18 tries |
-| [`summarize/company_brief`](#summarizecompany_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 12 of 12 tries |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 11 of 18 tries |
-| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 4 of 9 tries |
-| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 6 of 9 tries |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 37 of 39 tries |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 3 of 3 tries |
-| [`voice_build/derive`](#voice_buildderive) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 8 of 9 tries |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ❌ Not reliable yet | 6 of 9 tries |
-| [`voice_build/eval_scores`](#voice_buildeval_scores) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 3 of 3 tries |
-| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 12 of 12 tries |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 45 of 45 tries |
-
-</details>
-
 </details>
 
 <details>
@@ -1112,13 +1202,13 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 47 |
-| … best state `current` | 46 |
+| … best state `current` | 47 |
 | … best state `partial` | 0 |
-| … best state `stale` | 1 |
+| … best state `stale` | 0 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 178 |
-| Committed records | 254 |
-| Bindings measured | 14 |
+| Committed records | 304 |
+| Bindings measured | 16 |
 
 #### Why the stale records went stale
 
@@ -1186,53 +1276,53 @@ Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 9 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 10 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 10 |
-| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 10 |
-| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 8 |
-| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 14 | 6 |
-| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 19 | 6 |
-| [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 10 |
-| [`cold_start/acts`](#cold_startacts) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 5 | 9 |
-| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 9 |
-| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 9 |
-| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 4 | 9 |
-| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 8 |
-| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 9 |
+| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 11 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
+| [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 12 |
+| [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 9 |
+| [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 14 | 7 |
+| [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 19 | 7 |
+| [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 12 |
+| [`cold_start/acts`](#cold_startacts) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 5 | 11 |
+| [`cold_start/company_message`](#cold_startcompany_message) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
+| [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
+| [`cold_start/sitereadmessage`](#cold_startsitereadmessage) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 4 | 11 |
+| [`corpus_ask/corpus_ask`](#corpus_askcorpus_ask) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 9 |
+| [`deal_health/deal_status`](#deal_healthdeal_status) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
 | [`document_extract/fields`](#document_extractfields) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 4 | 1 |
-| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
-| [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
-| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
-| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 11 |
-| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
-| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 4 | 11 |
-| [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 8 |
-| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 9 |
-| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 11 | 7 |
-| [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 9 |
-| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 8 |
-| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 3 | 9 |
-| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 10 |
-| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 8 |
-| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 8 | 9 |
-| [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 7 |
-| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 9 |
-| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 5 | 9 |
-| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 9 |
-| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 9 |
-| [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 9 |
-| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 9 |
-| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 9 |
-| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 9 |
-| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 9 |
-| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 9 |
-| [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 9 |
-| [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 9 |
-| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 9 |
-| [`voice_build/eval_scores`](#voice_buildeval_scores) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 9 |
-| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 9 |
-| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 9 |
+| [`draft_reply/account`](#draft_replyaccount) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
+| [`draft_reply/contact`](#draft_replycontact) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
+| [`draft_reply/first`](#draft_replyfirst) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
+| [`draft_reply/intro`](#draft_replyintro) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
+| [`draft_reply/intro_note`](#draft_replyintro_note) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 13 |
+| [`draft_reply/reply`](#draft_replyreply) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 4 | 13 |
+| [`enrich/signature`](#enrichsignature) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 9 |
+| [`growth_fit/growth_fit`](#growth_fitgrowth_fit) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 11 |
+| [`nl_search/filter_propose`](#nl_searchfilter_propose) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 11 | 9 |
+| [`offer_draft/draft`](#offer_draftdraft) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 11 |
+| [`owed_verdict/owed`](#owed_verdictowed) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 9 |
+| [`propose_roles/committee`](#propose_rolescommittee) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 3 | 11 |
+| [`rate_extract/fx`](#rate_extractfx) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 12 |
+| [`request_settlement/request_settle`](#request_settlementrequest_settle) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 9 |
+| [`signal_extract/thread_events`](#signal_extractthread_events) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 8 | 11 |
+| [`site_extract/profile`](#site_extractprofile) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 8 |
+| [`site_fact_extract/page_facts`](#site_fact_extractpage_facts) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
+| [`site_triage/triage`](#site_triagetriage) | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `certified` | 1.00 | `current` | 5 | 11 |
+| [`stage_evidence_extract/criteria`](#stage_evidence_extractcriteria) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 9 | 11 |
+| [`summarize/company_ask`](#summarizecompany_ask) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 11 |
+| [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 11 |
+| [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 11 |
+| [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 11 |
+| [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 11 |
+| [`summarize/meeting_plan`](#summarizemeeting_plan) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
+| [`transcript_propose/next_steps`](#transcript_proposenext_steps) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 6 | 11 |
+| [`voice_build/demo_draft`](#voice_builddemo_draft) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 11 |
+| [`voice_build/derive`](#voice_buildderive) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 11 |
+| [`voice_build/eval_draft`](#voice_buildeval_draft) | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 11 |
+| [`voice_build/eval_scores`](#voice_buildeval_scores) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 1 | 11 |
+| [`weekly_learnings/learn`](#weekly_learningslearn) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
+| [`weekly_review/narrative`](#weekly_reviewnarrative) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 5 | 11 |
 
 **Best model tested** is the strongest result that still describes what ships.
 Only a `current` or `partial` record is eligible; among those the pick is the
@@ -1271,6 +1361,8 @@ record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 40 | 39 | 0 | 1 | 594 | 564 | 0.95 | 13541ms | 21 | 12 | 7 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `eu_hosted` | 40 | 39 | 0 | 1 | 570 | 540 | 0.95 | 17751ms | 18 | 15 | 7 |
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 4 | 0 | 1 | 93 | 77 | 0.83 | 4105ms | 3 | 1 | 1 |
+| `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 44 | 44 | 0 | 0 | 669 | 633 | 0.95 | 26943ms | 24 | 16 | 4 |
+| `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 40 | 40 | 0 | 0 | 498 | 477 | 0.96 | 21274ms | 25 | 13 | 2 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 44 | 43 | 0 | 1 | 849 | 770 | 0.91 | 19791ms | 16 | 17 | 11 |
 | `vllm` | `mlx-community/Qwen3-14B-4bit` | `sovereign` | 45 | 25 | 0 | 20 | 750 | 591 | 0.79 | 195164ms | 9 | 8 | 28 |
 
@@ -1390,7 +1482,7 @@ did. What the columns mean is in [How to read this page](#how-to-read-this-page)
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>account_scan/company_scan</code>: 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>account_scan/company_scan</code>: 2 scenario(s), 11 record(s), best state current</summary>
 
 ##### `account_scan/company_scan`
 
@@ -1403,7 +1495,7 @@ Scenarios (2):
 | `scan_finds_the_promise_we_did_not_keep` | `accepted` | judge | [promise_we_left_open_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/promise_we_left_open_01.yaml) |
 | `scan_finds_the_question_nobody_answered` | `accepted` | judge | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1414,6 +1506,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 3400ms | 36507ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1529ms | 3535ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1492ms | 3347ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 4366ms | 6215ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 6028ms | 7355ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1331ms | 3011ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 19671ms | 29181ms | 12 | 0 | 0 | 0 |
 
@@ -1424,7 +1518,7 @@ Records (9):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 10 record(s), best state current</summary>
+<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 12 record(s), best state current</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1438,7 +1532,7 @@ Scenarios (3):
 | `morning_brief_reads_its_queue_first` | `accepted` | checked mechanically | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
 | `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (10):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1450,13 +1544,15 @@ Records (10):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1376ms | 2243ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1271ms | 2277ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1866ms | 2035ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 13 | 0.87 | 1786ms | 4867ms | 13 | 0 | 2 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1822ms | 3874ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 988ms | 2543ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 6195ms | 29008ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 10 record(s), best state stale</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 12 record(s), best state current</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -1470,7 +1566,7 @@ Scenarios (3):
 | `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | checked mechanically | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
 | `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (10):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1482,6 +1578,8 @@ Records (10):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1376ms | 2243ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1271ms | 2277ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1866ms | 2035ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 24 | 19 | 0.79 | 1786ms | 4867ms | 19 | 0 | 5 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1822ms | 3874ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 988ms | 2543ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 6195ms | 29008ms | 9 | 0 | 0 | 0 |
 
@@ -1490,7 +1588,7 @@ Records (10):
 #### `brief_ranking`
 
 <details>
-<summary><code>brief_ranking/rank</code>: 1 scenario(s), 10 record(s), best state current</summary>
+<summary><code>brief_ranking/rank</code>: 1 scenario(s), 12 record(s), best state current</summary>
 
 ##### `brief_ranking/rank`
 
@@ -1502,7 +1600,7 @@ Scenarios (1):
 |---|---|---|---|
 | `reorder_two_candidates_by_momentum` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
-Records (10):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1514,6 +1612,8 @@ Records (10):
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 937ms | 4453ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1011ms | 1747ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 1776ms | 2050ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 2601ms | 3321ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 2498ms | 3278ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 590ms | 743ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 8112ms | 12908ms | 9 | 0 | 0 | 0 |
 
@@ -1522,7 +1622,7 @@ Records (10):
 #### `capture_classify`
 
 <details>
-<summary><code>capture_classify/classify</code>: 5 scenario(s), 8 record(s), best state current</summary>
+<summary><code>capture_classify/classify</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `capture_classify/classify`
 
@@ -1538,7 +1638,7 @@ Scenarios (5):
 | `an_auto_reply_carries_no_commitment_and_no_meeting` | `accepted` | judge | [noise_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/noise_01.yaml) |
 | `meeting_request_from_reply` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/capture_classify/basic_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1548,6 +1648,7 @@ Records (8):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 24 | 21 | 0.88 | 3728ms | 9952ms | 21 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1469ms | 2917ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2129ms | 3157ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `not_supported` | 15 | 9 | 0.60 | 3169ms | 4467ms | 9 | 6 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 758ms | 1000ms | 15 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 15 | 12 | 0.80 | 12864ms | 27764ms | 12 | 3 | 0 | 0 |
 
@@ -1556,7 +1657,7 @@ Records (8):
 #### `capture_confidentiality_verdict`
 
 <details>
-<summary><code>capture_confidentiality_verdict/thread</code>: 14 scenario(s), 6 record(s), best state current</summary>
+<summary><code>capture_confidentiality_verdict/thread</code>: 14 scenario(s), 7 record(s), best state current</summary>
 
 ##### `capture_confidentiality_verdict/thread`
 
@@ -1581,7 +1682,7 @@ Scenarios (14):
 | `text_claiming_the_thread_was_cleared_does_not_open_it` | `accepted` | checked mechanically | [forged_clearance_01.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/forged_clearance_01.yaml) |
 | `the_rent_on_the_owners_flat_is_not_a_supplier_relationship` | `accepted` | checked mechanically | [personal_03.yaml](../../backend/internal/compose/aicert/corpus/capture_confidentiality_verdict/personal_03.yaml) |
 
-Records (6):
+Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1589,6 +1690,7 @@ Records (6):
 | `ollama · gemma4:12b · sovereign` | `current` | 14/14 | `not_supported` | 42 | 36 | 0.86 | 10612ms | 11447ms | 36 | 6 | 0 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 14/14 | `certified` | 42 | 42 | 1.00 | 1534ms | 2362ms | 42 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 14/14 | `certified` | 48 | 45 | 0.94 | 1533ms | 2256ms | 45 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 14/14 | `not_supported` | 42 | 36 | 0.86 | 2205ms | 3936ms | 36 | 6 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 14/14 | `supported_degraded` | 54 | 48 | 0.89 | 629ms | 926ms | 48 | 6 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 14/14 | `not_supported` | 42 | 36 | 0.86 | 10432ms | 11617ms | 36 | 6 | 0 | 0 |
 
@@ -1597,7 +1699,7 @@ Records (6):
 #### `capture_counterparty_verdict`
 
 <details>
-<summary><code>capture_counterparty_verdict/verdict</code>: 19 scenario(s), 6 record(s), best state current</summary>
+<summary><code>capture_counterparty_verdict/verdict</code>: 19 scenario(s), 7 record(s), best state current</summary>
 
 ##### `capture_counterparty_verdict/verdict`
 
@@ -1627,7 +1729,7 @@ Scenarios (19):
 | `the_owners_own_clinic_is_not_the_businesss_correspondent` | `accepted` | judge | [personal_clinic_reception_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/personal_clinic_reception_01.yaml) |
 | `the_owners_own_lawyer_is_not_the_workspaces_contact` | `accepted` | judge | [advisor_01.yaml](../../backend/internal/compose/aicert/corpus/capture_counterparty_verdict/advisor_01.yaml) |
 
-Records (6):
+Records (7):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1635,6 +1737,7 @@ Records (6):
 | `ollama · gemma4:12b · sovereign` | `current` | 19/19 | `not_supported` | 72 | 53 | 0.74 | 9974ms | 12711ms | 53 | 12 | 7 | 0 |
 | `openai_compatible · google/gemma-4-26b-a4b-it · cloud_frontier` | `current` | 19/19 | `not_supported` | 75 | 68 | 0.91 | 1913ms | 4624ms | 68 | 3 | 4 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 19/19 | `not_supported` | 63 | 51 | 0.81 | 1563ms | 2411ms | 51 | 12 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 19/19 | `not_supported` | 60 | 56 | 0.93 | 2349ms | 3927ms | 56 | 4 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 19/19 | `not_supported` | 63 | 49 | 0.78 | 732ms | 1548ms | 49 | 14 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 19/19 | `not_supported` | 123 | 95 | 0.77 | 12682ms | 37420ms | 95 | 28 | 0 | 0 |
 
@@ -1643,7 +1746,7 @@ Records (6):
 #### `cert_judge`
 
 <details>
-<summary><code>cert_judge/judge</code>: 2 scenario(s), 10 record(s), best state current</summary>
+<summary><code>cert_judge/judge</code>: 2 scenario(s), 12 record(s), best state current</summary>
 
 ##### `cert_judge/judge`
 
@@ -1656,7 +1759,7 @@ Scenarios (2):
 | `grades_a_fabricated_answer_poorly` | `accepted` | checked mechanically | [basic_02_low_score.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_02_low_score.yaml) |
 | `grades_a_well_grounded_answer_highly` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/cert_judge/basic_01.yaml) |
 
-Records (10):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1668,6 +1771,8 @@ Records (10):
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 794ms | 1282ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1206ms | 2158ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 1373ms | 1865ms | 17 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3814ms | 4601ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2796ms | 5618ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 756ms | 2309ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 9580ms | 12325ms | 12 | 0 | 0 | 0 |
 
@@ -1676,7 +1781,7 @@ Records (10):
 #### `cold_start`
 
 <details>
-<summary><code>cold_start/acts</code>: 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/acts</code>: 5 scenario(s), 11 record(s), best state current</summary>
 
 ##### `cold_start/acts`
 
@@ -1692,7 +1797,7 @@ Scenarios (5):
 | `asking_what_to_do_next_is_answered_as_a_recommendation` | `accepted` | judge | [acts_recommendation_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_recommendation_01.yaml) |
 | `results_act_keeps_an_off_topic_request_in_scope` | `accepted` | judge | [acts_off_topic_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/acts_off_topic_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1703,13 +1808,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 27 | 20 | 0.74 | 2191ms | 6609ms | 20 | 7 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 | 1207ms | 3300ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1310ms | 3022ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 24 | 22 | 0.92 | 3399ms | 5179ms | 22 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 | 3145ms | 5364ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 21 | 20 | 0.95 | 681ms | 2160ms | 20 | 1 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `certified` | 30 | 30 | 1.00 | 12308ms | 91334ms | 30 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/company_message</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/company_message</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `cold_start/company_message`
 
@@ -1721,7 +1828,7 @@ Scenarios (1):
 |---|---|---|---|
 | `bare_answer_corrects_the_field_the_wizard_asked_for` | `accepted` | judge | [company_message_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/company_message_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1732,13 +1839,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 2191ms | 6609ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 1207ms | 3300ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 1310ms | 3022ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 681ms | 2160ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 9 | 7 | 0.78 | 12308ms | 91334ms | 7 | 0 | 2 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/field_extract</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/field_extract</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `cold_start/field_extract`
 
@@ -1750,7 +1859,7 @@ Scenarios (1):
 |---|---|---|---|
 | `onboarding_readback_from_landing_page` | `accepted` | judge | [field_extract_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/field_extract_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1761,13 +1870,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 2191ms | 6609ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1207ms | 3300ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1310ms | 3022ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3399ms | 5179ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3145ms | 5364ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 681ms | 2160ms | 3 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 12308ms | 91334ms | 6 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>cold_start/sitereadmessage</code>: 4 scenario(s), 9 record(s), best state current</summary>
+<summary><code>cold_start/sitereadmessage</code>: 4 scenario(s), 11 record(s), best state current</summary>
 
 ##### `cold_start/sitereadmessage`
 
@@ -1782,7 +1893,7 @@ Scenarios (4):
 | `an_administrator_answering_an_offer_with_another_value_corrects_it` | `accepted` | judge | [sitereadmessage_offer_corrected_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_offer_corrected_01.yaml) |
 | `dossier_correction_the_administrator_asked_for` | `accepted` | judge | [sitereadmessage_correction_01.yaml](../../backend/internal/compose/aicert/corpus/cold_start/sitereadmessage_correction_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1793,6 +1904,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` (this site: thinking low) | `current` | 4/4 | `supported_degraded` | 18 | 14 | 0.78 | 2191ms | 6609ms | 14 | 0 | 4 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1207ms | 3300ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` (this site: thinking low) | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 1310ms | 3022ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 3399ms | 5179ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 3145ms | 5364ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` (this site: thinking low) | `current` | 4/4 | `supported_degraded` | 18 | 16 | 0.89 | 681ms | 2160ms | 16 | 2 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 27 | 20 | 0.74 | 12308ms | 91334ms | 20 | 0 | 7 | 0 |
 
@@ -1801,7 +1914,7 @@ Records (9):
 #### `corpus_ask`
 
 <details>
-<summary><code>corpus_ask/corpus_ask</code>: 5 scenario(s), 8 record(s), best state current</summary>
+<summary><code>corpus_ask/corpus_ask</code>: 5 scenario(s), 9 record(s), best state current</summary>
 
 ##### `corpus_ask/corpus_ask`
 
@@ -1817,7 +1930,7 @@ Scenarios (5):
 | `corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question` | `accepted` | judge | [corpus_ask_abstains_when_uncovered_03.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_03.yaml) |
 | `corpus_ask_returns_nothing_when_the_passages_do_not_answer` | `accepted` | judge | [corpus_ask_abstains_when_uncovered_01.yaml](../../backend/internal/compose/aicert/corpus/corpus_ask/corpus_ask_abstains_when_uncovered_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1828,6 +1941,7 @@ Records (8):
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1538ms | 2200ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1615ms | 4859ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1982ms | 4105ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2968ms | 7167ms | 15 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `supported_degraded` | 33 | 28 | 0.85 | 22701ms | 54572ms | 28 | 5 | 0 | 0 |
 
 </details>
@@ -1835,7 +1949,7 @@ Records (8):
 #### `deal_health`
 
 <details>
-<summary><code>deal_health/deal_status</code>: 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>deal_health/deal_status</code>: 3 scenario(s), 11 record(s), best state current</summary>
 
 ##### `deal_health/deal_status`
 
@@ -1849,7 +1963,7 @@ Scenarios (3):
 | `deal_status_offer_left_hanging` | `accepted` | judge | [deal_status_offer_left_hanging_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_offer_left_hanging_01.yaml) |
 | `deal_status_says_nothing_is_wrong_when_nothing_is` | `accepted` | judge | [deal_status_quiet_after_proposal_01.yaml](../../backend/internal/compose/aicert/corpus/deal_health/deal_status_quiet_after_proposal_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1860,6 +1974,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `supported_degraded` | 24 | 24 | 1.00 | 7601ms | 11327ms | 24 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 15 | 1.00 | 2613ms | 6122ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 2903ms | 3650ms | 21 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 | 17970ms | 26943ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 12 | 12 | 1.00 | 13705ms | 21274ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 21 | 21 | 1.00 | 1418ms | 2038ms | 21 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 9 | 1.00 | 90826ms | 117783ms | 9 | 0 | 0 | 0 |
 
@@ -1896,7 +2012,7 @@ Records (1):
 Certified without the company context production prepends (`positioning`, `sales`, `proof`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>draft_reply/account</code>: 1 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/account</code>: 1 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/account`
 
@@ -1908,7 +2024,7 @@ Scenarios (1):
 |---|---|---|---|
 | `account_first_touch_with_a_deal_in_flight` | `accepted` | judge | [account_en_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1921,13 +2037,15 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1754ms | 19791ms | 6 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 46299ms | 189882ms | 3 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/contact</code>: 1 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/contact</code>: 1 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/contact`
 
@@ -1939,7 +2057,7 @@ Scenarios (1):
 |---|---|---|---|
 | `contact_first_touch_in_german` | `accepted` | judge | [contact_first_touch_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/contact_first_touch_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1952,13 +2070,15 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1435ms | 4154ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1556ms | 3315ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 1754ms | 19791ms | 6 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `supported_degraded` | 9 | 9 | 1.00 | 46299ms | 189882ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/first</code>: 1 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/first</code>: 1 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/first`
 
@@ -1970,7 +2090,7 @@ Scenarios (1):
 |---|---|---|---|
 | `first_message_from_an_intent_alone` | `accepted` | judge | [first_message_from_intent_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/first_message_from_intent_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1983,13 +2103,15 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 5753ms | 30271ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 1435ms | 4154ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 1556ms | 3315ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 4568ms | 12191ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 5013ms | 9755ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 1754ms | 19791ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 3 | 1.00 | 46299ms | 189882ms | 3 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/intro</code>: 2 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/intro</code>: 2 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/intro`
 
@@ -2002,7 +2124,7 @@ Scenarios (2):
 | `intro_request_asks_a_colleague_without_overclaiming` | `accepted` | judge | [intro_warm_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_warm_route_01.yaml) |
 | `intro_request_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_cold_stale_route_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_cold_stale_route_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2015,13 +2137,15 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 0 | 0.00 | 5753ms | 30271ms | 0 | 0 | 9 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 1435ms | 4154ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 15 | 15 | 1.00 | 1556ms | 3315ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 9 | 8 | 0.89 | 4568ms | 12191ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 12 | 12 | 1.00 | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 | 1754ms | 19791ms | 18 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `supported_degraded` | 15 | 15 | 1.00 | 46299ms | 189882ms | 15 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/intro_note</code>: 3 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/intro_note</code>: 3 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/intro_note`
 
@@ -2035,7 +2159,7 @@ Scenarios (3):
 | `intro_note_claims_no_more_warmth_than_the_record_holds` | `accepted` | judge | [intro_note_cold_stale_indirect_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_cold_stale_indirect_01.yaml) |
 | `intro_note_is_written_to_the_customer_not_about_the_request` | `accepted` | judge | [intro_note_warm_direct_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/intro_note_warm_direct_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2048,13 +2172,15 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 12 | 9 | 0.75 | 5753ms | 30271ms | 9 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `not_supported` | 18 | 12 | 0.67 | 1435ms | 4154ms | 12 | 6 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `not_supported` | 18 | 12 | 0.67 | 1556ms | 3315ms | 12 | 6 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 4568ms | 12191ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 5013ms | 9755ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 18 | 18 | 1.00 | 1754ms | 19791ms | 18 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 2/3 | `not_supported` | 15 | 12 | 0.80 | 46299ms | 189882ms | 12 | 3 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>draft_reply/reply</code>: 4 scenario(s), 11 record(s), best state current</summary>
+<summary><code>draft_reply/reply</code>: 4 scenario(s), 13 record(s), best state current</summary>
 
 ##### `draft_reply/reply`
 
@@ -2069,7 +2195,7 @@ Scenarios (4):
 | `replying_to_a_thread_eight_months_old` | `accepted` | judge | [stale_months_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/stale_months_01.yaml) |
 | `rich_german_thread_with_a_long_ask` | `accepted` | judge | [rich_thread_01.yaml](../../backend/internal/compose/aicert/corpus/draft_reply/rich_thread_01.yaml) |
 
-Records (11):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2082,6 +2208,8 @@ Records (11):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 4/4 | `supported_degraded` | 18 | 12 | 0.67 | 5753ms | 30271ms | 12 | 0 | 6 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 4/4 | `certified` | 27 | 27 | 1.00 | 1435ms | 4154ms | 27 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 4/4 | `certified` | 27 | 27 | 1.00 | 1556ms | 3315ms | 27 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 4568ms | 12191ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 4/4 | `certified` | 12 | 12 | 1.00 | 5013ms | 9755ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 4/4 | `supported_degraded` | 27 | 27 | 1.00 | 1754ms | 19791ms | 27 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/4 | `not_supported` | 18 | 18 | 1.00 | 46299ms | 189882ms | 18 | 0 | 0 | 0 |
 
@@ -2090,7 +2218,7 @@ Records (11):
 #### `enrich`
 
 <details>
-<summary><code>enrich/signature</code>: 2 scenario(s), 8 record(s), best state current</summary>
+<summary><code>enrich/signature</code>: 2 scenario(s), 9 record(s), best state current</summary>
 
 ##### `enrich/signature`
 
@@ -2103,7 +2231,7 @@ Scenarios (2):
 | `contact_fields_from_a_mail_signature` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/basic_01.yaml) |
 | `every_number_a_signature_lists` | `accepted` | checked mechanically | [every_number_of_a_signature_01.yaml](../../backend/internal/compose/aicert/corpus/enrich/every_number_of_a_signature_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2113,6 +2241,7 @@ Records (8):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 8196ms | 10915ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 11099ms | 16999ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 4122ms | 5038ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3150ms | 4322ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 879ms | 1488ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `certified` | 12 | 12 | 1.00 | 49256ms | 154553ms | 12 | 0 | 0 | 0 |
 
@@ -2121,7 +2250,7 @@ Records (8):
 #### `growth_fit`
 
 <details>
-<summary><code>growth_fit/growth_fit</code>: 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>growth_fit/growth_fit</code>: 2 scenario(s), 11 record(s), best state current</summary>
 
 ##### `growth_fit/growth_fit`
 
@@ -2134,7 +2263,7 @@ Scenarios (2):
 | `growth_fit_calls_a_company_outside_our_market_weak` | `accepted` | judge | [clear_misfit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_misfit_01.yaml) |
 | `growth_fit_reads_their_facts_against_our_offering` | `accepted` | judge | [clear_fit_01.yaml](../../backend/internal/compose/aicert/corpus/growth_fit/clear_fit_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2145,6 +2274,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 18 | 16 | 0.89 | 18741ms | 24366ms | 16 | 2 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 9077ms | 13541ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 9147ms | 17751ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 14563ms | 24649ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 14875ms | 17564ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 12 | 12 | 1.00 | 2137ms | 3252ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 12 | 0 | 0.00 | 119587ms | 195164ms | 0 | 11 | 0 | 1 |
 
@@ -2155,7 +2286,7 @@ Records (9):
 Certified without the company context production prepends (`offer`, `market`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>nl_search/filter_propose</code>: 11 scenario(s), 7 record(s), best state current</summary>
+<summary><code>nl_search/filter_propose</code>: 11 scenario(s), 9 record(s), best state current</summary>
 
 ##### `nl_search/filter_propose`
 
@@ -2177,7 +2308,7 @@ Scenarios (11):
 | `nl_search_reads_vietnamese_input` | `accepted` | judge | [reads_vietnamese_input_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/reads_vietnamese_input_01.yaml) |
 | `nl_search_refuses_a_value_outside_a_picklist` | `accepted` | judge | [refuses_a_value_outside_a_picklist_01.yaml](../../backend/internal/compose/aicert/corpus/nl_search/refuses_a_value_outside_a_picklist_01.yaml) |
 
-Records (7):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2187,6 +2318,8 @@ Records (7):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 11/11 | `not_supported` | 39 | 30 | 0.77 | 2327ms | 4395ms | 30 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 11/11 | `certified` | 33 | 33 | 1.00 | 1328ms | 1907ms | 33 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 11/11 | `certified` | 33 | 33 | 1.00 | 1428ms | 1980ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 11/11 | `certified` | 33 | 33 | 1.00 | 3103ms | 4212ms | 33 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 11/11 | `certified` | 33 | 33 | 1.00 | 2190ms | 3292ms | 33 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 11/11 | `certified` | 33 | 33 | 1.00 | 1027ms | 1534ms | 33 | 0 | 0 | 0 |
 
 </details>
@@ -2196,7 +2329,7 @@ Records (7):
 Certified without the company context production prepends (`offer`, `positioning`, `proof`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>offer_draft/draft</code>: 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>offer_draft/draft</code>: 5 scenario(s), 11 record(s), best state current</summary>
 
 ##### `offer_draft/draft`
 
@@ -2212,7 +2345,7 @@ Scenarios (5):
 | `rich_context_prices_every_line_from_its_own_evidence` | `accepted` | judge | [rich_context.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/rich_context.yaml) |
 | `two_sources_disagree_on_price` | `accepted` | judge | [contradictory_sources.yaml](../../backend/internal/compose/aicert/corpus/offer_draft/contradictory_sources.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2223,6 +2356,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 21 | 21 | 1.00 | 3835ms | 9410ms | 18 | 0 | 0 | 3 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 24 | 24 | 1.00 | 1617ms | 3572ms | 21 | 0 | 0 | 3 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 21 | 21 | 1.00 | 1594ms | 3584ms | 18 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 3553ms | 7082ms | 12 | 0 | 0 | 3 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 3224ms | 10548ms | 12 | 0 | 0 | 3 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 44 | 0.98 | 954ms | 2070ms | 35 | 0 | 1 | 9 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/5 | `not_supported` | 18 | 15 | 0.83 | 15619ms | 86095ms | 12 | 3 | 0 | 3 |
 
@@ -2231,7 +2366,7 @@ Records (9):
 #### `owed_verdict`
 
 <details>
-<summary><code>owed_verdict/owed</code>: 6 scenario(s), 8 record(s), best state current</summary>
+<summary><code>owed_verdict/owed</code>: 6 scenario(s), 9 record(s), best state current</summary>
 
 ##### `owed_verdict/owed`
 
@@ -2248,7 +2383,7 @@ Scenarios (6):
 | `an_invitation_asks_nothing_a_calendar_reply_cannot_settle` | `accepted` | checked mechanically | [invitation_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/invitation_01.yaml) |
 | `the_recipient_line_separates_a_request_from_a_copy` | `accepted` | checked mechanically | [envelope_decides_01.yaml](../../backend/internal/compose/aicert/corpus/owed_verdict/envelope_decides_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2258,6 +2393,7 @@ Records (8):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 3523ms | 5505ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 6/6 | `not_supported` | 24 | 15 | 0.62 | 5331ms | 6872ms | 15 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 6/6 | `not_supported` | 18 | 15 | 0.83 | 2274ms | 4314ms | 15 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 2743ms | 6547ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 820ms | 2288ms | 18 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/6 | `not_supported` | 15 | 7 | 0.47 | 17364ms | 26664ms | 7 | 6 | 2 | 0 |
 
@@ -2266,7 +2402,7 @@ Records (8):
 #### `propose_roles`
 
 <details>
-<summary><code>propose_roles/committee</code>: 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>propose_roles/committee</code>: 3 scenario(s), 11 record(s), best state current</summary>
 
 ##### `propose_roles/committee`
 
@@ -2280,7 +2416,7 @@ Scenarios (3):
 | `propose_roles_reads_a_buyer_out_of_their_own_words` | `accepted` | judge | [committee_evidenced_buyer_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_evidenced_buyer_01.yaml) |
 | `propose_roles_reads_no_role_out_of_a_title` | `accepted` | judge | [committee_title_only_restraint_01.yaml](../../backend/internal/compose/aicert/corpus/propose_roles/committee_title_only_restraint_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2291,6 +2427,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1908ms | 24808ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1150ms | 2360ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1096ms | 2246ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2247ms | 3531ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2961ms | 3994ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `not_supported` | 27 | 20 | 0.74 | 1111ms | 2638ms | 20 | 7 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 24 | 13 | 0.54 | 26328ms | 81593ms | 13 | 11 | 0 | 0 |
 
@@ -2299,7 +2437,7 @@ Records (9):
 #### `rate_extract`
 
 <details>
-<summary><code>rate_extract/fx</code>: 2 scenario(s), 10 record(s), best state current</summary>
+<summary><code>rate_extract/fx</code>: 2 scenario(s), 12 record(s), best state current</summary>
 
 ##### `rate_extract/fx`
 
@@ -2312,7 +2450,7 @@ Scenarios (2):
 | `fx_rates_json_api_grounded` | `accepted` | checked mechanically | [fx_json_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_json_grounded.yaml) |
 | `fx_rates_two_pairs_grounded` | `accepted` | checked mechanically | [fx_grounded.yaml](../../backend/internal/compose/aicert/corpus/rate_extract/fx_grounded.yaml) |
 
-Records (10):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2324,6 +2462,8 @@ Records (10):
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1175ms | 2097ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1228ms | 2216ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 1347ms | 2247ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2756ms | 13124ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 1963ms | 3362ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 626ms | 1341ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/2 | `supported_degraded` | 6 | 6 | 1.00 | 8434ms | 23109ms | 6 | 0 | 0 | 0 |
 
@@ -2332,7 +2472,7 @@ Records (10):
 #### `request_settlement`
 
 <details>
-<summary><code>request_settlement/request_settle</code>: 6 scenario(s), 8 record(s), best state current</summary>
+<summary><code>request_settlement/request_settle</code>: 6 scenario(s), 9 record(s), best state current</summary>
 
 ##### `request_settlement/request_settle`
 
@@ -2349,7 +2489,7 @@ Scenarios (6):
 | `answering_one_of_two_asks_leaves_the_other_owed` | `accepted` | judge | [partial_answer_and_reask_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/partial_answer_and_reask_01.yaml) |
 | `declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague` | `accepted` | judge | [declined_and_handed_on_01.yaml](../../backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml) |
 
-Records (8):
+Records (9):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2359,6 +2499,7 @@ Records (8):
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 6/6 | `not_supported` | 24 | 15 | 0.62 | 3975ms | 5487ms | 15 | 0 | 9 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 2234ms | 10541ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-8b-2512 · eu_hosted` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 1638ms | 3180ms | 18 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 3016ms | 5555ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 6/6 | `certified` | 18 | 18 | 1.00 | 711ms | 1214ms | 18 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/6 | `not_supported` | 12 | 6 | 0.50 | 21539ms | 57615ms | 6 | 6 | 0 | 0 |
 
@@ -2367,7 +2508,7 @@ Records (8):
 #### `signal_extract`
 
 <details>
-<summary><code>signal_extract/thread_events</code>: 8 scenario(s), 9 record(s), best state current</summary>
+<summary><code>signal_extract/thread_events</code>: 8 scenario(s), 11 record(s), best state current</summary>
 
 ##### `signal_extract/thread_events`
 
@@ -2386,7 +2527,7 @@ Scenarios (8):
 | `we_might_circle_back_some_time` | `accepted` | checked mechanically | [commitment_hedged_ours_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_hedged_ours_01.yaml) |
 | `we_promise_revised_pricing_by_friday` | `accepted` | judge | [commitment_firm_ours_01.yaml](../../backend/internal/compose/aicert/corpus/signal_extract/commitment_firm_ours_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2397,6 +2538,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 8/8 | `not_supported` | 24 | 12 | 0.50 | 1825ms | 7662ms | 12 | 12 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 8/8 | `certified` | 24 | 24 | 1.00 | 1278ms | 2186ms | 24 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 8/8 | `certified` | 24 | 24 | 1.00 | 1135ms | 2096ms | 24 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 8/8 | `certified` | 30 | 28 | 0.93 | 2773ms | 4303ms | 28 | 2 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 8/8 | `supported_degraded` | 33 | 26 | 0.79 | 4454ms | 10075ms | 26 | 5 | 2 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 8/8 | `supported_degraded` | 39 | 30 | 0.77 | 937ms | 3454ms | 30 | 5 | 4 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/8 | `not_supported` | 12 | 6 | 0.50 | 14179ms | 40442ms | 6 | 4 | 2 | 0 |
 
@@ -2405,7 +2548,7 @@ Records (9):
 #### `site_extract`
 
 <details>
-<summary><code>site_extract/profile</code>: 5 scenario(s), 7 record(s), best state current</summary>
+<summary><code>site_extract/profile</code>: 5 scenario(s), 8 record(s), best state current</summary>
 
 ##### `site_extract/profile`
 
@@ -2421,7 +2564,7 @@ Scenarios (5):
 | `one_legal_page_naming_two_entities` | `accepted` | judge | [legal_abstention.yaml](../../backend/internal/compose/aicert/corpus/site_extract/legal_abstention.yaml) |
 | `services_page_profile_fields_grounded` | `accepted` | judge | [offering_facts.yaml](../../backend/internal/compose/aicert/corpus/site_extract/offering_facts.yaml) |
 
-Records (7):
+Records (8):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2431,6 +2574,7 @@ Records (7):
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `not_supported` | 30 | 24 | 0.80 | 1714ms | 2429ms | 18 | 6 | 0 | 6 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `not_supported` | 30 | 24 | 0.80 | 1828ms | 2354ms | 18 | 6 | 0 | 6 |
 | `openai_compatible · mistralai/mistral-small-2603 · eu_hosted` | `current` | 5/5 | `not_supported` | 45 | 30 | 0.67 | 2259ms | 3250ms | 21 | 15 | 0 | 9 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 3297ms | 5907ms | 12 | 0 | 0 | 3 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 45 | 34 | 0.76 | 30372ms | 82067ms | 25 | 11 | 0 | 9 |
 
 </details>
@@ -2438,7 +2582,7 @@ Records (7):
 #### `site_fact_extract`
 
 <details>
-<summary><code>site_fact_extract/page_facts</code>: 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>site_fact_extract/page_facts</code>: 3 scenario(s), 11 record(s), best state current</summary>
 
 ##### `site_fact_extract/page_facts`
 
@@ -2452,7 +2596,7 @@ Scenarios (3):
 | `impressum_page_company_facts_and_entities` | `accepted` | judge | [basic_02.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_02.yaml) |
 | `services_page_offering_facts` | `accepted` | judge | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/site_fact_extract/basic_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2463,6 +2607,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 21 | 14 | 0.67 | 4673ms | 83052ms | 14 | 6 | 1 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 1517ms | 1732ms | 6 | 3 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 1850ms | 2365ms | 6 | 3 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3586ms | 4479ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 3311ms | 3618ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1021ms | 1638ms | 9 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 3/3 | `not_supported` | 9 | 6 | 0.67 | 48298ms | 67791ms | 6 | 3 | 0 | 0 |
 
@@ -2471,7 +2617,7 @@ Records (9):
 #### `site_triage`
 
 <details>
-<summary><code>site_triage/triage</code>: 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>site_triage/triage</code>: 5 scenario(s), 11 record(s), best state current</summary>
 
 ##### `site_triage/triage`
 
@@ -2487,7 +2633,7 @@ Scenarios (5):
 | `a_parked_domain_identifies_nobody` | `accepted` | judge | [parked_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/parked_domain_01.yaml) |
 | `a_personal_domain_is_not_a_company` | `accepted` | judge | [personal_domain_01.yaml](../../backend/internal/compose/aicert/corpus/site_triage/personal_domain_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2498,6 +2644,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2014ms | 24803ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 956ms | 3043ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1100ms | 2159ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 2346ms | 3539ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1666ms | 2613ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `certified` | 15 | 15 | 1.00 | 1260ms | 4401ms | 15 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 | 8771ms | 49507ms | 18 | 0 | 0 | 0 |
 
@@ -2506,7 +2654,7 @@ Records (9):
 #### `stage_evidence_extract`
 
 <details>
-<summary><code>stage_evidence_extract/criteria</code>: 9 scenario(s), 9 record(s), best state current</summary>
+<summary><code>stage_evidence_extract/criteria</code>: 9 scenario(s), 11 record(s), best state current</summary>
 
 ##### `stage_evidence_extract/criteria`
 
@@ -2526,7 +2674,7 @@ Scenarios (9):
 | `the_rep_says_the_buyer_confirmed_it` | `abstained` | checked mechanically | [rep_asserts_it_for_them_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/rep_asserts_it_for_them_01.yaml) |
 | `warmth_with_no_facts_in_it` | `abstained` | checked mechanically | [nothing_groundable_01.yaml](../../backend/internal/compose/aicert/corpus/stage_evidence_extract/nothing_groundable_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2537,6 +2685,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 9/9 | `not_supported` | 45 | 27 | 0.60 | 2193ms | 4628ms | 18 | 18 | 0 | 9 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 9/9 | `not_supported` | 27 | 21 | 0.78 | 1267ms | 1864ms | 9 | 2 | 4 | 12 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 9/9 | `not_supported` | 27 | 21 | 0.78 | 1163ms | 1778ms | 9 | 2 | 4 | 12 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 9/9 | `certified` | 27 | 27 | 1.00 | 2638ms | 4156ms | 15 | 0 | 0 | 12 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 9/9 | `supported_degraded` | 33 | 28 | 0.85 | 3658ms | 7200ms | 16 | 4 | 1 | 12 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 9/9 | `not_supported` | 81 | 65 | 0.80 | 951ms | 1523ms | 32 | 9 | 7 | 33 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 9/9 | `not_supported` | 30 | 20 | 0.67 | 18988ms | 31872ms | 11 | 7 | 3 | 9 |
 
@@ -2547,7 +2697,7 @@ Records (9):
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>summarize/company_ask</code>: 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_ask</code>: 2 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/company_ask`
 
@@ -2560,7 +2710,7 @@ Scenarios (2):
 | `ask_meeting_prep_stays_silent_about_a_withheld_section` | `accepted` | judge | [ask_meeting_prep_restricted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_meeting_prep_restricted_01.yaml) |
 | `ask_whats_open_answers_the_pipeline_not_the_history` | `accepted` | judge | [ask_whats_open_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/ask_whats_open_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2571,13 +2721,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 8803ms | 20071ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 2809ms | 5339ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 14 | 0.93 | 7653ms | 22625ms | 14 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 6597ms | 19895ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 16 | 0.89 | 1390ms | 3135ms | 16 | 0 | 0 | 2 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `supported_degraded` | 12 | 12 | 1.00 | 64712ms | 118960ms | 12 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>summarize/company_brief</code>: 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_brief</code>: 2 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/company_brief`
 
@@ -2590,7 +2742,7 @@ Scenarios (2):
 | `brief_names_the_stalled_deal_and_the_last_touch` | `accepted` | judge | [stalled_account_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/stalled_account_01.yaml) |
 | `brief_stays_silent_about_a_withheld_section` | `accepted` | judge | [restricted_reader_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/restricted_reader_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2601,13 +2753,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 9 | 8 | 0.89 | 8803ms | 20071ms | 8 | 1 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 18 | 18 | 1.00 | 2809ms | 5339ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `certified` | 18 | 17 | 0.94 | 7653ms | 22625ms | 17 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 12 | 12 | 1.00 | 1390ms | 3135ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 9 | 9 | 1.00 | 64712ms | 118960ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>summarize/company_dossier</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/company_dossier</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/company_dossier`
 
@@ -2619,7 +2773,7 @@ Scenarios (1):
 |---|---|---|---|
 | `dossier_describes_the_company_not_the_relationship` | `accepted` | judge | [dossier_describes_the_company_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/dossier_describes_the_company_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2630,13 +2784,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 8803ms | 20071ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 2809ms | 5339ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 3283ms | 5733ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 | 7653ms | 22625ms | 8 | 0 | 0 | 1 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 6597ms | 19895ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1390ms | 3135ms | 3 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 64712ms | 118960ms | 6 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>summarize/contact_brief</code>: 2 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/contact_brief</code>: 2 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/contact_brief`
 
@@ -2649,7 +2805,7 @@ Scenarios (2):
 | `contact_brief_reads_what_was_said` | `accepted` | judge | [contact_brief_reads_what_was_said_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_reads_what_was_said_01.yaml) |
 | `contact_brief_stays_silent_about_what_the_reader_may_not_see` | `accepted` | judge | [contact_brief_withheld_and_omitted_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/contact_brief_withheld_and_omitted_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2660,13 +2816,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 2/2 | `not_supported` | 18 | 10 | 0.56 | 8803ms | 20071ms | 10 | 8 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 2/2 | `certified` | 15 | 15 | 1.00 | 2809ms | 5339ms | 15 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 2/2 | `certified` | 12 | 12 | 1.00 | 3283ms | 5733ms | 12 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 7653ms | 22625ms | 6 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 18 | 11 | 0.61 | 1390ms | 3135ms | 11 | 6 | 0 | 1 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 18 | 2 | 0.11 | 64712ms | 118960ms | 2 | 8 | 0 | 8 |
 
 </details>
 
 <details>
-<summary><code>summarize/meeting_brief</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/meeting_brief</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/meeting_brief`
 
@@ -2678,7 +2836,7 @@ Scenarios (1):
 |---|---|---|---|
 | `meeting_brief_reads_the_thread_that_matters` | `accepted` | judge | [meeting_brief_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_brief_reads_the_thread_that_matters_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2689,13 +2847,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 0 | 0.00 | 8803ms | 20071ms | 0 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 2809ms | 5339ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 3283ms | 5733ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 4 | 0.44 | 1390ms | 3135ms | 4 | 5 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 3 | 0 | 0.00 | 64712ms | 118960ms | 0 | 3 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>summarize/meeting_plan</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>summarize/meeting_plan</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `summarize/meeting_plan`
 
@@ -2707,7 +2867,7 @@ Scenarios (1):
 |---|---|---|---|
 | `meeting_plan_reads_the_thread_that_matters` | `accepted` | judge | [meeting_plan_reads_the_thread_that_matters_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/meeting_plan_reads_the_thread_that_matters_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2718,6 +2878,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 8803ms | 20071ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 6 | 6 | 1.00 | 2809ms | 5339ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3283ms | 5733ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 7653ms | 22625ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 6597ms | 19895ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 6 | 0.67 | 1390ms | 3135ms | 6 | 3 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/1 | `not_supported` | 9 | 2 | 0.22 | 64712ms | 118960ms | 2 | 1 | 6 | 0 |
 
@@ -2726,7 +2888,7 @@ Records (9):
 #### `transcript_propose`
 
 <details>
-<summary><code>transcript_propose/next_steps</code>: 6 scenario(s), 9 record(s), best state current</summary>
+<summary><code>transcript_propose/next_steps</code>: 6 scenario(s), 11 record(s), best state current</summary>
 
 ##### `transcript_propose/next_steps`
 
@@ -2743,7 +2905,7 @@ Scenarios (6):
 | `we_might_follow_up_some_time` | `accepted` | judge | [commitment_hedged_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_hedged_01.yaml) |
 | `we_promise_the_integration_spec_by_a_day` | `accepted` | judge | [commitment_firm_01.yaml](../../backend/internal/compose/aicert/corpus/transcript_propose/commitment_firm_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2754,6 +2916,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 6/6 | `not_supported` | 54 | 47 | 0.87 | 1345ms | 1963ms | 47 | 7 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 6/6 | `not_supported` | 54 | 45 | 0.83 | 846ms | 1477ms | 45 | 9 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 6/6 | `not_supported` | 54 | 45 | 0.83 | 1011ms | 1399ms | 45 | 9 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 6/6 | `supported_degraded` | 39 | 35 | 0.90 | 2271ms | 5366ms | 35 | 4 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 6/6 | `not_supported` | 54 | 45 | 0.83 | 1889ms | 3593ms | 45 | 9 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 6/6 | `certified` | 39 | 37 | 0.95 | 903ms | 3543ms | 37 | 2 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/6 | `certified` | 9 | 9 | 1.00 | 9939ms | 23302ms | 9 | 0 | 0 | 0 |
 
@@ -2762,7 +2926,7 @@ Records (9):
 #### `voice_build`
 
 <details>
-<summary><code>voice_build/demo_draft</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/demo_draft</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `voice_build/demo_draft`
 
@@ -2774,7 +2938,7 @@ Scenarios (1):
 |---|---|---|---|
 | `the_card_shows_a_line_in_the_built_voice` | `accepted` | judge | [demo_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/demo_draft_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2785,13 +2949,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 1106ms | 6185ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 1826ms | 7150ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1554ms | 3524ms | 3 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 28288ms | 108565ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>voice_build/derive</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/derive</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `voice_build/derive`
 
@@ -2803,7 +2969,7 @@ Scenarios (1):
 |---|---|---|---|
 | `owner_voice_candidate_from_authored_messages` | `accepted` | judge | [derive_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/derive_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2814,13 +2980,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 9 | 2 | 0.22 | 3188ms | 73472ms | 2 | 0 | 7 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 9 | 8 | 0.89 | 1554ms | 3524ms | 8 | 1 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 0 | 0.00 | 28288ms | 108565ms | 0 | 0 | 3 | 0 |
 
 </details>
 
 <details>
-<summary><code>voice_build/eval_draft</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/eval_draft</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `voice_build/eval_draft`
 
@@ -2832,7 +3000,7 @@ Scenarios (1):
 |---|---|---|---|
 | `held_out_draft_sits_close_to_the_author` | `accepted` | judge | [eval_draft_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_draft_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2843,13 +3011,15 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 8 | 0.89 | 5267ms | 17661ms | 8 | 1 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `not_supported` | 9 | 6 | 0.67 | 1554ms | 3524ms | 6 | 3 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `not_supported` | 3 | 3 | 1.00 | 28288ms | 108565ms | 3 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>voice_build/eval_scores</code>: 1 scenario(s), 9 record(s), best state current</summary>
+<summary><code>voice_build/eval_scores</code>: 1 scenario(s), 11 record(s), best state current</summary>
 
 ##### `voice_build/eval_scores`
 
@@ -2861,7 +3031,7 @@ Scenarios (1):
 |---|---|---|---|
 | `judge_ranks_the_author_rhythm_above_generic_ai_prose` | `accepted` | judge | [eval_scores_01.yaml](../../backend/internal/compose/aicert/corpus/voice_build/eval_scores_01.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2872,6 +3042,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 3188ms | 73472ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1106ms | 6185ms | 3 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1826ms | 7150ms | 3 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 5267ms | 17661ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 6458ms | 18967ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 1554ms | 3524ms | 3 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 1/1 | `supported_degraded` | 3 | 3 | 1.00 | 28288ms | 108565ms | 3 | 0 | 0 | 0 |
 
@@ -2880,7 +3052,7 @@ Records (9):
 #### `weekly_learnings`
 
 <details>
-<summary><code>weekly_learnings/learn</code>: 3 scenario(s), 9 record(s), best state current</summary>
+<summary><code>weekly_learnings/learn</code>: 3 scenario(s), 11 record(s), best state current</summary>
 
 ##### `weekly_learnings/learn`
 
@@ -2894,7 +3066,7 @@ Scenarios (3):
 | `a_pattern_across_three_deals_is_drawn_and_cited` | `accepted` | judge | [a_repeated_pattern_is_cited.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml) |
 | `a_week_that_invites_a_lesson_it_cannot_support_yields_none` | `accepted` | judge | [a_thin_week_yields_no_lesson.yaml](../../backend/internal/compose/aicert/corpus/weekly_learnings/a_thin_week_yields_no_lesson.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2905,6 +3077,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 3/3 | `not_supported` | 12 | 4 | 0.33 | 3207ms | 5498ms | 4 | 8 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 786ms | 1570ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1222ms | 2006ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 2870ms | 3590ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1623ms | 3135ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 12 | 12 | 1.00 | 902ms | 6569ms | 12 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `stale` | 0/3 | `not_supported` | 15 | 9 | 0.60 | 36351ms | 66428ms | 9 | 5 | 1 | 0 |
 
@@ -2913,7 +3087,7 @@ Records (9):
 #### `weekly_review`
 
 <details>
-<summary><code>weekly_review/narrative</code>: 5 scenario(s), 9 record(s), best state current</summary>
+<summary><code>weekly_review/narrative</code>: 5 scenario(s), 11 record(s), best state current</summary>
 
 ##### `weekly_review/narrative`
 
@@ -2929,7 +3103,7 @@ Scenarios (5):
 | `a_week_with_no_deal_movement_may_say_so_without_calling_it_quiet` | `accepted` | judge | [a_week_with_no_deal_movement_may_say_so.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_no_deal_movement_may_say_so.yaml) |
 | `the_sentence_leads_with_what_changed_not_with_a_count` | `accepted` | judge | [a_week_with_one_thing_worth_saying.yaml](../../backend/internal/compose/aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml) |
 
-Records (9):
+Records (11):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -2940,6 +3114,8 @@ Records (9):
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `current` | 5/5 | `not_supported` | 24 | 23 | 0.96 | 2603ms | 4656ms | 23 | 0 | 1 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 1091ms | 1623ms | 45 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 1078ms | 2431ms | 45 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 36 | 36 | 1.00 | 4803ms | 11758ms | 36 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 5/5 | `certified` | 18 | 18 | 1.00 | 4504ms | 8474ms | 18 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 5/5 | `supported_degraded` | 45 | 45 | 1.00 | 1259ms | 2627ms | 45 | 0 | 0 | 0 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 5/5 | `not_supported` | 30 | 30 | 1.00 | 30361ms | 44155ms | 30 | 0 | 0 | 0 |
 

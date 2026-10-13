@@ -298,12 +298,19 @@ func brokerSheetRates(day time.Time) []ModelRate {
 		// catalog prices 4.5 at double above 200k prompt tokens, where 4.6 is
 		// flat across its window — the same reason gemini-3.1-pro-preview is
 		// left unseeded above.
+		// Read 2026-10-12 from the broker's catalog, for the GPT-6 family that
+		// config/presets/openrouter_openai.yaml binds. Unlike the Mistral rows,
+		// OpenAI publishes a cache-write price, so that column is nonzero.
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6-luna", 100_000, 500_000, 10_000, 125_000),
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6-sol", 2_000_000, 10_000_000, 200_000, 2_500_000),
+		rateOn(day, providerOpenAICompatible, "openai/gpt-6.1-sol", 2_000_000, 10_000_000, 100_000, 2_500_000),
 		rateOn(day, providerOpenAICompatible, "anthropic/claude-haiku-4.5", 1_000_000, 5_000_000, 100_000, 1_250_000),
 		rateOn(day, providerOpenAICompatible, "anthropic/claude-sonnet-4.6", 3_000_000, 15_000_000, 300_000, 3_750_000),
 		// Embedding lanes have no output and no cache — only input is nonzero.
 		embedOn(day, providerOpenAICompatible, "mistralai/mistral-embed-2312", 100_000),
 		embedOn(day, providerOpenAICompatible, "baai/bge-m3", 10_000),
 		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-small", 20_000),
+		embedOn(day, providerOpenAICompatible, "openai/text-embedding-3-large", 130_000),
 		// Read 2026-09-25 from the decisions endpoint's own usage.cost: one call
 		// of 425 input tokens cost $0.00001785, which is $0.042 per million
 		// input tokens exactly. Keyed on the configured id, which is what a

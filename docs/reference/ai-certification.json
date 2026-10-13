@@ -1,13 +1,13 @@
 {
   "totals": {
     "sites": 47,
-    "sites_best_current": 46,
+    "sites_best_current": 47,
     "sites_best_partial": 0,
-    "sites_best_stale": 1,
+    "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 178,
-    "records": 254,
-    "bindings": 14,
+    "records": 304,
+    "bindings": 16,
     "self_judged_records": 0
   },
   "presets": [
@@ -5288,6 +5288,827 @@
       "unrecognised": 0
     },
     {
+      "file": "openrouter_openai.yaml",
+      "profile": "cloud_frontier",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-6-luna"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-6-luna"
+        },
+        {
+          "tier": "premium",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-6-sol"
+        },
+        {
+          "tier": "frontier",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-6.1-sol"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 39,
+          "passed": 32,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "not_supported",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 9,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 2
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 42,
+          "passed": 36,
+          "cases_failing_often": 2,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 60,
+          "passed": 56,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 42,
+          "passed": 40,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 39,
+          "passed": 38,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "nl_search",
+          "label": "Natural-language search",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 33,
+          "passed": 33,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "rate_extract",
+          "label": "Exchange rate extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 12,
+          "passed": 12,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Did our reply settle it",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-luna",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 18,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 30,
+          "passed": 28,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_extract",
+          "label": "Website deep read",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 15,
+          "passed": 15,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 27,
+          "passed": 27,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 54,
+          "passed": 51,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "not_supported",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 39,
+          "passed": 35,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "supported_degraded",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 36,
+          "passed": 35,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 9,
+          "passed": 9,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "certified",
+            "state": "current"
+          },
+          "abandoned": 0,
+          "runs": 36,
+          "passed": 36,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 2
+        }
+      ],
+      "bands": {
+        "certified": 21,
+        "supported_degraded": 5,
+        "not_supported": 3
+      },
+      "untested": 1,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
       "file": "qwen3_local_vllm.yaml",
       "profile": "sovereign",
       "tiers": [
@@ -6836,6 +7657,724 @@
           "runs": 15,
           "passed": 15,
           "records": 2
+        }
+      ]
+    },
+    {
+      "name": "GPT",
+      "answer": "mostly",
+      "sites_shipped": 47,
+      "sites_measured": 46,
+      "ready": 33,
+      "usable_with_care": 11,
+      "not_reliable_yet": 2,
+      "recheck_pending": 1,
+      "models": [
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "sites": 44,
+          "sites_current": 44,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 669,
+          "passed": 633,
+          "reliability": 0.9461883408071748,
+          "slowest_p95_ms": 26943,
+          "bands": {
+            "certified": 24,
+            "supported_degraded": 16,
+            "not_supported": 4
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "sites": 40,
+          "sites_current": 40,
+          "sites_partial": 0,
+          "sites_stale": 0,
+          "runs": 498,
+          "passed": 477,
+          "reliability": 0.9578313253012049,
+          "slowest_p95_ms": 21274,
+          "bands": {
+            "certified": 25,
+            "supported_degraded": 13,
+            "not_supported": 2
+          }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "sites": 44,
+          "sites_current": 43,
+          "sites_partial": 0,
+          "sites_stale": 1,
+          "runs": 849,
+          "passed": 770,
+          "reliability": 0.9069493521790342,
+          "slowest_p95_ms": 19791,
+          "bands": {
+            "certified": 16,
+            "supported_degraded": 17,
+            "not_supported": 11
+          }
+        }
+      ],
+      "sites": [
+        {
+          "key": "account_scan/company_scan",
+          "task": "account_scan",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/morning_brief",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "agent_loop/overnight_at_risk_sweep",
+          "task": "agent_loop",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "brief_ranking/rank",
+          "task": "brief_ranking",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "capture_classify/classify",
+          "task": "capture_classify",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 2
+        },
+        {
+          "key": "capture_confidentiality_verdict/thread",
+          "task": "capture_confidentiality_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 54,
+          "passed": 48,
+          "records": 2
+        },
+        {
+          "key": "capture_counterparty_verdict/verdict",
+          "task": "capture_counterparty_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 60,
+          "passed": 56,
+          "records": 2
+        },
+        {
+          "key": "cert_judge/judge",
+          "task": "cert_judge",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "cold_start/acts",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 3
+        },
+        {
+          "key": "cold_start/company_message",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "cold_start/field_extract",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "cold_start/sitereadmessage",
+          "task": "cold_start",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "corpus_ask/corpus_ask",
+          "task": "corpus_ask",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "deal_health/deal_status",
+          "task": "deal_health",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/account",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/contact",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/first",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/intro_note",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "draft_reply/reply",
+          "task": "draft_reply",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "enrich/signature",
+          "task": "enrich",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 2
+        },
+        {
+          "key": "growth_fit/growth_fit",
+          "task": "growth_fit",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "nl_search/filter_propose",
+          "task": "nl_search",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 33,
+          "passed": 33,
+          "records": 3
+        },
+        {
+          "key": "offer_draft/draft",
+          "task": "offer_draft",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "owed_verdict/owed",
+          "task": "owed_verdict",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 2
+        },
+        {
+          "key": "propose_roles/committee",
+          "task": "propose_roles",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "rate_extract/fx",
+          "task": "rate_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "request_settlement/request_settle",
+          "task": "request_settlement",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 2
+        },
+        {
+          "key": "signal_extract/thread_events",
+          "task": "signal_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 30,
+          "passed": 28,
+          "records": 3
+        },
+        {
+          "key": "site_extract/profile",
+          "task": "site_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 1
+        },
+        {
+          "key": "site_fact_extract/page_facts",
+          "task": "site_fact_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "site_triage/triage",
+          "task": "site_triage",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 15,
+          "passed": 15,
+          "records": 3
+        },
+        {
+          "key": "stage_evidence_extract/criteria",
+          "task": "stage_evidence_extract",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 27,
+          "passed": 27,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_ask",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 12,
+          "passed": 12,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 17,
+          "records": 3
+        },
+        {
+          "key": "summarize/company_dossier",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "summarize/contact_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 6,
+          "passed": 6,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_brief",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "summarize/meeting_plan",
+          "task": "summarize",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 3,
+          "passed": 3,
+          "records": 3
+        },
+        {
+          "key": "transcript_propose/next_steps",
+          "task": "transcript_propose",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 39,
+          "passed": 37,
+          "records": 3
+        },
+        {
+          "key": "voice_build/demo_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/derive",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_draft",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "voice_build/eval_scores",
+          "task": "voice_build",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "weekly_learnings/learn",
+          "task": "weekly_learnings",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 9,
+          "passed": 9,
+          "records": 3
+        },
+        {
+          "key": "weekly_review/narrative",
+          "task": "weekly_review",
+          "best": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "current",
+          "runs": 18,
+          "passed": 18,
+          "records": 3
         }
       ]
     },
@@ -8958,656 +10497,6 @@
           "records": 1
         }
       ]
-    },
-    {
-      "name": "GPT",
-      "answer": "not_yet",
-      "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 16,
-      "usable_with_care": 17,
-      "not_reliable_yet": 11,
-      "recheck_pending": 1,
-      "models": [
-        {
-          "binding": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "sites": 44,
-          "sites_current": 43,
-          "sites_partial": 0,
-          "sites_stale": 1,
-          "runs": 849,
-          "passed": 770,
-          "reliability": 0.9069493521790342,
-          "slowest_p95_ms": 19791,
-          "bands": {
-            "certified": 16,
-            "supported_degraded": 17,
-            "not_supported": 11
-          }
-        }
-      ],
-      "sites": [
-        {
-          "key": "account_scan/company_scan",
-          "task": "account_scan",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "agent_loop/morning_brief",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "agent_loop/overnight_at_risk_sweep",
-          "task": "agent_loop",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "brief_ranking/rank",
-          "task": "brief_ranking",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "capture_classify/classify",
-          "task": "capture_classify",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 1
-        },
-        {
-          "key": "capture_confidentiality_verdict/thread",
-          "task": "capture_confidentiality_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 54,
-          "passed": 48,
-          "records": 1
-        },
-        {
-          "key": "capture_counterparty_verdict/verdict",
-          "task": "capture_counterparty_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 63,
-          "passed": 49,
-          "records": 1
-        },
-        {
-          "key": "cert_judge/judge",
-          "task": "cert_judge",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "cold_start/acts",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 21,
-          "passed": 20,
-          "records": 1
-        },
-        {
-          "key": "cold_start/company_message",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "cold_start/field_extract",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
-          "key": "cold_start/sitereadmessage",
-          "task": "cold_start",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 18,
-          "passed": 16,
-          "records": 1
-        },
-        {
-          "key": "deal_health/deal_status",
-          "task": "deal_health",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 21,
-          "passed": 21,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/account",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/contact",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 6,
-          "passed": 6,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/first",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/intro",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/intro_note",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 1
-        },
-        {
-          "key": "draft_reply/reply",
-          "task": "draft_reply",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 27,
-          "passed": 27,
-          "records": 1
-        },
-        {
-          "key": "enrich/signature",
-          "task": "enrich",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "growth_fit/growth_fit",
-          "task": "growth_fit",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "nl_search/filter_propose",
-          "task": "nl_search",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 33,
-          "passed": 33,
-          "records": 1
-        },
-        {
-          "key": "offer_draft/draft",
-          "task": "offer_draft",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 45,
-          "passed": 44,
-          "records": 1
-        },
-        {
-          "key": "owed_verdict/owed",
-          "task": "owed_verdict",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 1
-        },
-        {
-          "key": "propose_roles/committee",
-          "task": "propose_roles",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 27,
-          "passed": 20,
-          "records": 1
-        },
-        {
-          "key": "rate_extract/fx",
-          "task": "rate_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 18,
-          "passed": 18,
-          "records": 1
-        },
-        {
-          "key": "signal_extract/thread_events",
-          "task": "signal_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 39,
-          "passed": 30,
-          "records": 1
-        },
-        {
-          "key": "site_fact_extract/page_facts",
-          "task": "site_fact_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 9,
-          "passed": 9,
-          "records": 1
-        },
-        {
-          "key": "site_triage/triage",
-          "task": "site_triage",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 15,
-          "passed": 15,
-          "records": 1
-        },
-        {
-          "key": "stage_evidence_extract/criteria",
-          "task": "stage_evidence_extract",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 81,
-          "passed": 65,
-          "records": 1
-        },
-        {
-          "key": "summarize/company_ask",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 18,
-          "passed": 16,
-          "records": 1
-        },
-        {
-          "key": "summarize/company_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "summarize/company_dossier",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
-          "key": "summarize/contact_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 18,
-          "passed": 11,
-          "records": 1
-        },
-        {
-          "key": "summarize/meeting_brief",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 4,
-          "records": 1
-        },
-        {
-          "key": "summarize/meeting_plan",
-          "task": "summarize",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 6,
-          "records": 1
-        },
-        {
-          "key": "transcript_propose/next_steps",
-          "task": "transcript_propose",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 39,
-          "passed": 37,
-          "records": 1
-        },
-        {
-          "key": "voice_build/demo_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
-          "key": "voice_build/derive",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 9,
-          "passed": 8,
-          "records": 1
-        },
-        {
-          "key": "voice_build/eval_draft",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "current",
-          "runs": 9,
-          "passed": 6,
-          "records": 1
-        },
-        {
-          "key": "voice_build/eval_scores",
-          "task": "voice_build",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 3,
-          "passed": 3,
-          "records": 1
-        },
-        {
-          "key": "weekly_learnings/learn",
-          "task": "weekly_learnings",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 12,
-          "passed": 12,
-          "records": 1
-        },
-        {
-          "key": "weekly_review/narrative",
-          "task": "weekly_review",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "current",
-          "runs": 45,
-          "passed": 45,
-          "records": 1
-        }
-      ]
     }
   ],
   "bindings": [
@@ -9856,6 +10745,46 @@
     {
       "binding": {
         "provider": "openai_compatible",
+        "model": "openai/gpt-6-luna",
+        "env": "cloud_frontier"
+      },
+      "sites": 44,
+      "sites_current": 44,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 669,
+      "passed": 633,
+      "reliability": 0.9461883408071748,
+      "slowest_p95_ms": 26943,
+      "bands": {
+        "certified": 24,
+        "supported_degraded": 16,
+        "not_supported": 4
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "openai/gpt-6-sol",
+        "env": "cloud_frontier"
+      },
+      "sites": 40,
+      "sites_current": 40,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 498,
+      "passed": 477,
+      "reliability": 0.9578313253012049,
+      "slowest_p95_ms": 21274,
+      "bands": {
+        "certified": 25,
+        "supported_degraded": 13,
+        "not_supported": 2
+      }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
         "model": "openai/gpt-oss-120b",
         "env": "cloud_frontier"
       },
@@ -10083,6 +11012,52 @@
           "reliability": 1,
           "latency_p50_ms": 1492,
           "latency_p95_ms": 3347,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 4366,
+          "latency_p95_ms": 6215,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 6028,
+          "latency_p95_ms": 7355,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -10385,6 +11360,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 1786,
+          "latency_p95_ms": 4867,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 0,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1822,
+          "latency_p95_ms": 3874,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -10448,8 +11469,17 @@
         "sales",
         "offer"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "openai_compatible",
+          "model": "openai/gpt-6-sol",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "overnight_sweep_one_quiet_deal_is_not_the_book",
@@ -10712,6 +11742,52 @@
               "overnight_sweep_retrieved_text_is_not_an_instruction"
             ]
           }
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 24,
+          "passed": 19,
+          "reliability": 0.7916666666666666,
+          "latency_p50_ms": 1786,
+          "latency_p95_ms": 4867,
+          "reported": {
+            "accepted": 19,
+            "wrong_answer": 0,
+            "invalid": 5,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1822,
+          "latency_p95_ms": 3874,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -10989,6 +12065,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2601,
+          "latency_p95_ms": 3321,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2498,
+          "latency_p95_ms": 3278,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -11217,6 +12339,29 @@
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 9,
+          "reliability": 0.6,
+          "latency_p50_ms": 3169,
+          "latency_p95_ms": 4467,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
@@ -11461,6 +12606,29 @@
           "reported": {
             "accepted": 45,
             "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 14,
+          "scenarios_total": 14,
+          "runs": 42,
+          "passed": 36,
+          "reliability": 0.8571428571428571,
+          "latency_p50_ms": 2205,
+          "latency_p95_ms": 3936,
+          "reported": {
+            "accepted": 36,
+            "wrong_answer": 6,
             "invalid": 0,
             "abstained": 0
           },
@@ -11743,6 +12911,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 19,
+          "scenarios_total": 19,
+          "runs": 60,
+          "passed": 56,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 2349,
+          "latency_p95_ms": 3927,
+          "reported": {
+            "accepted": 56,
+            "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -12000,6 +13191,52 @@
           "reported": {
             "accepted": 17,
             "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 3814,
+          "latency_p95_ms": 4601,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 2796,
+          "latency_p95_ms": 5618,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -12268,6 +13505,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 24,
+          "passed": 22,
+          "reliability": 0.9166666666666666,
+          "latency_p50_ms": 3399,
+          "latency_p95_ms": 5179,
+          "reported": {
+            "accepted": 22,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 3145,
+          "latency_p95_ms": 5364,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -12500,6 +13783,54 @@
           "latency_p95_ms": 3022,
           "reported": {
             "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 3399,
+          "latency_p95_ms": 5179,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 3145,
+          "latency_p95_ms": 5364,
+          "reported": {
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -12744,6 +14075,52 @@
           "reliability": 1,
           "latency_p50_ms": 1310,
           "latency_p95_ms": 3022,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 3399,
+          "latency_p95_ms": 5179,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 3145,
+          "latency_p95_ms": 5364,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -13003,6 +14380,54 @@
           "reliability": 1,
           "latency_p50_ms": 1310,
           "latency_p95_ms": 3022,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 3399,
+          "latency_p95_ms": 5179,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 3145,
+          "latency_p95_ms": 5364,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -13289,6 +14714,29 @@
         },
         {
           "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 2968,
+          "latency_p95_ms": 7167,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "vllm",
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
@@ -13506,6 +14954,52 @@
           "latency_p95_ms": 3650,
           "reported": {
             "accepted": 21,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 17970,
+          "latency_p95_ms": 26943,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 13705,
+          "latency_p95_ms": 21274,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -13898,6 +15392,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -14218,6 +15758,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -14529,6 +16115,52 @@
           "latency_p95_ms": 3315,
           "reported": {
             "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -14870,6 +16502,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -15196,6 +16874,52 @@
           "reported": {
             "accepted": 12,
             "wrong_answer": 6,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -15560,6 +17284,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 4568,
+          "latency_p95_ms": 12191,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 5013,
+          "latency_p95_ms": 9755,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -15787,6 +17557,29 @@
           "reliability": 1,
           "latency_p50_ms": 4122,
           "latency_p95_ms": 5038,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 3150,
+          "latency_p95_ms": 4322,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -16038,6 +17831,52 @@
           "latency_p95_ms": 17751,
           "reported": {
             "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 14563,
+          "latency_p95_ms": 24649,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 14875,
+          "latency_p95_ms": 17564,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -16323,6 +18162,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 3103,
+          "latency_p95_ms": 4212,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 2190,
+          "latency_p95_ms": 3292,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -16555,6 +18440,52 @@
           "latency_p95_ms": 3584,
           "reported": {
             "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 3553,
+          "latency_p95_ms": 7082,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 3224,
+          "latency_p95_ms": 10548,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 3
@@ -16833,6 +18764,29 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 2743,
+          "latency_p95_ms": 6547,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -17078,6 +19032,52 @@
           "reliability": 1,
           "latency_p50_ms": 1096,
           "latency_p95_ms": 2246,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2247,
+          "latency_p95_ms": 3531,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2961,
+          "latency_p95_ms": 3994,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -17360,6 +19360,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 2756,
+          "latency_p95_ms": 13124,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 1963,
+          "latency_p95_ms": 3362,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -17611,6 +19657,29 @@
           "reliability": 1,
           "latency_p50_ms": 1638,
           "latency_p95_ms": 3180,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 3016,
+          "latency_p95_ms": 5555,
           "reported": {
             "accepted": 18,
             "wrong_answer": 0,
@@ -17931,6 +20000,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 8,
+          "scenarios_total": 8,
+          "runs": 30,
+          "passed": 28,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 2773,
+          "latency_p95_ms": 4303,
+          "reported": {
+            "accepted": 28,
+            "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 8,
+          "scenarios_total": 8,
+          "runs": 33,
+          "passed": 26,
+          "reliability": 0.7878787878787878,
+          "latency_p50_ms": 4454,
+          "latency_p95_ms": 10075,
+          "reported": {
+            "accepted": 26,
+            "wrong_answer": 5,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -18180,6 +20295,29 @@
         },
         {
           "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 3297,
+          "latency_p95_ms": 5907,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "vllm",
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
@@ -18398,6 +20536,52 @@
           "reported": {
             "accepted": 6,
             "wrong_answer": 3,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 3586,
+          "latency_p95_ms": 4479,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 3311,
+          "latency_p95_ms": 3618,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -18655,6 +20839,52 @@
           "reliability": 1,
           "latency_p50_ms": 1100,
           "latency_p95_ms": 2159,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 2346,
+          "latency_p95_ms": 3539,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 1666,
+          "latency_p95_ms": 2613,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -18950,6 +21180,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 2638,
+          "latency_p95_ms": 4156,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 12
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 33,
+          "passed": 28,
+          "reliability": 0.8484848484848485,
+          "latency_p50_ms": 3658,
+          "latency_p95_ms": 7200,
+          "reported": {
+            "accepted": 16,
+            "wrong_answer": 4,
+            "invalid": 1,
+            "abstained": 12
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -19185,6 +21461,52 @@
           "latency_p95_ms": 5733,
           "reported": {
             "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 15,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 14,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -19439,6 +21761,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 17,
+          "reliability": 0.9444444444444444,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 17,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -19496,10 +21864,10 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "model": "openai/gpt-6-sol",
           "env": "cloud_frontier"
         },
-        "band": "supported_degraded",
+        "band": "certified",
         "reliability": 1,
         "state": "current"
       },
@@ -19668,6 +22036,52 @@
           "latency_p95_ms": 5733,
           "reported": {
             "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 1
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
+          "reported": {
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -19912,6 +22326,52 @@
           "latency_p95_ms": 5733,
           "reported": {
             "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
+          "reported": {
+            "accepted": 6,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -20167,6 +22627,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -20410,6 +22916,52 @@
           "reliability": 1,
           "latency_p50_ms": 3283,
           "latency_p95_ms": 5733,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 7653,
+          "latency_p95_ms": 22625,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 6597,
+          "latency_p95_ms": 19895,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -20695,6 +23247,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 39,
+          "passed": 35,
+          "reliability": 0.8974358974358975,
+          "latency_p50_ms": 2271,
+          "latency_p95_ms": 5366,
+          "reported": {
+            "accepted": 35,
+            "wrong_answer": 4,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 6,
+          "scenarios_total": 6,
+          "runs": 54,
+          "passed": 45,
+          "reliability": 0.8333333333333334,
+          "latency_p50_ms": 1889,
+          "latency_p95_ms": 3593,
+          "reported": {
+            "accepted": 45,
+            "wrong_answer": 9,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -20931,6 +23529,52 @@
           "reliability": 1,
           "latency_p50_ms": 1826,
           "latency_p95_ms": 7150,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 5267,
+          "latency_p95_ms": 17661,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6458,
+          "latency_p95_ms": 18967,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -21179,6 +23823,52 @@
         {
           "binding": {
             "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 5267,
+          "latency_p95_ms": 17661,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6458,
+          "latency_p95_ms": 18967,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
@@ -21406,6 +24096,52 @@
           "latency_p95_ms": 7150,
           "reported": {
             "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 5267,
+          "latency_p95_ms": 17661,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6458,
+          "latency_p95_ms": 18967,
+          "reported": {
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -21643,6 +24379,52 @@
           "latency_p95_ms": 7150,
           "reported": {
             "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 5267,
+          "latency_p95_ms": 17661,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 6458,
+          "latency_p95_ms": 18967,
+          "reported": {
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -21901,6 +24683,52 @@
           "reliability": 1,
           "latency_p50_ms": 1222,
           "latency_p95_ms": 2006,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 2870,
+          "latency_p95_ms": 3590,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 1623,
+          "latency_p95_ms": 3135,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -22176,6 +25004,52 @@
           "latency_p95_ms": 2431,
           "reported": {
             "accepted": 45,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 36,
+          "passed": 36,
+          "reliability": 1,
+          "latency_p50_ms": 4803,
+          "latency_p95_ms": 11758,
+          "reported": {
+            "accepted": 36,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-sol",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 4504,
+          "latency_p95_ms": 8474,
+          "reported": {
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0

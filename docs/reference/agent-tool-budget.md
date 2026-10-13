@@ -57,7 +57,7 @@ spends it on every run of every agent.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 66 | 1913 | 1311 | 3810 | 11% | 19400 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 66 | 2901 | 1972 | 5459 | 16% | 17751 | 7 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 27051 |  |  | 82% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 66 |  | 27100 |  |  | 82% |  |  |  |
 
 ### `morning_brief`
 
@@ -146,7 +146,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 346 tokens, mean 409, across 66 served tools.
+Median 346 tokens, mean 410, across 66 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -167,7 +167,7 @@ listing once. Read a row as what that tool costs a menu.
 | `send_message` | 603 |  |
 | `change_lists` | 592 |  |
 | `update_record` | 581 |  |
-| `forecast_readings` | 552 |  |
+| `forecast_readings` | 574 |  |
 | `read_reporting` | 535 |  |
 | `query_workspace` | 530 |  |
 | `progress_deal` | 513 |  |
@@ -175,8 +175,8 @@ listing once. Read a row as what that tool costs a menu.
 | `change_lead_state` | 494 |  |
 | `resolve_entities` | 493 |  |
 | `change_tags` | 492 |  |
+| `forecast_movement` | 471 |  |
 | `search_records` | 456 |  |
-| `forecast_movement` | 443 |  |
 | `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |

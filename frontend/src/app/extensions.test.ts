@@ -1,14 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   composedExtensions,
   EXTENSION_SCREEN,
   type ExtensionDescriptor,
   extensionRbacObject,
+  extensionTitle,
   findExtension,
   isExtensionRbacObject,
   unitsForSecretScope,
 } from "./extensions";
 import { parseHash } from "./router";
+
+// A unit's copy as gen-composition merges it, so a title resolves as it would composed.
+vi.mock("@composition/copy", () => ({
+  extensionCopy: {
+    en: { "extDispactConnector.title": "Dispact" },
+    de: { "extDispactConnector.title": "Dispact DE" },
+  },
+}));
 
 // The registry is the ONE place the SPA learns what an installation composed.
 // Two states have to hold at once, and they are not the same test: a composed
@@ -29,6 +38,7 @@ import { parseHash } from "./router";
 
 const NOTES: ExtensionDescriptor = {
   name: "notes",
+  title: "",
   secretScope: "workspace",
   verbs: [
     {
@@ -126,12 +136,14 @@ describe("the composed extension registry", () => {
 describe("placing a unit by its declared secret scope", () => {
   const DISPACT: ExtensionDescriptor = {
     name: "dispact-connector",
+    title: "extDispactConnector.title",
     secretScope: "user",
     verbs: [],
   };
   // A unit declaring no secret: de in the shipped tree.
   const YOGI: ExtensionDescriptor = {
     name: "yogi",
+    title: "",
     secretScope: "",
     verbs: [],
   };
@@ -168,5 +180,31 @@ describe("placing a unit by its declared secret scope", () => {
     // rather than a heading over an empty list.
     expect(unitsForSecretScope("user")).toEqual([]);
     expect(unitsForSecretScope("workspace")).toEqual([]);
+  });
+});
+
+describe("naming a unit", () => {
+  const DISPACT: ExtensionDescriptor = {
+    name: "dispact-connector",
+    title: "extDispactConnector.title",
+    secretScope: "user",
+    verbs: [],
+  };
+  const REGISTRY = [DISPACT, NOTES];
+
+  it("shows a unit's own title in the reader's locale", () => {
+    expect(extensionTitle("dispact-connector", "en", REGISTRY)).toBe("Dispact");
+    expect(extensionTitle("dispact-connector", "de", REGISTRY)).toBe(
+      "Dispact DE",
+    );
+  });
+
+  it("falls back to the unit name when it carries no title", () => {
+    expect(extensionTitle("notes", "en", REGISTRY)).toBe("notes");
+  });
+
+  it("falls back to the unit name for a unit this installation does not compose", () => {
+    expect(extensionTitle("retired-unit", "en", REGISTRY)).toBe("retired-unit");
+    expect(extensionTitle("dispact-connector", "en")).toBe("dispact-connector");
   });
 });

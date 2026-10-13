@@ -4,12 +4,14 @@
 import { Blocks, ChevronRight } from "lucide-react";
 import {
   EXTENSION_SCREEN,
+  type ExtensionDescriptor,
   type UnitSecretScope,
   unitsForSecretScope,
+  unitTitle,
 } from "../app/extensions";
 import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -62,28 +64,28 @@ export function ExtensionUnitsCard({
         <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
       </PanelBody>
       {units.map((unit) => (
-        <UnitRow key={unit.name} name={unit.name} />
+        <UnitRow key={unit.name} unit={unit} />
       ))}
     </Panel>
   );
 }
 
-/**
- * One unit, as a row that is its own way in. A unit ships no display name, so
- * its directory name shows once, in the code face.
- */
-function UnitRow({ name }: Readonly<{ name: string }>) {
+/** One unit, as a row that is its own way in. */
+function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const { name } = unit;
+  const title = unitTitle(unit, locale);
   return (
     <PanelRow interactive record className="extunits-row">
       <a
         className="extunits-row-press"
         data-testid={`ext-unit-${name}`}
         href={`#/${EXTENSION_SCREEN}/${name}`}
-        aria-label={t("extUnits.openNamed", { name })}
+        aria-label={t("extUnits.openNamed", { name: title })}
       >
         <Blocks className="extunits-mark" aria-hidden />
-        <KeyedName name={name} code={name} />
+        <KeyedName name={title} code={name} />
         <ChevronRight className="extunits-go" aria-hidden />
       </a>
     </PanelRow>

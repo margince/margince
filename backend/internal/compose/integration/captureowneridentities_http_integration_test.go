@@ -79,6 +79,21 @@ func TestTheOwnerIdentityEndpointsRoundTripAClaim(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/capture/owner-identities", nil, nil, &listed); status != http.StatusOK || len(listed.Data) != 0 {
 		t.Errorf("after withdrawing, the list carried %d identity(ies), want none", len(listed.Data))
 	}
+
+	var restored struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/capture/owner-identities/"+created.ID+"/restore",
+		nil, nil, &restored); status != http.StatusOK {
+		t.Fatalf("restore = %d, want 200", status)
+	}
+	if restored.ID != created.ID {
+		t.Errorf("restore answered id %s, want the withdrawn identity's own %s", restored.ID, created.ID)
+	}
+	if status := e.Call(t, "POST", "/v1/capture/owner-identities/"+created.ID+"/restore",
+		nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("a second restore of the same withdrawal = %d, want 404", status)
+	}
 }
 
 func TestAMalformedOwnerIdentityIsRefusedRatherThanStored(t *testing.T) {

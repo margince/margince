@@ -10,11 +10,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { RowOpen } from "../design-system/rowopen";
 import { SettingRow } from "../design-system/settingrow";
-import {
-  isMailbox,
-  isMailIcon,
-  providerName,
-} from "../format/connectorprovider";
+import { isMailIcon, providerName } from "../format/connectorprovider";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -70,7 +66,7 @@ export function ConnectorRow({
   const [importing, setImporting] = useState(false);
   const name = providerName(conn.provider, t);
   const identity = conn.account_label ? `${name} ${conn.account_label}` : name;
-  const canImport = conn.status === "connected" && isMailbox(conn.provider);
+  const canImport = conn.status === "connected" && conn.can_backfill;
   return (
     <>
       <SettingRow
