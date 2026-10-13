@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,6 +36,14 @@ type Session struct {
 	ApprovedAt     *time.Time
 	SupersededBy   *RunID
 	SourceReleased bool
+	// JobAttempt is the attempt the run's current job was queued under; zero
+	// for a run only older code moved.
+	JobAttempt int
+	// Actor is who moved the run to the work it is queued for; the job acts as it.
+	Actor                *StoredActor
+	AttemptCorrelationID *ids.UUID
+	Phase                string
+	Progress             *Progress
 }
 
 // The wizard steps a draft can be reopened on.
@@ -97,7 +106,10 @@ type runChange struct {
 	version int
 	// approved admits the move only for a run someone approved.
 	approved bool
-	values   []runValue
+	// queue marks a move that queues work: it opens a new attempt, which
+	// fences off every older one, and stores who the job acts as.
+	queue  bool
+	values []runValue
 	// literals are fixed assignments such as "report = NULL".
 	literals      []string
 	before, after map[string]any
@@ -184,6 +196,14 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 	for _, literal := range change.literals {
 		set.WriteString(", " + literal)
 	}
+	if change.queue {
+		actor, err := storedActorOf(ctx)
+		if err != nil {
+			return err
+		}
+		set.WriteString(storekit.SQLf(`, job_attempt = job_attempt + 1, job_status = $%d, actor = $%d, attempt_correlation_id = $%d`,
+			arg(to), arg(actor), arg(ids.NewV7())))
+	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))
 	if err := execHoldingName(ctx, tx, id, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
 		return fmt.Errorf("moving import run %s to %s: %w", id, to, err)
@@ -226,7 +246,7 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (
 		}
 		moved = true
 		return stageTransition(ctx, tx, id, moveValidate, runChange{
-			version: version, literals: []string{"report = NULL", "error = NULL"},
+			version: version, queue: true, literals: []string{"report = NULL", "error = NULL"},
 		})
 	})
 	if err != nil {

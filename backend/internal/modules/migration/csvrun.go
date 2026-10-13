@@ -121,6 +121,7 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int) (Run, err
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		return stageTransition(ctx, tx, id, moveApprove, runChange{
 			version: version,
+			queue:   true,
 			values:  []runValue{{"approved_by", approver}},
 			// The profile serves only the choosing; a stopped commit must not keep its sample cells.
 			literals: []string{"approved_at = now()", "profile = NULL"},
@@ -146,7 +147,7 @@ func (s *RunStore) ResumeApproved(ctx context.Context, id RunID, version int) (R
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		return stageTransition(ctx, tx, id, moveResume, runChange{
-			version: version, approved: true, literals: []string{"error = NULL"},
+			version: version, approved: true, queue: true, literals: []string{"error = NULL"},
 		})
 	})
 	if err != nil {
@@ -243,7 +244,8 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at, updated_at,
 			mapping, report, undo_report, error, captured_by,
 			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
-			source_released_at IS NOT NULL`
+			source_released_at IS NOT NULL, job_attempt, actor, attempt_correlation_id,
+			coalesce(phase, ''), progress`
 
 func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 	var (
@@ -252,11 +254,14 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		report     []byte
 		undoReport []byte
 		runErr     *string
+		actor      []byte
+		progress   []byte
 	)
 	dest := []any{
 		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
 		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
 		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
+		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &progress,
 	}
 	if withProfile {
 		dest = append(dest, &run.Profile)
@@ -285,6 +290,9 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 			return Run{}, fmt.Errorf("reading the report of import run %s: %w", run.ID, err)
 		}
 		run.Report = &rep
+	}
+	if err := decodeLeaseColumns(&run, actor, progress); err != nil {
+		return Run{}, err
 	}
 	if len(undoReport) > 0 {
 		var rep UndoReport

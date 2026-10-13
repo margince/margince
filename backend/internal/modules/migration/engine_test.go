@@ -42,6 +42,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 	})
 	s := NewRunStore(nil)
 	runID := RunID(ids.NewV7())
+	lease := Lease{Run: runID, Status: StatusRunning, Attempt: 1}
 
 	for _, entry := range []struct {
 		name string
@@ -108,6 +109,12 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
+		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},
+		{"Heartbeat", func() error { return s.Heartbeat(ctx, lease) }},
+		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
+		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
+		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
+		{"UndoSlice", func() error { _, err := s.UndoSlice(ctx, lease, nil, Budget{}); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -226,7 +233,11 @@ func (w *fakeWriters) Associate(_ context.Context, a Assoc) (AssocResult, error)
 // fakeRuns is the in-memory run record — the loop's checkpoint/resume
 // contract is provable without Postgres (the SQL RunStore has its own
 // integration coverage).
-type fakeRuns struct{ run Run }
+type fakeRuns struct {
+	run Run
+	// checkpoints records the cursors the loop advanced to, in order.
+	checkpoints []int
+}
 
 func newFakeRuns() *fakeRuns {
 	return &fakeRuns{run: Run{Status: StatusRunning}}
@@ -242,6 +253,7 @@ func (r *fakeRuns) advanceCheckpoint(_ context.Context, _ RunID, checkpoint int)
 		return fmt.Errorf("checkpoint %d is behind %d: %w", checkpoint, r.run.Checkpoint, apperrors.ErrConflict)
 	}
 	r.run.Checkpoint = checkpoint
+	r.checkpoints = append(r.checkpoints, checkpoint)
 	return nil
 }
 
@@ -665,6 +677,7 @@ func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
 		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
+		"Claim": true, "Heartbeat": true, "Flush": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {
@@ -727,5 +740,22 @@ func TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce(t *testing.T) {
 	if predicted != 2 {
 		t.Errorf("the prediction now reads %d; the dry run predicted two and no attempt may add to it, "+
 			"or an approval turns a file's duplicates into twice as many", predicted)
+	}
+}
+
+// The flip has no lease: its checkpoint advances after every landed row, and
+// its edges are never checkpointed, because the link phase runs whole.
+func TestTheFlipStillAdvancesPerRow(t *testing.T) {
+	runs := newFakeRuns()
+	e := &Engine{runs: runs, w: newFakeWriters()}
+
+	if _, err := e.Run(context.Background(), RunID{}, twoObjectSource()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if want := []int{1, 2, 3, 4, 5}; !reflect.DeepEqual(runs.checkpoints, want) {
+		t.Errorf("the flip advanced its checkpoint to %v, want %v: one write per row, none per edge", runs.checkpoints, want)
+	}
+	if runs.run.Status != StatusComplete {
+		t.Errorf("the flip ended %s, want complete", runs.run.Status)
 	}
 }
