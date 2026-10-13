@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
@@ -49,13 +50,14 @@ function Served({
         oidc_group_role_map: groupRoleMap,
       }),
     "GET /me": () =>
-      jsonResponse({
-        user: { email: "admin@brandt.example" },
-        authorization: {
-          installation_settings: ["read", "update"],
-          authentication_policy: ["read", "update"],
-        },
-      }),
+      jsonResponse(
+        meFixture({
+          allow: {
+            installation_settings: ["read", "update"],
+            authentication_policy: ["read", "update"],
+          },
+        }),
+      ),
     "GET /me/mfa": () =>
       jsonResponse({
         enrolled: ownMfaConfirmed,
@@ -161,9 +163,13 @@ export const SecondFactorConfirm: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("switch", { name: /require second factor/i }),
-    );
+    const control = await canvas.findByRole("switch", {
+      name: /require second factor/i,
+    });
+    // The switch draws before the session grants arrive, and a disabled one
+    // ignores the click.
+    await waitFor(() => expect(control).toBeEnabled());
+    await userEvent.click(control);
     // The dialog portals to the body, outside the canvas.
     await within(canvasElement.ownerDocument.body).findByText(
       /you have not set up an authenticator/i,
