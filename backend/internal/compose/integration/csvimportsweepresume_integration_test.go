@@ -236,6 +236,29 @@ func TestAJobLostBeforeItsClaimIsReinsertedOnce(t *testing.T) {
 	}
 }
 
+// A queued run whose job is alive is asked about once a window, not on every
+// pass: the insert that found the job dates the run.
+func TestALiveJobsRequeueWaitsAWholeWindow(t *testing.T) {
+	e := setupImportApp(t)
+	commit := compose.ImportCommitArgs{}.Kind()
+	runID := approvedButUnworked(t, e)
+	queued := readLease(t, e, runID)
+	ageQueuedRun(t, e, runID)
+
+	sweepImportRuns(t, e)
+	var dated bool
+	if err := e.Owner.QueryRow(t.Context(), `SELECT updated_at > now() - interval '1 minute' FROM import_run WHERE id = $1`,
+		runID).Scan(&dated); err != nil || !dated {
+		t.Fatalf("the requeue that found the live job left the run undated (%v); the next pass would ask again", err)
+	}
+	if got := readLease(t, e, runID); got != queued {
+		t.Fatalf("the requeue moved the run to %+v, want it as approve left it, %+v", got, queued)
+	}
+	if jobs := jobsOf(t, e, commit, runID); !slices.Equal(jobs, []attemptJob{{queued.attempt, "available"}}) {
+		t.Fatalf("the run's jobs are %v, want its one queued job", jobs)
+	}
+}
+
 func TestPastTheResumeLimitTheRunFails(t *testing.T) {
 	e := setupImportApp(t)
 	commit, undo := compose.ImportCommitArgs{}.Kind(), compose.ImportUndoArgs{}.Kind()

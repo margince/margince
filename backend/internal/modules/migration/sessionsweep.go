@@ -302,7 +302,8 @@ func reopenStale(ctx context.Context, tx pgx.Tx, l Lease, requeue Requeue) error
 }
 
 // reinsertLost queues the run's current attempt once more and counts a resume
-// only when that inserted, which means the job had been lost.
+// only when that inserted, which means the job had been lost. Either way the
+// run is dated, so the rule asks again only a whole window later.
 func reinsertLost(ctx context.Context, tx pgx.Tx, l Lease, queuedAfter time.Duration, requeue Requeue) (bool, error) {
 	if err := lockGuarded(ctx, tx, l, lostJob, queuedAfter); err != nil {
 		return false, err
@@ -316,7 +317,7 @@ func reinsertLost(ctx context.Context, tx pgx.Tx, l Lease, queuedAfter time.Dura
 		return false, fmt.Errorf("queueing import run %s attempt %d again: %w", l.Run, l.Attempt, err)
 	}
 	if !inserted {
-		return false, nil
+		return false, execFenced(ctx, tx, l, `updated_at = now()`)
 	}
 	return true, execFenced(ctx, tx, l, `resume_count = resume_count + 1, updated_at = now()`)
 }
