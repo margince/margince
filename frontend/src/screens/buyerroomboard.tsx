@@ -12,6 +12,7 @@ import { previewMediaType } from "../design-system/filechip";
 import { useFilePreview } from "../design-system/filepreview";
 import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
+import { downloadBytes } from "../lib/download";
 import { throwProblem } from "../lib/problem";
 import {
   bearer,
@@ -21,7 +22,6 @@ import {
 } from "./buyerroomsession";
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
-import { downloadBytes } from "./download";
 
 // The buyer's half of the document board: the shared documents and the
 // conversation, read and written on the room session's Bearer. The board

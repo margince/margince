@@ -31,6 +31,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { postMultipart } from "../lib/multipart";
 import {
   problemCodeOf,
   problemMessageOf,
@@ -38,7 +39,6 @@ import {
   unwrap,
 } from "../lib/problem";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
-import { postMultipart } from "./multipart";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];

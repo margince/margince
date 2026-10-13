@@ -10,9 +10,9 @@ import { Callout } from "../design-system/callout";
 import { CompanyLogo } from "../design-system/companylogo";
 import { FileDropzone } from "../design-system/filedropzone";
 import { useT } from "../i18n";
+import { postMultipart } from "../lib/multipart";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { storeCompany } from "./installationcompany";
-import { postMultipart } from "./multipart";
 import "./companymark.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];

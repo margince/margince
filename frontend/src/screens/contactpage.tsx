@@ -28,6 +28,7 @@ import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMemberName } from "../lib/membernames";
 import { unwrap } from "../lib/problem";
 import { useViewerId } from "../lib/session";
 import { useFoldedViewport } from "../lib/viewport";
@@ -57,7 +58,6 @@ import { transportForActivity, useTransports } from "./contacttransports";
 import { rosterOwnerName } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
-import { useMemberName } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { RecordAccess } from "./recordaccess";
 import {

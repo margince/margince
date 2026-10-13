@@ -3,7 +3,7 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { ProblemError } from "../lib/problem";
+import { ProblemError } from "./problem";
 
 // Names a colleague by id, batching every id asked for within one tick into
 // a single `GET /users/names` request rather than one request per reference.

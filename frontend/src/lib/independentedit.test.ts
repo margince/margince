@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ProblemError } from "../lib/problem";
 import { saveIndependentEdit } from "./independentedit";
+import { ProblemError } from "./problem";
 
 type RecordValue = Record<string, unknown> & {
   id: string;

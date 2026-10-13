@@ -15,8 +15,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { RecordBack } from "../design-system/recordview";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { postMultipart } from "../lib/multipart";
 import { problemMessageOf } from "../lib/problem";
-import { postMultipart } from "./multipart";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];

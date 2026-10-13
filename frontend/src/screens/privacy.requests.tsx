@@ -19,6 +19,7 @@ import { ruleText } from "../format/jurisdiction";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMemberName } from "../lib/membernames";
 import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
 import {
   EntityRef,
@@ -27,7 +28,6 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
-import { useMemberName } from "./membernames";
 import {
   DSR_KIND_LABEL,
   DSR_STATUS_LABEL,

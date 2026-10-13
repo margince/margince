@@ -7,7 +7,13 @@
 // Afterwards the script lists text outside imports that still names an old path,
 // such as a gate or a waiver list. Only a reader can say if that text follows.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import {
   basename,
   dirname,
@@ -22,6 +28,7 @@ import ts from "typescript";
 import {
   filesMatching,
   filesUnder,
+  MODULE_FILE,
   moduleAt,
   parseSource,
 } from "./lib/source-tree.ts";
@@ -177,7 +184,15 @@ function corpus(): string[] {
   const roots = ["src", "e2e", ".storybook", "scripts"].map((dir) =>
     join(frontendDir, dir),
   );
-  return roots.filter(existsSync).flatMap((root) => filesUnder(root));
+  // The config files at the top of frontend/ (vitest.setup.ts and the like)
+  // import from src/ too.
+  const configs = readdirSync(frontendDir)
+    .filter((name) => MODULE_FILE.test(name))
+    .map((name) => join(frontendDir, name));
+  return [
+    ...configs,
+    ...roots.filter(existsSync).flatMap((root) => filesUnder(root)),
+  ];
 }
 
 function main(argv: readonly string[]) {

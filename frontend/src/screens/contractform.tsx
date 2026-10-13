@@ -13,7 +13,10 @@ import { FileDropzoneControl } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
-import { ACCEPTED_ATTACHMENT_ATTR, uploadAttachment } from "./attachmentupload";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  uploadAttachment,
+} from "../lib/attachmentupload";
 import { ContractCustomFields } from "./contractcustomfields";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { paperState, useContractPaper } from "./contractpaper";

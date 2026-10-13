@@ -6,7 +6,7 @@ import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf } from "../../lib/problem";
-import { useFileDrop } from "../use-file-drop";
+import { useFileDrop } from "../../lib/use-file-drop";
 import { parseVoiceInsights } from "../voice-insights";
 import { VOICE_MIN_WORDS } from "../voice-intake-core";
 import type {

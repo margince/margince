@@ -29,10 +29,10 @@ import { formatDate } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
+import { useMemberName } from "../lib/membernames";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import { EntityRef, rosterOwnerName, useRoster } from "./entityref";
-import { useMemberName } from "./membernames";
 import {
   acquisitionCaption,
   noticeRuleHint,

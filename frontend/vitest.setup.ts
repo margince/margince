@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
-import { takeUnroutedSessionProbes } from "./src/screens/unrouted-session";
+import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
 
 // Every waiter that states no timeout gets the one per-waiter budget

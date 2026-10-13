@@ -17,9 +17,9 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { JobHealthCard } from "./jobhealth";
 import { DeadWorkCallout } from "./jobhealthdead";
-import { tableRowCells } from "./tablerow.testkit";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

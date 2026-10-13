@@ -28,9 +28,9 @@ import { useToast } from "../design-system/toast";
 import { VisibilityBadge } from "../design-system/visibility";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useMemberName } from "../lib/membernames";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { useViewerId } from "../lib/session";
-import { useMemberName } from "./membernames";
 import { invalidateRecord, recordWriteKeys } from "./recordwritekeys";
 import "./recordaccess.css";
 

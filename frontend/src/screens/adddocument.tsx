@@ -25,6 +25,11 @@ import { foldForMatch } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import {
+  ACCEPTED_ATTACHMENT_ATTR,
+  type AttachmentParent,
+  uploadAttachment,
+} from "../lib/attachmentupload";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   DEAL_MATCH_LIMIT,
@@ -33,11 +38,6 @@ import {
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
-import {
-  ACCEPTED_ATTACHMENT_ATTR,
-  type AttachmentParent,
-  uploadAttachment,
-} from "./attachmentupload";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.

@@ -22,6 +22,7 @@ import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useMemberName } from "../../lib/membernames";
 import { useViewerId } from "../../lib/session";
 import {
   LostReasonFact,
@@ -29,7 +30,6 @@ import {
   WonWithoutContractFact,
 } from "../dealwinreason";
 import { EntityRef, rosterOwnerName } from "../entityref";
-import { useMemberName } from "../membernames";
 import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];
