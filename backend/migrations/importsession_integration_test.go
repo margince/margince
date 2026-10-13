@@ -17,9 +17,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/migrations"
+)
+
+// The backfill matches the text old code wrote, so the test spells it as it
+// was written and does not follow the live constants.
+const (
+	oldCauseStopped           = "the import stopped on an error; approve it again to continue from its checkpoint"
+	oldCauseValidationStopped = "the test run stopped on an error; upload the file again to start a new import"
+	oldCauseSuperseded        = "a newer test run of this source replaced this one"
 )
 
 const importSessionChecksVersion = "20261013120001"
@@ -59,7 +66,7 @@ type legacyRun struct {
 func seedLegacyRun(t *testing.T, conn *pgx.Conn, run legacyRun) string {
 	t.Helper()
 	if run.connector == "" {
-		run.connector = migration.ConnectorCSV
+		run.connector = "csv"
 	}
 	var runError *string
 	if run.runError != "" {
@@ -108,18 +115,18 @@ func TestTheBackfillCancelsEveryLegacyValidationFailure(t *testing.T) {
 	rewindImportSession(t, conn)
 	stopped := seedLegacyRun(t, conn, legacyRun{
 		status: "failed", sourceRef: "ws/import/a",
-		runError: migration.CauseValidationStopped,
+		runError: oldCauseValidationStopped,
 	})
 	commitStopped := seedLegacyRun(t, conn, legacyRun{
 		status: "failed", sourceRef: "ws/import/b",
-		runError: migration.CauseStopped,
+		runError: oldCauseStopped,
 	})
 	replayImportSession(t, conn)
 
-	if got := readSessionRow(t, conn, stopped); got.status != migration.StatusCancelled || !got.released {
+	if got := readSessionRow(t, conn, stopped); got.status != "cancelled" || !got.released {
 		t.Errorf("a test run that stopped reads %+v, want cancelled with its file released: it wrote nothing", got)
 	}
-	if got := readSessionRow(t, conn, commitStopped); got.status != migration.StatusFailed || got.released {
+	if got := readSessionRow(t, conn, commitStopped); got.status != "failed" || got.released {
 		t.Errorf("a stopped commit reads %+v, want still failed and holding its file: a resume reads it", got)
 	}
 }
@@ -133,7 +140,7 @@ func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
 	}
 	wrote["failed"] = seedLegacyRun(t, conn, legacyRun{
 		status: "failed", sourceRef: "ws/import/failed",
-		runError: migration.CauseStopped,
+		runError: oldCauseStopped,
 	})
 	unwritten := map[string]string{}
 	for _, status := range []string{"validating", "awaiting_approval"} {
@@ -175,15 +182,15 @@ func TestTheOlderOfTwoNamedReportsIsCancelled(t *testing.T) {
 	replayImportSession(t, conn)
 
 	got := readSessionRow(t, conn, older)
-	if got.status != migration.StatusCancelled || got.supersededBy == nil || *got.supersededBy != newer ||
-		!got.released || got.runError != migration.CauseSuperseded {
+	if got.status != "cancelled" || got.supersededBy == nil || *got.supersededBy != newer ||
+		!got.released || got.runError != oldCauseSuperseded {
 		t.Errorf("the older report reads %+v, want cancelled, superseded by %s, released, with the supersede cause", got, newer)
 	}
 	if got := readSessionRow(t, conn, newer); got.status != "validating" {
 		t.Errorf("the newer test run reads %s, want it kept as it was", got.status)
 	}
 	// A run that writes keeps its name even against a newer report: it cannot be undone by a rename.
-	if got := readSessionRow(t, conn, laterReport); got.status != migration.StatusCancelled ||
+	if got := readSessionRow(t, conn, laterReport); got.status != "cancelled" ||
 		got.supersededBy == nil || *got.supersededBy != writing {
 		t.Errorf("a report beside a running run of its name reads %+v, want superseded by the running run", got)
 	}
@@ -224,7 +231,7 @@ func TestOneUnreleasedRunPerSource(t *testing.T) {
 	finished := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/same", age: 3 * time.Hour})
 	resumable := seedLegacyRun(t, conn, legacyRun{
 		status: "failed", sourceRef: "ws/import/same",
-		runError: migration.CauseStopped, age: 2 * time.Hour,
+		runError: oldCauseStopped, age: 2 * time.Hour,
 	})
 	report := seedLegacyRun(t, conn, legacyRun{status: "awaiting_approval", sourceRef: "ws/import/same", age: time.Hour})
 	replayImportSession(t, conn)
@@ -232,10 +239,10 @@ func TestOneUnreleasedRunPerSource(t *testing.T) {
 	if got := readSessionRow(t, conn, resumable); got.released {
 		t.Error("the resumable commit lost its file; a resume reads it, so it is the run that keeps the upload")
 	}
-	if got := readSessionRow(t, conn, finished); got.status != migration.StatusComplete || !got.released {
+	if got := readSessionRow(t, conn, finished); got.status != "complete" || !got.released {
 		t.Errorf("the finished run reads %+v, want complete and released", got)
 	}
-	if got := readSessionRow(t, conn, report); got.status != migration.StatusCancelled || !got.released {
+	if got := readSessionRow(t, conn, report); got.status != "cancelled" || !got.released {
 		t.Errorf("the unwritten report of the same upload reads %+v, want cancelled and released", got)
 	}
 
