@@ -68,7 +68,7 @@ const tools = () =>
         name: "search_records",
         title: "Search records",
         description:
-          'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+          "Find contacts, companies, deals, leads and projects by name.",
         required_scope: "read",
         tier: "auto_execute",
         egress: false,

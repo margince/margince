@@ -64,13 +64,13 @@ type listPipelinesAnswer struct {
 // surface.
 type PipelineLister func(ctx context.Context) ([]Pipeline, error)
 
-// RegisterPipelineTool wires the config read behind the deal write verbs. A nil
-// seam registers nothing: a surface that cannot ground its answer does not
-// pretend to.
 // pipelinesSource names where a pipeline or stage id comes from, for every tool
 // that takes one.
 const pipelinesSource = "read_directory (list: pipelines)"
 
+// RegisterPipelineTool wires the config read behind the deal write verbs. A nil
+// seam registers nothing: a surface that cannot ground its answer does not
+// pretend to.
 func RegisterPipelineTool(r *Registry, list PipelineLister) {
 	if list == nil {
 		return

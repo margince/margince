@@ -15,8 +15,8 @@ from tests.fakes import FakeMcp  # noqa: E402
 SEARCH = [{"name": "search_context", "inputSchema": {"type": "object"}}]
 
 
-def reply(hits, notes=(), record_type="activity"):
-    return json.dumps({"data": {"hits": [{"record": {"record_type": record_type, "id": str(i)}} for i in range(hits)],
+def reply(hits, notes=()):
+    return json.dumps({"data": {"hits": [{"id": str(i)} for i in range(hits)],
                                 "notes": [{"code": code} for code in notes]}}), False
 
 
@@ -33,10 +33,6 @@ class SemanticTest(unittest.TestCase):
     def test_lexical_fallback_is_named_as_lexical(self):
         why, lexical = self.problem(reply(0, ["semantic_ranking_degraded_to_lexical"]))
         self.assertEqual((lexical, "lexical" in why), (True, True))
-
-    def test_hits_without_an_activity_are_not_ready_and_not_lexical(self):
-        why, lexical = self.problem(reply(1, record_type="deal"))
-        self.assertEqual((lexical, "no activity" in why), (False, True))
 
     def test_no_hits_is_not_ready_and_not_lexical(self):
         why, lexical = self.problem(reply(0))

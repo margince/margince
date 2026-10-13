@@ -321,9 +321,12 @@ reindex_to_binding() {
   fi
   for _ in $(seq 1 90); do
     curl -sS -b "$COOKIES" -o "$WORK/reindex.status" "$APP_BASE/v1/embeddings/reindex/status"
-    if python3 -c 'import json, sys; s = json.load(open(sys.argv[1])); sys.exit(s.get("status") != "idle" or s.get("reindex_needed") is not False)' \
-      "$WORK/reindex.status" 2>/dev/null; then
-      echo "==> search index rebuilt for the binding"
+    # Idle under the bound identity is done. An entity whose embed exhausted its
+    # attempts stays pending forever, so it is named, not waited on.
+    if pending="$(python3 -c 'import json, sys; s = json.load(open(sys.argv[1]))
+done = s.get("status") == "idle" and s.get("configured_identity") == s.get("populated_identity")
+print(s.get("entities_pending")); sys.exit(not done)' "$WORK/reindex.status" 2>/dev/null)"; then
+      echo "==> search index rebuilt for the binding ($pending entities left unembedded)"
       return 0
     fi
     sleep 10
@@ -768,6 +771,8 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
+  # A settled scenario makes fewer runs than an earlier lane may have kept.
+  rm -f "$RECORD_DIR/$name".run*.jsonl
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
 done
 

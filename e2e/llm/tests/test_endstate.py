@@ -92,9 +92,9 @@ class EndStateTest(unittest.TestCase):
         with self.assertRaisesRegex(endstate.Unreadable, "read_record refused"):
             self.read(replies)
 
-    def test_a_field_the_read_does_not_carry_is_a_harness_fault(self):
-        with self.assertRaisesRegex(endstate.Unreadable, "carries no field 'tier'"):
-            self.read(world(SEEDED), ['company "Emsland Ventilbau GmbH" tier=gold'])
+    def test_a_field_the_read_leaves_out_is_scored_as_empty(self):
+        _, problems = self.read(world(SEEDED), ['company "Emsland Ventilbau GmbH" tier=gold'])
+        self.assertEqual(problems, ['ended with company "Emsland Ventilbau GmbH" tier=(empty), wanted gold'])
 
     def test_a_transport_error_is_a_harness_fault(self):
         with FakeMcp(TOOLS, status=500) as server:
@@ -274,8 +274,10 @@ def crm_world(records, tags=None, words=None, runs=None):
     def read_record(arguments):
         for t, i, n, fields, owner in records:
             if i == arguments.get("id") and t == arguments.get("record_type"):
-                return ok({"record_type": t, "id": i, "fields": {name_field[t]: n, **fields},
-                           "owner": {"id": "u-" + owner, "name": owner, "is_you": False}})
+                record = {"record_type": t, "id": i, "fields": {name_field[t]: n, **fields}}
+                if owner is not None:
+                    record["owner"] = {"id": "u-" + owner, "name": owner, "is_you": False}
+                return ok(record)
         return "not found", True
 
     def read_directory(arguments):
@@ -331,6 +333,11 @@ class ReadersTest(unittest.TestCase):
         _, problems = self.read(crm_world(HERZOG), ['company "Herzog Fertigung GmbH" owner=Sofia Meier',
                                                     'company "Herzog Fertigung GmbH" owner=Demo Admin'])
         self.assertEqual(problems, ['ended with company "Herzog Fertigung GmbH" owner=Sofia Meier, wanted Demo Admin'])
+
+    def test_a_record_left_without_an_owner_is_a_scored_failure(self):
+        ownerless = [r if r[0] != "company" else r[:4] + (None,) for r in HERZOG]
+        _, problems = self.read(crm_world(ownerless), ['company "Herzog Fertigung GmbH" owner=Sofia Meier'])
+        self.assertEqual(problems, ['ended with company "Herzog Fertigung GmbH" owner=(none), wanted Sofia Meier'])
 
     def test_a_stage_is_read_by_its_name_not_its_id(self):
         held, problems = self.read(crm_world(HERZOG), ['deal "Rheinufer Netzmodernisierung" stage=Negotiation'])

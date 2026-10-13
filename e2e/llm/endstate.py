@@ -96,12 +96,6 @@ _TAG = "tag"
 _TAGGABLE = ("company", "contact", "deal", "lead")
 _TAG_COUNTS = ("contacts", "companies", "deals", "leads")
 
-# Fields read_record leaves out while they are empty. A run that never filled
-# one ended without it, which is a score; any other missing field is a field
-# the read does not carry, and the reader stops.
-_OMITTED_WHEN_EMPTY = {("contact", "title"), ("company", "size_band"), ("company", "description"),
-                       ("lead", "company_name"), ("lead", "title")}
-
 # commit_import answers while the import is still writing. A four-row file
 # lands in about a second; a run still going after this long is a stuck stack.
 _IMPORT_WAIT_SECONDS = 90
@@ -357,19 +351,17 @@ def _field_problem(session, want, record_id):
     fields = record.get("fields")
     if not isinstance(fields, dict):
         raise Unreadable(f"read_record on {_where(want)} carries no fields")
+    # read_record leaves an empty field, and an unowned record's owner, out. A
+    # run that emptied one has changed the world, so it is scored, not a fault.
     if want.field == _OWNER:
         owner = record.get("owner")
-        if not isinstance(owner, dict) or "name" not in owner:
-            raise Unreadable(f"read_record on {_where(want)} names no owner")
-        actual = str(owner["name"])
+        actual = str(owner["name"]) if isinstance(owner, dict) and "name" in owner else "(none)"
     elif want.field == _STAGE:
         actual = _stage_name(session, fields.get("stage_id"), want)
     elif want.field in fields:
         actual = _rendered(fields[want.field])
-    elif (want.record_type, want.field) in _OMITTED_WHEN_EMPTY:
-        actual = "(empty)"
     else:
-        raise Unreadable(f"read_record on {_where(want)} carries no field {want.field!r}")
+        actual = "(empty)"
     if actual == want.value:
         return ""
     return f"ended with {_where(want)} {want.field}={actual}, wanted {want.value}"
