@@ -91,7 +91,6 @@ func RegisterImportTools(r *Registry, imports Imports) {
 	r.Register(describeImportFormat{imports: imports})
 	r.Register(commitImport{imports: imports, language: r.language})
 	r.Register(readImport{})
-	r.Register(runImport{})
 }
 
 // importObjectEnum is what a file's rows may be.
@@ -210,7 +209,7 @@ func (t commitImport) Spec() mcp.ToolSpec {
 		Name: "commit_import", Title: "Commit an import", Version: toolVersionV1,
 		Description:   commitImportCopy.render(),
 		Instead:       commitImportCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "approveImportRun",
 		InputSchema: schema(`{"type":"object","required":["run_id"],"properties":{
 			"run_id":{"type":"string","format":"uuid"},
@@ -300,7 +299,7 @@ func importRunArg(in json.RawMessage) (ids.UUID, error) {
 	id, err := ids.Parse(args.RunID)
 	if err != nil {
 		return ids.UUID{}, &BadArgsError{Cause: errors.New(
-			"`run_id` must be the uuid run_import (step: preview) answered with")}
+			"`run_id` must be the uuid preview_import answered with")}
 	}
 	return id, nil
 }

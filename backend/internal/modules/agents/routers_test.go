@@ -32,12 +32,10 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 		table  map[string]string
 	}{
 		{"read_forecast", principal.ScopeRead, "view", (readForecast{}).routeTargets()},
-		{"read_directory", principal.ScopeRead, "of", (readDirectory{}).routeTargets()},
-		{"read_relationships", principal.ScopeRead, "view", (readRelationships{}).routeTargets()},
-		{"read_context", principal.ScopeRead, "for", (readContext{}).routeTargets()},
-		{"send_outbound", principal.ScopeSend, "channel", (sendOutbound{}).routeTargets()},
-		{"draft_outbound", principal.ScopeDraft, "kind", (draftOutbound{}).routeTargets()},
-		{"run_import", principal.ScopeWrite, "step", (runImport{}).routeTargets()},
+		{"read_directory", principal.ScopeRead, "list", (readDirectory{}).routeTargets()},
+		{"read_project", principal.ScopeRead, "view", (readProject{}).routeTargets()},
+		{"send_outbound", principal.ScopeSend, "as", (sendOutbound{}).routeTargets()},
+		{"draft_outbound", principal.ScopeDraft, "for", (draftOutbound{}).routeTargets()},
 	} {
 		for choice, target := range tc.table {
 			served, err := r.InvokeServed(scopedCtx(tc.scope), tc.router,
@@ -49,12 +47,26 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 	}
 }
 
+// A router whose targets come from seams a composition may leave out is absent
+// with them, rather than refusing the boot.
+func TestARouterIsAbsentWhereATargetsSeamIs(t *testing.T) {
+	r := NewRegistry(nil, nil)
+	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
+	registerWhereServed(r, readDirectory{})
+	if _, served := r.Spec("read_directory"); served {
+		t.Error("read_directory registered without list_pipelines or list_channel_providers behind it")
+	}
+}
+
 func TestChoosingRoutersPickTheTargetByTheArgumentsNamed(t *testing.T) {
 	r := fullRegistry(t)
 	for _, tc := range []struct {
 		router, args, target string
 		scope                principal.Scope
 	}{
+		{"read_relationships", `{"contact_id":"not-a-uuid"}`, "who_knows", principal.ScopeRead},
+		{"read_relationships", `{"company_id":"not-a-uuid","deal_id":null}`, "intro_path_to", principal.ScopeRead},
+		{"read_relationships", `{"deal_id":"not-a-uuid"}`, "company_coverage", principal.ScopeRead},
 		{"resolve_duplicates", `{"candidate_id":"not-a-uuid","decision":"not_the_same"}`, "decide_duplicate", principal.ScopeWrite},
 		{"resolve_duplicates", `{"record_type":"contact","source_id":"not-a-uuid","target_id":"not-a-uuid"}`, "merge_records", principal.ScopeWrite},
 		{"resolve_duplicates", `{"candidate_id":null,"source_id":"not-a-uuid","target_id":"not-a-uuid","record_type":"contact"}`, "merge_records", principal.ScopeWrite},
@@ -64,13 +76,18 @@ func TestChoosingRoutersPickTheTargetByTheArgumentsNamed(t *testing.T) {
 			t.Errorf("%s %s: served %q with %v, want %s's own refusal", tc.router, tc.args, served.Tool, err, tc.target)
 		}
 	}
-	for _, args := range []string{
-		`{"decision":"not_the_same"}`,
-		`{"candidate_id":"a","source_id":"b","target_id":"c","record_type":"contact"}`,
+	for _, tc := range []struct {
+		router, args string
+		scope        principal.Scope
+	}{
+		{"resolve_duplicates", `{"decision":"not_the_same"}`, principal.ScopeWrite},
+		{"resolve_duplicates", `{"candidate_id":"a","source_id":"b","target_id":"c","record_type":"contact"}`, principal.ScopeWrite},
+		{"read_relationships", `{}`, principal.ScopeRead},
+		{"read_relationships", `{"contact_id":"a","deal_id":"b"}`, principal.ScopeRead},
 	} {
-		served, err := r.InvokeServed(scopedCtx(principal.ScopeWrite), "resolve_duplicates", json.RawMessage(args))
-		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != "resolve_duplicates" {
-			t.Errorf("%s: served %q with %v, want the router's own refusal", args, served.Tool, err)
+		served, err := r.InvokeServed(scopedCtx(tc.scope), tc.router, json.RawMessage(tc.args))
+		if _, bad := errors.AsType[*BadArgsError](err); !bad || served.Tool != tc.router {
+			t.Errorf("%s %s: served %q with %v, want the router's own refusal", tc.router, tc.args, served.Tool, err)
 		}
 	}
 }

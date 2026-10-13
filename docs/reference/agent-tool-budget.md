@@ -55,9 +55,9 @@ spends it on every run of every agent.
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 54 | 1917 | 1315 | 3818 | 11% | 19392 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 54 | 2912 | 1984 | 5483 | 16% | 17727 | 5 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 54 |  | 24309 |  |  | 74% |  |  |  |
+| `morning_brief` | 5 | 5 of 56 | 1917 | 1315 | 3819 | 11% | 19391 | 0 | 5 |
+| `overnight_at_risk_sweep` | 7 | 7 of 56 | 2915 | 1985 | 5486 | 16% | 17724 | 5 | 6 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 56 |  | 24762 |  |  | 75% |  |  |  |
 
 ### `morning_brief`
 
@@ -73,8 +73,8 @@ existing order. If there are no items, finish without inventing a brief. A tool 
 findings were not saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 3818 tokens on every step (1917 listing, 1315 step schema), leaving
-19392 of its budget and 28950 tokens of the
+Attaches 5 tools and pays 3819 tokens on every step (1917 listing, 1315 step schema), leaving
+19391 of its budget and 28949 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -94,8 +94,8 @@ at-risk deal summarizing the risk and the evidence (cite the records you read). 
 stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 5483 tokens on every step (2912 listing, 1984 step schema), leaving
-17727 of its budget and 27285 tokens of the
+Attaches 7 tools and pays 5486 tokens on every step (2915 listing, 1985 step schema), leaving
+17724 of its budget and 27282 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -144,7 +144,7 @@ would replace it is sampling real runs for chosen-vs-wanted.
 
 ## What each tool costs, largest first
 
-Median 397 tokens, mean 449, across 54 served tools.
+Median 393 tokens, mean 441, across 56 served tools.
 
 Each row is one tool rendered alone, so the rows do not add up to the catalog total:
 every row carries its own rounding, and the catalog figure divides the whole rendered
@@ -152,51 +152,53 @@ listing once. Read a row as what that tool costs a menu.
 
 | Tool | Tokens | Named as the wrong reach in |
 |---|---:|---:|
-| `run_import` | 1024 |  |
 | `run_report` | 1024 |  |
-| `send_outbound` | 1017 |  |
+| `send_outbound` | 1014 |  |
+| `preview_import` | 986 |  |
 | `list_records` | 821 | 2 scenarios |
 | `bulk_update_records` | 809 |  |
-| `log_activity` | 790 | 3 scenarios |
-| `compose_analytics_report` | 785 |  |
+| `log_activity` | 791 | 3 scenarios |
+| `compose_analytics_report` | 786 |  |
 | `read_lists` | 745 |  |
-| `create_record` | 680 |  |
-| `read_forecast` | 663 |  |
+| `create_record` | 678 |  |
+| `read_forecast` | 677 |  |
 | `change_lists` | 592 |  |
 | `update_record` | 581 |  |
-| `read_reporting` | 543 |  |
+| `read_reporting` | 544 |  |
 | `query_workspace` | 530 |  |
-| `progress_deal` | 521 |  |
+| `progress_deal` | 522 |  |
+| `draft_outbound` | 517 |  |
 | `run_analytics_query` | 508 |  |
-| `draft_outbound` | 501 |  |
 | `change_lead_state` | 494 |  |
 | `resolve_entities` | 494 |  |
 | `change_tags` | 492 |  |
-| `read_context` | 487 |  |
 | `search_records` | 456 |  |
 | `decide_approvals` | 429 |  |
 | `annotate_brief` | 417 | 2 scenarios |
 | `advance_project_phase` | 416 |  |
 | `review_commitments` | 401 |  |
-| `attach_document` | 398 |  |
+| `attach_document` | 399 |  |
 | `enrich` | 396 |  |
+| `prep_for_meeting` | 394 |  |
 | `resolve_duplicates` | 393 |  |
-| `read_relationships` | 363 |  |
-| `read_directory` | 360 |  |
-| `catch_me_up_on` | 347 | 2 scenarios |
+| `read_directory` | 361 |  |
+| `read_relationships` | 359 |  |
+| `catch_me_up_on` | 348 | 2 scenarios |
 | `describe_vocabulary` | 346 |  |
 | `read_input_checks` | 346 |  |
 | `book_meeting` | 344 |  |
 | `search_context` | 344 |  |
-| `check_availability` | 341 |  |
+| `check_availability` | 342 |  |
 | `search_report_evidence` | 335 |  |
 | `read_tags` | 322 |  |
 | `relink_activity` | 303 |  |
 | `archive_record` | 292 |  |
+| `read_project` | 292 |  |
 | `read_record` | 292 | 2 scenarios |
-| `whats_slipping_this_week` | 272 |  |
+| `whats_slipping_this_week` | 273 |  |
 | `list_approvals` | 268 |  |
 | `invite_meeting` | 264 |  |
+| `commit_import` | 263 |  |
 | `relink_activities` | 260 |  |
 | `create_task` | 221 |  |
 | `at_risk_relationships` | 212 |  |

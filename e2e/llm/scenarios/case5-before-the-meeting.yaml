@@ -38,7 +38,7 @@ prompt: |
 must_call:
   - search_records
 may_call:
-  - read_context
+  - prep_for_meeting
   - read_relationships
   - catch_me_up_on
   - query_workspace

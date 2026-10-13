@@ -87,7 +87,7 @@ must_call:
 # user asked for it.
 must_call_with:
   - resolve_duplicates.record_type=company
-  - read_directory.of=colleagues
+  - read_directory.list=colleagues
   - archive_record.record_type=company
   # CRITERION 3, AND THE HALF THE NAME ALONE CANNOT HOLD. "Lena Fischer" below
   # is satisfied by the sentence that says the handover did NOT happen — "handing

@@ -211,6 +211,9 @@ func RegisterNetworkTools(r *Registry, whoKnows WhoKnowsLister, coverage Coverag
 	if atRisk != nil {
 		r.Register(atRiskTool{list: atRisk})
 	}
+	if whoKnows != nil && coverage != nil && intro != nil {
+		r.Register(readRelationships{})
+	}
 }
 
 // --- company_coverage (🟢 read) ---

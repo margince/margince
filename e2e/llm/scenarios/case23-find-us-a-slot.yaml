@@ -50,7 +50,7 @@ may_call:
   - query_workspace
   - resolve_entities
   - catch_me_up_on
-  - read_context
+  - prep_for_meeting
 
 must_mention:
   # CRITERION 1, MECHANICAL — real openings came back, as times a rep can

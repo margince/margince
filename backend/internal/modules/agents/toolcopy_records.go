@@ -61,7 +61,7 @@ var createRecordCopy = toolCopy{
 		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
 		"it — the create files the pair for review, and you report the pair as filed, unresolved " +
 		"until the reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
-		"a CSV — go through run_import (step: preview), which checks " +
+		"a CSV — go through preview_import, which checks " +
 		"every row and writes nothing; creating them one by one skips that check.",
 	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
 		"When the user says where they met the contact, pass that word as offer_tag: it only offers " +

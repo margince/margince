@@ -222,7 +222,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Name: "prep_for_meeting", Title: "Prepare for a meeting", Version: toolVersionV1,
 		Description:   prepForMeetingCopy.render(),
 		Instead:       prepForMeetingCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp:    "prepForMeeting",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),

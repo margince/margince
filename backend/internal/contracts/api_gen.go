@@ -22724,7 +22724,7 @@ type AgentRecordRef struct {
 
 // AgentTool defines model for AgentTool.
 type AgentTool struct {
-	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause.
+	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
 	// Egress True if the tool reaches outside the workspace.

@@ -69,7 +69,7 @@ type PipelineLister func(ctx context.Context) ([]Pipeline, error)
 // pretend to.
 // pipelinesSource names where a pipeline or stage id comes from, for every tool
 // that takes one.
-const pipelinesSource = "read_directory (of: pipelines)"
+const pipelinesSource = "read_directory (list: pipelines)"
 
 func RegisterPipelineTool(r *Registry, list PipelineLister) {
 	if list == nil {

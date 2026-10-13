@@ -3,7 +3,12 @@
 
 package agents
 
-import "github.com/margince/margince/backend/internal/shared/ports/mcp"
+import (
+	"encoding/json"
+	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // readInputChecks fronts the three answers to whether the forecast's inputs can
 // be trusted. Each stays its own tool because each is its own REST route.
@@ -67,7 +72,8 @@ func (readForecast) routeTargets() map[string]string {
 }
 
 // readDirectory fronts the workspace's own set-up: who holds a seat, its
-// pipelines and stages, and the messaging transports it composed.
+// pipelines and stages, and the messaging transports it composed. whoami stays
+// apart: it is offered to every passport, and a router spends one scope.
 type readDirectory struct{ routed }
 
 func (readDirectory) Spec() mcp.ToolSpec {
@@ -76,11 +82,11 @@ func (readDirectory) Spec() mcp.ToolSpec {
 		Description: readDirectoryCopy.render(),
 		Instead:     readDirectoryCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"of":{"description":"colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports"}}}`),
+			"list":{"description":"colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports"}}}`),
 	}
 }
 
-func (readDirectory) routeField() string { return "of" }
+func (readDirectory) routeField() string { return "list" }
 
 func (readDirectory) routeTargets() map[string]string {
 	return map[string]string{
@@ -90,7 +96,8 @@ func (readDirectory) routeTargets() map[string]string {
 	}
 }
 
-// readRelationships fronts the relationship graph read from one record.
+// readRelationships fronts the relationship reads that start from one record.
+// The id a call names says which: each target takes a different one.
 // at_risk_relationships stays apart: a scheduled sweep is allowed it alone.
 type readRelationships struct{ routed }
 
@@ -100,32 +107,57 @@ func (readRelationships) Spec() mcp.ToolSpec {
 		Description: readRelationshipsCopy.render(),
 		Instead:     readRelationshipsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"view":{"description":"knows takes contact_id, intro company_id, coverage deal_id"}}}`),
+			"contact_id":{"description":"The colleagues who know this contact; name exactly one of the three ids"},
+			"company_id":{"description":"A warm route into this company; name exactly one of the three ids"},
+			"deal_id":{"description":"Which roles at this deal's company we cover; name exactly one of the three ids"}}}`),
 	}
 }
 
-func (readRelationships) routeField() string { return "view" }
+var relationshipTargetByID = map[string]string{
+	"contact_id": "who_knows",
+	"company_id": "intro_path_to",
+	"deal_id":    "company_coverage",
+}
 
 func (readRelationships) routeTargets() map[string]string {
-	return map[string]string{"knows": "who_knows", "intro": "intro_path_to", "coverage": "company_coverage"}
+	return map[string]string{"contact": "who_knows", "company": "intro_path_to", "deal": "company_coverage"}
 }
 
-// readContext fronts the assembled pictures a person reads before acting: a
-// meeting brief, a project handover and a project's whole page.
-type readContext struct{ routed }
+var errRelationshipsNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of contact_id, company_id or deal_id")}
 
-func (readContext) Spec() mcp.ToolSpec {
+func (readRelationships) chooseTarget(members map[string]json.RawMessage) (string, error) {
+	dropNullMembers(members, "contact_id", "company_id", "deal_id")
+	var target string
+	for id, tool := range relationshipTargetByID {
+		if _, named := members[id]; named {
+			if target != "" {
+				return "", errRelationshipsNamesOneID
+			}
+			target = tool
+		}
+	}
+	if target == "" {
+		return "", errRelationshipsNamesOneID
+	}
+	return target, nil
+}
+
+// readProject fronts the two reads of one project: its whole page, and what its
+// delivery side needs from sales.
+type readProject struct{ routed }
+
+func (readProject) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_context", Title: "Prepare for a meeting, handover or project", Version: toolVersionV1,
-		Description: readContextCopy.render(),
-		Instead:     readContextCopy.Instead,
+		Name: "read_project", Title: "Read a project or its handover", Version: toolVersionV1,
+		Description: readProjectCopy.render(),
+		Instead:     readProjectCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"for":{"description":"meeting prepares for one record or meeting; handoff and project read one project by project_id"}}}`),
+			"view":{"description":"overview is the project's whole page; handoff is what delivery needs from sales, with its gaps"}}}`),
 	}
 }
 
-func (readContext) routeField() string { return "for" }
+func (readProject) routeField() string { return "view" }
 
-func (readContext) routeTargets() map[string]string {
-	return map[string]string{"meeting": "prep_for_meeting", "handoff": "prepare_handoff", "project": "read_project_360"}
+func (readProject) routeTargets() map[string]string {
+	return map[string]string{"overview": "read_project_360", "handoff": "prepare_handoff"}
 }

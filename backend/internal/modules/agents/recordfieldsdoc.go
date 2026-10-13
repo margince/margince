@@ -346,7 +346,7 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "assignee_id") {
 		return nil
 	}
-	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (of: " +
+	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — read_directory (list: " +
 		"colleagues) answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 

@@ -27,9 +27,9 @@ prompt: |
   Alpenblick Sensorik GmbH,München,11-50,DE
 
 must_call:
-  - run_import
+  - preview_import
 may_call:
-  # NOT run_import's commit, and its absence is the case. Criterion 1 is that the
+  # NOT commit_import, and its absence is the case. Criterion 1 is that the
   # numbers are shown BEFORE anything is written, and the prose half now fails a
   # run that reports the import as done — so permitting the tool that does it
   # would license the very act the case exists to catch. The commit follow-through
@@ -37,9 +37,6 @@ may_call:
   - read_import
   - query_workspace
   - search_records
-
-must_call_with:
-  - run_import.step=preview
 
 must_mention:
   # MECHANICAL, both. Criterion 1 needs the usable count to appear at all, and

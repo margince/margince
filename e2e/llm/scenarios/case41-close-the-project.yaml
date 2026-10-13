@@ -44,7 +44,7 @@ prompt: |
   close it out.
 
 must_call:
-  - read_context
+  - read_project
   - advance_project_phase
 may_call:
   - list_records
@@ -59,7 +59,7 @@ may_call:
 # the right record, with prose about closing beside it. The phase is the whole
 # act, so the phase is pinned.
 must_call_with:
-  - read_context.for=project
+  - read_project.view=overview
   - advance_project_phase.to_phase=closed
 
 must_mention:

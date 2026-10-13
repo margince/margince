@@ -140,8 +140,7 @@ conversation where someone made a promise.
 
 ## One brief, two surfaces
 
-The `prep_for_meeting` MCP tool, which a client reaches as `read_context` with `for: meeting`, serves
-this brief and does not build its own.
+The `prep_for_meeting` MCP tool serves this brief and does not build its own.
 So an agent and the user it acts for read the same brief. The binding is
 `internal/compose/meetingbriefseam.go`. It takes the service the server runs,
 because the model lane is bound to that one. A second service would serve

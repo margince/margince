@@ -186,7 +186,9 @@ Write a case as a task a user would ask for in real work, never as a test of one
 
 - `must_call` lists the tools the job needs. Use `a|b` where either of
   two engines gives a right answer. Use `must_call_with` where the argument
-  is what the case tests, such as `decide_approval` with `approve`.
+  is what the case tests, such as `decide_approvals` with `decision: approve`.
+  A router is matched by the name the model called, so pin its choice the same
+  way: `read_forecast.view=movement`.
 - Set `writes: true` if the case changes any data, and `must_end_with` for the
   records it must leave changed. The answer can claim a write that never
   happened; the end state cannot.

@@ -80,7 +80,7 @@ var sendMessageCopy = toolCopy{
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find candidate times for a host without booking or sending anything.",
 	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability.",
-	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. read_context prepares for an existing meeting.",
+	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting.",
 	Retain:  "Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time.",
 }
 
@@ -108,7 +108,7 @@ var enrichCopy = toolCopy{
 
 var sendOutboundCopy = toolCopy{
 	Purpose: "Put a message on the wire to a real recipient, exactly as given; it composes " +
-		"nothing. email_reply: a mail answering a thread recorded here, by activity_id. new_email: " +
+		"nothing. email_reply: a mail answering a thread recorded here, by activity_id. email_new: " +
 		"a first mail starting a new conversation, filed on `links` naming the records it is about. " +
 		"chat_reply: an answer on a captured chat conversation, by activity_id, on the channel it " +
 		"came from.",
@@ -120,19 +120,19 @@ var sendOutboundCopy = toolCopy{
 		"record that something was said rather than say it.",
 	Retain: "Send the subject, body and activity_id or links the draft produced, and keep the " +
 		"staged approval id: the approval binds that exact message, so changed text needs a new " +
-		"one. new_email answers with the new conversation's activity_id.",
+		"one. email_new answers with the new conversation's activity_id.",
 }
 
 var draftOutboundCopy = toolCopy{
-	Purpose: "Write messages and send none. email: one email — a reply to a recorded thread " +
+	Purpose: "Write messages and send none. one_message: one email — a reply to a recorded thread " +
 		"(activity_id), or a FIRST message to a contact or lead (links naming the recipient and, " +
-		"for a contact, the company, deal or project it is about). follow_ups: a follow-up for " +
+		"for a contact, the company, deal or project it is about). slipping_deals: a follow-up for " +
 		"each deal in a segment at once — today `slipping` — each left on its deal's timeline.",
 	Limits: "A first email waits on the recipient's page, marked as drafted by an agent, until " +
 		"the human you act for sends it there; a reply, or one not_saved because they keep an " +
-		"unsent draft of their own, is not saved, so show it in full. follow_ups covers the deals " +
+		"unsent draft of their own, is not saved, so show it in full. slipping_deals covers the deals " +
 		"whats_slipping_this_week reports, at most 25.",
 	Instead: "send_outbound sends an email once it is written.",
-	Retain: "Keep the subject, body, to and the activity_id or links an email echoes; the send " +
+	Retain: "Keep the subject, body, to and the activity_id or links a message echoes; the send " +
 		"takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id.",
 }

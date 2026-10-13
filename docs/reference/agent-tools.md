@@ -126,7 +126,7 @@ Every core verb the surface serves, including those a client reaches only throug
 | `promote_lead` | 🟢 | `write` | no |
 | `qualify_lead` | 🟢 | `write` | no |
 | `read_brief` | 🟢 | `read` | no |
-| `read_context` | 🟢 | `read` | no |
+| `read_project` | 🟢 | `read` | no |
 | `read_directory` | 🟢 | `read` | no |
 | `read_forecast` | 🟢 | `read` | no |
 | `read_tags` | 🟢 | `read` | no |
@@ -147,7 +147,6 @@ Every core verb the surface serves, including those a client reaches only throug
 | `resolve_duplicates` | 🟢 | `write` | no |
 | `review_commitments` | 🟢 | `read` | no |
 | `run_analytics_query` | 🟢 | `read` | no |
-| `run_import` | 🟢 | `write` | no |
 | `run_report` | 🟢 | `read` | no |
 | `read_reporting` | 🟢 | `read` | no |
 | `compose_analytics_report` | 🟢 | `read` | no |

@@ -1,6 +1,6 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__read_forecast", "mcp__margince__read_directory", "mcp__margince__progress_deal", "mcp__margince__search_records"]}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__search_records", "input": {"q": "Netzmodernisierung", "record_type": "deal"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_directory", "input": {"of": "pipelines"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_directory", "input": {"list": "pipelines"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_forecast", "input": {"view": "readings"}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__progress_deal", "input": {"deal_id": "d1", "to_stage_id": "s-neg", "if_version": 1, "note": "Purchasing joined the call; terms are being negotiated."}}]}}
 {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_forecast", "input": {"view": "readings"}}]}}

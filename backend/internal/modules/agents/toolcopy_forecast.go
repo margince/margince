@@ -146,8 +146,8 @@ var readForecastCopy = toolCopy{
 	Limits: "`won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline " +
 		"whose close date somebody confirmed. `coverage_note` says what the totals leave out; " +
 		"quote it with any total. movement needs `from` then `to`, both from ONE readings answer's " +
-		"`snapshots`; none listed means nothing was frozen yet, and two reads subtracted is not " +
-		"this answer. In movement, `definition` means the snapshots used different rules and " +
+		"`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is " +
+		"not the same answer: it says nothing of where the difference went. In movement, `definition` means the snapshots used different rules and " +
 		"`model` a re-scored probability: neither is sales movement.",
 	Instead: "run_report and query_workspace also produce numbers, and neither is the forecast. " +
 		"For a board-pack section, run_analytics_query with save, then compose_analytics_report; " +

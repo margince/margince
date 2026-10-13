@@ -20,14 +20,14 @@ func (sendOutbound) Spec() mcp.ToolSpec {
 		Description: sendOutboundCopy.render(),
 		Instead:     sendOutboundCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"channel":{"description":"email_reply answers a recorded mail thread, new_email starts one filed on links, chat_reply answers a captured chat"}}}`),
+			"as":{"description":"email_reply answers a recorded mail thread, email_new starts one filed on links, chat_reply answers a captured chat"}}}`),
 	}
 }
 
-func (sendOutbound) routeField() string { return "channel" }
+func (sendOutbound) routeField() string { return "as" }
 
 func (sendOutbound) routeTargets() map[string]string {
-	return map[string]string{"email_reply": "send_email", "new_email": "send_company_email", "chat_reply": "send_message"}
+	return map[string]string{"email_reply": "send_email", "email_new": "send_company_email", "chat_reply": "send_message"}
 }
 
 // draftOutbound fronts drafting one message and drafting a follow-up per
@@ -40,34 +40,14 @@ func (draftOutbound) Spec() mcp.ToolSpec {
 		Description: draftOutboundCopy.render(),
 		Instead:     draftOutboundCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"kind":{"description":"email drafts one message; follow_ups drafts one per deal in a segment"}}}`),
+			"for":{"description":"one_message drafts one email; slipping_deals drafts a follow-up per slipping deal"}}}`),
 	}
 }
 
-func (draftOutbound) routeField() string { return "kind" }
+func (draftOutbound) routeField() string { return "for" }
 
 func (draftOutbound) routeTargets() map[string]string {
-	return map[string]string{"email": "draft_email", "follow_ups": "draft_follow_ups_for"}
-}
-
-// runImport fronts the two writing steps of an import: the dry run and the
-// commit of the run it produced.
-type runImport struct{ routed }
-
-func (runImport) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "run_import", Title: "Import a spreadsheet", Version: toolVersionV1,
-		Description: runImportCopy.render(),
-		Instead:     runImportCopy.Instead,
-		InputSchema: schema(`{"type":"object","properties":{
-			"step":{"description":"preview checks the rows and writes nothing; commit writes a previewed run by run_id"}}}`),
-	}
-}
-
-func (runImport) routeField() string { return "step" }
-
-func (runImport) routeTargets() map[string]string {
-	return map[string]string{"preview": "preview_import", "commit": "commit_import"}
+	return map[string]string{"one_message": "draft_email", "slipping_deals": "draft_follow_ups_for"}
 }
 
 // resolveDuplicates fronts settling a flagged pair and merging two records.

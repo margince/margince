@@ -62,7 +62,7 @@ may_call:
   - search_context
 
 must_call_with:
-  - read_relationships.view=intro
+  - read_relationships.company_id=*
 
 must_mention:
   - "Heike"

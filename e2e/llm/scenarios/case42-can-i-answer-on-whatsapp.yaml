@@ -59,7 +59,7 @@ may_call:
 # hold: the value has to be the one the directory carries, verbatim, or the
 # write dies on a foreign key.
 must_call_with:
-  - read_directory.of=channel_providers
+  - read_directory.list=channel_providers
   - log_activity.kind=message
   - log_activity.channel_provider=whatsapp
 
