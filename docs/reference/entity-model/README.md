@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 303 |
-| Columns | 3578 |
-| Foreign keys | 502 |
+| Tables | 305 |
+| Columns | 3591 |
+| Foreign keys | 504 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 129 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 131 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 36 |
@@ -96,7 +96,7 @@ erDiagram
 | [assignments](assignments.md) | 2 |
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
-| [capture](capture.md) | 22 |
+| [capture](capture.md) | 24 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
@@ -162,7 +162,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 25 | 129 |
+| [`app_user`](identity.md#app_user) | identity | 25 | 131 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -183,6 +183,7 @@ erDiagram
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |
 | [`bulk_operation`](compose.md#bulk_operation) | compose | 13 | 0 |
+| [`capture_alias_refused`](capture.md#capture_alias_refused) | capture | 3 | 0 |
 | [`capture_alias_sighting`](capture.md#capture_alias_sighting) | capture | 5 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
@@ -195,6 +196,7 @@ erDiagram
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 5 | 0 |
 | [`capture_import`](capture.md#capture_import) | capture | 9 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
+| [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
 | [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 21 | 0 |
 | [`capture_sender_override`](capture.md#capture_sender_override) | capture | 7 | 0 |
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |

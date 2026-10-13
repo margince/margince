@@ -200,37 +200,39 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	return out, err
 }
 
-// Remove withdraws one claim. Somebody else's is not theirs to see, so it
-// answers not-found like a row that is not there — the same shape the
-// exclusion list uses, and for the same reason: a refusal that distinguished
-// "not yours" from "not there" would confirm the colleague's alias exists.
+// Remove withdraws one claim, kept aside for its undo. Somebody else's answers
+// not-found like a row that is not there. A refusal that told "not yours" from
+// "not there" would confirm the colleague's alias.
 func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 	actor, err := seatItself(ctx)
 	if err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var identity OwnerIdentity
+		if err := purgeExpiredWithdrawalsTx(ctx, tx); err != nil {
+			return err
+		}
+		var withdrawn withdrawnIdentity
 		err := tx.QueryRow(ctx, `
-			SELECT id, user_id, kind, value, source FROM capture_owner_identity WHERE id = $1`, id).
-			Scan(&identity.ID, &identity.UserID, &identity.Kind, &identity.Value, &identity.Source)
+			DELETE FROM capture_owner_identity WHERE id = $1 AND user_id = $2
+			RETURNING id, user_id, kind, value, source, created_by, created_at`, id, actor.UserID).
+			Scan(&withdrawn.ID, &withdrawn.UserID, &withdrawn.Kind, &withdrawn.Value,
+				&withdrawn.Source, &withdrawn.createdBy, &withdrawn.CreatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
-			return fmt.Errorf("capture: reading an owner identity: %w", err)
-		}
-		if identity.UserID != actor.UserID {
-			return apperrors.ErrNotFound
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM capture_owner_identity WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("capture: removing an owner identity: %w", err)
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// withdrawing a claim IS retiring it, as the exclusion list reads it.
-		_, err = storekit.Audit(ctx, tx, "archive", captureSettingsObject,
-			storekit.MustWorkspace(ctx), ownerIdentityAuditImage(identity), nil)
-		return err
+		auditID, err := storekit.Audit(ctx, tx, "archive", captureSettingsObject,
+			storekit.MustWorkspace(ctx), ownerIdentityAuditImage(withdrawn.OwnerIdentity), nil)
+		if err != nil {
+			return err
+		}
+		withdrawn.auditID, withdrawn.withdrawnBy = auditID, actor.ID
+		return keepWithdrawalTx(ctx, tx, withdrawn)
 	})
 }
 

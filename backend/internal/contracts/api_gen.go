@@ -26905,6 +26905,11 @@ type CaptureConnection struct {
 	// Backfill Summary of the connection's backfill run; state `none` when never run.
 	Backfill *BackfillStatus `json:"backfill,omitempty"`
 
+	// CanBackfill Whether this provider's connector can import older mail at all. False means
+	// `POST /connectors/{provider}/backfill` and its estimate refuse with `422
+	// connector_unsupported`, so a client offers no import rather than one that fails.
+	CanBackfill bool `json:"can_backfill"`
+
 	// ContextTag The one existing word every record this connector creates is filed under, so
 	// "which records came in from this source" has an answer. Absent when the operator
 	// chose none, which is the honest default rather than a guess.
@@ -27086,8 +27091,12 @@ type CaptureCounterpartyHoldListResponse struct {
 
 // CaptureExclusion defines model for CaptureExclusion.
 type CaptureExclusion struct {
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// CreatedByName The display name of the member who added the rule. Null when no member added it (a
+	// system or connector rule) and when that member has been deactivated.
+	CreatedByName *string            `json:"created_by_name"`
+	Id            openapi_types.UUID `json:"id"`
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
@@ -27317,6 +27326,14 @@ type CapturePurgeOutcome struct {
 type CaptureSenderDecision struct {
 	Address string `json:"address"`
 
+	// ContactId The contact `record_exists` found, so a client can open it. Absent whenever
+	// `record_exists` is false.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
+
+	// ContactName That contact's name (its `full_name`), so a client can show it without fetching the
+	// contact. Present exactly when `contact_id` is.
+	ContactName *string `json:"contact_name,omitempty"`
+
 	// Decision What YOU decided instead, absent when you have not.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
@@ -27330,6 +27347,13 @@ type CaptureSenderDecision struct {
 	// transactional, spam, personal, advisor — or absent when it has not answered yet.
 	Kind *string `json:"kind,omitempty"`
 
+	// LastSeenAt When the newest of those messages was sent or received. Absent when there are none.
+	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
+
+	// MessageCount How many messages stored from your mailbox have this address as their counterparty, sent
+	// or received. Archived mail is not counted.
+	MessageCount int `json:"message_count"`
+
 	// Overruled Whether your own decision is what governs this sender.
 	Overruled bool `json:"overruled"`
 
@@ -27337,7 +27361,9 @@ type CaptureSenderDecision struct {
 	// rather than showing only the answer that now stands.
 	OverruledKind *string `json:"overruled_kind,omitempty"`
 
-	// RecordExists Whether a contact actually exists for this address.
+	// RecordExists Whether a live contact you may see holds this address. It follows the same visibility
+	// rule as opening the contact: a seat without contact read gets false, and a contact
+	// shared with you counts.
 	RecordExists bool `json:"record_exists"`
 
 	// Status The ledger's own lifecycle for this sender.
@@ -35938,6 +35964,15 @@ type HeldThread struct {
 	// OccurredAt When that message arrived. Absent for the same reason `subject` can be.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
+	// ParticipantCount How many addresses outside the workspace that message names, of which `participants`
+	// shows up to five. Absent when `participants` is.
+	ParticipantCount *int `json:"participant_count,omitempty"`
+
+	// Participants Up to five addresses outside the workspace on the message that opened the thread, so you
+	// can tell who a held thread is with. Colleagues are left out. Present exactly when
+	// `activity_id` is: a message you may not read, or one that was erased, names nobody.
+	Participants *[]HeldThreadParticipant `json:"participants,omitempty"`
+
 	// Pending No verdict has landed yet. Stated as its own field rather than left to a client
 	// comparing `status`, because it decides the order these arrive in and a reader that
 	// derived it differently would sort them differently.
@@ -35963,6 +35998,16 @@ type HeldThreadListResponse struct {
 
 	// ThreadVerdict When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
+}
+
+// HeldThreadParticipant One address outside the workspace on a held thread's opening message.
+type HeldThreadParticipant struct {
+	// Address The folded address the message named.
+	Address string `json:"address"`
+
+	// ContactId The contact this address belongs to, where you may see it. Absent when there is none
+	// and when it is not yours to see.
+	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 }
 
 // HiddenBacklog How much waiting work each hiding rule is keeping off one reader's queue, at one
@@ -68443,6 +68488,9 @@ type ServerInterface interface {
 	// Withdraw one of your own addresses.
 	// (DELETE /capture/owner-identities/{id})
 	DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
+	// Put back one of your own addresses you just withdrew.
+	// (POST /capture/owner-identities/{id}/restore)
+	RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id)
 	// Every decision this product made about your senders.
 	// (GET /capture/senders)
 	ListCaptureSenders(w http.ResponseWriter, r *http.Request)
@@ -71497,6 +71545,12 @@ func (_ Unimplemented) CreateCaptureOwnerIdentity(w http.ResponseWriter, r *http
 // Withdraw one of your own addresses.
 // (DELETE /capture/owner-identities/{id})
 func (_ Unimplemented) DeleteCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put back one of your own addresses you just withdrew.
+// (POST /capture/owner-identities/{id}/restore)
+func (_ Unimplemented) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83015,6 +83069,38 @@ func (siw *ServerInterfaceWrapper) DeleteCaptureOwnerIdentity(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCaptureOwnerIdentity(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreCaptureOwnerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCaptureOwnerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCaptureOwnerIdentity(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111053,6 +111139,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/capture/owner-identities/{id}", wrapper.DeleteCaptureOwnerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/owner-identities/{id}/restore", wrapper.RestoreCaptureOwnerIdentity)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/senders", wrapper.ListCaptureSenders)

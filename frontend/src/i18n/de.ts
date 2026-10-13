@@ -7011,6 +7011,7 @@ export const de = {
     "Threads, die dein Postfach zurückhält. Gibst du einen Thread frei, können alle Teammitglieder ihn lesen; nur du kannst deine freigeben.",
   "heldThreads.empty": "Dein Postfach hält keine Threads zurück.",
   "heldThreads.colThread": "Thread",
+  "heldThreads.colParties": "Beteiligte",
   "heldThreads.colWhy": "Grund",
   "heldThreads.colWhen": "Eingegangen",
   "heldThreads.release": "Mit dem Team teilen",
@@ -7040,6 +7041,8 @@ export const de = {
   "heldThreads.kind.explicitlyConfidential": "Als vertraulich markiert",
   "heldThreads.kind.unsure": "Unklar",
   "heldThreads.kind.other": "Anderer Grund",
+  "heldThreads.moreParticipants_one": "+{count} weitere",
+  "heldThreads.moreParticipants_other": "+{count} weitere",
   "senders.title": "Absender",
   "senders.sub":
     "Die Entscheidung zu jeder Adresse, die dein Postfach eingebracht hat, und deine eigene Antwort, sofern gegeben. Nur du siehst diese Liste.",
@@ -7048,8 +7051,12 @@ export const de = {
   "senders.colSender": "Absender",
   "senders.colDecision": "Entscheidung",
   "senders.colRecord": "Kontakt",
-  "senders.recordYes": "Vorhanden",
   "senders.recordNo": "Kein Kontakt",
+  "senders.colMessages": "Nachrichten",
+  "senders.colLastSeen": "Letzte Nachricht",
+  "senders.messages_one": "{count} Nachricht",
+  "senders.messages_other": "{count} Nachrichten",
+  "senders.lastSeen": "Letzte Nachricht am {date}",
   "senders.byYou": "Von dir entschieden",
   "senders.deletesOn": "Älteste Nachricht am {date} gelöscht",
   "senders.markBusiness": "Als geschäftlich markieren",
@@ -10499,11 +10506,15 @@ export const de = {
   "ownerIdentities.addFailed": "Adresse nicht hinzugefügt",
   "ownerIdentities.domainPlaceholder": "beispiel.de",
   "ownerIdentities.removedToast": "Adresse entfernt",
+  "ownerIdentities.removedLearnedToast":
+    "Adresse entfernt. Margince fügt sie nicht wieder hinzu.",
   "ownerIdentities.restoredToast": "Adresse wiederhergestellt",
-  "ownerIdentities.removeLearnedTitle": "{value} entfernen?",
-  "ownerIdentities.removeLearnedBody":
-    "Margince hat diese Adresse in deinen E-Mails gefunden. Fügst du sie später wieder hinzu, wird sie als von dir eingegeben gespeichert.",
-  "ownerIdentities.removeConfirm": "Entfernen",
+  "ownerIdentities.restoreGone":
+    "Diese Adresse lässt sich nicht mehr zurückholen. Füge sie neu hinzu.",
+  "ownerIdentities.restoreMovedOn":
+    "Diese Adresse wurde seitdem erneut entfernt. Mach stattdessen das neuere Entfernen rückgängig.",
+  "ownerIdentities.restoreDeclaredAgain":
+    "Diese Adresse steht schon wieder in deiner Liste.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -10513,6 +10524,7 @@ export const de = {
   "captureExclusions.kind.address": "Adresse",
   "captureExclusions.kind.domain": "Domain",
   "captureExclusions.kind.container": "Label, Ordner oder Postfach",
+  "captureExclusions.addedBy": "Hinzugefügt von {name}",
   "captureExclusions.scopeLabel": "Gilt für",
   "capturePurge.title": "Bereits erfasste Post von {value} löschen?",
   "capturePurge.intro":

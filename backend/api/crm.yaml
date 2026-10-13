@@ -15079,12 +15079,56 @@ paths:
         next message on; nothing already dropped comes back. A colleague's identity answers
         not-found rather than forbidden — the two are the same answer to somebody who may not know
         it exists.
+
+        `POST /capture/owner-identities/{id}/restore` puts it back for ten minutes. After that the
+        withdrawn address is deleted, so a private address is kept no longer than an undo needs.
+
+        Withdrawing an address the product learned (`source: delivered_to`) also stops it being
+        learned again from later mail, and that outlasts the ten minutes.
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]
       responses:
         '204': { description: Withdrawn. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /capture/owner-identities/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Capture]
+      operationId: restoreCaptureOwnerIdentity
+      summary: Put back one of your own addresses you just withdrew.
+      description: |
+        Undoes one `deleteCaptureOwnerIdentity`, named by the id it withdrew. No body. The address
+        comes back as it was: the same id, `source` and `created_at`, not the restorer and now. It
+        then does what declaring it does: open questions about the address close, and mail between
+        your own addresses is dropped again from the next message on.
+
+        Only your own withdrawal, and only for ten minutes: after that the withdrawn address is
+        deleted and this answers `404`, as it does for somebody else's and for one already restored.
+
+        `409 removal_moved_on` when the same address was declared and withdrawn again after this
+        withdrawal; put back the newer one instead. `409 identity_declared_again` when the address
+        is declared again now, so it is already yours.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The identity, back.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The address cannot be put back: it was declared and withdrawn again since
+            (`removal_moved_on`), or it is declared again now (`identity_declared_again`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /capture/email-domains/{domain}:
     parameters:
@@ -31063,10 +31107,16 @@ components:
         A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
         credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
         server-side by `credential_ref`.
-      required: [id, provider, status, scopes]
+      required: [id, provider, status, scopes, can_backfill]
       properties:
         id: { type: string, format: uuid }
         provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], description: The mail/calendar provider (A51 email+calendar parity). }
+        can_backfill:
+          type: boolean
+          description: |
+            Whether this provider's connector can import older mail at all. False means
+            `POST /connectors/{provider}/backfill` and its estimate refuse with `422
+            connector_unsupported`, so a client offers no import rather than one that fails.
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
         status: { type: string, enum: [connected, disconnected, error, reauth_required], description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
@@ -31282,11 +31332,38 @@ components:
           type: string
           format: date-time
           description: When that message arrived. Absent for the same reason `subject` can be.
+        participants:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/HeldThreadParticipant' }
+          description: |
+            Up to five addresses outside the workspace on the message that opened the thread, so you
+            can tell who a held thread is with. Colleagues are left out. Present exactly when
+            `activity_id` is: a message you may not read, or one that was erased, names nobody.
+        participant_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many addresses outside the workspace that message names, of which `participants`
+            shows up to five. Absent when `participants` is.
         attempts:
           type: integer
           description: |
             How many times a verdict has been asked for. This is the outage signal: a pending row
             whose attempts stop climbing is a model that stopped answering.
+
+    HeldThreadParticipant:
+      type: object
+      description: One address outside the workspace on a held thread's opening message.
+      required: [address]
+      properties:
+        address: { type: string, description: The folded address the message named. }
+        contact_id:
+          type: string
+          format: uuid
+          description: |
+            The contact this address belongs to, where you may see it. Absent when there is none
+            and when it is not yours to see.
 
     CaptureAwaitingContactListResponse:
       type: object
@@ -31324,7 +31401,7 @@ components:
     CaptureSenderDecision:
       type: object
       description: One sender your mailbox produced, and what became of them.
-      required: [address, overruled, record_exists]
+      required: [address, overruled, record_exists, message_count]
       properties:
         address: { type: string }
         kind:
@@ -31349,7 +31426,31 @@ components:
           description: Whether your own decision is what governs this sender.
         record_exists:
           type: boolean
-          description: Whether a contact actually exists for this address.
+          description: |
+            Whether a live contact you may see holds this address. It follows the same visibility
+            rule as opening the contact: a seat without contact read gets false, and a contact
+            shared with you counts.
+        contact_id:
+          type: string
+          format: uuid
+          description: |
+            The contact `record_exists` found, so a client can open it. Absent whenever
+            `record_exists` is false.
+        contact_name:
+          type: string
+          description: |
+            That contact's name (its `full_name`), so a client can show it without fetching the
+            contact. Present exactly when `contact_id` is.
+        message_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many messages stored from your mailbox have this address as their counterparty, sent
+            or received. Archived mail is not counted.
+        last_seen_at:
+          type: string
+          format: date-time
+          description: When the newest of those messages was sent or received. Absent when there are none.
         deletes_at:
           type: string
           format: date-time
@@ -31819,7 +31920,7 @@ components:
 
     CaptureExclusion:
       type: object
-      required: [id, scope, kind, value, created_at]
+      required: [id, scope, kind, value, created_at, created_by_name]
       properties:
         id: { type: string, format: uuid }
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
@@ -31830,6 +31931,11 @@ components:
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
             `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
         created_at: { type: string, format: date-time }
+        created_by_name:
+          type: [string, 'null']
+          description: |
+            The display name of the member who added the rule. Null when no member added it (a
+            system or connector rule) and when that member has been deactivated.
     CaptureExclusionScope:
       type: string
       enum: [workspace, user]

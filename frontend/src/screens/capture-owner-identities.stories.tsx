@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "./story-utils";
 
@@ -38,11 +39,12 @@ const LEARNED = {
   created_at: "2026-09-14T06:40:00Z",
 };
 
-function story(identities: Record<string, unknown>[]) {
+function story(identities: Record<string, unknown>[], routes: RouteMap = {}) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /capture/owner-identities": () => jsonResponse({ data: identities }),
+      ...routes,
     });
     return (
       <StoryProviders>
@@ -92,5 +94,45 @@ export const Declaring: Story = {
       await body.findByRole("button", { name: "Add address" }),
     );
     await body.findByRole("dialog");
+  },
+};
+
+const WITHDRAWN: RouteMap = {
+  "DELETE /capture/owner-identities/oi-3": () =>
+    new Response(null, { status: 204 }),
+};
+
+async function removeLearned(canvasElement: HTMLElement) {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(
+    await body.findByRole("button", { name: `Remove ${LEARNED.value}` }),
+  );
+  return body;
+}
+
+// A learned address goes at once like a typed one, with Undo on the notice.
+export const Removed: Story = {
+  render: story([ALIAS, OWN_DOMAIN, LEARNED], WITHDRAWN),
+  play: async ({ canvasElement }) => {
+    const body = await removeLearned(canvasElement);
+    const undo = await body.findByRole("button", { name: "Undo" });
+    await waitFor(() => expect(undo).toBeVisible());
+    await expect(body.queryByRole("dialog")).not.toBeInTheDocument();
+  },
+};
+
+// Past its ten minutes the Undo is refused, and the notice says what to do.
+export const UndoRefused: Story = {
+  render: story([ALIAS, OWN_DOMAIN, LEARNED], {
+    ...WITHDRAWN,
+    "POST /capture/owner-identities/oi-3/restore": () =>
+      jsonResponse({ code: "not_found", status: 404 }, 404),
+  }),
+  play: async ({ canvasElement }) => {
+    const body = await removeLearned(canvasElement);
+    await userEvent.click(await body.findByRole("button", { name: "Undo" }));
+    await body.findByText(
+      "This address can no longer be put back. Add it again instead.",
+    );
   },
 };

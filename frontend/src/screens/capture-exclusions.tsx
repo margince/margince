@@ -284,7 +284,14 @@ function ExclusionRow({
           <span className="capture-exclusions-value">{rule.value}</span>
         )
       }
-      description={`${words.scope[rule.scope]} · ${words.kind[rule.kind]}`}
+      description={[
+        words.scope[rule.scope],
+        words.kind[rule.kind],
+        rule.created_by_name &&
+          t("captureExclusions.addedBy", { name: rule.created_by_name }),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
       control={
         <span className="cell-actions" ref={verbs}>
           <OverflowMenu label={t("table.rowActions", { name: rule.value })}>
