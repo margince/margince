@@ -5419,6 +5419,7 @@ export const de = {
   "forecast.fxMissing": "Wechselkurs fehlt",
   "analytics.reportForecast": "Forecast-Kategorien",
   "analytics.reportOpenByCompany": "Offene Deals pro Unternehmen",
+  "analytics.archivedPipeline": "{name} (archiviert)",
   "analytics.forecastBanner":
     "Jede Kachel zeigt die Rohsumme und darunter die nach Wahrscheinlichkeit gewichtete Summe. Gerundet wird pro Deal, daher stimmt sie immer mit „Diese Zahl erklären“ überein.",
   "analytics.company": "Unternehmen",

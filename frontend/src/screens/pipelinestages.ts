@@ -17,11 +17,12 @@ type PipelineStages = {
  * default one. Each stage's position becomes its place in the ladder, and a
  * name that two pipelines share is prefixed with its pipeline.
  *
- * An archived pipeline's stages come last and always carry its name, so they
- * never rename a live stage that shares theirs.
+ * An archived pipeline's stages come last under `archivedName`, so they never
+ * rename a live stage. Its name is free for a new pipeline to take.
  */
 export function stagesOfEveryPipeline(
   pipelines: readonly PipelineStages[],
+  archivedName: (name: string) => string,
 ): Stage[] {
   const live = pipelines.filter((pipeline) => !pipeline.archived_at);
   const ordered = [
@@ -38,17 +39,34 @@ export function stagesOfEveryPipeline(
       );
     }
   }
-  const carriesPipeline = (pipeline: PipelineStages, stage: Stage) =>
-    Boolean(pipeline.archived_at) || (owners.get(stage.name)?.size ?? 0) > 1;
-  return ordered
-    .flatMap((pipeline) =>
-      [...(pipeline.stages ?? [])]
-        .sort((a, z) => a.position - z.position)
-        .map((stage) =>
-          pipeline.name && carriesPipeline(pipeline, stage)
-            ? { ...stage, name: `${pipeline.name} · ${stage.name}` }
-            : stage,
-        ),
-    )
-    .map((stage, place) => ({ ...stage, position: place }));
+  const ladder = ordered.flatMap((pipeline) => {
+    const archived = Boolean(pipeline.archived_at);
+    const owner =
+      pipeline.name && archived ? archivedName(pipeline.name) : pipeline.name;
+    return [...(pipeline.stages ?? [])]
+      .sort((a, z) => a.position - z.position)
+      .map((stage) =>
+        owner && (archived || (owners.get(stage.name)?.size ?? 0) > 1)
+          ? { ...stage, name: `${owner} · ${stage.name}` }
+          : stage,
+      );
+  });
+  return distinctNames(ladder).map((stage, place) => ({
+    ...stage,
+    position: place,
+  }));
+}
+
+// Two pipelines may share a name, so a label two stages still share takes a
+// number. No report row may read as another stage's.
+function distinctNames(stages: readonly Stage[]): Stage[] {
+  const used = new Set<string>();
+  return stages.map((stage) => {
+    let name = stage.name;
+    for (let n = 2; used.has(name); n += 1) {
+      name = `${stage.name} (${n})`;
+    }
+    used.add(name);
+    return name === stage.name ? stage : { ...stage, name };
+  });
 }

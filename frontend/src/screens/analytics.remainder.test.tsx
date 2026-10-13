@@ -71,6 +71,14 @@ describe("a report the server answered in full", () => {
     expect(card.queryByText("Showing part of the list")).toBeNull();
   });
 
+  it("states no remainder when the server sends no total", async () => {
+    vi.stubGlobal("fetch", reportsStub({ companyRows }));
+    render(<AnalyticsScreen />);
+    const card = await reportCard("Open deals per company");
+    expect(await card.findByText("4")).toBeTruthy();
+    expect(card.queryByText(/more not shown/)).toBeNull();
+  });
+
   it("draws an empty forecast as its category slots, not as a none", async () => {
     vi.stubGlobal(
       "fetch",

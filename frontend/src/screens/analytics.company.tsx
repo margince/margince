@@ -21,8 +21,7 @@ import { CompanyCellExplain, rowDerivationUrl } from "./analytics.explain";
 import { dealsFilteredBy } from "./dealsaddress";
 
 // `/deals` has no currency filter, so only a company with one currency row has
-// a link that opens the deals its row counted. A capped answer may hide a
-// second row, so a capped table links none.
+// a link that opens the deals its row counted.
 function singleCurrencyKeys(keys: readonly string[]): ReadonlySet<string> {
   const rowsPerKey = new Map<string, number>();
   for (const key of keys) {
@@ -77,7 +76,7 @@ export function CompanyTable({
               url={rowDerivationUrl(row)}
               currency={rowCurrency(row)}
               companyId={companyKey(row) || null}
-              split={!single.has(companyKey(row))}
+              split={!complete || !single.has(companyKey(row))}
             />
           ),
         },
@@ -91,6 +90,7 @@ export function CompanyTable({
           header: t("analytics.openDeals"),
           align: "end",
           render: (row: ReportRow) =>
+            // A capped answer may hide a company's second row, so it links none.
             complete &&
             typeof row.company_id === "string" &&
             single.has(row.company_id) ? (

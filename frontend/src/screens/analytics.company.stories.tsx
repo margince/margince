@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { CompanyTable } from "./analytics.company";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -40,6 +41,13 @@ function table(complete: boolean) {
 
 export const Complete: Story = { render: () => table(true) };
 
-export const Capped: Story = { render: () => table(false) };
+export const Capped: Story = {
+  render: () => table(false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("4");
+    await expect(canvas.queryByRole("link", { name: "4" })).toBeNull();
+  },
+};
 
 export const CappedDark: Story = { ...Capped, globals: { theme: "dark" } };

@@ -100,36 +100,47 @@ describe("the pipeline stage table", () => {
     const table = within(
       await screen.findByRole("table", { name: "Open deals by stage" }),
     );
-    expect(await table.findByText("Retired · Legacy intake")).toBeTruthy();
+    expect(
+      await table.findByText("Retired (archived) · Legacy intake"),
+    ).toBeTruthy();
     expect(table.queryByText("old-s1")).toBeNull();
     expect(table.queryByText(/Legacy close/)).toBeNull();
   });
 });
 
 describe("stagesOfEveryPipeline", () => {
+  const archived = (name: string) => `${name} (archived)`;
+  const ARCHIVED_AT = "2026-05-01T00:00:00Z";
+
   it("tells apart a stage name two pipelines share", () => {
-    const names = stagesOfEveryPipeline([
-      {
-        name: "Sales",
-        is_default: true,
-        stages: [stage("a", "pl", "Qualify", 1)],
-      },
-      { name: "Partners", stages: [stage("b", "o", "Qualify", 1)] },
-    ]).map((entry) => entry.name);
+    const names = stagesOfEveryPipeline(
+      [
+        {
+          name: "Sales",
+          is_default: true,
+          stages: [stage("a", "pl", "Qualify", 1)],
+        },
+        { name: "Partners", stages: [stage("b", "o", "Qualify", 1)] },
+      ],
+      archived,
+    ).map((entry) => entry.name);
     expect(names).toEqual(["Sales · Qualify", "Partners · Qualify"]);
   });
 
   it("lists the default pipeline first and keeps each ladder in order", () => {
-    const stages = stagesOfEveryPipeline([
-      {
-        is_default: false,
-        stages: [
-          stage("o2", "other", "Won", 5000),
-          stage("o1", "other", "Intake", 2),
-        ],
-      },
-      { is_default: true, stages: [stage("p1", "pl", "Qualify", 1)] },
-    ]);
+    const stages = stagesOfEveryPipeline(
+      [
+        {
+          is_default: false,
+          stages: [
+            stage("o2", "other", "Won", 5000),
+            stage("o1", "other", "Intake", 2),
+          ],
+        },
+        { is_default: true, stages: [stage("p1", "pl", "Qualify", 1)] },
+      ],
+      archived,
+    );
     expect(stages.map((entry) => entry.name)).toEqual([
       "Qualify",
       "Intake",
@@ -138,20 +149,81 @@ describe("stagesOfEveryPipeline", () => {
     expect(stages.map((entry) => entry.position)).toEqual([0, 1, 2]);
   });
 
-  it("lists an archived pipeline's stages last, under its name, renaming no live stage", () => {
-    const names = stagesOfEveryPipeline([
-      {
-        name: "Retired",
-        archived_at: "2026-05-01T00:00:00Z",
-        stages: [stage("r1", "old", "Qualify", 1)],
-      },
-      { name: "Partners", stages: [stage("p1", "o", "Intake", 1)] },
-      {
-        name: "Sales",
-        is_default: true,
-        stages: [stage("s1", "pl", "Qualify", 1)],
-      },
-    ]).map((entry) => entry.name);
-    expect(names).toEqual(["Qualify", "Intake", "Retired · Qualify"]);
+  it("lists an archived pipeline's stages last, marked archived, renaming no live stage", () => {
+    const names = stagesOfEveryPipeline(
+      [
+        {
+          name: "Retired",
+          archived_at: ARCHIVED_AT,
+          stages: [stage("r1", "old", "Qualify", 1)],
+        },
+        { name: "Partners", stages: [stage("p1", "o", "Intake", 1)] },
+        {
+          name: "Sales",
+          is_default: true,
+          stages: [stage("s1", "pl", "Qualify", 1)],
+        },
+      ],
+      archived,
+    ).map((entry) => entry.name);
+    expect(names).toEqual([
+      "Qualify",
+      "Intake",
+      "Retired (archived) · Qualify",
+    ]);
+  });
+
+  it("tells an archived pipeline from a live one that took its name", () => {
+    const names = stagesOfEveryPipeline(
+      [
+        {
+          name: "Sales",
+          is_default: true,
+          stages: [stage("l1", "pl", "Qualify", 1)],
+        },
+        { name: "Partners", stages: [stage("p1", "o", "Qualify", 1)] },
+        {
+          name: "Sales",
+          archived_at: ARCHIVED_AT,
+          stages: [stage("a1", "old", "Qualify", 1)],
+        },
+      ],
+      archived,
+    ).map((entry) => entry.name);
+    expect(names).toEqual([
+      "Sales · Qualify",
+      "Partners · Qualify",
+      "Sales (archived) · Qualify",
+    ]);
+  });
+
+  it("gives every stage its own label when two archived pipelines share a name", () => {
+    const stages = stagesOfEveryPipeline(
+      [
+        {
+          name: "Sales",
+          archived_at: ARCHIVED_AT,
+          stages: [stage("a1", "x", "Qualify", 1)],
+        },
+        {
+          name: "Sales",
+          archived_at: ARCHIVED_AT,
+          stages: [stage("a2", "y", "Qualify", 1)],
+        },
+        {
+          name: "Sales",
+          is_default: true,
+          stages: [stage("l1", "pl", "Sales (archived) · Qualify (2)", 1)],
+        },
+      ],
+      archived,
+    );
+    const names = stages.map((entry) => entry.name);
+    expect(new Set(names).size).toBe(stages.length);
+    expect(names).toEqual([
+      "Sales (archived) · Qualify (2)",
+      "Sales (archived) · Qualify",
+      "Sales (archived) · Qualify (3)",
+    ]);
   });
 });

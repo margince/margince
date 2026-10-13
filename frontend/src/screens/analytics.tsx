@@ -761,7 +761,7 @@ function ReportRemainder({
   const capped = state === "partial";
   return (
     <SurfaceState
-      state={capped ? state : "ready"}
+      state={capped ? "partial" : "ready"}
       emptyLabel={t("common.empty")}
       loadingLabel={label}
       detail={{ remaining }}
@@ -899,17 +899,15 @@ export function AnalyticsScreen() {
   const context = useAnalyticsContext();
   const { selection, selectScope } = useAnalyticsSelection(context.data);
 
-  const stagesQuery = useQuery({
-    queryKey: ["pipelines", "all-stages"],
-    queryFn: async () => {
-      // Archived too: a deal keeps its stage when its pipeline is archived.
-      const pipelines = unwrap(
+  const pipelinesQuery = useQuery({
+    queryKey: ["pipelines", "with-archived"],
+    // Archived too: a deal keeps its stage when its pipeline is archived.
+    queryFn: async () =>
+      unwrap(
         await api.GET("/pipelines", {
           params: { query: { include_archived: true } },
         }),
-      );
-      return stagesOfEveryPipeline(pipelines.data);
-    },
+      ).data,
   });
 
   const canReadReports = useCan("report_definition", "read");
@@ -1004,7 +1002,9 @@ export function AnalyticsScreen() {
           selection={selection}
           onSelectScope={selectScope}
           scopeControl={scopeControl}
-          stages={stagesQuery.data ?? []}
+          stages={stagesOfEveryPipeline(pipelinesQuery.data ?? [], (name) =>
+            t("analytics.archivedPipeline", { name }),
+          )}
         />
       </div>
     </div>

@@ -5310,6 +5310,7 @@ export const vi = {
   "forecast.fxMissing": "Thiếu tỷ giá",
   "analytics.reportForecast": "Danh mục dự báo",
   "analytics.reportOpenByCompany": "Deal đang mở theo công ty",
+  "analytics.archivedPipeline": "{name} (đã lưu trữ)",
   "analytics.forecastBanner":
     "Mỗi ô hiển thị tổng thô và, bên dưới, tổng có trọng số theo xác suất. Làm tròn theo từng deal, nên luôn khớp với “Giải thích con số này”.",
   "analytics.company": "Công ty",
