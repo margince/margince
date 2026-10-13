@@ -1,0 +1,162 @@
+/* Settings > Outcome reviews: the how-it-works steps, one panel per review and
+ * the editor drawer's question cards. */
+
+.rt-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rt-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: center;
+}
+.rt-step-num {
+  display: inline-grid;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+.rt-step-body {
+  grid-column: 2;
+  margin: 0;
+}
+
+/* A ruled note under the steps: a quiet fact, icon first. */
+.rt-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+.rt-note > svg {
+  flex: none;
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-top: var(--space-1);
+}
+
+/* The review panel head: title and outcome badge, then the count and the
+ * edit verb at the end. */
+.rt-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+/* The question table runs flush in its panel, so its outer cells take the
+ * panel's own inset and the numbers line up under the title. */
+.rt-review .table :is(th, td):first-child {
+  padding-left: var(--padPanel);
+}
+.rt-review .table :is(th, td):last-child {
+  padding-right: var(--padPanel);
+}
+
+.rt-head-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.rt-muted {
+  color: var(--textSecondary);
+}
+
+/* On a wide panel the answer and its need have their own columns; on a narrow
+ * one they fold under the question so the question keeps a readable width. */
+.rt-review {
+  container: rt-review / inline-size;
+}
+.rt-q-compact {
+  display: none;
+}
+@container rt-review (max-width: 32rem) {
+  .rt-review .table :is(th, td):nth-child(n + 3) {
+    display: none;
+  }
+  .rt-review .table :is(th, td):nth-child(2) {
+    padding-right: var(--padPanel);
+  }
+  .rt-q-compact {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--textSecondary);
+  }
+  .rt-head > .t-caption {
+    display: none;
+  }
+}
+
+.rt-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* ---- the editor drawer ------------------------------------------------- */
+
+.rt-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: 0;
+  list-style: none;
+}
+.rt-q {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+}
+.rt-q-num {
+  padding-top: var(--space-1);
+  color: var(--textSecondary);
+}
+.rt-q-opts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: end;
+}
+.rt-q-tools {
+  display: flex;
+  gap: var(--gapActions);
+}
+.rt-prefill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accentText);
+}
+.rt-prefill > svg {
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+.rt-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.rt-foot-actions {
+  display: flex;
+  gap: var(--gapActions);
+  margin-left: auto;
+}

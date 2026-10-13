@@ -5,16 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import {
   ImapConnectPanel,
-  OAuthConnectPanel,
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The onboarding connect panels for the fe-uat render gate (G-10): the
 // idle IMAP form, its post-connect state (the honest "building itself"
-// framing — no fabricated capture counts), and its rejected-login error;
-// plus the provider-parametrized OAuth panel's pre-consent idle state
-// (Gmail and Microsoft) and the provider-agnostic post-consent return view.
+// framing, no fabricated capture counts), and its rejected-login error; plus
+// the post-consent return view, for a mailbox and for a chained calendar.
 
 const meta: Meta<typeof ImapConnectPanel> = {
   title: "Onboarding/Connect panels",
@@ -94,28 +92,6 @@ export const ImapLoginRejected: Story = {
   },
 };
 
-export const GoogleIdle: Story = {
-  render: () => {
-    installFetchStub({});
-    return (
-      <StoryProviders>
-        <OAuthConnectPanel provider="gmail" onDismiss={() => {}} />
-      </StoryProviders>
-    );
-  },
-};
-
-export const MicrosoftIdle: Story = {
-  render: () => {
-    installFetchStub({});
-    return (
-      <StoryProviders>
-        <OAuthConnectPanel provider="graph" onDismiss={() => {}} />
-      </StoryProviders>
-    );
-  },
-};
-
 export const OAuthReturnLive: Story = {
   render: () => {
     installFetchStub({
@@ -141,4 +117,38 @@ export const OAuthReturnLive: Story = {
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(/live and capturing/i);
   },
+};
+
+/** Mail and calendar asked together, the calendar refused: the mailbox is
+ *  still live, and the calendar says it was not connected. */
+export const CalendarDeclined: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /connectors": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "g1",
+              provider: "gmail",
+              status: "connected",
+              scopes: ["read"],
+              backfill: { state: "done" },
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <OAuthReturnPanel outcome="denied" provider="gcal" onDone={() => {}} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(/calendar was not connected/i);
+  },
+};
+
+export const CalendarDeclinedDark: Story = {
+  ...CalendarDeclined,
+  globals: { theme: "dark" },
 };

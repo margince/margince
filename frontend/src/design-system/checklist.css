@@ -1,0 +1,82 @@
+/* Checklist: an ordered list whose numbers come from a counter, a mark per
+ * step that says done, current or open, and a trailing cell for the verb. */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: checklist-step;
+}
+
+.checklist > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.checklist-step {
+  counter-increment: checklist-step;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.checklist-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--borderControl);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  font: var(--fontHeadingXXSmall);
+  color: var(--textSecondary);
+}
+/* A done step shows its tick instead of its number. */
+.checklist-step:not(.checklist-step-done) > .checklist-mark::before {
+  content: counter(checklist-step);
+}
+
+.checklist-step-done > .checklist-mark {
+  border-color: var(--successText);
+  background: var(--successText);
+  color: var(--textOnStatusControl);
+}
+.checklist-step-done .checklist-title {
+  color: var(--textSecondary);
+}
+
+/* The next step: accent edge on the accent tint. No outer ring, since an
+ * outline or a glow here would read as keyboard focus. */
+.checklist-step-current > .checklist-mark {
+  border-color: var(--accent);
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+
+.checklist-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* As tall as the mark, so a one-line title sits on its centre. */
+.checklist-title {
+  display: flex;
+  align-items: center;
+  min-block-size: 24px;
+}
+
+.checklist-body {
+  margin-top: var(--space-2);
+}
+
+.checklist-action {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}

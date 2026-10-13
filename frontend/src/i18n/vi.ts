@@ -289,32 +289,7 @@ export const vi = {
   "scheduling.linkReplaced":
     "Bạn đã thay đổi đề xuất này nên nó sẽ có liên kết mới. Liên kết trước vẫn mở cho đến khi bạn thu hồi trong mục Cuộc họp của liên hệ.",
   "scheduling.bookWith": "Đặt lịch họp với {name}",
-  "scheduling.setupTitle": "Hoàn tất thiết lập đặt lịch · xong {done}/{total}",
-  "scheduling.stepCalendar": "Lịch có thể gửi lời mời",
-  "scheduling.stepHours": "Giờ làm việc và múi giờ của bạn",
-  "scheduling.stepLink": "Liên kết đặt lịch đã bật",
-  "scheduling.stepDone": "Đã xong",
-  "scheduling.stepOpen": "Chưa xong",
   "scheduling.calendarTitle": "Lịch",
-  "scheduling.calendarIntro":
-    "Nơi gửi lời mời và nơi đọc thời gian bận của bạn.",
-  "scheduling.availabilityTitle": "Thời gian rảnh",
-  "scheduling.defaultsTitle": "Mặc định cuộc họp",
-  "scheduling.defaultsIntro":
-    "Áp dụng cho mọi cuộc họp mới. Bạn có thể đổi khi đặt lịch.",
-  "scheduling.videoDefaultGoogle": "Thêm liên kết Google Meet vào cuộc họp mới",
-  "scheduling.videoDefaultTeams":
-    "Thêm liên kết Microsoft Teams vào cuộc họp mới",
-  "scheduling.videoDefaultGeneric": "Thêm liên kết gọi video vào cuộc họp mới",
-  "scheduling.videoDefaultHelp":
-    "Được tạo cùng mỗi lời mời lịch, kể cả lượt đặt qua liên kết của bạn. Bạn có thể tắt cho từng cuộc họp khi đặt lịch.",
-  "scheduling.videoTeamsHelp":
-    "Cần tài khoản Microsoft 365 cơ quan hoặc trường học.",
-  "scheduling.locationFallback": "Dùng cho cuộc họp không có gọi video.",
-  "scheduling.unsaved": "Bạn có thay đổi chưa lưu",
-  "scheduling.discard": "Hủy thay đổi",
-  "scheduling.brand": "Tên và logo công ty",
-  "scheduling.copyBookingLink": "Sao chép liên kết đặt lịch",
   "scheduling.back": "Quay lại Margince",
   "scheduling.prepare": "Chuẩn bị cho cuộc họp",
   "scheduling.timezone": "Múi giờ",
@@ -438,7 +413,6 @@ export const vi = {
   "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
   "scheduling.calendarSetupNeeded":
     "Chọn và lưu lịch trong cài đặt Cuộc họp trước khi bật đặt lịch.",
-  "scheduling.hostName": "Tên công khai của bạn",
   "scheduling.subject": "Tiêu đề cuộc họp",
   "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
   "scheduling.duration": "Thời lượng cuộc họp",
@@ -2266,7 +2240,7 @@ export const vi = {
   "co.commercial.title": "Thương mại",
   "linkedinImport.title": "Kết nối LinkedIn",
   "linkedinImport.sub":
-    "Nhập bản xuất của chính bạn để biết đội của bạn đã quen những ai",
+    "Cho thấy bạn quen ai đó ở những công ty nào đã có trong hồ sơ. Các kết nối được nhập không bao giờ trở thành liên hệ và không ai gửi email cho họ từ đây được.",
   "linkedinImport.profileLabel": "URL hồ sơ LinkedIn của bạn",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Lưu hồ sơ",
@@ -2275,15 +2249,15 @@ export const vi = {
   "linkedinImport.importFailed": "Bản xuất chưa được nhập",
   "linkedinImport.editProfile": "Sửa",
   "linkedinImport.editProfileTitle": "Trang LinkedIn của bạn",
-  "linkedinImport.profileNotSet": "Chưa ghi nhận",
+  "linkedinImport.profileNotSet": "Chưa thêm",
   "linkedinImport.connectedNote":
     "Đã kết nối. Các kết nối nhập vào được quy về hồ sơ này, nhờ đó CRM nói được đồng nghiệp nào quen người đó, chứ không phải “công ty” quen.",
   "linkedinImport.notConnectedNote":
-    "Ghi lại URL hồ sơ của bạn sẽ quy mọi kết nối bạn nhập vào về đúng tên bạn.",
+    "Giúp Margince quy các kết nối đã nhập về đúng tên bạn.",
   "linkedinImport.whichFile":
-    "LinkedIn cho bạn tệp Connections.csv trong Settings → Data privacy → Get a copy of your data; kho lưu trữ còn cả chục tệp khác, và đây là tệp cần dùng. Những gì bạn tải lên không bao giờ trở thành liên hệ trong CRM: các kết nối nằm ngoài tìm kiếm, danh sách và trang của từng liên hệ, và không ai viết thư hay gửi email cho họ được.",
-  "linkedinImport.choose": "Chọn tệp Connections.csv",
-  "linkedinImport.importLabel": "Tệp xuất danh bạ",
+    "Trong LinkedIn, mở Settings, rồi Data privacy, rồi Get a copy of your data. Tải lên tệp Connections.csv từ kho lưu trữ LinkedIn gửi qua email cho bạn.",
+  "linkedinImport.choose": "Nhập tệp Connections.csv",
+  "linkedinImport.importLabel": "Cách lấy tệp Connections.csv từ LinkedIn",
   "linkedinImport.noMatchesYet":
     "Chưa có kết quả khớp nào, điều này là bình thường với một tổ chức mới: các kết nối của bạn được đối chiếu với những liên hệ mà CRM đã biết, và số đó tăng dần khi thư của bạn được đọc. Việc này chạy lại mỗi giờ, nên kết quả khớp sẽ xuất hiện khi CRM đầy dần lên.",
   "linkedinImport.working": "Đang đọc bản xuất của bạn…",
@@ -2292,12 +2266,9 @@ export const vi = {
   "linkedinImport.suggested": "Đang chờ bạn xác nhận",
 
   // The review queue and the reach table (ADR-0078 §2.1b).
-  "linkedinReach.title": "Mạng lưới của bạn vươn tới đâu",
-  "linkedinReach.sub":
-    "Các tài khoản đã có trong hồ sơ mà bạn đã quen ai đó, nhiều kết nối nhất lên trước.",
+  "linkedinReach.title": "Mạng lưới LinkedIn",
   "linkedinReach.readFailed": "Không đọc được kết quả này",
-  "linkedinReach.empty":
-    "Chưa ai trong số kết nối của bạn làm việc tại một tài khoản đã có trong hồ sơ.",
+  "linkedinReach.empty": "Chưa vươn tới công ty nào",
   "linkedinReach.allUnresolved":
     "Cả {unresolved} kết nối của bạn đều làm việc ở nơi chưa có trong hồ sơ tài khoản.",
   "linkedinReach.accountsLabel": "Tài khoản bạn vươn tới",
@@ -2786,72 +2757,31 @@ export const vi = {
   "lead.source.unknown": "Nguồn không rõ",
   "lead.sourceFromConnector":
     "Do một kết nối ghi vào — giữ nguồn riêng của nó.",
-  "leadSources.title": "Nguồn khách hàng tiềm năng",
-  "leadSources.sub":
-    "Khách hàng tiềm năng đến từ đâu. Dùng trong biểu mẫu tạo mới, làm bộ lọc và trong điểm số.",
   "leadSources.readOnly":
     "Chỉ tài khoản quản trị hoặc vận hành mới thay đổi danh sách này.",
   "leadSources.readOnlyTitle":
     "Chỉ tài khoản quản trị hoặc vận hành mới thay đổi danh sách này",
   "leadSources.notSaved": "Thay đổi chưa được lưu",
   "leadSources.notAdded": "Nguồn chưa được thêm",
-  "leadSources.labelFor": "Nhãn của nguồn {key}",
-  "leadSources.intentFor": "Trọng số của {label}",
-  "leadSources.intent": "Trọng số",
-  "leadSources.intent.high": "Quan tâm cao",
-  "leadSources.intent.neutral": "Trung lập",
-  "leadSources.intent.low": "Quan tâm thấp",
-  "leadSources.intentHint":
-    "Cao cộng điểm, Thấp trừ điểm; thay đổi áp dụng ở lần tính lại tiếp theo của mỗi khách hàng tiềm năng.",
-  "leadSources.leadCount": "{count} khách hàng tiềm năng",
   "leadSources.builtIn": "Có sẵn",
-  "leadSources.builtInKept":
-    "Nguồn có sẵn có thể đổi tên và tắt, không xóa được.",
-  "leadSources.inUse_one":
-    "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
-  "leadSources.inUse_other":
-    "{count} khách hàng tiềm năng dùng nguồn này — hãy tắt thay vì xóa.",
-  "leadSources.deactivateInstead": "hãy tắt thay vì xóa",
-  "leadSources.activeFor": "{label} đang bật",
   "leadSources.remove": "Xóa",
   "leadSources.removeTitle": "Xóa nguồn này?",
   "leadSources.removeBody":
     '"{label}" không được khách hàng tiềm năng nào dùng và sẽ biến mất khỏi danh sách.',
-  "leadSources.newLabel": "Nguồn mới",
-  "leadSources.labelField": "Nhãn",
   "leadSources.addOpen": "Nguồn mới",
-  "leadSources.listLabel": "Các nguồn trong danh sách",
   "leadSources.discovered": "Giá trị phát hiện được",
   "leadSources.newPlaceholder": "Hội chợ",
   "leadSources.add": "Thêm nguồn",
   "leadSources.discoveredSub":
     "Từ tích hợp và nhập liệu — giá trị có trên khách hàng tiềm năng nhưng chưa có trong danh sách. Thêm vào để đặt nhãn và trọng số.",
   "leadSources.adopt": "Thêm vào danh sách",
-  "leadReasons.title": "Lý do loại",
-  "leadReasons.sub":
-    "Điều nhân viên chọn khi bỏ một khách hàng tiềm năng. Lý do hiển thị trên hồ sơ và lọc được.",
-  "leadReasons.labelFor": "Nhãn của lý do {label}",
-  "leadReasons.leadCount": "{count} khách hàng tiềm năng",
-  "leadReasons.inUse_one":
-    "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
-  "leadReasons.inUse_other":
-    "{count} khách hàng tiềm năng mang lý do này — hãy tắt thay vì xóa.",
   "leadReasons.newLabel": "Lý do mới",
-  "leadReasons.listLabel": "Các lý do trong danh sách",
   "leadReasons.add": "Thêm lý do",
   "leadReasons.removeTitle": "Xóa lý do này?",
   "leadReasons.removeBody":
     '"{label}" không được khách hàng tiềm năng nào dùng và sẽ biến mất khỏi danh sách.',
-  "leadHandling.title": "Xử lý khách hàng tiềm năng",
-  "leadHandling.sub": "Cách cài đặt này xử lý một khách hàng tiềm năng mới.",
-  "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
-  "leadHandling.firstResponseHint":
-    "Mặc định tắt. Khi bật, mọi khách hàng tiềm năng đang mở có hạn phản hồi, danh sách có thêm chế độ xem Quá hạn và các mục quá hạn xếp trước.",
-  "leadHandling.targetMinutes": "Mục tiêu (phút)",
   "leadHandling.targetOutOfRange":
     "Nhập số phút nguyên từ 15 đến 10080 (7 ngày).",
-  "leadHandling.targetHint":
-    "Khách hàng tiềm năng được chờ bao lâu cho phản hồi đầu tiên sau khi được phân (hoặc tạo). Từ 15 phút đến 7 ngày.",
   "lead.boardCount": "{count} lead",
   "lead.duplicateFound": "Đã có lead với email hoặc hồ sơ LinkedIn này.",
   "lead.promote": "Đủ điều kiện",
@@ -3187,20 +3117,11 @@ export const vi = {
   "settings.page.reviewtemplates.sub":
     "Các câu hỏi khi một thương vụ thắng hoặc thua.",
   "settings.tab.reviewtemplates": "Đánh giá kết quả",
-  "reviewTemplates.editHint":
-    "Thay đổi áp dụng cho đánh giá mới. Đánh giá đã lưu giữ nguyên câu hỏi và câu trả lời.",
   "reviewTemplates.question": "Câu hỏi",
-  "reviewTemplates.answerType": "Loại câu trả lời",
-  "reviewTemplates.options": "Lựa chọn (mỗi dòng một mục)",
-  "reviewTemplates.requiredChoice": "Bắt buộc trả lời",
-  "reviewTemplates.removeQuestion": "Xóa câu hỏi",
   "reviewTemplates.addQuestion": "Thêm câu hỏi",
-  "reviewTemplates.save": "Lưu mẫu",
   "reviewTemplates.edit": "Sửa câu hỏi",
   "reviewTemplates.title": "Câu hỏi đánh giá kết quả",
-  "reviewTemplates.empty": "Chưa thiết lập câu hỏi đánh giá",
   "reviewTemplates.retired": "Đã ngừng dùng",
-  "reviewTemplates.required": "(bắt buộc)",
   "outcomeReview.title": "Đánh giá kết quả",
   "outcomeReview.add": "Thêm đánh giá",
   "outcomeReview.save": "Lưu đánh giá",
@@ -4946,7 +4867,6 @@ export const vi = {
   "explain.col.owner": "Phụ trách",
   "explain.col.pipeline": "Pipeline",
 
-  "settings.accountCard": "Tài khoản của bạn",
   "unsaved.title": "Bạn có thay đổi chưa lưu",
   "unsaved.body":
     "Rời trang này bây giờ sẽ bỏ những gì bạn đã nhập. Hãy quay lại để lưu trước.",
@@ -4956,8 +4876,6 @@ export const vi = {
   "settings.removed": "Đã gỡ.",
   "settings.saved": "Đã lưu.",
   "settings.signature": "Chữ ký email",
-  "settings.signatureSub":
-    "Được thêm dưới mỗi thư bạn gửi, phía trên phần hủy đăng ký.",
   "settings.signatureLabel": "Lời kết của bạn",
   "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
   "settings.signatureHint":
@@ -4974,14 +4892,10 @@ export const vi = {
   "delivery.byEmail": "Qua email",
   "delivery.none": "Không qua email",
   "settings.appearance": "Giao di\u1ec7n",
-  "settings.appearanceHelp":
-    "S\u00e1ng, t\u1ed1i, ho\u1eb7c theo thi\u1ebft b\u1ecb n\u00e0y. Menu t\u00e0i kho\u1ea3n c\u0169ng \u0111\u1ed5i \u0111\u01b0\u1ee3c.",
   "settings.displayName": "T\u00ean c\u1ee7a b\u1ea1n",
   "settings.displayNameHelp":
     "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n \u2014 tr\u00ean b\u1ea3n ghi, trong danh s\u00e1ch ch\u1ecdn v\u00e0 trong nh\u1eadt k\u00fd.",
   "settings.displayNameSave": "L\u01b0u",
-  "settings.languageHelp": "Chỉ giữ trong phiên làm việc.",
-  "settings.deviceCard": "Thiết bị này",
   "settings.installApp": "Ứng dụng Margince",
   "settings.installAppHelp":
     "Cài Margince lên thiết bị này thành ứng dụng có cửa sổ và biểu tượng riêng.",
@@ -5342,7 +5256,6 @@ export const vi = {
   "settings.resetDataConfirmBody":
     "Nhập tên tổ chức của bạn để xác nhận. Không thể hoàn tác.",
   "settings.resetDataConfirmName": "Nhập đúng tên tổ chức này:",
-  "settings.resetDataConfirmLabel": "Xác nhận tên tổ chức",
   "settings.resetDataResult":
     "Đã xoá {tables} bảng, {jobs} dòng tác vụ, {streams} luồng sự kiện, {keys} khoá bộ nhớ đệm và {objects} tệp đã lưu.",
   "settings.resetDataDrainWarning":
@@ -5480,22 +5393,6 @@ export const vi = {
   "audit.viaDealRoom": "trong Deal Room",
   "audit.viaNamed": "qua {client}",
   "audit.noHumanAuthority": "Không ghi nhận người uỷ quyền",
-  "settings.auditSub":
-    "mọi hành động đều được quy trách — người, Agent hay connector",
-  "settings.auditAdminOnly":
-    "Đọc toàn bộ dấu vết cần quyền mà ghế của bạn không có. Nó ghi lại mọi người thực hiện và mọi bản ghi họ chạm tới, nên không mở cho tất cả mọi người.",
-  "settings.auditFilters": "Bộ lọc",
-  "settings.auditEntries": "Nhật ký kiểm toán",
-  "settings.auditTrailLabel": "Các hành động đã ghi",
-  "settings.auditActor": "Tác nhân",
-  "settings.auditEntity": "Loại thực thể",
-  "settings.auditEntityId": "ID thực thể",
-  "settings.auditAction": "Hành động",
-  "settings.auditFrom": "Từ",
-  "settings.auditTo": "Đến",
-  "settings.auditExpand": "Xem chi tiết thay đổi",
-  "settings.auditRule": "Quy tắc phân quyền",
-  "settings.auditOnBehalf": "thay mặt",
   "settings.privacy": "Hộp yêu cầu quyền riêng tư",
   "settings.privacySub": "yêu cầu của chủ thể dữ liệu kèm thời hạn luật định",
   "settings.due": "hạn {date}",
@@ -5659,7 +5556,6 @@ export const vi = {
   "privacy.fulfilErasureTitle": "Thực hiện yêu cầu xoá dữ liệu",
   "privacy.erasureIrreversible":
     "Thao tác này xoá vĩnh viễn liên hệ đó trên toàn hệ thống — bản ghi, hoạt động đã thu thập và các giá trị dẫn xuất. Không thể hoàn tác. Chính lần xoá này cũng được ghi vào nhật ký kiểm toán.",
-  "privacy.typeErase": "Nhập ERASE để xác nhận",
   "privacy.erasureConfirm": "Xoá + chặn",
   "privacy.legalHoldTitle": "Bị chặn — lệnh lưu giữ pháp lý",
   "privacy.legalHold":
@@ -6098,27 +5994,16 @@ export const vi = {
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Hộp thư khác (IMAP/SMTP)",
-  "ob.s4.microsoftBtn": "Cho phép truy cập Microsoft của tôi",
-  "ob.s4.microsoftHint":
-    "Đọc thư của bạn và có thể gửi từ đó. Bạn cấp cả hai trên màn hình của Microsoft và ngắt kết nối lúc nào cũng được.",
   "ob.s4.microsoftUnverified":
     "Bạn có thể thấy thông báo “ứng dụng chưa xác minh” — đó chính là bản tự vận hành này, không phải bên thứ ba.",
   "ob.s4.microsoftFailed": "Kết nối Microsoft chưa hoàn tất.",
-  "ob.s4.connectOkTitle": "Đã kết nối",
-  "ob.s4.connectOkBody":
-    "Hộp thư của bạn đã được liên kết. Việc thu thập bắt đầu từ lần đồng bộ kế tiếp.",
   "ob.s4.connectVerifying": "Đang xác nhận kết nối…",
   "ob.s4.connectLive": "Đang chạy và thu thập",
   "ob.s4.connectConfirmFailed": "Không xác nhận được kết nối.",
   "ob.s4.connectRetry": "Hãy vào Cài đặt → Kết nối để thử kết nối lại.",
   "ob.s4.connectDenied": "Bạn đã từ chối cấp quyền — không có gì được kết nối.",
-  "ob.s4.googleBtn": "Cho phép truy cập Gmail của tôi",
-  "ob.s4.googleHint":
-    "Đọc thư của bạn và có thể gửi từ đó. Bạn cấp cả hai trên màn hình của Google và ngắt kết nối lúc nào cũng được.",
   "ob.s4.googleUnverified":
     "Nếu Google báo “ứng dụng chưa xác minh”, chọn Nâng cao → Tiếp tục. Màn hình của Google liệt kê đúng những gì bạn đang cấp.",
-  "backfill.title": "Nhập email cũ",
   "backfill.intro":
     "Chọn muốn lấy lại bao xa. Chưa có gì chạy cho đến khi bạn bấm Bắt đầu nhập.",
   "backfill.windowLabel": "Lấy lại bao xa",
@@ -6148,8 +6033,6 @@ export const vi = {
   "backfill.startCta": "Bắt đầu nhập",
   "backfill.starting": "Đang bắt đầu…",
   "backfill.skip": "Để sau",
-  "backfill.skippedNote":
-    "Chưa nhập email cũ. Email mới vẫn được ghi nhận. Bạn có thể nhập email cũ sau trong Cài đặt.",
   "backfill.loading": "Đang kiểm tra lượt nhập…",
   "backfill.statusUnavailable":
     "Hiện chưa xem được lượt nhập. Email mới vẫn được ghi nhận.",
@@ -6192,23 +6075,20 @@ export const vi = {
   // loại thông tin đăng nhập mà đơn vị đó dùng để cấu hình.
   "extUnits.open": "Mở",
   "extUnits.openNamed": "Mở trang {name}",
-  "extUnits.user.title": "Tài khoản khác của bạn",
+  "extUnits.user.title": "Tài khoản khác",
   "extUnits.user.sub":
-    "Những tài khoản bản cài đặt này có thể kết nối thay bạn. Mỗi tài khoản chỉ thuộc về bạn — không ai khác nhìn thấy, và ngắt kết nối chỉ ảnh hưởng tới bạn.",
+    "Các tiện ích bản cài đặt này cung cấp, đăng nhập với tư cách của bạn. Mỗi tiện ích chỉ thuộc về bạn, và ngắt kết nối chỉ ảnh hưởng tới bạn.",
   "extUnits.workspace.title": "Tiện ích của bản cài đặt",
   "extUnits.workspace.sub":
     "Những tiện ích bản cài đặt này chạy bằng một thông tin đăng nhập dùng chung. Thiết lập ở đây áp dụng cho mọi người.",
 
-  "connectors.title": "Hộp thư và lịch đã kết nối",
+  "connectors.title": "Thư và lịch",
   // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
   // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
   "overnightGrant.title": "Chuẩn bị qua đêm",
-  "overnightGrant.sub":
-    "Margince xem qua các deal của bạn trong khi bạn ngủ và chuẩn bị sẵn buổi sáng cho bạn. Nó hành động với tư cách của bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
-  "overnightGrant.label":
-    "Cho phép Margince chuẩn bị bản tóm tắt buổi sáng qua đêm",
+  "overnightGrant.label": "Chuẩn bị bản tóm tắt buổi sáng của tôi qua đêm",
   "overnightGrant.help":
-    "Nó đọc deal và email của bạn để sắp xếp việc gì cần bạn hôm nay, và ghi ghi chú trở lại. Nó không thể gửi: quyền bạn cấp ở đây chỉ gồm đọc và ghi, không bao giờ gửi.",
+    "Margince đọc deal và email của bạn vào ban đêm, sắp xếp việc ưu tiên hôm nay và ghi ghi chú trở lại, để bản tóm tắt sẵn sàng khi bạn bắt đầu. Nó hành động với tư cách của bạn, chỉ thấy những gì bạn được thấy, và không bao giờ gửi.",
   "overnightGrant.dangerTitle": "Trợ lý qua đêm sẽ không chạy",
   "overnightGrant.danger":
     "Trợ lý không thể đọc hoặc thêm ghi chú vào bản tin qua đêm. Dữ liệu, danh sách công việc và bản tổng kết tuần theo lịch vẫn có sẵn.",
@@ -6306,10 +6186,6 @@ export const vi = {
     "Có thể giới hạn từng tin nhắn sau đó, và loại trừ địa chỉ hoặc tên miền ngay từ đầu.",
   "mailSharing.danger":
     "Tắt chia sẻ email sẽ khiến việc sử dụng CRM trở nên khó khăn. Email mới chỉ hiển thị với những người trong từng tin nhắn.",
-  "mailSharing.posture.shared":
-    "Thư mới thu thập được đồng nghiệp thấy được liên hệ đó đọc.",
-  "mailSharing.posture.private":
-    "Th\u01b0 m\u1edbi thu th\u1eadp ch\u1ec9 d\u00e0nh cho ng\u01b0\u1eddi trong th\u01b0 v\u00e0 h\u1ed9p th\u01b0 \u0111\u00e3 thu.",
   "mailSharing.posture.where":
     "Thay \u0111\u1ed5i \u1edf Quy t\u1eafc thu th\u1eadp",
   "mailSharing.sharedPosture.label": "Cho phép hộp thư chia sẻ ngay khi nhận",
@@ -6328,13 +6204,10 @@ export const vi = {
   "connectors.originUnreachable": "Kh\u00f4ng ph\u1ea3n h\u1ed3i",
   "connectors.originUnchecked": "Ch\u01b0a ki\u1ec3m tra",
   "connectors.sub":
-    "Các hộp thư và lịch đang thu thập vào CRM của bạn. Cần thì ngắt kết nối cái nào cũng được — bản ghi đã thu thập vẫn giữ nguyên.",
+    "Kết nối tài khoản bạn dùng để làm việc. Email của bạn tự được xếp vào đúng liên hệ và thương vụ, còn lịch đưa các cuộc họp lên hồ sơ và cho liên kết đặt lịch biết giờ rảnh của bạn.",
   "connectors.loading": "Đang tải các kết nối…",
   "connectors.loadFailed": "Không tải được các kết nối.",
-  "connectors.empty": "Chưa có hộp thư hay lịch nào được kết nối.",
-  "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
-  "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
   "connectors.provTestMailbox": "Hộp thư kiểm thử",
@@ -6348,9 +6221,6 @@ export const vi = {
     "Hãy kết nối lại hộp thư này để gửi từ đó. Hộp thư được kết nối từ trước khi có tính năng gửi thì không nâng cấp tại chỗ được — nhà cung cấp chỉ cấp quyền gửi trên một kết nối mới.",
   "connectors.lastSynced": "Đồng bộ lần cuối {at}",
   "connectors.neverSynced": "Đang chờ lần đồng bộ đầu tiên",
-  "connectors.nextCheck": "Lần kiểm tra kế tiếp ~{at}",
-  "connectors.polled": "Kiểm tra theo lịch (không có đăng ký đẩy)",
-  "connectors.pushRenewal": "Gia hạn đẩy trước {at}",
   "connectors.notConfigured":
     "Việc thu thập thư chưa được cấu hình trên bản triển khai này.",
   "connectors.reconnect": "Kết nối lại",
@@ -6393,7 +6263,7 @@ export const vi = {
   "captureNotice.yourControl":
     "Bạn quyết định theo từng người gửi và từng chuỗi thư, tại Cài đặt → Kết nối: chặn hẳn một người gửi, chia sẻ chuỗi thư với nhóm, hoặc xóa những gì một người gửi đã mang vào. Ở đây không yêu cầu bạn đồng ý — đây là điều sẽ xảy ra, để bạn biết trước khi kết nối.",
   "connectors.mailPosture.label": "Ai được đọc thư từ hộp thư này",
-  "connectors.mailPosture.classified": "Giữ lại cho đến khi phân loại",
+  "connectors.mailPosture.classified": "Giữ lại cho đến khi kiểm tra",
   "connectors.mailPosture.held": "Luôn giữ lại",
   "connectors.mailPosture.shared": "Chia sẻ với nhóm",
   "connectors.mailPosture.sharedNeedsAdmin":
@@ -6409,9 +6279,6 @@ export const vi = {
     "Lựa chọn này áp dụng cho thư được thu thập từ nay về sau. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi bạn thu hẹp cho khớp.",
   "connectors.mailPosture.historyConfirm": "Thay đổi phạm vi hiển thị",
   "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
-  "connectors.disconnectTitle": "Ngắt kết nối hộp thư này?",
-  "connectors.disconnectBody":
-    "Thao tác này xoá thông tin xác thực chúng tôi đã lưu cho hộp thư. Việc thu thập dừng ngay; mọi thứ đã thu thập vẫn nằm trong CRM của bạn, và kết nối lại thì phải xin quyền lần nữa.",
   "connectors.disconnectBodyGoogleNote":
     "Google có thể vẫn liệt kê Margince trong phần quyền truy cập của bên thứ ba trên tài khoản của bạn — hãy gỡ ở đó nếu muốn thu hồi hoàn toàn.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -6448,29 +6315,10 @@ export const vi = {
   "connectors.dismissOutcome": "Bỏ qua",
   "connectors.oauthConnected": "Đã tạo kết nối",
   "connectors.oauthNotConnected": "Chưa kết nối được gì",
-  "connectors.connectFailed": "Không thể kết nối",
   "connectors.imapConnectFailed": "Chưa kết nối hộp thư",
 
-  // The "Add a connection" affordance (Task 1): one verb in the card's header
-  // opens a dialog listing the providers still addable, each with the sentence
-  // it needs.
-  "connectors.addConnection": "Thêm một kết nối",
-  "connectors.addOpen": "Kết nối một tài khoản",
-  "connectors.connect": "Kết nối",
-  "connectors.connectProvider": "Kết nối {provider}",
-  "connectors.rosterLabel": "Đang thu thập vào CRM",
-  "connectors.addGmailBrings":
-    "Thư bạn gửi và nhận, từ Google. Margince cũng có thể gửi thư qua kết nối này.",
-  "connectors.addGcalBrings":
-    "Google Calendar của bạn. Nó được kết nối riêng, không đi kèm Gmail.",
-  "connectors.addGraphBrings":
-    "Thư bạn gửi và nhận trên tài khoản công việc Microsoft. Margince cũng có thể gửi thư qua kết nối này.",
-  "connectors.addGraphCalBrings":
-    "Lịch Outlook của bạn. Nó được kết nối riêng với thư Outlook.",
-  "connectors.addImapBrings":
-    "Bất kỳ máy chủ thư nào khác, bằng mật khẩu ứng dụng. Chỉ thu thập.",
-  "connectors.addTestMailboxBrings":
-    "Hộp thư giả chỉ dành cho QC — không bao giờ gửi hoặc nhận thư thật.",
+  // The card's header verb, which opens the connect dialog (connectFlow.*).
+  "connectors.addOpen": "Thêm tài khoản",
   "connectors.providerNotConfigured":
     "{provider} chưa được cấu hình trên bản triển khai này.",
 
@@ -6622,9 +6470,6 @@ export const vi = {
     "Dữ liệu là của bạn — xuất hoặc xoá sạch lúc nào cũng được.",
   "ob.s4.scope4Lead": "Ngắt kết nối bằng một cú nhấp.",
   "ob.s4.scope4Rest": "CRM vẫn chạy bình thường, chỉ dừng thu thập.",
-  "ob.s4.capturedTitle": "Đã kết nối hộp thư",
-  "ob.s4.capturedBody":
-    "CRM đang tự dựng. Email mới hiện ở đây khi lượt quét đầu chạy, thường trong vài phút.",
   "ob.s4.connectFailed": "Không kết nối được hộp thư đó",
   "ob.s4.notNow": "Để sau",
 
@@ -6780,43 +6625,14 @@ export const vi = {
   "ob.conv.scene.decisionSub":
     "Website của bạn nêu nhiều pháp nhân. Pháp nhân bạn chọn sẽ in trên mọi hoá đơn.",
   "ob.conv.scene.continue": "Tiếp tục",
-  "ob.conv.connect.sceneTitle": "Kết nối các tài khoản của bạn.",
+  "ob.conv.connect.sceneTitle": "Kết nối thư và lịch của bạn",
   "ob.conv.connect.sceneSub":
-    "Tôi dựng liên hệ, công ty và lịch sử từ những gì đã có trong hộp thư.",
-  "ob.conv.connect.mailboxTitle": "Hộp thư của bạn",
-  "ob.conv.connect.mailboxHint":
-    "Hãy chọn một. Liên hệ, công ty và lịch sử của bạn đều đến từ đây.",
-  "ob.conv.connect.networkTitle": "Mạng lưới quan hệ của bạn",
-  "ob.conv.connect.networkHint":
-    "Lưu hồ sơ của bạn để mạng lưới bạn nhập sau này được ghi nhận cho bạn. Việc nhập nằm trong Cài đặt.",
+    "Margince biến thư của bạn thành liên hệ, công ty và lịch sử, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "ob.conv.connect.recommended": "Nên có",
-  "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
-  "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
-  "ob.conv.connect.imapBrings":
-    "Email từ máy chủ bất kỳ, bằng địa chỉ email và mật khẩu ứng dụng",
-  "ob.conv.connect.linkedinAuth": "Đường dẫn hồ sơ, lưu vào tài khoản của bạn",
-  "ob.conv.connect.saveCta": "lưu →",
   "ob.conv.connect.dialogDone": "Xong",
-  "ob.conv.connect.scopeGoogle": "OAuth, phạm vi đọc và gửi",
-  "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "Địa chỉ email và mật khẩu",
-  "ob.conv.connect.connectCta": "kết nối →",
-  "ob.conv.connect.connectedCta": "đã kết nối",
-  "ob.conv.connect.savedCta": "đã lưu",
-  "ob.conv.connect.blockedCard":
-    "Bạn đã chọn một hộp thư rồi. Hãy ngắt kết nối trong Cài đặt nếu muốn đổi.",
-  "ob.conv.connect.guaranteesToggle": "Kết nối thì thực sự làm gì",
-  "ob.conv.connect.dialogHeadlineAccess": "Cần quyền truy cập {name}",
+  "ob.conv.connect.savedCta": "Đã lưu",
   "ob.conv.connect.dialogHeadlineImap": "Kết nối máy chủ thư của bạn",
-  "ob.conv.connect.appMissingCard":
-    "Tổ chức của bạn chưa đăng ký ứng dụng {name}.",
-  "ob.conv.connect.appUnusableCard":
-    "Ứng dụng {name} của tổ chức bạn hiện không mở được. Cần một quản trị viên, không phải một ứng dụng mới.",
   "ob.conv.connect.unsupportedCard": "Bản cài đặt này không hỗ trợ {name}.",
-  "ob.conv.connect.appSetupLink": "Thiết lập trong Cài đặt",
-  "ob.conv.connect.dialogIntro":
-    "{brings}. Tôi đọc một lần để dựng liên hệ và lịch sử của bạn, rồi giữ đồng bộ về sau.",
-  "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Đã lưu hồ sơ",
   "ob.conv.connect.linkedinSkippedNote": "Đã bỏ qua: bổ sung sau trong Cài đặt",
   "ob.conv.connect.rosterFailedTitle": "Không kiểm tra được hộp thư của bạn",
@@ -6908,10 +6724,8 @@ export const vi = {
     "Chào bạn quay lại. Lượt đọc {host} trước đó chưa xong. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
   "ob.conv.recap.readDeferred":
     "Chào bạn quay lại. Lượt đọc {host} của tôi đang tạm dừng. Hãy đưa tôi một website lần nữa, hoặc kể trực tiếp cho tôi.",
-  "ob.conv.connect.skip": "Tiếp tục mà không có hộp thư",
+  "ob.conv.connect.skip": "Tạm bỏ qua",
   "ob.conv.connect.continue": "Tiếp tục",
-  "ob.conv.connect.mailboxNeeded":
-    "Vẫn cần một hộp thư: thư là thứ được đọc và soạn nháp. Kết nối một hộp thư ở trên, hoặc tạm tiếp tục mà không có.",
   "ob.conv.linkedin.cardBody":
     "Địa chỉ hồ sơ của bạn, để một kết nối được nhập ghi là “Anna quen họ”, không phải “công ty quen họ”.",
   "ob.conv.linkedin.dialogHeadline": "Hồ sơ LinkedIn của bạn",
@@ -7078,7 +6892,6 @@ export const vi = {
   // A separate operation from connecting, and the copy has to keep them
   // separate: connecting grants access, the backread spends budget reading
   // history. Read-only, and it writes nothing until the reader approves.
-  "ob.backread.heading": "Tôi nên đọc ngược lại bao xa?",
   "ob.backread.estimating": "Đang đếm thư trong khoảng thời gian đó…",
   "ob.backread.estimate": "Khoảng {messages} thư trong khoảng thời gian đó.",
   "ob.backread.estimateAtLeast":
@@ -7089,7 +6902,6 @@ export const vi = {
     "Tôi không ước tính được khoảng thời gian đó: {detail} Bạn vẫn bắt đầu được, hoặc chọn khoảng khác.",
   "ob.backread.note":
     "Hộp thư của bạn không thay đổi. Email và liên hệ đã nhập sẽ xuất hiện trong Margince khi quá trình nhập tiến triển.",
-  "ob.backread.start": "Kết nối và đọc",
   "ob.backread.startFailed":
     "Tôi không bắt đầu được lượt đọc lịch sử: {detail} Hãy thử lại, hoặc đi tiếp rồi bắt đầu sau trong Cài đặt.",
   "ob.backread.running": "Đang đọc hộp thư của bạn",
@@ -7115,8 +6927,6 @@ export const vi = {
     "Tôi không dừng được lượt đọc: {detail} Hãy thử lại — trong lúc đó lượt đọc vẫn chạy.",
   "ob.backread.detailUnavailable": "Đã có lỗi ngoài dự kiến.",
   "ob.backread.cancel": "Dừng đọc",
-  "ob.backread.explore": "Tiếp tục trong khi đang đọc",
-  "ob.backread.skip": "Chưa đọc lịch sử lúc này",
 
   "auth.title": "Margince",
   "auth.checking": "Đang kiểm tra phiên của bạn…",
@@ -7207,7 +7017,6 @@ export const vi = {
   "password.cancel": "Hủy",
   "password.submit": "Lưu mật khẩu mới",
   "password.doneTitle": "Đã đổi mật khẩu",
-  "password.done": "Mọi thiết bị khác đã được đăng xuất.",
   "password.changeFailedTitle": "Mật khẩu chưa được đổi",
   "password.errorGeneric": "Không có nguyên nhân được báo. Hãy thử lại.",
   "setup.pageTitle": "Thiết lập Margince",
@@ -7746,7 +7555,7 @@ export const vi = {
   "settings.boundary.unknownBody":
     "Li\u00ean k\u1ebft c\u00f3 th\u1ec3 t\u1eeb phi\u00ean b\u1ea3n c\u0169 ho\u1eb7c g\u00f5 sai. Trang t\u1ed5ng quan c\u00e0i \u0111\u1eb7t li\u1ec7t k\u00ea m\u1ecdi trang gh\u1ebf c\u1ee7a b\u1ea1n m\u1edf \u0111\u01b0\u1ee3c.",
   "settings.page.account.sub":
-    "C\u00e1ch b\u1ea1n hi\u1ec3n th\u1ecb v\u00e0 \u0111\u0103ng nh\u1eadp \u2014 ch\u1ec9 c\u1ee7a ri\u00eang b\u1ea1n.",
+    "C\u00e1ch \u0111\u1ed3ng nghi\u1ec7p th\u1ea5y b\u1ea1n, c\u00e1ch b\u1ea1n \u0111\u0103ng nh\u1eadp, c\u00f9ng ng\u00f4n ng\u1eef v\u00e0 giao di\u1ec7n Margince d\u00f9ng cho b\u1ea1n.",
   "settings.page.voice.sub":
     "T\u1eeb ng\u1eef b\u1ea3n nh\u00e1p d\u00f9ng khi vi\u1ebft thay b\u1ea1n.",
   "settings.page.agents.sub":
@@ -7760,7 +7569,7 @@ export const vi = {
   "settings.page.company.sub":
     "T\u00ean, ti\u1ec1n t\u1ec7 v\u00e0 b\u1ed1i c\u1ea3nh m\u00e0 m\u1ecdi b\u1ea3n ghi \u0111\u01b0\u1ee3c \u0111\u1ecdc theo.",
   "settings.page.authentication.sub":
-    "C\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp v\u00e0o b\u1ea3n tri\u1ec3n khai n\u00e0y, \u1ee9ng d\u1ee5ng n\u00e0o \u0111\u01b0\u1ee3c thay m\u1eb7t n\u00f3, v\u00e0 nh\u00f3m IdP n\u00e0o c\u1ea5p vai tr\u00f2.",
+    "C\u00e1c \u1ee9ng d\u1ee5ng Google v\u00e0 Microsoft m\u00e0 m\u1ecdi tr\u00ecnh k\u1ebft n\u1ed1i email v\u00e0 l\u1ecbch \u0111\u1ec1u ch\u1ea1y qua, v\u00e0 c\u00e1c c\u00e1ch m\u1ecdi ng\u01b0\u1eddi \u0111\u0103ng nh\u1eadp.",
   "settings.page.members.sub":
     "M\u1ecdi ng\u01b0\u1eddi c\u00f3 gh\u1ebf, v\u00e0 m\u1ed7i ng\u01b0\u1eddi t\u1edbi \u0111\u01b0\u1ee3c \u0111\u00e2u.",
   "settings.page.teams.sub":
@@ -8478,8 +8287,6 @@ export const vi = {
   "extAccess.grantFailed": "Chưa thay đổi quyền",
   "extAccess.nobodyReads":
     "Không vai trò nào được đọc {object}, nên mọi thành viên chỉ thấy màn hình trống ở nơi lẽ ra là tiện ích này. Hãy cấp quyền đọc cho ít nhất một vai trò bên dưới.",
-  "users.empty": "Chưa có người dùng nào.",
-  "users.adminOnly": "Bạn không có quyền quản lý người dùng.",
   "users.inviteTitle": "Mời một người dùng",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm.",
@@ -8528,11 +8335,6 @@ export const vi = {
   "users.access.maskOutside": "trên bản ghi họ không được sửa",
   "users.inviteSub":
     "Thêm một người vào bản cài đặt này và chọn vai trò họ bắt đầu với.",
-  "users.membersTitle": "Người dùng",
-  "users.membersSub":
-    "Mọi người đang giữ một chỗ ngồi ở đây, kể cả tài khoản đã vô hiệu hoá.",
-  "users.memberCount_one": "{count} người dùng",
-  "users.memberCount_other": "{count} người dùng",
   "users.teamMemberCount_one": "{count} thành viên",
   "users.teamMemberCount_other": "{count} thành viên",
   "users.emailLabel": "Email của người dùng mới",
@@ -8545,14 +8347,10 @@ export const vi = {
   "users.deactivateAgentConfirmBody":
     "Đây là danh tính Agent của tổ chức. Nó không đăng nhập ở đâu cả và không ai mất quyền truy cập. Các tác vụ định kỳ của tiện ích mở rộng vẫn chạy: mỗi tác vụ hành động với tư cách chính nó, và thu thập dữ liệu theo quyền của thành viên có kết nối tạo ra bản ghi đó.",
   "users.agentSeat": "Agent",
-  "users.agentSeatRole": "Hành động theo passport, không theo vai trò",
   "users.roleLabel": "Vai trò cho người dùng mới",
-  "users.inviteOpen": "Mời người dùng",
   "users.invite": "Mời",
   "users.setRole": "Đặt vai trò…",
-  "users.setRoleFor": "Đặt vai trò cho {name}",
   "users.rowActions": "Hành động cho {name}",
-  "users.rolesHeld": "Đang giữ {roles}. Chọn một vai trò sẽ thay thế tất cả",
   "users.deactivate": "Vô hiệu hoá",
   "users.reactivate": "Kích hoạt lại",
   "users.status.active": "Đang hoạt động",
@@ -8768,19 +8566,76 @@ export const vi = {
   "aicalls.withheld":
     "Chỉ người vận hành mới đọc được dấu vết từng lượt gọi. Nó ghi lại mọi lượt gọi mô hình của bản cài đặt, nên không hiển thị rộng hơn.",
   "aicalls.sub":
-    "Mọi lượt gọi mô hình — danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
-  "aicalls.col.detail": "Chi tiết",
-  "aicalls.expandCall": "Xem chuỗi lần thử của {task} lúc {when}",
+    "Mọi lượt gọi mô hình: danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
+  "aicalls.open": "Mở lượt gọi {feature} lúc {when}",
   "aicalls.col.when": "Lúc",
-  "aicalls.col.task": "Tác vụ",
+  "aicalls.col.feature": "Tính năng",
   "aicalls.col.model": "Mô hình",
+  "aicalls.col.outcome": "Kết quả",
   "aicalls.col.tokens": "Token",
   "aicalls.col.latency": "Độ trễ",
+  "aicalls.col.cost": "Chi phí",
+  "aicalls.cost.unpriced": "Chưa có giá",
+  "aicalls.cost.unpricedHint": "Bảng giá không có giá cho một mô hình mà lượt gọi này đã dùng.",
   "aicalls.ms": "{value} ms",
+  "aicalls.outcome.ok": "Đã trả lời",
+  "aicalls.outcome.fallback": "Dự phòng",
+  "aicalls.outcome.declined": "Bị từ chối",
+  "aicalls.outcome.error": "Thất bại",
+  "aicalls.error.provider_quota": "Hết hạn mức tại nhà cung cấp",
+  "aicalls.error.provider_throttled": "Bị giới hạn tốc độ tại nhà cung cấp",
+  "aicalls.error.provider_refused": "Nhà cung cấp từ chối lượt gọi",
+  "aicalls.error.provider_error": "Lỗi từ nhà cung cấp",
+  "aicalls.error.output_withheld": "Nhà cung cấp giữ lại câu trả lời",
+  "aicalls.error.request_rejected": "Nhà cung cấp bác bỏ yêu cầu",
+  "aicalls.error.budget_deferred": "Bị ngân sách AI hoãn lại",
+  "aicalls.error.budget_unavailable": "Không đọc được ngân sách AI",
+  "aicalls.error.metering_failed": "Đã trả lời, chưa ghi được mức dùng",
+  "aicalls.error.request_failed": "Thất bại trước khi định tuyến",
+  "aicalls.source.response": "Phản hồi của nhà cung cấp",
+  "aicalls.source.echo": "Nhà cung cấp gửi lại",
+  "aicalls.source.configured": "Mô hình đã cấu hình",
+  "aicalls.filter.search": "Tìm lượt gọi",
+  "aicalls.filter.searchPlaceholder": "Tìm tính năng, mô hình hoặc lỗi",
+  "aicalls.filter.window": "Khoảng thời gian",
+  "aicalls.filter.anyOutcome": "Mọi kết quả",
+  "aicalls.filter.anyModel": "Mọi mô hình",
+  "aicalls.window.any": "Mọi lúc",
+  "aicalls.window.hour": "Một giờ qua",
+  "aicalls.window.day": "24 giờ qua",
+  "aicalls.window.week": "7 ngày qua",
+  "aicalls.clear": "Xóa bộ lọc",
+  "aicalls.filteredEmpty": "Không có lượt gọi nào khớp với bộ lọc này.",
+  "aicalls.prev": "Lượt gọi trước",
+  "aicalls.next": "Lượt gọi sau",
+  "aicalls.copy": "Sao chép",
+  "aicalls.copied": "Đã sao chép",
+  "aicalls.copyNamed": "Sao chép {what}",
+  "aicalls.copyRemedy": "Chọn văn bản trong ô và sao chép thủ công.",
+  "aicalls.fact.served": "Mô hình phục vụ",
+  "aicalls.fact.configured": "Mô hình đã cấu hình",
+  "aicalls.fact.provider": "Nhà cung cấp",
+  "aicalls.fact.tier": "Bậc",
+  "aicalls.fact.error": "Lỗi",
+  "aicalls.fact.tokensInOut": "{in} vào, {out} ra",
+  "aicalls.fact.reasoning": "Token suy luận",
+  "aicalls.fact.cached": "Token từ cache",
+  "aicalls.fact.source": "Mô hình do bên này báo",
+  "aicalls.fact.context": "Ngữ cảnh công ty",
+  "aicalls.fact.none": "Không có",
+  "aicalls.fact.exactTime": "Thời điểm chính xác (UTC)",
+  "aicalls.fact.taskKey": "Khóa tác vụ",
+  "aicalls.fact.callId": "ID lượt gọi",
+  "aicalls.fact.logicalId": "ID lượt gọi logic",
+  "aicalls.fact.correlationId": "ID tương quan",
+  "aicalls.fact.configHash": "Mã băm cấu hình",
+  "aicalls.fact.errorCode": "Mã lỗi",
   "aicalls.badge.cacheHit": "Trúng cache",
-  "aicalls.badge.degraded": "Giảm cấp",
-  "aicalls.badge.retries": "Thử lại ×{count}",
+  "aicalls.badge.degraded": "Bị ngân sách giảm cấp",
   "aicalls.badge.decision": "Mô hình quyết định",
+  "aicalls.reason.provider_error": "Lần thử trước gặp lỗi từ nhà cung cấp",
+  "aicalls.reason.schema_invalid": "Câu trả lời trước không khớp schema",
+  "aicalls.reason.budget_degrade": "Bị ngân sách AI hạ một bậc",
   "aicalls.reason.decision_below_floor":
     "Mô hình quyết định dưới ngưỡng tin cậy",
   "aicalls.reason.decision_error": "Mô hình quyết định bị lỗi",
@@ -8794,19 +8649,17 @@ export const vi = {
     "Tác vụ chỉ chạy cục bộ, mô hình quyết định thì không",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
-  "aicalls.filter.all": "Mọi tác vụ",
-  "aicalls.loadMore": "Tải thêm",
+  "aicalls.filter.all": "Mọi tính năng",
   "aicalls.empty": "Chưa ghi nhận lượt gọi AI nào.",
-  "aicalls.detail.identity":
-    "Phục vụ bằng {served} qua {provider} (cấu hình: {configured})",
-  "aicalls.detail.source": "Nguồn danh tính phục vụ: {source}",
-  "aicalls.detail.context": "Ngữ cảnh đưa vào: {scopes}",
-  "aicalls.detail.contextNone": "Không đưa ngữ cảnh công ty nào vào",
+  "aicalls.taskEmpty": "Chưa ghi nhận lượt gọi nào cho tính năng này.",
+  "aicalls.detail.call": "Lượt gọi",
+  "aicalls.detail.payload": "Nội dung",
+  "aicalls.detail.technical": "Chi tiết kỹ thuật",
   "aicalls.detail.attempts": "Số lần thử",
   "aicalls.detail.request": "Nội dung yêu cầu",
   "aicalls.detail.response": "Nội dung phản hồi",
   "aicalls.payload.off":
-    "Việc ghi nội dung đang tắt — hãy đặt ai.capture_payloads: true trong margince.yaml để ghi lại nội dung yêu cầu và phản hồi.",
+    "Việc ghi nội dung đang tắt. Hãy đặt ai.capture_payloads: true trong margince.yaml để ghi lại nội dung yêu cầu và phản hồi.",
   "aicalls.payload.none": "Không có nội dung nào được ghi cho lượt gọi này.",
 
   "aiexport.button": "Xuất thành kịch bản kiểm định",
@@ -8897,84 +8750,47 @@ export const vi = {
   "signInMethods.title": "Phương thức đăng nhập",
   "signInMethods.saveFailed": "Thay đổi đó chưa được lưu",
   "signInMethods.sub":
-    "Những cách mọi người có thể đăng nhập tại đây. Danh sách này là những gì bản triển khai có thông tin xác thực, nên quản trị viên có thể tắt một mục nhưng không thể thêm mục mới.",
+    "Các nút trên màn hình đăng nhập. Tắt một nút sẽ cần xác nhận, vì những người đang dùng nút đó mất lối vào này.",
   "signInMethods.password": "Email và mật khẩu",
   "signInMethods.passwordAlways":
-    "Luôn khả dụng. Mọi tài khoản đều vào được theo cách này, và đó là lý do việc tắt các phương thức khác là an toàn.",
-  "signInMethods.passwordReason":
-    "Không thể tắt đăng nhập bằng mật khẩu. Đây là phương thức giữ cho bản cài đặt luôn vào được.",
-  "signInMethods.providerHint":
-    "Cung cấp nhà cung cấp này trên màn hình đăng nhập. Tắt đi sẽ dừng cả những lượt đăng nhập đang diễn ra; các phiên hiện có không bị ảnh hưởng.",
+    "Luôn khả dụng, nên không ai bị khoá ngoài khi một phương thức khác bị tắt.",
   "signInMethods.noneConfigured":
     "Bản triển khai này chưa cấu hình nhà cung cấp bên ngoài nào, nên ngoài mật khẩu không có lựa chọn khác.",
-  "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
-    "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",
-  "groupRoles.grantOnlyTitle": "Chỉ cấp: thư mục không bao giờ thu hồi",
+    "Khi ai đó bạn đã mời đăng nhập bằng Google hoặc Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Không ai vào được nếu chưa được mời.",
+  "groupRoles.grantOnlyTitle": "Nhóm chỉ thêm vai trò, không bao giờ gỡ",
   "groupRoles.grantOnly":
-    "Mỗi lần đăng nhập cấp các vai trò đã ánh xạ và không bao giờ gỡ vai trò nào. Xóa một thành viên khỏi nhóm IdP không thu hồi vai trò ở đây: việc thu hồi vẫn là hành động chủ động của quản trị viên trên tài khoản của chính thành viên đó.",
+    "Đưa ai đó ra khỏi một nhóm thư mục không thu hồi vai trò ở đây. Hãy đổi vai trò trong mục của họ ở Thành viên.",
   "groupRoles.adminGrant":
-    "Ánh xạ một nhóm vào vai trò Admin sẽ cấp quyền quản trị cho mọi thành viên đã được mời của nhóm đó ở lần đăng nhập kế tiếp.",
-  "groupRoles.group": "Nhóm IdP",
-  "groupRoles.groupPlaceholder": "Tên nhóm, đúng như ID token ghi",
-  "groupRoles.role": "Vai trò được cấp",
+    "Nhóm được ánh xạ vào Admin sẽ biến mọi thành viên được mời trong nhóm thành quản trị viên ở lần đăng nhập tiếp theo.",
+  "groupRoles.group": "Nhóm thư mục",
+  "groupRoles.groupPlaceholder": "Tên nhóm, đúng như thư mục của bạn đặt",
+  "groupRoles.role": "Vai trò được nhận",
   "groupRoles.add": "Thêm nhóm",
   "groupRoles.remove": "Gỡ ánh xạ nhóm này",
   "groupRoles.removeNamed": "Gỡ ánh xạ {group}",
-  "groupRoles.save": "Lưu cấp vai trò theo nhóm",
+  "groupRoles.save": "Lưu vai trò theo nhóm",
   "groupRoles.empty":
-    "Chưa có nhóm nào được ánh xạ. Đăng nhập doanh nghiệp không cấp thêm gì ngoài những gì mỗi thành viên đang có.",
+    "Chưa có nhóm nào được ánh xạ. Đăng nhập bằng Google hoặc Microsoft không cấp thêm gì ngoài vai trò mỗi thành viên đang có.",
   "groupRoles.blankGroup": "Mỗi ánh xạ cần một tên nhóm.",
   "groupRoles.whitespaceGroup":
-    "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng. Tên phải khớp chính xác với ID token.",
+    "Tên nhóm không được bắt đầu hay kết thúc bằng khoảng trắng. Tên phải khớp chính xác với thư mục của bạn.",
   "groupRoles.duplicateGroup": "Mỗi nhóm chỉ được ánh xạ một lần.",
   "groupRoles.tooMany": "Chỉ có thể ánh xạ tối đa 64 nhóm.",
   "oauthApp.google.title": "Ứng dụng Google",
-  "oauthApp.google.sub":
-    "Hộp thư được kết nối, và mọi người đăng nhập bằng Google, thông qua một ứng dụng Google OAuth của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
-  "oauthApp.google.absent":
-    "Không có ứng dụng nào từ bất kỳ nguồn nào. Không thể kết nối Gmail và Lịch, và không thể cung cấp đăng nhập bằng Google.",
-  "oauthApp.google.redirectSub":
-    "Hãy đăng ký mọi URI bên dưới cho OAuth client trong Google console. Thiếu một URI sẽ khiến màn hình đồng ý báo redirect_uri_mismatch mà không nói URI nào sai.",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "oauthApp.google.removeConfirmTitle": "Xoá ứng dụng Google?",
-  "oauthApp.google.removeConfirmBody":
-    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này. Hộp thư Microsoft và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
   "oauthApp.microsoft.title": "Ứng dụng Microsoft",
-  "oauthApp.microsoft.sub":
-    "Hộp thư và lịch Outlook được kết nối, và mọi người đăng nhập bằng Microsoft, thông qua một đăng ký ứng dụng Entra của bạn. Thông tin xác thực của tổ chức bạn được dùng thay vì của chúng tôi.",
-  "oauthApp.microsoft.absent":
-    "Không có ứng dụng nào từ bất kỳ nguồn nào. Không thể kết nối thư và lịch Outlook, và không thể cung cấp đăng nhập bằng Microsoft.",
-  "oauthApp.microsoft.redirectSub":
-    "Hãy đăng ký mọi URI bên dưới trong mục Authentication của đăng ký ứng dụng Entra, dưới nền tảng Web. Thiếu một URI sẽ khiến màn hình đồng ý báo AADSTS50011 mà không nói URI nào sai.",
   "oauthApp.microsoft.clientIdPlaceholder":
     "00000000-0000-0000-0000-000000000000",
   "oauthApp.microsoft.removeConfirmTitle": "Xoá ứng dụng Microsoft?",
-  "oauthApp.microsoft.removeConfirmBody":
-    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ cổng Entra. Kết nối thư và lịch Outlook đi qua ứng dụng này. Hộp thư Google và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
-  "oauthApp.configured": "Đang dùng: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Đang dùng từ cấu hình triển khai này: {clientId}. Lưu một ứng dụng tại đây sẽ thay thế nó trong thời gian còn lưu.",
-  "oauthApp.pinnedToDirectory": "Đã gắn với thư mục {tenant}.",
-  "oauthApp.replaceHint":
-    "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy tới khi kết nối lại.",
-  "oauthApp.store": "Lưu ứng dụng",
-  "oauthApp.replace": "Thay ứng dụng",
-  "oauthApp.writeFailed": "Thay đổi chưa được lưu",
   "oauthApp.remove": "Xoá ứng dụng",
   "oauthApp.redirectCopied": "Đã sao chép",
   "oauthApp.redirectCopyFailed": "Hãy chọn địa chỉ và tự sao chép.",
-  "oauthApp.redirectCopy": "Sao chép URI {purpose}",
-  "oauthApp.redirect.mailbox_connect": "Hộp thư",
-  "oauthApp.redirect.calendar_connect": "Lịch",
   "oauthApp.redirect.sign_in": "Đăng nhập",
-  "oauthApp.redirectTitle": "URI chuyển hướng được uỷ quyền",
   "oauthApp.clientId": "Client ID",
   "oauthApp.clientSecret": "Client secret",
-  "oauthApp.tenant": "Directory (tenant) ID",
-  "oauthApp.tenantHint":
-    "Tùy chọn. Gắn ứng dụng với một thư mục Entra duy nhất: chỉ thành viên của nó mới kết nối được hộp thư, và đăng nhập Microsoft chạy trên thư mục đó. Để trống để mọi tổ chức đều kết nối được; khi đó đăng nhập chờ server nêu tên các thư mục của bạn.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "Chưa lưu ứng dụng",
   "firstRun.continue": "Tiếp tục",
@@ -9199,20 +9015,12 @@ export const vi = {
     "Chỉ đọc: tầng của mỗi tác vụ do hợp đồng cố định. Mỗi dòng hiển thị tầng và mô hình nó đang chạy.",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
   "aiTasks.viewCalls": "Xem lượt gọi",
-  "workingHours.title": "Khi nào bạn nhận lịch hẹn",
-  "workingHours.sub":
-    "Chỉ của riêng bạn. Không ai đặt giúp bạn, và bạn cũng không đặt cho ai.",
   "workingHours.unsetTitle": "Bạn chưa chọn khung giờ nào",
   "workingHours.unset":
     "Khách được đề nghị 09:00–17:00, thứ Hai đến thứ Sáu, theo đồng hồ của hệ thống.",
-  "workingHours.start": "Bắt đầu ngày",
-  "workingHours.end": "Kết thúc ngày",
-  "workingHours.days": "Những ngày bạn làm việc",
   "workingHours.timezone": "Múi giờ của bạn",
   "workingHours.browserZone":
     "Trình duyệt của bạn sử dụng {zone}. Lựa chọn ở trên là múi giờ dùng để tính thời gian trống.",
-  "workingHours.timezoneHelp":
-    "Múi giờ dùng để tính thời gian trống. Tìm theo thành phố hoặc khu vực.",
   "workingHours.narrowedTitle": "Bạn nhận lịch trong ít thời gian hơn",
   "workingHours.narrowed":
     "Sẽ có ít khách tìm được giờ hẹn hơn. Đó là thay đổi bạn vừa lưu, không phải lỗi.",
@@ -9268,26 +9076,28 @@ export const vi = {
     "Có hiệu lực từ tin nhắn tiếp theo. Tin nhắn đã thu thập vẫn giữ nguyên.",
   "captureExclusions.current": "Quy tắc đang áp dụng",
   "captureExclusions.empty": "Không có loại trừ.",
-  "ownerIdentities.title": "Các địa chỉ khác của bạn",
+  "ownerIdentities.title": "Các địa chỉ email khác của bạn",
   "ownerIdentities.sub":
-    "Những địa chỉ cũng là bạn: một bí danh gửi thay, một tên miền riêng bạn đọc, một địa chỉ bạn chuyển tiếp. Thư giữa các địa chỉ của chính bạn không phải là trao đổi với ai cả, nên không được thu thập và không bao giờ thành liên hệ.",
+    "Bí danh, một tên miền riêng hoặc một địa chỉ bạn chuyển tiếp. Margince coi chúng là bạn: thư giữa các địa chỉ này không được thu thập và không bao giờ thành liên hệ.",
   "ownerIdentities.add": "Thêm địa chỉ",
   "ownerIdentities.addLabel": "Khai báo một địa chỉ khác là của bạn",
-  "ownerIdentities.addDescription":
-    "Chỉ của riêng bạn. Đồng nghiệp không bao giờ thấy những gì bạn liệt kê ở đây.",
-  "ownerIdentities.current": "Đã khai báo",
+  "ownerIdentities.emptyTitle": "Chưa có địa chỉ nào khác",
+  "ownerIdentities.emptyBody":
+    "Địa chỉ bạn thêm, và những địa chỉ Margince tìm thấy trong hộp thư bạn đã kết nối, được liệt kê ở đây và áp dụng từ thư kế tiếp. Đồng nghiệp không bao giờ thấy danh sách này.",
   "ownerIdentities.notRetroactive":
     "Áp dụng từ thư kế tiếp. Thư đã thu thập vẫn giữ nguyên, và liên hệ đã tạo từ một bí danh vẫn còn cho đến khi bạn gộp hoặc xoá.",
-  "ownerIdentities.empty": "Bạn chưa khai báo địa chỉ nào khác.",
-  "ownerIdentities.remove": "Rút lại địa chỉ này",
+  "ownerIdentities.colAddress": "Địa chỉ",
+  "ownerIdentities.colType": "Loại",
+  "ownerIdentities.colSource": "Nguồn",
+  "ownerIdentities.colRemove": "Xoá",
+  "ownerIdentities.remove": "Xoá {value}",
   "ownerIdentities.added": "Đã thêm địa chỉ.",
   "ownerIdentities.confirm": "Thêm",
   "ownerIdentities.kindLabel": "Bạn đang khai báo gì?",
   "ownerIdentities.kind.address": "Một địa chỉ",
-  "ownerIdentities.learned.deliveredTo":
-    "Được tìm thấy tự động — thư gửi tới địa chỉ này rơi vào hộp thư bạn đã kết nối. Hãy xoá nếu đó không phải là bạn.",
-  "ownerIdentities.learned.provider":
-    "Nhà cung cấp thư của bạn báo đây là một trong các địa chỉ của chính bạn. Hãy xoá nếu đó không phải là bạn.",
+  "ownerIdentities.source.user": "Do bạn thêm",
+  "ownerIdentities.source.deliveredTo": "Tìm thấy trong hộp thư của bạn",
+  "ownerIdentities.source.provider": "Từ nhà cung cấp thư của bạn",
   "ownerIdentities.kind.domain": "Cả một tên miền",
   "ownerIdentities.valueLabel": "Địa chỉ hoặc tên miền",
   "ownerIdentities.addressPlaceholder": "ban@vidu.com",
@@ -10051,7 +9861,7 @@ export const vi = {
   "provider.deleteDataConfirm.title": "Xoá mọi thứ đã mua từ nhà cung cấp này?",
   "provider.deleteDataConfirm.body":
     "Mọi giá trị nhà cung cấp này đã cấp sẽ bị gỡ khỏi mọi liên hệ. Khoản bạn đã chi vẫn được ghi lại; dữ liệu thì không. Không thể hoàn tác.",
-  "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
+  "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận:",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
     "Mỗi liên hệ được tra cứu một lần — cho những mục mà kết nối chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, cùng quá trình công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này: chúng tốn tín dụng và vẫn là quyết định cho từng liên hệ.",
@@ -11331,8 +11141,6 @@ export const vi = {
   "firstRun.platform.imapWhat":
     "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
   "firstRun.platform.redirectTitle": "Đăng ký các redirect URI này trong app",
-  "firstRun.platform.redirectHint":
-    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; Hộp thư và Lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
   "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu?",
   "firstRun.google.helpStep1":
     "Trong Google Cloud console, mở một project rồi vào APIs & Services → Credentials → Create credentials → OAuth client ID, và chọn Web application.",
@@ -11719,4 +11527,878 @@ export const vi = {
     "Những gì bạn thấy từ nguồn này có thể còn thiếu.",
   "magic.consequence.capture_history_incomplete":
     "Các trao đổi cũ hơn từ nguồn này bị thiếu.",
+  "scheduling.linksTitle": "Liên kết đặt lịch",
+  "scheduling.status.paused": "Đã tạm dừng",
+  "scheduling.status.attention": "Cần xử lý",
+  "scheduling.acceptBookings": "Nhận đặt lịch",
+  "scheduling.acceptBookingsHelp":
+    "Ai có liên kết của bạn đều có thể chọn một giờ trống. Tắt để tạm dừng đặt lịch; liên kết vẫn giữ nguyên.",
+  "scheduling.acceptNeedsCalendar":
+    "Dùng được khi đã kết nối lịch. Khách mở liên kết của bạn trong lúc này sẽ thấy việc đặt lịch đang tạm dừng.",
+  "scheduling.acceptNeedsReconnect":
+    "Dùng được khi lịch của bạn đã kết nối lại. Khách mở liên kết của bạn trong lúc này sẽ thấy việc đặt lịch đang tạm dừng.",
+  "scheduling.acceptNeedsChoice":
+    "Dùng được khi đã lưu một lịch cho việc đặt lịch trong mục Lịch.",
+  "scheduling.col.link": "Liên kết",
+  "scheduling.col.length": "Thời lượng",
+  "scheduling.col.status": "Trạng thái",
+  "scheduling.col.actions": "Thao tác",
+  "scheduling.videoCall": "Cuộc gọi video",
+  "scheduling.row.live": "Đang hoạt động",
+  "scheduling.row.noInvitations": "Không gửi lời mời",
+  "scheduling.videoNotSet": "Chưa thiết lập",
+  "scheduling.video.ownShort": "Liên kết riêng",
+  "scheduling.mainLink": "(liên kết chính)",
+  "scheduling.linkActions": "Thao tác khác cho {name}",
+  "scheduling.editLink": "Sửa liên kết",
+  "scheduling.createLink": "Tạo liên kết đặt lịch",
+  "scheduling.noLinkYet": "Chưa có liên kết đặt lịch.",
+  "scheduling.replaceAddress": "Thay địa chỉ",
+  "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
+  "scheduling.personalLinksFoot":
+    "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
+  "scheduling.liveNoInvitesTitle":
+    "Khách vẫn đặt được lịch, nhưng không có lời mời nào được gửi",
+  "scheduling.attentionExpired":
+    "Kết nối {provider} của bạn đã hết hạn. Hãy kết nối lại để lịch hẹn được thêm vào lịch của bạn, hoặc tạm dừng đặt lịch cho đến lúc đó.",
+  "scheduling.attentionReadOnly":
+    "Kết nối {provider} của bạn đọc được sự kiện nhưng không thêm được. Hãy kết nối lại và cho phép gửi lời mời, hoặc tạm dừng đặt lịch cho đến lúc đó.",
+  "scheduling.attentionMissing":
+    "Chưa có lịch nào được kết nối cho việc đặt lịch. Hãy kết nối một lịch để lịch hẹn được thêm vào, hoặc tạm dừng đặt lịch cho đến lúc đó.",
+  "scheduling.reconnectCalendar": "Kết nối lại lịch",
+  "scheduling.reconnect": "Kết nối lại",
+  "scheduling.openConnections": "Mở Kết nối",
+  "scheduling.drawerTitle": "Sửa liên kết đặt lịch",
+  "scheduling.drawerIntro":
+    "Thay đổi áp dụng cho lượt đặt mới. Cuộc hẹn đã đặt giữ nguyên thông tin.",
+  "scheduling.meetingName": "Tên cuộc hẹn",
+  "scheduling.meetingNameHelp":
+    "Khách thấy tên này trên trang đặt lịch và trong lời mời.",
+  "scheduling.linkAddress": "Địa chỉ liên kết",
+  "scheduling.linkAddressHelp":
+    "Sau khi bạn xác nhận, liên kết này có địa chỉ mới. Cuộc hẹn đã đặt vẫn giữ liên kết thay đổi riêng.",
+  "scheduling.lengthOther": "Khác",
+  "scheduling.lengthOtherHelp":
+    "Khác cho phép mọi thời lượng từ 15 phút đến 8 giờ.",
+  "scheduling.lengthMinutes": "Thời lượng tính bằng phút",
+  "scheduling.lengthInvalid": "Nhập thời lượng từ 15 đến 480 phút.",
+  "scheduling.video.meetHelp":
+    "Mỗi lượt đặt có một liên kết Meet mới, được thêm vào lời mời. Dùng Google Calendar của bạn, {account}.",
+  "scheduling.video.teamsHelp":
+    "Mỗi lượt đặt có một liên kết Teams mới, được thêm vào lời mời. Dùng lịch Microsoft 365 của bạn, {account}.",
+  "scheduling.video.meetNeeds": "Cần một lịch Google.",
+  "scheduling.video.teamsNeeds": "Cần một lịch Microsoft 365.",
+  "scheduling.video.meetOther":
+    "Dùng khi lịch hẹn được thêm vào lịch Google của bạn, chọn trong mục Lịch.",
+  "scheduling.video.teamsOther":
+    "Dùng khi lịch hẹn được thêm vào lịch Microsoft 365 của bạn, chọn trong mục Lịch.",
+  "scheduling.connectGoogle": "Kết nối Google",
+  "scheduling.connectMicrosoft": "Kết nối Microsoft 365",
+  "scheduling.video.own": "Liên kết hoặc địa chỉ riêng",
+  "scheduling.video.ownHelp":
+    "Một phòng Zoom, một số điện thoại hoặc một địa chỉ văn phòng. Giống nhau cho mọi lượt đặt.",
+  "scheduling.video.ownSaved": "Địa chỉ đã lưu: {location}",
+  "scheduling.video.none": "Không có địa điểm",
+  "scheduling.video.noneHelp": "Thống nhất chi tiết với khách qua email.",
+  "scheduling.locationLabel": "Liên kết hoặc địa chỉ",
+  "scheduling.locationRequired": "Nhập một liên kết hoặc một địa chỉ.",
+  "scheduling.usesHours":
+    "Dùng giờ của bạn: {days}, {from} đến {until} giờ {zone}, đặt trước ít nhất {notice}.",
+  "scheduling.usesHoursAnyNotice":
+    "Dùng giờ của bạn: {days}, {from} đến {until} giờ {zone}.",
+  "scheduling.dayRange": "{from} đến {until}",
+  "scheduling.changeHours": "Đổi giờ",
+  "scheduling.saveLink": "Lưu liên kết",
+  "scheduling.readsBusy": "Đọc giờ bận",
+  "scheduling.sendsInvites": "Gửi lời mời",
+  "scheduling.syncedAgo": "Đã đồng bộ {ago}",
+  "scheduling.reconnectNeeded": "Cần kết nối lại",
+  "scheduling.expiredRow":
+    "Kết nối đã hết hạn. Margince không đọc được giờ bận và không gửi được lời mời cho đến khi bạn kết nối lại.",
+  "scheduling.eventCalendar": "Thêm cuộc hẹn đã đặt vào",
+  "scheduling.eventCalendarHelp":
+    "Mỗi lượt đặt thành một sự kiện ở đây, có mời khách và đính kèm liên kết video.",
+  "scheduling.blocking": "Cũng tính là bận",
+  "scheduling.blockingRowHelp":
+    "Sự kiện trong các lịch này cũng ẩn khung giờ đó với khách. Tên sự kiện vẫn riêng tư.",
+  "scheduling.keptAsSaved":
+    "Giữ như đã lưu. Bạn có thể đổi sau khi kết nối lại.",
+  "scheduling.mainCalendar": "Lịch chính",
+  "scheduling.savedCalendar": "Lịch đã lưu",
+  "scheduling.calendarCount_one": "{count} lịch",
+  "scheduling.calendarCount_other": "{count} lịch",
+  "scheduling.noneChosen": "Không có",
+  "scheduling.saveCalendar": "Lưu lịch",
+  "scheduling.setup.title": "Kết nối lịch để nhận đặt lịch",
+  "scheduling.setup.intro":
+    "Margince đọc giờ bận của bạn để khách chỉ thấy khung giờ trống, rồi thêm mọi lượt đặt vào lịch của bạn, có mời khách và đính kèm liên kết video. Cho đến lúc đó, liên kết của bạn vẫn tạm dừng.",
+  "scheduling.setup.step1": "Kết nối Google hoặc Microsoft 365",
+  "scheduling.setup.step1Help":
+    "Đăng nhập bằng tài khoản chứa lịch của bạn. Mất khoảng một phút.",
+  "scheduling.connectCalendar": "Kết nối lịch",
+  "scheduling.setup.step2": "Kiểm tra giờ của bạn bên dưới",
+  "scheduling.setup.step2Help":
+    "Khách được đề nghị 09:00 đến 17:00, thứ Hai đến thứ Sáu, cho đến khi bạn lưu giờ riêng.",
+  "scheduling.setup.step2Done": "Giờ của bạn đã được lưu.",
+  "scheduling.setup.step3": "Bật đặt lịch và chia sẻ liên kết",
+  "scheduling.setup.step3Help":
+    "Liên kết của bạn đã có sẵn, nên bạn có thể đưa vào chữ ký ngay bây giờ.",
+  "scheduling.whenTitle": "Khi nào khách có thể đặt",
+  "scheduling.days": "Ngày",
+  "workingHours.from": "Từ",
+  "workingHours.until": "Đến",
+  "workingHours.zoneHelp": "Khách thấy các giờ này theo múi giờ của họ.",
+  "scheduling.bookingRules": "Quy tắc đặt lịch",
+  "scheduling.noticeRow": "Báo trước tối thiểu",
+  "scheduling.noticeRowHelp":
+    "Không ai đặt được khung giờ bắt đầu sớm hơn mức này.",
+  "scheduling.bufferRow": "Nghỉ giữa các cuộc hẹn",
+  "scheduling.bufferRowHelp":
+    "Được để trống trước và sau mỗi cuộc hẹn trong lịch của bạn.",
+  "scheduling.horizonRow": "Đặt trước tối đa",
+  "scheduling.horizonRowHelp":
+    "Khách có thể chọn ngày xa nhất đến mức này trong tương lai.",
+  "scheduling.ruleOther": "Khác",
+  "scheduling.ruleMinutes": "Phút",
+  "scheduling.ruleDays": "Số ngày",
+  "scheduling.ruleInvalid": "Nhập một số nguyên từ {min} đến {max}.",
+  "scheduling.unit.minutes_one": "{count} phút",
+  "scheduling.unit.minutes_other": "{count} phút",
+  "scheduling.unit.hours_one": "{count} giờ",
+  "scheduling.unit.hours_other": "{count} giờ",
+  "scheduling.unit.days_one": "{count} ngày",
+  "scheduling.unit.days_other": "{count} ngày",
+  "scheduling.unit.weeks_one": "{count} tuần",
+  "scheduling.unit.weeks_other": "{count} tuần",
+  "scheduling.rulesFoot": "Áp dụng cho mọi lượt đặt.",
+  "scheduling.rulesFootAttention":
+    "Áp dụng cho mọi lượt đặt. Bạn có thể lưu mục này trong lúc lịch đang được kết nối lại.",
+  "scheduling.saveAvailability": "Lưu thời gian rảnh",
+  "scheduling.rulesSaveFailed": "Chưa lưu được quy tắc đặt lịch",
+  "scheduling.bookNeedsGrant": "Đặt cuộc hẹn cần quản trị viên cấp quyền.",
+  "scheduling.guestView": "Khách thấy gì",
+  "scheduling.previewLabel": "Xem trước trang đặt lịch công khai của bạn",
+  "scheduling.companyRow": "Tên và logo công ty",
+  "scheduling.companyRowHelp": "Lấy từ hồ sơ công ty.",
+  "scheduling.companyNoLogo":
+    "Lấy từ hồ sơ công ty. Chưa tải logo lên, nên khách chỉ thấy tên.",
+  "scheduling.companyNoName":
+    "Hồ sơ công ty chưa có tên, nên khách chỉ thấy tên của bạn.",
+  "scheduling.addLogo": "Thêm logo",
+  "scheduling.change": "Đổi",
+  "scheduling.yourName": "Tên của bạn",
+  "scheduling.yourNameHelp": "{name}, lấy từ tài khoản của bạn.",
+  "scheduling.reminderRow": "Email nhắc",
+  "scheduling.reminderFrom": "Một giờ trước mỗi cuộc hẹn, gửi từ {mailbox}.",
+  "scheduling.reminderNoMailbox":
+    "Một giờ trước mỗi cuộc hẹn. Cần một hộp thư đã kết nối, bạn có thể thêm trong mục Kết nối.",
+  "confirmPhrase.matches": "Cụm từ đã khớp",
+  "checklist.stepDone": "Đã xong",
+  "checklist.stepOpen": "Chưa xong",
+  "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
+  "firstRun.platform.redirectHint":
+    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; trình kết nối thư và trình kết nối lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
+  "oauthApp.redirect.mailbox_connect": "Trình kết nối thư",
+  "oauthApp.redirect.calendar_connect": "Trình kết nối lịch",
+  "oauthApp.redirectCopy": "Sao chép địa chỉ {purpose}",
+  "oauthApp.copyAll": "Sao chép tất cả",
+  "oauthApp.redirectTable": "Địa chỉ chuyển hướng",
+  "oauthApp.redirectCol.usedFor": "Dùng cho",
+  "oauthApp.redirectCol.address": "Địa chỉ",
+  "oauthApp.tenant": "Directory ID",
+  "oauthApp.tenantHint":
+    "Giới hạn ứng dụng trong thư mục của công ty bạn, để chỉ thành viên trong đó kết nối được hộp thư. Để trống thì ai có tài khoản công việc Microsoft cũng kết nối được, nhưng nút Tiếp tục với Microsoft chỉ xuất hiện trên màn hình đăng nhập khi đã đặt thư mục.",
+  "oauthApp.noWriteReason":
+    "Chỉ quản trị viên mới thiết lập được ứng dụng công ty",
+  "oauthApp.unlock.gmail": "Gmail",
+  "oauthApp.unlock.outlook": "Thư Outlook",
+  "oauthApp.unlock.calendar": "Lịch",
+  "oauthApp.unlock.signIn": "Đăng nhập",
+  "oauthApp.google.save": "Lưu ứng dụng Google",
+  "oauthApp.microsoft.save": "Lưu ứng dụng Microsoft",
+  "oauthApp.drawer.google.title": "Thiết lập ứng dụng Google",
+  "oauthApp.drawer.google.intro":
+    "Hai bước trong Google Cloud console, rồi dán kết quả vào đây. Bạn cần quyền truy cập dự án Google Cloud của công ty.",
+  "oauthApp.drawer.google.value":
+    "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được Gmail và Google Calendar, và nút Tiếp tục với Google có thể xuất hiện trên màn hình đăng nhập.",
+  "oauthApp.drawer.google.step1Title": "Tạo OAuth client trong Google Cloud",
+  "oauthApp.drawer.google.step1Body":
+    "Mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application.",
+  "oauthApp.drawer.google.step1Link": "Mở Google Cloud console",
+  "oauthApp.drawer.google.step2Body":
+    "Trong client, ở mục Authorized redirect URIs. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Google. Dán chính xác; nếu thiếu một địa chỉ, Google sẽ dừng kết nối với lỗi “redirect_uri_mismatch” mà không nói địa chỉ nào.",
+  "oauthApp.drawer.microsoft.title": "Thiết lập ứng dụng Microsoft",
+  "oauthApp.drawer.microsoft.intro":
+    "Hai bước trong Microsoft Entra admin center, rồi dán kết quả vào đây. Bạn cần quyền truy cập thư mục Entra của công ty.",
+  "oauthApp.drawer.microsoft.value":
+    "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được thư và lịch Outlook, và nút Tiếp tục với Microsoft có thể xuất hiện trên màn hình đăng nhập.",
+  "oauthApp.drawer.microsoft.step1Title":
+    "Đăng ký ứng dụng trong Microsoft Entra",
+  "oauthApp.drawer.microsoft.step1Body":
+    "Mở App registrations, đăng ký một ứng dụng mới, rồi thêm client secret ở mục Certificates and secrets.",
+  "oauthApp.drawer.microsoft.step1Link": "Mở Microsoft Entra admin center",
+  "oauthApp.drawer.microsoft.step2Body":
+    "Trong đăng ký ứng dụng, ở mục Authentication, dưới dạng redirect URI của nền tảng Web. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
+  "oauthApp.drawer.step2Title": "Thêm các địa chỉ chuyển hướng này",
+  "oauthApp.drawer.step3Title": "Dán client ID và secret",
+  "oauthApp.drawer.step3Body":
+    "{vendor} hiển thị cả hai khi client đã được tạo.",
+  "oauthApp.drawer.secretHint":
+    "Được lưu mã hoá và không bao giờ hiển thị lại. Muốn đổi sau này, hãy thay ứng dụng.",
+  "oauthApp.drawer.foot": "Có hiệu lực cho tất cả ngay khi lưu.",
+  "confirmPhrase.risk": "Tôi hiểu rõ rủi ro này",
+  "confirmPhrase.riskPrompt": "Nhập câu này để xác nhận:",
+  "oauthApps.title": "Ứng dụng Google và Microsoft",
+  "oauthApps.statusNeedsSetup": "Cần thiết lập",
+  "oauthApps.statusReady": "Sẵn sàng",
+  "oauthApps.noneTitle": "Chưa ai kết nối được Gmail, Outlook hay lịch",
+  "oauthApps.noneBody":
+    "Ai bạn mời cũng sẽ thấy “Công ty bạn chưa đăng ký ứng dụng Google” khi kết nối hộp thư. Hãy thiết lập ứng dụng cho nhà cung cấp công ty bạn dùng: một ứng dụng phục vụ tất cả.",
+  "oauthApps.readyIntro":
+    "Mọi trình kết nối email và lịch trong {company} đều chạy qua một trong các ứng dụng này. Mỗi thành viên tự kết nối hộp thư của mình trong mục Kết nối.",
+  "oauthApps.imapNote":
+    "Hộp thư ở máy chủ khác kết nối bằng địa chỉ và mật khẩu (IMAP) và không cần ứng dụng.",
+  "oauthApp.status.none": "Chưa thiết lập",
+  "oauthApp.status.stored": "Đã thiết lập",
+  "oauthApp.status.environment": "Do bản cài đặt này cung cấp",
+  "oauthApp.google.for": "Cho công ty dùng Google Workspace hoặc Gmail.",
+  "oauthApp.microsoft.for": "Cho công ty dùng Microsoft 365 hoặc Outlook.",
+  "oauthApp.unlocks": "Mở khoá cho tất cả:",
+  "oauthApp.clientLine": "Mã client {clientId}",
+  "oauthApp.clientLineEnv":
+    "Mã client {clientId}, lấy từ cấu hình của bản cài đặt này",
+  "oauthApp.directoryLine": "Chỉ trong thư mục công ty bạn {tenant}",
+  "oauthApp.google.setUp": "Thiết lập ứng dụng Google",
+  "oauthApp.microsoft.setUp": "Thiết lập ứng dụng Microsoft",
+  "oauthApp.useOwn": "Dùng ứng dụng riêng",
+  "oauthApp.menu": "Thao tác khác cho {app}",
+  "oauthApp.menu.showRedirects": "Xem địa chỉ chuyển hướng",
+  "oauthApp.menu.replace": "Thay mã client và khoá bí mật",
+  "oauthApp.removeImpactTitle":
+    "Việc này thay đổi cách mọi thành viên kết nối email",
+  "oauthApp.google.removeSecret":
+    "Không thể đọc lại khoá bí mật của client. Muốn khôi phục ứng dụng, hãy nhập lại mã và khoá bí mật từ Google Cloud console.",
+  "oauthApp.google.removeUsedBy":
+    "Các kết nối Gmail và Google Calendar dùng ứng dụng này.",
+  "oauthApp.google.removeOthers":
+    "Hộp thư Microsoft và IMAP không bị ảnh hưởng.",
+  "oauthApp.google.removeSignIn":
+    "Nút Tiếp tục với Google rời khỏi màn hình đăng nhập, trừ khi bản cài đặt này cũng cấu hình một ứng dụng.",
+  "oauthApp.microsoft.removeSecret":
+    "Không thể đọc lại khoá bí mật của client. Muốn khôi phục ứng dụng, hãy nhập lại mã và khoá bí mật từ Microsoft Entra admin center.",
+  "oauthApp.microsoft.removeUsedBy":
+    "Các kết nối email và lịch Outlook dùng ứng dụng này.",
+  "oauthApp.microsoft.removeOthers":
+    "Hộp thư Google và IMAP không bị ảnh hưởng.",
+  "oauthApp.microsoft.removeSignIn":
+    "Nút Tiếp tục với Microsoft rời khỏi màn hình đăng nhập, trừ khi bản cài đặt này cũng cấu hình một ứng dụng.",
+  "oauthApp.removeFirstRun": "Bước thiết lập ban đầu sẽ lại hỏi một ứng dụng.",
+  "signInMethods.alwaysOn": "Luôn bật",
+  "signInMethods.desc.google":
+    "Nút Google cho ai có tài khoản công việc trên Google.",
+  "signInMethods.desc.microsoft":
+    "Nút Microsoft cho ai có tài khoản công việc trên Microsoft 365.",
+  "signInMethods.onScreen": "Có trên màn hình đăng nhập",
+  "signInMethods.offScreen.noApp":
+    "Chưa có trên màn hình đăng nhập: ứng dụng {vendor} chưa được thiết lập.",
+  "signInMethods.offScreen.noDirectory":
+    "Chưa có trên màn hình đăng nhập: ứng dụng Microsoft chưa giới hạn trong thư mục công ty bạn.",
+  "signInMethods.offScreen.unusable":
+    "Không có trên màn hình đăng nhập: hiện không dùng được ứng dụng {vendor}.",
+  "signInMethods.offScreen.turnedOff": "Đã tắt",
+  "signInMethods.noWriteReason":
+    "Chỉ quản trị viên hoặc ops mới đổi được phương thức đăng nhập",
+  "signInMethods.turnOffTitle": "Tắt {provider}?",
+  "signInMethods.turnOffBody":
+    "Nút {vendor} rời khỏi màn hình đăng nhập với mọi thành viên của {company}. Bạn có thể bật lại bất cứ lúc nào.",
+  "signInMethods.impactTitle":
+    "Việc này thay đổi cách mọi thành viên đăng nhập",
+  "signInMethods.impact.fallback":
+    "Ai đang dùng {vendor} sẽ đăng nhập bằng email và mật khẩu. Ai chưa từng đặt mật khẩu thì dùng Quên mật khẩu trên màn hình đăng nhập.",
+  "signInMethods.impact.inProgress":
+    "Lượt đăng nhập {vendor} đang diễn ra sẽ bị dừng. Các phiên đã mở vẫn tiếp tục.",
+  "signInMethods.impact.groups":
+    "Vai trò từ nhóm thư mục không còn được cấp khi đăng nhập bằng {vendor}.",
+  "signInMethods.impact.connectors":
+    "Trình kết nối email và lịch vẫn hoạt động: chúng dùng ứng dụng {vendor}, không dùng nút này.",
+  "signInMethods.turnOffConfirm": "Tắt đăng nhập {vendor}",
+  "signInMethods.keepOn": "Giữ nguyên",
+  "groupRoles.disclosure": "Nâng cao: vai trò từ nhóm thư mục",
+  "groupRoles.countNone": "Chưa ánh xạ nhóm nào",
+  "groupRoles.count_one": "Đã ánh xạ {count} nhóm",
+  "groupRoles.count_other": "Đã ánh xạ {count} nhóm",
+  "groupRoles.roleFor": "Vai trò cho nhóm {group}",
+  "groupRoles.help": "Nhập từng nhóm đúng như thư mục của bạn đặt tên.",
+  "groupRoles.noWriteReason": "Chỉ quản trị viên mới đổi được các ánh xạ này",
+  "groupRoles.adminConfirmTitle":
+    "Cho mọi thành viên của {group} làm quản trị viên?",
+  "groupRoles.adminImpactTitle": "Việc này trao vai trò cao nhất",
+  "groupRoles.adminImpact.signIn":
+    "Mọi thành viên được mời trong nhóm sẽ thành quản trị viên ở lần đăng nhập tiếp theo bằng Google hoặc Microsoft.",
+  "groupRoles.adminImpact.reach":
+    "Quản trị viên đổi được mọi cài đặt, mọi vai trò và mọi bản ghi.",
+  "groupRoles.adminImpact.keep": "Rời nhóm sau này cũng không làm mất vai trò.",
+  "groupRoles.adminConfirm": "Lưu và cấp quyền quản trị",
+  "connectors.vendorGoogle": "Google",
+  "connectors.vendorMicrosoft": "Microsoft 365",
+  "connectors.oauthConnectedTitle": "Đã kết nối {provider}",
+  "connectors.oauthBoth": "Thư và Lịch đang được đồng bộ.",
+  "connectors.oauthMailOnly": "Thư đang được đồng bộ.",
+  "connectors.oauthCalendarOnly": "Lịch đang được đồng bộ.",
+  "connectors.oauthImportRuns":
+    "Bạn có thể rời trang này: việc nhập email cũ vẫn tự tiếp tục chạy.",
+  "connectors.oauthCalendarDeclined":
+    "Thư đã được kết nối. Lịch thì chưa, vì quyền truy cập lịch không được cho phép.",
+  "connectors.oauthCalendarFailed": "Thư đã được kết nối. Lịch thì chưa.",
+  "connectors.connectCalendar": "Kết nối lịch",
+  "connectors.health.connected": "Đã kết nối",
+  "connectors.health.syncing": "Đang đồng bộ",
+  "connectors.health.upToDate": "Đã cập nhật",
+  "connectors.health.reconnect": "Cần kết nối lại",
+  "connectors.health.attention": "Cần xử lý",
+  "connectors.health.notConnected": "Chưa kết nối",
+  "connectFlow.title": "Kết nối thư và lịch",
+  "connectFlow.progress": "Các bước",
+  "connectFlow.stepAccount": "Tài khoản",
+  "connectFlow.stepBringIn": "Những gì được đưa vào",
+  "connectFlow.stepSignIn": "Đăng nhập",
+  "connectFlow.stepDone": "{step}, đã xong",
+  "connectFlow.where": "Bạn đọc email công việc ở đâu?",
+  "connectFlow.google": "Gmail và Google Calendar",
+  "connectFlow.microsoft": "Thư và lịch Outlook trên tài khoản công việc",
+  "connectFlow.otherHost": "Máy chủ thư khác",
+  "connectFlow.otherHostDesc":
+    "IMAP với mật khẩu ứng dụng. Chỉ có thư, không có lịch, không gửi thư.",
+  "connectFlow.alreadyConnected": "Đã được kết nối.",
+  "connectFlow.pickAccount": "Hãy chọn một tài khoản trước.",
+  "connectFlow.titleVendor": "Kết nối {vendor}",
+  "connectFlow.titleImap": "Kết nối máy chủ thư khác",
+  "connectFlow.mail": "Thư",
+  "connectFlow.calendar": "Lịch",
+  "connectFlow.mailHelp":
+    "Email bạn gửi và nhận được xếp vào đúng liên hệ và giao dịch. Bạn cũng có thể gửi thư từ Margince.",
+  "connectFlow.mailHelpImap":
+    "Email bạn gửi và nhận được xếp vào đúng liên hệ và giao dịch.",
+  "connectFlow.calendarHelp":
+    "Cuộc họp xuất hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
+  "connectFlow.calendarImap": "Không khả dụng qua IMAP.",
+  "connectFlow.pickService": "Chọn Thư, Lịch hoặc cả hai.",
+  "connectFlow.importLabel": "Nhập email cũ",
+  "connectFlow.importNone": "Không nhập",
+  "connectFlow.importAfter":
+    "Sau khi đăng nhập, bạn sẽ thấy khoảng thời gian đó có bao nhiêu email. Lần nhập nhỏ tự bắt đầu, lần nhập lớn hơn chờ bạn bắt đầu, và bạn có thể dừng bất cứ lúc nào.",
+  "connectFlow.signInTitle": "Đăng nhập bằng {vendor}",
+  "connectFlow.handoff":
+    "{vendor} mở trong tab này. Hãy đăng nhập bằng tài khoản bạn dùng cho công việc và cho phép từng quyền mà {vendor} liệt kê:",
+  "connectFlow.permMail": "Đọc và gửi email",
+  "connectFlow.permMailFor": "Cho Thư",
+  "connectFlow.permCalendar": "Xem và chỉnh sửa sự kiện lịch",
+  "connectFlow.permCalendarFor": "Cho Lịch và liên kết đặt lịch của bạn",
+  "connectFlow.asksTwice":
+    "{vendor} sẽ hỏi hai lần: một lần cho thư, rồi một lần cho lịch của bạn.",
+  "connectFlow.afterBoth":
+    "Sau đó bạn quay lại trang Kết nối. Thư mới và cuộc họp sẽ tự đến.",
+  "connectFlow.afterMail":
+    "Sau đó bạn quay lại trang Kết nối. Thư mới sẽ tự đến.",
+  "connectFlow.afterCalendar":
+    "Sau đó bạn quay lại trang Kết nối. Cuộc họp mới sẽ tự đến.",
+  "connectFlow.back": "Quay lại",
+  "connectFlow.next": "Tiếp tục",
+  "connectFlow.continueTo": "Tiếp tục với {vendor}",
+  "connectors.bringsMail": "Thư",
+  "connectors.bringsCalendar": "Lịch",
+  "connectors.bringsSend": "Gửi từ Margince",
+  "connectors.servicesBoth": "Thư và Lịch",
+  "connectors.connectMail": "Kết nối thư",
+  "connectors.account.connectedOn": "Đã kết nối {date}",
+  "connectors.account.menu": "Thêm thao tác cho {account}",
+  "connectors.menu.bringsIn": "Đổi những gì được đưa vào",
+  "connectors.menu.importOlder": "Nhập email cũ hơn",
+  "connectors.svc.list": "Những gì {account} đưa vào",
+  "connectors.svc.newMail": "Thư mới",
+  "connectors.svc.newMailDesc":
+    "Thư bạn gửi và nhận được xếp vào đúng liên hệ và giao dịch.",
+  "connectors.svc.pastEmail": "Email cũ",
+  "connectors.svc.pastEmailWindow": "Email cũ, {window}",
+  "connectors.svc.pastEmailDesc":
+    "Margince đọc từng email để tìm liên hệ và công ty. Mọi thứ đã nhập vẫn được giữ nếu bạn dừng.",
+  "connectors.svc.checked_one": "Đã xem {done} trên khoảng {count} email",
+  "connectors.svc.checked_other": "Đã xem {done} trên khoảng {count} email",
+  "connectors.svc.notImported": "Chưa nhập",
+  "connectors.svc.importPast": "Nhập email cũ",
+  "connectors.svc.waiting": "Đang chờ bạn",
+  "connectors.svc.heldNote":
+    "Lượt nhập này đang chờ bạn. Xem nó gồm bao nhiêu email, rồi bắt đầu.",
+  "connectors.svc.queued": "Sắp bắt đầu",
+  "connectors.svc.imported": "Đã nhập",
+  "connectors.svc.stopped": "Đã dừng",
+  "connectors.svc.calendar": "Lịch",
+  "connectors.svc.calendarDesc":
+    "Cuộc họp hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
+  "connectors.svc.bookingLink": "Thiết lập liên kết đặt lịch",
+  "connectors.accountSettings": "Ai thấy thư từ {account}",
+  "connectors.heldPointer.label":
+    "Chuỗi thư đang giữ lại và quyết định về người gửi",
+  "connectors.heldPointer.some_one":
+    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại nó, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Hoạt động thu thập.",
+  "connectors.heldPointer.some_other":
+    "{count} chuỗi thư đang được giữ lại khỏi nhóm. Xem lại chúng, cùng mọi người gửi mà hộp thư của bạn đưa vào, trong Hoạt động thu thập.",
+  "connectors.heldPointer.none":
+    "Hiện không có gì bị giữ lại khỏi nhóm. Mọi người gửi mà hộp thư của bạn đưa vào đều có trong Hoạt động thu thập.",
+  "connectors.heldPointer.unknown":
+    "Các chuỗi thư bị giữ lại khỏi nhóm, cùng mọi người gửi mà hộp thư của bạn đưa vào, đều có trong Hoạt động thu thập.",
+  "connectors.heldPointer.review": "Xem lại",
+  "connectors.advanced": "Nâng cao",
+  "connectors.advancedCount_one": "{count} cài đặt",
+  "connectors.advancedCount_other": "{count} cài đặt",
+  "connectors.disconnectAccountTitle": "Ngắt kết nối {account}?",
+  "connectors.stopServicesTitle": "Ngừng đưa vào {services}?",
+  "connectors.disconnectServicesBody":
+    "Thao tác này dừng {services} và xoá thông tin xác thực đã lưu. Những gì đã thu thập vẫn nằm trong CRM, và kết nối lại thì phải xin quyền lần nữa.",
+  "connectors.bringsIn.title": "Những gì {account} đưa vào",
+  "connectors.bringsIn.addNote": "{vendor} mở trong thẻ này và xin quyền mới.",
+  "connectors.bringsIn.unchanged": "Hãy chọn hoặc bỏ chọn một mục trước.",
+  "connectors.bringsIn.save": "Lưu",
+  "connectors.tile.google": "Gmail và Google Lịch",
+  "connectors.tile.microsoft": "Thư và lịch Outlook",
+  "connectors.connectVendor": "Kết nối {vendor}",
+  "connectors.strip.label": "Cách kết nối",
+  "connectors.strip.pick": "Chọn tài khoản",
+  "connectors.strip.tick": "Chọn Thư và Lịch",
+  "connectors.strip.signIn": "Đăng nhập",
+  "connectors.strip.syncs": "Việc đồng bộ tự bắt đầu",
+  "mailSharing.plate.scope": "Toàn công ty",
+  "mailSharing.plate.shared":
+    "{company} chia sẻ thư mới thu thập với những đồng nghiệp thấy được liên hệ đó. Mỗi hộp thư có thể giữ lại thư của mình nhiều hơn nữa.",
+  "mailSharing.plate.private":
+    "{company} chỉ để thư mới thu thập cho người trong thư và hộp thư đã thu.",
+  "connectors.originTitle": "Liên kết trong email gửi đi",
+  "connectors.originSub":
+    "Địa chỉ Margince đặt vào các liên kết gửi qua email, ví dụ liên kết hủy đăng ký. Nếu bên ngoài không truy cập được, các liên kết đó không mở ra gì.",
+  "overnightGrant.choiceHelp":
+    "Margince đọc deal và email của bạn qua đêm để sắp xếp việc ưu tiên hôm nay và ghi ghi chú trở lại. Nó không bao giờ gửi. Được lưu khi bạn tiếp tục với hộp thư đã kết nối.",
+  "overnightGrant.off": "Tắt",
+  "overnightGrant.offNote":
+    "Khi tắt, bản tóm tắt buổi sáng không được chuẩn bị trước. Hồ sơ, danh sách việc và bản đánh giá hằng tuần vẫn hoạt động như bình thường.",
+  "linkedinImport.addProfile": "Thêm hồ sơ",
+  "linkedinImport.notImported": "Chưa nhập",
+  "linkedinImport.importedCount_one": "Đã nhập {count}",
+  "linkedinImport.importedCount_other": "Đã nhập {count}",
+  "linkedinReach.emptyBody":
+    "Sau khi nhập, các công ty đã có trong hồ sơ mà bạn quen ai đó sẽ hiện ở đây dưới dạng bảng, nhiều kết nối nhất lên trước.",
+  "extUnits.managedElsewhere": "Được quản lý trên trang riêng.",
+  "ob.conv.connect.whereTitle": "Tài khoản công việc của bạn ở đâu?",
+  "ob.conv.connect.whereHint":
+    "Chọn dịch vụ công ty bạn đang dùng. Thư và lịch đến từ cùng một tài khoản.",
+  "ob.conv.connect.tileGoogleDesc": "Gmail và Lịch Google",
+  "ob.conv.connect.tileMicrosoftDesc": "Thư Outlook và Lịch Outlook",
+  "ob.conv.connect.tileImap": "Nhà cung cấp thư khác",
+  "ob.conv.connect.tileImapDesc":
+    "Bất kỳ máy chủ nào hỗ trợ IMAP. Chỉ có thư: thêm lịch sau trong Cài đặt.",
+  "ob.conv.connect.panelTitle": "Kết nối những gì từ {vendor}",
+  "ob.conv.connect.servicesLegend": "Kết nối những gì",
+  "ob.conv.connect.serviceMail": "Thư",
+  "ob.conv.connect.serviceCalendar": "Lịch",
+  "ob.conv.connect.mailBrings":
+    "Liên hệ, công ty và lịch sử từ hộp thư đến và thư đã gửi của bạn. Margince chỉ gửi khi bạn gửi, hoặc khi bạn cho phép một agent gửi.",
+  "ob.conv.connect.calendarBrings":
+    "Cuộc họp được gắn vào đúng deal và liên hệ, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
+  "ob.conv.connect.asksTwiceTitle":
+    "{vendor} hỏi hai lần, rồi đưa bạn quay lại đây",
+  "ob.conv.connect.asksTwiceBody": "Một màn hình cho thư, một cho lịch.",
+  "ob.conv.connect.asksOnceTitle":
+    "{vendor} hỏi một lần, rồi đưa bạn quay lại đây",
+  "ob.conv.connect.meansTitle": "Kết nối nghĩa là gì",
+  "ob.conv.connect.meansSub": "Ai có thể đọc thư của bạn, và cách ngắt kết nối",
+  "ob.conv.connect.connectBoth": "Kết nối thư và lịch",
+  "ob.conv.connect.connectMailOnly": "Kết nối thư",
+  "ob.conv.connect.connectCalendar": "Kết nối lịch",
+  "ob.conv.connect.pickService": "Chọn thư, lịch hoặc cả hai.",
+  "ob.conv.connect.skipCaption":
+    "Chưa có gì được kết nối. Danh sách thiết lập sẽ nhắc bạn nếu bạn bỏ qua.",
+  "ob.conv.connect.calendarFailedTitle": "Lịch của bạn chưa được kết nối",
+  "ob.conv.connect.calendarDeclined":
+    "Quyền truy cập lịch không được cho phép. Danh sách thiết lập sẽ nhắc bạn kết nối lịch.",
+  "ob.conv.connect.waitingAdmin": "Đang chờ quản trị viên",
+  "ob.conv.connect.availableNow": "Dùng được ngay",
+  "ob.conv.connect.yourCompany": "công ty của bạn",
+  "ob.conv.connect.appMissingTitle":
+    "{vendor} chưa được thiết lập cho công ty của bạn",
+  "ob.conv.connect.appMissingBody":
+    "Trước khi bất kỳ ai tại {company} có thể kết nối tài khoản {vendor}, một quản trị viên cần đăng ký ứng dụng {vendor} của công ty một lần trong Cài đặt, mục {page}. Bạn không cần làm gì trong {vendor}.",
+  "ob.conv.connect.appMissingHolderBody":
+    "Trước khi bất kỳ ai tại {company} có thể kết nối tài khoản {vendor}, ứng dụng {vendor} của công ty cần được đăng ký một lần. Bạn có thể làm ngay mà không rời khỏi phần thiết lập: tạo ứng dụng trong bảng điều khiển {vendor} rồi dán hai giá trị của nó vào đây.",
+  "ob.conv.connect.appUnusableTitle": "Hiện không thể kết nối {vendor}",
+  "ob.conv.connect.appUnusableBody":
+    "Ứng dụng {vendor} tại {company} đã được đăng ký, nhưng client secret của nó không còn mở được, nên không tài khoản {vendor} nào kết nối được. Một quản trị viên cần thay client secret trong Cài đặt, mục {page}; không cần ứng dụng mới.",
+  "ob.conv.connect.appUnusableHolderBody":
+    "Ứng dụng {vendor} tại {company} đã được đăng ký, nhưng client secret của nó không còn mở được, nên không tài khoản {vendor} nào kết nối được. Hãy dán client secret mới ngay bây giờ; không cần ứng dụng mới.",
+  "ob.conv.connect.registerApp": "Đăng ký ứng dụng {vendor} của công ty",
+  "ob.conv.connect.replaceApp": "Thay client secret của {vendor}",
+  "ob.conv.connect.copyRequest": "Sao chép yêu cầu gửi quản trị viên",
+  "ob.conv.connect.requestCopied": "Đã sao chép yêu cầu",
+  "ob.conv.connect.requestCopyFailed":
+    "Hãy tự gửi yêu cầu này cho quản trị viên: {request}",
+  "ob.conv.connect.requestText":
+    "Bạn có thể đăng ký ứng dụng {vendor} của công ty trong Margince, tại Cài đặt, mục {page} không? Khi đó tôi có thể kết nối thư và lịch của mình.",
+  "ob.conv.connect.requestTextUnusable":
+    "Bạn có thể thay client secret của ứng dụng {vendor} của công ty trong Margince, tại Cài đặt, mục {page} không? Khi đó tôi có thể kết nối thư và lịch của mình.",
+  "ob.conv.connect.useImap": "Dùng nhà cung cấp thư khác",
+  "ob.conv.connect.skipCaptionWaiting":
+    "Danh sách thiết lập sẽ nhắc bạn kết nối khi {vendor} sẵn sàng.",
+  "ob.conv.connect.connectedTitle": "{vendor} đã được kết nối",
+  "ob.conv.connect.calendarNotConnected":
+    "Chưa kết nối. Kết nối ngay, hoặc sau đó từ danh sách thiết lập.",
+  "ob.conv.connect.postureIntro":
+    "Ai có thể đọc thư mà Margince thu thập từ hộp thư này. Được lưu ngay khi bạn chọn, trước khi nhập, để thư cũ theo cùng quy tắc.",
+  "ob.conv.connect.importTitle": "Nhập thư cũ",
+  "ob.conv.connect.importIntro":
+    "Tạo danh bạ và lịch sử từ thư bạn đã có. Không có gì bắt đầu cho đến khi bạn chọn.",
+  "ob.conv.connect.connectedCaption":
+    "Đã kết nối thư và lịch. Bạn có thể thay đổi tất cả trong Cài đặt, mục {page}.",
+  "ob.conv.connect.connectedCaptionMailOnly":
+    "Đã kết nối thư. Danh sách thiết lập sẽ nhắc bạn về lịch.",
+  "ob.conv.connect.continueNoImport": "Tiếp tục mà không nhập",
+  "ob.conv.connect.importAndContinue": "Nhập {period} và tiếp tục",
+  "ob.conv.connect.alsoTitle": "Cũng nên làm ngay",
+  "ob.conv.connect.alsoSub":
+    "Không bắt buộc. Cả hai có thể đổi sau trong Cài đặt.",
+  "ob.conv.connect.linkedinRow": "Hồ sơ LinkedIn của bạn",
+  "ob.conv.connect.linkedinAdd": "Thêm hồ sơ",
+  "setup.reminder.trigger": "Hoàn tất thiết lập",
+  "setup.reminder.count": "{done}/{total}",
+  "setup.reminder.title": "Hoàn tất thiết lập",
+  "setup.reminder.hide": "Ẩn đến lần đăng nhập sau",
+  "setup.step.mail": "Kết nối email của bạn",
+  "setup.step.connectedAs": "{address}, tài khoản {provider}",
+  "setup.step.calendar": "Kết nối lịch của bạn",
+  "setup.step.voiceDone": "Bản nháp giờ đã giống giọng bạn.",
+  "setup.step.booking": "Bật liên kết đặt lịch",
+  "setup.step.bookingDone": "Khách hàng có thể đặt lịch với bạn.",
+  "setup.action.mail": "Kết nối email",
+  "setup.action.calendar": "Kết nối lịch",
+  "setup.action.voice": "Thêm mẫu",
+  "setup.action.booking": "Bật",
+  "settings.home.setup.title": "Thiết lập của bạn",
+  "settings.home.setup.count": "Đã xong {done}/{total}",
+  "settings.home.setup.complete": "Đã thiết lập xong",
+  "settings.home.setup.show": "Xem các bước",
+  "connectors.tile.notSetUp": "Chưa thiết lập",
+  "connectors.tile.askAdmin": "Quản trị viên bật {vendor} trong {page}.",
+  "connectors.tile.registerApp":
+    "Thiết lập ứng dụng {vendor} của công ty để bật.",
+  "connectors.tile.openPage": "Mở {page}",
+  "connectors.imapRow.note":
+    "Chỉ có thư, không có lịch. Đăng nhập bằng mật khẩu ứng dụng.",
+  "connectors.imapRow.connect": "Kết nối bằng IMAP",
+  // end polish: connections-tiles
+  "setup.step.writingVoice": "Luyện giọng văn của bạn",
+  "setup.caption.mail": "Mang về liên hệ và lịch sử.",
+  "setup.caption.calendar": "Gắn cuộc họp vào deal của bạn.",
+  "setup.caption.calendarSkipped": "Đã bỏ qua khi thiết lập.",
+  "setup.caption.calendarNeedsVendor": "Cần Google hoặc Microsoft.",
+  "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
+  "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
+  "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
+  "setup.caption.voice": "Cần 800 từ do bạn viết.",
+  "setup.caption.booking": "Khách hàng đặt giờ rảnh của bạn.",
+  "setup.caption.bookingNeedsCalendar": "Cần có lịch.",
+  "setup.reminder.waiting": "Đang chờ",
+  "setup.reminder.progress": "Tiến độ thiết lập",
+  // end polish: setup-popover
+  "account.profileCard": "Hồ sơ",
+  "account.signInCard": "Đăng nhập",
+  "account.languageCard": "Ngôn ngữ",
+  "account.browserCard": "Trình duyệt này",
+  "account.emailsCard": "Email định kỳ",
+  "account.signatureHelp":
+    "Được thêm dưới mỗi thư bạn gửi từ Margince, phía trên phần hủy đăng ký. Bản nháp AI không bao giờ tự thêm lời kết.",
+  "account.signatureAdd": "Thêm chữ ký",
+  "account.passwordHelp":
+    "Dùng để đăng nhập bằng {email}. Đổi mật khẩu sẽ đăng xuất bạn ở mọi nơi khác và ngắt kết nối các ứng dụng và agent thay mặt bạn.",
+  "account.passwordWarnTitle":
+    "Mọi phiên khác đăng nhập bằng tài khoản của bạn sẽ dừng",
+  "account.passwordWarnBody":
+    "Các trình duyệt và thiết bị khác bị đăng xuất. Ứng dụng bạn đã kết nối bằng tài khoản và các agent thay mặt bạn mất quyền truy cập cho đến khi bạn kết nối lại. Trình duyệt này vẫn đăng nhập.",
+  "account.passwordDone":
+    "Các thiết bị khác đã được đăng xuất và các ứng dụng đã kết nối cần được kết nối lại.",
+  "account.signOutHelp":
+    "Kết thúc phiên của bạn trên trình duyệt này. Các thiết bị khác vẫn đăng nhập.",
+  "account.languageHelp":
+    "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
+  "account.appearanceHelp":
+    "Sáng, tối hoặc theo cài đặt của máy tính này. Chỉ áp dụng trên trình duyệt này. Menu tài khoản đổi cùng cài đặt này.",
+  // end polish: account
+  "users.roster.title": "Thành viên",
+  "users.roster.inviteOpen": "Mời thành viên",
+  "users.roster.empty": "Chưa có thành viên nào.",
+  "users.roster.foot":
+    "Thành viên bị vô hiệu hoá vẫn ở trong danh sách này, đã đăng xuất, để có thể kích hoạt lại từ hàng của họ.",
+  "users.roster.readOnly": "Vai trò của bạn không thể quản lý thành viên.",
+  "users.roster.searchLabel": "Tìm thành viên",
+  "users.roster.searchPlaceholder": "Tìm theo tên hoặc email",
+  "users.roster.filterLabel": "Hiển thị thành viên",
+  "users.roster.filter.all": "Tất cả",
+  "users.roster.filter.active": "Đang hoạt động",
+  "users.roster.filter.invited": "Đã mời",
+  "users.roster.filter.deactivated": "Đã vô hiệu hoá",
+  "users.roster.emptyFilter.active": "Không có thành viên đang hoạt động.",
+  "users.roster.emptyFilter.invited": "Không có thành viên được mời.",
+  "users.roster.emptyFilter.deactivated": "Không có thành viên bị vô hiệu hoá.",
+  "users.roster.noMatch": "Không có thành viên nào khớp với tìm kiếm này.",
+  "users.roster.col.member": "Thành viên",
+  "users.roster.col.role": "Vai trò",
+  "users.roster.col.teams": "Nhóm",
+  "users.roster.col.status": "Trạng thái",
+  "users.roster.col.actions": "Hành động",
+  "users.roster.you": "(bạn)",
+  "users.roster.noTeam": "Không có nhóm",
+  "users.roster.noRole": "Không có vai trò",
+  "users.roster.agentRole":
+    "Hành động thay công ty qua agent passport, không có vai trò",
+  "users.roster.roleLocked": "Bạn không thể đổi vai trò này",
+  "users.roster.changeRole": "Đổi vai trò",
+  "users.roster.changeRoleTitle": "Đổi vai trò cho {name}",
+  "users.roster.roleToday": "Vai trò hiện tại: {role}",
+  "users.roster.newRole": "Vai trò mới",
+  "users.roster.replaceTitle": "Không thể hoàn tác",
+  "users.roster.replaceBody":
+    "Vai trò mới thay thế mọi vai trò {name} đang có. Để quay lại, hãy đổi vai trò lần nữa.",
+  // end polish: members
+  "leadVocab.col.source": "Nguồn",
+  "leadVocab.col.reason": "Lý do",
+  "leadVocab.col.score": "Tác động đến điểm",
+  "leadVocab.col.leads": "Khách hàng tiềm năng",
+  "leadVocab.col.offered": "Cho chọn",
+  "leadVocab.score.high": "Tăng điểm",
+  "leadVocab.score.neutral": "Không tác động",
+  "leadVocab.score.low": "Giảm điểm",
+  "leadVocab.score.highDesc":
+    "Khách hàng tiềm năng đã xin liên hệ, hoặc được giới thiệu.",
+  "leadVocab.score.neutralDesc":
+    "Nguồn này không cho biết khách hàng tiềm năng quan tâm đến đâu.",
+  "leadVocab.score.lowDesc":
+    "Tìm thấy hoặc mua theo danh sách, chưa ai xin liên hệ.",
+  "leadVocab.score.for": "Tác động đến điểm của {label}",
+  "leadVocab.score.rescoreNote":
+    "Khách hàng tiềm năng hiện có nhận thay đổi ở lần tính điểm lại tiếp theo.",
+  "leadVocab.offerFor": "Cho chọn {label}",
+  "leadVocab.moreFor": "Thao tác khác cho {label}",
+  "leadVocab.rename": "Đổi tên",
+  "leadVocab.renameTitle": "Đổi tên {label}",
+  "leadVocab.nameField": "Tên",
+  "leadVocab.save": "Lưu",
+  "leadVocab.new.title": "Nguồn khách hàng tiềm năng mới",
+  "leadVocab.new.nameHint":
+    "Nhân viên kinh doanh thấy tên này trong biểu mẫu tạo mới và trong bộ lọc.",
+  "leadVocab.sources.title": "Khách hàng tiềm năng đến từ đâu",
+  "leadVocab.sources.count_one": "{count} nguồn",
+  "leadVocab.sources.count_other": "{count} nguồn",
+  "leadVocab.sources.intro":
+    "Các lựa chọn trong biểu mẫu tạo mới và trong bộ lọc. Một nguồn có thể tăng hoặc giảm điểm của khách hàng tiềm năng.",
+  "leadVocab.sources.acquisitionLine":
+    "Để ghi nhận một giao dịch thắng cho một kênh, hãy dùng {link}.",
+  "leadVocab.sources.acquisitionLink": "Nguồn tiếp cận",
+  "leadVocab.sources.foot":
+    "Thay đổi điểm áp dụng ở lần tính điểm lại tiếp theo. Nguồn đang được dùng hoặc nguồn có sẵn không xóa được: hãy tắt Cho chọn.",
+  "leadVocab.sources.keyCaption":
+    "Các tích hợp nhận ra nguồn này qua khóa {key}. Đổi tên vẫn giữ khóa.",
+  "leadVocab.sources.builtInKept":
+    "Nguồn có sẵn không xóa được. Tắt Cho chọn để ẩn nguồn này với nhân viên kinh doanh.",
+  "leadVocab.sources.inUse_one":
+    "{count} khách hàng tiềm năng dùng nguồn này nên không xóa được. Tắt Cho chọn để ẩn nguồn này với nhân viên kinh doanh.",
+  "leadVocab.sources.inUse_other":
+    "{count} khách hàng tiềm năng dùng nguồn này nên không xóa được. Tắt Cho chọn để ẩn nguồn này với nhân viên kinh doanh.",
+  "leadVocab.reasons.title": "Vì sao khách hàng tiềm năng bị loại",
+  "leadVocab.reasons.count_one": "{count} lý do",
+  "leadVocab.reasons.count_other": "{count} lý do",
+  "leadVocab.reasons.intro":
+    "Các lý do nhân viên chọn khi loại một khách hàng tiềm năng. Lý do hiển thị trên hồ sơ và trong bộ lọc.",
+  "leadVocab.reasons.placeholder": "Thêm lý do, ví dụ Đã là khách hàng",
+  "leadVocab.reasons.builtInKept":
+    "Lý do có sẵn không xóa được. Tắt Cho chọn để ẩn lý do này với nhân viên kinh doanh.",
+  "leadVocab.reasons.inUse_one":
+    "{count} khách hàng tiềm năng mang lý do này nên không xóa được. Tắt Cho chọn để ẩn lý do này với nhân viên kinh doanh.",
+  "leadVocab.reasons.inUse_other":
+    "{count} khách hàng tiềm năng mang lý do này nên không xóa được. Tắt Cho chọn để ẩn lý do này với nhân viên kinh doanh.",
+  "leadVocab.deadline.title": "Hạn phản hồi",
+  "leadVocab.deadline.on": "Bật",
+  "leadVocab.deadline.off": "Tắt",
+  "leadVocab.deadline.switch":
+    "Đặt hạn phản hồi cho mọi khách hàng tiềm năng đang mở",
+  "leadVocab.deadline.switchHint":
+    "Khách hàng tiềm năng đang mở hiển thị lúc cần phản hồi. Danh sách có thêm chế độ xem Quá hạn và đưa mục quá hạn lên đầu.",
+  "leadVocab.deadline.target": "Phản hồi trong vòng (phút)",
+  "leadVocab.deadline.targetHint":
+    "Tính từ lúc khách hàng tiềm năng được tạo hoặc giao cho nhân viên. Từ 15 phút đến 7 ngày.",
+  // end polish: lead-sources
+  "reviewTemplates.how.title": "Cách một đánh giá đến với nhân viên kinh doanh",
+  "reviewTemplates.how.closedTitle": "Một giao dịch được đóng",
+  "reviewTemplates.how.closedBody":
+    "Trên bảng hoặc trang giao dịch, trong bất kỳ quy trình nào. Giao dịch thất bại luôn cần lý do khi đóng; giao dịch thành công có thể đóng mà không cần lý do.",
+  "reviewTemplates.how.openTitle": "Đánh giá được mở",
+  "reviewTemplates.how.openBody":
+    "Các câu hỏi bên dưới hiện ra ngay, kèm một ô ghi chú tự do. Câu hỏi 1 đã chứa lý do đóng, nếu đã có lý do.",
+  "reviewTemplates.how.keptTitle": "Câu trả lời được lưu trên giao dịch",
+  "reviewTemplates.how.keptBody":
+    "Được lưu trên dòng thời gian của giao dịch. Có thể bỏ qua và thêm đánh giá sau; giao dịch vẫn được đóng dù thế nào.",
+  "reviewTemplates.how.changes":
+    "Thay đổi áp dụng từ lần đóng tiếp theo. Các đánh giá đã viết giữ nguyên câu hỏi đã được hỏi.",
+  "reviewTemplates.how.who":
+    "Chỉ thành viên được phép ghi hoạt động trên giao dịch mới được đề nghị đánh giá. Không thể lưu đánh giá cho đến khi trả lời các câu hỏi bắt buộc.",
+  "reviewTemplates.questionCount_one": "{count} câu hỏi",
+  "reviewTemplates.questionCount_other": "{count} câu hỏi",
+  "reviewTemplates.summary": "{questions}, {required} bắt buộc",
+  "reviewTemplates.col.order": "STT",
+  "reviewTemplates.col.answer": "Câu trả lời",
+  "reviewTemplates.col.needed": "Cần trả lời",
+  "reviewTemplates.prefilled": "Được điền bằng lý do đóng, nếu đã có lý do",
+  "reviewTemplates.type.text": "Văn bản tự do",
+  "reviewTemplates.type.multiselect": "Chọn từ danh sách",
+  "reviewTemplates.requiredBadge": "Bắt buộc",
+  "reviewTemplates.optional": "Không bắt buộc",
+  "reviewTemplates.outcomeNote.title":
+    "Đánh giá theo kết quả, không theo giai đoạn",
+  "reviewTemplates.outcomeNote.body":
+    "Mọi quy trình đều hỏi cùng các câu hỏi. Các giai đoạn trước Thắng hoặc Thua nằm trong {pipelines}; tự động chuyển giao dịch nằm trong {stageAutomation}.",
+  "reviewTemplates.emptyLine":
+    "Chưa thiết lập câu hỏi đánh giá. Nhân viên sẽ không được đề nghị đánh giá khi đóng giao dịch.",
+  "reviewTemplates.drawer.lost":
+    "Được đề nghị mỗi khi một giao dịch được đóng là thất bại, trong mọi quy trình. Thay đổi áp dụng từ lần đóng tiếp theo; các đánh giá đã viết giữ nguyên câu hỏi.",
+  "reviewTemplates.drawer.won":
+    "Được đề nghị mỗi khi một giao dịch được đóng là thành công, trong mọi quy trình. Thay đổi áp dụng từ lần đóng tiếp theo; các đánh giá đã viết giữ nguyên câu hỏi.",
+  "reviewTemplates.prefillCallout.title": "Câu hỏi đầu tiên nhận lý do đóng",
+  "reviewTemplates.prefillCallout.body":
+    "Khi nhân viên nhập lý do lúc đóng giao dịch, lý do đó được điền vào câu hỏi 1. Hãy giữ câu hỏi về lý do ở đầu.",
+  "reviewTemplates.choices": "Lựa chọn, mỗi dòng một mục",
+  "reviewTemplates.choicesHint": "Có thể chọn nhiều mục.",
+  "reviewTemplates.moveUp": "Đưa câu hỏi {n} lên",
+  "reviewTemplates.moveDown": "Đưa câu hỏi {n} xuống",
+  "reviewTemplates.removeNumbered": "Xóa câu hỏi {n}",
+  "reviewTemplates.unsaved": "Thay đổi chưa lưu",
+  "reviewTemplates.saveQuestions": "Lưu câu hỏi",
+  // end polish: outcome-reviews
+  "settings.auditLog.title": "Thay đổi",
+  "settings.auditLog.record": "Bản ghi",
+  "settings.auditLog.recordSearch":
+    "Tìm liên hệ, công ty, deal hoặc lead để chỉ xem thay đổi của nó",
+  "settings.auditLog.when": "Khi nào",
+  "settings.auditLog.who": "Ai",
+  "settings.auditLog.what": "Việc gì",
+  "settings.auditLog.action": "Hành động",
+  "settings.auditLog.recordType": "Loại bản ghi",
+  "settings.auditLog.details": "Chi tiết",
+  "settings.auditLog.open": "Mở chi tiết thay đổi này",
+  "settings.auditLog.anyTime": "Mọi lúc",
+  "settings.auditLog.today": "Hôm nay",
+  "settings.auditLog.last7": "7 ngày qua",
+  "settings.auditLog.last30": "30 ngày qua",
+  "settings.auditLog.custom": "Khoảng tùy chọn",
+  "settings.auditLog.from": "Từ",
+  "settings.auditLog.to": "Đến",
+  "settings.auditLog.anyone": "Bất kỳ ai",
+  "settings.auditLog.anyAction": "Mọi hành động",
+  "settings.auditLog.anyType": "Mọi loại",
+  "settings.auditLog.byId": "Tìm theo ID",
+  "settings.auditLog.recordId": "ID bản ghi",
+  "settings.auditLog.batchId": "ID thay đổi hàng loạt",
+  "settings.auditLog.actorId": "ID tác nhân",
+  "settings.auditLog.countLine":
+    "Mới nhất trước, mỗi lần 20 mục. Thời gian và bộ lọc ngày theo giờ công ty ({zone}).",
+  "settings.auditLog.shown_one": "Đang hiển thị: {count}",
+  "settings.auditLog.shown_other": "Đang hiển thị: {count}",
+  "settings.auditLog.shownMore_one": "Đang hiển thị: {count}, còn thêm bên dưới",
+  "settings.auditLog.shownMore_other": "Đang hiển thị: {count}, còn thêm bên dưới",
+  "settings.auditLog.clear": "Xóa bộ lọc",
+  "settings.auditLog.filteredEmpty":
+    "Không có thay đổi nào khớp với bộ lọc này",
+  "settings.auditLog.empty":
+    "Thay đổi sẽ hiện ở đây ngay khi một bản ghi được tạo hoặc sửa.",
+  "settings.auditLog.noGrant":
+    "Vai trò của bạn không thể đọc nhật ký kiểm toán. Quản trị viên có thể cấp quyền Nhật ký kiểm toán cho vai trò của bạn trong Vai trò và quyền.",
+  "settings.auditLog.detailTitle": "Chi tiết thay đổi",
+  "settings.auditLog.changed": "Đã thay đổi gì",
+  "settings.auditLog.why": "Vì sao được phép",
+  "settings.auditLog.rule": "Quy tắc phân quyền",
+  "settings.auditLog.technical": "Chi tiết kỹ thuật",
+  "settings.auditLog.exactTime": "Thời điểm chính xác (UTC)",
+  "settings.auditLog.entryId": "ID mục",
+  "settings.auditLog.onBehalf": "Thay mặt",
+  "settings.auditLog.noDiff":
+    "Không ghi nhận giá trị trường nào cho thay đổi này.",
+  "settings.auditLog.action.create": "Đã tạo",
+  "settings.auditLog.action.update": "Đã cập nhật",
+  "settings.auditLog.action.archive": "Đã lưu trữ",
+  "settings.auditLog.action.merge": "Đã gộp",
+  "settings.auditLog.action.promote": "Đã nâng cấp",
+  "settings.auditLog.action.demote": "Đã hạ cấp",
+  "settings.auditLog.action.disqualify": "Đã loại",
+  "settings.auditLog.action.restore": "Đã khôi phục",
+  "settings.auditLog.action.export": "Đã xuất",
+  "settings.auditLog.action.erase": "Đã xóa vĩnh viễn",
+  "settings.auditLog.action.anonymize": "Đã ẩn danh",
+  "settings.auditLog.action.assign": "Đã giao",
+  "settings.auditLog.action.advance_stage": "Đã chuyển giai đoạn",
+  "settings.auditLog.action.advance_phase": "Đã chuyển pha",
+  "settings.auditLog.action.send_email": "Đã gửi email",
+  "settings.auditLog.action.consent_grant": "Đã đồng ý",
+  "settings.auditLog.action.consent_withdraw": "Đã rút đồng ý",
+  "settings.auditLog.action.approve": "Đã duyệt",
+  "settings.auditLog.action.reject": "Đã từ chối",
+  "settings.auditLog.action.record_share": "Đã chia sẻ",
+  "settings.auditLog.action.record_unshare": "Đã bỏ chia sẻ",
+  "settings.auditLog.action.activity_relink": "Đã liên kết lại hoạt động",
+  "settings.auditLog.action.import": "Đã nhập",
+  "settings.auditLog.action.import_undo": "Đã hoàn tác nhập",
+  "settings.auditLog.action.reset_data": "Đã đặt lại dữ liệu",
+  "settings.auditLog.action.password_link_issued": "Đã cấp liên kết mật khẩu",
+  "settings.auditLog.action.connect": "Đã kết nối",
+  "settings.auditLog.action.disconnect": "Đã ngắt kết nối",
+  "settings.auditLog.action.schedule": "Đã lên lịch",
+  "settings.auditLog.action.reschedule": "Đã dời lịch",
+  "settings.auditLog.action.cancel": "Đã hủy",
+  "settings.auditLog.action.release": "Đã phát hành",
+  "settings.auditLog.action.hold": "Đã tạm giữ",
+  "settings.auditLog.action.expire": "Đã hết hạn",
+  "settings.auditLog.action.resolve": "Đã giải quyết",
+  "settings.auditLog.action.restrict": "Đã hạn chế",
+  "settings.auditLog.action.pin": "Đã ghim",
+  "settings.auditLog.action.accrue": "Đã cộng dồn",
+  "settings.auditLog.action.pay": "Đã thanh toán",
+  "settings.auditLog.action.publish": "Đã xuất bản",
+  "settings.auditLog.action.pause": "Đã tạm dừng",
+  "settings.auditLog.action.resume": "Đã tiếp tục",
+  "settings.auditLog.action.close": "Đã đóng",
+  "settings.auditLog.action.invite": "Đã mời",
+  "settings.auditLog.action.revoke": "Đã thu hồi",
+  "settings.auditLog.action.delete": "Đã xóa",
+  "settings.auditLog.action.place_legal_hold": "Đã đặt lưu giữ pháp lý",
+  "settings.auditLog.action.lift_legal_hold": "Đã gỡ lưu giữ pháp lý",
+  "settings.auditLog.type.contact": "Liên hệ",
+  "settings.auditLog.type.company": "Công ty",
+  "settings.auditLog.type.deal": "Deal",
+  "settings.auditLog.type.lead": "Lead",
+  "settings.auditLog.type.project": "Dự án",
+  "settings.auditLog.type.activity": "Hoạt động",
+  "settings.auditLog.type.user": "Thành viên",
+  "settings.auditLog.type.offer": "Báo giá",
+  "settings.auditLog.type.offer_template": "Mẫu báo giá",
+  "settings.auditLog.type.product": "Sản phẩm",
+  "settings.auditLog.type.pipeline": "Pipeline",
+  "settings.auditLog.type.stage": "Giai đoạn pipeline",
+  "settings.auditLog.type.tag": "Thẻ",
+  "settings.auditLog.type.automation": "Tự động hóa",
+  "settings.auditLog.type.attachment": "Tệp đính kèm",
+  "settings.auditLog.type.relationship": "Mối quan hệ",
+  "settings.auditLog.type.weekly_review": "Đánh giá tuần",
+  "settings.auditLog.type.forecast_snapshot": "Ảnh chụp dự báo",
+  "settings.auditLog.type.forecast_capture_status":
+    "Trạng thái thu thập dự báo",
+  "settings.auditLog.type.onboarding_wizard_state": "Tiến độ thiết lập",
+  "settings.auditLog.type.privacy_notice_case":
+    "Hồ sơ thông báo quyền riêng tư",
+  "settings.auditLog.type.data_subject_request": "Yêu cầu của chủ thể dữ liệu",
+  "settings.auditLog.type.provider_connection": "Kết nối nhà cung cấp",
+  "settings.auditLog.type.saved_view": "Chế độ xem đã lưu",
+  // end polish: audit-log
 } as const satisfies Record<MessageKey, string>;

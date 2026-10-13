@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Calendar, Mail } from "lucide-react";
 import { useState } from "react";
 import { ChoiceList } from "./choicelist";
 
@@ -113,4 +114,42 @@ export const LabelsOnly: Story = {
     ],
     onChange: () => {},
   },
+};
+
+const SERVICES = [
+  {
+    value: "mail" as const,
+    label: "Mail",
+    description: "Conversations with your contacts go into the CRM.",
+    mark: <Mail aria-hidden="true" />,
+  },
+  {
+    value: "calendar" as const,
+    label: "Calendar",
+    description: "Not available for an IMAP mailbox.",
+    mark: <Calendar aria-hidden="true" />,
+    disabled: true,
+  },
+];
+
+function ManyLive() {
+  const [value, setValue] = useState<("mail" | "calendar")[]>(["mail"]);
+  return (
+    <ChoiceList
+      legend="What should Margince read?"
+      multiple
+      layout="cards"
+      value={value}
+      choices={SERVICES}
+      onChange={setValue}
+    />
+  );
+}
+
+// Several answers at once: checkbox plates in one group, one refused with its
+// reason. The picks come back in the order the choices are listed.
+export const ManyAsCards: Story = { render: () => <ManyLive /> };
+export const ManyAsCardsDark: Story = {
+  ...ManyAsCards,
+  globals: { theme: "dark" },
 };

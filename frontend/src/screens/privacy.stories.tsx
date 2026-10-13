@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../app/mefixture";
+import { en } from "../i18n/en";
 import { PrivacyInboxCard } from "./privacy";
 import {
   jsonResponse,
@@ -159,7 +160,10 @@ async function armErasureConfirm(canvasElement: HTMLElement) {
   await userEvent.type(await canvas.findByLabelText(/resolution/i), "verified");
   const row = await findRow(canvasElement, "8f3a-contact-uuid");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-  await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
+  await userEvent.type(
+    await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),
+    "ERASE",
+  );
 }
 
 // The typed-ERASE confirm modal for the destructive erasure fulfil —

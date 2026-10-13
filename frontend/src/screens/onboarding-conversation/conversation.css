@@ -1197,12 +1197,6 @@
   max-width: 62rem;
 }
 
-.ob-connect h2 {
-  margin: 0;
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyHeading);
-}
-
 /* The roster read that failed outright, centred at a card's measure. Its margin
    replaces `.readfail`'s own, so it chains that class. */
 .readfail.ob-conv-rosterfail {
@@ -1246,6 +1240,11 @@
   margin: var(--space-5) 0 0;
 }
 
+/* The step opens on its first question, with no section above to part from. */
+.ob-connect-section-head:first-child {
+  margin-top: 0;
+}
+
 .ob-connect-section-head h3 {
   display: flex;
   align-items: center;
@@ -1259,235 +1258,35 @@
   margin: var(--space-1) 0 0;
 }
 
-/* The provider cards: a mark, the name, what the connection actually grants,
-   and a footer naming the auth mechanism plus the tile's own affordance. */
-.ob-connect-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-3);
-}
-
-/* LinkedIn's own grid holds one card — still a grid, so its card matches the
-   mail tiles' width exactly rather than stretching to the full row. */
-.ob-connect-grid-single {
-  grid-template-columns: minmax(15rem, 22rem);
-}
-
-.ob-connect-card {
+/* The optional extras: their heading and the panel under it, one beat apart. */
+.ob-connect-also {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--padPanel);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-  cursor: pointer;
-  text-align: start;
-  transition:
-    border-color 0.14s ease,
-    background 0.14s ease;
 }
 
-.ob-connect-card:hover:not(:disabled) {
-  border-color: var(--borderStrong);
-}
-
-.ob-connect-card:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* A connected or blocked tile is disabled, but not the dashed "not
-   available" look of a control that never worked — the honest hard case is
-   "this happens to be settled right now", not "this is broken". */
-.ob-connect-card:disabled {
-  cursor: default;
-  opacity: 0.82;
-}
-
-.ob-connect-card[data-state="connected"] {
-  border-color: var(--success);
-  background: var(--successBg);
-}
-
-/* The one state where the dashed treatment above is the honest one: this
-   provider cannot be connected until somebody registers the company's
-   app, which is a different thing from a choice that happens to be settled.
-   It is not a button either, so it carries no :disabled to inherit from. */
-.ob-connect-card[data-state="unavailable"] {
-  border-style: dashed;
-  background: var(--bgPage);
-  cursor: default;
-}
-
-.ob-connect-card[data-state="unavailable"] .ob-connect-mark {
-  opacity: 0.55;
-}
-
-/* The way out of the state, in the CTA's slot and its voice: the reader who
-   can fix this is one link away from where it is fixed. */
-.ob-connect-card-setup {
-  color: var(--accentText);
-  font-family: var(--fontFamilyBody);
-}
-
-.ob-connect-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.ob-connect-mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgPage);
-}
-
-.ob-connect-mark .provider-mark {
-  width: 18px;
-  height: 18px;
-}
-
-.ob-connect-card-done {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  /* The Text green, not the base hue: this disc is a filled status control
-     with a mark read ON it, and --textOnStatusControl is the ink for that
-     ground in either theme (tokens.css). The base hue is for what nothing is
-     read on — a bar, a dot, a border. */
-  background: var(--successText);
-  color: var(--textOnStatusControl);
-}
-
-.ob-connect-card-done svg {
-  width: 12px;
-  height: 12px;
-}
-
-.ob-connect-card b {
-  color: var(--textPrimary);
-}
-
-.ob-connect-card-foot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: auto;
-  padding-top: var(--space-3);
-}
-
-.ob-connect-card-auth {
-  font-family: var(--fontFamilyBody);
-}
-
-.ob-connect-card-cta {
-  color: var(--accentText);
-  font-family: var(--fontFamilyBody);
-}
-
-/* ---- the connect dialog: one provider's ask, its own surface ---- */
-
-.ob-connect-dialog-mark {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-lg);
-  background: var(--bgPage);
-}
-
-.ob-connect-dialog-mark .provider-mark {
-  width: 28px;
-  height: 28px;
-}
-
-/* The handshake connects the mark to nothing (a single badge, honestly —
-   see connect-dialog.tsx for why this build draws no two-way wire). A
-   future two-mark version keeps its travelling highlight behind
-   no-preference, matching every other decorative motion in this file. */
-@media (prefers-reduced-motion: no-preference) {
-  .ob-connect-dialog-mark {
-    animation: ob-connect-mark-in 0.3s ease-out;
-  }
-}
-
-@keyframes ob-connect-mark-in {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-}
-
-.ob-connect-dialog-title {
-  margin: 0;
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyHeading);
-  text-align: center;
-}
-
-.ob-connect-dialog-intro {
-  margin: var(--space-2) 0 0;
-  text-align: center;
-}
-
-.ob-connect-dialog-body {
-  margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions {
+/* The inline ask's own column: the account's services, what the vendor's
+   screens will say, and any refusal, one beat apart. */
+.ob-connect-ask {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: var(--space-4);
+}
+
+/* An account's standing on its own line under what it brings, so the badge
+   never wraps into the middle of the sentence. */
+.ob-connect-standing {
+  display: block;
+  margin-top: var(--space-2);
+}
+
+/* A form's verbs at its trailing edge, the quiet way out before the press. */
+.ob-connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--gapActions);
   margin-top: var(--space-4);
-}
-
-.ob-connect-dialog-actions .btn {
-  width: 100%;
-}
-
-/* The panel spaces its own children with a flex gap, so the actions row asks
-   only for the DIFFERENCE between that gap and the beat it gets in the
-   block-flow dialogs — adding its full margin on top of the gap put 28px above
-   this one row and 16px above the identical row in every other dialog. */
-.ob-connect-linkedin-panel .ob-connect-dialog-actions {
-  margin-top: var(--space-1);
-}
-
-/* Same shape as the primary above it, one weight quieter: a bare label with no
-   padding sat in a row with a 44px-tall button and gave the reader a two-line
-   hit area for the choice that undoes the whole dialog. */
-.ob-connect-dialog-notnow {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-sm);
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.ob-connect-dialog-notnow:hover {
-  background: var(--bgHover);
-}
-
-/* The authorization form itself keeps left-aligned labels — a form reads
-   worse centred — inside the otherwise-centred dialog chrome above it. */
-.ob-connect-linkedin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  text-align: start;
 }
 
 /* The attention jump inside a message bubble. */
@@ -2624,22 +2423,6 @@
     animation: none;
     box-shadow: 0 0 0 2px var(--aiText);
   }
-}
-
-/* The LinkedIn act's one input: the profile the imported network is
-   attributed to. Matches the scope list beside it rather than the form
-   modules, because it sits in the artifact panel and not in a form. */
-.ob-connect-linkedin-panel input {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-}
-
-.ob-connect-linkedin-panel input:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
 }
 
 /* ---- the basis act: the installation reporting basis ---- */

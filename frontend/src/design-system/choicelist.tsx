@@ -2,11 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId } from "react";
-import { Radio } from "./atoms";
+import { Checkbox, Radio } from "./atoms";
 import "./choicelist.css";
 
 /**
- * One answer out of a few, with every answer READABLE AT REST.
+ * One answer out of a few, with every answer READABLE AT REST. With `multiple`
+ * it is any number of answers out of a few, drawn as checkboxes in the same
+ * fieldset, so a pick-several question keeps its name and its group too.
  *
  * It exists because the product had the `Radio` atom and no radio GROUP, so
  * every caller wrapped it by hand — each with its own stack gap, its own idea of
@@ -42,8 +44,12 @@ export type Choice<Value extends string> = Readonly<{
   value: Value;
   /** The answer, written so it reads on its own. */
   label: string;
-  /** What choosing it means, when the label cannot carry it alone. */
-  description?: string;
+  /**
+   * What choosing it means, when the label cannot carry it alone. A node so a
+   * refused answer can link to what unlocks it; keep that to one short link,
+   * since its words join the answer's accessible name.
+   */
+  description?: ReactNode;
   /**
    * A mark that identifies the answer faster than its name does, for a choice
    * between things the reader already recognises by sight: a vendor picking its
@@ -61,16 +67,25 @@ export type Choice<Value extends string> = Readonly<{
   disabled?: boolean;
 }>;
 
-export function ChoiceList<Value extends string>({
-  legend,
-  hideLegend,
-  value,
-  choices,
-  disabled,
-  layout = "stack",
-  className,
-  onChange,
-}: Readonly<{
+/**
+ * One answer (the default) or several. Several come back in CHOICE order, not
+ * press order, so a caller comparing two picks never sees the same set twice
+ * spelled differently.
+ */
+type Answer<Value extends string> =
+  | Readonly<{
+      multiple?: false;
+      /** The chosen value, or "" for a question nobody has answered yet. */
+      value: Value | "";
+      onChange: (next: Value) => void;
+    }>
+  | Readonly<{
+      multiple: true;
+      value: readonly Value[];
+      onChange: (next: Value[]) => void;
+    }>;
+
+type Question<Value extends string> = Readonly<{
   /** The question. A group of answers with nothing naming the question is a set
    * of unrelated controls to anybody not looking at the layout. */
   legend: string;
@@ -82,8 +97,6 @@ export function ChoiceList<Value extends string>({
    * heading's proximity.
    */
   hideLegend?: boolean;
-  /** The chosen value, or "" for a question nobody has answered yet. */
-  value: Value | "";
   choices: readonly Choice<Value>[];
   disabled?: boolean;
   /**
@@ -106,8 +119,19 @@ export function ChoiceList<Value extends string>({
   /** Layout the surrounding form owns — the margin its own rhythm expects. It
    * lands on the fieldset, which is the only element a caller can position. */
   className?: string;
-  onChange: (next: Value) => void;
-}>) {
+}>;
+
+export function ChoiceList<Value extends string>(
+  props: Question<Value> & Answer<Value>,
+) {
+  const {
+    legend,
+    hideLegend,
+    choices,
+    disabled,
+    layout = "stack",
+    className,
+  } = props;
   // The name groups the radios, and the group is what makes arrow keys move
   // between them rather than tab. Minted here because it is a DOM detail no
   // caller should have to think about, and two ChoiceLists on one page with the
@@ -129,30 +153,62 @@ export function ChoiceList<Value extends string>({
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
-      {choices.map((choice) => (
-        <Radio
-          key={choice.value}
-          className="choicelist-choice"
-          name={name}
-          value={choice.value}
-          checked={choice.value === value}
-          disabled={disabled || choice.disabled}
-          onChange={() => onChange(choice.value)}
-          label={
-            <span className="choicelist-text">
-              {choice.mark === undefined ? null : (
-                <span className="choicelist-mark" aria-hidden="true">
-                  {choice.mark}
-                </span>
-              )}
-              <span className="choicelist-label">{choice.label}</span>
-              {choice.description !== undefined && (
-                <span>{choice.description}</span>
-              )}
-            </span>
-          }
-        />
-      ))}
+      {choices.map((choice) => {
+        const shared = {
+          className: "choicelist-choice",
+          name,
+          value: choice.value,
+          disabled: disabled || choice.disabled,
+          label: <ChoiceText choice={choice} />,
+        };
+        if (props.multiple === true) {
+          const { value, onChange } = props;
+          return (
+            <Checkbox
+              key={choice.value}
+              {...shared}
+              checked={value.includes(choice.value)}
+              onChange={(event) => {
+                const ticked = event.target.checked;
+                onChange(
+                  choices
+                    .filter((c) =>
+                      c.value === choice.value
+                        ? ticked
+                        : value.includes(c.value),
+                    )
+                    .map((c) => c.value),
+                );
+              }}
+            />
+          );
+        }
+        const { value, onChange } = props;
+        return (
+          <Radio
+            key={choice.value}
+            {...shared}
+            checked={choice.value === value}
+            onChange={() => onChange(choice.value)}
+          />
+        );
+      })}
     </fieldset>
+  );
+}
+
+function ChoiceText<Value extends string>({
+  choice,
+}: Readonly<{ choice: Choice<Value> }>) {
+  return (
+    <span className="choicelist-text">
+      {choice.mark === undefined ? null : (
+        <span className="choicelist-mark" aria-hidden="true">
+          {choice.mark}
+        </span>
+      )}
+      <span className="choicelist-label">{choice.label}</span>
+      {choice.description != null && <span>{choice.description}</span>}
+    </span>
   );
 }

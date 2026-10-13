@@ -15,7 +15,8 @@ import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { OnboardingBackread } from "./onboarding-backread";
+import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
+import { ConnectedWayOnward } from "./onboarding-conversation/connect-connected";
 import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The mailbox backread step. Two invariants carry most of the weight here and
@@ -31,7 +32,34 @@ const PREVIEW_ROUTE = "POST /connectors/gmail/backfill/preview";
 const START_ROUTE = "POST /connectors/gmail/backfill";
 const CANCEL_ROUTE = "DELETE /connectors/gmail/backfill";
 
-function render(initial: BackfillStatus, onDone = vi.fn()) {
+// The choice as the connect step composes it: the panel, and the step footer
+// that starts the import or leaves without one.
+function Backread({
+  initial,
+  held,
+  onFinish,
+}: Readonly<{
+  initial: BackfillStatus | undefined;
+  held: boolean;
+  onFinish: () => void;
+}>) {
+  const choice = useOnboardingBackread({ provider: "gmail", initial });
+  return (
+    <>
+      <BackreadPanel choice={choice} />
+      <ConnectedWayOnward
+        choice={choice}
+        caption=""
+        held={held}
+        finishing={false}
+        onFinish={onFinish}
+      />
+    </>
+  );
+}
+
+function render(initial: BackfillStatus | undefined, held = false) {
+  const onDone = vi.fn();
   const view = rtlRender(
     <QueryClientProvider
       client={
@@ -39,16 +67,14 @@ function render(initial: BackfillStatus, onDone = vi.fn()) {
       }
     >
       <LocaleProvider initial="en">
-        <OnboardingBackread
-          provider="gmail"
-          initial={initial}
-          onDone={onDone}
-        />
+        <Backread initial={initial} held={held} onFinish={onDone} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
   return { ...view, onDone };
 }
+
+const START = { name: /^Import .+ and continue$/ };
 
 const previewOf = (body: Record<string, unknown>) =>
   jsonResponse({
@@ -100,9 +126,7 @@ describe("the scope preview", () => {
       screen.getByText(/cost can be higher if there are more emails/),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
-    await user.click(
-      screen.getByRole("button", { name: "Connect and import" }),
-    );
+    await user.click(screen.getByRole("button", START));
     await waitFor(() => expect(starts).toEqual([{ window: "120m" }]));
   });
 
@@ -202,7 +226,7 @@ describe("the scope preview", () => {
       screen.getByRole("combobox", { name: "How far back" }),
       "3 months",
     );
-    const start = screen.getByRole("button", { name: "Connect and import" });
+    const start = screen.getByRole("button", START);
     expect(start).toBeEnabled();
     await user.click(start);
 
@@ -274,7 +298,7 @@ describe("the scope preview", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/The mailbox went quiet\./)).toBeInTheDocument();
 
-    const start = screen.getByRole("button", { name: "Connect and import" });
+    const start = screen.getByRole("button", START);
     expect(start).toBeEnabled();
     await user.click(start);
     await waitFor(() => expect(starts).toEqual([{ window: "6m" }]));
@@ -320,9 +344,7 @@ describe("starting the read", () => {
       screen.getByRole("combobox", { name: "How far back" }),
       "3 months",
     );
-    await user.click(
-      screen.getByRole("button", { name: "Connect and import" }),
-    );
+    await user.click(screen.getByRole("button", START));
 
     await waitFor(() => expect(starts).toEqual([{ window: "3m" }]));
     expect(
@@ -353,9 +375,7 @@ describe("starting the read", () => {
     ).toContain("1 year");
 
     await screen.findByText("About 90 messages in this period.");
-    await user.click(
-      screen.getByRole("button", { name: "Connect and import" }),
-    );
+    await user.click(screen.getByRole("button", START));
     await waitFor(() => expect(starts).toEqual([{ window: "12m" }]));
   });
 
@@ -371,9 +391,7 @@ describe("starting the read", () => {
     render({ state: "none" });
 
     await screen.findByText("About 1,234 messages in this period.");
-    await user.click(
-      screen.getByRole("button", { name: "Connect and import" }),
-    );
+    await user.click(screen.getByRole("button", START));
 
     expect(
       await screen.findByText(/The mailbox history import did not start/),
@@ -407,9 +425,7 @@ describe("starting the read", () => {
       await screen.findByRole("heading", { name: "Importing mailbox history" }),
     ).toBeInTheDocument();
     expect(starts).toEqual([]);
-    expect(
-      screen.queryByRole("button", { name: "Connect and import" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", START)).not.toBeInTheDocument();
   });
 });
 
@@ -578,23 +594,12 @@ describe("outcomes", () => {
     installFetchStub({
       [STATUS_ROUTE]: () => jsonResponse({ code: "internal" }, 500),
     });
-    const onDone = vi.fn();
-    rtlRender(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <OnboardingBackread provider="gmail" onDone={onDone} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
+    const { onDone } = render(undefined);
 
     expect(
       await screen.findByText(/The import status is not available/),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /^done$/i }));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 });
@@ -615,9 +620,7 @@ describe("leaving", () => {
       counts: { messages_scanned: 5 },
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "Continue during import" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Continue" }));
     // Leaving the backread is not leaving the step: the read keeps running
     // and nothing is cancelled.
     expect(onDone).toHaveBeenCalledTimes(1);
@@ -629,23 +632,15 @@ describe("leaving", () => {
       [STATUS_ROUTE]: () =>
         jsonResponse({ state: "running", counts: { messages_scanned: 5 } }),
     });
-    const onDone = vi.fn();
-    rtlRender(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <OnboardingBackread provider="gmail" disabled onDone={onDone} />
-        </LocaleProvider>
-      </QueryClientProvider>,
+    const { onDone } = render(
+      { state: "running", counts: { messages_scanned: 5 } },
+      true,
     );
 
     // The posture write needs this surface mounted to show a refusal; an
     // exit that pressed mid-write would leave it nowhere to land.
     const exit = await screen.findByRole("button", {
-      name: "Continue during import",
+      name: "Continue",
     });
     expect(exit).toBeDisabled();
     await user.click(exit);
@@ -665,7 +660,7 @@ describe("leaving", () => {
 
     await screen.findByText("About 1,234 messages in this period.");
     await user.click(
-      screen.getByRole("button", { name: "Skip history import" }),
+      screen.getByRole("button", { name: "Continue without importing" }),
     );
 
     expect(onDone).toHaveBeenCalledTimes(1);
@@ -678,7 +673,7 @@ describe("leaving", () => {
 
     await screen.findByText("About 1,234 messages in this period.");
     const note = screen.getByText(en["ob.backread.note"]);
-    const start = screen.getByRole("button", { name: "Connect and import" });
+    const start = screen.getByRole("button", START);
     expect(
       note.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

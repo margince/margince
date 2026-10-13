@@ -152,7 +152,7 @@ afterEach(() => {
 // whole act ("Invite a member") and the dialog's submit the bare one
 // ("Invite"), which is what keeps the two tellable apart.
 async function openInvite() {
-  await userEvent.click(screen.getByRole("button", { name: /invite user/i }));
+  await userEvent.click(screen.getByRole("button", { name: /invite member/i }));
   return screen.findByRole("dialog");
 }
 

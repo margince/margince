@@ -2,16 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../api/schema";
 import { OAuthOutcomeNote } from "./connectors.notices";
 import { StoryProviders } from "./story-utils";
 
-// What comes back from a consent round trip, which is the half of the
-// connections card no fixture can pose: the note reads the ADDRESS the provider
-// returned to, so each frame sets that address and mounts nothing else.
+// What comes back from a consent round trip. The note takes the landing as
+// props, so each frame poses the outcome, its provider and the roster it is
+// read against.
 //
-// `ok` and the five failures share one heading each — connected, or nothing
-// was connected — because that is what a reader scans for; the outcome's own
-// sentence under it says which remedy this particular failure wants.
+// `ok` names the vendor and what now syncs; a calendar refused after its
+// mailbox is a partial success with one way on; the other failures keep one
+// heading, nothing was connected, and their own remedy under it.
+
+type CaptureConnection = components["schemas"]["CaptureConnection"];
 
 const meta: Meta<typeof OAuthOutcomeNote> = {
   title: "Settings/You/Connections/OAuth return",
@@ -22,42 +25,98 @@ export default meta;
 
 type Story = StoryObj<typeof OAuthOutcomeNote>;
 
-function landing(outcome: string) {
-  return () => {
-    globalThis.location.hash = `#/settings/connections/${outcome}`;
-    return (
-      <StoryProviders>
-        <OAuthOutcomeNote />
-      </StoryProviders>
-    );
+function connection(
+  provider: CaptureConnection["provider"],
+  backfill: CaptureConnection["backfill"] = { state: "done" },
+): CaptureConnection {
+  return {
+    id: `connection-${provider}`,
+    provider,
+    status: "connected",
+    scopes: [],
+    backfill,
   };
 }
 
-/** It worked, and the mailbox is capturing. */
-export const Connected: Story = { render: landing("ok") };
+const offerCalendar = {
+  onConnect: () => undefined,
+  pending: false,
+  error: null,
+};
 
-/** The reader said no. Nothing is wrong and nothing was connected. */
-export const Declined: Story = { render: landing("denied") };
+function landing(
+  outcome: string,
+  provider: string | undefined,
+  connections: CaptureConnection[] = [],
+) {
+  return () => (
+    <StoryProviders>
+      <OAuthOutcomeNote
+        outcome={outcome}
+        provider={provider}
+        connections={connections}
+        connectCalendar={offerCalendar}
+      />
+    </StoryProviders>
+  );
+}
+
+const googleImporting = [
+  connection("gmail", { state: "running" }),
+  connection("gcal"),
+];
+
+/** Mail and calendar granted in one trip, and the import of past email running. */
+export const Connected: Story = {
+  render: landing("ok", "gcal", googleImporting),
+};
+
+/** The same landing in dark. */
+export const ConnectedDark: Story = {
+  globals: { theme: "dark" },
+  render: landing("ok", "gcal", googleImporting),
+};
+
+/** Only the mailbox was asked for. */
+export const MailOnly: Story = {
+  render: landing("ok", "graph", [connection("graph")]),
+};
+
+/** Only the calendar, as Meetings asks for it: no mailbox is claimed. */
+export const CalendarOnly: Story = {
+  render: landing("ok", "gcal"),
+};
+
+/** The mailbox held and the calendar was declined: one button asks again. */
+export const CalendarDeclined: Story = {
+  render: landing("denied", "gcal", [connection("gmail")]),
+};
+
+/** The same partial success in dark, where the warning reaches the heading's ink. */
+export const CalendarDeclinedDark: Story = {
+  globals: { theme: "dark" },
+  render: landing("denied", "gcal", [connection("gmail")]),
+};
+
+/** The reader said no on the first consent. Nothing is wrong and nothing was connected. */
+export const Declined: Story = { render: landing("denied", "gmail") };
 
 /** The provider's API was never enabled: an administrator's console, not a retry. */
-export const Misconfigured: Story = { render: landing("misconfigured") };
+export const Misconfigured: Story = {
+  render: landing("misconfigured", "gmail"),
+};
 
-/** This deployment's client credentials were refused — the app card, not a retry. */
-export const BadClient: Story = { render: landing("bad_client") };
+/** This deployment's client credentials were refused: the app card, not a retry. */
+export const BadClient: Story = { render: landing("bad_client", "graph") };
 
 /** The same refusal in dark, where tone reaches the heading's ink. */
 export const BadClientDark: Story = {
   globals: { theme: "dark" },
-  render: landing("bad_client"),
+  render: landing("bad_client", "graph"),
 };
 
 /**
- * An address carrying no outcome draws nothing. The segment is server-defined,
- * so an unknown one is ignored rather than printed back at the reader.
- *
- * The sharp half of that rule is the segment naming an inherited member of
- * Object.prototype, which a bare index would answer with a function. A frame
- * can only show that nothing is drawn; connectors.notices.test.tsx asserts it,
- * and is what fails if the guard goes.
+ * A landing carrying no known outcome draws nothing. A frame can only show
+ * that; connectors.notices.test.tsx asserts the inherited-member guard.
  */
-export const NoOutcome: Story = { render: landing("unrecognised") };
+export const NoOutcome: Story = { render: landing("unrecognised", "gmail") };

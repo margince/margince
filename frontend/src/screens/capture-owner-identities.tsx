@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -11,9 +11,10 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -24,8 +25,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 //
 // Mail among a contact's own addresses is not correspondence with anybody, so
 // declaring one keeps those messages out of the CRM and stops the address being
-// minted as a contact. Until this card there was no way to say so — the endpoint
-// shipped and nothing reached it.
+// minted as a contact.
 //
 // The caller's own only, and that is the point rather than a limitation: a
 // colleague's alias says which of THEIR mail is private, which is the thing the
@@ -33,6 +33,7 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type OwnerIdentity = components["schemas"]["CaptureOwnerIdentity"];
 type Kind = components["schemas"]["CaptureOwnerIdentityKind"];
+type Source = components["schemas"]["CaptureOwnerIdentitySource"];
 
 const KINDS: readonly Kind[] = ["address", "domain"];
 
@@ -97,43 +98,38 @@ export function OwnerIdentitiesCard() {
   const query = useOwnerIdentities();
   const remove = useRemoveIdentity();
   const [declaring, setDeclaring] = useState(false);
+  const add = (
+    <Button variant="ghost" onClick={() => setDeclaring(true)}>
+      <Plus aria-hidden />
+      {t("ownerIdentities.add")}
+    </Button>
+  );
+  const hasRows = (query.data?.data.length ?? 0) > 0;
   return (
-    <Panel title={t("ownerIdentities.title")}>
+    // With rows the verb moves to the head; with none it is the empty state's own.
+    <Panel
+      title={t("ownerIdentities.title")}
+      titleAction={hasRows ? add : null}
+    >
       <PanelBody>
         <PanelIntro>{t("ownerIdentities.sub")}</PanelIntro>
-        <SettingList>
-          <SettingRow
-            label={t("ownerIdentities.addLabel")}
-            description={t("ownerIdentities.addDescription")}
-            control={
-              <Button onClick={() => setDeclaring(true)}>
-                {t("ownerIdentities.add")}
-              </Button>
-            }
-          />
-          {/* Not retroactive, and the row says so where the reader is deciding.
-              Mail already captured under the old reading stays, and a contact
-              already minted from an alias stays until it is merged. */}
-          <SettingRow
-            label={t("ownerIdentities.current")}
-            description={t("ownerIdentities.notRetroactive")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("ownerIdentities.title")}
-              >
-                {(list) => (
-                  <IdentityRows
-                    list={list.data}
-                    pending={remove.isPending}
-                    onRemove={(id) => remove.mutate(id)}
-                  />
-                )}
-              </QueryGate>
-            }
-          />
-        </SettingList>
+        <QueryGate query={query} pendingLabel={t("ownerIdentities.title")}>
+          {(list) =>
+            list.data.length === 0 ? (
+              <EmptyState title={t("ownerIdentities.emptyTitle")} action={add}>
+                <span data-testid="owner-identities-empty">
+                  {t("ownerIdentities.emptyBody")}
+                </span>
+              </EmptyState>
+            ) : (
+              <IdentityTable
+                list={list.data}
+                pending={remove.isPending}
+                onRemove={(id) => remove.mutate(id)}
+              />
+            )
+          }
+        </QueryGate>
         {remove.isError && (
           <Callout
             tone="danger"
@@ -155,33 +151,17 @@ const kindLabel: Record<Kind, MessageKey> = {
 };
 
 /**
- * A row says where its claim came from, and only when the seat did not make it.
- *
- * An address somebody typed needs no explanation. One the product LEARNED does:
- * a seat scanning this card would otherwise find an address they never entered
- * and have no way to tell whether they forgot adding it or something else did —
- * and they are the colleague who decides whether it stays.
+ * Where a claim came from. A seat scanning this list would otherwise find an
+ * address they never entered and could not tell whether they forgot adding it
+ * or Margince learned it, and they are the one who decides whether it stays.
  */
-function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
-  switch (source) {
-    case "delivered_to":
-      return "ownerIdentities.learned.deliveredTo";
-    case "provider":
-      return "ownerIdentities.learned.provider";
-    default:
-      return null;
-  }
-}
+const sourceLabel: Record<Source, MessageKey> = {
+  user: "ownerIdentities.source.user",
+  delivered_to: "ownerIdentities.source.deliveredTo",
+  provider: "ownerIdentities.source.provider",
+};
 
-/**
- * One declared address per row: what it names on the left, whether it is an
- * address or a whole domain as the row's answer, and the verb that withdraws it
- * at the right.
- *
- * The same row language the exclusions card uses, because a reader auditing
- * what binds their mailbox travels one column across both.
- */
-function IdentityRows({
+function IdentityTable({
   list,
   pending,
   onRemove,
@@ -191,39 +171,49 @@ function IdentityRows({
   onRemove: (id: string) => void;
 }>) {
   const t = useT();
-  if (list.length === 0) {
-    // A reading, not a failed read: "I have declared no other addresses" is
-    // what a reader opens this card to confirm.
-    return (
-      <EmptyState>
-        <p data-testid="owner-identities-empty">{t("ownerIdentities.empty")}</p>
-      </EmptyState>
-    );
-  }
   return (
-    <SettingList testId="owner-identities-list">
-      {list.map((identity) => {
-        const learned = learnedNote(identity.source);
-        return (
-          <SettingRow
-            key={identity.id}
-            label={identity.value}
-            description={learned === null ? undefined : t(learned)}
-            value={t(kindLabel[identity.kind])}
-            control={
-              <Button
-                variant="ghost"
+    <>
+      <DataTable<OwnerIdentity>
+        label={t("ownerIdentities.title")}
+        rows={list}
+        rowKey={(identity) => identity.id}
+        columns={[
+          {
+            key: "address",
+            header: t("ownerIdentities.colAddress"),
+            render: (identity) => identity.value,
+          },
+          {
+            key: "kind",
+            header: t("ownerIdentities.colType"),
+            render: (identity) => t(kindLabel[identity.kind]),
+          },
+          {
+            key: "source",
+            header: t("ownerIdentities.colSource"),
+            render: (identity) => t(sourceLabel[identity.source]),
+          },
+          {
+            key: "remove",
+            header: t("ownerIdentities.colRemove"),
+            align: "end",
+            render: (identity) => (
+              <IconAction
+                inline
+                label={t("ownerIdentities.remove", {
+                  value: identity.value,
+                })}
+                icon={<Trash2 aria-hidden />}
                 disabled={pending}
-                aria-label={t("ownerIdentities.remove")}
                 onClick={() => onRemove(identity.id)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
-            }
-          />
-        );
-      })}
-    </SettingList>
+              />
+            ),
+          },
+        ]}
+      />
+      {/* Not retroactive, said under the list the reader is changing. */}
+      <p className="t-sub">{t("ownerIdentities.notRetroactive")}</p>
+    </>
   );
 }
 

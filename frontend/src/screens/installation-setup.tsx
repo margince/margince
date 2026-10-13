@@ -39,6 +39,7 @@ import {
   RedirectUris,
   useOAuthApp,
   useSetOAuthApp,
+  VENDOR_CONSOLE,
   type Vendor,
   vendorCopy,
 } from "./oauth-app";
@@ -467,10 +468,6 @@ const PLATFORM_COPY: Readonly<
   },
 };
 
-/** Google's own console, where the app is created and the two values are read. */
-const GOOGLE_CREDENTIALS_CONSOLE =
-  "https://console.cloud.google.com/apis/credentials";
-
 /**
  * The redirect URIs the app must carry, in the open and each with its copy
  * button: the one thing on this step that is done in the vendor's console and
@@ -478,10 +475,8 @@ const GOOGLE_CREDENTIALS_CONSOLE =
  * puts the button on the login page, so the hint says so before the list.
  */
 function AppRedirectUris({
-  vendor,
   uris,
 }: Readonly<{
-  vendor: Vendor;
   uris: readonly { purpose: string; url: string }[] | undefined;
 }>) {
   const t = useT();
@@ -490,7 +485,7 @@ function AppRedirectUris({
       <Callout kind="standing" title={t("firstRun.platform.redirectTitle")}>
         <p>{t("firstRun.platform.redirectHint")}</p>
       </Callout>
-      <RedirectUris uris={uris} sub={t(vendorCopy[vendor].redirectSub)} />
+      <RedirectUris uris={uris} />
     </>
   );
 }
@@ -513,7 +508,7 @@ function GoogleAppHelp() {
         <li>{t("firstRun.google.helpStep4")}</li>
       </ol>
       <p className="ob-fr-help-note t-sub">
-        <OffsiteLink href={GOOGLE_CREDENTIALS_CONSOLE}>
+        <OffsiteLink href={VENDOR_CONSOLE.google}>
           {t("firstRun.google.helpConsole")}
         </OffsiteLink>
       </p>
@@ -568,7 +563,7 @@ function VendorAppFields({
   }, [save.isPending, onBusy]);
   return (
     <>
-      <AppRedirectUris vendor={vendor} uris={app.data?.redirect_uris} />
+      <AppRedirectUris uris={app.data?.redirect_uris} />
       {vendor === "google" ? (
         <GoogleAppHelp />
       ) : (

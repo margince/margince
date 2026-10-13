@@ -113,6 +113,7 @@ describe("a stored value", () => {
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
       "margince.room.session",
+      "margince.setup.reminderHidden",
     ]);
   });
 });

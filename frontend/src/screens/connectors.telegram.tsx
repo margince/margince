@@ -7,21 +7,20 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { problemCode, problemMessageOf, throwProblem, useMe } from "./common";
 import { statusLabel, statusTone } from "./connector-status";
-import { ConnectionIdentity } from "./connectors.identity";
 import { TelegramConnectForm } from "./telegram-connect-form";
 
-// The workspace's messaging bot, as its own file. It shares the connections
-// card with the mail roster and nothing else: a different endpoint, a different
-// scope — one bot for the workspace against a roster per user — and its own
-// three grants. Only ConnectorsCard, which renders the pair, spans both.
+// The workspace's messaging bot: one bot for the whole company, read from
+// /channel-connections and gated on its own three grants. It sits on
+// Integrations beside the other company wiring, not among a member's mailboxes.
 
 type ChannelConnection = components["schemas"]["ChannelConnection"];
 
@@ -29,7 +28,7 @@ type ChannelConnectionsResult = {
   // GET /channel-connections answers 503 when this deployment serves no
   // messaging channels, or has no credential store to seal a bot token in — a
   // calm, documented feature-off state, mirroring the mail card's 501
-  // not_implemented treatment above rather than an error card.
+  // not_implemented treatment rather than an error card.
   notConfigured: boolean;
   data: ChannelConnection[];
 };
@@ -66,38 +65,37 @@ function TelegramConnectionRow({
   onDisconnect?: () => void;
 }>) {
   const t = useT();
+  const tone = statusTone(connection.status);
   return (
-    <SettingRow
-      testId="telegram-connection"
-      label={
-        <ConnectionIdentity
-          icon={Send}
-          name={t("connectors.provTelegram")}
-          account={`@${connection.channelLabel}`}
-        />
-      }
-      value={
-        <Badge tone={statusTone(connection.status)}>
-          {t(statusLabel(connection.status))}
-        </Badge>
-      }
-      control={
-        (onEdit || onDisconnect) && (
-          <div className="connector-actions">
-            {onEdit && (
-              <Button onClick={onEdit}>
-                <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
-              </Button>
-            )}
-            {onDisconnect && (
-              <Button variant="ghost" onClick={onDisconnect}>
-                {t("connectors.disconnect")}
-              </Button>
-            )}
-          </div>
-        )
-      }
-    />
+    // The wrapper names the row for its tests; the hairline between rows is
+    // the list's, drawn between any two children.
+    <div data-testid="telegram-connection">
+      <ProviderRow
+        mark={<Send />}
+        name={t("connectors.provTelegram")}
+        account={`@${connection.channelLabel}`}
+        status={{
+          tone: tone ?? "default",
+          label: t(statusLabel(connection.status)),
+        }}
+        action={
+          onEdit || onDisconnect ? (
+            <>
+              {onEdit && (
+                <Button onClick={onEdit}>
+                  <RefreshCw aria-hidden /> {t("connectors.telegramEditToken")}
+                </Button>
+              )}
+              {onDisconnect && (
+                <Button variant="ghost" onClick={onDisconnect}>
+                  {t("connectors.disconnect")}
+                </Button>
+              )}
+            </>
+          ) : undefined
+        }
+      />
+    </div>
   );
 }
 
@@ -187,10 +185,8 @@ export function TelegramConnectorsPanel() {
   return (
     <Panel
       title={t("connectors.telegramTitle")}
-      // The connect verb in the header, the same shape the mail card next to it
-      // takes: as the zero state's row it was labelled "Telegram" under a card
-      // titled "Telegram bot" — the card's own subject, said twice, with the
-      // act beside it.
+      // The connect verb in the header, the shape every connections card takes;
+      // as a zero-state row it named the card's own subject twice.
       titleAction={
         canCreate &&
         live &&
@@ -215,35 +211,32 @@ export function TelegramConnectorsPanel() {
           <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
         )}
         <TelegramNotice query={query} />
-        {live && (
+        {live && connections.length === 0 && (
+          // What the card is FOR, in the roster's own place: which bot is
+          // carrying messages. The verb that changes it is in the header.
           <SettingList>
-            {connections.length === 0 ? (
-              // What the card is FOR, in the roster's own place: which bot is
-              // carrying messages. The verb that changes it is in the header.
-              <SettingRow
-                label={t("connectors.telegramRosterLabel")}
-                layout="stack"
-                control={
-                  <EmptyState>{t("connectors.telegramEmpty")}</EmptyState>
+            <SettingRow
+              label={t("connectors.telegramRosterLabel")}
+              layout="stack"
+              control={<EmptyState>{t("connectors.telegramEmpty")}</EmptyState>}
+            />
+          </SettingList>
+        )}
+        {live && connections.length > 0 && (
+          <ProviderList>
+            {connections.map((connection) => (
+              <TelegramConnectionRow
+                key={connection.id}
+                connection={connection}
+                onEdit={
+                  canEdit ? () => setEditingConnection(connection) : undefined
+                }
+                onDisconnect={
+                  canDisconnect ? () => setDisconnecting(connection) : undefined
                 }
               />
-            ) : (
-              connections.map((connection) => (
-                <TelegramConnectionRow
-                  key={connection.id}
-                  connection={connection}
-                  onEdit={
-                    canEdit ? () => setEditingConnection(connection) : undefined
-                  }
-                  onDisconnect={
-                    canDisconnect
-                      ? () => setDisconnecting(connection)
-                      : undefined
-                  }
-                />
-              ))
-            )}
-          </SettingList>
+            ))}
+          </ProviderList>
         )}
       </PanelBody>
       <TelegramConnectForm

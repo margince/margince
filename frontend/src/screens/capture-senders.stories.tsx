@@ -107,7 +107,7 @@ function story(rows: SenderDecision[], waiting: AwaitingContact[] = []) {
 }
 
 const meta: Meta<typeof CaptureSendersCard> = {
-  title: "Settings/You/Connections/Senders",
+  title: "Settings/You/Capture activity/Senders",
   component: CaptureSendersCard,
 };
 export default meta;

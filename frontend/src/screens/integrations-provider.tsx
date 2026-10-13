@@ -4,7 +4,7 @@
 import "./integrations-provider.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plug } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
@@ -19,6 +19,10 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../design-system/confirmphrase";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
@@ -541,15 +545,11 @@ function LookupBacklogRow({
   );
 }
 
-// The two destructive decisions, behind the overflow they share. A component
-// rather than duplicated JSX because they render in two places: beside the key
-// verb for a reader who may also connect, and alone for one who may not.
-//
-// The overflow is the point, not the tidiness. Disconnect is recoverable —
-// reconnect the key and lookups resume — while delete-data irreversibly
-// destroys contact details this installation PAID for. Neither belongs at the
-// same weight as Connect, and the confirm ladder behind them (a plain confirm,
-// then a typed one) already said so before the button row did.
+// The two destructive decisions, behind one overflow. Disconnect is
+// recoverable (reconnect the key and lookups resume) while delete-data
+// irreversibly destroys contact details this installation PAID for. Neither
+// belongs at the same weight as Connect, and the confirm ladder behind them (a
+// plain confirm, then a typed one) says so too.
 function DestructiveActions({
   onDisconnect,
   onDeleteData,
@@ -649,6 +649,7 @@ function CredentialRow({
   const [disconnecting, setDisconnecting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
 
   const connect = useMutation({
     // The key arrives as a variable rather than through a closure over the
@@ -735,10 +736,9 @@ function CredentialRow({
         }
         control={
           <>
-            {/* The key field goes behind the verb it feeds: two of the three
-                things a connect needs — the key and the confirmation that it
-                costs money — are not answers that fit in a row's right
-                column. A reader who may not connect has nothing to open. */}
+            {/* The key and the cost confirmation do not fit a row's right
+                column, so they go behind the verb they feed. A reader who
+                may not connect has nothing to open. */}
             {canConnect && (
               <Button
                 variant="primary"
@@ -749,9 +749,8 @@ function CredentialRow({
                 {connected ? t("provider.reconnect") : t("provider.connect")}
               </Button>
             )}
-            {/* Stopping the flow and destroying what was bought are a
-                different authority from connecting, so they stand on their own
-                for a reader who holds one grant and not the other. */}
+            {/* Stopping the flow and destroying what was bought are another
+                grant than connecting, so they stand on their own. */}
             {destructive && (
               <DestructiveActions
                 onDisconnect={() => setDisconnecting(true)}
@@ -777,10 +776,8 @@ function CredentialRow({
         />
       )}
 
-      {/* Both destructive confirms carry their own mutation's failure. Without
-          it the dialog simply closed on a refusal and the card looked exactly
-          as it had before — a disconnect the server rejected was
-          indistinguishable from one it accepted. */}
+      {/* Each destructive confirm carries its own mutation's failure: a
+          refusal that just closed the dialog would read as a success. */}
       <ConfirmModal
         open={disconnecting}
         confirmVariant="danger"
@@ -803,7 +800,7 @@ function CredentialRow({
         confirmVariant="danger"
         title={t("provider.deleteDataConfirm.title")}
         confirmLabel={t("provider.deleteData")}
-        confirmDisabled={typed !== connection.provider}
+        confirmDisabled={!phraseMatches(typed, connection.provider)}
         onConfirm={() => deleteData.mutate()}
         pending={deleteData.isPending}
         error={
@@ -813,17 +810,18 @@ function CredentialRow({
           setDeleting(false);
           setTyped("");
         }}
+        initialFocusTo={() => phraseInput.current}
       >
-        <p>{t("provider.deleteDataConfirm.body")}</p>
-        <Field label={t("provider.deleteDataConfirm.typed")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-            />
-          )}
-        </Field>
+        <div className="form-stack">
+          <p>{t("provider.deleteDataConfirm.body")}</p>
+          <ConfirmPhraseBox
+            prompt={t("provider.deleteDataConfirm.typed")}
+            phrase={connection.provider}
+            value={typed}
+            onChange={setTyped}
+            inputRef={phraseInput}
+          />
+        </div>
       </ConfirmModal>
     </>
   );

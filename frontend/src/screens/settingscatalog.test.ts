@@ -71,20 +71,17 @@ describe("the scope each page declares", () => {
     voice: "self",
     agents: "self",
     notifications: "self",
+    // The mail-sharing plate carries its own "Whole company" badge, and the
+    // Telegram bot lives on Integrations.
+    connections: "self",
 
     // Pages whose cards genuinely split across two scopes. `integrations`
     // is one: PATCH /integrations/settings is "the installation's
     // provider-lookup posture" by its own contract summary, while webhooks
     // and the workspace extension units on the same page stay inside one
-    // workspace.
+    // workspace. CaptureExclusionsCard's workspace rules keep a
+    // correspondent out of the CRM for everybody.
     integrations: "mixed",
-
-    // Personal pages carrying one shared surface each. A badge reading "Only
-    // you" over either would tell a reader a company-wide switch is private to
-    // them. ConnectorsCard's second panel connects the workspace's Telegram
-    // bot; CaptureExclusionsCard's workspace rules keep a correspondent out of
-    // the CRM for everybody.
-    connections: "mixed",
     "capture-activity": "mixed",
 
     // The installation's own facts, by their contract summaries.
@@ -248,7 +245,7 @@ describe("what each page lets a reader change", () => {
     // Delete included, and the composed-unit arm outside the ceiling:
     // ExtensionUnitsCard's Open link asks for no grant at all.
     integrations:
-      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete)), units:workspace)",
+      "any(all(full-seat, any(any(integrations:update, integrations:create), integrations:delete, any(webhook_subscription:update, webhook_subscription:create), webhook_subscription:delete, any(channel_connection:update, channel_connection:create), channel_connection:delete)), units:workspace)",
     knowledge: "all(full-seat, any(any(knowledge_corpus:create)))",
     // BOTH verbs: ImportCard's own gate is `mayCreate && mayAdvance`.
     import:
@@ -480,6 +477,7 @@ describe("who may open what", () => {
   it.each([
     ["company", "installation_settings"],
     ["integrations", "webhook_subscription"],
+    ["integrations", "channel_connection"],
     ["automations", "automation"],
   ] as const)(
     "withholds %s from a rep who only reads %s, and opens it to its writer",

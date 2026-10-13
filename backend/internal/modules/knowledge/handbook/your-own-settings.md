@@ -2,15 +2,16 @@
 
 Your own settings in Margince are the six pages under **You** in Settings:
 **Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and **Capture
-activity**. Everything here changes your own seat and nobody else's, with two
-named exceptions that carry one company-wide card each — Connections and Capture
-activity.
+activity**. Everything here changes your own seat and nobody else's, with one
+named exception: Capture activity carries the company's capture exclusions
+beside your own. Connections only states the company's email sharing rule, on a
+plate marked **Whole company**, and changes nothing for anyone else.
 
 For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The six pages are **Account** (name, password, signature, language, appearance), **Meetings** (bookable hours, calendars and booking preferences), **Writing voice**, **Agents**, **Connections** and **Capture activity**.
+The six pages are **Account** (name, password, signature, language, appearance), **Meetings** (booking link, calendar, working hours and what guests see), **Writing voice**, **Agents**, **Connections** and **Capture activity**.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
@@ -64,55 +65,79 @@ Also called: dark mode, light mode, appearance, colour scheme.
 
 ## Meetings
 
+The Meetings page in Settings is where customers book time with you. It is a
+stack of cards in this order: **Booking links**, **Calendar**,
+**When people can book** and **What guests see**. While no Google or
+Microsoft 365 calendar is connected, a card
+**Connect a calendar to take bookings** comes first.
+
+### How do I set up bookings?
+To let customers book time with you in Margince, open Settings → **Meetings** and follow **Connect a calendar to take bookings**.
+1. Choose **Connect calendar** and sign in with Google or Microsoft 365. You come back to Meetings, where a note says how the connection went.
+2. Check your hours under **When people can book** and choose **Save availability**.
+3. Under **Booking links**, turn on **Accept bookings** and choose **Copy link** to share it.
+The setup card goes away once a calendar is connected.
+Also called: booking page, scheduling link, calendly, book a meeting with me.
+
 ### How do I set my bookable hours?
-To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in the **Bookable hours** card.
-1. Set **Day starts** and **Day ends**.
-2. Tick your **Working days**.
-3. Choose a city in the **Timezone** dropdown, which shows the timezone currently used for availability. Type the city name while the list is open to jump to it.
-4. Choose **Save working hours**.
-Until you save, the card says **Not set yet** and customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.
-Also called: working hours, availability, office hours.
+To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in **When people can book**.
+1. Pick your **Working days**.
+2. Set **From**, **Until** and your time zone. Guests see the hours in their own zone.
+3. Under **Booking rules**, set **Minimum notice**, **Break between meetings** and **How far ahead**, each a preset or **Other**.
+4. Choose **Save availability**, which saves hours and rules together.
+Saving works even while the calendar is being reconnected, because the rules never ask the calendar anything.
+Also called: working hours, availability, office hours, notice, buffer.
 
-The Bookable hours card is personal: "Personal setting. Only you set your
-hours." Nobody sets them for you, and you set them for nobody else. Narrowing
-them says what it costs: "Customers have fewer times to choose from."
-
-### Calendar and booking preferences
-
-Open **Settings → Meetings** to set working hours and timezone, the calendar
-that receives invitations, and other calendars whose busy events block times.
-With one connected calendar provider, Margince selects it automatically. With
-both Google Calendar and Microsoft Outlook connected, choose the provider here.
-Read-only connections must be reconnected before they can send invitations.
-
-Set the meeting duration, minimum notice, buffer and booking horizon on this
-page. Dates beyond that horizon cannot be booked; extend it here to offer later
-dates. All-day events marked busy are respected. In the booking form,
-**Find next available times** searches the rest of your booking horizon.
-
-**Add a video call link to new meetings** is on by default. Your calendar
-creates the link: Google Meet for Google Calendar, and Outlook's default, usually
-Microsoft Teams, for Outlook. You can turn it off for a single meeting while
-booking. If the calendar adds no link, the invitation is still sent.
-
-**My booking link** remains the place to copy a reusable public link for your
-email signature, preview it, pause it or replace it. Opening meeting settings
-from a booking draft opens another tab; returning refreshes the saved setup.
+Without the permission to book meetings, the page shows only the working hours,
+saved with **Save working hours**, and the note "Booking meetings needs
+permission from an administrator."
 
 ### How do I share a booking link?
-Open **Settings → Meetings**. Connect or reconnect Google Calendar or Outlook
-Calendar with permission to create invitations. Your name comes from **Settings → Account**, and company branding comes from
-**Settings → Company**. Set the meeting details and availability limits, then save. Open the account menu
-→ **My booking link** and choose **Enable bookings**.
-A calendar marked **Read-only calendar** is connected for reading events but
-cannot send invitations. In Settings → Connections, choose **Reconnect** and
-allow invitation access. Choose the event calendar in Settings → Meetings.
-Choose **Copy link** to share it anywhere, including your email signature. Guests choose a time and enter
-their own details; you do not need to select a contact first.
+To share your booking link in Margince, open Settings → **Meetings** and choose **Copy link** on the link in **Booking links**.
+1. Turn on **Accept bookings**. It stays off until a calendar is connected and saved under **Calendar**.
+2. Choose **Copy link** and paste it anywhere, including your email signature.
+Guests choose a time and enter their own details; you do not need to select a contact first. With no link yet, the card offers **Create booking link**. You have one link today.
+Also called: booking link, my calendar link, scheduling page.
 
-**Preview public page** shows what guests will see. **Pause bookings** stops new
-bookings without changing the URL. **Replace booking link** invalidates the old
-URL, so update any signatures or pages where you shared it.
+The link row shows its name, length, video call and status: **Live**,
+**Paused** or **No invitations**. Under its menu:
+
+- **Edit link** opens a side panel: **Meeting name**, the length (a preset or
+  **Other**, 15 minutes to 8 hours), where the meeting happens (Google Meet or
+  Microsoft Teams from the connected calendar, your own link or address, or no
+  location), and the hours it uses, with a **Change hours** shortcut. Changes
+  apply to new bookings only.
+- **Preview public page** shows what guests will see.
+- **Replace address** asks first, then gives the link a new address. Update any
+  signature or page where you shared the old one. Meetings already booked keep
+  their own change links.
+
+Turning **Accept bookings** off is always allowed: it pauses the link without
+changing its address. When bookings are on but the calendar has expired, lost
+write access or is gone, the card warns "Guests can book, but no invitations go
+out" and offers **Reconnect calendar** or **Pause bookings**.
+
+### Calendar
+
+The **Calendar** card appears once a calendar is connected. It shows the
+connected calendar as a row (reads busy times, sends invitations, last sync),
+then **Add booked meetings to**, the calendar each booking lands in, and **Also
+count as busy**, other calendars that hide time from guests. Event names stay
+private. With both Google and Microsoft calendars connected, a **Calendar
+provider** choice comes first. **Save calendar** appears only after a change.
+
+An expired or read-only connection shows **Reconnect** and keeps the saved
+choices as they were. A calendar connected for reading only cannot send
+invitations; reconnect it and allow invitation access.
+
+### What guests see
+
+**What guests see** puts a small preview of the public booking page beside
+three rows: **Company name and logo** (from the company profile, with **Change**
+or **Add logo**; with no company name set, guests see your name only), **Your
+name** (from your account, with **Change**) and **Reminder email** (one hour
+before each meeting, sent from your connected mailbox, so it needs a mailbox
+under Connections). **Preview public page** opens the real page.
 
 ### How do I arrange a meeting with a contact?
 Open the contact’s **Meetings** tab and choose **Book a meeting**. Propose two or three times and review
@@ -185,39 +210,64 @@ do](agents-and-passports.md#passports-how-an-agent-is-connected).
 
 ## Connections
 
-The Connections page in Settings holds your own mailbox and calendar
-connections, and your LinkedIn import. The distinction from **Integrations** is
-deliberate: Connections is what *you* connected, Integrations is what the
-*installation* is wired to.
+The Connections page in Settings holds what *you* connected: your mail and
+calendar account, your other email addresses, overnight preparation and your
+LinkedIn network. **Integrations** is the other side: what the *installation* is
+wired to, such as webhooks and the company's Telegram bot.
+
+The cards, in order:
+
+- **Mail and calendar**: one row per account (Google, Microsoft 365, or a mail
+  host connected over IMAP), with what it brings in listed under it: **New
+  mail**, **Past email** and **Calendar**. Each account has a block **Who sees
+  mail from {account}** with **Mail visibility**, a pointer to held threads in
+  Capture activity, and **Advanced** settings. A plate at the foot, marked
+  **Whole company**, states the company's email sharing rule.
+- **Your other email addresses**: aliases, a private domain or an address you
+  forward from. Margince treats them as you, so mail between them is not
+  captured and never creates a contact.
+- **Overnight preparation**: whether Margince prepares your Morning brief
+  overnight. When it is off, the card says **Off** and explains that the brief is
+  not prepared ahead; nothing else stops working.
+- **LinkedIn network**: import your **LinkedIn connections** from
+  Connections.csv, set your LinkedIn profile URL, and see which companies on file
+  you know someone at.
 
 ### How do I connect my mailbox?
-To connect your mailbox or calendar to Margince, open Settings → **Connections** and choose **Add connector** in **Connected mailboxes and calendars**.
-1. Pick a provider: **Gmail**, **Google Calendar**, **Outlook**, **Outlook Calendar** or **IMAP mailbox**. A calendar is connected separately from its mail.
-2. Choose **Connect** and approve access at the provider.
-When it works, Margince says "Connected. Your mailbox is capturing."
+To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**, or **Add account** once one account is connected.
+1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**. A tile has already chosen it.
+2. Under **What to bring in**, tick **Mail**, **Calendar** or both, and pick how much past email to import, or **None**. Choose **Continue**.
+3. Sign in at Google or Microsoft and allow each permission it lists. With both ticked it asks twice: once for mail, then once for your calendar.
+You land back on Connections, where a note says, for example, "Google connected" and "Mail and Calendar are syncing."
 Also called: link my email, sync Gmail, sync Outlook, connect my calendar.
 
-Full detail — IMAP settings, importing past mail, reconnecting and what capture
-files where — is in [Connecting your mailbox and calendar](connecting-mail-and-calendars.md#what-you-can-connect).
+Full detail (IMAP settings, importing past mail, reconnecting and what capture
+files where) is in [Connecting your mailbox and calendar](connecting-mail-and-calendars.md#what-you-can-connect).
 
 ## Capture activity
 
-The Capture activity page in Settings holds two things: the senders you keep
-out, and what the last 24 hours of your mail turned into.
+The Capture activity page in Settings says what your connected mail turned into,
+and holds the decisions you make about it. The cards, in order:
+
+**Held threads.** Threads your mailbox is withholding from the team right now,
+with the reason. **Share with the team** releases one; only you can release
+yours.
 
 **Capture exclusions.** Addresses and domains whose messages never enter the
 CRM. Your rules apply only to mailboxes you connected; the company's rules apply
 to everyone (and only an administrator may add or remove one of those). A rule
 applies from the next message; what is already captured stays.
 
-**Outcomes.** Five counters for the window — **Captured**, **Dropped as
-internal**, **No contact created**, **Awaiting sender check** and **Derivation
-failed**. Click one to narrow the list under it.
+**Capture activity.** What the last 24 hours of your mail produced. Five
+counters, **Captured**, **Dropped as internal**, **No contact created**,
+**Awaiting sender check** and **Derivation failed**: click one to narrow the
+list under it. **Messages**, behind a disclosure, is the per-message log: which
+step a single message stopped at and why. Most installations record no sender
+and no subject for these rows; the page says so once above them, and that is the
+default, not a misconfiguration.
 
-**Messages**, behind a disclosure, is the per-message log: which step a single
-message stopped at and why. Open it when a message you expected did not show up.
-Most installations record no sender and no subject for these rows — the page says
-so once above them, and that is the default, not a misconfiguration.
+**Senders.** Every address your mailbox brought in, what was decided about
+each, and your own answer where you gave one. Only you see this list.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.

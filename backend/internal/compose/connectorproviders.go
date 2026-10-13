@@ -12,7 +12,10 @@ package compose
 // grew a copy of the list at some point, and the copies are what let a provider
 // be admitted by one and unknown to the next.
 
-import "slices"
+import (
+	"maps"
+	"slices"
+)
 
 // The OAuth capture providers. Gmail and Google Calendar (gcal) share one
 // Google OAuth app; graph (Outlook mail) and graphcal (Outlook calendar) share
@@ -85,8 +88,17 @@ func calendarProvidersFrom(oauth []string) []string {
 }
 
 // listedProviders are what the connect screen offers, which is the mail set:
-// gcal and graphcal are each created by their paired MAIL grant rather than
-// picked directly, so there is nothing for the screen to ask about them on
-// their own. Derived rather than listed again — the two answers were the same
-// three names written twice.
+// gcal and graphcal ride their paired mail provider's app, so the mail entry
+// already answers for them. Derived rather than listed again, because the two
+// answers were the same three names written twice.
 var listedProviders = MailProviders()
+
+// pairedCalendar is the calendar a mail consent may chain straight into: the
+// same vendor, the same OAuth app, a separate grant. Held equal to
+// connectorproviders.ts's VENDOR_SERVICES by
+// backend/gates/frontendvendorservices_test.go.
+var pairedCalendar = map[string]string{providerGmail: providerGcal, providerGraph: providerGraphCal}
+
+// PairedCalendars is a copy of pairedCalendar, so the gate that reads it can
+// never widen what may chain.
+func PairedCalendars() map[string]string { return maps.Clone(pairedCalendar) }

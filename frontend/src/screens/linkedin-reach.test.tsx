@@ -9,12 +9,12 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { LinkedInReachCard } from "./linkedin-reach";
+import { LinkedInReachSection } from "./linkedin-reach";
 import { installFetchStub, jsonResponse } from "./story-utils";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those
-// are already contacts — the gap between the two is what the import was for.
+// are already contacts. The gap between the two is what the import was for.
 
 type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 
@@ -56,7 +56,7 @@ function renderReach(body: LinkedInReach): void {
       }
     >
       <LocaleProvider initial="en">
-        <LinkedInReachCard />
+        <LinkedInReachSection />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -85,6 +85,32 @@ it("shows, per account reached, how many connections work there and how many are
   expect(
     screen.getByText(
       "Showing 2 of 9 companies. 1,420 connections work at companies not on file yet.",
+    ),
+  ).toBeInTheDocument();
+});
+
+it("says how many connections match nothing yet, instead of an empty sentence", async () => {
+  renderReach({
+    accounts: [],
+    accounts_total: 0,
+    unresolved_connections: 5210,
+  });
+
+  expect(
+    await screen.findByText(
+      "All your connections work at companies not on file yet. Connections: 5,210.",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText("No companies reached yet")).toBeInTheDocument();
+  expect(screen.queryByRole("table")).toBeNull();
+});
+
+it("explains what will appear when nothing is imported yet", async () => {
+  renderReach({ accounts: [], accounts_total: 0, unresolved_connections: 0 });
+
+  expect(
+    await screen.findByText(
+      "After the import, companies on file where you know someone appear here as a table, most connections first.",
     ),
   ).toBeInTheDocument();
 });

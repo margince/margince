@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { MailSharingCard } from "./mail-sharing";
+import { MailSharingCard, MailSharingPlate } from "./mail-sharing";
 
 // The workspace mail-sharing posture (Settings → Capture rules): every role
 // reads it, only capture_settings:update holders change it, and switching it
@@ -168,5 +168,37 @@ describe("MailSharingCard", () => {
     expect(
       screen.getAllByText(/Only an administrator or operations user/),
     ).toHaveLength(2);
+  });
+});
+
+// The rule as it reads under the reader's own Mail and calendar card: a
+// statement about the whole company, and the way to change it only for a
+// reader who may.
+describe("MailSharingPlate", () => {
+  it("says the company shares, scopes it to the whole company and links an editor to the switch", async () => {
+    vi.stubGlobal("fetch", backendFor(SETTINGS_EDITOR, true).fetchMock);
+    render(<MailSharingPlate />);
+
+    expect(
+      await screen.findByText(
+        /^Test Workspace shares newly captured mail with colleagues/,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Whole company")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Change in Capture rules" })
+        .getAttribute("href"),
+    ).toBe("#/settings/capture");
+  });
+
+  it("states a held posture and offers no link to a reader who cannot change it", async () => {
+    vi.stubGlobal("fetch", backendFor({}, false).fetchMock);
+    render(<MailSharingPlate />);
+
+    expect(
+      await screen.findByText(/^Test Workspace holds newly captured mail/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 });

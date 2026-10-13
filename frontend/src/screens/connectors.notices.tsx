@@ -2,86 +2,205 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useRoute } from "../app/router";
-import { Callout } from "../design-system/callout";
-import { useT } from "../i18n";
+import type { components } from "../api/schema";
+import { Button } from "../design-system/atoms";
+import { Callout, type CalloutTone } from "../design-system/callout";
+import { ErrorLine } from "../design-system/errorline";
+import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { PairedCalendar } from "./connect-account";
+import {
+  ACCOUNT_NAME,
+  type AccountVendor,
+  VENDOR_SERVICES,
+  vendorOf,
+} from "./connectorproviders";
 
-// What the connections card says about a consent round trip that has just come
-// back. Its own file for the reason it was its own function first: the outcome
-// table and the dismissal state are a self-contained answer to "what happened
-// when you left this page", and the card below it is about standing decisions.
+// What a page says about a consent round trip that has just come back. It
+// takes the landing as props so Connections and Meetings draw the same answer.
 
-// The OAuth callback lands back on #/settings/connections/{outcome} — the
-// route parses to id2 = "ok" | "denied" | "rejected" | "misconfigured" |
-// "bad_client" | "error". Only these are server-defined (contract-first); any
-// other value is silently ignored rather than rendering a raw route segment.
-//
-// Three of them exist so a failure nobody can fix by retrying does not tell the
-// reader to retry, and they are three rather than two because the remedies are
-// different screens: the provider refused the grant (reconnect and accept
-// everything), its API was never enabled (the vendor console), or it refused
-// this deployment's client credentials (the app card in Settings).
-const OAUTH_OUTCOME_NOTE: Record<
-  string,
-  { key: MessageKey; tone: "success" | "danger" }
-> = {
-  ok: { key: "connectors.oauthOk", tone: "success" },
-  denied: { key: "connectors.oauthDenied", tone: "danger" },
-  rejected: { key: "connectors.oauthRejected", tone: "danger" },
-  misconfigured: { key: "connectors.oauthMisconfigured", tone: "danger" },
-  bad_client: { key: "connectors.oauthBadClient", tone: "danger" },
-  error: { key: "connectors.oauthError", tone: "danger" },
+type CaptureConnection = components["schemas"]["CaptureConnection"];
+
+// The callback lands on .../{outcome}/{provider}, and only these outcomes are
+// server-defined; any other segment is ignored rather than printed back.
+// Three failures exist so one nobody can fix by retrying does not say retry:
+// the provider refused the grant, its API was never enabled, or it refused
+// this installation's client credentials.
+const OAUTH_OUTCOME_NOTE: Record<string, MessageKey> = {
+  ok: "connectors.oauthOk",
+  denied: "connectors.oauthDenied",
+  rejected: "connectors.oauthRejected",
+  misconfigured: "connectors.oauthMisconfigured",
+  bad_client: "connectors.oauthBadClient",
+  error: "connectors.oauthError",
 };
 
-/**
- * The OAuth return outcome: the callback lands back on
- * #/settings/connections/{outcome} — id2 on that route only, never parsed from
- * location.hash directly (the router already owns that).
- *
- * Dismissing (or navigating away, which unmounts it) clears it; the list itself
- * already refetches on mount, so "ok" needs no extra invalidation here. It sits
- * ABOVE the row list rather than in it: it reports on what the reader just did,
- * which is not one of the card's standing decisions.
- *
- * The heading answers the one thing a reader scans for — whether anything got
- * connected — and the outcome's own sentence under it says which remedy this
- * failure wants.
- */
-export function OAuthOutcomeNote() {
-  const t = useT();
-  const route = useRoute();
-  const oauthOutcome =
-    route.screen === "settings" && route.id === "connections"
-      ? route.id2
-      : undefined;
-  const [dismissedOutcome, setDismissedOutcome] = useState<string | null>(null);
-  // Object.hasOwn, not a bare index: a route segment like "constructor" would
-  // otherwise resolve to an inherited member and render an empty note.
-  const note =
-    oauthOutcome &&
-    oauthOutcome !== dismissedOutcome &&
-    Object.hasOwn(OAUTH_OUTCOME_NOTE, oauthOutcome)
-      ? OAUTH_OUTCOME_NOTE[oauthOutcome]
-      : undefined;
-  if (!note) {
+type Reading = {
+  tone: CalloutTone;
+  title: string;
+  body: string | null;
+  /** Set when the mail grant held and only its calendar leg is missing. */
+  calendar: PairedCalendar | null;
+};
+
+function liveProviders(connections: readonly CaptureConnection[]) {
+  return new Set(
+    connections
+      .filter((c) => c.status !== "disconnected")
+      .map((c) => c.provider),
+  );
+}
+
+function importRunning(
+  connections: readonly CaptureConnection[],
+  mail: CaptureConnection["provider"],
+) {
+  return connections.some(
+    (c) =>
+      c.provider === mail &&
+      (c.backfill?.state === "queued" || c.backfill?.state === "running"),
+  );
+}
+
+// A vendor landing is read against the roster, because a chained consent
+// lands on the calendar's outcome while the mail grant before it already holds.
+function readVendorLanding(
+  t: Translator,
+  outcome: string,
+  vendor: AccountVendor,
+  provider: string | undefined,
+  connections: readonly CaptureConnection[],
+): Reading | null {
+  const services = VENDOR_SERVICES[vendor];
+  const live = liveProviders(connections);
+  const mail = provider === services.mail || live.has(services.mail);
+  if (outcome === "ok") {
+    const calendar =
+      provider === services.calendar || live.has(services.calendar);
+    let syncing: MessageKey = "connectors.oauthCalendarOnly";
+    if (mail) {
+      syncing = calendar ? "connectors.oauthBoth" : "connectors.oauthMailOnly";
+    }
+    return {
+      tone: "success",
+      title: t("connectors.oauthConnectedTitle", {
+        provider: t(ACCOUNT_NAME[vendor]),
+      }),
+      body: importRunning(connections, services.mail)
+        ? `${t(syncing)} ${t("connectors.oauthImportRuns")}`
+        : t(syncing),
+      calendar: null,
+    };
+  }
+  if (provider !== services.calendar || !mail) {
     return null;
   }
+  const declined = outcome === "denied";
+  return {
+    tone: "warning",
+    title: t(
+      declined
+        ? "connectors.oauthCalendarDeclined"
+        : "connectors.oauthCalendarFailed",
+    ),
+    body: declined ? null : t(OAUTH_OUTCOME_NOTE[outcome]),
+    calendar: services.calendar,
+  };
+}
+
+function readLanding(
+  t: Translator,
+  outcome: string,
+  provider: string | undefined,
+  connections: readonly CaptureConnection[],
+): Reading {
+  const vendor = vendorOf(provider);
+  const vendorReading =
+    vendor && readVendorLanding(t, outcome, vendor, provider, connections);
+  if (vendorReading) {
+    return vendorReading;
+  }
+  const ok = outcome === "ok";
+  return {
+    tone: ok ? "success" : "danger",
+    title: t(ok ? "connectors.oauthConnected" : "connectors.oauthNotConnected"),
+    body: t(OAUTH_OUTCOME_NOTE[outcome]),
+    calendar: null,
+  };
+}
+
+/**
+ * The OAuth return outcome above a page's own content: it reports what the
+ * reader just did, which is not one of the page's standing decisions.
+ *
+ * The heading answers whether anything got connected, and the sentence under
+ * it says what syncs now or which remedy a failure wants. A calendar refused
+ * after its mailbox was granted is a partial success, so it offers the one
+ * missing consent through `connectCalendar`, which the host page wires.
+ * Dismissing clears it until the landing changes.
+ */
+export function OAuthOutcomeNote({
+  outcome,
+  provider,
+  connections,
+  connectCalendar,
+}: Readonly<{
+  /** The landing's outcome segment, unvalidated. */
+  outcome: string | undefined;
+  /** The landing's provider segment, unvalidated. */
+  provider: string | undefined;
+  /** The reader's connections from GET /connectors; undefined until it
+   *  answers, so a chain's landing is never read against an empty roster. */
+  connections: readonly CaptureConnection[] | undefined;
+  connectCalendar?: Readonly<{
+    onConnect: (calendar: PairedCalendar) => void;
+    pending: boolean;
+    error: string | null;
+  }>;
+}>) {
+  const t = useT();
+  const landing = `${outcome}/${provider}`;
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  // Object.hasOwn, not a bare index: a segment like "constructor" would
+  // otherwise resolve to an inherited member and render an empty note.
+  if (
+    !outcome ||
+    !connections ||
+    landing === dismissed ||
+    !Object.hasOwn(OAUTH_OUTCOME_NOTE, outcome)
+  ) {
+    return null;
+  }
+  const reading = readLanding(t, outcome, provider, connections);
+  const calendar = reading.calendar;
+  const connectError = calendar ? connectCalendar?.error : null;
   return (
     <Callout
-      tone={note.tone}
+      tone={reading.tone}
       kind="outcome"
-      title={t(
-        note.tone === "success"
-          ? "connectors.oauthConnected"
-          : "connectors.oauthNotConnected",
-      )}
+      title={reading.title}
+      actions={
+        calendar &&
+        connectCalendar && (
+          <Button
+            pending={connectCalendar.pending}
+            onClick={() => connectCalendar.onConnect(calendar)}
+          >
+            {t("connectors.connectCalendar")}
+          </Button>
+        )
+      }
       dismiss={{
         label: t("connectors.dismissOutcome"),
-        onDismiss: () => setDismissedOutcome(oauthOutcome ?? null),
+        onDismiss: () => setDismissed(landing),
       }}
     >
-      {t(note.key)}
+      {reading.body || connectError ? (
+        <>
+          {reading.body}
+          {connectError && <ErrorLine>{connectError}</ErrorLine>}
+        </>
+      ) : undefined}
     </Callout>
   );
 }

@@ -13,12 +13,12 @@ page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 ### How does email get into Margince?
 Email gets into Margince through a connected mailbox: once you connect Gmail, Outlook or an IMAP mailbox at **Settings → Connections**, capture reads new mail on each sync and files it on the timelines of the contacts on it.
 There is no forwarding address and no copy-paste step. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
-To bring in older mail, use **Import mailbox history**. To see what happened to one message, open **Settings → Capture activity**.
+To bring in older mail, pick a window under **Import past email** when you connect, or choose **Import older email** in the account's menu. To see what happened to one message, open **Settings → Capture activity**.
 Also called: email logging, sync email to CRM, auto-log emails.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too: a connected Gmail or Outlook mailbox is read in both your inbox and your sent mail, so each sent message lands on the recipients' contact timelines marked **Sent**.
-1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with **Import mailbox history**.
+1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with the **Past email** import.
 2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
 Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
 Also called: sent items, outgoing mail, outbox, log sent emails.
@@ -303,8 +303,8 @@ It applies from the next message; captured mail stays. **Whole company** rules a
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince concluded about a sender, open **Settings → Connections**, find the address in **Senders**, and press **Business** to readmit it or **Exclude** to keep it out.
-1. Open **Settings**, then **Connections**, and scroll to **Senders**.
+To correct what Margince concluded about a sender, open **Settings → Capture activity**, find the address in **Senders**, and press **Business** to readmit it or **Exclude** to keep it out.
+1. Open **Settings**, then **Capture activity**, and scroll to **Senders**.
 2. Find the address; the **Decision** column shows what was concluded.
 3. Press **Business**, or press **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender brought into your mailbox; copies a colleague imported stay theirs. **Undo** withdraws your answer. A decision you make is never overwritten by a later verdict.
@@ -356,7 +356,7 @@ Changing the posture governs mail captured afterwards. The same dialog offers to
 narrow what is already captured; it only ever narrows, because re-opening what
 was captured under a stricter answer is a separate decision.
 
-**Senders** (Settings → Connections) — every address your mailbox brought in and
+**Senders** (Settings → Capture activity): every address your mailbox brought in and
 what the classifier concluded about each: a contact, a role mailbox, an automated
 tool, a newsletter, an advisor, personal. You can overrule any of them.
 **Business** readmits a sender; **Exclude** destroys what they brought into your
@@ -364,7 +364,7 @@ mailbox and stops the next message. A decision you make is never overwritten by
 a later verdict. **Waiting on a decision**, under the list, names the contacts
 only you see until their sender is decided: the set an admin sees only counted.
 
-**Held threads** (Settings → Connections) — the threads your mailbox is
+**Held threads** (Settings → Capture activity): the threads your mailbox is
 withholding right now, with the reason. **Share with the team** releases one.
 
 **Private correspondence** (a contact's or company's page) — keep your mail with

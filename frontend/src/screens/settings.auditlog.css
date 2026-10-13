@@ -1,0 +1,99 @@
+/* Audit log card. Layout and token colours only (ds-purity). */
+
+/* The dials stand above the trail: the record search full width, then the four
+   pickers in one row that folds to two, then one, as the card narrows. */
+.audit-log-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.audit-log-dials {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.audit-log-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+@media (max-width: 720px) {
+  .audit-log-dials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 420px) {
+  .audit-log-dials {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.audit-log-countline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+/* One line a row: the time never wraps mid-stamp, and the detail control is a
+   compact icon at the row's right edge on the same line as the facts. */
+.audit-log-table td {
+  vertical-align: middle;
+}
+.audit-log-when {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.audit-log-id {
+  font-family: var(--fontFamilyMono);
+}
+
+.audit-log-more {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-3);
+}
+
+.audit-log-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+
+.audit-log-error-cause {
+  color: var(--textSecondary);
+}
+
+/* The change drawer: one column of sections, each a heading over its facts. */
+.audit-log-detail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.audit-log-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+}
+.audit-log-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.audit-log-diff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.audit-log-diff-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}

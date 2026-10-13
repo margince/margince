@@ -253,13 +253,14 @@ func TestLandingURLMapsReturnToThroughAClosedSet(t *testing.T) {
 		want     string
 	}{
 		{"settings", "settings", "https://crm.example.com/#/settings/connections/ok/graph"},
+		{"meetings", "meetings", "https://crm.example.com/#/settings/meetings/ok/graph"},
 		{"onboarding", "onboarding", "https://crm.example.com/#/onboarding/connect/ok/graph"},
 		{"absent falls back to onboarding", "", "https://crm.example.com/#/onboarding/connect/ok/graph"},
 		{"unknown falls back to onboarding", "elsewhere", "https://crm.example.com/#/onboarding/connect/ok/graph"},
 		{"a URL is never reflected", "https://evil.example/", "https://crm.example.com/#/onboarding/connect/ok/graph"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := h.landingURL("ok", tc.returnTo, "graph"); got != tc.want {
+			if got := h.landingURL("ok", tc.returnTo, "graph", 0); got != tc.want {
 				t.Errorf("landingURL(ok, %q, graph) = %q, want %q", tc.returnTo, got, tc.want)
 			}
 		})
@@ -273,7 +274,7 @@ func TestLandingURLNamesTheProviderTheConsentReturnedFor(t *testing.T) {
 	h := connectorHandlers{publicBaseURL: "https://crm.example.com"}
 	for _, provider := range []string{"gmail", "graph", "gcal"} {
 		want := "https://crm.example.com/#/onboarding/connect/ok/" + provider
-		if got := h.landingURL(outcomeOK, returnToOnboarding, provider); got != want {
+		if got := h.landingURL(outcomeOK, returnToOnboarding, provider, 0); got != want {
 			t.Errorf("landingURL(ok, onboarding, %q) = %q, want %q", provider, got, want)
 		}
 	}

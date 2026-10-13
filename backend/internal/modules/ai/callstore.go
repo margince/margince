@@ -417,10 +417,14 @@ const (
 	sentinelRequestRejected = "request_rejected"
 )
 
+// declinedSentinels are outcomes, not failures: the model was reached and
+// decided not to answer.
+var declinedSentinels = []string{sentinelOutputWithheld, sentinelRequestRejected}
+
 // answeredSentinels are the sentinels the health read does not count as a
-// failure: metering_failed is an answer whose usage write failed, and the other
-// two are outcomes — the model was reached and decided.
-var answeredSentinels = []string{sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected}
+// failure: metering_failed is an answer whose usage write failed, plus the
+// declined outcomes.
+var answeredSentinels = append([]string{sentinelMeteringFailed}, declinedSentinels...)
 
 // classifyError maps a completion terminal error to a short, stable code
 // for ai_call.error_sentinel. It never stores raw error text — that could

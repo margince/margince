@@ -260,3 +260,42 @@
     min-height: max(var(--controlHeight), 44px);
   }
 }
+
+/* The setup reminder: a quiet chip before the bell, its dot the one accent. */
+.setup-reminder {
+  gap: var(--space-2);
+  min-height: var(--controlHeight);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  color: var(--textPrimary);
+  font: var(--fontBodySmall);
+  white-space: nowrap;
+}
+.setup-reminder:hover {
+  background: var(--bgHover);
+}
+.setup-reminder-dot {
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+}
+.setup-reminder-count {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+}
+/* No room for the words at phone width: the count stays, and the words stay
+   in the accessible name. */
+@media (max-width: 700px) {
+  .setup-reminder-word {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

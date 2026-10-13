@@ -8,7 +8,8 @@ import { AccountMenu } from "../app/account";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
-import { AuditLogCard, SettingsScreen, tabContent } from "./settings";
+import { SettingsScreen, tabContent } from "./settings";
+import { AuditLogCard } from "./settings.auditlog";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -108,15 +109,11 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    expect(screen.getByRole("heading", { name: "Your account" })).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
-    // Opened, because a Margince `Select` renders its options in a listbox on
-    // click rather than as children of the control.
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("combobox", { name: "Appearance" }));
+    // A segmented choice, so every option is on screen without opening it.
     expect(
-      within(screen.getByRole("listbox"))
-        .getAllByRole("option")
+      within(screen.getByRole("group", { name: "Appearance" }))
+        .getAllByRole("button")
         .map((option) => option.textContent),
     ).toEqual(["Light", "Dark", "System"]);
   });
@@ -137,10 +134,11 @@ describe("SettingsScreen RBAC surfaces", () => {
     );
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    await pickOption(
-      user,
-      screen.getByRole("combobox", { name: "Appearance" }),
-      "Dark",
+    await user.click(
+      within(screen.getByRole("group", { name: "Appearance" })).getByRole(
+        "button",
+        { name: "Dark" },
+      ),
     );
 
     // The menu's own radio, read through the menu rather than through the store
@@ -151,40 +149,44 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
-  // Identity, credential, sign-off and language are ONE card, not four: a
-  // reader auditing their own account reads one title and finds three answers
-  // at one x. The claim is about the three ROWS being there, in the one card —
-  // a page that grew a second panel back would still pass a query for any one
-  // of them on its own.
-  //
-  // The tab holds a second card beside it — which kinds of proposal answer
-  // themselves — and that is a different subject rather than a fragment of this
-  // one, so the count below asks how many headings this card carries rather
-  // than how many the tab does.
-  it("carries the identity, the password, the signature and the language in ONE card", async () => {
+  // One card per job: who colleagues see, how you sign in, the language that
+  // follows the account, and what only this browser remembers. Each row is
+  // asserted inside its own card, because a row that slid into a neighbour would
+  // still pass a page-wide query.
+  it("puts each account setting in the card for its job", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    const card = screen
-      .getByRole("heading", { name: "Your account" })
-      .closest("section");
-    if (!(card instanceof HTMLElement)) {
-      throw new Error("the account card is not a section");
+    function card(title: string): HTMLElement {
+      const section = screen
+        .getByRole("heading", { name: title })
+        .closest("section");
+      if (!(section instanceof HTMLElement)) {
+        throw new Error(`the ${title} card is not a section`);
+      }
+      return section;
     }
-    // The identity block, and the three verbs/answers that belong to it.
-    expect(within(card).getByText("ada@acme.test")).toBeTruthy();
+    const profile = card("Profile");
+    expect(within(profile).getByText("ada@acme.test")).toBeTruthy();
     expect(
-      within(card).getByRole("button", { name: "Change password" }),
+      within(profile).getByRole("textbox", { name: "Display name" }),
     ).toBeTruthy();
     expect(
-      within(card).getByRole("button", { name: "Edit signature" }),
+      within(profile).getByRole("button", { name: /signature/ }),
+    ).toBeTruthy();
+    const signIn = card("Sign-in");
+    expect(
+      within(signIn).getByRole("button", { name: "Change password" }),
     ).toBeTruthy();
     expect(
-      within(card).getByRole("combobox", { name: "Language" }),
+      within(signIn).getByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
-    // And the four are not four cards: this one has a single title over all of
-    // them, which is what fragmenting it again would break.
-    expect(within(card).getAllByRole("heading", { level: 2 })).toHaveLength(1);
+    expect(
+      within(card("Language")).getByRole("combobox", { name: "Language" }),
+    ).toBeTruthy();
+    expect(
+      within(card("This browser")).getByRole("group", { name: "Appearance" }),
+    ).toBeTruthy();
   });
 
   // THE DRAFT IS DISCARDED ON THE NEXT OPENING, not on the way out.
@@ -200,12 +202,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.click(screen.getByRole("button", { name: /signature/ }));
     const draft = await screen.findByRole("textbox", { name: "Sign-off" });
     await user.type(draft, "half a sign-off nobody meant to keep");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.click(screen.getByRole("button", { name: /signature/ }));
     const reopened = await screen.findByRole("textbox", {
       name: "Sign-off",
     });
@@ -344,9 +346,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // The choice reaches the chrome around the control, not just the control's
     // own face — which is the whole point of changing a language here.
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Dein Nutzerkonto" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Anmeldung" })).toBeTruthy();
   });
 
   // WCAG 2.2 AA 3.1.2. This is the one picker in the product where every option
@@ -599,11 +599,11 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Changes" })).toBeNull();
     cleanup();
 
-    // ...and the trail, on the address it moved to: its filters — in a
-    // disclosure now, closed on arrival — and an entry answering them.
+    // ...and the trail, on the address it moved to: its filters, always in
+    // view above the table, and an entry answering them.
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
@@ -616,10 +616,10 @@ describe("SettingsScreen restructured pages", () => {
     );
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
+      await screen.findByRole("heading", { name: "Changes" }),
     ).toBeTruthy();
-    expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(screen.getByLabelText("Who").closest("details")).toBeNull();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The WRITE opens it, editor included. The page absorbed a route that nothing
@@ -664,12 +664,12 @@ describe("SettingsScreen restructured pages", () => {
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
+      await screen.findByRole("heading", { name: "Changes" }),
     ).toBeTruthy();
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Updated")).toBeTruthy();
   });
 
   // The other half, and the reason opening the page is not the whole answer: a
@@ -685,7 +685,7 @@ describe("SettingsScreen restructured pages", () => {
     // Audit log row at all, so the card is the only way to reach the branch.
     render(<AuditLogCard />);
     expect(
-      await screen.findByText(translate("en", "settings.auditAdminOnly")),
+      await screen.findByText(translate("en", "settings.auditLog.noGrant")),
     ).toBeTruthy();
     // WITHHELD rather than absent, and the request is never issued: it could
     // only ever come back 403, and a red failure with a futile Retry is what
@@ -804,7 +804,7 @@ describe("installation-wide cards live off the personal pages", () => {
 
   it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
     const hosts = SETTINGS_PAGES.filter((page) =>
-      pageRenders(page.id, "OAuthAppCard"),
+      pageRenders(page.id, "OAuthAppsCard"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");

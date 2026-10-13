@@ -15,6 +15,8 @@ const LARS = {
   status: "active",
   is_agent: false,
   roles: ["admin"],
+  team_ids: ["t-dach"],
+  allowed_actions: ["issue_password_link"],
 };
 
 const DANA = {
@@ -25,6 +27,8 @@ const DANA = {
   status: "active",
   is_agent: false,
   roles: ["rep"],
+  team_ids: ["t-dach", "t-north"],
+  allowed_actions: ["change_role", "issue_password_link", "deactivate"],
 };
 
 // A deactivated seat still occupies the roster: the card lists everyone with a
@@ -37,7 +41,27 @@ const RETIRED = {
   status: "deactivated",
   is_agent: false,
   roles: ["rep"],
+  allowed_actions: ["change_role", "reactivate"],
 };
+
+// An invitation nobody has redeemed yet: it holds a seat, and the neutral badge
+// says it is the ordinary first state rather than something wrong.
+const INVITED = {
+  id: "u-4",
+  email: "ivy@brandt.example",
+  display_name: "Ivy Lindqvist",
+  timezone: "Europe/Berlin",
+  status: "invited",
+  is_agent: false,
+  roles: ["manager"],
+  team_ids: ["t-north"],
+  allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+};
+
+const TEAMS = [
+  { id: "t-dach", name: "DACH Sales" },
+  { id: "t-north", name: "Nordics" },
+];
 
 // An agent identity. Bootstrap seeds none, so most installations have no such
 // row — but one exists wherever the retirement migration has not run, and a
@@ -52,12 +76,11 @@ const AGENT = {
   status: "active",
   is_agent: true,
   roles: [],
+  allowed_actions: ["deactivate"],
 };
 
-// Nine members is the roster the founder measured, and the number that decides
-// whether this card reads as a list or as a wall: at one SettingRow per member
-// it is nine lines, and at the old shape — a full-width role Select on its own
-// line plus two stacked ghost buttons — it was nine 140px blocks.
+// Nine members is the roster the founder measured: nine table rows, every role,
+// status badge and menu trigger at one x.
 const CROWD = [
   LARS,
   DANA,
@@ -72,6 +95,8 @@ const CROWD = [
       status: "active",
       is_agent: false,
       roles: [index === 0 ? "manager" : "rep"],
+      team_ids: index % 2 === 0 ? ["t-dach"] : [],
+      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
     }),
   ),
   {
@@ -81,8 +106,9 @@ const CROWD = [
     timezone: "Europe/Berlin",
     status: "active",
     is_agent: false,
-    // No role yet, so the picker reads its placeholder rather than an answer.
+    // No role yet, so the column says so rather than leaving a blank.
     roles: [],
+    allowed_actions: ["change_role", "deactivate"],
   },
 ];
 
@@ -103,6 +129,8 @@ function story(
           admin_password_link: passwordLinks,
         }),
       "GET /users": () => jsonResponse({ data: users }),
+      "GET /teams": () =>
+        jsonResponse({ data: TEAMS, page: { has_more: false } }),
       "GET /users/assignable-roles": () =>
         jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
     });
@@ -121,32 +149,41 @@ const meta: Meta<typeof UsersAdminCard> = {
 export default meta;
 type Story = StoryObj<typeof UsersAdminCard>;
 
+const ROSTER = [LARS, DANA, INVITED, RETIRED, AGENT];
+
 export const Roster: Story = {
-  render: story([LARS, DANA, RETIRED, AGENT], { roles: ["admin"] }),
+  render: story(ROSTER, { roles: ["admin"] }, {}, true),
 };
 
-// The case the redesign is for: the count and the invite verb share the header
-// band, and nine members read as nine lines down one column of answers.
+export const RosterDark: Story = {
+  render: story(ROSTER, { roles: ["admin"] }, {}, true),
+  globals: { theme: "dark" },
+};
+
+// Nine members read as nine rows down one set of columns.
 export const NineMembers: Story = {
   render: story(CROWD, { roles: ["admin"] }, {}, true),
 };
 
-// The header band is the tightest thing on this card at 720px — a title, a
-// count and a verb on one line — and this is the render of that claim. The
-// rows fall to one column under 640px (settingrow.css), which is what keeps a
-// long name off three words per line.
+// The table is wider than a phone, so it scrolls inside its own region rather
+// than squeezing the status badges; the toolbar stacks.
 export const RosterPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: story([LARS, DANA, RETIRED, AGENT], { roles: ["admin"] }, {}, true),
+  render: story(ROSTER, { roles: ["admin"] }, {}, true),
 };
 
 export const Empty: Story = { render: story([], { roles: ["admin"] }) };
 
 // The roster answers "who is on my team", which is not an admin's private
-// question — but administering it is. An operator seat without the admin role
-// reads the card, gets each role as a fact rather than a picker, and is told in
-// the card's own description that managing members is not theirs.
+// question, but administering it is. An operator seat without the admin role
+// reads the card with no role or team columns and no verbs, and the panel foot
+// says that managing members is not theirs.
 export const NotAnAdmin: Story = {
   render: story([LARS, DANA, RETIRED, AGENT], { roles: ["ops"] }),
+};
+
+export const NotAnAdminDark: Story = {
+  render: story([LARS, DANA, RETIRED, AGENT], { roles: ["ops"] }),
+  globals: { theme: "dark" },
 };

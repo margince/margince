@@ -14,7 +14,12 @@ type Story = StoryObj;
 function ConfirmDemo({
   tier,
   error,
-}: Readonly<{ tier?: "confirm"; error?: string | null }>) {
+  cancelLabel,
+}: Readonly<{
+  tier?: "confirm";
+  error?: string | null;
+  cancelLabel?: string;
+}>) {
   const [open, setOpen] = useState(true);
   return (
     <ConfirmModal
@@ -23,6 +28,7 @@ function ConfirmDemo({
       title="Send this offer?"
       tier={tier}
       confirmLabel="Send"
+      cancelLabel={cancelLabel}
       onConfirm={() => setOpen(false)}
       error={error}
     >
@@ -41,4 +47,9 @@ export const ConfirmTier: Story = {
 
 export const WithError: Story = {
   render: () => <ConfirmDemo error="A currency conversion rate is missing." />,
+};
+
+/** The way back named for what it keeps, where Cancel would not say it. */
+export const NamedCancel: Story = {
+  render: () => <ConfirmDemo cancelLabel="Keep the draft" />,
 };

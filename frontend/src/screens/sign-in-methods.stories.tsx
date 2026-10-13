@@ -2,17 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { LocaleProvider } from "../i18n";
+import { screen, userEvent, within } from "storybook/test";
+import { meFixture } from "../app/mefixture";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 import { SignInMethodsCard } from "./sign-in-methods";
-import { installFetchStub, jsonResponse } from "./story-utils";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// Password is present in every state and flippable in none: there is no value
-// of the setting that removes it, so the row shows a control that exists and
-// refuses rather than one that is missing. The three states differ only in what
-// the DEPLOYMENT composed and what the admin chose of it.
+// Password is always on and says so. Each provider says whether its button is
+// on the sign-in screen right now, and why not when it is missing: the verdict
+// is the server's sign_in_screen, the reason the vendor app's state.
 
 const meta: Meta<typeof SignInMethodsCard> = {
   title: "Settings/Company/Sign-in and apps/Sign-in methods",
@@ -22,85 +21,134 @@ const meta: Meta<typeof SignInMethodsCard> = {
 export default meta;
 type Story = StoryObj<typeof SignInMethodsCard>;
 
-// The card reads the narrow authentication-policy projection, so the story
-// answers that route rather than seeding a cache: data written with
-// setQueryData is stale on arrival and the mount's background refetch would
-// reach the network.
+type Provider = { key: string; label: string; enabled: boolean };
+
+const GOOGLE: Provider = {
+  key: "google",
+  label: "Continue with Google",
+  enabled: true,
+};
+const MICROSOFT: Provider = {
+  key: "microsoft",
+  label: "Continue with Microsoft",
+  enabled: true,
+};
+
+function app(provider: string, source: "stored" | "none", tenant?: string) {
+  return {
+    provider,
+    configured: source === "stored",
+    client_id: source === "stored" ? "client-id" : "",
+    ...(tenant === undefined ? {} : { tenant }),
+    source,
+    redirect_uris: [],
+  };
+}
+
+// The card reads the narrow authentication-policy projection and each vendor's
+// app, so the story answers those routes rather than seeding a cache.
 function Served({
   providers,
-  groupRoleMap = {},
+  onScreen,
+  apps = "stored",
   children,
 }: Readonly<{
-  providers: { key: string; label: string; enabled: boolean }[];
-  groupRoleMap?: Record<string, string>;
+  providers: Provider[];
+  onScreen: string[];
+  apps?: "stored" | "none";
   children: ReactNode;
 }>) {
   installFetchStub({
     "GET /installation/authentication-policy": () =>
       jsonResponse({
         sign_in_providers: providers,
+        sign_in_screen: onScreen,
         require_sso: false,
         require_mfa: false,
-        oidc_group_role_map: groupRoleMap,
+        oidc_group_role_map: {},
       }),
+    "GET /installation/oauth-apps/google": () =>
+      jsonResponse(app("google", apps)),
+    "GET /installation/oauth-apps/microsoft": () =>
+      jsonResponse(app("microsoft", apps, "9b0c3a71")),
     "GET /me": () =>
-      jsonResponse({
-        user: { email: "admin@brandt.example" },
-        authorization: {
-          installation_settings: ["read", "update"],
-          authentication_policy: ["read", "update"],
-        },
-      }),
+      jsonResponse(
+        meFixture({
+          allow: {
+            installation_settings: ["read", "update"],
+            authentication_policy: ["read", "update"],
+          },
+        }),
+      ),
     "GET /users/assignable-roles": () =>
       jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES }),
   });
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return (
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
-    </QueryClientProvider>
-  );
+  return <StoryProviders>{children}</StoryProviders>;
 }
 
-/** A provider the deployment configured and the admin offers. */
-export const ProviderEnabled: Story = {
+/** Both apps set up, both buttons on the sign-in screen. */
+export const OnScreen: Story = {
   render: () => (
-    <Served providers={[{ key: "google", label: "Google", enabled: true }]}>
+    <Served providers={[GOOGLE, MICROSOFT]} onScreen={["google", "microsoft"]}>
       <SignInMethodsCard />
     </Served>
   ),
 };
 
-/** The same provider switched off. It stays LISTED — the credentials are still
- * there, and an admin who cannot see it cannot put it back. */
-export const ProviderDisabled: Story = {
+export const OnScreenDark: Story = {
+  ...OnScreen,
+  globals: { theme: "dark" },
+};
+
+/** Chosen but not drawn: neither app is set up yet, and each row says so. */
+export const OffScreenNoApp: Story = {
   render: () => (
-    <Served providers={[{ key: "google", label: "Google", enabled: false }]}>
+    <Served providers={[GOOGLE, MICROSOFT]} onScreen={[]} apps="none">
       <SignInMethodsCard />
     </Served>
   ),
+};
+
+export const OffScreenNoAppDark: Story = {
+  ...OffScreenNoApp,
+  globals: { theme: "dark" },
+};
+
+/** One provider switched off. It stays listed, so an admin can put it back. */
+export const ProviderTurnedOff: Story = {
+  render: () => (
+    <Served
+      providers={[{ ...GOOGLE, enabled: false }, MICROSOFT]}
+      onScreen={["microsoft"]}
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+};
+
+/** Turning a provider off asks for the typed phrase first. */
+export const TurnOffConfirm: Story = {
+  ...OnScreen,
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("switch", {
+        name: "Continue with Google",
+      }),
+    );
+    await screen.findByRole("dialog");
+  },
+};
+
+export const TurnOffConfirmDark: Story = {
+  ...TurnOffConfirm,
+  globals: { theme: "dark" },
 };
 
 /** No external provider configured, so password is the whole answer. */
 export const PasswordOnly: Story = {
   render: () => (
-    <Served providers={[]}>
-      <SignInMethodsCard />
-    </Served>
-  ),
-};
-
-/** IdP groups mapped onto roles, with the grant-only warning standing beside
- * the rows. The empty-map states above show the "nothing extra is granted"
- * line instead. */
-export const GroupsGrantRoles: Story = {
-  render: () => (
-    <Served
-      providers={[{ key: "google", label: "Google", enabled: true }]}
-      groupRoleMap={{ "crm-admins": "admin", "field-sales": "rep" }}
-    >
+    <Served providers={[]} onScreen={[]}>
       <SignInMethodsCard />
     </Served>
   ),

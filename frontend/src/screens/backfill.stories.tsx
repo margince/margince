@@ -9,8 +9,8 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // BackfillPanel stories for the fe-uat render gate — one per honest branch
 // the panel now covers: the ordinary setup/running/done/error/cancelled run
-// (seeded via `initial`, matching how connectors.tsx now mounts this panel
-// off the embedded CaptureConnection.backfill), plus the three added by this
+// (seeded via `initial`, matching how the import dialog on a Connections
+// account mounts this panel off the embedded CaptureConnection.backfill), plus the three added by this
 // change — a provider with no Backfiller, a stalled running run, and a
 // refused window narrowing.
 
@@ -33,7 +33,11 @@ function panelStory(
     });
     return (
       <StoryProviders>
-        <BackfillPanel provider={provider} initial={initial} />
+        <BackfillPanel
+          provider={provider}
+          initial={initial}
+          onClose={() => undefined}
+        />
       </StoryProviders>
     );
   };

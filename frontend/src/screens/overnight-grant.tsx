@@ -11,29 +11,24 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../app/storage";
-import { Checkbox } from "../design-system/atoms";
+import { Badge } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import "./overnight-grant.css";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The rep's standing answer: may an agent work as them overnight?
 //
-// ONE QUESTION, ASKED IN TWO PLACES. It is put next to the mailbox connect in
-// onboarding, because that is the moment a rep is already deciding what
-// Margince may see, and again in Settings beside the same connectors, because
-// an answer given once has to be findable later. Both surfaces read and write
-// through this file so the two cannot drift into saying different things about
-// the same authority.
+// ONE QUESTION, ASKED IN TWO PLACES: beside the mailbox connect in onboarding,
+// where the rep is already deciding what Margince may see, and again in
+// Settings, where an answer given once has to be findable later. Both surfaces
+// read and write through this file so the two cannot drift apart.
 //
-// The two shapes differ on purpose, and the design system says why: a Switch IS
-// the action — flipping it writes — while a Checkbox states an intent that
-// something later submits. Onboarding's box is an intent carried by the connect
-// step, so it is a Checkbox. Settings writes on flip, so it is a Switch.
+// Both draw a Switch row. Settings writes on flip; onboarding's switch holds the
+// answer until the step continues, and its description says so in words.
 
 type MyAgentGrant = components["schemas"]["MyAgentGrant"];
 
@@ -119,16 +114,9 @@ export function morningBriefGrant(
 }
 
 /**
- * What stops working without this answer.
- *
- * It is the SAME words on both surfaces, because the cost is the same in both
- * places and a rep who reads one and then the other must not be told two
- * different things.
- *
- * `warning` and `standing`, not a danger alert: a cleared box is the rep's own
- * answer and their authority to give, so nothing has gone wrong here — what the
- * notice reports is the cost of the answer, and announcing it on every mount
- * while the box stays clear reads their decision back to them as a fault.
+ * What stops working without this answer, said where the answer is being given.
+ * `warning` and `standing`, not danger: a "no" is the rep's authority to give,
+ * and the notice reports its cost rather than a fault.
  */
 function GrantCostNotice() {
   const t = useT();
@@ -144,18 +132,14 @@ function GrantCostNotice() {
 }
 
 /**
- * The onboarding question: a preselected checkbox beside the mailbox connect.
+ * The onboarding question: a preselected Switch row for the caller's SettingList.
  *
- * PRESELECTED, and it stays that way unless the rep clears it — the features it
- * feeds are the ones the product opens on, so an unticked default would ship a
- * new installation whose morning brief is permanently empty for reasons nobody
- * is told. Clearing it is allowed and warned about, never blocked: it is the
- * rep's authority, and a question that cannot be answered "no" is not a
- * question.
+ * PRESELECTED: the features it feeds are the ones the product opens on, so an
+ * off default would ship a morning brief that stays empty for reasons nobody is
+ * told. Turning it off is warned about, never blocked.
  *
- * It does not write. The answer rides with the mailbox connect the step is
- * already performing — see `checked` / `onChange` — so a rep who abandons
- * onboarding here has granted nothing.
+ * It does not write. The answer rides with the step's continue (`checked` /
+ * `onChange`), so a rep who abandons onboarding here has granted nothing.
  */
 export function OvernightGrantChoice({
   checked,
@@ -165,20 +149,26 @@ export function OvernightGrantChoice({
   checked: boolean;
   onChange: (next: boolean) => void;
   /** The answer could not be recorded when the step completed. Shown rather
-   * than swallowed: a rep who ticked the box and hit a transient failure would
-   * otherwise leave onboarding believing they had answered. */
+   * than swallowed, so the rep does not leave believing they had answered. */
   failed?: boolean;
 }>) {
   const t = useT();
   return (
-    <div className="overnight-grant-choice">
-      <Checkbox
-        checked={checked}
-        onChange={(event) => onChange(event.currentTarget.checked)}
+    <>
+      <SettingRow
         label={t("overnightGrant.label")}
-        data-testid="overnight-grant-choice"
+        description={t("overnightGrant.choiceHelp")}
+        control={(control) => (
+          <Switch
+            describedBy={control["aria-describedby"]}
+            testId="overnight-grant-choice"
+            label={t("overnightGrant.label")}
+            labelHidden
+            checked={checked}
+            onChange={onChange}
+          />
+        )}
       />
-      <p className="overnight-grant-help t-sub">{t("overnightGrant.help")}</p>
       {!checked && <GrantCostNotice />}
       {failed && (
         <Callout
@@ -189,18 +179,15 @@ export function OvernightGrantChoice({
           {t("overnightGrant.saveFailed")}
         </Callout>
       )}
-    </div>
+    </>
   );
 }
 
 /**
  * The settings card: the same question, answered again later.
  *
- * It writes on flip rather than behind a Save button, which is the opposite of
- * the mail-sharing card beside it — and deliberately. Mail sharing changes what
- * a whole team can see, so it earns a deliberate commit; this changes only
- * whether an agent works for the one rep flipping it, and it is reversible in
- * the same click.
+ * It writes on flip rather than behind a Save button: it changes only whether an
+ * agent works for the one rep flipping it, and it is reversible in the same click.
  */
 export function OvernightGrantCard() {
   const t = useT();
@@ -209,26 +196,26 @@ export function OvernightGrantCard() {
   // While a flip is in flight the switch shows what the rep just chose, so it
   // does not snap back to the stored answer for the width of a round trip.
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const stored =
+    query.data === undefined
+      ? undefined
+      : morningBriefGrant(query.data)?.state === "granted";
+  const shownOff = (optimistic ?? stored) === false;
 
   return (
-    <Panel title={t("overnightGrant.title")}>
+    <Panel
+      title={t("overnightGrant.title")}
+      titleAction={shownOff ? <Badge>{t("overnightGrant.off")}</Badge> : null}
+    >
       <PanelBody>
-        <PanelIntro>{t("overnightGrant.sub")}</PanelIntro>
         <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
           {(grants) => {
             const grant = morningBriefGrant(grants);
             const granted = grant?.state === "granted";
             const shown = optimistic ?? granted;
-            // The rep agreed and their credential no longer does the job.
-            // Reported as its own state rather than as a decline, because they
-            // already answered — asking again would be putting a settled
-            // question back to them.
-            //
-            // TWO CAUSES, and the rep is owed which one. The passport lapsed —
-            // revoked or expired — or the agent has since gained a tool the
-            // passport was never minted to fund, in which case it is perfectly
-            // live authority for a job this agent no longer does. Neither
-            // fails the run: it degrades, silently, at 2am.
+            // The rep agreed and their credential no longer does the job: the
+            // passport lapsed, or the agent gained a tool it was never minted to
+            // fund. Either degrades silently at 2am, so each gets its own notice.
             const lapsed = granted && !grant?.credential_usable;
             const outgrown =
               granted &&
@@ -258,8 +245,12 @@ export function OvernightGrantCard() {
                     )}
                   />
                 </SettingList>
+                {/* A quiet sentence, not a warning: off is a settled answer on
+                    this page, and reading it back as a fault every visit nags. */}
+                {!shown && (
+                  <p className="t-sub">{t("overnightGrant.offNote")}</p>
+                )}
                 <GrantNotices
-                  showDanger={!shown}
                   showRenewal={lapsed && shown}
                   showScopeRenewal={outgrown && shown}
                   error={
@@ -275,26 +266,23 @@ export function OvernightGrantCard() {
   );
 }
 
-/** The card's three possible notices, kept out of the card so its own body
- * stays the question rather than the answers to it. */
+/** The card's possible notices, kept out of the card so its own body stays the
+ * question rather than the answers to it. */
 function GrantNotices({
-  showDanger,
   showRenewal,
   showScopeRenewal,
   error,
 }: Readonly<{
-  showDanger: boolean;
   showRenewal: boolean;
   showScopeRenewal: boolean;
   error?: ReactNode;
 }>) {
   const t = useT();
-  if (!showDanger && !showRenewal && !showScopeRenewal && error === undefined) {
+  if (!showRenewal && !showScopeRenewal && error === undefined) {
     return null;
   }
   return (
     <div className="settings-panel-commit">
-      {showDanger && <GrantCostNotice />}
       {showRenewal && (
         <Callout
           kind="event"

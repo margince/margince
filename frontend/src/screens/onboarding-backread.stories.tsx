@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { OnboardingBackread } from "./onboarding-backread";
+import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 import {
   installFetchStub,
   jsonResponse,
@@ -20,16 +20,19 @@ import {
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
+// The panel as the connect step mounts it: the choice hook and its panel. The
+// start is the step footer's, storied with the connect scene.
+function Backread({ initial }: Readonly<{ initial: BackfillStatus }>) {
+  const choice = useOnboardingBackread({ provider: "gmail", initial });
+  return <BackreadPanel choice={choice} />;
+}
+
 function backreadStory(initial: BackfillStatus, routes: RouteMap = {}) {
   return () => {
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <OnboardingBackread
-          provider="gmail"
-          initial={initial}
-          onDone={() => {}}
-        />
+        <Backread initial={initial} />
       </StoryProviders>
     );
   };
@@ -46,12 +49,12 @@ const preview =
       ...extra,
     });
 
-const meta: Meta<typeof OnboardingBackread> = {
+const meta: Meta<typeof Backread> = {
   title: "Onboarding/Backread",
-  component: OnboardingBackread,
+  component: Backread,
 };
 export default meta;
-type Story = StoryObj<typeof OnboardingBackread>;
+type Story = StoryObj<typeof Backread>;
 
 export const Pick: Story = {
   render: backreadStory(
@@ -77,10 +80,7 @@ export const Counting: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(/Counting the messages/i);
-    await expect(
-      canvas.getByRole("button", { name: /Connect and read/i }),
-    ).toBeEnabled();
+    await canvas.findByText(/Counting messages/i);
   },
 };
 

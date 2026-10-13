@@ -140,7 +140,7 @@ Records, deals and mail in Margince, by page:
   for a warm introduction and the four answers they can give, and what a website
   read will and will not do.
 - **[Your own settings](your-own-settings.md)** — changing your password,
-  display name, language and theme, your email signature and bookable hours,
+  display name, language and theme, your email signature, your meetings and booking link,
   your writing voice, your agent passports, your mailbox connections, and what
   the last 24 hours of your mail turned into.
 - **[Settings](settings.md)** — how to open Settings, every settings page and

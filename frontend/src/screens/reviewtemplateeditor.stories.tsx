@@ -42,5 +42,6 @@ const meta: Meta<typeof ReviewTemplateEditor> = {
 };
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const MultipleChoices: Story = {};
-export const MultipleChoicesDark: Story = { globals: { theme: "dark" } };
+/** The drawer: question 1 carries the prefill note; a list question its choices. */
+export const Drawer: Story = {};
+export const DrawerDark: Story = { globals: { theme: "dark" } };

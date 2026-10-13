@@ -227,7 +227,7 @@ describe("the first-run setup gate", () => {
     // one part of this step done elsewhere: they stand in the open with their
     // copy buttons, not behind the fold the rest of the help sits in.
     expect(
-      await screen.findByRole("button", { name: "Copy Sign-in URI" }),
+      await screen.findByRole("button", { name: "Copy the Sign-in address" }),
     ).toBeTruthy();
   });
 
@@ -272,13 +272,11 @@ describe("the first-run setup gate", () => {
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(
-      screen.getByText("Still needed: Directory (tenant) ID"),
-    ).toBeTruthy();
+    expect(screen.getByText("Still needed: Directory ID")).toBeTruthy();
     expect(writes.length).toBe(0);
 
     await user.type(
-      screen.getByLabelText("Directory (tenant) ID"),
+      screen.getByLabelText("Directory ID"),
       "00000000-0000-0000-0000-000000000000",
     );
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -299,7 +297,7 @@ describe("the first-run setup gate", () => {
     mount(setupReport(true, false));
     const user = userEvent.setup();
     await screen.findByRole("radio", { name: /Google Workspace/ });
-    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    expect(screen.queryByLabelText("Directory ID")).toBeNull();
     await user.type(screen.getByLabelText("Client ID"), "google-app");
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));

@@ -6,10 +6,8 @@ import type { components } from "../api/schema";
 import { navigate } from "../app/router";
 import { Badge, Button, TextInput } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
-import { CompanyLogo } from "../design-system/companylogo";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
-import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
@@ -20,45 +18,34 @@ import { useSchedulingProfile } from "./scheduling-profile-query";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
-export function BookingProfileScreen({
-  embedded = false,
-}: Readonly<{ embedded?: boolean }>) {
+export function BookingProfileScreen() {
   const t = useT();
   const query = useSchedulingProfile();
   return (
-    <div className={embedded ? "book-form" : "book-page"}>
-      {!embedded && <BookingBack />}
-      {!embedded && (
-        <header className="book-heading">
-          <div>
-            <Heading as="h1" size="large">
-              {t("scheduling.myLink")}
-            </Heading>
-            <p className="t-caption">{t("scheduling.linkIntro")}</p>
-          </div>
-          <Button onClick={() => navigate({ screen: "book", id: "contact" })}>
-            <CalendarDays aria-hidden />
-            {t("scheduling.new")}
-          </Button>
-        </header>
-      )}
+    <div className="book-page">
+      <BookingBack />
+      <header className="book-heading">
+        <div>
+          <Heading as="h1" size="large">
+            {t("scheduling.myLink")}
+          </Heading>
+          <p className="t-caption">{t("scheduling.linkIntro")}</p>
+        </div>
+        <Button onClick={() => navigate({ screen: "book", id: "contact" })}>
+          <CalendarDays aria-hidden />
+          {t("scheduling.new")}
+        </Button>
+      </header>
       <QueryGate pendingLabel={t("common.loading")} query={query}>
         {(profile) => (
-          <ProfileForm
-            key={JSON.stringify(profile)}
-            profile={profile}
-            embedded={embedded}
-          />
+          <ProfileForm key={JSON.stringify(profile)} profile={profile} />
         )}
       </QueryGate>
     </div>
   );
 }
 
-function ProfileForm({
-  profile,
-  embedded,
-}: Readonly<{ profile: Profile; embedded: boolean }>) {
+function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const client = useQueryClient();
   const calendar = useBookingCalendar(profile.provider, false);
@@ -147,7 +134,6 @@ function ProfileForm({
           {!profile.enabled && !profile.provider && (
             <p className="t-caption">{t("scheduling.calendarSetupNeeded")}</p>
           )}
-          {embedded && <BookingIdentity profile={profile} />}
           <ConfirmModal
             open={replace}
             onClose={() => setReplace(false)}
@@ -167,43 +153,7 @@ function ProfileForm({
           <ErrorLine error={save.error} />
         </PanelBody>
       </Panel>
-      {!embedded && (
-        <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
-      )}
+      <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
     </div>
-  );
-}
-
-// Where the booking page's name and branding come from, since neither is
-// edited here. The company shows as the guest's page draws it: the logo when
-// there is one, else the name.
-function BookingIdentity({ profile }: Readonly<{ profile: Profile }>) {
-  const t = useT();
-  const company = profile.company_name;
-  return (
-    <FactList
-      facts={[
-        {
-          key: "name",
-          term: t("scheduling.hostName"),
-          value: profile.host_name || t("field.unset"),
-          note: <a href="#/settings/account">{t("settings.tab.account")}</a>,
-        },
-        {
-          key: "company",
-          term: t("scheduling.brand"),
-          value: company ? (
-            <CompanyLogo
-              name={company}
-              src={profile.logo_url}
-              fallback={company}
-            />
-          ) : (
-            t("field.unset")
-          ),
-          note: <a href="#/settings/company">{t("settings.companyTitle")}</a>,
-        },
-      ]}
-    />
   );
 }

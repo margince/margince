@@ -22,6 +22,10 @@ import {
 } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../design-system/confirmphrase";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import {
@@ -855,13 +859,14 @@ function isLegalHold(problem: unknown): boolean {
   return (problem as Record<string, unknown>).code === "conflict";
 }
 
+// The word that fulfils an erasure. It stays English in every locale.
+const ERASE_PHRASE = "ERASE";
+
 // The single most destructive action in the product: fulfilling an erasure
-// permanently wipes a contact across the whole system. Follows share.tsx's
-// revoke-confirm id-in-state pattern — ONE modal at the card root (never one
-// per row), gated by a typed "ERASE" rather than a plain confirm click. A
-// legal-hold 409 is a documented, lawful refusal (Art. 17(3)(b)), not a
-// malfunction — it gets its own honest copy ahead of the generic fallback,
-// same branch-before-generic shape as isIllegalTransition above.
+// permanently wipes a contact across the whole system. ONE modal at the card
+// root (never one per row, as share.tsx's revoke confirm), gated by a typed
+// ERASE_PHRASE. A legal-hold 409 is a lawful refusal (Art. 17(3)(b)), not a
+// malfunction, so it gets its own copy ahead of the generic fallback.
 function FulfilErasureModal({
   dsr,
   resolution,
@@ -871,31 +876,28 @@ function FulfilErasureModal({
   dsr: DataSubjectRequest | null;
   resolution: string;
   onClose: () => void;
-  // Passed through to the confirm: a fulfilled request is terminal, so the whole
-  // actions branch this was opened from — the button included — is gone by the
-  // time focus comes back.
+  // Passed through to the confirm: a fulfilled request is terminal, so the
+  // button this was opened from is gone by the time focus comes back.
   returnFocusTo: () => HTMLElement | null;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
 
   // Both the staged request and the operator's resolution arrive as the
-  // mutation's variable rather than through this closure. react-query re-arms
-  // a mutation's options in a passive effect, so a confirm landing between the
-  // commit that stages a request and that effect runs the previous render's
-  // function. On the most destructive action in the product that matters twice
-  // over: read through a stale closure, `dsr` is null and the erasure refuses,
-  // and `resolution` is whatever the operator had typed one render ago.
+  // mutation's variable rather than through this closure: react-query re-arms
+  // a mutation's options in a passive effect, so a confirm landing before it
+  // runs the previous render's function, where `dsr` is null and `resolution`
+  // is one render old.
   const patch = useMutation({
     mutationFn: async (
       fulfilment: Readonly<{ request: DataSubjectRequest; resolution: string }>,
     ) => {
       const body: UpdateDataSubjectRequest = { status: "fulfilled" };
       // Same omit-if-blank rule as the row's own plain PATCH above: a blank
-      // resolution key would still be a value the server writes over
-      // whatever it already had stored, so it only rides along when there is
-      // something to write.
+      // resolution would overwrite what the server already stored, so it only
+      // rides along when there is something to write.
       if (fulfilment.resolution.trim()) {
         body.resolution = fulfilment.resolution.trim();
       }
@@ -956,28 +958,26 @@ function FulfilErasureModal({
       title={t("privacy.fulfilErasureTitle")}
       confirmLabel={t("privacy.erasureConfirm")}
       confirmVariant="danger"
-      // Once the server has reported the hold OR that the request moved on,
-      // retrying can only fail the same way again — neither can be resolved
-      // from this modal, so the confirm stays disabled until the operator
-      // closes it and re-opens against the request's current state.
-      confirmDisabled={
-        typed.trim().toUpperCase() !== "ERASE" || held || movedOn
-      }
+      // A reported hold or a request that moved on fails the same way on
+      // every retry, so the confirm stays shut until the operator reopens the
+      // dialog against the request's current state.
+      confirmDisabled={!phraseMatches(typed, ERASE_PHRASE) || held || movedOn}
       onConfirm={() => dsr && patch.mutate({ request: dsr, resolution })}
       pending={patch.isPending}
       error={errorMessage}
       returnFocusTo={returnFocusTo}
+      initialFocusTo={() => phraseInput.current}
     >
-      <p>{t("privacy.erasureIrreversible")}</p>
-      <Field className="dsr-erase-field" label={t("privacy.typeErase")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-          />
-        )}
-      </Field>
+      <div className="form-stack">
+        <p>{t("privacy.erasureIrreversible")}</p>
+        <ConfirmPhraseBox
+          prompt={t("privacy.typeErasePrompt")}
+          phrase={ERASE_PHRASE}
+          value={typed}
+          onChange={setTyped}
+          inputRef={phraseInput}
+        />
+      </div>
       <ErasureRefusals held={held} movedOn={movedOn} />
     </ConfirmModal>
   );

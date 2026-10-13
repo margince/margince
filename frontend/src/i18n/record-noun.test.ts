@@ -76,6 +76,9 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // A booking guest is a human, not the CRM contact record type.
+    "scheduling.personalLinksFoot",
+    "scheduling.whenTitle",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "settings.group.people",
@@ -88,8 +91,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "firstRun.microsoft.tenantHint",
     "firstRun.platform.redirectHint",
     "firstRun.platform.sub",
-    "oauthApp.google.sub",
-    "oauthApp.microsoft.sub",
     "ob.conv.invite.noBody",
     "ob.conv.team.body",
     "ob.digest.referenceNote",
@@ -126,7 +127,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "hold.heldByAddress",
     "hold.heldByDomain",
     "mailSharing.danger",
-    "mailSharing.posture.private",
+    "mailSharing.plate.private",
     "roompage.closeBody",
     "timeline.group.bulk_one",
     "timeline.group.bulk_other",
@@ -153,7 +154,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "provider.automaticLookupJurisdiction",
   ],
   de: [
-    // The meeting host is a human, not the CRM contact record type.
+    // The meeting host and a booking guest are humans, not the CRM contact
+    // record type.
+    "scheduling.personalLinksFoot",
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
@@ -234,7 +237,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "recordAccess.contact.madePrivate",
     "recordAccess.company.privateYours",
     "recordAccess.option.ownerHint",
-    // The meeting host is a human, not the CRM contact record type.
+    // The meeting host and a booking guest are humans, not the CRM contact
+    // record type.
+    "scheduling.personalLinksFoot",
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
     // Human account holders whose full seats determine the shared allowance.
@@ -286,8 +291,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "knowledge.new.topicHint",
     "lead.assignNobodyElse",
     "linkedinImport.connectedNote",
-    "oauthApp.google.sub",
-    "oauthApp.microsoft.sub",
     "ob.conv.invite.noBody",
     "ob.conv.team.body",
     "ob.conv.team.done",
@@ -308,8 +311,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "retention.lawfulBasisHint",
     "retention.withheld",
     "review.reasonHelp",
-    "settings.auditAdminOnly",
-    "settings.auditSub",
     "settings.boundary.deniedBody",
     "settings.companyPositioning",
     "settings.companyResolveAll",
@@ -339,17 +340,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "stageAutomation.noRules",
     "stageAutomation.reviewedHint",
     "users.access.title",
-    "users.adminOnly",
     "users.deactivateConfirmBody",
     "users.emailLabel",
-    "users.empty",
-    "users.inviteOpen",
     "users.inviteSub",
     "users.inviteTitle",
-    "users.memberCount_one",
-    "users.memberCount_other",
-    "users.membersSub",
-    "users.membersTitle",
     "users.nameLabel",
     "users.roleLabel",
     "users.teamNobodyToAdd",
@@ -383,6 +377,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.threadGone",
     "compose.threadStillHeld_one",
     "compose.threadStillHeld_other",
+    // "người gửi" is a sender, a human the mailbox heard from.
+    "connectors.heldPointer.label",
+    "connectors.heldPointer.none",
+    "connectors.heldPointer.some_one",
+    "connectors.heldPointer.some_other",
+    "connectors.heldPointer.unknown",
     "connectors.mailPosture.help.classified",
     "connectors.mailPosture.help.held",
     "email.access.sentence.participants",
@@ -394,7 +394,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "hold.heldByAddress",
     "hold.heldByDomain",
     "mailSharing.danger",
-    "mailSharing.posture.private",
+    "mailSharing.plate.private",
     "roompage.banner.closed",
     "roompage.banner.expired",
     "roompage.banner.paused",

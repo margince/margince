@@ -151,17 +151,17 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
   const settings = await settingsPromise;
   await expect(
-    settings.getByRole("heading", { name: de["scheduling.availabilityTitle"] }),
+    settings.getByRole("heading", { name: de["scheduling.calendarTitle"] }),
   ).toBeVisible();
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
   ).toHaveCount(0);
-  await settings
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
-    .click();
-  await expect(
-    settings.getByText(de["settings.saved"], { exact: true }),
-  ).toBeVisible();
+  const saveCalendar = settings.getByRole("button", {
+    name: de["scheduling.saveCalendar"],
+    exact: true,
+  });
+  await saveCalendar.click();
+  await expect(saveCalendar).toHaveCount(0);
   await settings.close();
   await page.bringToFront();
   await page.evaluate(() =>
@@ -359,25 +359,32 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   });
   await page.goto("/#/settings/meetings");
   await expect(
-    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
-  ).toHaveValue(bookingProfile.public_url ?? "");
+    page.getByText(bookingProfile.public_url ?? "", { exact: true }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Firmenname")).toHaveCount(0);
-  await expect(
-    page.getByPlaceholder("https://meet.google.com/abc-defg-hij"),
-  ).toBeVisible();
-  await page.getByLabel(de["scheduling.notice"]).fill("24");
   await page
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
+    .getByRole("combobox", { name: de["scheduling.noticeRow"] })
+    .click();
+  await page.getByRole("option", { name: de["scheduling.ruleOther"] }).click();
+  await page.getByLabel(de["scheduling.ruleMinutes"]).fill("1440");
+  await page
+    .getByRole("button", {
+      name: de["scheduling.saveAvailability"],
+      exact: true,
+    })
     .click();
   await expect(
     page.getByText(de["settings.saved"], { exact: true }),
   ).toBeVisible();
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ notice_minutes: 1440, enabled: false });
-  await page.getByRole("button", { name: de["scheduling.preview"] }).click();
+  await page
+    .getByRole("button", { name: de["scheduling.preview"] })
+    .first()
+    .click();
   await expect(page).toHaveURL(/#\/book\/preview$/);
   await expect(page.getByText(de["scheduling.previewPaused"])).toBeVisible();
   await expect(
@@ -425,32 +432,28 @@ test("calendar setup enables booking with the existing Account name", async ({
   });
   await page.goto("/#/settings/meetings");
   await expect(
-    page.getByText(de["scheduling.hostName"], { exact: true }),
+    page.getByText(
+      de["scheduling.yourNameHelp"].replace(
+        "{name}",
+        bookingProfile.host_name ?? "",
+      ),
+      { exact: true },
+    ),
   ).toBeVisible();
-  await expect(page.locator(".factlist")).toContainText(
-    bookingProfile.host_name ?? "",
-  );
-  await expect(
-    page
-      .getByRole("main")
-      .getByRole("link", { name: de["settings.tab.account"], exact: true }),
-  ).toHaveAttribute("href", "#/settings/account");
-  await expect(
-    page.getByRole("button", { name: de["scheduling.resume"], exact: true }),
-  ).toBeDisabled();
-  await page
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
-    .click();
-  await expect(
-    page.getByText(de["settings.saved"], { exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: de["scheduling.resume"], exact: true })
-    .click();
-  await expect(
-    page.getByText(de["scheduling.active"], { exact: true }),
-  ).toHaveCount(2);
-  expect(writes).toHaveLength(2);
+  const accept = page.getByRole("switch", {
+    name: de["scheduling.acceptBookings"],
+  });
+  await expect(accept).toBeDisabled();
+  const saveCalendar = page.getByRole("button", {
+    name: de["scheduling.saveCalendar"],
+    exact: true,
+  });
+  await saveCalendar.click();
+  await expect(saveCalendar).toHaveCount(0);
+  await expect(accept).toBeEnabled();
+  await accept.click();
+  await expect(accept).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => writes.length).toBe(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",
     enabled: true,

@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { ProviderRowTone } from "../design-system/providerrow";
 import type { MessageKey } from "../i18n/en";
+import type { ConnectionAccount } from "./connectorproviders";
 
 // The shared connector-status vocabulary: Settings (the connected-inboxes
 // card) and the Brief's digest both render connector health, and they must never
@@ -144,4 +146,74 @@ export function missingCalendarWriteGrant(
     grants !== undefined &&
     !grants.some((scope) => connection.scopes.includes(scope))
   );
+}
+
+/** The words the Connections page puts on an account and on each service.
+ *  Their own keys, never statusLabel's: the Telegram badge reads those. */
+export type ConnectorHealth =
+  | "connected"
+  | "syncing"
+  | "up_to_date"
+  | "needs_reconnect"
+  | "needs_attention"
+  | "not_connected";
+
+type HealthBadge = Readonly<{ tone: ProviderRowTone; label: MessageKey }>;
+
+const HEALTH_BADGE: Readonly<Record<ConnectorHealth, HealthBadge>> = {
+  connected: { tone: "success", label: "connectors.health.connected" },
+  syncing: { tone: "info", label: "connectors.health.syncing" },
+  up_to_date: { tone: "success", label: "connectors.health.upToDate" },
+  needs_reconnect: { tone: "warning", label: "connectors.health.reconnect" },
+  needs_attention: { tone: "warning", label: "connectors.health.attention" },
+  not_connected: { tone: "default", label: "connectors.health.notConnected" },
+};
+
+export function healthBadge(health: ConnectorHealth): HealthBadge {
+  return HEALTH_BADGE[health];
+}
+
+type ServiceFacts = Pick<CaptureConnection, "status" | "last_sync_error_class">;
+
+/** One service's word. A connected row still carrying an error class is in a
+ *  failure streak the sweep has not given up on, so it is not up to date. */
+export function serviceHealth(service: ServiceFacts): ConnectorHealth {
+  switch (service.status) {
+    case "reauth_required":
+      return "needs_reconnect";
+    case "error":
+      return "needs_attention";
+    case "disconnected":
+      return "not_connected";
+    case "connected":
+      return service.last_sync_error_class ? "needs_attention" : "up_to_date";
+  }
+}
+
+/** The account's word. A broken service outranks a running import: the import
+ *  shows its own progress, and the reconnect is what the member has to do. A
+ *  grant too narrow to send or to book counts as broken, as its row says. */
+export function accountHealth(
+  account: Pick<ConnectionAccount, "mail" | "calendar">,
+): ConnectorHealth {
+  const services = [account.mail, account.calendar]
+    .filter((service) => service !== null)
+    .filter((service) => service.status !== "disconnected");
+  if (services.length === 0) return "not_connected";
+  const broken = services.some((service) => {
+    const health = serviceHealth(service);
+    return (
+      health === "needs_reconnect" ||
+      health === "needs_attention" ||
+      missingSendGrant(service) ||
+      missingCalendarWriteGrant(service)
+    );
+  });
+  if (broken) return "needs_attention";
+  const importing = services.some(
+    (service) =>
+      service.backfill?.state === "queued" ||
+      service.backfill?.state === "running",
+  );
+  return importing ? "syncing" : "connected";
 }

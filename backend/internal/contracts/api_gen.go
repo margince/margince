@@ -778,6 +778,30 @@ func (e AiActivityKind) Valid() bool {
 	}
 }
 
+// Defines values for AiCallOutcome.
+const (
+	AiCallOutcomeAnswered AiCallOutcome = "answered"
+	AiCallOutcomeDeclined AiCallOutcome = "declined"
+	AiCallOutcomeFailed   AiCallOutcome = "failed"
+	AiCallOutcomeFallback AiCallOutcome = "fallback"
+)
+
+// Valid indicates whether the value is a known member of the AiCallOutcome enum.
+func (e AiCallOutcome) Valid() bool {
+	switch e {
+	case AiCallOutcomeAnswered:
+		return true
+	case AiCallOutcomeDeclined:
+		return true
+	case AiCallOutcomeFailed:
+		return true
+	case AiCallOutcomeFallback:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiEmbeddingsBindingThinkingLevel.
 const (
 	AiEmbeddingsBindingThinkingLevelDefault AiEmbeddingsBindingThinkingLevel = "default"
@@ -5452,8 +5476,63 @@ func (e ConnectChannelRequestProvider) Valid() bool {
 	}
 }
 
+// Defines values for ConnectConnectorRequestAlsoConnect.
+const (
+	ConnectConnectorRequestAlsoConnectGcal     ConnectConnectorRequestAlsoConnect = "gcal"
+	ConnectConnectorRequestAlsoConnectGraphcal ConnectConnectorRequestAlsoConnect = "graphcal"
+)
+
+// Valid indicates whether the value is a known member of the ConnectConnectorRequestAlsoConnect enum.
+func (e ConnectConnectorRequestAlsoConnect) Valid() bool {
+	switch e {
+	case ConnectConnectorRequestAlsoConnectGcal:
+		return true
+	case ConnectConnectorRequestAlsoConnectGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectConnectorRequestImportWindow.
+const (
+	ConnectConnectorRequestImportWindowN120m ConnectConnectorRequestImportWindow = "120m"
+	ConnectConnectorRequestImportWindowN12m  ConnectConnectorRequestImportWindow = "12m"
+	ConnectConnectorRequestImportWindowN24m  ConnectConnectorRequestImportWindow = "24m"
+	ConnectConnectorRequestImportWindowN36m  ConnectConnectorRequestImportWindow = "36m"
+	ConnectConnectorRequestImportWindowN3m   ConnectConnectorRequestImportWindow = "3m"
+	ConnectConnectorRequestImportWindowN60m  ConnectConnectorRequestImportWindow = "60m"
+	ConnectConnectorRequestImportWindowN6m   ConnectConnectorRequestImportWindow = "6m"
+	ConnectConnectorRequestImportWindowN84m  ConnectConnectorRequestImportWindow = "84m"
+)
+
+// Valid indicates whether the value is a known member of the ConnectConnectorRequestImportWindow enum.
+func (e ConnectConnectorRequestImportWindow) Valid() bool {
+	switch e {
+	case ConnectConnectorRequestImportWindowN120m:
+		return true
+	case ConnectConnectorRequestImportWindowN12m:
+		return true
+	case ConnectConnectorRequestImportWindowN24m:
+		return true
+	case ConnectConnectorRequestImportWindowN36m:
+		return true
+	case ConnectConnectorRequestImportWindowN3m:
+		return true
+	case ConnectConnectorRequestImportWindowN60m:
+		return true
+	case ConnectConnectorRequestImportWindowN6m:
+		return true
+	case ConnectConnectorRequestImportWindowN84m:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectConnectorRequestReturnTo.
 const (
+	ConnectConnectorRequestReturnToMeetings   ConnectConnectorRequestReturnTo = "meetings"
 	ConnectConnectorRequestReturnToOnboarding ConnectConnectorRequestReturnTo = "onboarding"
 	ConnectConnectorRequestReturnToSettings   ConnectConnectorRequestReturnTo = "settings"
 )
@@ -5461,6 +5540,8 @@ const (
 // Valid indicates whether the value is a known member of the ConnectConnectorRequestReturnTo enum.
 func (e ConnectConnectorRequestReturnTo) Valid() bool {
 	switch e {
+	case ConnectConnectorRequestReturnToMeetings:
+		return true
 	case ConnectConnectorRequestReturnToOnboarding:
 		return true
 	case ConnectConnectorRequestReturnToSettings:
@@ -21446,6 +21527,9 @@ type AiCall struct {
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
+	// EstimatedCostMicrousd Price-sheet estimate for every attempt of this logical call, in millionths of one US dollar, priced on read exactly as the usage report prices it, so the list sums to the usage total. Omitted, never 0, when any attempt had usage but no effective rate. A cache hit costs 0.
+	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty"`
+
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
@@ -21460,6 +21544,9 @@ type AiCall struct {
 	// ModelId The configured binding.
 	ModelId    string    `json:"model_id"`
 	OccurredAt time.Time `json:"occurred_at"`
+
+	// Outcome How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+	Outcome AiCallOutcome `json:"outcome"`
 
 	// Payload Present only when payload_captured. Post-secret-stripper content (AIRT-AC-4); rune-capped with a visible truncation marker.
 	Payload *struct {
@@ -21541,7 +21628,10 @@ type AiCallConfig struct {
 // AiCallListResponse defines model for AiCallListResponse.
 type AiCallListResponse struct {
 	Data []AiCallSummary `json:"data"`
-	Page PageInfo        `json:"page"`
+
+	// Models Every value the `model` filter accepts (served model, or configured model when none was reported) across terminal calls, sorted, independent of the current page and filters.
+	Models []string `json:"models"`
+	Page   PageInfo `json:"page"`
 
 	// PayloadCaptureEnabled The deployment's ai.capture_payloads posture.
 	PayloadCaptureEnabled bool `json:"payload_capture_enabled"`
@@ -21549,6 +21639,9 @@ type AiCallListResponse struct {
 	// Tasks Every task with at least one terminal call, sorted — the complete filter option set (matches the terminal-only list), independent of the current page.
 	Tasks []string `json:"tasks"`
 }
+
+// AiCallOutcome How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+type AiCallOutcome string
 
 // AiCallSummary One terminal model call from the ai_call trace (AIRT-SCHEMA-2).
 type AiCallSummary struct {
@@ -21568,6 +21661,9 @@ type AiCallSummary struct {
 	// `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
 	ErrorSentinel *string `json:"error_sentinel,omitempty"`
 
+	// EstimatedCostMicrousd Price-sheet estimate for every attempt of this logical call, in millionths of one US dollar, priced on read exactly as the usage report prices it, so the list sums to the usage total. Omitted, never 0, when any attempt had usage but no effective rate. A cache hit costs 0.
+	EstimatedCostMicrousd *int64 `json:"estimated_cost_microusd,omitempty"`
+
 	// HasPayload A captured payload row exists for this call.
 	HasPayload bool               `json:"has_payload"`
 	Id         openapi_types.UUID `json:"id"`
@@ -21577,10 +21673,13 @@ type AiCallSummary struct {
 	LatencyMs int    `json:"latency_ms"`
 
 	// ModelId The configured binding.
-	ModelId         string    `json:"model_id"`
-	OccurredAt      time.Time `json:"occurred_at"`
-	Provider        string    `json:"provider"`
-	ReasoningTokens int       `json:"reasoning_tokens"`
+	ModelId    string    `json:"model_id"`
+	OccurredAt time.Time `json:"occurred_at"`
+
+	// Outcome How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+	Outcome         AiCallOutcome `json:"outcome"`
+	Provider        string        `json:"provider"`
+	ReasoningTokens int           `json:"reasoning_tokens"`
 
 	// ServedModel What the provider reported serving.
 	ServedModel string `json:"served_model"`
@@ -23803,6 +23902,13 @@ type AuthenticationPolicy struct {
 	// this document governs is the providers, and `/auth/capabilities` reports the
 	// methods a login screen may draw.
 	SignInProviders []SignInProvider `json:"sign_in_providers"`
+
+	// SignInScreen The provider keys a visitor's login screen draws today: the ones the installation
+	// offers AND holds an OAuth client for, the same answer `/auth/capabilities`
+	// gives as `oidc_providers`. Where `sign_in_providers` says what was chosen, this says
+	// what took effect, so a screen can mark a chosen provider that is still missing its
+	// app. Empty when none is drawn, never absent.
+	SignInScreen []string `json:"sign_in_screen"`
 }
 
 // Authorization What this principal may do, as the server itself computed it — never a client-side re-derivation from role keys, which drifts the moment an installation's stored grants differ from the compiled-in defaults.
@@ -25100,8 +25206,9 @@ type CaptureOwnerIdentitySource string
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
 // endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
-// choose between (gmail, graph, imap); the paired calendar connectors (gcal, graphcal) are
-// created by a mail grant rather than picked, so they are absent.
+// choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent:
+// each is its own grant, asked for after its mail provider's (`ConnectConnectorRequest.also_connect`)
+// or connected directly, on the same vendor OAuth app as its mail provider.
 type CaptureProviderAvailability struct {
 	// Provider The mail provider a seat picks between.
 	Provider CaptureProviderAvailabilityProvider `json:"provider"`
@@ -28406,10 +28513,20 @@ type ConnectChannelRequest struct {
 type ConnectChannelRequestProvider string
 
 // ConnectConnectorRequest Connect a capture source. Providers differ in kind, not in path: an OAuth provider
-// (gmail, gcal, graph, graphcal) needs no body and answers with `authorize_url`; a credential
-// provider (imap) submits `imap` and answers with the created `connection`. Exactly one
-// of `authorize_url` or `connection` is returned.
+// (gmail, gcal, graph, graphcal) answers with `authorize_url`; a credential provider (imap)
+// submits `imap` and answers with the created `connection`. Exactly one of `authorize_url`
+// or `connection` is returned. The OAuth body is optional and may carry `return_to`,
+// `also_connect` and `import_window`, all of which ride the signed state to the callback.
 type ConnectConnectorRequest struct {
+	// AlsoConnect The paired calendar to ask for straight after this mail grant, in one round trip:
+	// the mail callback stores its grant, then redirects to the calendar's own consent
+	// instead of landing, and the landing names the calendar's outcome. Only `gcal` after
+	// `gmail` and `graphcal` after `graph`; any other pairing is refused with
+	// `422 also_connect_mismatch`. The calendar must be connectable right now, or the
+	// request answers exactly as a direct connect to it would. A declined or failed
+	// calendar consent leaves the mail grant in place.
+	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
+
 	// Imap Direct IMAP credentials (the `imap` provider only).
 	Imap *struct {
 		Host string `json:"host"`
@@ -28428,11 +28545,26 @@ type ConnectConnectorRequest struct {
 		Username string `json:"username"`
 	} `json:"imap,omitempty"`
 
+	// ImportWindow The past-email window to import once the mail grant is stored. The callback takes
+	// the estimate then, and starts the import by itself only when that estimate is small
+	// enough to need no review; above that, or when the estimate fails, nothing starts and
+	// the landing carries the held window as `?import={window}` after its route (also on a
+	// chained calendar's landing), so the screen previews it (`previewConnectorBackfill`)
+	// and offers the start. No query means the import started or none was asked for. OAuth
+	// mail providers only (a calendar is refused with `422 not_a_mailbox`, `imap` with
+	// `422 connector_unsupported`); a window above what this installation offers
+	// (`BackfillStatus.offered_windows`) is refused with `422 window_invalid`. Absent means
+	// no import starts. A failure to start one still lands the connect as connected.
+	ImportWindow *ConnectConnectorRequestImportWindow `json:"import_window,omitempty"`
+
 	// RedirectUri App page to return to after OAuth consent (OAuth providers).
 	RedirectUri *string `json:"redirect_uri,omitempty"`
 
-	// ReturnTo Which surface the post-consent redirect lands on. Absent means `onboarding`.
-	// A closed enum, never a URL — the server maps it to a fixed path, so it carries no
+	// ReturnTo Which surface the post-consent redirect lands on: `onboarding` lands on
+	// `/#/onboarding/connect/{outcome}/{provider}`, `settings` on
+	// `/#/settings/connections/{outcome}/{provider}` and `meetings` on
+	// `/#/settings/meetings/{outcome}/{provider}`. Absent means `onboarding`.
+	// A closed enum, never a URL: the server maps it to a fixed path, so it carries no
 	// open-redirect surface. Ignored by credential providers, which never redirect.
 	ReturnTo *ConnectConnectorRequestReturnTo `json:"return_to,omitempty"`
 
@@ -28443,8 +28575,32 @@ type ConnectConnectorRequest struct {
 	ShareAcknowledged *bool `json:"share_acknowledged,omitempty"`
 }
 
-// ConnectConnectorRequestReturnTo Which surface the post-consent redirect lands on. Absent means `onboarding`.
-// A closed enum, never a URL — the server maps it to a fixed path, so it carries no
+// ConnectConnectorRequestAlsoConnect The paired calendar to ask for straight after this mail grant, in one round trip:
+// the mail callback stores its grant, then redirects to the calendar's own consent
+// instead of landing, and the landing names the calendar's outcome. Only `gcal` after
+// `gmail` and `graphcal` after `graph`; any other pairing is refused with
+// `422 also_connect_mismatch`. The calendar must be connectable right now, or the
+// request answers exactly as a direct connect to it would. A declined or failed
+// calendar consent leaves the mail grant in place.
+type ConnectConnectorRequestAlsoConnect string
+
+// ConnectConnectorRequestImportWindow The past-email window to import once the mail grant is stored. The callback takes
+// the estimate then, and starts the import by itself only when that estimate is small
+// enough to need no review; above that, or when the estimate fails, nothing starts and
+// the landing carries the held window as `?import={window}` after its route (also on a
+// chained calendar's landing), so the screen previews it (`previewConnectorBackfill`)
+// and offers the start. No query means the import started or none was asked for. OAuth
+// mail providers only (a calendar is refused with `422 not_a_mailbox`, `imap` with
+// `422 connector_unsupported`); a window above what this installation offers
+// (`BackfillStatus.offered_windows`) is refused with `422 window_invalid`. Absent means
+// no import starts. A failure to start one still lands the connect as connected.
+type ConnectConnectorRequestImportWindow string
+
+// ConnectConnectorRequestReturnTo Which surface the post-consent redirect lands on: `onboarding` lands on
+// `/#/onboarding/connect/{outcome}/{provider}`, `settings` on
+// `/#/settings/connections/{outcome}/{provider}` and `meetings` on
+// `/#/settings/meetings/{outcome}/{provider}`. Absent means `onboarding`.
+// A closed enum, never a URL: the server maps it to a fixed path, so it carries no
 // open-redirect surface. Ignored by credential providers, which never redirect.
 type ConnectConnectorRequestReturnTo string
 
@@ -46566,6 +46722,21 @@ type ListAiCallsParams struct {
 
 	// Task Filter to one task (capture_classify, enrich, …).
 	Task *string `form:"task,omitempty" json:"task,omitempty"`
+
+	// From Only calls that occurred at or after this instant.
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Only calls that occurred before this instant. Must be after `from` when both are set.
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+
+	// Outcome Only calls in this outcome bucket, the same bucket each summary reports.
+	Outcome *AiCallOutcome `form:"outcome,omitempty" json:"outcome,omitempty"`
+
+	// Model Only calls whose served model, or configured model when none was reported, is exactly this. The response's `models` lists every value.
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+
+	// Q Case-insensitive substring over task key (underscores also match spaces), provider, configured and served model, and error code.
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
 // GetAiUsageParams defines parameters for GetAiUsage.
@@ -72032,6 +72203,71 @@ func (siw *ServerInterfaceWrapper) ListAiCalls(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "task"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "task", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "outcome" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "outcome", r.URL.Query(), &params.Outcome, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "outcome"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "outcome", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "model" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "model", r.URL.Query(), &params.Model, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "model"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "model", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
 		}
 		return
 	}

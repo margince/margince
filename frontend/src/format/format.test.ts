@@ -7,6 +7,7 @@ import {
   formatDateTime,
   formatDayMonth,
   formatDuration,
+  formatMicroUSD,
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
@@ -312,6 +313,20 @@ describe("a number that names or places is not a magnitude", () => {
     // And agrees with it below that width, which is why three of these sites
     // looked correct for as long as the demo data stayed small.
     expect(identifierNumber(999)).toBe(formatNumber(999, "de"));
+  });
+});
+
+describe("formatMicroUSD", () => {
+  // One AI call usually costs a fraction of a cent, which formatMoney would
+  // print as $0.00 and so call free.
+  it("keeps a sub-cent estimate visible", () => {
+    expect(formatMicroUSD(4300, "en")).toBe("US$0.0043");
+    expect(formatMicroUSD(4300, "de")).toBe("0,0043\u00a0$");
+  });
+
+  it("reads a whole-cent estimate and a genuine zero at two digits", () => {
+    expect(formatMicroUSD(1_250_000, "en")).toBe("US$1.25");
+    expect(formatMicroUSD(0, "en")).toBe("US$0.00");
   });
 });
 

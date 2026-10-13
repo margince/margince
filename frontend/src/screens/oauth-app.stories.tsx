@@ -5,26 +5,24 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
-import { OAuthAppCard } from "./oauth-app";
+import {
+  OAuthAppDrawer,
+  RedirectAddressesDialog,
+  RemoveOAuthAppDialog,
+} from "./oauth-app-drawer";
 import { installFetchStub, jsonResponse } from "./story-utils";
 
-// The card has THREE states, and the middle one is why it was rewritten: an app
-// the DEPLOYMENT supplies is neither a stored app nor the absence of one, and
-// reporting it as absent told operators Gmail could not be connected on
-// installations where it demonstrably could.
-//
-// It is now ONE component rendered per vendor, so the Microsoft story is not a
-// duplicate: it carries a state Google cannot have — a directory pin — and its
-// copy, callbacks and vendor console all differ. A reader comparing the two is
-// checking exactly what the shared card is allowed to vary.
+// The setup drawer and the two dialogs a stored app's menu opens. Google and
+// Microsoft are both drawn because they differ in what the drawer asks: only
+// Microsoft has a directory to pin.
 
-const meta: Meta<typeof OAuthAppCard> = {
+const meta: Meta<typeof OAuthAppDrawer> = {
   title: "Settings/Company/Sign-in and apps/Connector app",
-  component: OAuthAppCard,
+  component: OAuthAppDrawer,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof OAuthAppCard>;
+type Story = StoryObj<typeof OAuthAppDrawer>;
 
 const CLIENT_ID = "111-abc.apps.googleusercontent.com";
 const URIS = [
@@ -56,6 +54,7 @@ function Served({
     "GET /me": () =>
       jsonResponse({
         user: { email: "admin@brandt.example" },
+        workspace_name: "Brandt Automotive GmbH",
         authorization: { capture_settings: ["read", "update"] },
       }),
   });
@@ -68,56 +67,6 @@ function Served({
     </QueryClientProvider>
   );
 }
-
-/** An app saved through this surface, which wins over the deployment's. */
-export const Stored: Story = {
-  render: () => (
-    <Served
-      app={{
-        configured: true,
-        client_id: CLIENT_ID,
-        source: "stored",
-        redirect_uris: URIS,
-      }}
-    >
-      <OAuthAppCard provider="google" />
-    </Served>
-  ),
-};
-
-/** The deployment's own credentials, used because nothing is stored. */
-export const FromEnvironment: Story = {
-  render: () => (
-    <Served
-      app={{
-        configured: true,
-        client_id: CLIENT_ID,
-        source: "environment",
-        redirect_uris: URIS,
-      }}
-    >
-      <OAuthAppCard provider="google" />
-    </Served>
-  ),
-};
-
-/** Neither source can supply one, so neither flow can run — but the URIs are
- * still listed, because this is the state an operator is in while creating the
- * OAuth client that will end it. */
-export const Absent: Story = {
-  render: () => (
-    <Served
-      app={{
-        configured: false,
-        client_id: "",
-        source: "none",
-        redirect_uris: URIS,
-      }}
-    >
-      <OAuthAppCard provider="google" />
-    </Served>
-  ),
-};
 
 const ENTRA_ID = "11111111-2222-3333-4444-555555555555";
 const GRAPH_URIS = [
@@ -135,9 +84,33 @@ const GRAPH_URIS = [
   },
 ];
 
-/** The Microsoft variant, pinned to one Entra directory — the state Google has
- * no equivalent of, and the reason the tenant field exists at all. */
-export const MicrosoftPinnedToADirectory: Story = {
+const noop = () => undefined;
+
+/** The setup drawer on an installation with no Google app: three steps, the
+ * redirect table with Copy all, and Save waiting for both halves of the pair. */
+export const SetupDrawerGoogle: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: false,
+        client_id: "",
+        source: "none",
+        redirect_uris: URIS,
+      }}
+    >
+      <OAuthAppDrawer provider="google" open onClose={noop} />
+    </Served>
+  ),
+};
+
+export const SetupDrawerGoogleDark: Story = {
+  ...SetupDrawerGoogle,
+  globals: { theme: "dark" },
+};
+
+/** Replacing a stored Microsoft app: the same drawer, opened with the client
+ * id and directory in place, so a secret rotation is one field. */
+export const ReplaceDrawerMicrosoft: Story = {
   render: () => (
     <Served
       app={{
@@ -148,24 +121,48 @@ export const MicrosoftPinnedToADirectory: Story = {
         redirect_uris: GRAPH_URIS,
       }}
     >
-      <OAuthAppCard provider="microsoft" />
+      <OAuthAppDrawer provider="microsoft" open onClose={noop} />
     </Served>
   ),
 };
 
-/** Unpinned: the same app authorizing any company, which is what an
- * omitted tenant means rather than an empty one. */
-export const MicrosoftAnyCompany: Story = {
+export const ReplaceDrawerMicrosoftDark: Story = {
+  ...ReplaceDrawerMicrosoft,
+  globals: { theme: "dark" },
+};
+
+const STORED_GOOGLE = {
+  configured: true,
+  client_id: CLIENT_ID,
+  source: "stored",
+  redirect_uris: URIS,
+};
+
+/** Removing a stored app: the impact list, then the typed phrase that unlocks
+ * Remove app. */
+export const RemoveGoogle: Story = {
   render: () => (
-    <Served
-      app={{
-        configured: true,
-        client_id: ENTRA_ID,
-        source: "environment",
-        redirect_uris: GRAPH_URIS,
-      }}
-    >
-      <OAuthAppCard provider="microsoft" />
+    <Served app={STORED_GOOGLE}>
+      <RemoveOAuthAppDialog provider="google" open onClose={noop} />
     </Served>
   ),
+};
+
+export const RemoveGoogleDark: Story = {
+  ...RemoveGoogle,
+  globals: { theme: "dark" },
+};
+
+/** A stored app's redirect addresses on their own, from its menu. */
+export const RedirectAddressesGoogle: Story = {
+  render: () => (
+    <Served app={STORED_GOOGLE}>
+      <RedirectAddressesDialog provider="google" open onClose={noop} />
+    </Served>
+  ),
+};
+
+export const RedirectAddressesGoogleDark: Story = {
+  ...RedirectAddressesGoogle,
+  globals: { theme: "dark" },
 };

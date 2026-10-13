@@ -147,11 +147,9 @@ export type SettingsScope =
   | "team"
   | "workspace"
   | "installation"
-  // A page whose surfaces do not agree. My connections is the case: most of its
-  // cards are the reader's own mailboxes and network, and one is not —
-  // ConnectorsCard's second panel is the workspace's Telegram bot, connected
-  // once for everybody, sitting beside the mailboxes each reader connects for
-  // themselves.
+  // A page whose surfaces do not agree. Capture activity is the case: the
+  // reader's own trace sits beside exclusion rules that keep a correspondent
+  // out of the CRM for everybody.
   //
   // Its own value rather than picking the wider of the two, because "Company"
   // over a page that is mostly personal is as wrong as "Only you" over a
@@ -283,30 +281,21 @@ export const SETTINGS_PAGES = [
     // nothing here an admin sets for somebody else and no grant to withhold.
     changes: always,
   },
-  // MIXED, not self: most of its cards are the reader's own, and ConnectorsCard
-  // carries the workspace's Telegram bot beside them. A page-level "Only you"
-  // over that panel would tell a reader a shared connection is private to them.
-  //
-  // The mail-sharing SWITCH left this page for Capture rules, where the rest of
-  // the installation's capture posture lives. What stays is a value-only row
-  // saying what the rule currently is, which claims nothing about who may
-  // change it.
+  // Self: every card is the reader's own. The mail-sharing plate states a
+  // company rule and carries its own "Whole company" badge, changed on Capture
+  // rules; the Telegram bot lives on Integrations.
   {
     id: "connections",
     group: "me",
-    scope: "mixed",
+    scope: "self",
     requires: always,
-    // Acting, not consulting: the mailbox, sender and LinkedIn controls are the
-    // reader's own and need no grant, and the mail-sharing row states a value
-    // and offers no control at all. The Telegram panel gates its own verbs on
-    // `channel_connection`, so this field need not withhold the page for it.
+    // The mailbox and LinkedIn controls are the reader's own and need no
+    // grant; the mail-sharing plate states a value and offers no control.
     changes: always,
   },
-  // MIXED for the same reason as `connections`, one page along:
-  // CaptureExclusionsCard carries BOTH scopes by design — its own comment says
-  // so — and its workspace rules keep a correspondent out of the CRM for
-  // everybody. The workspace activity view behind `capture_trace:read` is the
-  // installation's too.
+  // MIXED: CaptureExclusionsCard carries both scopes by design, and the
+  // workspace activity view behind `capture_trace:read` is the installation's.
+  // The held threads and senders cards are the reader's own.
   {
     id: "capture-activity",
     group: "me",
@@ -564,6 +553,7 @@ export const SETTINGS_PAGES = [
     // ops work.
     requires: anyOf(
       writes("webhook_subscription"),
+      writes("channel_connection"),
       // A composed workspace-scoped unit puts its settings on this page and
       // nowhere else, so the page has to open for it even when the reader holds
       // none of the grants above.
@@ -583,6 +573,8 @@ export const SETTINGS_PAGES = [
         destroys("integrations"),
         writes("webhook_subscription"),
         destroys("webhook_subscription"),
+        writes("channel_connection"),
+        destroys("channel_connection"),
       ),
       composedUnits("workspace"),
     ),

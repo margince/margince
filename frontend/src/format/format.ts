@@ -169,6 +169,20 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
 }
 
 /**
+ * A price-sheet estimate held in millionths of a dollar, as the AI cost reads
+ * carry it. Not `formatMoney`: it rounds a fraction-of-a-cent read to $0.00.
+ * The locale stays the reader's, because a German reader writes 0,0043 $.
+ */
+export function formatMicroUSD(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: value > 0 && value < 10_000 ? 4 : 2,
+    maximumFractionDigits: 6,
+  }).format(value / 1_000_000);
+}
+
+/**
  * A share of a whole where the FRACTION matters: "0.4 %", "12.0 %".
  *
  * `formatPercent` rounds to whole numbers, which is right for progress. It is

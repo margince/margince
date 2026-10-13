@@ -15,6 +15,10 @@ import { LocaleProvider } from "../i18n";
 import { BackfillPanel } from "./backfill";
 import { installFetchStub } from "./story-utils";
 
+// The panel is the import dialog's body; these cases are about what it draws,
+// and the ones about leaving it pass their own onClose.
+const noop = () => undefined;
+
 // The connect-time backfill is the coldstart payoff: the scope must auto-load
 // (honest scope before any click), the spend must still wait for the explicit
 // start (ADR-0020 preview-before-spend), and the run must render the three
@@ -159,7 +163,7 @@ describe("the connect-time backfill payoff", () => {
       "POST /connectors/gmail/backfill/preview": () =>
         jsonResponse(previewOf(400)),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
     await user.click(
       await screen.findByRole("button", { name: /Start a new import/ }),
     );
@@ -178,7 +182,7 @@ describe("the connect-time backfill payoff", () => {
       statuses: [statusNone],
       preview: previewOf(90210),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
     const picker = await screen.findByRole("combobox", {
       name: "How far back",
     });
@@ -222,7 +226,7 @@ describe("the connect-time backfill payoff", () => {
       statuses: [statusNone],
       preview: { ...previewOf(20000), estimate_is_floor: true },
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText(/20,000 emails or more/)).toBeTruthy();
     // And not as a plain count, which is the statement this replaces.
@@ -231,7 +235,7 @@ describe("the connect-time backfill payoff", () => {
 
   it("auto-loads the scope estimate without a click, and does not spend until start", async () => {
     const calls = stubApi({ statuses: [statusNone], preview: previewOf(1234) });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     // The scope appears with no user interaction, and the WINDOW leads it: the
     // period of their own mailbox is what the mailbox owner agrees to, and the count
@@ -254,7 +258,7 @@ describe("the connect-time backfill payoff", () => {
       statuses: [statusNone],
       preview: { ...previewOf(400), estimated_cost_minor: 250 },
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText(/about US\$2\.50/)).toBeTruthy();
     expect(screen.queryByText(/EUR/)).toBeNull();
@@ -266,7 +270,7 @@ describe("the connect-time backfill payoff", () => {
       preview: previewOf(400),
       onStart: countsStatus("running", { captured: 0 }),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     await screen.findByText(/400 emails in that time/);
     await user.click(screen.getByRole("button", { name: /Start import/ }));
@@ -274,6 +278,34 @@ describe("the connect-time backfill payoff", () => {
     await waitFor(() =>
       expect(requestsTo(calls, "/backfill", "POST").length).toBe(1),
     );
+  });
+
+  it("steps aside once the server has accepted the start", async () => {
+    stubApi({
+      statuses: [statusNone],
+      preview: previewOf(400),
+      onStart: countsStatus("queued", { captured: 0 }),
+    });
+    const onClose = vi.fn();
+    render(<BackfillPanel onClose={onClose} provider="gmail" />);
+
+    await screen.findByText(/400 emails in that time/);
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /Start import/ }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("leaves without starting anything on Not now", async () => {
+    const calls = stubApi({ statuses: [statusNone], preview: previewOf(400) });
+    const onClose = vi.fn();
+    render(<BackfillPanel onClose={onClose} provider="gmail" />);
+
+    await screen.findByText(/400 emails in that time/);
+    await user.click(screen.getByRole("button", { name: "Not now" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(requestsTo(calls, "/backfill", "POST")).toHaveLength(0);
   });
 
   // The estimate describes the window; the window is what the reader picked
@@ -287,7 +319,7 @@ describe("the connect-time backfill payoff", () => {
       previewRoute: () => new Promise<Response>(() => {}),
       onStart: countsStatus("running", { captured: 0 }),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText("Counting emails…")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Start import/ }));
@@ -309,7 +341,7 @@ describe("the connect-time backfill payoff", () => {
         ),
       onStart: countsStatus("running", { captured: 0 }),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText(/No answer from Gmail\./)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Start import/ }));
@@ -330,7 +362,7 @@ describe("the connect-time backfill payoff", () => {
         }),
       ],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText("128")).toBeTruthy();
     expect(screen.getByText("47")).toBeTruthy();
@@ -353,7 +385,7 @@ describe("the connect-time backfill payoff", () => {
         }),
       ],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText(/Old emails imported/i)).toBeTruthy();
     expect(screen.getByText("512")).toBeTruthy();
@@ -366,7 +398,7 @@ describe("the connect-time backfill payoff", () => {
         countsStatus("cancelled", { captured: 20, messages_scanned: 40 }),
       ],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     await user.click(await screen.findByRole("button", { name: /^Stop$/ }));
     await waitFor(() =>
@@ -392,7 +424,7 @@ describe("the connect-time backfill payoff", () => {
       ],
       preview: previewOf(1234),
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     await user.click(
       await screen.findByRole("button", { name: /Start a new import/ }),
@@ -427,7 +459,7 @@ describe("the connect-time backfill payoff", () => {
         },
       ],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(
       await screen.findByText("The last import stopped after 6,800 emails."),
@@ -453,7 +485,7 @@ describe("the connect-time backfill payoff", () => {
         },
       ],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     await user.click(await screen.findByRole("button", { name: "Start over" }));
     await user.click(
@@ -473,7 +505,7 @@ describe("the connect-time backfill payoff", () => {
     stubApi({
       statuses: [countsStatus("error", { captured: 40, contacts_created: 9 })],
     });
-    render(<BackfillPanel provider="gmail" />);
+    render(<BackfillPanel onClose={noop} provider="gmail" />);
 
     expect(await screen.findByText("40")).toBeTruthy();
     expect(
@@ -493,7 +525,13 @@ describe("honest capability and staleness", () => {
       "POST /connectors/imap/backfill/preview": () =>
         jsonResponse({ code: "connector_unsupported" }, 422),
     });
-    render(<BackfillPanel provider="imap" initial={{ state: "none" }} />);
+    render(
+      <BackfillPanel
+        onClose={noop}
+        provider="imap"
+        initial={{ state: "none" }}
+      />,
+    );
 
     expect(await screen.findByText(/cannot import old emails/i)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -513,6 +551,7 @@ describe("honest capability and staleness", () => {
   it("drops the percentage once a run scans past a FLOOR it cannot see beyond", () => {
     render(
       <BackfillPanel
+        onClose={noop}
         provider="gmail"
         initial={{
           ...countsStatus("running", { captured: 900, messages_scanned: 900 }),
@@ -530,6 +569,7 @@ describe("honest capability and staleness", () => {
   it("keeps the bar full when an EXACT estimate was overrun by a growing mailbox", () => {
     render(
       <BackfillPanel
+        onClose={noop}
         provider="gmail"
         initial={{
           ...countsStatus("running", { captured: 900, messages_scanned: 900 }),
@@ -550,6 +590,7 @@ describe("honest capability and staleness", () => {
     const staleUpdatedAt = new Date(Date.now() - 20 * 60_000).toISOString();
     render(
       <BackfillPanel
+        onClose={noop}
         provider="gmail"
         initial={{
           ...countsStatus("running", { captured: 40, messages_scanned: 40 }),
@@ -565,6 +606,7 @@ describe("honest capability and staleness", () => {
   it("shows absolute counts and no percentage when estimated_messages is null", () => {
     render(
       <BackfillPanel
+        onClose={noop}
         provider="gmail"
         initial={{
           state: "running",
@@ -586,7 +628,13 @@ describe("honest capability and staleness", () => {
       "POST /connectors/gmail/backfill": () =>
         jsonResponse({ code: "window_narrowing" }, 409),
     });
-    render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
+    render(
+      <BackfillPanel
+        onClose={noop}
+        provider="gmail"
+        initial={{ state: "none" }}
+      />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: /Start import/ }),
@@ -608,7 +656,13 @@ describe("a failure nobody wrote for a reader", () => {
         throw new TypeError("ECONNREFUSED: connection refused");
       },
     });
-    render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
+    render(
+      <BackfillPanel
+        onClose={noop}
+        provider="gmail"
+        initial={{ state: "none" }}
+      />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: /Start import/ }),
@@ -631,7 +685,13 @@ describe("a failure nobody wrote for a reader", () => {
           429,
         ),
     });
-    render(<BackfillPanel provider="gmail" initial={{ state: "none" }} />);
+    render(
+      <BackfillPanel
+        onClose={noop}
+        provider="gmail"
+        initial={{ state: "none" }}
+      />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: /Start import/ }),

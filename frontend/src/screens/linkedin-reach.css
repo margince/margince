@@ -1,8 +1,17 @@
-/* The reach table: which accounts a member's imported network reaches.
-   The table itself is DataTable now, so its header type, cell padding, row
-   rules and sideways scroll all come from the design system, and the interval
-   above it belongs to the stacked SettingRow that holds it. What is left here
-   is only what the CONTENT of a cell needs. */
+/* The reach table: which accounts a member's imported network reaches. The
+   table is DataTable; what is left here is the caveat's spacing and what the
+   CONTENT of a cell needs. `min-width: 0` lets the table's own scroller
+   scroll inside the panel instead of pushing the panel sideways. */
+.li-reach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.li-reach > p {
+  margin: 0;
+}
 
 /* An account name plus two counts is wider than a phone, so every cell holds
    its line and the table takes the sideways scroll instead of the page. It sits

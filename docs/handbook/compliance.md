@@ -69,7 +69,7 @@ ones to execute.
 | --- | --- |
 | Does mail leave our infrastructure? | The AI egress reference, generated from the model routing table |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
-| What was decided about my correspondents? | Settings → Connections → Senders, per seat |
+| What was decided about my correspondents? | Settings → Capture activity → Senders, per seat |
 | Can an administrator read a held message? | No. The audience gate has no admin arm |
 | What happens when the classifier is unavailable? | Everything stays held |
 

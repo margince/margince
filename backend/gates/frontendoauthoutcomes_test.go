@@ -43,8 +43,9 @@ const (
 // outcomeConst matches the declarations that DEFINE the vocabulary.
 var outcomeConst = regexp.MustCompile(`(?m)^\s*outcome[A-Za-z]+\s*=\s*"([a-z_]+)"`)
 
-// settingsOutcomeKey matches one entry of the SPA's outcome→copy record.
-var settingsOutcomeKey = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*\{\s*key:\s*"connectors\.`)
+// settingsOutcomeKey matches one entry of the SPA's outcome→copy record, as a
+// bare key or a `{ key }` object, so a change of value shape stays in view.
+var settingsOutcomeKey = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*(?:\{\s*key:\s*)?"connectors\.oauth`)
 
 func serverOutcomes(t *testing.T) []string {
 	t.Helper()

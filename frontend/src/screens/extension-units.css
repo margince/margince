@@ -1,27 +1,7 @@
 /* The units an installation composed, as offered in Settings (Connections and
-   Integrations both draw the same card). Each unit is a SettingRow now, so the
-   row's geometry — the two columns, the hairline between them, the vertical
-   rhythm — comes from the design system. What is left here is what the CONTENT
-   of the two halves needs. */
-
-/* The unit's mark beside its name, in the row's naming column. The name wraps
-   with the column rather than truncating: a row that ellipsised a directory
-   name hid the one word that tells two units apart, and the naming column is
-   as wide as the card. */
-.extunits-name {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.extunits-name > svg {
-  width: 18px;
-  height: 18px;
-  color: var(--accentText);
-  flex: none;
-}
+   Integrations both draw the same card). Each unit is a ProviderRow, so the
+   row's geometry comes from the design system; what is left here is the link
+   in its action slot. */
 
 /* The way in, in the row's control column: a link, not a Button, because it
    navigates. The chevron is the affordance and takes the meta colour so the

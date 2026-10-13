@@ -1,0 +1,112 @@
+/* The Meetings settings cards: what the panels, rows and table do not already
+   lay out themselves. */
+
+/* The card a drawer link scrolls to; its outline is the panel's, not a focus box. */
+.meeting-anchor {
+  scroll-margin-top: var(--space-6);
+}
+.meeting-anchor:focus {
+  outline: none;
+}
+
+/* A card's save band: the sentence that qualifies the save on the leading
+   edge, the button on the trailing one. */
+.meeting-card-save {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.meeting-card-save > .btn {
+  margin-inline-start: auto;
+}
+
+/* The drawer's foot holds only its two verbs, on the trailing edge. */
+.meeting-drawer-actions {
+  margin-inline-start: auto;
+}
+
+.meeting-subhead {
+  margin-block-end: var(--space-2);
+}
+
+/* A rule's preset list and, once Other is picked, the number under it. */
+.meeting-rule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 12rem;
+}
+
+/* The link cell: the meeting name over its address, which may truncate. */
+.meeting-link-url {
+  overflow-wrap: anywhere;
+}
+
+.meeting-link-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The address with its Replace verb on one line, as the field it is. */
+.meeting-address {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+.meeting-address > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* What guests see: the miniature page beside the rows that feed it, stacked
+   on a narrow screen. */
+.meeting-guest {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .meeting-guest {
+    grid-template-columns: 1fr;
+  }
+}
+.meeting-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgCard);
+}
+.meeting-preview-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block-end: var(--space-3);
+  border-block-end: 1px solid var(--borderSubtle);
+  font-weight: var(--fontWeightMedium);
+}
+.meeting-preview-brand .company-logo {
+  max-height: var(--space-6);
+}
+.meeting-preview-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--textSecondary);
+}
+
+/* The drawer's title and intro pair tight; the head band owns the space below. */
+.meeting-drawer-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

@@ -27,7 +27,7 @@ test("AC-mailbox-1: a mailbox says who may read it, and refuses shared without t
 
   // The stored posture, and the sentence saying what it does.
   await expect(row).toContainText("Sichtbarkeit der E-Mails");
-  await expect(row).toContainText("Bis zur Einstufung zurückgehalten");
+  await expect(row).toContainText("Bis zur Prüfung zurückgehalten");
   await expect(row).toContainText(
     "Neue Nachrichten bleiben auf die Beteiligten beschränkt",
   );
@@ -91,8 +91,10 @@ test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async (
 test("AC-mailbox-4: the Senders page shows every decision and takes an overrule", async ({
   page,
 }) => {
-  await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  await page.goto("/#/settings/capture-activity");
+  const senders = page.locator(".panel").filter({
+    has: page.getByRole("heading", { name: de["senders.title"], exact: true }),
+  });
   await expect(senders).toBeVisible();
   await expect(senders).toContainText(de["senders.kind.contact"]);
   await expect(senders).toContainText(de["senders.kind.newsletter"]);
@@ -111,8 +113,10 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
 test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   page,
 }) => {
-  await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  await page.goto("/#/settings/capture-activity");
+  const senders = page.locator(".panel").filter({
+    has: page.getByRole("heading", { name: de["senders.title"], exact: true }),
+  });
   await senders
     .locator("tr", { hasText: "anne@hotmail.com" })
     .getByRole("button", { name: "Ausschließen" })
@@ -130,8 +134,11 @@ test("AC-mailbox-6: the connect form says what happens before it asks for a pass
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  await page.getByRole("button", { name: "Connector hinzufügen" }).click();
-  await page.getByTestId("connector-add-imap").getByRole("button").click();
+  await page.getByRole("button", { name: de["connectors.addOpen"] }).click();
+  await page.getByRole("radio", { name: de["connectFlow.otherHost"] }).click();
+  // Account, then what it brings in: the IMAP form is the sign-in step.
+  await page.getByRole("button", { name: de["connectFlow.next"] }).click();
+  await page.getByRole("button", { name: de["connectFlow.next"] }).click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Margince liest dieses Postfach");

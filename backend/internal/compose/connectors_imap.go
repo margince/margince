@@ -57,7 +57,7 @@ func (h connectorHandlers) connectIMAP(w http.ResponseWriter, r *http.Request) {
 	// input, and answers malformed JSON itself — so a decode failure is handled,
 	// never conflated with the credential check below.
 	var req crmcontracts.ConnectConnectorRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.Decode(w, r, &req) || !imapAsksNothingMore(w, r, req) {
 		return
 	}
 	if req.Imap == nil || req.Imap.Secret == nil || req.Imap.Host == "" || req.Imap.Username == "" {

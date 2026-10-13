@@ -1,0 +1,30 @@
+/* The display name edited in place: the field and its Save on one line in the
+   row's control column, so the row keeps the label-left, control-right rhythm
+   of every other row on the page. The field takes the width; Save hugs. */
+.account-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.account-inline > .field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The identity's two qualifiers on one caption line, comma-joined. */
+.account-identity-meta > span + span::before {
+  content: ", ";
+}
+
+/* The person the page is about heads the Profile card, a rung above its rows. */
+.account-identity-name {
+  font: var(--fontHeadingMedium);
+  color: var(--textPrimary);
+}
+
+/* The identity is read, the rows under it are edited: the same hairline the
+   rows draw between themselves marks where one ends and the other begins. */
+.account-identity {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}

@@ -1,26 +1,132 @@
-/* Settings → Data model: the two lead vocabularies and the lead-handling
-   posture. One list shape for both vocabularies, so a source row and a reason
-   row line up under each other. */
+/* Settings → Lead handling: the two lead vocabularies as terms tables and the
+   reply deadline. One table shape for both vocabularies, so a source row and a
+   reason row line up under each other. */
 
-/* No horizontal padding: the list sits inside a SettingRow now, whose column
-   is already inset by the panel body. The 16px this used to add was the inset a
-   full-bleed list under a card body needed, and keeping it would step the rows
-   in from the label that names them. */
+/* The table runs edge to edge inside the panel, and its first and last cells
+   take the panel's own inset so the names line up with the intro above. */
+.lead-vocab-table .table :is(th, td):first-child {
+  padding-inline-start: var(--padPanel);
+}
+.lead-vocab-table .table :is(th, td):last-child {
+  padding-inline-end: var(--padPanel);
+}
+
+.lead-vocab-table .table td {
+  vertical-align: middle;
+}
+
+.lead-vocab-name {
+  font-weight: var(--fontWeightMedium);
+}
+
+/* `Select`'s face is an `.input`, which is `width: 100%`; in a content-sized
+   column that collapses, so the score picker holds its own measure. */
+.lead-vocab-table .select-control {
+  min-width: 10rem;
+}
+
+/* The discovered values sit between the intro and the administered list, under
+   their own small heading; the table below them carries its hairline. */
+.lead-vocab-discovered > .panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+}
+
+/* The card's own band above the table: the read-only posture and a write the
+   server refused. It pays for its own interval, the same one `.panel-intro`
+   pays, because nothing above or below it owns one. */
+.lead-vocab-notices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.panel-body > .lead-vocab-notices:first-child {
+  margin-top: 0;
+  margin-bottom: var(--space-4);
+}
+
+/* The New source dialog: the three score effects, then the note on when a
+   change lands, read as one group. */
+.lead-vocab-score {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The add-reason form in the panel's action band reads as one line: the box,
+   then the verb that submits it. */
+.lead-vocab-add {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lead-vocab-add > .input {
+  flex: 0 1 20rem;
+  min-width: 12rem;
+}
+
+/* The target's refusal, under the box it is about. */
+.lead-handling-target {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The add-reason band follows the table's last row, which draws no rule, so
+   the band draws the one that closes the list. */
+.lead-vocab-table + .panel-actions {
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* On a phone the scored table cannot hold five columns: the lead count goes,
+   since the menu still says when a source is kept for being in use, and the
+   Offered switch and the menu stay on screen. */
+.lead-vocab-table {
+  container-type: inline-size;
+}
+@container (max-width: 30rem) {
+  .lead-vocab-scored .table :is(th, td):nth-child(3) {
+    display: none;
+  }
+  .lead-vocab-scored .table :is(th, td) {
+    padding-inline: var(--space-1);
+  }
+  .lead-vocab-scored .table th:nth-child(2):not(.datatable-grow) {
+    white-space: normal;
+  }
+  /* A name folds onto a second line before a control leaves the screen. */
+  .lead-vocab-scored .table .datatable-grow {
+    min-width: 0;
+  }
+  .lead-vocab-scored .select-control {
+    min-width: 0;
+  }
+}
+
+/* The sources head carries a title, a count and a verb; on a phone the count
+   gives way so the title is not cut to its first word. */
+@media (max-width: 30rem) {
+  .lead-vocab-count {
+    display: none;
+  }
+}
+
+/* The list shape the acquisition-source and record-role cards still draw: one
+   record per line, wrapping on a narrow column, hairlines only between rows. */
 .lead-vocab-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* A row is one record: label (editable), its key, what it is worth, how many
-   leads carry it, and its flags. It wraps on a narrow column rather than
-   squeezing the label it is about.
-
-   `--borderSubtle` is the token the row language draws its hairline from
-   (design-system/settingrow.css). This asked for `--color-border-subtle`, which
-   this product does not define — so the fallback won and every separator in both
-   vocabularies has been transparent, leaving a list of records reading as one
-   block of text. */
 .lead-vocab-row {
   display: flex;
   flex-wrap: wrap;
@@ -30,23 +136,10 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-/* The hairline belongs BETWEEN records: a rule under the last one lands a pixel
-   above the SettingList's own, where the two read as one thick border. */
 .lead-vocab-list > .lead-vocab-row:last-child {
   border-bottom: 0;
 }
 
-.lead-vocab-row > .lead-vocab-rename {
-  flex: 1 1 180px;
-  width: auto;
-}
-
-/* The intent picker, held to a measure inside the row's line. `Select`'s face is
-   an `.input`, which is `width: 100%` — and a 100% flex item takes the WHOLE
-   line, so at the settings page's 720px measure every source came out as three
-   stacked full-width boxes and the list read as a wall of grey rather than one
-   line per record. Same rule the add form's box already needed below, and the
-   same one the pinned-record field needs in retention.css. */
 .lead-vocab-row > .select-control {
   flex: 0 1 10rem;
   min-width: 0;
@@ -57,52 +150,9 @@
   flex: 0 0 auto;
 }
 
-.lead-vocab-count {
-  flex: 0 0 auto;
-  min-width: 6ch;
-}
-
 .lead-vocab-flags {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin-left: auto;
-}
-
-/* The card's own band under the rows: the read-only posture, and a write the
-   server refused. It is not one more row — the posture is true of every row in
-   the list and a refusal belongs to the card — so it pays for its own interval,
-   the same one `.panel-intro` pays above the list, because `SettingList`
-   owns the gaps BETWEEN rows and nothing above or below itself. */
-.lead-vocab-notices {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-
-/* The add row reads as one line: the box, then the verb that submits it. One
-   input and its submit is the row case, so this form sits in a SettingRow's
-   right column — the two-input source form went to a dialog, and with it the
-   `.field` wrapper this rule used to size. */
-.lead-vocab-add {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.lead-vocab-add > .input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* The target's refusal, under the box it is about. The row above it owns the
-   label and the rule; this is only what went wrong with the value typed in, so
-   it lays out in the same column as the control rather than beside it. */
-.lead-handling-target {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
 }

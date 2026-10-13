@@ -1,9 +1,16 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
@@ -27,10 +34,12 @@ const summary = {
   error_sentinel: "provider_unavailable",
   has_payload: true,
   decision_attempted: false,
+  outcome: "failed",
+  estimated_cost_microusd: 4300,
 };
 
 // The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
-// asks for — so a stub that never answers /me leaves the caller holding no
+// asks for, so a stub that never answers /me leaves the caller holding no
 // grant and the card correctly says it is withheld instead of rendering rows.
 //
 // The card asked `automation:update` before the runtime's spend got an object of
@@ -73,6 +82,7 @@ const DECIDED_THEN_FELL_BACK = {
     degraded: false,
     error_sentinel: null,
     decision_attempted: true,
+    outcome: "fallback",
   },
   attempts: [
     {
@@ -125,39 +135,47 @@ function mount(
     call: Record<string, unknown>;
     attempts: unknown[];
   } = RETRIED,
+  others: Record<string, unknown>[] = [],
+  listed: boolean | ((query: URLSearchParams) => boolean) = true,
 ) {
   const seen: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
-      const path = new URL(
+      const url = new URL(
         input instanceof Request ? input.url : String(input),
         "https://test",
-      ).pathname;
+      );
+      const path = url.pathname;
       seen.push(path);
+      const answered =
+        typeof listed === "function" ? listed(url.searchParams) : listed;
       if (path.endsWith("/v1/me")) {
         return new Response(JSON.stringify(meFixture({ allow })), {
           headers: { "Content-Type": "application/json" },
         });
       }
-      const body = path.endsWith(summary.id)
-        ? {
-            ...trace.call,
-            served_identity_source: "response",
-            context_scopes: [],
-            context_fingerprint: "",
-            attempts: trace.attempts,
-            payload_captured: withPayload,
-            payload: withPayload
-              ? { request: { system: "safe", messages: [] }, response: "ok" }
-              : null,
-          }
-        : {
-            data: [trace.call],
-            page: { has_more: false },
-            payload_capture_enabled: captureEnabled,
-            tasks: [summary.task],
-          };
+      const other = others.find((row) => path.endsWith(String(row.id)));
+      const body =
+        path.endsWith(summary.id) || other
+          ? {
+              ...(other ?? trace.call),
+              served_identity_source: "response",
+              context_scopes: [],
+              context_fingerprint: "",
+              attempts: trace.attempts,
+              payload_captured: withPayload,
+              payload: withPayload
+                ? { request: { system: "safe", messages: [] }, response: "ok" }
+                : null,
+            }
+          : {
+              data: answered ? [trace.call, ...others] : [],
+              page: { has_more: false },
+              payload_capture_enabled: captureEnabled,
+              tasks: [summary.task],
+              models: [summary.served_model],
+            };
       return new Response(JSON.stringify(body), {
         headers: { "Content-Type": "application/json" },
       });
@@ -230,6 +248,7 @@ function tracePage(rows: unknown[]) {
         data: rows,
         page: { has_more: false },
         tasks: [],
+        models: [],
         payload_capture_enabled: false,
       }),
       { headers: { "Content-Type": "application/json" } },
@@ -260,7 +279,7 @@ it("says the trace is withheld rather than that nothing was ever called", async 
 it("answers with the newest call's instant once the trace has landed", async () => {
   mountProbe(tracePage([summary]));
 
-  // The instant the newest row carries, parsed — not a zero and not the row
+  // The instant the newest row carries, parsed: not a zero and not the row
   // below it.
   expect(
     await screen.findByText(new Date(summary.occurred_at).toISOString()),
@@ -294,53 +313,94 @@ it("says never called only when the trace answered and held no row", async () =>
   expect(await screen.findByText("never")).toBeTruthy();
 });
 
-it("renders call badges and expands the attempt and payload detail", async () => {
+// The drawer is portalled to the body and named by the call it opens.
+async function openCall(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", {
+      name: /^Open the Capture classify call/,
+    }),
+  );
+  return screen.findByRole("dialog");
+}
+
+it("reads each call in words: the feature, an outcome, and its figures", async () => {
   mount();
-  expect(await screen.findByText("provider_unavailable")).toBeTruthy();
-  expect(screen.getByText("Retry ×2")).toBeTruthy();
-  // One element, not the second of two: the task name used to appear in the
-  // filter's option list as well as in the row, and the row is what expands.
-  // The disclosure is a real button now, not the row: a `<tr onClick>`
-  // could only ever be reached by pointer.
-  const toggle = screen.getByRole("button", {
-    name: /show attempts/i,
-  });
-  // The chevron is turned by this attribute (aicalls.css), so what the reader
-  // sees and what a screen reader hears are one fact rather than two that can
-  // disagree. It is also why this stays a button and not a `Disclosure`: what
-  // opens is the NEXT table row, which no element can contain from inside a
-  // cell of the row above it.
-  expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  await userEvent.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
-  expect(await screen.findByText(/retry_on_5xx/)).toBeTruthy();
-  expect(screen.getByText("Request payload")).toBeTruthy();
-  expect(screen.getByText("Export certification scenario")).toBeTruthy();
+  const row = (await screen.findByText("Capture classify")).closest("tr");
+  expect(row?.textContent).toContain("Failed");
+  expect(row?.textContent).toContain("120");
+  expect(row?.textContent).toContain("900 ms");
+  expect(row?.textContent).toContain("$0.0043");
+  // No wire key reaches the table: not the task, not the failure code.
+  expect(screen.queryByText("capture_classify")).toBeNull();
+  expect(screen.queryByText(/provider_unavailable/)).toBeNull();
 });
 
-// The filter is a settings row now: the row draws the label and the Select is
-// named BY it, so the combobox still says what it narrows while carrying no
-// second name of its own — one visible label naming one control is the whole
-// reason `control` is a function here.
-it("names the task filter from its row, and stacks the trace under its own label", async () => {
+it("opens a call in a drawer and leaves the table exactly as it was", async () => {
+  const user = userEvent.setup();
   mount();
-  const filter = await screen.findByRole("combobox", { name: "Task" });
-  expect(filter.getAttribute("aria-label")).toBeNull();
-  expect(filter.getAttribute("aria-labelledby")).toBeTruthy();
-  // The trace is the subject of its row, not an answer beside it, so it stacks
-  // under a label of its own rather than sharing the filter's.
-  expect(screen.getByText("Recent calls")).toBeTruthy();
+  const table = await screen.findByRole("table");
+  const rowsBefore = table.querySelectorAll("tr").length;
+
+  const drawer = await openCall(user);
+  // Nothing is inserted under the row: the detail lives beside the table.
+  expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
+  expect(within(drawer).getByText("Capture classify")).toBeTruthy();
+  expect(
+    await within(drawer).findByText(/Answer before|retry on 5xx/i),
+  ).toBeTruthy();
+  expect(within(drawer).getByText("Request payload")).toBeTruthy();
+  expect(
+    within(drawer).getByText("Export certification scenario"),
+  ).toBeTruthy();
+
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+it("copies a payload and says Copied on that block alone", async () => {
+  const user = userEvent.setup();
+  const clipboard = stubClipboard("accepts");
+  mount();
+  const drawer = await openCall(user);
+  await user.click(
+    await within(drawer).findByRole("button", {
+      name: "Copy Response payload",
+    }),
+  );
+  await waitFor(() => expect(clipboard.written).toEqual(["ok"]));
+  expect(within(drawer).getByRole("button", { name: "Copied" })).toBeTruthy();
+  expect(
+    within(drawer).getByRole("button", { name: "Copy Request payload" }),
+  ).toBeTruthy();
+});
+
+it("steps to the next call from inside the drawer", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, RETRIED, [
+    { ...summary, id: "second-call", task: "enrich", error_sentinel: null },
+  ]);
+  const drawer = await openCall(user);
+  expect(
+    within(drawer).getByRole("button", { name: "Previous call" }),
+  ).toHaveProperty("disabled", true);
+  await user.click(within(drawer).getByRole("button", { name: "Next call" }));
+  expect(
+    await within(drawer).findByRole("heading", { name: "Enrich" }),
+  ).toBeTruthy();
+  expect(
+    within(drawer).getByRole("button", { name: "Next call" }),
+  ).toHaveProperty("disabled", true);
 });
 
 // A task row on the models page links here with the task on the address, so the
 // filter is read from it and written back to it.
-it("narrows the trace to the task the address names, and writes a new pick back", async () => {
+it("narrows the trace to the feature the address names, and writes a new pick back", async () => {
   const user = userEvent.setup();
   globalThis.location.hash = "#/settings/model-calls?task=account_scan";
   mount();
-  const filter = await screen.findByRole("combobox", { name: "Task" });
+  const filter = await screen.findByRole("combobox", { name: "Feature" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("account_scan");
+  expect(filter.textContent).toContain("Account scan");
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>
@@ -349,33 +409,94 @@ it("narrows the trace to the task the address names, and writes a new pick back"
   expect(asked.some((url) => url.includes("task=account_scan"))).toBe(true);
 
   await user.click(filter);
-  await user.click(await screen.findByRole("option", { name: summary.task }));
+  await user.click(
+    await screen.findByRole("option", { name: "Capture classify" }),
+  );
   expect(globalThis.location.hash).toBe(
     `#/settings/model-calls?task=${summary.task}`,
   );
   globalThis.location.hash = "";
 });
 
-it("distinguishes capture disabled from a call without payload", async () => {
-  mount(false, false);
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show attempts/i }),
+function askedQueries(): URLSearchParams[] {
+  return vi
+    .mocked(fetch)
+    .mock.calls.map(
+      ([input]) =>
+        new URL(
+          input instanceof Request ? input.url : String(input),
+          "https://test",
+        ),
+    )
+    .filter((url) => url.pathname.endsWith("/ai/calls"))
+    .map((url) => url.searchParams);
+}
+
+// Every dial is a question the server answers over the whole trace, so a pick
+// is written to the address and asked of the server, and an empty answer offers
+// the way back rather than claiming no such call exists.
+it("asks the server for the outcome and search picked, and clears both", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, RETRIED, [], (query) => !query.has("q"));
+  await user.click(await screen.findByRole("combobox", { name: "Outcome" }));
+  await user.click(await screen.findByRole("option", { name: "Failed" }));
+  expect(globalThis.location.hash).toContain("outcome=failed");
+  await waitFor(() =>
+    expect(askedQueries().some((q) => q.get("outcome") === "failed")).toBe(
+      true,
+    ),
   );
-  expect(await screen.findByText(/Payload capture is off/)).toBeTruthy();
+
+  await user.type(
+    screen.getByRole("searchbox", { name: "Search calls" }),
+    "quota",
+  );
+  expect(await screen.findByText("No calls match these filters.")).toBeTruthy();
+  // The search is asked once it settles, never once per keystroke.
+  const searched = askedQueries().filter((q) => q.has("q"));
+  expect(searched.map((q) => q.get("q"))).toEqual(["quota"]);
+
+  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  expect(await screen.findByText("Capture classify")).toBeTruthy();
+  expect(globalThis.location.hash).not.toContain("outcome");
+  expect(
+    (
+      screen.getByRole("searchbox", {
+        name: "Search calls",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("");
+  globalThis.location.hash = "";
+});
+
+it("says a call the price sheet cannot price is not priced, never free", async () => {
+  mount(true, true, OPERATOR, {
+    call: { ...summary, estimated_cost_microusd: undefined },
+    attempts: RETRIED.attempts,
+  });
+  const row = (await screen.findByText("Capture classify")).closest("tr");
+  expect(row?.textContent).toContain("Not priced");
+  expect(row?.textContent).not.toContain("$0.00");
+});
+
+it("distinguishes capture disabled from a call without payload", async () => {
+  const user = userEvent.setup();
+  mount(false, false);
+  let drawer = await openCall(user);
+  expect(
+    await within(drawer).findByText(/Payload capture is off/),
+  ).toBeTruthy();
   cleanup();
   mount(true, false);
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show attempts/i }),
-  );
+  drawer = await openCall(user);
   expect(
-    await screen.findByText("No payload captured for this call."),
+    await within(drawer).findByText("No payload captured for this call."),
   ).toBeTruthy();
 });
 
 it("withholds the trace from a principal without the diagnostics read, and asks the server for nothing", async () => {
   // Withheld, not absent: an absent trace claims the installation made no model
-  // calls. The card keeps its title and says whose record this is — and the list
-  // read never fires, because the denial is already known.
+  // calls. The list read never fires, because the denial is already known.
   const { seen } = mount(true, true, { automation: ["read", "update"] });
 
   expect(
@@ -384,59 +505,61 @@ it("withholds the trace from a principal without the diagnostics read, and asks 
     ),
   ).toBeTruthy();
   expect(screen.getByText("AI call trace")).toBeTruthy();
+  expect(screen.queryByRole("searchbox")).toBeNull();
   expect(seen.some((path) => path.includes("/ai/calls"))).toBe(false);
 });
 
-it("marks a decision call, and names the tier it ran on", async () => {
+it("names the decision lane in words, never as the rung key", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED);
-
-  expect(
-    await screen.findByText("Decision model · jev_compatible/served"),
-  ).toBeTruthy();
-  // The badge on the row is the kind, in words; the tier column above is the
-  // same fact spelled as the lane, and both say it rather than "decide".
-  expect(screen.getAllByText("Decision model").length).toBeGreaterThan(0);
+  const drawer = await openCall(user);
+  expect(within(drawer).getAllByText("Decision model").length).toBeGreaterThan(
+    0,
+  );
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
-// The terminal row of a fallback is the completion, so the row reads the
-// logical call's flag rather than its own kind — otherwise a decision model
-// that was asked and overruled is visible only after expanding the call.
-it("marks a call the decision model fell back from on its row, before it is opened", async () => {
+// The terminal row of a fallback is the completion, so the outcome reads the
+// logical call's flag rather than its own kind: a decision model that was asked
+// and overruled shows on the row before it is opened.
+it("marks a call the decision model fell back from on its row", async () => {
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Decision model");
+  const row = (await screen.findByText("Capture classify")).closest("tr");
+  expect(row?.textContent).toContain("Fallback");
 });
 
-it("leaves the decision mark off a call that never asked a decision model", async () => {
-  mount();
-
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
+it("reads a first-try answer as answered, with no decision mark", async () => {
+  const user = userEvent.setup();
+  mount(true, true, OPERATOR, {
+    call: {
+      ...summary,
+      calls_attempted: 1,
+      degraded: false,
+      error_sentinel: null,
+      outcome: "answered",
+    },
+    attempts: [RETRIED.attempts[1]],
   });
-  expect(task.textContent).not.toContain("Decision model");
+  const row = (await screen.findByText("Capture classify")).closest("tr");
+  expect(row?.textContent).toContain("Answered");
+  const drawer = await openCall(user);
+  expect(within(drawer).queryByText("Decision model")).toBeNull();
 });
 
 it("says why the ladder answered after the decision model, and where it went", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show attempts/i }),
-  );
+  const drawer = await openCall(user);
 
   // The fallback rung reads its tier, then the reason in words rather than the
   // wire code, and no number: the floor is not stored on the call.
   expect(
-    await screen.findByText(
+    await within(drawer).findByText(
       /cheap_cloud · Decision model below its confidence floor/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/decision_below_floor/)).toBeNull();
-  // And the decision attempt itself carries the badge, and names the model it
-  // asked: the terminal row's binding is the rung that answered after it.
-  const first = screen.getByText("#1").closest("li");
+  const first = within(drawer).getByText("#1").closest("li");
   expect(first?.textContent).toContain("Decision model");
   expect(first?.textContent).toContain("jev_compatible/jev-classify");
 });
@@ -444,51 +567,80 @@ it("says why the ladder answered after the decision model, and where it went", a
 // The answer that did not stand is the one a floor is tuned from, so the
 // decision attempt says what it answered even when the ladder answered after.
 it("says what the decision model answered, and at what confidence", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show attempts/i }),
-  );
+  const drawer = await openCall(user);
 
-  const first = (await screen.findByText("#1")).closest("li");
+  const first = (await within(drawer).findByText("#1")).closest("li");
   expect(first?.textContent).toContain("answered company at 0.62");
-  const second = screen.getByText("#2").closest("li");
+  const second = within(drawer).getByText("#2").closest("li");
   expect(second?.textContent).not.toContain("answered");
 });
 
-// The ladder rung a decision model fell back to is the SECOND model asked, not
-// a second try of the first, so the retry count on the row is the ladder's own:
-// the attempts beyond the decision one.
-it("does not count the fall back from a decision model as a retry", async () => {
-  mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Decision model");
-  expect(task.textContent).not.toContain("Retry");
-});
-
-it("counts the ladder's own retries after a decision model fell back", async () => {
+// The rung a decision model fell back to is the SECOND model asked, not a second
+// try of the first, so the attempt count is the ladder's own.
+it("counts the ladder's attempts without the decision model before them", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, {
     ...DECIDED_THEN_FELL_BACK,
     call: { ...DECIDED_THEN_FELL_BACK.call, calls_attempted: 3 },
   });
-
-  const task = await screen.findByText("capture_classify", {
-    selector: "td",
-  });
-  expect(task.textContent).toContain("Retry ×2");
+  const drawer = await openCall(user);
+  const attempts = within(drawer).getByText("Attempts", { selector: "dt" });
+  expect(attempts.nextElementSibling?.textContent).toBe("2");
 });
 
 // An ordinary first attempt and a decision that stood have no reason to run,
 // so the line names its binding and its latency and nothing in between.
 it("leaves the reason out of an attempt that had none", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show attempts/i }),
-  );
+  const drawer = await openCall(user);
 
-  const first = (await screen.findByText("#1")).closest("li");
+  const first = (await within(drawer).findByText("#1")).closest("li");
   expect(first?.textContent).toContain("jev_compatible/jev-classify · 600 ms");
-  expect(first?.textContent).not.toContain("—");
+  expect(first?.textContent).not.toContain("\u2014");
+});
+
+// Under a feature filter an empty trace is a fact about that feature, so it
+// does not claim the installation never called a model, and offers the way back.
+it("says a filtered feature has no calls, rather than that nothing was ever called", async () => {
+  const user = userEvent.setup();
+  globalThis.location.hash = "#/settings/model-calls?task=account_scan";
+  mount(true, true, OPERATOR, RETRIED, [], false);
+  expect(
+    await screen.findByText("No calls recorded for this feature yet."),
+  ).toBeTruthy();
+  expect(screen.queryByText("No AI calls recorded yet.")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  expect(globalThis.location.hash).not.toContain("account_scan");
+  globalThis.location.hash = "";
+});
+
+// The window is kept on the address by name and cut into an instant when the
+// request runs, so the server narrows the whole trace, not the loaded pages.
+it("asks the server for calls inside the time range picked", async () => {
+  const user = userEvent.setup();
+  mount();
+  await user.click(await screen.findByRole("combobox", { name: "Time range" }));
+  await user.click(await screen.findByRole("option", { name: "Last hour" }));
+  expect(globalThis.location.hash).toContain("window=hour");
+  await waitFor(() =>
+    expect(askedQueries().some((q) => q.has("from"))).toBe(true),
+  );
+  const from = Date.parse(
+    askedQueries()
+      .find((q) => q.has("from"))
+      ?.get("from") ?? "",
+  );
+  expect(Date.now() - from).toBeGreaterThanOrEqual(3_600_000);
+  expect(Date.now() - from).toBeLessThan(3_600_000 + 60_000);
+  globalThis.location.hash = "";
+});
+
+it("says in the drawer when the AI budget demoted the call", async () => {
+  const user = userEvent.setup();
+  mount();
+  const drawer = await openCall(user);
+  expect(within(drawer).getByText("Budget degraded")).toBeTruthy();
 });

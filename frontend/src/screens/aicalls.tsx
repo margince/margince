@@ -1,38 +1,60 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
-import { useId, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
-import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { useUrlParams } from "../app/urlstate";
-import { Badge, Button, EmptyState, TableScroll } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { CellStack } from "../design-system/cellstack";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { tierLabel } from "./ai-decision-labels";
-import { CallDetailPanel } from "./aicalls-detail";
-import { QueryGate, QueryStates, throwProblem, useMe } from "./common";
+import { type AiCallRecord, CallDrawer } from "./aicalls-detail";
+import {
+  CALL_PARAMS,
+  type CallFilters,
+  CallFiltersBar,
+  callFiltersOf,
+  callQueryOf,
+  isNarrowed,
+  UNFILTERED_CALLS,
+  withCallFilters,
+} from "./aicalls-filters";
+import {
+  type AiCallSummary,
+  costLabel,
+  modelLabel,
+  OUTCOME_TONE,
+  outcomeLabel,
+  taskLabel,
+} from "./aicalls-vocab";
+import { ExportScenarioDialog } from "./aiexport";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+  throwProblem,
+  useMe,
+} from "./common";
+import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import "./aicalls.css";
 
-// The trace's first page, as one query the card and the page header share.
-//
-// The header wants a single fact from it — when the runtime last called a model
-// — and the unfiltered trace is where that fact lives, so it asks for the same
-// window under the same key rather than opening a second read of the same
-// endpoint. `task: ""` is the card's own no-filter state, which is why the two
-// coincide exactly when the reader has filtered nothing.
-function useCallTrace(task: string, enabled: boolean) {
+// The trace as the server narrows it. Every dial is in the key, so a changed
+// filter is a fresh walk from the newest call rather than a cursor minted under
+// another question.
+function useCallTrace(filters: CallFilters, enabled: boolean) {
   return useInfiniteQuery({
     enabled,
-    queryKey: ["ai-calls", task],
+    queryKey: ["ai-calls", filters],
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/ai/calls", {
         params: {
-          query: { cursor: pageParam ?? undefined, task: task || undefined },
+          query: {
+            ...callQueryOf(filters, Date.now()),
+            cursor: pageParam ?? undefined,
+          },
         },
       });
       if (error) throwProblem(error);
@@ -43,12 +65,12 @@ function useCallTrace(task: string, enabled: boolean) {
 }
 
 /**
- * When the runtime last reached a model — and, where there is no instant to
+ * When the runtime last reached a model and, where there is no instant to
  * give, WHICH silence this is.
  *
  * `never` is a claim about the INSTALLATION: nothing has ever called a model.
- * The other three are claims about the READ — this reader may not make it, it
- * has not answered yet, it failed — and none of them is evidence about the
+ * The other three are claims about the READ (this reader may not make it, it
+ * has not answered yet, it failed), and none of them is evidence about the
  * installation at all. One `null` over all four let a caller say "Never called"
  * over a trace that was still arriving, which is the defect this type exists to
  * make unspellable.
@@ -70,7 +92,7 @@ export type LastCall =
  *
  * Its OWN query rather than the card's. The card pages through a filtered trace
  * on demand; this wants the newest row and wants it to keep up, and the two
- * cannot share a key without one imposing its refetch on the other — a poll
+ * cannot share a key without one imposing its refetch on the other: a poll
  * over every page the reader had loaded.
  */
 export function useLastCallAt(): LastCall {
@@ -106,41 +128,265 @@ export function useLastCallAt(): LastCall {
 }
 
 /** The address dial the trace is narrowed by, so a task row can link to its calls. */
-export const CALL_TASK_PARAM = "task";
+export const CALL_TASK_PARAM = CALL_PARAMS.task;
+
+function useCallColumns(
+  onOpen: (call: AiCallSummary) => void,
+): DataTableColumn<AiCallSummary>[] {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const n = (value: number) => formatNumber(value, locale);
+  return [
+    {
+      key: "when",
+      header: t("aicalls.col.when"),
+      render: (call) => (
+        <time className="aicalls-when" dateTime={call.occurred_at}>
+          {formatDateTime(call.occurred_at, locale, zone)}
+        </time>
+      ),
+    },
+    {
+      key: "feature",
+      header: t("aicalls.col.feature"),
+      // The row answers a pointer too, but a `<tr>` takes no focus and
+      // announces nothing, so the feature is the button a keyboard opens by.
+      render: (call) => {
+        const when = formatDateTime(call.occurred_at, locale, zone);
+        return (
+          <CellStack>
+            <Button
+              variant="link"
+              className="aicalls-feature"
+              aria-label={t("aicalls.open", {
+                feature: taskLabel(call.task),
+                when,
+              })}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpen(call);
+              }}
+            >
+              {taskLabel(call.task)}
+            </Button>
+            <time
+              className="t-caption aicalls-when-inline"
+              dateTime={call.occurred_at}
+            >
+              {when}
+            </time>
+          </CellStack>
+        );
+      },
+    },
+    {
+      key: "model",
+      header: t("aicalls.col.model"),
+      render: (call) => (
+        <CellStack>
+          <span className="aicalls-clip" title={modelLabel(call)}>
+            {modelLabel(call)}
+          </span>
+          <span className="t-caption aicalls-clip">{call.provider}</span>
+        </CellStack>
+      ),
+    },
+    {
+      key: "outcome",
+      header: t("aicalls.col.outcome"),
+      render: (call) => (
+        <Badge tone={OUTCOME_TONE[call.outcome]}>
+          {outcomeLabel(call.outcome, t)}
+        </Badge>
+      ),
+    },
+    {
+      key: "tokens",
+      header: t("aicalls.col.tokens"),
+      align: "end",
+      render: (call) => (
+        <span
+          title={t("aicalls.fact.tokensInOut", {
+            in: n(call.tokens_in),
+            out: n(call.tokens_out),
+          })}
+        >
+          {n(call.tokens_in + call.tokens_out)}
+        </span>
+      ),
+    },
+    {
+      key: "cost",
+      header: t("aicalls.col.cost"),
+      align: "end",
+      render: (call) =>
+        call.estimated_cost_microusd === undefined ? (
+          <span className="t-caption" title={t("aicalls.cost.unpricedHint")}>
+            {costLabel(call, locale, t)}
+          </span>
+        ) : (
+          costLabel(call, locale, t)
+        ),
+    },
+    {
+      key: "latency",
+      header: t("aicalls.col.latency"),
+      align: "end",
+      render: (call) => t("aicalls.ms", { value: n(call.latency_ms) }),
+    },
+  ];
+}
+
+function CallTrace({
+  query,
+  filters,
+  onClear,
+}: Readonly<{
+  query: ReturnType<typeof useCallTrace>;
+  filters: CallFilters;
+  onClear: () => void;
+}>) {
+  const t = useT();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<AiCallRecord | null>(null);
+  const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
+  const rows = calls;
+  const columns = useCallColumns((call) => setOpenId(call.id));
+  const narrowed = isNarrowed(filters);
+  const at = rows.findIndex((call) => call.id === openId);
+  const open = at >= 0 ? rows[at] : undefined;
+  const step = (offset: number) => {
+    const next = rows[at + offset];
+    return next ? () => setOpenId(next.id) : undefined;
+  };
+
+  if (rows.length === 0) {
+    // Under a filter the empty trace is a fact about the filter, not about the
+    // installation, and the way back is beside it.
+    if (!narrowed) {
+      return <EmptyState>{t("aicalls.empty")}</EmptyState>;
+    }
+    const taskOnly = isNarrowed({ ...filters, task: "" }) === false;
+    return (
+      <EmptyState>
+        <p>{t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}</p>
+        <Button onClick={onClear}>{t("aicalls.clear")}</Button>
+      </EmptyState>
+    );
+  }
+  return (
+    <>
+      {narrowed && (
+        <div className="aicalls-countline">
+          <Button variant="link" onClick={onClear}>
+            {t("aicalls.clear")}
+          </Button>
+        </div>
+      )}
+      <div className="aicalls-table">
+        <DataTable
+          label={t("aicalls.callsLabel")}
+          columns={columns}
+          rows={rows}
+          rowKey={(call) => call.id}
+          onRowClick={(call) => setOpenId(call.id)}
+        />
+      </div>
+      <div className="aicalls-more">
+        <LoadMoreButton query={query} />
+      </div>
+      {open && (
+        <CallDrawer
+          call={open}
+          captureEnabled={captureEnabled}
+          onClose={() => setOpenId(null)}
+          onPrev={step(-1)}
+          onNext={step(1)}
+          onExport={(detail) => {
+            // One dialog at a time: the export opens in place of the drawer
+            // rather than over it, which would stack two Escape handlers.
+            setOpenId(null);
+            setExporting(detail);
+          }}
+        />
+      )}
+      {exporting && (
+        <ExportScenarioDialog
+          call={exporting}
+          onClose={() => {
+            setExporting(null);
+            setOpenId(exporting.id);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function withSelected(listed: readonly string[], selected: string) {
+  return selected && !listed.includes(selected)
+    ? [selected, ...listed]
+    : listed;
+}
+
+/**
+ * The search box as typed, written to the address once typing settles. The
+ * address is the query key, so writing every keystroke would be one request
+ * per character with answers free to land out of order. An address that moves
+ * on its own (Back, a cleared filter) moves the box with it; trimmed equality
+ * keeps the box from eating a space the reader is still typing past.
+ */
+function useSettledSearch(
+  settled: string,
+  onSettle: (search: string) => void,
+): [string, (typed: string) => void] {
+  const [typed, setTyped] = useState(settled);
+  const [seen, setSeen] = useState(settled);
+  if (settled !== seen) {
+    setSeen(settled);
+    if (settled.trim() !== typed.trim()) setTyped(settled);
+  }
+  useEffect(() => {
+    if (typed.trim() === settled.trim()) return;
+    const timer = setTimeout(() => onSettle(typed), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [typed, settled, onSettle]);
+  return [typed, setTyped];
+}
 
 export function AiCallsCard() {
   const t = useT();
-  const { locale } = useLocale();
   const me = useMe();
-  // Same seam as the spend card: `ai_diagnostics:read` (ai/callread.go). The
-  // seat ceiling stays out of the question either way (capability.ts) — a read
-  // seat may still read a diagnostic.
+  // `ai_diagnostics:read` is what `GET /ai/calls` asks for (ai/callread.go).
+  // The seat ceiling stays out of it: a read seat may read a diagnostic.
   const canSee = useCan("ai_diagnostics", "read");
-  const zone = viewerZone();
   const [params, setParams] = useUrlParams();
-  const task = params.get(CALL_TASK_PARAM) ?? "";
-  const setTask = (next: string) => {
-    const dials = new Map(params);
-    dials.set(CALL_TASK_PARAM, next);
-    setParams(dials);
-  };
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const query = useCallTrace(task, canSee);
-  const calls = query.data?.pages.flatMap((page) => page.data) ?? [];
-  const captureEnabled = query.data?.pages[0]?.payload_capture_enabled ?? false;
-  // The filter options are the server's complete task set (carried on every
-  // page), NOT the tasks on the loaded rows: deriving them from `calls` would
-  // collapse the dropdown to the one selected task once a filter is applied.
-  const listed = query.data?.pages[0]?.tasks ?? [];
-  // A task reached by link may have no calls yet and so be absent from the
+  const filters = useMemo(() => callFiltersOf(params), [params]);
+  const setFilters = useCallback(
+    (next: CallFilters) => setParams(withCallFilters(params, next)),
+    [params, setParams],
+  );
+  const [search, setSearch] = useSettledSearch(
+    filters.search,
+    useCallback(
+      (typed) => setFilters({ ...filters, search: typed }),
+      [filters, setFilters],
+    ),
+  );
+  const query = useCallTrace(filters, canSee);
+  // The server's complete sets, carried on every page, NOT the values on the
+  // loaded rows: those collapse to the one selected once a dial is set.
+  const first = query.data?.pages[0];
+  // A value reached by link may have no calls yet and so be absent from the
   // server's set; it stays selectable so the select shows what is filtered.
-  const tasks = task && !listed.includes(task) ? [task, ...listed] : listed;
+  const tasks = withSelected(first?.tasks ?? [], filters.task);
+  const models = withSelected(first?.models ?? [], filters.model);
 
   if (!canSee) {
-    // Withheld, not absent — the same choice the spend card above it makes. An
-    // absent trace reads as "the installation made no model calls", which is a
-    // claim about the data rather than about who may read it. No request either:
-    // the query is disabled, because a settled denial is not a failure to retry.
+    // Withheld, not absent: an absent trace reads as "the installation made no
+    // model calls". No request either, because a settled denial is no failure.
     return (
       <Panel title={t("aicalls.title")}>
         <PanelBody>
@@ -153,216 +399,30 @@ export function AiCallsCard() {
     );
   }
 
-  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
   return (
     <Panel title={t("aicalls.title")}>
       <PanelBody>
         <PanelIntro>{t("aicalls.sub")}</PanelIntro>
-        <QueryStates query={query} pendingLabel={t("aicalls.title")}>
-          <SettingList>
-            <SettingRow
-              label={t("aicalls.col.task")}
-              control={(control) => (
-                <Select
-                  {...control}
-                  className="settingrow-measure"
-                  value={task}
-                  onChange={setTask}
-                  // "All tasks" is a real option, not the select's placeholder: a
-                  // reader who filtered to one task has to be able to come back.
-                  // A task name is a wire value the server owns, so it is its own
-                  // label — there is nothing to translate.
-                  options={[
-                    { value: "", label: t("aicalls.filter.all") },
-                    ...tasks.map((value) => ({ value, label: value })),
-                  ]}
-                />
-              )}
-            />
-            <SettingRow
-              label={t("aicalls.callsLabel")}
-              layout="stack"
-              control={
-                // A column, because the page that follows the trace is under it
-                // rather than beside it; `.settingrow-control` is a flex ROW, so
-                // the two would otherwise sit shoulder to shoulder.
-                <div className="form-stack settingrow-measure">
-                  {calls.length === 0 ? (
-                    <EmptyState>{t("aicalls.empty")}</EmptyState>
-                  ) : (
-                    // Every figure of a call stays — a call is only diagnosable
-                    // with its model, its tokens and its latency side by side —
-                    // but they share three columns, not six: the moment and the
-                    // latency ride under the task and the tokens, and the model
-                    // wraps. A table wider than its card scrolls, and an overlay
-                    // scrollbar draws nothing, so it just looks cut off.
-                    // `TableScroll` stays as the containment for a viewport too
-                    // narrow for even this.
-                    <TableScroll label={t("aicalls.callsLabel")}>
-                      <table className="table aicalls-table">
-                        <thead>
-                          <tr>
-                            {/* The disclosure column. Named rather than left
-                              blank: a table that announces five headers for six
-                              cells makes the reader count. */}
-                            <th className="sr-only">
-                              {t("aicalls.col.detail")}
-                            </th>
-                            <th>
-                              {t("aicalls.col.task")} / {t("aicalls.col.when")}
-                            </th>
-                            <th>{t("aicalls.col.model")}</th>
-                            <th>
-                              {t("aicalls.col.tokens")} /{" "}
-                              {t("aicalls.col.latency")}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {calls.map((call) => (
-                            <FragmentRow
-                              key={call.id}
-                              call={call}
-                              expanded={expanded === call.id}
-                              captureEnabled={captureEnabled}
-                              onToggle={() =>
-                                setExpanded(
-                                  expanded === call.id ? null : call.id,
-                                )
-                              }
-                              when={formatDateTime(
-                                call.occurred_at,
-                                locale,
-                                zone,
-                              )}
-                              tokens={`${formatNumber(call.tokens_in, locale)} / ${formatNumber(call.tokens_out, locale)}`}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
-                    </TableScroll>
-                  )}
-                  {query.hasNextPage && (
-                    <div>
-                      <Button
-                        disabled={query.isFetchingNextPage}
-                        onClick={() => void query.fetchNextPage()}
-                      >
-                        {t("aicalls.loadMore")}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              }
-            />
-          </SettingList>
+        <CallFiltersBar
+          tasks={tasks}
+          models={models}
+          filters={filters}
+          search={search}
+          onSearch={setSearch}
+          onChange={setFilters}
+        />
+        <QueryStates
+          query={query}
+          pendingLabel={t("aicalls.title")}
+          pendingLines={6}
+        >
+          <CallTrace
+            query={query}
+            filters={filters}
+            onClear={() => setFilters(UNFILTERED_CALLS)}
+          />
         </QueryStates>
       </PanelBody>
     </Panel>
-  );
-}
-
-function FragmentRow({
-  call,
-  expanded,
-  captureEnabled,
-  onToggle,
-  when,
-  tokens,
-}: Readonly<{
-  call: components["schemas"]["AiCallSummary"];
-  expanded: boolean;
-  captureEnabled: boolean;
-  onToggle: () => void;
-  when: string;
-  tokens: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const panelId = useId();
-  // The attempts the ladder itself made. A decision model that fell back is
-  // the first of `calls_attempted`, and the rung after it is a second model
-  // asked, not a retry of the first — so it does not count toward the badge.
-  const ladderAttempts = call.decision_attempted
-    ? call.calls_attempted - 1
-    : call.calls_attempted;
-  return (
-    <>
-      {/* The disclosure is a real button in the first cell, not a click handler on
-          the row. A `<tr onClick>` is reachable by pointer alone: it takes no
-          focus, answers no key, and announces no state — so the attempt trail
-          behind it, which is the whole reason this table expands, was unreachable
-          by keyboard and to a screen reader. The subject-request queue
-          (screens/privacy.tsx) is the shape this follows. */}
-      <tr>
-        <td>
-          {/* NOT a `Disclosure`: that primitive is a `<details>` element, and
-              what opens here is the NEXT table row, which no element can
-              contain from inside a cell of the row above it. So the trigger
-              stays a real button carrying the expanded state in ARIA, and the
-              chevron is turned by that same attribute, by the catalog's own
-              `.expander-chevron` — `iconOnly` because the glyph is its whole
-              label, which is what makes the control square instead of a pill
-              around 14px. */}
-          <Button
-            iconOnly
-            variant="ghost"
-            aria-expanded={expanded}
-            aria-controls={expanded ? panelId : undefined}
-            // Named by the call it opens, not "Show detail": a page of twenty
-            // rows would otherwise offer twenty identically-named buttons.
-            aria-label={t("aicalls.expandCall", { task: call.task, when })}
-            onClick={onToggle}
-          >
-            {/* No `size=`: `.btn svg` already sizes a button's icon child
-                (base.css), and a size at the call site is the drift that rule
-                exists to stop. */}
-            <ChevronDown className="expander-chevron" aria-hidden />
-          </Button>
-        </td>
-        <td>
-          {call.task}
-          <div className="t-caption">{when}</div>
-          <div className="aicalls-badges">
-            {/* The logical call's flag, not this row's kind: a fallback's
-                terminal row is the completion that answered after the
-                decision model was asked. */}
-            {call.decision_attempted && (
-              <Badge>{t("aicalls.badge.decision")}</Badge>
-            )}
-            {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
-            {call.degraded && (
-              <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
-            )}
-            {call.error_sentinel && (
-              <Badge tone="danger">{call.error_sentinel}</Badge>
-            )}
-            {ladderAttempts > 1 && (
-              <Badge>
-                {t("aicalls.badge.retries", {
-                  count: formatNumber(ladderAttempts, locale),
-                })}
-              </Badge>
-            )}
-          </div>
-        </td>
-        <td>
-          {tierLabel(call.tier, t)} · {call.provider}/{call.served_model}
-        </td>
-        <td>
-          {tokens}
-          <div className="t-caption">
-            {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
-          </div>
-        </td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={4} id={panelId}>
-            <CallDetailPanel id={call.id} captureEnabled={captureEnabled} />
-          </td>
-        </tr>
-      )}
-    </>
   );
 }

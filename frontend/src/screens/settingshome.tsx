@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowLeft } from "lucide-react";
-import type { MouseEvent } from "react";
+import { type MouseEvent, useState } from "react";
 import { navigate } from "../app/router";
-import { Badge, EmptyState } from "../design-system/atoms";
+import { useSetupChecklist } from "../app/setup-checklist";
+import { SetupSteps } from "../app/setup-reminder";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RoleBadge } from "../design-system/rbac";
@@ -132,6 +135,8 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
           one a reader on a phone reaches. */}
       <SettingsSearchBox pages={[...reach.acts, ...reach.looksUp]} />
 
+      <YourSetup reach={reach} />
+
       <Panel title={t("settings.home.yours")}>
         <PanelBody>
           <PageRows pages={personal} />
@@ -202,6 +207,53 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
         </PanelBody>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * The reader's own setup steps, the ones the top bar reminds them of. Hiding
+ * that reminder leaves this card alone: here the steps are always one look away.
+ */
+function YourSetup({ reach }: Readonly<{ reach: SettingsReach }>) {
+  const t = useT();
+  const setup = useSetupChecklist(reach);
+  const [showDone, setShowDone] = useState(false);
+  if (!setup.settled || setup.total === 0) {
+    return null;
+  }
+  const complete = setup.done === setup.total;
+  return (
+    <Panel
+      title={t("settings.home.setup.title")}
+      titleAction={<Badge>{t("settings.scope.self")}</Badge>}
+    >
+      <PanelBody>
+        {complete && (
+          <Callout
+            tone="success"
+            title={t("settings.home.setup.complete")}
+            actions={
+              showDone ? undefined : (
+                <Button onClick={() => setShowDone(true)}>
+                  {t("settings.home.setup.show")}
+                </Button>
+              )
+            }
+          />
+        )}
+        {(!complete || showDone) && (
+          <div className="settings-home-setup">
+            <p className="t-caption">
+              {t("settings.home.setup.count", {
+                done: String(setup.done),
+                total: String(setup.total),
+              })}
+            </p>
+            <SetupSteps steps={setup.steps} />
+          </div>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

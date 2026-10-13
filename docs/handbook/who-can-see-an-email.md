@@ -157,11 +157,11 @@ It binds mail from then on, and lifting it re-opens nothing: "Lifting applies to
 new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark, or use **Share with the team** in **Settings → Connections → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark, or use **Share with the team** in **Settings → Capture activity → Held threads**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
-Or press **Share with the team** on the thread under **Settings → Connections → Held threads**.
+Or press **Share with the team** on the thread under **Settings → Capture activity → Held threads**.
 Only the mailbox owner can share; if a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
 
@@ -217,6 +217,6 @@ never returns another seat's personal rows.
 | This mailbox's posture | Settings → Connections → Mail visibility |
 | The company-wide floor | Settings → Capture rules → Email sharing |
 | Hold mail with one party | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Connections → Held threads |
+| Share one thread | The message itself, or Settings → Capture activity → Held threads |
 | One logged message's audience | Change visibility, on its row |
 | Who can see the *record* | The contact or company header |

@@ -47,9 +47,10 @@ const kindLabel: Record<string, MessageKey> = {
   explicitly_confidential: "heldThreads.kind.explicitlyConfidential",
 };
 
-export function HeldThreadsCard() {
-  const t = useT();
-  const query = useQuery({
+/** The reader's held threads, across every mailbox they connected. Shared by
+ *  this card and the pointer row on each Connections account. */
+export function useHeldThreads() {
+  return useQuery({
     queryKey: ["held-threads"],
     queryFn: async () => {
       const { data, error } = await api.GET("/capture/held-threads");
@@ -57,6 +58,11 @@ export function HeldThreadsCard() {
       return data;
     },
   });
+}
+
+export function HeldThreadsCard() {
+  const t = useT();
+  const query = useHeldThreads();
 
   return (
     <Panel title={t("heldThreads.title")}>

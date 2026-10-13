@@ -10,10 +10,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// A seat's own other addresses. Unlike the exclusions card beside it there is no
-// scope to tell apart — every row here is the reader's own, and a colleague's
-// identities are never listed — so the states worth drawing are what the list
-// looks like with entries and what it says when there are none.
+// A seat's own other email addresses: the empty state with its one verb, and
+// the table with its Source column telling typed addresses from learned ones.
 const ALIAS = {
   id: "oi-1",
   kind: "address",
@@ -27,6 +25,13 @@ const OWN_DOMAIN = {
   value: "privat.example",
   source: "user",
   created_at: "2026-09-01T09:05:00Z",
+};
+const LEARNED = {
+  id: "oi-3",
+  kind: "address",
+  value: "lars@brandt-automotive.example",
+  source: "delivered_to",
+  created_at: "2026-09-02T07:30:00Z",
 };
 
 function story(identities: Record<string, unknown>[]) {
@@ -44,19 +49,26 @@ function story(identities: Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof OwnerIdentitiesCard> = {
-  title: "Settings/You/Connections/Your other addresses",
+  title: "Settings/You/Connections/Your other email addresses",
   component: OwnerIdentitiesCard,
 };
 export default meta;
 type Story = StoryObj<typeof OwnerIdentitiesCard>;
 
-// Both kinds at once: one address, and a whole domain the same contact reads.
-// The kind is the row's answer, because "l.jankowfsky@privat.example" and
-// "privat.example" bind very different amounts of mail and the row has to say
-// which it is.
-export const Populated: Story = { render: story([ALIAS, OWN_DOMAIN]) };
+// Both kinds, and one address Margince found in the mailbox.
+export const Populated: Story = {
+  render: story([ALIAS, OWN_DOMAIN, LEARNED]),
+};
 
-// Nothing declared, which is the ordinary state and has to read as a fact rather
-// than as a list that failed to draw — "I have told it about no other addresses"
-// is what a reader opens this card to confirm.
+export const PopulatedDark: Story = {
+  globals: { theme: "dark" },
+  render: story([ALIAS, OWN_DOMAIN, LEARNED]),
+};
+
+// The approved empty state: what the list is for, and Add address.
 export const Empty: Story = { render: story([]) };
+
+export const EmptyDark: Story = {
+  globals: { theme: "dark" },
+  render: story([]),
+};

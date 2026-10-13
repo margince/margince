@@ -1,33 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
-  Badge,
   Button,
   EmptyState,
   Modal,
-  OverflowMenu,
+  SearchField,
+  SegmentedControl,
+  TableScroll,
 } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useToast } from "../design-system/toast";
-import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useT } from "../i18n";
+import { QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useCan, useCanWrite } from "../app/capability";
 import { type AssignableRole, useAssignableRoles } from "./roles.queries";
-import { InviteUserForm, type Role } from "./users-invite-form";
+import { useRosterNames } from "./roster";
+import { InviteUserForm } from "./users-invite-form";
+import { MemberRow } from "./users-memberrow";
 import { PasswordLinkModal, usePasswordLink } from "./users-password-link";
-import {
-  drawsRolePicker,
-  RoleCell,
-  roleAnswer,
-  withRoles,
-} from "./users-rolecell";
+import { withRoles } from "./users-rolecell";
 
 type User = components["schemas"]["User"];
 // The member roster (company settings). Every user-management WRITE is admin-only
@@ -116,6 +112,7 @@ export function UsersAdminCard() {
     <MembersCard
       members={members}
       probeSettled={me.isSuccess}
+      administersRoster={administersRoster}
       canIssueLink={canIssueLink}
       canInvite={canInvite}
       canChangeRole={canChangeRole}
@@ -124,20 +121,32 @@ export function UsersAdminCard() {
   );
 }
 
-type MemberAction = NonNullable<User["allowed_actions"]>[number];
+type RosterFilter = "all" | "active" | "invited" | "deactivated";
+const FILTERS: readonly RosterFilter[] = [
+  "all",
+  "active",
+  "invited",
+  "deactivated",
+];
 
-// Whether the server offers this reader `action` on `member`. The roster
-// computes it with the checks the verb itself runs — the grant, the seat, the
-// ceiling over the member, their status, the last admin, the deployment's
-// link posture — so a row offers what the write accepts. An absent list is a
-// roster that computed none, and offers nothing.
-function offers(member: User, action: MemberAction): boolean {
-  return member.allowed_actions?.includes(action) ?? false;
+// Whether `member` belongs under `filter`. Suspended members count under All
+// only: no filter names them, and hiding them from every view would lose them.
+function inFilter(member: User, filter: RosterFilter): boolean {
+  return filter === "all" || member.status === filter;
+}
+
+function matchesSearch(member: User, needle: string): boolean {
+  return (
+    needle === "" ||
+    member.display_name.toLocaleLowerCase().includes(needle) ||
+    member.email.toLocaleLowerCase().includes(needle)
+  );
 }
 
 function MembersCard({
   members,
   probeSettled,
+  administersRoster,
   canIssueLink,
   canInvite,
   canChangeRole,
@@ -145,6 +154,7 @@ function MembersCard({
 }: Readonly<{
   members: ReturnType<typeof useMembers>;
   probeSettled: boolean;
+  administersRoster: boolean;
   canIssueLink: boolean;
   canInvite: boolean;
   canChangeRole: boolean;
@@ -155,73 +165,157 @@ function MembersCard({
   // not read-only, and telling them so beside controls they can use would be
   // false — the individual verbs decide what each row offers.
   const administers = canInvite || canChangeRole || canSetStatus;
-  const plural = usePlural();
   const t = useT();
-  const { locale } = useLocale();
-  const roster = members.data;
-  // The roles this reader may hand out: what each row's picker offers, and the
-  // names custom roles are shown under.
+  // The roles this reader may hand out: what the change-role dialog offers, and
+  // the names custom roles are shown under.
   const assignable = useAssignableRoles(canChangeRole);
   const read = withRoles(members, assignable, canChangeRole);
   return (
+    // Untitled: the page head already says "Members", and a panel band saying
+    // it again sat between that head and the roster it names.
     <Panel
-      title={t("users.membersTitle")}
-      // What the roster holds, and the one verb that adds to it, on the title's
-      // own line — which is what this band is for. The count states the roster
-      // INCLUDING deactivated members: the read opts into them, and a roster of
-      // twelve with three switched off is not a roster of nine. Nothing to count
-      // is said by the empty state below instead, so a "0 members" badge never
-      // doubles it.
-      titleAction={
-        <>
-          {roster && roster.length > 0 && (
-            <Badge>
-              {plural("users.memberCount", roster.length, {
-                count: formatNumber(roster.length, locale),
-              })}
-            </Badge>
-          )}
-          {canInvite && <InviteAction canIssueLink={canIssueLink} />}
-        </>
+      // The read-only posture is stated ONCE for the whole card rather than
+      // beside each row's withheld controls, which would repeat it per row.
+      // The foot explains rows, so an empty roster draws none of it.
+      footer={
+        members.data !== undefined &&
+        members.data.length > 0 && (
+          <span className="t-caption">
+            {t("users.roster.foot")}
+            {probeSettled && !administers && ` ${t("users.roster.readOnly")}`}
+          </span>
+        )
       }
     >
-      <PanelBody>
-        {/* The card's description, and — for a seat that may not administer it —
-            its read-only posture, in the one paragraph a reader starts on. The
-            posture is stated ONCE for the whole card rather than beside each of
-            the nine rows' worth of controls it refuses: withholding the page's
-            one explanation is the defect, withholding twelve controls
-            individually is noise (design-system/README.md §Absent, disabled, or
-            withheld). */}
-        <PanelIntro>
-          {t("users.membersSub")}
-          {probeSettled && !administers && ` ${t("users.adminOnly")}`}
-        </PanelIntro>
-        <QueryGate query={read} pendingLabel={t("users.membersTitle")}>
-          {({ list, roles }) =>
-            list.length === 0 ? (
-              <EmptyState>{t("users.empty")}</EmptyState>
-            ) : (
-              // One SettingRow per member, so nine members read as nine lines
-              // rather than nine cards. Before this a row drew the name, then a
-              // full-width role Select on its own line, then two ghost buttons
-              // under that — 140px per member, and a roster of nine was a
-              // 1300px wall.
-              <SettingList>
-                {list.map((u) => (
-                  <MemberRow key={u.id} member={u} roles={roles} />
-                ))}
-              </SettingList>
-            )
-          }
-        </QueryGate>
-      </PanelBody>
+      <QueryGate query={read} pendingLabel={t("users.roster.title")}>
+        {({ list, roles }) => (
+          <Roster
+            list={list}
+            roles={roles}
+            administersRoster={administersRoster}
+            canChangeRole={canChangeRole}
+            invite={canInvite && <InviteAction canIssueLink={canIssueLink} />}
+          />
+        )}
+      </QueryGate>
     </Panel>
   );
 }
 
-// Inviting somebody is four decisions committed together — an address, a name,
-// a role and the teams they land in — so the roster's header carries the verb
+// The roster proper: a search and a status filter over one table. Both narrow
+// the page already read; the roster is one page in V1, so nothing is fetched.
+function Roster({
+  list,
+  roles,
+  administersRoster,
+  canChangeRole,
+  invite,
+}: Readonly<{
+  list: readonly User[];
+  roles: readonly AssignableRole[];
+  administersRoster: boolean;
+  canChangeRole: boolean;
+  // The invite verb, or false where this reader may not invite.
+  invite: ReactNode;
+}>) {
+  const t = useT();
+  const me = useMe();
+  const [filter, setFilter] = useState<RosterFilter>("all");
+  const [search, setSearch] = useState("");
+  // Team names for the Teams column. `team_ids` rides only the privileged
+  // projection, so a reader without it asks for no names either.
+  const teams = useRosterNames("team", administersRoster);
+  const teamNames = new Map<string, string>();
+  for (const entry of teams.data ?? []) {
+    if ("name" in entry) {
+      teamNames.set(entry.id, entry.name);
+    }
+  }
+  const countOf = (option: RosterFilter) =>
+    list.filter((member) => inFilter(member, option)).length;
+  const counts: Record<RosterFilter, number> = {
+    all: countOf("all"),
+    active: countOf("active"),
+    invited: countOf("invited"),
+    deactivated: countOf("deactivated"),
+  };
+  const needle = search.trim().toLocaleLowerCase();
+  const shown = list.filter(
+    (member) => inFilter(member, filter) && matchesSearch(member, needle),
+  );
+  return (
+    <>
+      <PanelBody className="users-roster-toolbar">
+        <SearchField
+          aria-label={t("users.roster.searchLabel")}
+          placeholder={t("users.roster.searchPlaceholder")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        {invite}
+        <SegmentedControl
+          label={t("users.roster.filterLabel")}
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+          counts={counts}
+          labels={{
+            all: t("users.roster.filter.all"),
+            active: t("users.roster.filter.active"),
+            invited: t("users.roster.filter.invited"),
+            deactivated: t("users.roster.filter.deactivated"),
+          }}
+        />
+      </PanelBody>
+      {shown.length === 0 ? (
+        <PanelBody>
+          <EmptyState>
+            {needle !== ""
+              ? t("users.roster.noMatch")
+              : filter === "all"
+                ? t("users.roster.empty")
+                : t(`users.roster.emptyFilter.${filter}`)}
+          </EmptyState>
+        </PanelBody>
+      ) : (
+        <TableScroll label={t("users.roster.title")}>
+          <table className="table users-roster">
+            <thead>
+              <tr>
+                <th scope="col">{t("users.roster.col.member")}</th>
+                {administersRoster && (
+                  <>
+                    <th scope="col">{t("users.roster.col.role")}</th>
+                    <th scope="col">{t("users.roster.col.teams")}</th>
+                  </>
+                )}
+                <th scope="col">{t("users.roster.col.status")}</th>
+                <th scope="col" className="users-roster-actions">
+                  <span className="sr-only">
+                    {t("users.roster.col.actions")}
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            {shown.map((member) => (
+              <MemberRow
+                key={member.id}
+                member={member}
+                roles={roles}
+                isMe={member.id === me.data?.user.id}
+                teamNames={administersRoster ? teamNames : null}
+                canChangeRole={canChangeRole}
+              />
+            ))}
+          </table>
+        </TableScroll>
+      )}
+    </>
+  );
+}
+
+// Inviting somebody is four decisions committed together (an address, a name,
+// a role and the teams they land in), so the roster's toolbar carries the verb
 // and the form (users-invite-form.tsx, shared with the setup journey) lives in
 // the dialog behind it.
 function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
@@ -243,7 +337,9 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
       {/* Named for what it opens, not for what it does: this button invites
           nobody, and the dialog's own submit reads "Invite". Two buttons with
           one name are ambiguous for a reader and for `getByRole` alike. */}
-      <Button onClick={() => setOpen(true)}>{t("users.inviteOpen")}</Button>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        {t("users.roster.inviteOpen")}
+      </Button>
       <Modal
         open={open}
         onClose={() => setOpen(false)}
@@ -282,298 +378,5 @@ function InviteAction({ canIssueLink }: Readonly<{ canIssueLink: boolean }>) {
         />
       )}
     </>
-  );
-}
-
-// The verbs a member's row offers, behind the one control a row spends on them.
-//
-// Two of them, one a credential and one destructive, used to sit as ghost
-// buttons stacked under the row — which is the greater part of why a member cost
-// 140px. Neither is what a reader opens this roster for, and that is exactly
-// what an OverflowMenu is for. Nothing to offer draws nothing: a trigger over an
-// empty panel is a promise the row cannot keep.
-function MemberVerbs({
-  member,
-  pending,
-  canMintLink,
-  canDeactivate,
-  canReactivate,
-  onMintLink,
-  onDeactivate,
-  onReactivate,
-}: Readonly<{
-  member: User;
-  pending: boolean;
-  canMintLink: boolean;
-  canDeactivate: boolean;
-  canReactivate: boolean;
-  onMintLink: () => void;
-  onDeactivate: () => void;
-  onReactivate: () => void;
-}>) {
-  const t = useT();
-  if (!(canMintLink || canDeactivate || canReactivate)) {
-    return null;
-  }
-  return (
-    <OverflowMenu label={t("users.rowActions", { name: member.display_name })}>
-      {canMintLink && (
-        <Button disabled={pending} onClick={onMintLink}>
-          {t("users.link.action")}
-        </Button>
-      )}
-      {canDeactivate && (
-        <Button disabled={pending} onClick={onDeactivate}>
-          {t("users.deactivate")}
-        </Button>
-      )}
-      {canReactivate && (
-        <Button disabled={pending} onClick={onReactivate}>
-          {t("users.reactivate")}
-        </Button>
-      )}
-    </OverflowMenu>
-  );
-}
-
-// statusTone maps a member's status onto the badge vocabulary.
-//
-// Invited is deliberately NEUTRAL rather than a warning. An invitation in
-// flight is the ordinary first state of every seat, and painting a whole
-// column of new colleagues amber tells an admin something is wrong when
-// nothing is. Warn is kept for the states somebody has to act on.
-function statusTone(
-  status: string,
-): "success" | "warning" | "danger" | undefined {
-  switch (status) {
-    case "active":
-      return "success";
-    case "invited":
-      return undefined;
-    default:
-      return "warning";
-  }
-}
-
-function MemberRow({
-  member,
-  roles,
-}: Readonly<{
-  member: User;
-  roles: readonly AssignableRole[];
-}>) {
-  const t = useT();
-  const qc = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [confirmOff, setConfirmOff] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
-  // Where the deactivate confirm hands focus back. The Deactivate item it was
-  // opened from is gone by then — Reactivate has taken its place — but the row
-  // itself stays, because the roster is read with include_inactive.
-  const row = useRef<HTMLDivElement | null>(null);
-  const passwordLink = usePasswordLink();
-  const openLink = () => {
-    setLinkOpen(true);
-    void passwordLink.mint(member.id);
-  };
-  // Returns the refetch so each onSuccess can hand it back to react-query,
-  // which then keeps the mutation pending until the new roster lands. Without
-  // that the mutation settles first and the row renders the pre-change roster
-  // it still has cached — the member's OLD role, briefly, right after a
-  // successful change.
-  const refresh = () => {
-    setError(null);
-    return Promise.all([
-      qc.invalidateQueries({ queryKey: ["users-admin"] }),
-      // The seat COUNT moves with the roster: deactivating a member frees a
-      // seat and reactivating one spends it, and Settings → Seats reads that
-      // number from its own endpoint with a five-minute staleTime. Left alone
-      // it kept reporting the pre-change count to whoever had the page open —
-      // the same roster change, two caches.
-      qc.invalidateQueries({ queryKey: ["installation-seat-usage"] }),
-      qc.invalidateQueries({ queryKey: ["installation-license"] }),
-    ]);
-  };
-  const onError = (e: Error) => setError(problemMessageOf(e, t));
-  const toast = useToast();
-
-  const setRole = useMutation({
-    mutationFn: async (role: Role) => {
-      const { error: err } = await api.PATCH("/users/{id}/role", {
-        params: { path: { id: member.id } },
-        body: { role },
-      });
-      if (err) {
-        throwProblem(err);
-      }
-    },
-    onSuccess: async () => {
-      await refresh();
-      // No Undo: reversing it means knowing which role they held before, and
-      // the roster this row redraws from has already been replaced by the time
-      // a reader could press it. A wrong role restored quietly is worse than
-      // no offer at all.
-      toast.show(t("users.roleSaved", { name: member.email }));
-    },
-    onError,
-  });
-
-  const deactivate = useMutation({
-    mutationFn: async () => {
-      const { error: err } = await api.POST("/users/{id}/deactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (err) {
-        throwProblem(err);
-      }
-    },
-    onSuccess: async () => {
-      // The refreshed roster FIRST, then the dialog: closing it hands focus back
-      // to the row, and a row still showing "Active" beside a Deactivate item
-      // would announce the state this confirm just ended.
-      await refresh();
-      setConfirmOff(false);
-      // A true inverse, and both halves are already on this row: `reactivate`
-      // restores exactly what `deactivate` took away, with nothing to re-supply.
-      toast.show(t("users.deactivated", { name: member.email }), {
-        action: { label: t("common.undo"), onAct: () => reactivate.mutate() },
-      });
-    },
-    onError,
-  });
-
-  const reactivate = useMutation({
-    mutationFn: async () => {
-      const { error: err } = await api.POST("/users/{id}/reactivate", {
-        params: { path: { id: member.id } },
-      });
-      if (err) {
-        throwProblem(err);
-      }
-    },
-    onSuccess: async () => {
-      await refresh();
-      toast.show(t("users.reactivated", { name: member.email }));
-    },
-    onError,
-  });
-
-  const pending =
-    setRole.isPending || deactivate.isPending || reactivate.isPending;
-  const drawsPicker = drawsRolePicker(
-    member,
-    roles,
-    offers(member, "change_role"),
-  );
-  const canMintLink = offers(member, "issue_password_link");
-  const canDeactivate = offers(member, "deactivate");
-  const canReactivate = offers(member, "reactivate");
-
-  return (
-    // The row's own wrapper, so a refusal reads UNDER the member it belongs to
-    // and inside their cell — the list's hairline still separates one member
-    // from the next. tabIndex -1 makes it reachable by focus() without putting
-    // a container into anybody's Tab order; the deactivate confirm below is the
-    // only thing that focuses it.
-    <div data-testid={`member-${member.id}`} ref={row} tabIndex={-1}>
-      <SettingRow
-        label={member.display_name}
-        description={member.email}
-        value={roleAnswer(member, roles, drawsPicker, t)}
-        // Status, then role, then the verbs — and that ORDER is what keeps nine
-        // role pickers at one x. The control column packs from the right, so an
-        // item's position is decided by the width of everything after it: with
-        // the badge last, "Deactivated" pushed that row's picker 34px left of
-        // the other eight. Only the menu trigger, which is one glyph wide on
-        // every row, sits after the picker now.
-        control={
-          <>
-            <Badge tone={statusTone(member.status)}>
-              {t(`users.status.${member.status}`)}
-            </Badge>
-            {/* The workspace's agent identity sits in this roster because it
-                OWNS records — a client resolving an owner has to find it — so
-                the row says what it is rather than passing for a colleague. */}
-            {member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>}
-            {drawsPicker && (
-              <RoleCell
-                member={member}
-                roles={roles}
-                pending={pending}
-                // While a change is in flight the cell shows the role being
-                // applied — and it stays in flight until the refreshed roster
-                // lands (see refresh), so the row never renders the replaced
-                // role. A FAILED change leaves it on the role still held, which
-                // is what keeps a retry live: re-picking the same target still
-                // fires onChange.
-                inFlight={setRole.isPending ? setRole.variables : undefined}
-                onPick={(role) => setRole.mutate(role)}
-              />
-            )}
-            <MemberVerbs
-              member={member}
-              pending={pending}
-              canMintLink={canMintLink}
-              canDeactivate={canDeactivate}
-              canReactivate={canReactivate}
-              onMintLink={openLink}
-              onDeactivate={() => setConfirmOff(true)}
-              onReactivate={() => reactivate.mutate()}
-            />
-          </>
-        }
-      />
-      {/* The invite dialog's vocabulary, at the row's full width. The interval
-          under it belongs to the WRAPPER: a notice owns no layout. */}
-      {error && (
-        <div className="users-member-error">
-          <Callout tone="danger" kind="outcome" title={t("users.notSaved")}>
-            {error}
-          </Callout>
-        </div>
-      )}
-      <ConfirmModal
-        open={confirmOff}
-        onClose={() => setConfirmOff(false)}
-        title={t("users.deactivateConfirmTitle", { name: member.display_name })}
-        confirmLabel={t("users.deactivate")}
-        confirmVariant="danger"
-        pending={deactivate.isPending}
-        error={deactivate.error ? problemMessageOf(deactivate.error, t) : null}
-        onConfirm={() => deactivate.mutate()}
-        // The member's own row, which reads back their name, address and the
-        // status this confirm just changed — the outcome, at the place the
-        // operator was working. The item they pressed is not an option: a
-        // deactivated row offers Reactivate instead, so the opener is gone.
-        returnFocusTo={() => row.current}
-      >
-        {/* Deactivating the agent seat is a posture an operator is entitled to
-            take, so it stays offered — and the generic body (signed out, sessions
-            revoked) describes a colleague rather than an identity that signs in
-            nowhere. The agent body's job is to say what does NOT stop: scheduled
-            extension jobs keep running, because a tick acts as the job it is. */}
-        <p>
-          {t(
-            member.is_agent
-              ? "users.deactivateAgentConfirmBody"
-              : "users.deactivateConfirmBody",
-          )}
-        </p>
-      </ConfirmModal>
-      {linkOpen && (
-        <PasswordLinkModal
-          memberName={member.display_name}
-          link={passwordLink.state.link}
-          pending={passwordLink.state.pending}
-          error={passwordLink.state.error}
-          onRetry={openLink}
-          onClose={() => {
-            // Drop the credential with the dialog, never merely hide it.
-            passwordLink.clear();
-            setLinkOpen(false);
-          }}
-        />
-      )}
-    </div>
   );
 }

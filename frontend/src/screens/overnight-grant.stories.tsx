@@ -3,15 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { SettingList } from "../design-system/settingrow";
 import { OvernightGrantCard, OvernightGrantChoice } from "./overnight-grant";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The rep's standing overnight authority, in both places it is asked.
 //
-// The states worth rendering are the ones a screenshot can tell apart and a
-// reader has to act on differently: ticked (nothing to warn about), cleared
-// (the red notice naming what goes empty), and — settings only — the renewal
-// case, where the rep already said yes and the credential behind it has died.
+// Onboarding: a Switch row, on (nothing to warn about) or off (the notice naming
+// what goes empty). Settings: on, off (an Off badge and a quiet sentence, no
+// warning), and the renewal cases where a yes no longer does the job.
 
 const meta: Meta<typeof OvernightGrantCard> = {
   title: "Shell/Overnight grant",
@@ -53,7 +53,7 @@ export const OnboardingPreselected: Story = {
   },
 };
 
-/** Onboarding, cleared — the red notice naming the screens that go empty. */
+/** Onboarding, turned off: the notice naming the screens that go empty. */
 export const OnboardingCleared: Story = {
   render: () => {
     installFetchStub({});
@@ -79,7 +79,7 @@ export const SettingsGranted: Story = {
   },
 };
 
-/** Settings, withdrawn: the same red notice as onboarding, same words. */
+/** Settings, withdrawn: the approved Off badge and quiet sentence. */
 export const SettingsDeclined: Story = {
   render: () => {
     installFetchStub({
@@ -93,8 +93,18 @@ export const SettingsDeclined: Story = {
   },
 };
 
-/** The rep agreed and their credential has since died. Reported as its own
- * state — showing it as a decline would put a settled question back to them. */
+export const SettingsDeclinedDark: Story = {
+  ...SettingsDeclined,
+  globals: { theme: "dark" },
+};
+
+export const OnboardingPreselectedDark: Story = {
+  ...OnboardingPreselected,
+  globals: { theme: "dark" },
+};
+
+/** The rep agreed and their credential has since died. Its own state: showing
+ * it as a decline would put a settled question back to them. */
 export const SettingsNeedsRenewal: Story = {
   render: () => {
     installFetchStub({
@@ -124,9 +134,13 @@ export const SettingsNeedsWiderAuthority: Story = {
   },
 };
 
-/** The checkbox owns no state of its own — the onboarding act does — so a
- * story has to hold it for the box to be tickable at all. */
+/** The switch owns no state (the onboarding act does), and it is a row for the
+ * caller's list, so the story holds both. */
 function ChoiceHarness({ initial }: Readonly<{ initial: boolean }>) {
   const [checked, setChecked] = useState(initial);
-  return <OvernightGrantChoice checked={checked} onChange={setChecked} />;
+  return (
+    <SettingList>
+      <OvernightGrantChoice checked={checked} onChange={setChecked} />
+    </SettingList>
+  );
 }

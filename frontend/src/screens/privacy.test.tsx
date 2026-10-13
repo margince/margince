@@ -1006,6 +1006,11 @@ describe("opening a DSR (G-2)", () => {
 });
 
 describe("fulfilling an erasure", () => {
+  // The whole label, so a dialog that stops showing the word fails here.
+  function erasePhraseInput() {
+    return screen.getByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`);
+  }
+
   it("holds the confirm until ERASE is typed", async () => {
     stubRoutes();
     render(<PrivacyInboxCard />);
@@ -1013,25 +1018,29 @@ describe("fulfilling an erasure", () => {
       await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
     );
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
-    // "Fulfil" also substring-matches the facet bar's "Fulfilled" filter
-    // button — scope to the row under test, same idiom as findDsrRow's other
-    // callers above.
+    // "Fulfil" also matches the facet bar's "Fulfilled" filter button, so
+    // scope to the row under test, as findDsrRow's other callers do.
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
     const confirm = await screen.findByRole("button", {
       name: /erase and suppress/i,
     });
     expect(confirm).toBeDisabled();
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await waitFor(() => expect(erasePhraseInput()).toHaveFocus());
+    // Case-sensitive, like every typed confirmation: the word is shown in bold.
+    await userEvent.type(erasePhraseInput(), "erase");
+    expect(confirm).toBeDisabled();
+    await userEvent.clear(erasePhraseInput());
+    await userEvent.type(erasePhraseInput(), " ERASE ");
     expect(confirm).toBeEnabled();
+    expect(
+      within(screen.getByRole("dialog")).getByRole("status"),
+    ).toHaveTextContent(en["confirmPhrase.matches"]);
   });
 
-  // gobd.html: retention wins for the statutory window (Art. 17(3)(b)). The
-  // 409 is not a generic error — it is a documented, explicit outcome. The
-  // stub mirrors the real wire shape (erasure.go's fmt.Errorf-wrapped
-  // ErrConflict, mapped by httperr.go's fixed sentinel table): no
-  // retain_until — the legal-hold check is a bare boolean column, never a
-  // retention-window timestamp — so the fixture must not invent one.
+  // Retention wins for the statutory window (Art. 17(3)(b)), so the 409 is a
+  // documented outcome. The stub mirrors the real wire shape: no retain_until,
+  // because the legal hold is a bare boolean column, never a timestamp.
   it("renders a legal hold as a blocked state, not a red toast", async () => {
     stubRoutes({
       "PATCH /data-subject-requests/d1": () =>
@@ -1053,19 +1062,17 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
-    await userEvent.click(
-      screen.getByRole("button", { name: /erase and suppress/i }),
-    );
+    await userEvent.type(erasePhraseInput(), "ERASE");
+    const confirm = screen.getByRole("button", { name: /erase and suppress/i });
+    await userEvent.click(confirm);
     expect(await screen.findByText(/legal hold/i)).toBeInTheDocument();
     expect(screen.getByText(/no override/i)).toBeInTheDocument();
+    // The phrase still matches, and the hold keeps the confirm shut anyway.
+    expect(confirm).toBeDisabled();
   });
 
-  // Unlike the legal hold above, a stale-transition 422 is not a lawful
-  // refusal of THIS confirm — it means someone else already decided the
-  // request, so retrying the same confirm could only 422 again. The modal
-  // must disarm itself and the row list behind it must re-read, exactly
-  // like DsrRow's own plain PATCH already does for this same race.
+  // A stale-transition 422 means someone else already decided the request, so
+  // a retry could only 422 again: the modal disarms and the list re-reads.
   it("disarms the confirm and re-reads when the fulfil moved on underneath us", async () => {
     const sent = stubRoutes({
       "PATCH /data-subject-requests/d1": () =>
@@ -1095,15 +1102,14 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     const confirm = screen.getByRole("button", { name: /erase and suppress/i });
     await userEvent.click(confirm);
 
     expect(await screen.findByText(/else decided this/i)).toBeInTheDocument();
     expect(confirm).toBeDisabled();
-    // The refusal must trigger the same re-read as the row's own plain
-    // PATCH race — a second GET beyond the initial page load — so the row
-    // behind this modal reflects what actually happened server-side.
+    // The refusal re-reads the queue (a second GET beyond the page load), as
+    // the row's own plain PATCH race does, so the row shows what happened.
     await waitFor(() =>
       expect(
         sent.filter((s) => s.key === "GET /data-subject-requests").length,
@@ -1111,15 +1117,10 @@ describe("fulfilling an erasure", () => {
     );
   });
 
-  // The confirm modal's own mutation, distinct from the row's plain PATCH
-  // above (submitTransition never reaches it for an erasure fulfil): the
-  // server now validates a DSR update BEFORE erasing (fulfilling an erasure
-  // without a resolution 422s), so the resolution the operator wrote in the
-  // row must ride along into this PATCH too — the modal has no field of its
-  // own to collect it a second time. The stub mirrors what the server would
-  // actually persist and echo back: a fixture starting at status "open" with
-  // no stored resolution cannot legitimately reply 200 to a fulfil that
-  // carried no resolution, so the response includes the one just sent.
+  // The confirm modal's own mutation, not the row's plain PATCH: the server
+  // validates a DSR update before erasing and 422s an erasure fulfil with no
+  // resolution, so the one the operator wrote in the row rides along, and the
+  // stub echoes it back as the server would persist it.
   it("sends {status: fulfilled, resolution} on the erasure fulfil PATCH", async () => {
     const sent = stubRoutes({
       "PATCH /data-subject-requests/d1": () =>
@@ -1136,7 +1137,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     await userEvent.click(
       screen.getByRole("button", { name: /erase and suppress/i }),
     );
@@ -1154,17 +1155,14 @@ describe("fulfilling an erasure", () => {
     });
   });
 
-  // A fulfilled request is terminal, so the whole actions branch the confirm was
-  // opened from — the resolution field and every transition button — is gone once
-  // it succeeds. Handing focus back to the button that staged it is a silent
-  // no-op that leaves the officer on <body>, one Tab from the top of the page.
+  // A fulfilled request is terminal, so the actions branch the confirm opened
+  // from is gone once it succeeds; focus handed back to it lands on <body>.
   it("returns focus to the row's summary after the fulfil, never to the document", async () => {
     let fulfilled = false;
     const closed = { status: "fulfilled", resolution: "verified" };
     stubRoutes({
-      // The queue the server would really answer with afterwards: without this
-      // the row comes back open, the staging button is still there to take focus
-      // back, and the case under test never happens.
+      // The queue the server answers with afterwards; without it the row comes
+      // back open and the case under test never happens.
       "GET /data-subject-requests": () =>
         jsonResponse({
           ...DSRS,
@@ -1186,7 +1184,7 @@ describe("fulfilling an erasure", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     const opener = within(row).getByRole("button", { name: /fulfil/i });
     await userEvent.click(opener);
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     await userEvent.click(
       screen.getByRole("button", { name: /erase and suppress/i }),
     );

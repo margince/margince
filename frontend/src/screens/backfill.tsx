@@ -1,8 +1,7 @@
-import { History } from "lucide-react";
-import { useState } from "react";
+import { useId } from "react";
 import type { components } from "../api/schema";
 import { useDrawsImportRun } from "../app/import-onscreen";
-import { Button } from "../design-system/atoms";
+import { Button, Modal } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { formatMoney, formatNumber } from "../format/format";
@@ -24,10 +23,10 @@ import "./backfill.css";
 // first thing a newly-connected user sees is honest scope, not a blank form —
 // but the spend still waits for the explicit "Start the import" consent.
 //
-// Its one caller today is the Settings connected-inboxes card, which already
-// holds the run row via the embedded `CaptureConnection.backfill` — seeding
-// from it renders a live run with no extra request. Without a seed (the shape
-// the onboarding coldstart used) it simply fetches on mount.
+// It is the body of the Settings import dialog, opened from a connected
+// account's Past email service. The account row seeds it with the run row
+// embedded in `CaptureConnection.backfill`, so a live run shows with no extra
+// request; without a seed it fetches on mount.
 //
 // It imports its own sheet. Every class it names — .backfill-setup,
 // .backfill-h, .capture-hero, .capture-stat — used to be declared in
@@ -73,18 +72,55 @@ function classifyBackfillErrors(
   };
 }
 
+/**
+ * "Import older email" for one connected mailbox: the pick, the scope and the
+ * start, or the last run with its own verbs. The panel mounts only while the
+ * dialog is open, because its setup counts the scope the moment it renders.
+ */
+export function ImportPastEmailDialog({
+  provider,
+  initial,
+  open,
+  onClose,
+}: Readonly<{
+  provider: Provider;
+  initial?: BackfillStatus;
+  open: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const headingId = useId();
+  return (
+    <Modal open={open} onClose={onClose} labelledBy={headingId}>
+      <Heading size="large" id={headingId} className="t-h2 modal-title">
+        {t("connectors.menu.importOlder")}
+      </Heading>
+      {open && (
+        <BackfillPanel
+          provider={provider}
+          initial={initial}
+          onClose={onClose}
+        />
+      )}
+    </Modal>
+  );
+}
+
 export function BackfillPanel({
   provider,
   initial,
+  onClose,
 }: {
   provider: Provider;
   // The run row already embedded in GET /connectors (CaptureConnection.
   // backfill) — seeds the first render so a live run shows immediately.
   initial?: BackfillStatus;
+  /** Leaves the panel: "Not now", or a start the server accepted, after which
+   *  the account row is where the run is watched. */
+  onClose: () => void;
 }) {
   const t = useT();
-  const [skipped, setSkipped] = useState(false);
-  const importRun = useBackfillRun({ provider, initial, previewHeld: skipped });
+  const importRun = useBackfillRun({ provider, initial });
   const { status, preview, start, cancel, window, setWindow } = importRun;
 
   const { unsupported, narrowing } = classifyBackfillErrors(
@@ -96,9 +132,6 @@ export function BackfillPanel({
   // while it is on screen rather than gauging the same import twice.
   useDrawsImportRun(isLiveRun(status.data?.state));
 
-  if (skipped) {
-    return <p className="backfill-skipped">{t("backfill.skippedNote")}</p>;
-  }
   if (status.isPending) {
     return <p>{t("backfill.loading")}</p>;
   }
@@ -126,8 +159,8 @@ export function BackfillPanel({
         startErrorMessage={
           start.isError ? problemMessageOf(start.error, t) : null
         }
-        onStart={() => importRun.begin(window)}
-        onSkip={() => setSkipped(true)}
+        onStart={() => importRun.begin(window, onClose)}
+        onSkip={onClose}
       />
     );
   }
@@ -187,9 +220,6 @@ function BackfillSetup({
   if (unsupported) {
     return (
       <div className="backfill-setup">
-        <Heading size="medium" className="backfill-h">
-          <History aria-hidden /> {t("backfill.title")}
-        </Heading>
         <p>{t("backfill.unsupportedNote")}</p>
       </div>
     );
@@ -197,9 +227,6 @@ function BackfillSetup({
 
   return (
     <div className="backfill-setup">
-      <Heading size="medium" className="backfill-h">
-        <History aria-hidden /> {t("backfill.title")}
-      </Heading>
       <p>{t("backfill.intro")}</p>
       <ImportWindowPicker
         value={window}
@@ -241,7 +268,7 @@ function BackfillSetup({
 // only on a landed estimate took the start button off screen for exactly the
 // mailboxes slow enough to make someone wonder, and off screen for good when
 // the estimator refused.
-function EstimateCard({
+export function EstimateCard({
   preview,
   window,
   counting,

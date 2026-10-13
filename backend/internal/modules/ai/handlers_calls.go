@@ -5,6 +5,7 @@ package ai
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -26,7 +27,12 @@ func (h Handlers) ListAiCalls(
 	r *http.Request,
 	params crmcontracts.ListAiCallsParams,
 ) {
-	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, params.Task)
+	filter, err := callFilterOf(params.Task, params.Model, params.Q, params.Outcome, params.From, params.To)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, filter)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -40,11 +46,40 @@ func (h Handlers) ListAiCalls(
 		Page:                  crmcontracts.PageInfo{HasMore: page.HasMore},
 		PayloadCaptureEnabled: h.capturePayloads,
 		Tasks:                 page.Tasks,
+		Models:                page.Models,
 	}
 	if page.NextCursor != "" {
 		response.Page.NextCursor = &page.NextCursor
 	}
 	httperr.WriteJSON(w, http.StatusOK, response)
+}
+
+// callFilterOf checks what the generated binding cannot: an outcome off the
+// enum and a window that ends before it starts, which would match nothing.
+func callFilterOf(
+	task, model, query *string,
+	outcome *crmcontracts.AiCallOutcome,
+	from, to *time.Time,
+) (CallFilter, error) {
+	filter := CallFilter{From: from, To: to}
+	for _, field := range []struct{ dest, src *string }{
+		{&filter.Task, task}, {&filter.Model, model}, {&filter.Query, query},
+	} {
+		if field.src != nil {
+			*field.dest = *field.src
+		}
+	}
+	if outcome != nil {
+		if !outcome.Valid() {
+			return CallFilter{}, httperr.Validation("outcome", "invalid_parameter",
+				"outcome must be one of answered, fallback, declined, failed")
+		}
+		filter.Outcome = string(*outcome)
+	}
+	if filter.From != nil && filter.To != nil && !filter.To.After(*filter.From) {
+		return CallFilter{}, httperr.Validation("to", "invalid_parameter", "to must be after from")
+	}
+	return filter, nil
 }
 
 // GetAiCall implements (GET /ai/calls/{id}).
@@ -67,7 +102,9 @@ func wireAiCallSummary(summary CallSummary) crmcontracts.AiCallSummary {
 		CachedTokens: int(summary.CachedTokens), LatencyMs: int(summary.LatencyMS),
 		CacheHit: summary.CacheHit, Degraded: summary.Degraded,
 		ErrorSentinel: summary.ErrorSentinel, HasPayload: summary.HasPayload,
-		DecisionAttempted: summary.DecisionAttempted,
+		DecisionAttempted:     summary.DecisionAttempted,
+		Outcome:               crmcontracts.AiCallOutcome(summary.Outcome),
+		EstimatedCostMicrousd: summary.CostMicroUSD,
 	}
 }
 
@@ -83,12 +120,14 @@ func wireAiCall(detail CallDetail) crmcontracts.AiCall {
 		Degraded: summary.Degraded, ErrorSentinel: summary.ErrorSentinel,
 		HasPayload: summary.HasPayload, ServedIdentitySource: detail.ServedIdentitySource,
 		ConfigHash: detail.ConfigHash, Config: detail.Config,
-		ContextScopes:      detail.ContextScopes,
-		ContextFingerprint: detail.ContextFingerprint,
-		LogicalCallId:      openapi_types.UUID(detail.LogicalCallID),
-		Attempts:           make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
-		PayloadCaptured:    detail.Payload != nil,
-		DecisionAttempted:  summary.DecisionAttempted,
+		ContextScopes:         detail.ContextScopes,
+		ContextFingerprint:    detail.ContextFingerprint,
+		LogicalCallId:         openapi_types.UUID(detail.LogicalCallID),
+		Attempts:              make([]crmcontracts.AiCallAttempt, 0, len(detail.Attempts)),
+		PayloadCaptured:       detail.Payload != nil,
+		DecisionAttempted:     summary.DecisionAttempted,
+		Outcome:               summary.Outcome,
+		EstimatedCostMicrousd: summary.EstimatedCostMicrousd,
 	}
 	if detail.CorrelationID != nil {
 		value := openapi_types.UUID(*detail.CorrelationID)

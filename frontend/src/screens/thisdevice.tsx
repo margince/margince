@@ -2,37 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef, useState } from "react";
-import {
-  type InstallOutcome,
-  type InstallState,
-  useInstallState,
-} from "../app/pwa";
+import type { InstallOutcome, InstallState } from "../app/pwa";
 import { Button } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import { logUnexpectedError } from "./common";
 
-export function ThisDevicePanel() {
-  return <InstallPanel install={useInstallState()} />;
-}
-
-/** Absent where the browser cannot install: a capability this device lacks,
- *  not a refusal. */
-export function InstallPanel({ install }: Readonly<{ install: InstallState }>) {
-  const t = useT();
+/** The install row, absent where the browser cannot install: a capability
+ *  this device lacks, not a refusal. */
+export function InstallSettingRow({
+  install,
+}: Readonly<{ install: InstallState }>) {
   if (install.kind === "unavailable") {
     return null;
   }
-  return (
-    <Panel title={t("settings.deviceCard")}>
-      <PanelBody>
-        <SettingList>
-          <InstallRow install={install} />
-        </SettingList>
-      </PanelBody>
-    </Panel>
-  );
+  return <InstallRow install={install} />;
 }
 
 function InstallRow({

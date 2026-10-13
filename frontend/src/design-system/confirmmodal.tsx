@@ -22,6 +22,7 @@ export function ConfirmModal({
   title,
   tier,
   confirmLabel,
+  cancelLabel,
   confirmVariant = "primary",
   confirmDisabled = false,
   actionsLead,
@@ -41,6 +42,9 @@ export function ConfirmModal({
   title: string;
   tier?: "confirm";
   confirmLabel: string;
+  // The way back, named for what it keeps ("Keep it on") where a bare Cancel
+  // would not say what staying put means. Defaults to Cancel.
+  cancelLabel?: string;
   // Passed through to Modal. A confirm whose body is a form the user has to
   // READ before an irreversible act — an email about to leave — needs more
   // than the compact width every yes/no confirm uses. "split" is the two-column
@@ -122,7 +126,7 @@ export function ConfirmModal({
             stopped something they did not. */}
         <span className="actions-pair">
           <Button onClick={onClose} disabled={pending}>
-            {t("create.cancel")}
+            {cancelLabel ?? t("create.cancel")}
           </Button>
           {/* The compound this dialog used to carry — `pending || confirmDisabled`
             — folded two unrelated facts into one attribute: a write in flight

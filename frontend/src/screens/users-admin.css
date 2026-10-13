@@ -1,11 +1,8 @@
 /* Admin member management layout. Colour inherits from the design tokens so the
    purity gate stays satisfied; only structure lives here.
 
-   The roster's own rhythm is NOT here any more: a member is one `SettingRow` in
-   one `SettingList`, so the gaps, the hairlines and the column at which every
-   answer sits all come from settingrow.css. What is left is the two places the
-   row language has nothing to say about — a refusal under the member it belongs
-   to, and the two boxes inside dialogs. */
+   The roster is the shared `.table`; what is here is the roster's own columns,
+   its toolbar, and the boxes inside the dialogs. */
 
 /* The team checkboxes inside the invite dialog. A bare <fieldset> draws the
    browser's 2px groove and its own padding, which is the one shape this tree
@@ -21,14 +18,88 @@
   min-width: 0;
 }
 
-/* The BOX a refused write sits in on a member's row, under that row and inside
-   its cell — so the hairline the list draws still separates one member from the
-   next, and the notice is not squeezed into the right column beside the control
-   that caused it. The interval is the box's, never the notice's: a callout owns
-   no layout, and the row above brings its own bottom padding, so this pays for
-   the interval below itself and nothing else does. */
-.users-member-error {
-  margin-bottom: var(--space-3);
+/* The roster toolbar: the search takes the slack with the invite verb at its
+   end, and the status filter runs under both, right above the rows it narrows. */
+.users-roster-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+.users-roster-toolbar .segmented {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* The outer columns start and end on the panel's own inset, so the member
+   names line up under the search and the verbs under the invite button. */
+.users-roster th:first-child,
+.users-roster td:first-child {
+  padding-left: var(--padPanel);
+}
+.users-roster th:last-child,
+.users-roster td:last-child {
+  padding-right: var(--padPanel);
+}
+.users-roster td.users-roster-error {
+  padding-left: var(--padPanel);
+  padding-right: var(--padPanel);
+}
+
+/* Between a phone and a full desktop column the table scrolls sideways rather
+   than folding a role name onto three lines. */
+.users-roster-member {
+  min-width: 12rem;
+}
+.users-roster-role {
+  min-width: 10rem;
+}
+
+/* Each member is its own <tbody> (the row and the refusal under it), so the
+   shared rule that drops the LAST row's hairline would drop every member's.
+   Only the table's last member ends without one. */
+.users-roster tbody:not(:last-child) tr:last-child td {
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.users-roster td {
+  vertical-align: middle;
+}
+
+.users-roster-member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.users-roster-teams {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* A status never truncates: "Ac..." is the one fact an admin scans this
+   column for, so the badges hold their width and the table scrolls instead. */
+.users-roster-status {
+  display: flex;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+/* The verbs column is one trigger wide on every row, at the row's end. */
+.users-roster-actions {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* A refused write, under the member it belongs to and across the whole row,
+   with no hairline between the member and their refusal. */
+.users-roster-error {
+  padding-top: 0;
+}
+.users-roster tr:has(+ .users-roster-error-row) td {
+  border-bottom: 0;
 }
 
 /* The BOX a refusal sits in inside the set-password dialog. It sits in a
@@ -53,4 +124,83 @@
 .users-link-row .input {
   flex: 1 1 20rem;
   min-width: 0;
+}
+
+/* On a phone each member becomes a card, as `.lt-table` rows do: a scrolled
+   table hid the status and the row's verbs off the right edge, which are the
+   two things an admin opens this page on a phone to reach. The member and
+   their verbs share the first line; role and status, then teams, run under it. */
+@media (max-width: 720px) {
+  .users-roster-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .users-roster-toolbar > * {
+    justify-self: start;
+  }
+  .users-roster-toolbar > :first-child {
+    justify-self: stretch;
+  }
+
+  .users-roster,
+  .users-roster tbody {
+    display: block;
+  }
+  .users-roster thead {
+    display: none;
+  }
+  .users-roster tbody:not(:last-child) {
+    border-bottom: 1px solid var(--borderSubtle);
+  }
+  .users-roster tbody tr:first-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "member actions"
+      "role status"
+      "teams teams";
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--padPanel);
+  }
+  .users-roster tbody tr:first-child:not(:has(.users-roster-role)) {
+    grid-template-areas:
+      "member actions"
+      "status status";
+  }
+  .users-roster tbody tr:hover td {
+    background: none;
+  }
+  .users-roster tbody tr:first-child td,
+  .users-roster tbody:not(:last-child) tr:last-child td {
+    padding: 0;
+    border-bottom: 0;
+  }
+  .users-roster-member,
+  .users-roster-role {
+    min-width: 0;
+  }
+  .users-roster tbody td:first-child {
+    grid-area: member;
+  }
+  .users-roster-role {
+    grid-area: role;
+  }
+  .users-roster-teamcell {
+    grid-area: teams;
+  }
+  .users-roster-statuscell {
+    grid-area: status;
+    justify-self: end;
+  }
+  .users-roster-actions {
+    grid-area: actions;
+    width: auto;
+  }
+  .users-roster-error-row {
+    display: block;
+  }
+  .users-roster tbody td.users-roster-error {
+    display: block;
+    padding: 0 var(--padPanel) var(--space-3);
+  }
 }

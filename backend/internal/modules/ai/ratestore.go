@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // RateStore is the ai_model_rate price sheet — the fx_rate-style
@@ -78,6 +79,34 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 	return &rate, nil
 }
 
+// The per-attempt pricing fragments over an ai_call row aliased `ac`. CostReport
+// sums them per day and the call trace sums them per logical call, so the trace's
+// per-call cost adds up to the usage report's total by construction.
+//
+// attemptRateJoin binds `r` to the attempt's as-of-date rate, RateFor's resolution.
+const attemptRateJoin = `LEFT JOIN LATERAL (
+	  SELECT mr.id, mr.input_per_mtok_microusd, mr.output_per_mtok_microusd,
+	         mr.cache_read_per_mtok_microusd, mr.cache_write_per_mtok_microusd
+	  FROM ai_model_rate mr
+	  WHERE mr.provider = ac.provider AND mr.model_id = ac.model_id
+	    AND mr.effective_date <= ac.occurred_at::date
+	  ORDER BY mr.effective_date DESC
+	  LIMIT 1
+	) r ON true`
+
+// attemptCostMicroUSD is PriceCall's four-bucket arithmetic in SQL.
+const attemptCostMicroUSD = `CASE
+	  WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
+	  WHEN r.id IS NULL THEN 0
+	  ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
+	       + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	       + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
+	       + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
+	END`
+
+// attemptUnpriced is an attempt that spent tokens with no rate to price them.
+const attemptUnpriced = `NOT ac.cache_hit AND NOT (ac.tokens_in = 0 AND ac.tokens_out = 0) AND r.id IS NULL`
+
 // CostReport prices the [from, to) window's ai_call rows against their
 // as-of-date rate and sums per (calendar day, task, tier) — THE one
 // money computation that runs at read time (price-on-read: the
@@ -105,39 +134,15 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCost, error) {
 	var report []DayCost
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT
-			  ac.occurred_at::date AS day,
-			  ac.task,
-			  ac.tier,
-			  COALESCE(SUM(
-			    CASE
-			      WHEN ac.cache_hit OR (ac.tokens_in = 0 AND ac.tokens_out = 0) THEN 0
-			      WHEN r.id IS NULL THEN 0
-			      ELSE (GREATEST(ac.tokens_in - ac.cached_tokens - ac.cache_write_tokens, 0) * r.input_per_mtok_microusd
-			           + ac.cached_tokens * COALESCE(NULLIF(r.cache_read_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-			           + ac.cache_write_tokens * COALESCE(NULLIF(r.cache_write_per_mtok_microusd, 0), r.input_per_mtok_microusd)
-			           + ac.tokens_out * r.output_per_mtok_microusd) / 1000000
-			    END
-			  ), 0) AS cost_microusd,
-			  COUNT(*) FILTER (
-			    WHERE NOT ac.cache_hit
-			      AND NOT (ac.tokens_in = 0 AND ac.tokens_out = 0)
-			      AND r.id IS NULL
-			  ) AS unpriced_calls
-			FROM ai_call ac
-			LEFT JOIN LATERAL (
-			  SELECT mr.id, mr.input_per_mtok_microusd, mr.output_per_mtok_microusd,
-			         mr.cache_read_per_mtok_microusd, mr.cache_write_per_mtok_microusd
-			  FROM ai_model_rate mr
-			  WHERE mr.provider = ac.provider AND mr.model_id = ac.model_id
-			    AND mr.effective_date <= ac.occurred_at::date
-			  ORDER BY mr.effective_date DESC
-			  LIMIT 1
-			) r ON true
+		rows, err := tx.Query(ctx, storekit.SQLf(`
+			SELECT ac.occurred_at::date AS day, ac.task, ac.tier,
+			  COALESCE(SUM(%s), 0) AS cost_microusd,
+			  COUNT(*) FILTER (WHERE %s) AS unpriced_calls
+			FROM ai_call ac %s
 			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
 			GROUP BY ac.occurred_at::date, ac.task, ac.tier
 			ORDER BY day, ac.task, ac.tier`,
+			attemptCostMicroUSD, attemptUnpriced, attemptRateJoin),
 			from, to)
 		if err != nil {
 			return err

@@ -1,7 +1,7 @@
 # Settings
 
 Margince settings open from the **account menu** at the top right, not from the
-sidebar. Settings has seven groups and 32 pages, and which of them you see
+sidebar. Settings has seven groups of pages, and which of them you see
 follows your permissions.
 
 ### How do I open Settings?
@@ -12,8 +12,8 @@ Settings is not in the side list on the left.
 Also called: preferences, admin settings, configuration, options.
 
 ### What settings pages are there?
-Margince Settings has 32 pages in seven groups:
-- **You**: Account, Writing voice, Agents, Connections, Capture activity.
+Margince Settings has these pages, in seven groups:
+- **You**: Account, Meetings, Writing voice, Agents, Connections, Capture activity.
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
@@ -25,11 +25,11 @@ You see only the pages your permissions open. The Reset data page appears only w
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
 - Change your password, display name, email signature, language or theme (appearance): **Account**.
-- Set when customers can book you: **Meetings**, in **Bookable hours**.
+- Set when customers can book you, and share your booking link: **Meetings**, in **When people can book** and **Booking links**.
 - Set up how your drafts sound: **Writing voice**.
 - Create or revoke an API key for an AI agent: **Agents**.
 - Connect your mailbox or calendar, or import from LinkedIn: **Connections**.
-- Keep a sender out of capture, or see why an email did not arrive: **Capture activity**.
+- Keep a sender out of capture, release a held thread, or see why an email did not arrive: **Capture activity**.
 See [Your own settings](your-own-settings.md) for each one step by step.
 
 ### Which settings page do I need for colleagues and the company?
@@ -40,7 +40,7 @@ Company-wide things in Margince each have one settings page.
 - Change the company name, timezone, base currency or exchange rates: **Company profile**.
 - Set up single sign-on or the Google and Microsoft apps: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
-- Set up webhooks or a contact-data provider: **Integrations**.
+- Set up webhooks, a contact-data provider or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
@@ -89,15 +89,17 @@ change there affects:
 | **Installation** | The whole deployment, such as sign-in, seats and model routing. |
 | **Mixed** | The page holds settings of more than one kind. Read the card. |
 
-Three pages are **Mixed**, each for a named reason: *Connections* and *Capture
-activity* sit among your own settings but each carries one card that binds
-everybody, and *Integrations* holds an installation-wide provider setting beside
-company-level wiring.
+Two pages are **Mixed**, each for a named reason: *Capture activity* sits among
+your own settings but carries one card that binds everybody, and *Integrations*
+holds an installation-wide provider setting beside company-level wiring.
+
+*Connections* is **Only you**. Its plate stating the company's email sharing rule
+is marked **Whole company** and offers no control: change it on **Capture rules**.
 
 ---
 
-Your own five pages — Account, Writing voice, Agents, Connections and Capture
-activity — are on [Your own settings](your-own-settings.md).
+Your own six pages (Account, Meetings, Writing voice, Agents, Connections and
+Capture activity) are on [Your own settings](your-own-settings.md).
 
 # The rest of settings
 
@@ -128,9 +130,8 @@ it; Ops finds the page without it.
 The Members, Teams and Seats and license pages sit in the Settings group
 *People* — the one place in the product where that word still means the
 humans who work here rather than the record type. One page each: the roster,
-the team list, and the seat count with the licence beside it. **Roles and
-permissions** is not built yet, and is deliberately absent from the navigation
-rather than present and empty.
+the team list, and the seat count with the licence beside it. **Roles** holds
+each role and the rights it grants.
 
 **Members** — "Everyone with a seat, and what each can access." Invite,
 change role, deactivate, reactivate. The settings *entry* is administrators',
@@ -156,6 +157,9 @@ The Integrations page in Settings (group **Data**) shows what the installation i
 refresh policy. **Webhooks** are "Outbound subscriptions that receive signed HTTP
 POSTs for chosen events"; deliveries can be inspected and replayed.
 
+**Telegram bot** is the one bot that sends and receives messages for the whole
+company. Admin and Ops connect or change it; other readers see which bot it is.
+
 ## Extensions
 
 The Extensions page in Settings (group **Governance**) lists every extension unit this installation was built with, and what each may reach.
@@ -179,7 +183,8 @@ the page puts it:
 
 **Email sharing**, at the top — whether captured mail is shared with colleagues.
 It is everybody's business rather than one seat's, which is why it lives here;
-your own connections page states what it currently says and links here.
+a plate at the foot of your own Connections mail card states what it currently
+says, marked **Whole company**.
 
 **Own email domains.** "Domains that belong to this company. Messages between
 colleagues are not stored for anyone, including you." Be careful: "Mail skipped
@@ -335,6 +340,9 @@ reading and emptying the installation are no longer three buttons on one screen.
   each mailbox, and how many filed meetings are held back across the whole
   installation. Counts only; the contacts and messages stay visible to their
   mailbox owner alone. Same readers as Background jobs.
+- **Links in outgoing mail**: the address Margince puts in the links it emails,
+  such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not
+  checked**. If nobody outside can reach it, those links open nothing.
 - **Reset data** — returns an installation to its first-boot state. It only
   appears where the installation has deliberately armed the capability. Treat it
   as what it is.
@@ -357,25 +365,17 @@ records.
 
 | You are | You can change | You can also look up |
 |---|---|---|
-| A sales seat | Your own five pages, Products and offers, Outcome reviews, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
+| A sales seat | Your own six pages, Products and offers, Outcome reviews, Capture rules (adding only) | The rest of the Sales group, and Knowledge |
 | A team lead | The same | The same |
 | Management | The same | The above plus AI usage, model calls, seat counts and the sign-in status — all of them readable and none of them theirs to change |
 | Ops | Most of the operational catalog, including the model rates | The rest, the extension inventory among them — Ops reads it and cannot change the grants |
 | Admin | Everything the deployment has armed | — |
 
-That first row surprises readers, so it is worth saying plainly: a sales seat
-reaches **Capture rules**, because one card there asks for a permission every
-sales role holds. If that is not what you want, the fix is the permission, not
-the page.
-
-What a sales seat can do there is narrower than "edit", and the difference
-matters: it may **add** — a consumer-mail domain the shipped list missed, for
-instance — and it may not change a setting or touch an entry that is already
-there. Changing what exists is Admin's and Ops's.
-
-The **company context** is not a sales seat's on any installation. It is what
-Margince's AI knows about your own company, so it is administered: only an Admin
-reads or changes it.
+That first row surprises readers: a sales seat reaches **Capture rules**,
+because one card there asks for a permission every sales role holds. It may
+only **add**, such as a consumer-mail domain the shipped list missed, and never
+change a setting or an existing entry; that is Admin's and Ops's. If that is
+not what you want, the fix is the permission, not the page.
 
 Nearly everything is a permission now, including the three that used to be role
 checks: administering members answers to `user_admin`, the audit log to

@@ -14,7 +14,7 @@ import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
 // suites share: users-admin.test.tsx for the roster and its verbs,
-// users-admin.roles.test.tsx for the role picker.
+// users-admin.roles.test.tsx for the role column and the change-role dialog.
 
 export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -92,30 +92,40 @@ export const ROSTER: {
   page: { next_cursor: null, has_more: false },
 };
 
-// Both helpers narrow by instance rather than asserting: a cast would let the
-// suite read `.disabled` off whatever the query happened to return, so a control
-// that stopped being the Select trigger would surface as a confusing undefined
-// instead of a named failure.
-export function roleSelect(row: HTMLElement, name: string) {
-  const control = within(row).getByRole("combobox", {
-    name: new RegExp(`set role for ${name}`, "i"),
+// What the row's role column reads: the role (or roles) held, as text, the
+// same shape on every row whoever may change it.
+export function roleShown(row: HTMLElement): string {
+  const cell = row.querySelector("tr > td:nth-child(2) .cell-stack > span");
+  if (!(cell instanceof HTMLElement)) {
+    throw new Error("the row draws no role column");
+  }
+  return cell.textContent ?? "";
+}
+
+// Opens a member's "Change role" dialog from their row menu and hands back the
+// dialog and its role picker. Narrowed by instance rather than asserted, so a
+// control that stopped being the Select trigger is a named failure.
+export async function openRoleChange(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.click((await rowMenu(user, name)).getByText("Change role"));
+  const dialog = await screen.findByRole("dialog", {
+    name: new RegExp(`change role for ${name}`, "i"),
   });
-  if (!(control instanceof HTMLButtonElement)) {
+  const select = within(dialog).getByRole("combobox", { name: /new role/i });
+  if (!(select instanceof HTMLButtonElement)) {
     throw new Error(`the role control for ${name} is not a select trigger`);
   }
-  return control;
+  const confirm = within(dialog).getByRole("button", { name: "Change role" });
+  if (!(confirm instanceof HTMLButtonElement)) {
+    throw new Error("the dialog's confirm is not a button");
+  }
+  return { dialog: within(dialog), select, confirm };
 }
 
-// What the closed control reads. The trigger's only text is its face — the
-// chevron is aria-hidden and carries none — so this is the role an operator
-// sees on the row without opening anything.
-export function roleShown(row: HTMLElement, name: string): string {
-  return roleSelect(row, name).textContent ?? "";
-}
-
-// A member is one SettingRow inside a wrapper carrying the row's refusal and
-// the focus target its deactivate confirm hands back to. The wrapper's testid is
-// what identifies it: SettingRow is a <div>, so there is no <li> to climb to.
+// A member is one <tbody>: their table row and the refusal row under it. The
+// testid is what identifies it, so a query scoped to it sees both.
 export function rowFor(name: string) {
   const row = screen.getByText(name).closest('[data-testid^="member-"]');
   if (!(row instanceof HTMLElement)) {

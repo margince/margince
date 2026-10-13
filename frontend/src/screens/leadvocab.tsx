@@ -1,11 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { Plus } from "lucide-react";
+import { type FormEvent, useId, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { isOption } from "../app/options";
+import { routeHash } from "../app/router";
 import { Badge, Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
@@ -16,6 +20,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { LEAD_LIST_KEY } from "./leadkeys";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   LEAD_SOURCES_KEY,
@@ -28,15 +33,15 @@ import {
   useLeadSources,
   useUpdateLeadSettings,
 } from "./leadsources";
+import { settingsHref } from "./settingsrouting";
 import "./leadvocab.css";
-import { LEAD_LIST_KEY } from "./leadkeys";
+import { type VocabRename, VocabTable } from "./leadvocab.table";
 
-// Settings › Data model: the two administered lead vocabularies and the
-// lead-handling posture. Every role reads them — the leads list needs the
-// labels and the SLA switch to know what to render — and only a seat holding
-// the custom_field write verbs changes them, the same posture as the
-// custom-field catalog beside them. The server stays the RBAC authority; the
-// controls disable with the reason rather than hide.
+// Settings › Lead handling: the two administered lead vocabularies and the
+// reply deadline. Every role reads them (the leads list needs the labels and
+// the deadline switch to know what to render) and only a seat holding the
+// custom_field write verbs changes them. The server stays the RBAC authority;
+// the controls disable with the reason rather than hide.
 
 const INTENTS = ["high", "neutral", "low"] as const;
 
@@ -46,15 +51,41 @@ function rowsOf<Row>(rows: readonly Row[] | null | undefined): readonly Row[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-// The first-response target's bounds, the same the server enforces
-// (15 minutes to 7 days); checked here so a refusal never leaves the page.
+// The reply deadline's bounds, the same the server enforces (15 minutes to
+// 7 days); checked here so a refusal never leaves the page.
 const TARGET_MIN_MINUTES = 15;
 const TARGET_MAX_MINUTES = 7 * 24 * 60;
+
+// The stored intent stays high, neutral and low; the reader is told what it
+// does to the score instead.
 const intentLabel: Record<LeadSourceIntent, MessageKey> = {
-  high: "leadSources.intent.high",
-  neutral: "leadSources.intent.neutral",
-  low: "leadSources.intent.low",
+  high: "leadVocab.score.high",
+  neutral: "leadVocab.score.neutral",
+  low: "leadVocab.score.low",
 };
+const intentDescription: Record<LeadSourceIntent, MessageKey> = {
+  high: "leadVocab.score.highDesc",
+  neutral: "leadVocab.score.neutralDesc",
+  low: "leadVocab.score.lowDesc",
+};
+
+type SourcePatch = {
+  id: string;
+  label?: string;
+  intent?: LeadSourceIntent;
+  active?: boolean;
+};
+
+async function patchSource({ id, ...body }: SourcePatch) {
+  const { data, error } = await api.PATCH("/lead-sources/{id}", {
+    params: { path: { id } },
+    body,
+  });
+  if (error) {
+    throwProblem(error);
+  }
+  return data;
+}
 
 function useSourceMutations() {
   const queryClient = useQueryClient();
@@ -77,26 +108,15 @@ function useSourceMutations() {
     },
     onSuccess: invalidate,
   });
+  // Two instances of one write: a rename's refusal speaks in its own dialog,
+  // a re-weight or a switch flip in the card, and one mutation cannot tell
+  // which of the two it is reporting.
   const update = useMutation({
-    mutationFn: async ({
-      id,
-      ...body
-    }: {
-      id: string;
-      label?: string;
-      intent?: LeadSourceIntent;
-      active?: boolean;
-      sort_order?: number;
-    }) => {
-      const { data, error } = await api.PATCH("/lead-sources/{id}", {
-        params: { path: { id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+    mutationFn: patchSource,
+    onSuccess: invalidate,
+  });
+  const rename = useMutation({
+    mutationFn: patchSource,
     onSuccess: invalidate,
   });
   const remove = useMutation({
@@ -110,147 +130,34 @@ function useSourceMutations() {
     },
     onSuccess: invalidate,
   });
-  return { create, update, remove };
+  return { create, update, rename, remove };
 }
 
-// A label that commits on Enter or blur, and gives the typed text back when
-// the save is refused so the reader can fix it rather than retype it.
-function RenameField({
-  label,
-  value,
-  canEdit,
-  onSave,
-}: Readonly<{
-  label: string;
-  value: string;
-  canEdit: boolean;
-  onSave: (next: string) => void;
-}>) {
-  const [draft, setDraft] = useState(value);
-  const [known, setKnown] = useState(value);
-  if (known !== value) {
-    setKnown(value);
-    setDraft(value);
-  }
-  const commit = () => {
-    const next = draft.trim();
-    if (next !== "" && next !== value) {
-      onSave(next);
-    } else {
-      setDraft(value);
-    }
+// The slice of a rename mutation the table needs, so sources and reasons
+// hand theirs over through one adapter.
+type RenameMutation = Readonly<{
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  reset: () => void;
+  mutate(
+    patch: { id: string; label: string },
+    options: { onSuccess: () => void },
+  ): void;
+}>;
+
+function renameOf(mutation: RenameMutation): VocabRename {
+  return {
+    pending: mutation.isPending,
+    error: mutation.isError ? mutation.error : undefined,
+    reset: mutation.reset,
+    save: (term, label, onSaved) =>
+      mutation.mutate({ id: term.id, label }, { onSuccess: onSaved }),
   };
-  // The row's own words name the field (the list is the label column), so
-  // the control carries its name for assistive tech only.
-  return (
-    <TextInput
-      aria-label={label}
-      className="lead-vocab-rename"
-      value={draft}
-      disabled={!canEdit}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          commit();
-        }
-        if (e.key === "Escape") {
-          setDraft(value);
-        }
-      }}
-    />
-  );
 }
 
-function LeadSourceRow({
-  source,
-  canEdit,
-  canRemove,
-  onUpdate,
-  onRemove,
-}: Readonly<{
-  source: LeadSource;
-  canEdit: boolean;
-  canRemove: boolean;
-  onUpdate: (patch: {
-    label?: string;
-    intent?: LeadSourceIntent;
-    active?: boolean;
-  }) => void;
-  onRemove: () => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const count = source.lead_count ?? 0;
-  const builtIn = source.system === true;
-  // Built-ins and in-use sources deactivate instead: the server answers 409
-  // to the delete, so the control says so instead of offering it.
-  const removable = canRemove && !builtIn && count === 0;
-  return (
-    <li className="lead-vocab-row" data-testid={`lead-source-${source.key}`}>
-      <RenameField
-        label={t("leadSources.labelFor", { key: source.key })}
-        value={source.label}
-        canEdit={canEdit}
-        onSave={(label) => onUpdate({ label })}
-      />
-      <span className="t-caption lead-vocab-key">{source.key}</span>
-      <Select
-        aria-label={t("leadSources.intentFor", { label: source.label })}
-        value={source.intent}
-        disabled={!canEdit}
-        onChange={(value) => {
-          if (isOption(value, INTENTS) && value !== source.intent) {
-            onUpdate({ intent: value });
-          }
-        }}
-        options={INTENTS.map((value) => ({
-          value,
-          label: t(intentLabel[value]),
-        }))}
-      />
-      <span className="t-caption lead-vocab-count">
-        {t("leadSources.leadCount", { count: formatNumber(count, locale) })}
-      </span>
-      <span className="lead-vocab-flags">
-        {builtIn && <Badge>{t("leadSources.builtIn")}</Badge>}
-        <Switch
-          label={t("leadSources.activeFor", { label: source.label })}
-          labelHidden
-          checked={source.active}
-          disabled={!canEdit}
-          onChange={(next) => onUpdate({ active: next })}
-        />
-        {removable ? (
-          <Button variant="danger" onClick={onRemove}>
-            {t("leadSources.remove")}
-          </Button>
-        ) : (
-          canRemove && (
-            <span
-              title={
-                builtIn
-                  ? t("leadSources.builtInKept")
-                  : plural("leadSources.inUse", count, {
-                      count: formatNumber(count, locale),
-                    })
-              }
-            >
-              {t("leadSources.deactivateInstead")}
-            </span>
-          )
-        )}
-      </span>
-    </li>
-  );
-}
-
-// A label and a weight, committed together — the settings page's dialog case
-// rather than its row case, and mounted only while it is open so a half-typed
-// source is gone the next time the verb is pressed rather than waiting there
-// under an intent nobody re-chose.
+// A name and a score effect, committed together, and mounted only while open
+// so a half-typed source is gone the next time New source is pressed.
 function AddSourceDialog({
   create,
   onClose,
@@ -265,8 +172,6 @@ function AddSourceDialog({
   const ready = label.trim() !== "";
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
-      {/* A real form, so Enter commits it: two fields a reader types into and
-          then has to reach for a button is not how anyone adds a list entry. */}
       <form
         className="form-stack"
         onSubmit={(e) => {
@@ -279,7 +184,7 @@ function AddSourceDialog({
         }}
       >
         <Heading size="large" className="t-h3" id={titleId}>
-          {t("leadSources.newLabel")}
+          {t("leadVocab.new.title")}
         </Heading>
         {create.isError && (
           <Callout
@@ -290,7 +195,10 @@ function AddSourceDialog({
             {problemMessageOf(create.error, t)}
           </Callout>
         )}
-        <Field label={t("leadSources.labelField")}>
+        <Field
+          label={t("leadVocab.nameField")}
+          hint={t("leadVocab.new.nameHint")}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -301,34 +209,28 @@ function AddSourceDialog({
             />
           )}
         </Field>
-        {/* The hint rides on the field it qualifies rather than sitting under
-            the form as a loose paragraph: what the weight DOES is the thing a
-            reader needs while choosing it. */}
-        <Field
-          label={t("leadSources.intent")}
-          hint={t("leadSources.intentHint")}
-        >
-          {(control) => (
-            <Select
-              {...control}
-              value={intent}
-              onChange={(value) => {
-                if (isOption(value, INTENTS)) setIntent(value);
-              }}
-              options={INTENTS.map((value) => ({
-                value,
-                label: t(intentLabel[value]),
-              }))}
-            />
-          )}
-        </Field>
+        <div className="lead-vocab-score">
+          <ChoiceList
+            legend={t("leadVocab.col.score")}
+            layout="cards"
+            value={intent}
+            onChange={(value) => {
+              if (isOption(value, INTENTS)) setIntent(value);
+            }}
+            choices={INTENTS.map((value) => ({
+              value,
+              label: t(intentLabel[value]),
+              description: t(intentDescription[value]),
+            }))}
+          />
+          <p className="t-caption">{t("leadVocab.score.rescoreNote")}</p>
+        </div>
         <div className="form-actions">
           <Button variant="ghost" onClick={onClose}>
             {t("deals.cancel")}
           </Button>
-          {/* Two facts, two props: `!ready` is a form with nothing in it yet
-              and `isPending` is a write already on its way, and one `disabled`
-              covering both draws them the same. */}
+          {/* `!ready` is a form with nothing in it yet and `isPending` a write
+              already on its way; one `disabled` covering both draws them alike. */}
           <Button
             type="submit"
             variant="primary"
@@ -344,11 +246,8 @@ function AddSourceDialog({
 }
 
 /**
- * The card's own band under the rows, not one more row: the posture is said once
- * for the whole card rather than on each of a dozen refused controls, and a
- * refused write belongs to the card the row it failed on sits in. One component
- * because all three cards here carry it, and three copies had already drifted
- * into two primitives for one band.
+ * The card's posture and its refused write, said once for the whole card
+ * rather than on each of a dozen refused controls. All three cards carry it.
  */
 function VocabNotices({
   readOnly = false,
@@ -370,166 +269,230 @@ function VocabNotices({
   );
 }
 
+// Values seen on leads but missing from the list: a fact about the
+// integrations this installation runs, so the block is absent until one exists.
+function DiscoveredSources({
+  discovered,
+  administered,
+  canCreate,
+  onAdopt,
+}: Readonly<{
+  discovered: readonly { key: string; lead_count: number }[];
+  administered: readonly LeadSource[];
+  canCreate: boolean;
+  onAdopt: (key: string, label: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  type Found = (typeof discovered)[number];
+  const columns: DataTableColumn<Found>[] = [
+    {
+      key: "name",
+      header: t("leadVocab.col.source"),
+      grow: true,
+      render: (found) => sourceKeyLabel(found.key, administered, t),
+    },
+    {
+      key: "leads",
+      header: t("leadVocab.col.leads"),
+      align: "end",
+      render: (found) => formatNumber(found.lead_count, locale),
+    },
+    {
+      key: "actions",
+      header: "",
+      render: (found) =>
+        canCreate && (
+          <Button
+            onClick={() =>
+              onAdopt(found.key, sourceKeyLabel(found.key, administered, t))
+            }
+          >
+            {t("leadSources.adopt")}
+          </Button>
+        ),
+    },
+  ];
+  return (
+    <section
+      className="lead-vocab-discovered"
+      data-testid="lead-source-discovered"
+    >
+      <PanelBody>
+        <Heading size="small" as="h3">
+          {t("leadSources.discovered")}
+        </Heading>
+        <p className="t-caption">{t("leadSources.discoveredSub")}</p>
+      </PanelBody>
+      <div className="lead-vocab-table">
+        <DataTable
+          label={t("leadSources.discovered")}
+          columns={columns}
+          rows={[...discovered]}
+          rowKey={(found) => found.key}
+        />
+      </div>
+    </section>
+  );
+}
+
 export function LeadSourcesCard() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
   const canRemove = useCanWrite("custom_field", "delete");
   const query = useLeadSources();
-  const { create, update, remove } = useSourceMutations();
+  const { create, update, rename, remove } = useSourceMutations();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
-  // `remove` is not here: its refusal belongs to the confirm dialog that asked
-  // for it, and a sentence in both places reads as two failures. What is left
-  // are the writes with nowhere else to speak — a rename, a re-weight, a switch
+  // `remove` and `rename` speak in the dialogs that asked for them. What is
+  // left are the writes with nowhere else to speak: a re-weight, a switch
   // flip, and the one-click adopt of a discovered value.
   const failure = [create, update].find((m) => m.isError);
-  // Read off the settled answer rather than through a second QueryGate: the
-  // discovered values are a row of their own, and one query cannot be gated
-  // twice without drawing its wait twice.
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
+  const scoreColumn: DataTableColumn<LeadSource> = {
+    key: "score",
+    header: t("leadVocab.col.score"),
+    render: (source) => (
+      <Select
+        aria-label={t("leadVocab.score.for", { label: source.label })}
+        value={source.intent}
+        disabled={!canEdit}
+        onChange={(value) => {
+          if (isOption(value, INTENTS) && value !== source.intent) {
+            update.mutate({ id: source.id, intent: value });
+          }
+        }}
+        options={INTENTS.map((value) => ({
+          value,
+          label: t(intentLabel[value]),
+        }))}
+      />
+    ),
+  };
+  // Only the page's name is the link, wherever each language puts it.
+  const [acquisitionBefore, acquisitionAfter = ""] = t(
+    "leadVocab.sources.acquisitionLine",
+  ).split("{link}");
   return (
     <Panel
-      title={t("leadSources.title")}
-      // The create verb in the header, not as a trailing row: that row's LABEL
-      // ("New source") was its own button's words, and it stood at the end of a
-      // list of sources as though it were one of them.
+      title={t("leadVocab.sources.title")}
       titleAction={
-        canCreate && (
-          <Button onClick={() => setAdding(true)}>
-            {t("leadSources.addOpen")}
-          </Button>
-        )
-      }
-    >
-      {/* No `form-stack` on the body: `PanelIntro` owns the interval down to
-          the rows, and the blocks that are NOT rows take theirs from
-          `.lead-vocab-notices`. */}
-      <PanelBody>
-        <PanelIntro>{t("leadSources.sub")}</PanelIntro>
-        <SettingList>
-          {/* The sources are the SUBJECT of this card rather than an answer to
-              a question beside them, so they take the row's full width. */}
-          <SettingRow
-            label={t("leadSources.listLabel")}
-            layout="stack"
-            control={
-              <QueryGate
-                query={query}
-                pendingLabel={t("leadSources.listLabel")}
-              >
-                {(list) => (
-                  <ul
-                    className="lead-vocab-list"
-                    data-testid="lead-source-list"
-                  >
-                    {rowsOf(list.data).map((source) => (
-                      <LeadSourceRow
-                        key={source.id}
-                        source={source}
-                        canEdit={canEdit}
-                        canRemove={canRemove}
-                        onUpdate={(patch) =>
-                          update.mutate({ id: source.id, ...patch })
-                        }
-                        onRemove={() => setRemoving(source)}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </QueryGate>
-            }
-          />
-          {/* Absent until there is one: a value seen on a lead but missing from
-              the list is a fact about the integrations this installation runs,
-              and a row that said "none" would be reporting on nothing. */}
-          {discovered.length > 0 && (
-            <SettingRow
-              label={t("leadSources.discovered")}
-              description={t("leadSources.discoveredSub")}
-              layout="stack"
-              control={
-                <ul
-                  className="lead-vocab-list"
-                  data-testid="lead-source-discovered"
-                >
-                  {discovered.map((found) => (
-                    <li key={found.key} className="lead-vocab-row">
-                      <span>{sourceKeyLabel(found.key, administered, t)}</span>
-                      <span className="t-caption lead-vocab-key">
-                        {found.key}
-                      </span>
-                      <span className="t-caption lead-vocab-count">
-                        {t("leadSources.leadCount", {
-                          count: formatNumber(found.lead_count, locale),
-                        })}
-                      </span>
-                      <span className="lead-vocab-flags">
-                        {canCreate && (
-                          <Button
-                            onClick={() =>
-                              create.mutate({
-                                key: found.key,
-                                label: sourceKeyLabel(
-                                  found.key,
-                                  administered,
-                                  t,
-                                ),
-                                intent: "neutral",
-                              })
-                            }
-                          >
-                            {t("leadSources.adopt")}
-                          </Button>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              }
-            />
+        <>
+          {query.data && (
+            <span className="lead-vocab-count">
+              <Badge>
+                {plural("leadVocab.sources.count", administered.length, {
+                  count: formatNumber(administered.length, locale),
+                })}
+              </Badge>
+            </span>
           )}
-        </SettingList>
+          {canCreate && (
+            <Button variant="ghost" onClick={() => setAdding(true)}>
+              <Plus aria-hidden /> {t("leadSources.addOpen")}
+            </Button>
+          )}
+        </>
+      }
+      footer={<span className="t-caption">{t("leadVocab.sources.foot")}</span>}
+    >
+      <PanelBody>
+        <PanelIntro>
+          {t("leadVocab.sources.intro")} {acquisitionBefore}
+          <a href={routeHash(settingsHref("acquisition"))}>
+            {t("leadVocab.sources.acquisitionLink")}
+          </a>
+          {acquisitionAfter}
+        </PanelIntro>
         <VocabNotices readOnly={!canEdit} error={failure?.error} />
-        {/* Closing clears the refusal with the form that carried it: the
-            dialog's own Callout and the card's read the same sentence, and
-            leaving it behind would report a failed add over a card the reader
-            has already walked away from. */}
-        {adding && (
-          <AddSourceDialog
-            create={create}
-            onClose={() => {
-              create.reset();
-              setAdding(false);
-            }}
+      </PanelBody>
+      {discovered.length > 0 && (
+        <DiscoveredSources
+          discovered={discovered}
+          administered={administered}
+          canCreate={canCreate}
+          onAdopt={(key, label) =>
+            create.mutate({ key, label, intent: "neutral" })
+          }
+        />
+      )}
+      <QueryGate query={query} pendingLabel={t("leadVocab.sources.title")}>
+        {(list) => (
+          <VocabTable
+            label={t("leadVocab.sources.title")}
+            nameHeader={t("leadVocab.col.source")}
+            terms={rowsOf(list.data)}
+            canEdit={canEdit}
+            canRemove={canRemove}
+            scoreColumn={scoreColumn}
+            keptReason={(source) =>
+              source.system === true
+                ? t("leadVocab.sources.builtInKept")
+                : plural("leadVocab.sources.inUse", source.lead_count ?? 0, {
+                    count: formatNumber(source.lead_count ?? 0, locale),
+                  })
+            }
+            renameCaption={(source) =>
+              t("leadVocab.sources.keyCaption", { key: source.key })
+            }
+            rename={renameOf(rename)}
+            onActive={(source, active) =>
+              update.mutate({ id: source.id, active })
+            }
+            onRemove={setRemoving}
           />
         )}
-        <ConfirmModal
-          open={removing !== null}
+      </QueryGate>
+      {/* Closing clears the refusal with the form that carried it. */}
+      {adding && (
+        <AddSourceDialog
+          create={create}
           onClose={() => {
-            remove.reset();
-            setRemoving(null);
+            create.reset();
+            setAdding(false);
           }}
-          title={t("leadSources.removeTitle")}
-          confirmLabel={t("leadSources.remove")}
-          confirmVariant="danger"
-          pending={remove.isPending}
-          error={remove.isError ? problemMessageOf(remove.error, t) : null}
-          onConfirm={() => {
-            if (removing) {
-              remove.mutate(removing.id, {
-                onSuccess: () => setRemoving(null),
-              });
-            }
-          }}
-        >
-          <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
-        </ConfirmModal>
-      </PanelBody>
+        />
+      )}
+      <ConfirmModal
+        open={removing !== null}
+        onClose={() => {
+          remove.reset();
+          setRemoving(null);
+        }}
+        title={t("leadSources.removeTitle")}
+        confirmLabel={t("leadSources.remove")}
+        confirmVariant="danger"
+        pending={remove.isPending}
+        error={remove.isError ? problemMessageOf(remove.error, t) : null}
+        onConfirm={() => {
+          if (removing) {
+            remove.mutate(removing.id, {
+              onSuccess: () => setRemoving(null),
+            });
+          }
+        }}
+      >
+        <p>{t("leadSources.removeBody", { label: removing?.label ?? "" })}</p>
+      </ConfirmModal>
     </Panel>
   );
+}
+
+type ReasonPatch = { id: string; label?: string; active?: boolean };
+
+async function patchReason({ id, ...body }: ReasonPatch) {
+  const { data, error } = await api.PATCH("/lead-disqualify-reasons/{id}", {
+    params: { path: { id } },
+    body,
+  });
+  if (error) {
+    throwProblem(error);
+  }
+  return data;
 }
 
 function useReasonMutations() {
@@ -551,24 +514,13 @@ function useReasonMutations() {
     },
     onSuccess: invalidate,
   });
+  // Split for the reason useSourceMutations gives.
   const update = useMutation({
-    mutationFn: async ({
-      id,
-      ...body
-    }: {
-      id: string;
-      label?: string;
-      active?: boolean;
-    }) => {
-      const { data, error } = await api.PATCH("/lead-disqualify-reasons/{id}", {
-        params: { path: { id } },
-        body,
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
+    mutationFn: patchReason,
+    onSuccess: invalidate,
+  });
+  const rename = useMutation({
+    mutationFn: patchReason,
     onSuccess: invalidate,
   });
   const remove = useMutation({
@@ -582,7 +534,35 @@ function useReasonMutations() {
     },
     onSuccess: invalidate,
   });
-  return { create, update, remove };
+  return { create, update, rename, remove };
+}
+
+// One input and the verb that submits it, in the panel's own action band: a
+// reason is a sentence and nothing else, so it needs no dialog.
+function AddReasonForm({
+  create,
+}: Readonly<{ create: ReturnType<typeof useReasonMutations>["create"] }>) {
+  const t = useT();
+  const [label, setLabel] = useState("");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (label.trim() === "") return;
+    create.mutate({ label: label.trim() }, { onSuccess: () => setLabel("") });
+  };
+  return (
+    <form className="lead-vocab-add" onSubmit={submit}>
+      <TextInput
+        aria-label={t("leadReasons.newLabel")}
+        data-testid="lead-reason-new-label"
+        placeholder={t("leadVocab.reasons.placeholder")}
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+      />
+      <Button type="submit" variant="ghost" disabled={create.isPending}>
+        {t("leadReasons.add")}
+      </Button>
+    </form>
+  );
 }
 
 export function LeadDisqualifyReasonsCard() {
@@ -593,173 +573,80 @@ export function LeadDisqualifyReasonsCard() {
   const canEdit = useCanWrite("custom_field", "update");
   const canRemove = useCanWrite("custom_field", "delete");
   const query = useLeadDisqualifyReasons();
-  const { create, update, remove } = useReasonMutations();
-  const [label, setLabel] = useState("");
+  const { create, update, rename, remove } = useReasonMutations();
   const [removing, setRemoving] = useState<LeadDisqualifyReason | null>(null);
-  // `remove` speaks in its own confirm dialog, so it is not repeated here —
-  // see LeadSourcesCard, which draws the same distinction for the same reason.
+  // See LeadSourcesCard: the dialogs report their own refusals.
   const failure = [create, update].find((m) => m.isError);
+  const reasons = rowsOf(query.data);
   return (
-    <Panel title={t("leadReasons.title")}>
-      {/* Plain body, for the reason the sources card above carries in full. */}
+    <Panel
+      title={t("leadVocab.reasons.title")}
+      titleAction={
+        query.data && (
+          <Badge>
+            {plural("leadVocab.reasons.count", reasons.length, {
+              count: formatNumber(reasons.length, locale),
+            })}
+          </Badge>
+        )
+      }
+      actions={canCreate && <AddReasonForm create={create} />}
+    >
       <PanelBody>
-        <PanelIntro>{t("leadReasons.sub")}</PanelIntro>
-        <SettingList>
-          {/* The reasons are the subject of this card, so they take the row's
-              full width — the same shape the sources list above takes, which is
-              what makes a reason row and a source row line up. */}
-          <SettingRow
-            label={t("leadReasons.listLabel")}
-            layout="stack"
-            control={
-              <QueryGate query={query} pendingLabel={t("leadReasons.title")}>
-                {(reasons) => (
-                  <ul
-                    className="lead-vocab-list"
-                    data-testid="lead-reason-list"
-                  >
-                    {rowsOf(reasons).map((reason) => {
-                      const count = reason.lead_count ?? 0;
-                      const builtIn = reason.system === true;
-                      const removable = canRemove && !builtIn && count === 0;
-                      return (
-                        <li
-                          key={reason.id}
-                          className="lead-vocab-row"
-                          data-testid={`lead-reason-${reason.id}`}
-                        >
-                          <RenameField
-                            label={t("leadReasons.labelFor", {
-                              label: reason.label,
-                            })}
-                            value={reason.label}
-                            canEdit={canEdit}
-                            onSave={(next) =>
-                              update.mutate({ id: reason.id, label: next })
-                            }
-                          />
-                          <span className="t-caption lead-vocab-count">
-                            {t("leadReasons.leadCount", {
-                              count: formatNumber(count, locale),
-                            })}
-                          </span>
-                          <span className="lead-vocab-flags">
-                            {builtIn && (
-                              <Badge>{t("leadSources.builtIn")}</Badge>
-                            )}
-                            <Switch
-                              label={t("leadSources.activeFor", {
-                                label: reason.label,
-                              })}
-                              labelHidden
-                              checked={reason.active}
-                              disabled={!canEdit}
-                              onChange={(next) =>
-                                update.mutate({ id: reason.id, active: next })
-                              }
-                            />
-                            {removable ? (
-                              <Button
-                                variant="danger"
-                                onClick={() => setRemoving(reason)}
-                              >
-                                {t("leadSources.remove")}
-                              </Button>
-                            ) : (
-                              canRemove && (
-                                <span
-                                  title={
-                                    builtIn
-                                      ? t("leadSources.builtInKept")
-                                      : plural("leadReasons.inUse", count, {
-                                          count: formatNumber(count, locale),
-                                        })
-                                  }
-                                >
-                                  {t("leadSources.deactivateInstead")}
-                                </span>
-                              )
-                            )}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </QueryGate>
-            }
-          />
-          {/* ONE input and the verb that submits it, so it stays a row: a
-              reason is a sentence and nothing else, and a dialog for a single
-              text box would ask the reader to open a door to type a word. */}
-          {canCreate && (
-            <SettingRow
-              label={t("leadReasons.newLabel")}
-              control={(control) => (
-                <form
-                  className="lead-vocab-add settingrow-measure"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (label.trim() === "") return;
-                    create.mutate(
-                      { label: label.trim() },
-                      { onSuccess: () => setLabel("") },
-                    );
-                  }}
-                >
-                  <TextInput
-                    {...control}
-                    data-testid="lead-reason-new-label"
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                  />
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={create.isPending}
-                  >
-                    {t("leadReasons.add")}
-                  </Button>
-                </form>
-              )}
-            />
-          )}
-        </SettingList>
+        <PanelIntro>{t("leadVocab.reasons.intro")}</PanelIntro>
         <VocabNotices readOnly={!canEdit} error={failure?.error} />
-        <ConfirmModal
-          open={removing !== null}
-          onClose={() => {
-            remove.reset();
-            setRemoving(null);
-          }}
-          title={t("leadReasons.removeTitle")}
-          confirmLabel={t("leadSources.remove")}
-          confirmVariant="danger"
-          pending={remove.isPending}
-          error={remove.isError ? problemMessageOf(remove.error, t) : null}
-          onConfirm={() => {
-            if (removing) {
-              remove.mutate(removing.id, {
-                onSuccess: () => setRemoving(null),
-              });
-            }
-          }}
-        >
-          <p>{t("leadReasons.removeBody", { label: removing?.label ?? "" })}</p>
-        </ConfirmModal>
       </PanelBody>
+      <QueryGate query={query} pendingLabel={t("leadVocab.reasons.title")}>
+        {(list) => (
+          <VocabTable
+            label={t("leadVocab.reasons.title")}
+            nameHeader={t("leadVocab.col.reason")}
+            terms={rowsOf(list)}
+            canEdit={canEdit}
+            canRemove={canRemove}
+            keptReason={(reason) =>
+              reason.system === true
+                ? t("leadVocab.reasons.builtInKept")
+                : plural("leadVocab.reasons.inUse", reason.lead_count ?? 0, {
+                    count: formatNumber(reason.lead_count ?? 0, locale),
+                  })
+            }
+            rename={renameOf(rename)}
+            onActive={(reason, active) =>
+              update.mutate({ id: reason.id, active })
+            }
+            onRemove={setRemoving}
+          />
+        )}
+      </QueryGate>
+      <ConfirmModal
+        open={removing !== null}
+        onClose={() => {
+          remove.reset();
+          setRemoving(null);
+        }}
+        title={t("leadReasons.removeTitle")}
+        confirmLabel={t("leadSources.remove")}
+        confirmVariant="danger"
+        pending={remove.isPending}
+        error={remove.isError ? problemMessageOf(remove.error, t) : null}
+        onConfirm={() => {
+          if (removing) {
+            remove.mutate(removing.id, {
+              onSuccess: () => setRemoving(null),
+            });
+          }
+        }}
+      >
+        <p>{t("leadReasons.removeBody", { label: removing?.label ?? "" })}</p>
+      </ConfirmModal>
     </Panel>
   );
 }
 
-// The first-response target: off by default, and the number is the
-// installation's own. The switch writes when flipped; the target commits on
-// Enter or blur like a rename, only once the value is a whole number in range.
-//
-// Two settings, two rows — this card is the simple posture on the tab, and it
-// holds no list, no form and no dialog. A switch and a bounded number each
-// ANSWER their row's question, so both sit in the right column and the reader
-// audits the pair down one column.
+// The reply deadline: off by default, and the number is the installation's
+// own. The switch writes when flipped; the target commits on Enter or blur,
+// only once the value is a whole number in range.
 export function LeadHandlingCard() {
   const t = useT();
   const canEdit = useCanWrite("custom_field", "update");
@@ -770,12 +657,24 @@ export function LeadHandlingCard() {
   // Minted unconditionally: a hook may not depend on whether the value in the
   // box is currently refused.
   const targetErrorId = useId();
+  const enabled = query.data?.first_response_enabled;
   return (
-    <Panel title={t("leadHandling.title")}>
-      {/* Plain body, for the reason the sources card carries in full. */}
+    <Panel
+      title={t("leadVocab.deadline.title")}
+      titleAction={
+        enabled !== undefined && (
+          <Badge tone={enabled ? "success" : "default"}>
+            {t(enabled ? "leadVocab.deadline.on" : "leadVocab.deadline.off")}
+          </Badge>
+        )
+      }
+    >
       <PanelBody>
-        <PanelIntro>{t("leadHandling.sub")}</PanelIntro>
-        <QueryGate query={query} pendingLabel={t("leadHandling.title")}>
+        <VocabNotices
+          readOnly={!canEdit}
+          error={update.isError ? update.error : undefined}
+        />
+        <QueryGate query={query} pendingLabel={t("leadVocab.deadline.title")}>
           {(settings) => {
             const shown =
               draft ?? String(settings.first_response_target_minutes);
@@ -806,22 +705,15 @@ export function LeadHandlingCard() {
             };
             return (
               <SettingList>
-                {/* The posture comes first: the number below is only a
-                    judgement the switch above it makes readable. */}
                 <SettingRow
-                  label={t("leadHandling.firstResponse")}
-                  description={t("leadHandling.firstResponseHint")}
+                  label={t("leadVocab.deadline.switch")}
+                  description={t("leadVocab.deadline.switchHint")}
                   control={(control) => (
-                    // The switch keeps its own hidden label — it owns its
-                    // accessible name by design, and pointing it at the row's
-                    // span as well would name it twice — but it takes the row's
-                    // DESCRIPTION, or the sentence saying what the setting does
-                    // reaches nobody who cannot see it. `reason` refuses the
-                    // flip AND says why, which is what a stateful control a
-                    // permission denies owes its reader.
+                    // The switch owns its hidden label, so it takes only the
+                    // row's description. `reason` refuses the flip and says why.
                     <Switch
                       describedBy={control["aria-describedby"]}
-                      label={t("leadHandling.firstResponse")}
+                      label={t("leadVocab.deadline.switch")}
                       labelHidden
                       checked={settings.first_response_enabled}
                       pending={update.isPending}
@@ -834,16 +726,14 @@ export function LeadHandlingCard() {
                   )}
                 />
                 <SettingRow
-                  label={t("leadHandling.targetMinutes")}
-                  description={t("leadHandling.targetHint")}
+                  label={t("leadVocab.deadline.target")}
+                  description={t("leadVocab.deadline.targetHint")}
                   control={(control) => (
                     <div className="settingrow-measure lead-handling-target">
                       <TextInput
                         {...control}
-                        // The row already describes the field; a value out of
-                        // range ADDS the refusal to that description rather
-                        // than replacing it, so a reader hears the rule and how
-                        // they broke it.
+                        // A value out of range ADDS the refusal to the row's
+                        // description, so a reader hears the rule and the miss.
                         aria-describedby={
                           [
                             control["aria-describedby"],
@@ -874,9 +764,6 @@ export function LeadHandlingCard() {
             );
           }}
         </QueryGate>
-        {/* The same component the two cards above report a refused write with.
-            This card's rows are switches every seat may flip, so no posture. */}
-        <VocabNotices error={update.isError ? update.error : undefined} />
       </PanelBody>
     </Panel>
   );

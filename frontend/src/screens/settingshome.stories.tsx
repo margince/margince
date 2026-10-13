@@ -5,7 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { meFixture } from "../app/mefixture";
 import { settingsReach } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 // The settings address with NO page segment, and the two things it answers when
 // the segment it does carry names no page this reader can open.
@@ -29,6 +34,45 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 /** No composed unit in the catalog: a story installs no extension tier. */
 const NO_UNITS = {};
 
+// The reads behind the "Your setup" card: Gmail connected, the calendar skipped,
+// no writing voice, the booking link off. `finished` turns every step done.
+function setupReads(finished: boolean): RouteMap {
+  const row = (provider: "gmail" | "gcal") => ({
+    id: `00000000-0000-4000-8000-${provider.padStart(12, "0")}`,
+    provider,
+    status: "connected",
+    scopes:
+      provider === "gcal"
+        ? ["https://www.googleapis.com/auth/calendar.events"]
+        : [],
+    account_label: "ada@example.test",
+  });
+  return {
+    "GET /connectors": () =>
+      jsonResponse({
+        data: finished ? [row("gmail"), row("gcal")] : [row("gmail")],
+        providers: ["gmail", "graph", "imap"].map((provider) => ({
+          provider,
+          reason: "ready",
+        })),
+      }),
+    "GET /voice-profiles": () =>
+      jsonResponse({ data: finished ? [{ profile_version: 1 }] : [] }),
+    "GET /scheduling/profile": () =>
+      jsonResponse({
+        enabled: finished,
+        provider: finished ? "gcal" : "",
+        calendar_id: finished ? "primary" : "",
+        duration_minutes: 30,
+        notice_minutes: 240,
+        horizon_days: 30,
+        buffer_minutes: 0,
+        title: "Intro call",
+        location: "",
+      }),
+  };
+}
+
 /**
  * One principal, serving both halves of the screen.
  *
@@ -37,10 +81,13 @@ const NO_UNITS = {};
  * foot is who this seat IS. Built from two snapshots they could disagree, which
  * is exactly the defect the screen's own partition exists to prevent.
  */
-function home(spec: Parameters<typeof meFixture>[0]) {
+function home(spec: Parameters<typeof meFixture>[0], finished = false) {
   return () => {
     const snapshot = meFixture(spec);
-    installFetchStub({ "GET /me": () => jsonResponse(snapshot) });
+    installFetchStub({
+      "GET /me": () => jsonResponse(snapshot),
+      ...setupReads(finished),
+    });
     return (
       <StoryProviders>
         <div className="wrap">
@@ -100,6 +147,14 @@ export const Ready: Story = { render: home(LEAD) };
 export const ReadyDark: Story = {
   globals: { theme: "dark" },
   render: home(LEAD),
+};
+
+// Every setup step done: the card folds to one success note, steps a press away.
+export const SetupComplete: Story = { render: home(LEAD, true) };
+
+export const SetupCompleteDark: Story = {
+  globals: { theme: "dark" },
+  render: home(LEAD, true),
 };
 
 // The floor: a seat holding no object grant at all. The personal pages are the

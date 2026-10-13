@@ -101,6 +101,47 @@ function CaptureStat({
   );
 }
 
+/** What a run row says about itself, read the one way every surface that
+ *  draws an import reads it: this hero, and the Past email service on a
+ *  Connections account. */
+export function runReading(run: BackfillStatus) {
+  const counts = run.counts;
+  const scanned = counts?.messages_scanned ?? 0;
+  const live = isLiveRun(run.state);
+  const { stale, agoMs } = staleness(run, live);
+  // A percentage needs a denominator that is still true, and whether this one
+  // is depends on what kind of number the provider gave: Gmail answers a FLOOR
+  // on a large mailbox, Graph an exact count. progressFraction is the one rule,
+  // shared with the chrome's own orb. A run that is not moving forward gets no
+  // bar at all: a stalled import must not draw something that implies progress.
+  const fraction =
+    live && !stale
+      ? progressFraction({
+          scanned,
+          estimated: run.estimated_messages ?? null,
+          estimatedIsFloor: run.estimate_is_floor === true,
+        })
+      : null;
+  return {
+    scanned,
+    // Messages the run walked past because they could not be captured. Said
+    // rather than folded into the other figures, so a gap has a number.
+    failed: counts?.failed ?? 0,
+    live,
+    stale,
+    agoMs,
+    // Indigo is a claim about who is doing the work, so a queued run that has
+    // not started and a stalled one both stay on plain ground.
+    reading: run.state === "running" && !stale,
+    fraction,
+  };
+}
+
+/** A run that stopped on an error and kept its place, so it can continue. */
+export function canResume(run: BackfillStatus): boolean {
+  return run.state === "error" && run.resumable === true;
+}
+
 export function RunView({
   run,
   cancelling,
@@ -128,37 +169,12 @@ export function RunView({
   const t = useT();
   const { locale } = useLocale();
   const counts = run.counts;
-  const scanned = counts?.messages_scanned ?? 0;
-  // Messages the run walked past because they could not be captured. Said
-  // rather than folded into the other figures, so a gap has a number.
-  const failed = counts?.failed ?? 0;
-  const live = isLiveRun(run.state);
+  const { scanned, failed, live, stale, agoMs, reading, fraction } =
+    runReading(run);
   const done = run.state === "done";
-  const { stale, agoMs } = staleness(run, live);
   // A run that stopped on an error and kept its place is offered as one to
   // continue, with starting over as the second choice.
-  const resumable =
-    run.state === "error" && run.resumable === true && onResume !== undefined;
-  // The card wears the AI family only while the machine is actually reading:
-  // indigo is a claim about who is doing the work, so a queued run that has
-  // not started and a stalled one that has stopped both stay on plain ground.
-  const reading = run.state === "running" && !stale;
-  // A percentage needs a denominator that is still true, and whether this one
-  // is depends on what kind of number the provider gave: Gmail counts by
-  // paging under a cap and answers a FLOOR on a large mailbox, Graph answers
-  // an exact count. progressFraction is the one rule — shared with the
-  // chrome's own orb, because a bar that differed between the two would be two
-  // answers to one question on one screen. A run that is not moving forward
-  // gets no bar at all, which is this screen's own addition to it: a stalled
-  // import must not draw something that implies progress.
-  const fraction =
-    live && !stale
-      ? progressFraction({
-          scanned,
-          estimated: run.estimated_messages ?? null,
-          estimatedIsFloor: run.estimate_is_floor === true,
-        })
-      : null;
+  const resumable = canResume(run) && onResume !== undefined;
   const heroClass = ["capture-hero", done && "done", reading && "reading"]
     .filter(Boolean)
     .join(" ");

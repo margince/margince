@@ -459,18 +459,14 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   // locales ship, so the control is a list rather than a toggle — a toggle
   // cannot say where the next click lands.
   await page.goto("/#/settings/account");
-  // The card the language row sits in: password, sign-off and language are one
-  // account card now rather than a Preferences card of their own.
-  await expect(
-    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
-  ).toBeVisible();
+  // A card title on the page, so the check below reads chrome the language
+  // control does not draw itself.
+  await expect(page.getByRole("heading", { name: "Anmeldung" })).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
   // The surface around the control follows the choice, not just the control's
   // own face: every word on it is rendered from the catalog that just changed.
-  await expect(
-    page.getByRole("heading", { name: "Your account" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign-in" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
 
@@ -485,12 +481,10 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
 }) => {
   await page.goto("/#/settings/account");
   await expect(
-    page.getByRole("heading", { name: "Dein Nutzerkonto" }),
+    page.getByRole("heading", { name: "Dieser Browser" }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
-  await expect(
-    page.getByRole("combobox", { name: "Darstellung" }),
-  ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Darstellung" })).toBeVisible();
 });
 
 /**
@@ -1087,7 +1081,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // The settings sidebar's own group heading also reads "Du", so the actor
   // label is read inside the trail's panel — the count-0 below proves the
   // filter dropped the ROW rather than that the sidebar went missing.
-  const trail = page.getByRole("region", { name: "Audit-Log" });
+  const trail = page.getByRole("region", {
+    name: de["settings.auditLog.title"],
+  });
   await expect(trail.getByText("Du", { exact: true })).toBeVisible();
   await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
   await expect(page.getByText("über einen Agenten")).toBeVisible();
@@ -1099,18 +1095,18 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   await expect(
     page.getByText("connector:gmail", { exact: true }),
   ).toBeVisible();
-  // The dials are the card's SECONDARY half — a reader arrives to read what
-  // happened and narrows it second — so they sit in a disclosure closed on
-  // arrival and the filter has to be opened before it can be typed in.
+  // The everyday dials stay in view; the exact-id searches fold away, so the
+  // actor id is typed after opening "search by id". It still speaks the API's
+  // `type:id` vocabulary, the spelling the trail itself carries.
   await page
     .locator("details")
-    .filter({ has: page.getByText("Filter", { exact: true }) })
+    .filter({
+      has: page.getByText(de["settings.auditLog.byId"], { exact: true }),
+    })
     .locator("summary")
     .click();
-  // The actor filter still speaks the API's `type:id` vocabulary, which is the
-  // spelling the column itself carries.
   await page
-    .getByRole("textbox", { name: de["settings.auditActor"] })
+    .getByRole("textbox", { name: de["settings.auditLog.actorId"] })
     .fill("agent:runner");
   // The matching row stays AND both non-matching rows go. Asserting only that
   // the agent row is still visible would pass on a filter that did nothing —

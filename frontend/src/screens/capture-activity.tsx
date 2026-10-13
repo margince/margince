@@ -23,8 +23,10 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { CaptureActivityDrawer } from "./capture-activity-drawer";
 import { CaptureExclusionsCard } from "./capture-exclusions";
+import { CaptureSendersCard } from "./capture-senders";
 import { useProviderLabel } from "./channelproviders";
 import { QueryGate, throwProblem } from "./common";
+import { HeldThreadsCard } from "./held-threads";
 import { useOpenEmail } from "./openemail";
 import { VerdictPassNote } from "./verdictpass";
 
@@ -121,24 +123,14 @@ export function CaptureActivityTab() {
 
   return (
     <>
-      {/* What the reader keeps out, first and on this page: the addresses and
-          domains whose mail the CRM never stores. It used to sit two tabs away
-          under Company → Capture, beside the posture settings an admin
-          owns, which put the one control a rep actually reaches for behind a
-          door most seats cannot open. Blocking a sender is not an
-          administrator's job — it is the answer to what this page is asking
-          about. */}
+      {/* What waits on the reader comes first: threads held back from the
+          team, which an outage makes urgent because every new one lands held. */}
+      <HeldThreadsCard />
+      {/* What the reader keeps out. Blocking a sender is a rep's answer to
+          what this page asks, not an administrator's posture setting. */}
       <CaptureExclusionsCard />
-      {/* `title` on the Panel, not a SectionHeader nested inside it. Nested, the
-          heading landed as a direct child of `.panel` — which has zero padding —
-          so the card's own name sat flush against its left border while
-          everything under it was indented by PanelBody's 20px, and the panel
-          drew no header band and no rule at all. */}
       <Panel title={t("captureActivity.title")}>
         <PanelBody>
-          {/* The description belongs in the body, which is where the other ten
-              settings cards put theirs — Panel's header band holds the title
-              alone, by design. */}
           <PanelIntro>{t("captureActivity.sub")}</PanelIntro>
           <SettingList>
             {/* Whose activity is a one-of-two ANSWER, so it sits beside its
@@ -168,6 +160,9 @@ export function CaptureActivityTab() {
           </SettingList>
         </PanelBody>
       </Panel>
+      {/* Every address the mailboxes brought in and what the classifier
+          concluded about each: the decided half a reader audits. */}
+      <CaptureSendersCard />
     </>
   );
 }

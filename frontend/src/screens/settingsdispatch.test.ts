@@ -51,7 +51,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "FxRatesCard",
   "CompanyContextCard",
   "SignInMethodsCard",
-  "OAuthAppCard",
+  "OAuthAppsCard",
   "ExtensionAccessCard",
   "UsersAdminCard",
   "TeamsCard",
@@ -155,7 +155,8 @@ describe("the split lost no card", () => {
     // The same for the card that left Connections, which is also a tab
     // function: gone from the tab, not merely gone from the case line.
     expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");
-    expect(bodyOf("ConnectionsTab")).toContain("<MailSharingPostureRow />");
+    // What it says stays here, as the plate under the mail card.
+    expect(bodyOf("ConnectionsTab")).toContain("<ConnectorsCard />");
   });
 
   it("names enough cards to make that meaningful", () => {

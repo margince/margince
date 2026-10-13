@@ -1,44 +1,26 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Mail, RefreshCw } from "lucide-react";
-import { useId, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { connectorsPollInterval } from "../app/capture-progress";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  EmptyState,
-  Modal,
-} from "../design-system/atoms";
+import { type Route, useRoute } from "../app/router";
+import { type UrlParams, useUrlParams } from "../app/urlstate";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
-import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
-import { Switch } from "../design-system/switch";
-import { formatDateTime } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
-import { BackfillPanel } from "./backfill";
-import { useCaptureSettings } from "./capture-settings";
+import { ProviderList } from "../design-system/providerrow";
+import { useT } from "../i18n";
+import { isImportWindow } from "../mail-history/window-picker";
 import { problemCode, problemMessageOf, throwProblem } from "./common";
-import {
-  errorClassKey,
-  missingCalendarWriteGrant,
-  missingSendGrant,
-  statusLabel,
-  statusTone,
-} from "./connector-status";
-import { isMailbox, isMailIcon } from "./connectorproviders";
-import { ConnectorContextTagRow } from "./connectors.contexttag";
-import { ConnectionIdentity } from "./connectors.identity";
+import { type ImportWindow, useConnectAccount } from "./connect-account";
+import { ConnectFlow } from "./connect-flow";
+import { canAddAccount, type FlowAccount } from "./connect-flow-draft";
+import { ConnectionAccountRow } from "./connection-account";
+import { ConnectTiles } from "./connection-empty";
+import { type AccountVendor, accountsOf, vendorOf } from "./connectorproviders";
 import { OAuthOutcomeNote } from "./connectors.notices";
-import { TelegramConnectorsPanel } from "./connectors.telegram";
 import { ImapConnectForm } from "./imap-connect-form";
+import { MailSharingPlate } from "./mail-sharing";
 import "./connectors.css";
 
 // The connected-inboxes surface (RC-8): the Settings cards the onboarding copy
@@ -47,67 +29,14 @@ import "./connectors.css";
 // same consent URL), and disconnects one in a single confirmed click.
 // Every field shown is a server fact from GET /connectors — never a claim.
 //
-// TWO panels, not one. Mail capture and the workspace's Telegram bot are two
-// subjects that happened to share a card: one is a per-user roster of mailboxes
-// read from /connectors, the other is a workspace-wide bot read from
-// /channel-connections, and the Telegram half was a level-3 heading buried
-// under the mail half's roster. The exported component renders both because
-// settings.tsx composes one entry for the pair.
+// Mail only. The workspace's Telegram bot is company wiring and lives on
+// Integrations; the address emailed links use is reported on System health.
 //
-// Every decision on both panels is a SettingRow: what the connection is on the
-// left, what it is set to on the right, at the one x the whole settings page
-// lines up on (design-system/settingrow.tsx). Adding a connection is not one of
-// those decisions — it is the card's create verb, so it sits in the header and
-// opens a dialog rather than taking a row in the column a reader travels to
-// audit the roster.
+// The roster is one ProviderRow per account (connection-account.tsx), with
+// what each service brings in under it. Adding an account is the card's create
+// verb, so it sits in the header and opens the connect dialog.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
-type Provider = CaptureConnection["provider"];
-type MailPosture = NonNullable<CaptureConnection["mail_posture"]>;
-
-const providerLabel: Record<Provider, MessageKey> = {
-  gmail: "connectors.provGmail",
-  gcal: "connectors.provGcal",
-  graph: "connectors.provGraph",
-  graphcal: "connectors.provGraphCal",
-  imap: "connectors.provImap",
-  test_mailbox: "connectors.provTestMailbox",
-};
-
-// The OAuth providers whose reconnect re-mints a consent URL; imap reconnects
-// (and first-connects) through the inline ImapConnectForm below instead, since
-// a credential provider never redirects.
-const OAUTH_PROVIDERS = new Set<Provider>([
-  "gmail",
-  "gcal",
-  "graph",
-  "graphcal",
-]);
-
-// The full connector roster the "Add a connection" affordance offers from —
-// the empty state shows every one, the row shows whichever aren't already
-// present in GET /connectors. Mail and calendar are separate entries on both
-// vendors because they are separate CONNECTIONS: one consent each, so a contact
-// can bring one without the other and disconnect either.
-const ALL_PROVIDERS: Provider[] = [
-  "gmail",
-  "gcal",
-  "graph",
-  "graphcal",
-  "imap",
-];
-
-// Disconnecting an OAuth connection deletes OUR stored credential; it does
-// not reach out to the vendor to revoke the grant on their side (there is no
-// such API call here), so the confirm names the vendor-specific place a
-// careful user can go finish that themselves. IMAP has no upstream grant —
-// omitted entirely rather than shown as a no-op.
-const OAUTH_DISCONNECT_NOTE: Partial<Record<Provider, MessageKey>> = {
-  gmail: "connectors.disconnectBodyGoogleNote",
-  gcal: "connectors.disconnectBodyGoogleNote",
-  graph: "connectors.disconnectBodyMicrosoftNote",
-  graphcal: "connectors.disconnectBodyMicrosoftNote",
-};
 
 export type ConnectorsResult = {
   // GET /connectors answers 501 code:not_implemented when this deployment
@@ -133,515 +62,6 @@ type PublicOriginStatus =
 type ProviderReadiness = NonNullable<
   components["schemas"]["CaptureConnectionListResponse"]["providers"]
 >[number];
-
-// What each provider actually brings, one sentence each. They exist because
-// the choice cannot be made from the names alone: on both vendors the mail and
-// the calendar are two halves of one account and two separate connections, only
-// the OAuth mailboxes can send, and IMAP is the answer for every host with no
-// OAuth at all. A strip of buttons had nowhere to say any of that.
-const PROVIDER_BLURB: Record<Provider, MessageKey> = {
-  gmail: "connectors.addGmailBrings",
-  gcal: "connectors.addGcalBrings",
-  graph: "connectors.addGraphBrings",
-  graphcal: "connectors.addGraphCalBrings",
-  imap: "connectors.addImapBrings",
-  test_mailbox: "connectors.addTestMailboxBrings",
-};
-
-// The "Add a connection" affordance (Task 1), as ONE verb and a dialog.
-//
-// It was a row whose control held a strip of four buttons — the shape the
-// spacing contract names outright: three or more verbs in a row's right column
-// collapse behind one. Four squeezed picks left no room for each provider's
-// sentence too, and made Gmail the primary of a card that exists to REPORT
-// the roster rather than to push one mailbox.
-//
-// So the picks are rows of their own in here: the provider names itself on the
-// left, its sentence under that, and one verb at the same x as every other
-// answer in the product. The reasons a connect failed — unwired here, or a
-// refusal from the one that is — land in the dialog the press opened, the
-// only place that names the button they answer.
-function AddConnectionDialog({
-  open,
-  onClose,
-  addable,
-  pendingProvider,
-  notConfigured501,
-  connectError,
-  onConnect,
-  onImap,
-}: Readonly<{
-  open: boolean;
-  onClose: () => void;
-  addable: Provider[];
-  /** The provider whose connect is in flight, or null. */
-  pendingProvider: Provider | null;
-  notConfigured501: Provider | null;
-  // Why the last connect started from THESE buttons failed, or null.
-  connectError: string | null;
-  onConnect: (provider: Provider) => void;
-  onImap: () => void;
-}>) {
-  const t = useT();
-  const headingId = useId();
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId}>
-      <div className="form-stack">
-        <Heading size="large" id={headingId} className="t-h2">
-          {t("connectors.addConnection")}
-        </Heading>
-        <SettingList>
-          {addable.map((provider) => (
-            <SettingRow
-              key={provider}
-              testId={`connector-add-${provider}`}
-              label={t(providerLabel[provider])}
-              description={t(PROVIDER_BLURB[provider])}
-              // The function form, but for the DESCRIPTION only: the sentence
-              // under the provider's name is what the choice turns on, so the
-              // button that makes it has to carry it. The row's
-              // `aria-labelledby` is deliberately left behind — it would
-              // outrank `aria-label` and leave four buttons announcing the word
-              // they share instead of the provider they differ by, and the
-              // visible "Connect" would no longer be inside the name a reader
-              // hears.
-              control={({ id, "aria-describedby": describedBy }) => (
-                <Button
-                  id={id}
-                  aria-describedby={describedBy}
-                  variant="ghost"
-                  aria-label={t("connectors.connectProvider", {
-                    provider: t(providerLabel[provider]),
-                  })}
-                  pending={pendingProvider === provider}
-                  onClick={
-                    provider === "imap" ? onImap : () => onConnect(provider)
-                  }
-                >
-                  {t("connectors.connect")}
-                </Button>
-              )}
-            />
-          ))}
-        </SettingList>
-        {/* The fact is standing — this deployment never wired that provider —
-            but the reader learns it BY pressing Connect and it is set on that
-            press alone, so it is an `outcome` and is spoken. `info` and not
-            `warning`: an unwired provider is a documented configuration, and
-            nothing about it is wrong. */}
-        {notConfigured501 && (
-          <Callout
-            kind="outcome"
-            title={t("connectors.providerNotConfigured", {
-              provider: t(providerLabel[notConfigured501]),
-            })}
-          />
-        )}
-        {connectError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("connectors.connectFailed")}
-          >
-            {connectError}
-          </Callout>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-type ConnectFailure = {
-  provider: Provider | undefined;
-  message: string;
-} | null;
-
-// Which surface owes the reader the reason a connect failed. One mutation
-// drives two of them — the add dialog's provider picks and a roster row's
-// Reconnect — so a single shared error region could only ever sit under one,
-// which is how the reason ended up in a band of its own naming no button at
-// all. A provider is either already on the roster or still addable, never both,
-// so the mutation's own variable answers it: whichever surface offers that
-// provider carries the message and the other stays silent.
-function failureOwnedBy(
-  failure: ConnectFailure,
-  owner: readonly Provider[],
-): string | null {
-  if (!failure?.provider || !owner.includes(failure.provider)) {
-    return null;
-  }
-  return failure.message;
-}
-
-// The health facts a mailbox row states under its own name. Split out of
-// ConnectorRow so that function stays inside the cognitive-complexity gate.
-function ConnectorFacts({ conn }: Readonly<{ conn: CaptureConnection }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const at = (iso: string) => formatDateTime(iso, locale, viewerZone());
-  return (
-    <>
-      <span className="connector-fact">
-        {conn.last_synced_at
-          ? t("connectors.lastSynced", { at: at(conn.last_synced_at) })
-          : t("connectors.neverSynced")}
-      </span>
-      {conn.next_sync_due_at && (
-        <span className="connector-fact">
-          {t("connectors.nextCheck", { at: at(conn.next_sync_due_at) })}
-        </span>
-      )}
-      <span className="connector-fact">
-        {conn.watch_expires_at
-          ? t("connectors.pushRenewal", { at: at(conn.watch_expires_at) })
-          : t("connectors.polled")}
-      </span>
-      {(conn.status === "error" || conn.status === "reauth_required") && (
-        <span className="connector-fact">
-          <ErrorLine inline standing>
-            {t(errorClassKey(conn.last_sync_error_class))}
-          </ErrorLine>
-        </span>
-      )}
-      {missingCalendarWriteGrant(conn) && (
-        <span className="connector-fact">
-          {t("scheduling.readOnlyCalendar")}
-        </span>
-      )}
-      {/* Show the missing grant before a draft reaches send; only this card
-          can recover the connection. */}
-      {missingSendGrant(conn) && (
-        <span className="connector-fact">
-          {t("connectors.reconnectToSend")}
-        </span>
-      )}
-    </>
-  );
-}
-
-// One mail connection, as a row of the panel's SettingList: which mailbox it is
-// and how it is doing on the left, what state it is in and the verbs that
-// change it on the right.
-//
-// The history import rides BELOW the row rather than inside a Disclosure, and
-// that is not a style choice: BackfillPanel fires a scope-preview POST from an
-// effect the moment its run state is "none" (backfill.tsx), and `<details>`
-// renders its children whether or not it is open — so a closed disclosure would
-// spend money-adjacent requests for every connected mailbox on page load. It is
-// mounted here exactly as often as it was before, which is what keeps this a
-// layout change and not a data-flow one.
-function ConnectorRow({
-  conn,
-  connectPending,
-  connectError,
-  onReconnect,
-  onImapReconnect,
-  onDisconnect,
-}: Readonly<{
-  conn: CaptureConnection;
-  // Whether the reconnect pressed on THIS row is the one in flight. One
-  // mutation serves the whole card, so an unscoped "something is connecting"
-  // would draw every row's Reconnect as busy over a press it never received.
-  connectPending: boolean;
-  // Why the reconnect pressed on THIS row failed, or null — reported here,
-  // under the button that produced it, rather than in a band of its own.
-  connectError: string | null;
-  onReconnect: () => void;
-  onImapReconnect: () => void;
-  onDisconnect: () => void;
-}>) {
-  const t = useT();
-  const needsReconnect =
-    conn.status === "reauth_required" ||
-    missingSendGrant(conn) ||
-    missingCalendarWriteGrant(conn);
-  // Calendar accounts share mailbox labels, but cannot expose mailbox actions.
-  const mailbox = isMailbox(conn.provider);
-  return (
-    <>
-      <SettingRow
-        testId={`connector-${conn.provider}`}
-        label={
-          <ConnectionIdentity
-            icon={isMailIcon(conn.provider) ? Mail : CalendarDays}
-            name={t(providerLabel[conn.provider])}
-            account={conn.account_label}
-          />
-        }
-        description={<ConnectorFacts conn={conn} />}
-        value={
-          <span className="connector-badges">
-            <Badge tone={statusTone(conn.status)}>
-              {t(statusLabel(conn.status))}
-            </Badge>
-            {missingCalendarWriteGrant(conn) && (
-              <Badge tone="warning">{t("scheduling.readOnlyBadge")}</Badge>
-            )}
-            {missingSendGrant(conn) && (
-              <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
-            )}
-          </span>
-        }
-        control={
-          <div className="connector-actions">
-            {needsReconnect &&
-              (OAUTH_PROVIDERS.has(conn.provider) ? (
-                // `pending`, never `disabled`: a write already on its way is a
-                // different unavailability from one the reader could fix, and
-                // disabling the button they just pressed drops their focus to
-                // <body> at the moment there is something to say.
-                <Button pending={connectPending} onClick={onReconnect}>
-                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                </Button>
-              ) : (
-                <Button onClick={onImapReconnect}>
-                  <RefreshCw aria-hidden /> {t("connectors.reconnect")}
-                </Button>
-              ))}
-            <Button variant="ghost" onClick={onDisconnect}>
-              {t("connectors.disconnect")}
-            </Button>
-          </div>
-        }
-      />
-      {/* Under the row rather than inside its control column: a notice squeezed
-          into the slot the verbs live in reads as a third button. */}
-      {connectError && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("connectors.connectFailed")}
-        >
-          {connectError}
-        </Callout>
-      )}
-      {conn.status === "connected" && mailbox && <MailPostureRow conn={conn} />}
-      {conn.status === "connected" && mailbox && (
-        <SignatureEnrichmentRow conn={conn} />
-      )}
-      {/* The tag is the one of the four that belongs to a calendar too: a
-          meeting brings in contacts exactly as a message does, and filing them
-          under the source that found them is the same question. */}
-      {conn.status === "connected" && <ConnectorContextTagRow conn={conn} />}
-      {conn.status === "connected" && mailbox && (
-        <div className="connector-backfill">
-          <BackfillPanel provider={conn.provider} initial={conn.backfill} />
-        </div>
-      )}
-    </>
-  );
-}
-
-// What this mailbox asks of the mail it brings in. A row of its own beside the
-// signature answer, because it is the OTHER standing decision about a mailbox —
-// and the more consequential one: it decides who may read a message, not what a
-// nightly pass may mine out of it.
-//
-// A Select rather than a Switch, because the three answers are not one thing
-// turned on and off. `held` and `classified` both hold a message to the contacts
-// on it; what separates them is whether a classifier is ever allowed to open it
-// later. A two-position control would have to drop one of the three, and the one
-// it would drop is the default.
-//
-// `shared` is present and REFUSED rather than absent when the workspace has not
-// allowed it. A missing option tells a reader their product has two postures; a
-// refused one with the reason beside it tells them there is a third and who can
-// turn it on. The server refuses it too (422 `shared_posture_not_allowed`) — this
-// is the same rule said early, never the only place it is held.
-// How strict each posture is, so the row can tell a NARROWING from a widening.
-// Only a narrowing has anything to offer history: opening what was captured
-// under a stricter answer is a separate decision the server refuses to make as
-// a side effect, and `apply_to_history` only ever narrows.
-const postureRank: Record<MailPosture, number> = {
-  shared: 0,
-  classified: 1,
-  held: 2,
-};
-
-function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
-  const t = useT();
-  const settings = useCaptureSettings();
-  const save = useSetMailPosture(conn.provider);
-  const [pendingPosture, setPendingPosture] = useState<MailPosture | null>(
-    null,
-  );
-  const [applyToHistory, setApplyToHistory] = useState(false);
-  const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
-  const posture = conn.mail_posture ?? "classified";
-
-  // A narrowing asks about history; anything else is saved on the spot. The
-  // question is worth a dialog only when there is a real second answer to give.
-  const choose = (next: MailPosture) => {
-    if (postureRank[next] > postureRank[posture]) {
-      setPendingPosture(next);
-      return;
-    }
-    save.mutate({ posture: next, applyToHistory: false });
-  };
-
-  return (
-    <>
-      <SettingRow
-        testId={`connector-${conn.provider}-mail-posture`}
-        label={t("connectors.mailPosture.label")}
-        description={
-          // Two sentences when one of the three answers is refused: what the
-          // current posture does, and who can unlock the one that is greyed.
-          // The reason cannot ride on the OPTION's label — a listbox row
-          // ellipsises, and the half that gets cut is the half a reader needs.
-          sharedAllowed
-            ? t(`connectors.mailPosture.help.${posture}` as MessageKey)
-            : `${t(`connectors.mailPosture.help.${posture}` as MessageKey)} ${t("connectors.mailPosture.sharedNeedsAdmin")}`
-        }
-        control={(controlProps) => (
-          <Select
-            {...controlProps}
-            value={posture}
-            disabled={save.isPending}
-            onChange={(next) => choose(next as MailPosture)}
-            options={[
-              {
-                value: "classified",
-                label: t("connectors.mailPosture.classified"),
-              },
-              { value: "held", label: t("connectors.mailPosture.held") },
-              {
-                value: "shared",
-                label: t("connectors.mailPosture.shared"),
-                disabled: !sharedAllowed,
-              },
-            ]}
-          />
-        )}
-      />
-      <ConfirmModal
-        open={pendingPosture !== null}
-        onClose={() => {
-          setPendingPosture(null);
-          setApplyToHistory(false);
-        }}
-        title={t("connectors.mailPosture.historyTitle")}
-        confirmLabel={t("connectors.mailPosture.historyConfirm")}
-        pending={save.isPending}
-        error={save.error ? problemMessageOf(save.error, t) : undefined}
-        onConfirm={() => {
-          if (pendingPosture) {
-            save.mutate(
-              { posture: pendingPosture, applyToHistory },
-              {
-                onSuccess: () => {
-                  setPendingPosture(null);
-                  setApplyToHistory(false);
-                },
-              },
-            );
-          }
-        }}
-      >
-        <p>{t("connectors.mailPosture.historyBody")}</p>
-        {/* The reach of the change is a CHECKBOX rather than a second button.
-            Two verbs of similar weight side by side read as rival answers to
-            "are you sure", and in German neither label fits the compact confirm
-            width — both were clipped on the running stack. One question, one
-            modifier, and the button says what it does. */}
-        <Checkbox
-          checked={applyToHistory}
-          onChange={(e) => setApplyToHistory(e.target.checked)}
-          label={t("connectors.mailPosture.historyApply")}
-        />
-      </ConfirmModal>
-    </>
-  );
-}
-
-function useSetMailPosture(provider: CaptureConnection["provider"]) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Both halves of the decision arrive as variables, like every mutation on
-    // this screen: a mutationFn closing over rendered state answers with the
-    // previous render's (frontend/AGENTS.md, mutation-variable-coverage).
-    mutationFn: async (vars: {
-      posture: MailPosture;
-      applyToHistory: boolean;
-    }) => {
-      const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
-        params: { path: { provider } },
-        body: { posture: vars.posture, apply_to_history: vars.applyToHistory },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
-}
-
-// This mailbox's own answer to the nightly signature pass — a row of its own
-// under the connection it belongs to, because it is a DECISION about that
-// mailbox rather than a fact about its connection state.
-//
-// Tri-state on the wire, two states on screen. A Switch has no third position,
-// so what a reader sees is on or off and what they are told beside it is
-// whether that answer is this mailbox's own or the company's — the
-// description says which. Turning the switch makes it the mailbox's own; there
-// is no control for handing the question back, because a reader who wants that
-// wants "follow the company", and no product surface has ever needed to
-// say it twice.
-function SignatureEnrichmentRow({
-  conn,
-}: Readonly<{ conn: CaptureConnection }>) {
-  const t = useT();
-  const settings = useCaptureSettings();
-  const save = useSetSignatureEnrichment(conn.provider);
-  const workspaceDefault = settings.data?.signature_enrich ?? true;
-  const own = conn.signature_enrich_enabled;
-  const effective = own ?? workspaceDefault;
-  return (
-    <SettingRow
-      testId={`connector-${conn.provider}-signature-enrich`}
-      label={t("connectors.signatureEnrich.label")}
-      description={
-        own === null || own === undefined
-          ? t("connectors.signatureEnrich.followingDefault")
-          : t("connectors.signatureEnrich.ownAnswer")
-      }
-      control={
-        <Switch
-          testId={`connector-${conn.provider}-signature-enrich-toggle`}
-          label={t("connectors.signatureEnrich.label")}
-          labelHidden
-          checked={effective}
-          disabled={save.isPending}
-          onChange={(next) => save.mutate(next)}
-        />
-      }
-    />
-  );
-}
-
-function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Takes the new answer as a VARIABLE rather than closing over the row's
-    // current one: the click belongs to the committed render, and a mutationFn
-    // reading render state would answer with whatever the previous render held
-    // (frontend/AGENTS.md, mutation-variable-coverage).
-    mutationFn: async (enabled: boolean) => {
-      const { error } = await api.PUT(
-        "/connectors/{provider}/signature-enrichment",
-        { params: { path: { provider } }, body: { enabled } },
-      );
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
-}
 
 // Readers share the connector query shape because its cache entry is shared.
 export function useConnectors(
@@ -679,293 +99,195 @@ export function useConnectors(
   });
 }
 
-/**
- * The address this installation puts in the links it emails, and whether it
- * answered when last asked.
- *
- * It sits on this card because it is the same question the card already
- * asks — can this installation reach the outside world — and because the
- * value is otherwise invisible: a deployment configured with a localhost
- * origin sends mail whose unsubscribe links open nothing, and until now
- * the only way to find out was for a recipient to click one.
- *
- * Reported, never enforced. The boot and send guards are what refuse an
- * unusable origin; this is so somebody can SEE it. And a probe from inside
- * the deployment says this process can reach the origin — it cannot say a
- * recipient's mail client can.
- */
-function PublicOriginRow({
-  status,
-}: Readonly<{ status?: ConnectorsResult["publicOrigin"] }>) {
-  const t = useT();
-  if (!status) {
-    return null;
-  }
-  const tone =
-    status.reachable === null || status.reachable === undefined
-      ? undefined
-      : status.reachable
-        ? "success"
-        : "warning";
-  const stateLabel =
-    status.reachable === null || status.reachable === undefined
-      ? t("connectors.originUnchecked")
-      : status.reachable
-        ? t("connectors.originReachable")
-        : t("connectors.originUnreachable");
-  return (
-    <SettingList>
-      <SettingRow
-        testId="public-origin"
-        label={t("connectors.originLabel")}
-        description={status.origin}
-        control={<Badge tone={tone}>{stateLabel}</Badge>}
-      />
-    </SettingList>
-  );
-}
-
-// The roster as this card's list of decisions: one row per mailbox, or — when
-// there is no mailbox — one row saying so.
-//
-// "No inbox is connected yet" is the ANSWER to the question the whole card asks,
-// which mailboxes are capturing, so it takes a row of its own rather than
-// floating as a bare paragraph between the card's description and whatever came
-// after it. A stacked row caps `.empty`'s page-furniture slab at a row's own
-// interval and left-aligns it (settingrow.css), so the sentence reads as a
-// sentence instead of as the loudest thing on the card.
+// The roster as this card's list: one row per account.
 function MailRoster({
   rows,
-  pendingProvider,
-  connectFailure,
-  onReconnect,
+  landing,
   onImapReconnect,
-  onDisconnect,
 }: Readonly<{
   rows: readonly CaptureConnection[];
-  pendingProvider: Provider | null;
-  connectFailure: ConnectFailure;
-  onReconnect: (provider: Provider) => void;
+  landing: Landing;
   onImapReconnect: () => void;
-  onDisconnect: (provider: Provider) => void;
 }>) {
-  const t = useT();
-  if (rows.length === 0) {
-    return (
-      <SettingList>
-        <SettingRow
-          testId="connector-roster-empty"
-          layout="stack"
-          label={t("connectors.rosterLabel")}
-          control={<EmptyState>{t("connectors.empty")}</EmptyState>}
-        />
-      </SettingList>
-    );
-  }
   return (
-    <SettingList>
-      {rows.map((conn) => (
-        <ConnectorRow
-          key={conn.id}
-          conn={conn}
-          connectPending={pendingProvider === conn.provider}
-          connectError={failureOwnedBy(connectFailure, [conn.provider])}
-          onReconnect={() => onReconnect(conn.provider)}
+    <ProviderList>
+      {accountsOf(rows).map((account) => (
+        <ConnectionAccountRow
+          key={account.key}
+          account={account}
+          heldWindow={
+            landing.heldVendor !== null && landing.heldVendor === account.key
+              ? landing.heldWindow
+              : null
+          }
           onImapReconnect={onImapReconnect}
-          onDisconnect={() => onDisconnect(conn.provider)}
         />
       ))}
-    </SettingList>
+    </ProviderList>
   );
 }
 
-// The mail half: the roster of mailboxes this member captures from, and the
-// header verb that adds another.
-function MailConnectorsPanel() {
+type Landing = Readonly<{
+  outcome: string | undefined;
+  provider: string | undefined;
+  /** A past-email window the connect asked for and the server held for the
+   *  reader, and the vendor whose mailbox it belongs to. */
+  heldWindow: ImportWindow | null;
+  heldVendor: AccountVendor | null;
+}>;
+
+// The consent callback lands on #/settings/connections/{outcome}/{provider},
+// with `?import={window}` when the import it asked for waits for the reader.
+// A chained consent lands on the calendar, so the window is matched to its
+// account by vendor rather than by provider.
+function connectionsLanding(route: Route, params: UrlParams): Landing {
+  if (route.screen !== "settings" || route.id !== "connections") {
+    return {
+      outcome: undefined,
+      provider: undefined,
+      heldWindow: null,
+      heldVendor: null,
+    };
+  }
+  const held = params.get("import");
+  return {
+    outcome: route.id2,
+    provider: route.id3,
+    heldWindow: isImportWindow(held) ? held : null,
+    heldVendor: vendorOf(route.id3),
+  };
+}
+
+// Everything the mail card shows INSTEAD of a roster: the read in flight, the
+// read refused, and a deployment that never wired mail capture.
+function RosterNotice({
+  query,
+}: Readonly<{ query: ReturnType<typeof useConnectors> }>) {
   const t = useT();
-  const qc = useQueryClient();
-  const [pendingDisconnect, setPendingDisconnect] = useState<Provider | null>(
-    null,
-  );
+  if (query.isPending) {
+    return <p>{t("connectors.loading")}</p>;
+  }
+  if (query.isError) {
+    return (
+      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
+        {problemMessageOf(query.error, t)}
+      </Callout>
+    );
+  }
+  if (query.data.notConfigured) {
+    return (
+      <EmptyState>
+        <p>{t("connectors.notConfigured")}</p>
+      </EmptyState>
+    );
+  }
+  return null;
+}
+
+// The head says nothing is connected until something is; from then on it
+// carries the create verb, while there is still an account left to add.
+function MailHeadAction({
+  empty,
+  offerAdd,
+  onAdd,
+}: Readonly<{ empty: boolean; offerAdd: boolean; onAdd: () => void }>) {
+  const t = useT();
+  if (empty) {
+    return <Badge>{t("connectors.health.notConnected")}</Badge>;
+  }
+  if (!offerAdd) {
+    return null;
+  }
+  return <Button onClick={onAdd}>{t("connectors.addOpen")}</Button>;
+}
+
+// The card: the roster of mailboxes this member captures from, the verb
+// that adds another, and the company's sharing rule those mailboxes work under.
+export function ConnectorsCard() {
+  const t = useT();
   const [imapConnectOpen, setImapConnectOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [notConfigured501, setNotConfigured501] = useState<Provider | null>(
-    null,
-  );
-
+  // The connect dialog: closed, open on the account step (""), or open on what
+  // a vendor or another host brings in, when the page already chose it.
+  const [adding, setAdding] = useState<FlowAccount | "" | null>(null);
+  const [params] = useUrlParams();
+  const landing = connectionsLanding(useRoute(), params);
   const connectors = useConnectors();
-
-  const connect = useMutation({
-    mutationFn: async (provider: Provider) => {
-      setNotConfigured501(null);
-      const { data, error, response } = await api.POST(
-        "/connectors/{provider}/connect",
-        {
-          params: { path: { provider } },
-          // Lands the post-consent redirect back on Settings (Task 2's
-          // contract field) rather than the default onboarding landing.
-          body: { return_to: "settings" },
-        },
-      );
-      // A deployment that never wired this specific provider answers 501
-      // code:not_implemented — a calm, provider-named state, never a claim
-      // dressed up as a generic failure.
-      if (response.status === 501 && problemCode(error) === "not_implemented") {
-        setNotConfigured501(provider);
-        return null;
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-    onSuccess: (data) => {
-      if (data?.authorize_url) {
-        globalThis.location.assign(data.authorize_url);
-      }
-    },
-  });
-
-  const disconnect = useMutation({
-    mutationFn: async (provider: Provider) => {
-      const { error } = await api.POST("/connectors/{provider}/disconnect", {
-        params: { path: { provider } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-    },
-    onSuccess: () => {
-      setPendingDisconnect(null);
-      void qc.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
+  // The outcome note's own "Connect calendar"; each account row carries its own.
+  const connect = useConnectAccount();
 
   const notConfigured = connectors.data?.notConfigured ?? false;
   const rows = (connectors.data?.data ?? []).filter(
     (c) => c.status !== "disconnected",
   );
-  const disconnectNoteKey = pendingDisconnect
-    ? OAUTH_DISCONNECT_NOTE[pendingDisconnect]
-    : undefined;
-
-  const present = new Set(rows.map((r) => r.provider));
-  const addable = ALL_PROVIDERS.filter((p) => !present.has(p));
-
-  const connectFailure = connect.isError
-    ? {
-        provider: connect.variables,
-        message: problemMessageOf(connect.error, t),
-      }
-    : null;
+  const present = rows.map((r) => r.provider);
 
   // Gated on the list having ANSWERED, not merely on it not having failed:
-  // `addable` is derived from what is already connected, so before the read
-  // lands it says "all four", and a reader would be offered a mailbox they
-  // already have.
+  // what is left to add is derived from what is already connected, so before
+  // the read lands every account looks free.
   const rosterKnown = connectors.isSuccess && !notConfigured;
-  const offerAdd = rosterKnown && addable.length > 0;
-  const pendingProvider = connect.isPending ? connect.variables : null;
+  const empty = rosterKnown && rows.length === 0;
+  const offerAdd = rosterKnown && canAddAccount(present);
 
   return (
     <Panel
       title={t("connectors.title")}
-      // The card's create verb, in the header — not one more row in the list.
-      // A row named "Add a connection" whose control is a button that says the
-      // same thing is a decision-shaped thing that answers nothing, and it sat
-      // in the column a reader travels to find what each mailbox is set to.
+      // Nothing connected is the one move this page asks for, so the empty card
+      // leads; once an account exists the create verb takes the header.
+      tone={empty ? "accent" : undefined}
       titleAction={
-        offerAdd ? (
-          <Button onClick={() => setAddOpen(true)}>
-            {t("connectors.addOpen")}
-          </Button>
-        ) : undefined
+        <MailHeadAction
+          empty={empty}
+          offerAdd={offerAdd}
+          onAdd={() => setAdding("")}
+        />
       }
     >
       <PanelBody>
-        <PanelIntro>{t("connectors.sub")}</PanelIntro>
-        <OAuthOutcomeNote />
-        {connectors.isPending && <p>{t("connectors.loading")}</p>}
-        {connectors.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("connectors.loadFailed")}
-          >
-            {problemMessageOf(connectors.error, t)}
-          </Callout>
+        {/* The ask, while it may still be the answer: a roster has no intro. */}
+        {(empty || connectors.isPending) && (
+          <PanelIntro>{t("connectors.sub")}</PanelIntro>
         )}
-        {connectors.isSuccess && notConfigured && (
-          <EmptyState>
-            <p>{t("connectors.notConfigured")}</p>
-          </EmptyState>
-        )}
-        {rosterKnown && (
-          <MailRoster
-            rows={rows}
-            pendingProvider={pendingProvider}
-            connectFailure={connectFailure}
-            onReconnect={(provider) => connect.mutate(provider)}
-            onImapReconnect={() => setImapConnectOpen(true)}
-            onDisconnect={setPendingDisconnect}
+        <OAuthOutcomeNote
+          outcome={landing.outcome}
+          provider={landing.provider}
+          connections={connectors.data?.data}
+          connectCalendar={{
+            onConnect: (calendar) =>
+              connect.mutate({ provider: calendar, returnTo: "settings" }),
+            pending: connect.isPending,
+            error: connect.isError ? problemMessageOf(connect.error, t) : null,
+          }}
+        />
+        <RosterNotice query={connectors} />
+        {empty && (
+          <ConnectTiles
+            availability={connectors.data?.providers ?? []}
+            onPick={setAdding}
+            onImap={() => setAdding("imap")}
           />
         )}
-        <PublicOriginRow status={connectors.data?.publicOrigin} />
-      </PanelBody>
-      <AddConnectionDialog
-        open={addOpen && offerAdd}
-        onClose={() => setAddOpen(false)}
-        addable={addable}
-        pendingProvider={pendingProvider}
-        notConfigured501={notConfigured501}
-        connectError={failureOwnedBy(connectFailure, addable)}
-        onConnect={(p) => connect.mutate(p)}
-        onImap={() => {
-          // A stale "X isn't configured" note from an earlier OAuth attempt
-          // must not linger once the user pivots to the IMAP form instead.
-          setNotConfigured501(null);
-          // Closed BEFORE the IMAP form opens, never stacked behind it: two
-          // overlays deep, Escape and the focus restore both answer to the
-          // wrong layer, and the chooser has already done its job.
-          setAddOpen(false);
-          setImapConnectOpen(true);
-        }}
-      />
-      <ConfirmModal
-        open={pendingDisconnect !== null}
-        onClose={() => setPendingDisconnect(null)}
-        title={t("connectors.disconnectTitle")}
-        confirmLabel={t("connectors.disconnect")}
-        confirmVariant="danger"
-        pending={disconnect.isPending}
-        error={
-          disconnect.isError ? problemMessageOf(disconnect.error, t) : null
-        }
-        onConfirm={() => {
-          if (pendingDisconnect !== null) {
-            disconnect.mutate(pendingDisconnect);
-          }
-        }}
-      >
-        <p>{t("connectors.disconnectBody")}</p>
-        {disconnectNoteKey && (
-          <p className="t-caption">{t(disconnectNoteKey)}</p>
+        {rosterKnown && !empty && (
+          <MailRoster
+            rows={rows}
+            landing={landing}
+            onImapReconnect={() => setImapConnectOpen(true)}
+          />
         )}
-      </ConfirmModal>
+      </PanelBody>
+      <MailSharingPlate />
+      <ConnectFlow
+        open={adding !== null && offerAdd}
+        onClose={() => setAdding(null)}
+        startFrom={adding || undefined}
+        connected={present}
+        availability={connectors.data?.providers}
+        onImap={() => setImapConnectOpen(true)}
+      />
       <ImapConnectForm
         open={imapConnectOpen}
         onClose={() => setImapConnectOpen(false)}
         onConnected={() => setImapConnectOpen(false)}
       />
     </Panel>
-  );
-}
-
-export function ConnectorsCard() {
-  return (
-    <>
-      <MailConnectorsPanel />
-      <TelegramConnectorsPanel />
-    </>
   );
 }

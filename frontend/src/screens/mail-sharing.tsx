@@ -1,15 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import {
+  Panel,
+  PanelBody,
+  PanelIntro,
+  PanelPlate,
+} from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 
 // The workspace mail-sharing posture: ON by default, captured mail is
 // readable by every colleague who can see the contact — the thing that makes
@@ -242,57 +248,47 @@ export function MailSharingCard() {
 }
 
 /**
- * What the sharing rule currently SAYS, on the reader's own connections page.
+ * What the sharing rule currently SAYS, as the plate under the reader's own
+ * Mail and calendar card.
  *
- * A value, not a control. The card that changes these two settings lives on
- * Capture rules, because it writes the WORKSPACE's posture — everybody's mail,
- * not this reader's — and this page is the reader's own mailboxes. The rule
- * still governs the mail those mailboxes bring in, so a reader looking at their
- * connections and wondering who else can read it deserves the answer where the
- * question occurs to them.
+ * A value, not a control. The switch lives on Capture rules, because it writes
+ * the WORKSPACE's posture, and the badge says so: this one plate on a page of
+ * the reader's own accounts binds the whole company. It sits under the
+ * mailboxes because it governs the mail they bring in, which is where a reader
+ * wonders who else can read it.
  *
- * The link appears only for a reader who may CHANGE the rule — the same grant
- * and seat the switch itself asks for. Testing whether they may open the page
- * would be a wider question than the link makes: every seeded role may read the
- * capture posture, so a rep would follow "Change this" to a disabled switch.
+ * The link appears only for a reader who may CHANGE the rule. Every seeded role
+ * may read the posture, so a visibility test sent a rep to a disabled switch.
  */
-export function MailSharingPostureRow() {
+export function MailSharingPlate() {
   const t = useT();
   const query = useMailSharing();
-  // The same question the switch on the other page asks, not "may they open
-  // that page". Every seeded role may READ the capture posture, so a visibility
-  // test offered "Change this" to a rep who would arrive at a disabled switch —
-  // an invitation to a refusal, which is worse than no invitation.
   const canChangeIt = useCanWrite("capture_settings", "update");
-  const shared = query.data?.mail_sharing ?? false;
+  const company = useMe().data?.workspace_name ?? "";
+  // Nothing until the read lands: a wrong statement about who can read
+  // somebody's mail is worse than a moment with no statement.
+  if (!query.isSuccess) {
+    return null;
+  }
   return (
-    <Panel title={t("mailSharing.title")}>
-      <PanelBody>
-        {/* A fact, not a setting: a definition list rather than SettingRow,
-            which requires a control because every row of it is something a
-            reader can operate. This one is operated on Capture rules. */}
-        <dl className="settings-facts">
-          <dt>{t("mailSharing.label")}</dt>
-          <dd>
-            {/* The stored answer in words. `query.data` is absent while the read
-                is in flight, and an absent answer says nothing rather than
-                claiming the narrower one — a wrong statement about who can read
-                somebody's mail is worse than a moment with no statement. */}
-            {query.isSuccess
-              ? t(
-                  shared
-                    ? "mailSharing.posture.shared"
-                    : "mailSharing.posture.private",
-                )
-              : null}
-          </dd>
-        </dl>
+    <PanelPlate>
+      <Badge icon={Building2}>
+        <span className="sr-only">
+          {t("settings.scopeAria", { scope: t("mailSharing.plate.scope") })}
+        </span>
+        <span aria-hidden="true">{t("mailSharing.plate.scope")}</span>
+      </Badge>
+      <p>
+        {t(
+          query.data.mail_sharing
+            ? "mailSharing.plate.shared"
+            : "mailSharing.plate.private",
+          { company },
+        )}{" "}
         {canChangeIt && (
-          <p>
-            <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
-          </p>
+          <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
         )}
-      </PanelBody>
-    </Panel>
+      </p>
+    </PanelPlate>
   );
 }

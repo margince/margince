@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { RbacAction } from "../app/capability";
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 import {
@@ -11,10 +12,10 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The questions a closed deal is asked. The picture worth keeping is the list
-// an administrator actually meets: a win and a loss template side by side, each
-// outcome badge in its own tone, and a retired template still listed under the
-// badge that says it is no longer offered.
+// The questions a closed deal is asked: the how-it-works steps, one panel per
+// review with its numbered questions, and a retired template still listed under
+// the badge that says it is no longer offered. Edit questions sits in each head
+// only for an administrator who may update custom fields.
 
 function template(over: Partial<ReviewTemplate>): ReviewTemplate {
   return {
@@ -65,10 +66,13 @@ const TEMPLATES: ReviewTemplate[] = [
   }),
 ];
 
-function served(answer: () => Response) {
+function served(
+  answer: () => Response,
+  allow: readonly RbacAction[] = ["read"],
+) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ custom_field: ["read"] }),
+      "GET /me": meRoute({ custom_field: allow }),
       "GET /activity-review-templates": answer,
     });
     return (
@@ -92,7 +96,27 @@ export const Templates: Story = {
   render: served(() => jsonResponse({ data: TEMPLATES })),
 };
 
+export const TemplatesDark: Story = {
+  ...Templates,
+  globals: { theme: "dark" },
+};
+
+/** An administrator: Edit questions in every review's head. */
+export const Editable: Story = {
+  render: served(() => jsonResponse({ data: TEMPLATES }), ["read", "update"]),
+};
+
+export const EditableDark: Story = {
+  ...Editable,
+  globals: { theme: "dark" },
+};
+
 /** No templates served: the card says so rather than drawing an empty list. */
 export const Empty: Story = {
   render: served(() => jsonResponse({ data: [] })),
+};
+
+export const EmptyDark: Story = {
+  ...Empty,
+  globals: { theme: "dark" },
 };

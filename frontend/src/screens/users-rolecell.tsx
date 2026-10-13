@@ -1,17 +1,14 @@
 import type { components } from "../api/schema";
-import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import type { useT } from "../i18n";
 import type { QueryLike } from "./common";
 import {
   type AssignableRole,
   roleLabel,
-  roleOptions,
   type useAssignableRoles,
 } from "./roles.queries";
-import type { Role } from "./users-invite-form";
 
-// The member roster's role column: the picker a row draws where the reader may
-// change a member's role, and the answer it reads back where they may not.
+// The member roster's role column: what each row reads back, and whether it
+// offers the change that the dialog in users-rolechange.tsx makes.
 
 type User = components["schemas"]["User"];
 
@@ -41,67 +38,6 @@ export function withRoles(
   };
 }
 
-// The role picker, held to the row language's measure so nine of them line up
-// at one x rather than each shrinking to its own answer's width.
-//
-// It draws only where a role is something this reader can CHANGE. The agent
-// seat has no role at all and a reader without the grant has a fact rather than
-// a control — both read as the row's `value`, decided by the caller, because a
-// picker the server would refuse promises something it cannot do.
-export function RoleCell({
-  member,
-  roles,
-  pending,
-  inFlight,
-  onPick,
-}: Readonly<{
-  member: User;
-  roles: readonly AssignableRole[];
-  pending: boolean;
-  inFlight?: Role;
-  onPick: (role: Role) => void;
-}>) {
-  const t = useT();
-  const label = roleLabel(t);
-  // `roles` on the member arrives only for a member administrator — which this
-  // control always has — and normally holds exactly one key. No key (an
-  // unassigned seat) and several keys both leave the select on its
-  // placeholder, because neither has one current role to show.
-  const heldRoles = member.roles ?? [];
-  const currentRole = heldRoles.length === 1 ? (heldRoles[0] ?? "") : "";
-  // A member holding SEVERAL roles is the case worth naming: any choice here
-  // replaces the whole set, so a neutral "Set role…" would let an admin strip
-  // privileges they never saw. The placeholder says what is held instead.
-  // plural-rule:allow the two arms name what is held and what to do, which is a
-  // state the reader is in rather than two forms of one sentence
-  const placeholder =
-    heldRoles.length > 1
-      ? t("users.rolesHeld", {
-          roles: heldRoles
-            .map((key) => label(key, nameOf(roles, key)))
-            .join(", "),
-        })
-      : t("users.setRole");
-  return (
-    // The unset state is the select's PLACEHOLDER, not an option: picking it
-    // back would set no role, so it belongs on the closed face and nowhere in
-    // the list. It is only ever seen when there is no single role to show.
-    //
-    // Its own `aria-label` rather than the row's label through `control`'s ARIA:
-    // the row names the MEMBER, and a combobox announcing itself as "Ada
-    // Active" would leave a reader to guess what picking from it does.
-    <Select
-      className="settingrow-measure"
-      aria-label={t("users.setRoleFor", { name: member.display_name })}
-      value={inFlight ?? currentRole}
-      placeholder={placeholder}
-      disabled={pending}
-      onChange={onPick}
-      options={roleOptions(t, roles)}
-    />
-  );
-}
-
 // The stored name of a role this reader may assign, for a custom role's label.
 function nameOf(
   roles: readonly AssignableRole[],
@@ -110,42 +46,50 @@ function nameOf(
   return roles.find((role) => role.key === key)?.name;
 }
 
-// Whether a row draws the role picker. A member holding exactly one role the
-// reader may not hand out gets the role as a fact instead: a picker would show
-// it as unset, and every choice from it would be one the server refuses.
-export function drawsRolePicker(
+// Whether a row offers "Change role". The server's `change_role` says a change
+// is possible at all; a member holding exactly one role the reader may not hand
+// out still gets none, because every choice the dialog offered would replace a
+// role this reader cannot give back.
+export function offersRoleChange(
   member: User,
   roles: readonly AssignableRole[],
-  canChangeRole: boolean,
+  offered: boolean,
 ): boolean {
-  if (!canChangeRole || member.is_agent) {
+  if (!offered || member.is_agent) {
     return false;
   }
   const held = member.roles ?? [];
   return held.length !== 1 || roles.some((role) => role.key === held[0]);
 }
 
-// The role a row reports rather than offers: the agent seat's, whose authority
-// is the passport granting it intersected with the contact that passport names,
-// and any member's for a reader who may not change it. `undefined` means the
-// row draws a picker instead.
-export function roleAnswer(
+// The roles a member holds, under their labels and joined; "" for none.
+export function heldRoleNames(
   member: User,
   roles: readonly AssignableRole[],
-  drawsPicker: boolean,
   t: ReturnType<typeof useT>,
-): string | undefined {
-  if (member.is_agent) {
-    return t("users.agentSeatRole");
-  }
-  if (drawsPicker) {
-    return undefined;
-  }
+): string {
   const label = roleLabel(t);
-  const held = (member.roles ?? [])
+  return (member.roles ?? [])
     .map((key) => label(key, nameOf(roles, key)))
     .join(", ");
-  // A seat holding no role has nothing to report, and an empty value would
-  // draw an empty span where the answer belongs.
-  return held === "" ? undefined : held;
+}
+
+// What the role column reads on every row, as text, so the column has one shape
+// whoever may change what. The caption says why a reader who changes roles
+// cannot change THIS one; the server sends no reason, so it says no more than
+// that.
+export function roleReading(
+  member: User,
+  roles: readonly AssignableRole[],
+  locked: boolean,
+  t: ReturnType<typeof useT>,
+): Readonly<{ role: string; caption?: string }> {
+  if (member.is_agent) {
+    return { role: t("users.roster.agentRole") };
+  }
+  const held = heldRoleNames(member, roles, t);
+  return {
+    role: held === "" ? t("users.roster.noRole") : held,
+    caption: locked ? t("users.roster.roleLocked") : undefined,
+  };
 }

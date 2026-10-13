@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { type RefObject, useRef } from "react";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
 import { useLocale, useT } from "../i18n";
@@ -16,6 +17,7 @@ import {
 } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import { type Route, routeHash } from "./router";
+import { SetupReminder } from "./setup-reminder";
 import "./topbar.css";
 
 // The top bar: the one strip that is true of the whole session rather than of
@@ -108,12 +110,17 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
  */
 function TopBarSearch({
   onOpenSearch,
-}: Readonly<{ onOpenSearch: () => void }>) {
+  buttonRef,
+}: Readonly<{
+  onOpenSearch: () => void;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+}>) {
   const t = useT();
   const label = t("shell.searchEverything");
   return (
     <div className="topbar-searchslot">
       <button
+        ref={buttonRef}
         type="button"
         className="topbar-search"
         aria-label={label}
@@ -154,6 +161,7 @@ export function TopBar({
   const t = useT();
   const crumbs = useCrumbs(route, section);
   const toggleLabel = collapsed ? t("shell.expand") : t("shell.collapse");
+  const searchRef = useRef<HTMLButtonElement>(null);
   return (
     <header className="topbar">
       <div className="topbar-lead">
@@ -178,12 +186,18 @@ export function TopBar({
         )}
         <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />
       </div>
-      <TopBarSearch onOpenSearch={onOpenSearch} />
+      <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
       <div className="topbar-trail">
         {/* Before the account chip, which is the strip's last word: the bell is
             something waiting FOR the reader, and the chip is who the reader is.
             Reading right to left, identity is the anchor and everything that
             wants their attention stacks up before it. */}
+        {/* Keyed on the route: a step's action navigates, and the new page
+            should not open under a panel left over from the last one. */}
+        <SetupReminder
+          key={routeHash(route)}
+          onHide={() => searchRef.current?.focus()}
+        />
         <NotificationBell />
         <AccountMenu />
       </div>

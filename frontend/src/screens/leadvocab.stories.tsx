@@ -15,9 +15,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Settings › Data model: where leads come from, why they get dropped, and
-// whether the first-response target is tracked. Every role reads the lists;
-// the custom_field write verbs decide who may change them.
+// Settings › Lead handling: where leads come from, the reply deadline, and why
+// leads are dropped. Every role reads the lists; the custom_field write verbs
+// decide who may change them.
 
 function source(
   key: string,
@@ -102,8 +102,8 @@ function story(allow: Parameters<typeof meRoute>[0], slaOn: boolean) {
     return (
       <StoryProviders>
         <LeadSourcesCard />
-        <LeadDisqualifyReasonsCard />
         <LeadHandlingCard />
+        <LeadDisqualifyReasonsCard />
       </StoryProviders>
     );
   };
@@ -120,17 +120,19 @@ export const Admin: Story = { render: story(ADMIN, false) };
 export const AdminWithTargetOn: Story = { render: story(ADMIN, true) };
 export const Reader: Story = { render: story(READER, false) };
 
-// The row language in dark: the hairline between two rows is a token
-// (`--borderSubtle`) and a list of decisions that loses its rules is a wall
-// again, which is the one thing this shape exists to prevent.
+// The terms tables in dark: the hairline between two rows is a token
+// (`--borderSubtle`), and a table that loses its rules reads as a wall.
 export const AdminDark: Story = {
   globals: { theme: "dark" },
   render: story(ADMIN, true),
 };
+export const ReaderDark: Story = {
+  globals: { theme: "dark" },
+  render: story(READER, false),
+};
 
-// A source is a label AND a weight, so its form is a dialog behind the row's
-// verb — the state no story could capture while the form sat inline under the
-// list.
+// A source is a name AND a score effect, so its form is a dialog behind the
+// card's header verb, with the three effects as readable choices.
 export const AddingSource: Story = {
   render: story(ADMIN, false),
   play: async ({ canvasElement }) => {
@@ -140,10 +142,28 @@ export const AddingSource: Story = {
     );
   },
 };
+export const AddingSourceDark: Story = {
+  ...AddingSource,
+  globals: { theme: "dark" },
+};
 
-// A target outside the 15-minutes-to-7-days window the server enforces. The
-// refusal used to be `Field`'s; it is drawn by the row now, so what it looks
-// like under a label and a description is worth a frame.
+// A built-in source's menu: Rename, and a caption saying why Remove is absent.
+export const BuiltInMenu: Story = {
+  render: story(ADMIN, false),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "More actions for Inbound" }),
+    );
+  },
+};
+export const BuiltInMenuDark: Story = {
+  ...BuiltInMenu,
+  globals: { theme: "dark" },
+};
+
+// A target outside the 15-minutes-to-7-days window the server enforces, drawn
+// under the row's label and description.
 export const TargetRefused: Story = {
   render: story(ADMIN, true),
   play: async ({ canvasElement }) => {

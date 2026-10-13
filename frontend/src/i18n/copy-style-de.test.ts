@@ -143,7 +143,7 @@ const RETIRED_WORDS = [
 // Keys where a retired word keeps a sense the table does not retire.
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
-  ["oauthApp.tenant", "Microsoft Entra labels the directory tenant Mandant"],
+  ["oauthApp.google.for", "Google Workspace is a product name"],
 ]);
 
 function retiredWordPattern(retired: string): RegExp {

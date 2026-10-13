@@ -99,6 +99,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "oauthApp.microsoft.clientIdPlaceholder",
   "oauthApp.tenant",
   "oauthApp.tenantPlaceholder",
+  // A product name, the same word in every language.
+  "oauthApp.unlock.gmail",
   // A URL, which is the same string in every language.
   "scheduling.locationExample",
   "aiRouting.baseUrl.placeholder",
@@ -142,13 +144,12 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // .withheld), so this value is the placeholder and a full stop.
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
-  "connectors.provGmail",
   "connectors.provGcal",
-  "connectors.provGraph",
   "connectors.provTelegram",
+  "connectors.vendorGoogle",
+  "connectors.vendorMicrosoft",
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
-  "ob.conv.connect.linkedinName",
   // "Email" is the loanword vi uses for the field, as en spells it.
   // Employee-count bands: digits and an en dash, the same in every locale.
   "lead.signal.employees.1-10",
@@ -158,7 +159,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // "Email" is the Vietnamese word for email. de has "E-Mail" and differs;
   // vi does not, and inventing a difference would name the transport
   // something no Vietnamese speaker calls it.
-  // The same proper noun as connectors.provGmail and its neighbours, one
+  // The same proper noun as connectors.provGcal and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
@@ -264,6 +265,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // the same reason the plural pair is not: the word is borrowed, not missed.
   "search.kind.deal",
   "search.kind.lead",
+  // The audit log names the record types in the same CRM vocabulary.
+  "settings.auditLog.type.deal",
+  "settings.auditLog.type.lead",
+  "settings.auditLog.type.pipeline",
   "search.kind.tag",
   // The same loanword naming the tag field on Filters and views.
   "filters.field.tag",
@@ -278,7 +283,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // Other cases verified individually against the source.
   "shell.logoAria",
-  "ob.conv.connect.scopeMicrosoft",
 
   // Worked examples of a German commercial register entry, the shape the
   // legal-notice read actually parses regardless of which locale a reader

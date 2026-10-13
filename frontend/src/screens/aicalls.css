@@ -1,84 +1,188 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings → AI → the per-call trace. The card's own intervals come from
- * `SettingList` / `SettingRow` / `PanelBody`; what is left here belongs to the
- * TABLE inside the card's stacked row, which the row language does not reach
- * into. */
+/* Settings, AI call log: the dials, the trace table and the call drawer. */
 
-/* The expanded call's detail card. Every block in it — the three identity
- * lines, the attempt trail, the payload stack — is a bare element under the
- * preflight reset, so with no rhythm of its own the card ran its facts together
- * and the payload block had to state a margin for itself. The interval rides on
- * the card, at `.form-stack`'s own step, so it holds for whichever of the
- * card's four payload branches renders. */
-.aicalls-detail {
+/* The search over the full width, then the four pickers in one row that folds
+   to two on a phone, where each still holds its longest label. The audit log's
+   toolbar, one page over, has the same shape. */
+.aicalls-toolbar {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
 }
 
-/* The badges a call carries under its task name: cache hit, degraded, the
- * error sentinel, a retry count. They wrap rather than widen the column — a
- * call can carry all four, and the task cell is the narrowest of the six. */
-.aicalls-badges {
+.aicalls-dials {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 720px) {
+  .aicalls-dials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.aicalls-countline {
   display: flex;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+/* Fixed layout, so the widths come from the header row and nothing a row holds
+   (a long broker model id, a wide badge) can move a column. Feature takes what
+   the six sized columns leave. */
+.aicalls-table {
+  margin-top: var(--space-3);
+}
+
+.aicalls-table .table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.aicalls-table :is(th, td) {
+  padding-inline: var(--space-2);
+  vertical-align: middle;
+}
+
+.aicalls-table th:nth-child(1) {
+  width: 8.75rem;
+}
+
+.aicalls-table th:nth-child(3) {
+  width: 7rem;
+}
+
+.aicalls-table th:nth-child(4) {
+  width: 6.25rem;
+}
+
+.aicalls-table th:nth-child(5) {
+  width: 4.75rem;
+}
+
+/* Wide enough for a sub-cent estimate (US$0.0043) without cutting it. */
+.aicalls-table th:nth-child(6) {
+  width: 5.75rem;
+}
+
+.aicalls-table th:nth-child(7) {
+  width: 4.5rem;
+}
+
+.aicalls-when {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* An id never breaks on its own, so it is cut at the column's edge and the
+   whole of it stays on hover and in the drawer. */
+.aicalls-clip {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aicalls-feature {
+  max-width: 100%;
+  text-align: start;
+}
+
+.aicalls-when-inline {
+  display: none;
+}
+
+/* On a phone the figures and the model live in the drawer. The time moves under
+   the feature so the row keeps two columns it can actually fit. */
+@media (max-width: 720px) {
+  .aicalls-table
+    :is(th, td):is(
+      :nth-child(1),
+      :nth-child(3),
+      :nth-child(5),
+      :nth-child(6),
+      :nth-child(7)
+    ) {
+    display: none;
+  }
+
+  .aicalls-when-inline {
+    display: block;
+  }
+}
+
+.aicalls-more {
+  padding-top: var(--space-3);
+}
+
+.aicalls-more:empty {
+  display: none;
+}
+
+/* The drawer. */
+.aicalls-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-/* A cell holds ids that never break on their own — the served model
- * (`vendor/model-2603`), a task name — and they are what made the table wider
- * than its card. They wrap anywhere instead, so the columns give way and the
- * table fits. */
-.aicalls-table td {
-  overflow-wrap: anywhere;
+.aicalls-drawer-nav {
+  display: inline-flex;
+  gap: var(--space-1);
+  margin-inline-start: auto;
 }
 
-/* Cells give up a third of their inline padding so a broker's long model id has
- * room to wrap rather than to overflow. */
-.aicalls-table th,
-.aicalls-table td {
-  padding-inline: var(--space-2);
+.aicalls-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
 }
 
-/* On a phone the card leaves ~250px, which three columns of ids cannot share
- * however they wrap. A call becomes a small block instead: the disclosure at
- * its side, and the task, the model and the figures one under another. The
- * header row is kept for a screen reader and drawn for nobody, since the lines
- * carry their own meaning (a tier and a model, "in / out", "ms"). */
-@media (max-width: 720px) {
-  .aicalls-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
+.aicalls-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
-  .aicalls-table tr {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: var(--space-2);
-    border-bottom: 1px solid var(--borderSubtle);
-  }
+/* The sentence takes the line beside its number and wraps inside itself, so a
+   narrow drawer never leaves the number alone on a line above it. */
+.aicalls-attempt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
 
-  .aicalls-table tbody tr:last-child {
-    border-bottom: 0;
-  }
+.aicalls-attempt-text {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
 
-  .aicalls-table td {
-    grid-column: 2;
-    padding-inline: 0;
-    border-bottom: 0;
-  }
+.aicalls-payload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
-  .aicalls-table td:first-child:not(:only-child) {
-    grid-column: 1;
-    grid-row: 1 / span 3;
-  }
+.aicalls-payload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 
-  .aicalls-table td:only-child {
-    grid-column: 1 / -1;
-  }
+/* A payload scrolls inside its own block, so a long prompt never pushes the
+   attempts and the identifiers out of the drawer's first screen. */
+.aicalls-code {
+  max-height: 22rem;
 }

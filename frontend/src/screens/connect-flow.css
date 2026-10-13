@@ -1,0 +1,82 @@
+/* The connect dialog's own pieces: the step trail (also the empty card's
+   strip) and the permission list of the hand-off. Everything else in it is a
+   design-system primitive. */
+
+.connect-flow-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+.connect-flow-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.connect-flow-step:not(:last-child)::after {
+  content: "";
+  width: 24px;
+  height: 1px;
+  margin-inline-start: var(--space-1);
+  background: var(--borderStrong);
+}
+.connect-flow-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--borderControl);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  font: var(--fontHeadingXXSmall);
+}
+.connect-flow-num svg {
+  width: 14px;
+  height: 14px;
+}
+.connect-flow-step:is([data-state="current"], [data-state="done"]) {
+  color: var(--textPrimary);
+}
+.connect-flow-step[data-state="current"] .connect-flow-num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+}
+.connect-flow-step[data-state="done"] .connect-flow-num {
+  border-color: var(--successText);
+  background: var(--successText);
+  color: var(--textOnStatusControl);
+}
+
+/* One permission per line, its glyph beside the name and what it is for under
+   that name. */
+.connect-flow-perms {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.connect-flow-perms li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.connect-flow-perms li > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: var(--space-1);
+  color: var(--accentText);
+}
+.connect-flow-perms li > span {
+  display: flex;
+  flex-direction: column;
+}

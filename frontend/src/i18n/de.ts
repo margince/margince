@@ -282,35 +282,7 @@ export const de = {
   "scheduling.linkReplaced":
     "Du hast den Vorschlag geändert, deshalb bekommt er einen neuen Link. Der vorherige bleibt offen, bis du ihn unter „Termine“ beim Kontakt zurückziehst.",
   "scheduling.bookWith": "Termin mit {name} buchen",
-  "scheduling.setupTitle":
-    "Buchung fertig einrichten · {done} von {total} erledigt",
-  "scheduling.stepCalendar": "Ein Kalender, der Einladungen senden kann",
-  "scheduling.stepHours": "Deine Zeiten und Zeitzone",
-  "scheduling.stepLink": "Dein Buchungslink ist aktiv",
-  "scheduling.stepDone": "Erledigt",
-  "scheduling.stepOpen": "Noch offen",
   "scheduling.calendarTitle": "Kalender",
-  "scheduling.calendarIntro":
-    "Von hier gehen Einladungen raus, und hier wird deine belegte Zeit gelesen.",
-  "scheduling.availabilityTitle": "Verfügbarkeit",
-  "scheduling.defaultsTitle": "Standards für Termine",
-  "scheduling.defaultsIntro":
-    "Gilt für jeden neuen Termin. Beim Buchen kannst du sie ändern.",
-  "scheduling.videoDefaultGoogle":
-    "Neuen Terminen einen Google-Meet-Link hinzufügen",
-  "scheduling.videoDefaultTeams":
-    "Neuen Terminen einen Microsoft-Teams-Link hinzufügen",
-  "scheduling.videoDefaultGeneric":
-    "Neuen Terminen einen Videocall-Link hinzufügen",
-  "scheduling.videoDefaultHelp":
-    "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du ihn für einen einzelnen Termin abschalten.",
-  "scheduling.videoTeamsHelp":
-    "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
-  "scheduling.locationFallback": "Gilt für Termine ohne Videocall.",
-  "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
-  "scheduling.discard": "Verwerfen",
-  "scheduling.brand": "Firmenname und Logo",
-  "scheduling.copyBookingLink": "Buchungslink kopieren",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -440,7 +412,6 @@ export const de = {
     "Speichere die Termineinstellungen, um deinen Buchungslink zu erstellen.",
   "scheduling.calendarSetupNeeded":
     "Wähle und speichere in den Termineinstellungen einen Kalender, bevor du Buchungen aktivierst.",
-  "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Besprechungslink",
   "scheduling.duration": "Termindauer",
@@ -2282,7 +2253,7 @@ export const de = {
   "co.commercial.title": "Geschäftliches",
   "linkedinImport.title": "LinkedIn-Verbindungen",
   "linkedinImport.sub":
-    "Importiere deinen LinkedIn-Export, um zu sehen, wen dein Team bereits kennt.",
+    "Zeigt, bei welchen erfassten Unternehmen du jemanden kennst. Importierte Verbindungen werden nie zu Kontakten, und niemand kann ihnen von hier E-Mails senden.",
   "linkedinImport.profileLabel": "URL deines LinkedIn-Profils",
   "linkedinImport.profilePlaceholder": "https://www.linkedin.com/in/…",
   "linkedinImport.saveProfile": "Profil speichern",
@@ -2294,15 +2265,15 @@ export const de = {
     "Der Export wurde nicht importiert. Versuche es erneut.",
   "linkedinImport.editProfile": "Bearbeiten",
   "linkedinImport.editProfileTitle": "Dein LinkedIn-Profil",
-  "linkedinImport.profileNotSet": "Noch nicht erfasst",
+  "linkedinImport.profileNotSet": "Nicht hinzugefügt",
   "linkedinImport.connectedNote":
     "Verbunden. Importierte Verbindungen werden diesem Profil zugeordnet, sodass das CRM zeigt, wer im Team jemanden kennt.",
   "linkedinImport.notConnectedNote":
-    "Wenn du deine Profil-URL speicherst, werden importierte Verbindungen dir namentlich zugeordnet.",
+    "Damit ordnet Margince die importierten Verbindungen dir namentlich zu.",
   "linkedinImport.whichFile":
-    "LinkedIn stellt die Datei Connections.csv unter „Einstellungen“, dann „Datenschutz“ bereit, wo sich eine Kopie der eigenen Daten anfordern lässt. Lade diese Datei aus dem Archiv hoch. Hochgeladene Verbindungen werden nie zu Kontakten: Suche, Listen und Kontaktseiten zeigen sie nicht, und niemand kann ihnen schreiben oder E-Mails senden.",
-  "linkedinImport.choose": "Connections.csv ausw\u00e4hlen",
-  "linkedinImport.importLabel": "Export der Verbindungen",
+    "Öffne in LinkedIn die Einstellungen, dann Datenschutz, und fordere eine Kopie deiner Daten an. Lade Connections.csv aus dem Archiv hoch, das LinkedIn dir per E-Mail schickt.",
+  "linkedinImport.choose": "Connections.csv importieren",
+  "linkedinImport.importLabel": "So bekommst du Connections.csv von LinkedIn",
   "linkedinImport.noMatchesYet":
     "Noch keine Treffer, was bei einem neuen Unternehmen normal ist. Verbindungen werden mit Kontakten abgeglichen, sobald E-Mails gelesen werden, und der Abgleich läuft stündlich erneut.",
   "linkedinImport.working": "Export wird gelesen…",
@@ -2311,13 +2282,10 @@ export const de = {
   "linkedinImport.suggested": "Wartet auf Bestätigung",
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
-  "linkedinReach.title": "Reichweite im Netzwerk",
-  "linkedinReach.sub":
-    "Erfasste Unternehmen, bei denen du jemanden kennst, die meisten Verbindungen zuerst.",
+  "linkedinReach.title": "LinkedIn-Netzwerk",
   "linkedinReach.readFailed":
     "Die Reichweite im Netzwerk konnte nicht geladen werden.",
-  "linkedinReach.empty":
-    "Noch keine deiner Verbindungen arbeitet bei einem erfassten Unternehmen.",
+  "linkedinReach.empty": "Noch keine Unternehmen erreicht",
   "linkedinReach.allUnresolved":
     "Alle deine Verbindungen arbeiten bei Unternehmen, die noch nicht erfasst sind. Verbindungen: {unresolved}.",
   "linkedinReach.accountsLabel": "Unternehmen in deiner Reichweite",
@@ -2814,72 +2782,31 @@ export const de = {
   "lead.source.unknown": "Unbekannte Quelle",
   "lead.sourceFromConnector":
     "Von einem Connector geschrieben, der seine eigene Quelle behält.",
-  "leadSources.title": "Lead-Quellen",
-  "leadSources.sub":
-    "Woher Leads kommen. Wird im Formular „Neuer Lead“, in Filtern und beim Scoring verwendet.",
   "leadSources.readOnly":
     "Nur Admins und Operations können diese Liste ändern.",
   "leadSources.readOnlyTitle":
     "Nur Admins und Operations können diese Liste ändern",
   "leadSources.notSaved": "Änderung nicht gespeichert",
   "leadSources.notAdded": "Quelle nicht hinzugefügt",
-  "leadSources.labelFor": "Bezeichnung der Quelle {key}",
-  "leadSources.intentFor": "Kaufinteresse von {label}",
-  "leadSources.intent": "Kaufinteresse",
-  "leadSources.intent.high": "Hohes Kaufinteresse",
-  "leadSources.intent.neutral": "Neutral",
-  "leadSources.intent.low": "Geringes Kaufinteresse",
-  "leadSources.intentHint":
-    "Hoch fügt dem Score Punkte hinzu, Gering zieht Punkte ab. Änderungen gelten ab der nächsten Neuberechnung jedes Leads.",
-  "leadSources.leadCount": "Leads: {count}",
   "leadSources.builtIn": "Vorgegeben",
-  "leadSources.builtInKept":
-    "Vorgegebene Quellen lassen sich umbenennen oder deaktivieren, aber nicht entfernen.",
-  "leadSources.inUse_one":
-    "{count} Lead nutzt diese Quelle. Deaktiviere sie stattdessen.",
-  "leadSources.inUse_other":
-    "{count} Leads nutzen diese Quelle. Deaktiviere sie stattdessen.",
-  "leadSources.deactivateInstead": "stattdessen deaktivieren",
-  "leadSources.activeFor": "{label} ist aktiv",
   "leadSources.remove": "Entfernen",
   "leadSources.removeTitle": "Quelle entfernen?",
   "leadSources.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
-  "leadSources.newLabel": "Neue Quelle",
-  "leadSources.labelField": "Bezeichnung",
   "leadSources.addOpen": "Neue Quelle",
-  "leadSources.listLabel": "Quellen in der Liste",
   "leadSources.discovered": "Gefundene Werte",
   "leadSources.newPlaceholder": "Messe",
   "leadSources.add": "Quelle hinzufügen",
   "leadSources.discoveredSub":
     "Werte auf Leads aus Connectors und Importen, die noch nicht in der Liste stehen. Füge einen hinzu, um ihm Bezeichnung und Gewichtung zu geben.",
   "leadSources.adopt": "Zur Liste hinzufügen",
-  "leadReasons.title": "Disqualifizierungsgründe",
-  "leadReasons.sub":
-    "Was Vertriebsmitarbeitende beim Disqualifizieren eines Leads wählen. Der Grund steht am Lead und lässt sich filtern.",
-  "leadReasons.labelFor": "Bezeichnung des Grunds {label}",
-  "leadReasons.leadCount": "Leads: {count}",
-  "leadReasons.inUse_one":
-    "{count} Lead hat diesen Grund. Deaktiviere ihn stattdessen.",
-  "leadReasons.inUse_other":
-    "{count} Leads haben diesen Grund. Deaktiviere ihn stattdessen.",
   "leadReasons.newLabel": "Neuer Grund",
-  "leadReasons.listLabel": "Gründe in der Liste",
   "leadReasons.add": "Grund hinzufügen",
   "leadReasons.removeTitle": "Grund entfernen?",
   "leadReasons.removeBody":
     "„{label}“ wird von keinem Lead verwendet und wird aus der Liste entfernt.",
-  "leadHandling.title": "Lead-Bearbeitung",
-  "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
-  "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
-  "leadHandling.firstResponseHint":
-    "Standardmäßig aus. Eingeschaltet erhält jeder offene Lead eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
-  "leadHandling.targetMinutes": "Zielzeit (Minuten)",
   "leadHandling.targetOutOfRange":
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
-  "leadHandling.targetHint":
-    "Längste Wartezeit auf eine erste Antwort nach Zuweisung oder Anlage, 15 Minuten bis 7 Tage.",
   "lead.boardCount": "Leads: {count}",
   "lead.duplicateFound":
     "Ein Lead mit dieser E-Mail oder diesem LinkedIn-Profil ist bereits vorhanden.",
@@ -3216,20 +3143,11 @@ export const de = {
   "settings.page.reviewtemplates.sub":
     "Fragen, die Vertriebsmitarbeitende zu einem gewonnenen oder verlorenen Deal beantworten.",
   "settings.tab.reviewtemplates": "Abschlussrückblicke",
-  "reviewTemplates.editHint":
-    "Änderungen gelten für künftige Rückblicke. Bestehende Rückblicke behalten ihre ursprünglichen Fragen und Antworten.",
   "reviewTemplates.question": "Frage",
-  "reviewTemplates.answerType": "Antworttyp",
-  "reviewTemplates.options": "Auswahlmöglichkeiten (eine pro Zeile)",
-  "reviewTemplates.requiredChoice": "Antwort erforderlich",
-  "reviewTemplates.removeQuestion": "Frage entfernen",
   "reviewTemplates.addQuestion": "Frage hinzufügen",
-  "reviewTemplates.save": "Vorlage speichern",
   "reviewTemplates.edit": "Fragen bearbeiten",
   "reviewTemplates.title": "Fragen zum Abschlussrückblick",
-  "reviewTemplates.empty": "Keine Fragen für den Rückblick eingerichtet",
   "reviewTemplates.retired": "Stillgelegt",
-  "reviewTemplates.required": "(erforderlich)",
   "outcomeReview.title": "Abschlussrückblick",
   "outcomeReview.add": "Rückblick hinzufügen",
   "outcomeReview.save": "Rückblick speichern",
@@ -5011,7 +4929,6 @@ export const de = {
   "explain.col.owner": "Zuständig",
   "explain.col.pipeline": "Pipeline",
 
-  "settings.accountCard": "Dein Nutzerkonto",
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
   "unsaved.body":
     "Wenn du diese Seite verlässt, gehen deine Eingaben verloren. Gehe zurück, um sie zuerst zu speichern.",
@@ -5021,8 +4938,6 @@ export const de = {
   "settings.removed": "Entfernt",
   "settings.saved": "Gespeichert",
   "settings.signature": "E-Mail-Signatur",
-  "settings.signatureSub":
-    "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
   "settings.signatureLabel": "Grußformel",
   "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
   "settings.signatureHint":
@@ -5040,14 +4955,10 @@ export const de = {
   "delivery.byEmail": "Per E-Mail",
   "delivery.none": "Nicht per E-Mail",
   "settings.appearance": "Darstellung",
-  "settings.appearanceHelp":
-    "Hell, dunkel oder die Einstellung des Geräts. Auch das Kontomenü ändert sie.",
   "settings.displayName": "Anzeigename",
   "settings.displayNameHelp":
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
   "settings.displayNameSave": "Speichern",
-  "settings.languageHelp": "Gilt für diese Sitzung.",
-  "settings.deviceCard": "Dieses Gerät",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
     "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
@@ -5407,7 +5318,6 @@ export const de = {
   "settings.resetDataConfirmBody":
     "Gib zur Bestätigung den Namen des Unternehmens ein. Das kann nicht rückgängig gemacht werden.",
   "settings.resetDataConfirmName": "Gib diesen Unternehmensnamen ein:",
-  "settings.resetDataConfirmLabel": "Unternehmensnamen bestätigen",
   "settings.resetDataResult":
     "Gelöscht: Tabellen {tables}, Job-Einträge {jobs}, Event-Streams {streams}, Cache-Schlüssel {keys}, gespeicherte Dateien {objects}.",
   "settings.resetDataDrainWarning":
@@ -5545,22 +5455,6 @@ export const de = {
   "audit.viaDealRoom": "im Deal Room",
   "audit.viaNamed": "über {client}",
   "audit.noHumanAuthority": "Keine menschliche Autorisierung erfasst",
-  "settings.auditSub":
-    "Jede Aktion, zugeordnet zu Nutzerkonto, Agent oder Connector",
-  "settings.auditAdminOnly":
-    "Deine Rolle darf das vollständige Audit-Log nicht lesen. Es verzeichnet alle Handelnden und jeden Datensatz, auf den sie zugegriffen haben.",
-  "settings.auditFilters": "Filter",
-  "settings.auditEntries": "Audit-Log",
-  "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
-  "settings.auditActor": "Ausgeführt von",
-  "settings.auditEntity": "Objekttyp",
-  "settings.auditEntityId": "Objekt-ID",
-  "settings.auditAction": "Aktion",
-  "settings.auditFrom": "Von",
-  "settings.auditTo": "Bis",
-  "settings.auditExpand": "Änderungsdetails anzeigen",
-  "settings.auditRule": "Berechtigungsregel",
-  "settings.auditOnBehalf": "im Auftrag von",
   "settings.privacy": "Datenschutzanfragen",
   "settings.privacySub": "Betroffenenanfragen mit ihren gesetzlichen Fristen",
   "settings.due": "fällig am {date}",
@@ -5726,7 +5620,6 @@ export const de = {
   "privacy.fulfilErasureTitle": "Löschanfrage erfüllen",
   "privacy.erasureIrreversible":
     "Damit wird der Kontakt im gesamten System dauerhaft gelöscht: Datensatz, erfasste Aktivitäten und abgeleitete Werte. Das lässt sich nicht rückgängig machen. Die Löschung selbst wird im Audit-Log festgehalten.",
-  "privacy.typeErase": "Zum Bestätigen ERASE eingeben",
   "privacy.erasureConfirm": "Löschen und sperren",
   "privacy.legalHoldTitle": "Durch Legal Hold blockiert",
   "privacy.legalHold":
@@ -6163,28 +6056,17 @@ export const de = {
 
   "ob.s4.provGoogle": "Google",
   "ob.s4.provMicrosoft": "Microsoft",
-  "ob.s4.provImap": "Anderes Postfach (IMAP/SMTP)",
-  "ob.s4.microsoftBtn": "Microsoft verbinden",
-  "ob.s4.microsoftHint":
-    "Liest deine E-Mails und kann aus dem Postfach senden. Beides erlaubst du auf der Seite von Microsoft und kannst die Verbindung jederzeit trennen.",
   "ob.s4.microsoftUnverified":
     "Möglicherweise erscheint ein Hinweis „Nicht verifizierte App“. Er bezieht sich auf diese selbst gehostete Installation, nicht auf einen Dritten.",
   "ob.s4.microsoftFailed": "Microsoft-Verbindung nicht abgeschlossen",
-  "ob.s4.connectOkTitle": "Postfach verbunden",
-  "ob.s4.connectOkBody":
-    "Die Erfassung beginnt bei der nächsten Synchronisierung.",
   "ob.s4.connectVerifying": "Verbindung wird bestätigt…",
   "ob.s4.connectLive": "Aktiv, Erfassung läuft",
   "ob.s4.connectConfirmFailed": "Die Verbindung konnte nicht bestätigt werden.",
   "ob.s4.connectRetry":
     "Verbinde das Postfach erneut in den Einstellungen unter Verbindungen.",
   "ob.s4.connectDenied": "Zugriff abgelehnt. Es wurde nichts verbunden.",
-  "ob.s4.googleBtn": "Gmail verbinden",
-  "ob.s4.googleHint":
-    "Liest deine E-Mails und kann aus dem Postfach senden. Beides erlaubst du auf der Seite von Google und kannst die Verbindung jederzeit trennen.",
   "ob.s4.googleUnverified":
     "Wenn Google vor einer „nicht verifizierten App“ warnt, wähle „Erweitert“ und dann „Weiter“. Die Seite von Google zeigt genau, was erlaubt wird.",
-  "backfill.title": "Alte E-Mails importieren",
   "backfill.intro":
     "Wähle, wie weit du zurückgehen willst. Es startet erst, wenn du auf „Import starten“ klickst.",
   "backfill.windowLabel": "Wie weit zurück",
@@ -6214,8 +6096,6 @@ export const de = {
   "backfill.startCta": "Import starten",
   "backfill.starting": "Wird gestartet…",
   "backfill.skip": "Jetzt nicht",
-  "backfill.skippedNote":
-    "Keine alten E-Mails importiert. Neue E-Mails kommen weiter an. Alte E-Mails kannst du später in den Einstellungen importieren.",
   "backfill.loading": "Import wird geprüft…",
   "backfill.statusUnavailable":
     "Der Import lässt sich gerade nicht anzeigen. Neue E-Mails kommen weiter an.",
@@ -6260,23 +6140,20 @@ export const de = {
   // wird.
   "extUnits.open": "Öffnen",
   "extUnits.openNamed": "Seite {name} öffnen",
-  "extUnits.user.title": "Deine weiteren Konten",
+  "extUnits.user.title": "Weitere Konten",
   "extUnits.user.sub":
-    "Konten, die diese Installation in deinem Namen verbinden kann. Jedes Konto ist privat, und das Trennen betrifft nur dich.",
+    "Erweiterungen dieser Installation, die sich in deinem Namen anmelden. Jede ist privat, und das Trennen betrifft nur dich.",
   "extUnits.workspace.title": "Erweiterungen der Installation",
   "extUnits.workspace.sub":
     "Erweiterungen, die diese Installation mit gemeinsamen Zugangsdaten betreibt. Einstellungen hier gelten für alle Nutzenden.",
 
-  "connectors.title": "Verbundene Postfächer und Kalender",
+  "connectors.title": "Mail und Kalender",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
-  "overnightGrant.sub":
-    "Margince arbeitet über Nacht deine Deals durch, und der Morgenbericht liegt bereit, wenn du anfängst. Margince handelt in deinem Namen, sieht nur, was du sehen kannst, und du kannst es jederzeit stoppen.",
-  "overnightGrant.label":
-    "Margince den Morgenbericht über Nacht vorbereiten lassen",
+  "overnightGrant.label": "Meinen Morgenbericht über Nacht vorbereiten",
   "overnightGrant.help":
-    "Margince liest deine Deals und E-Mails, um die Prioritäten des Tages zu ordnen, und schreibt Notizen zurück. Senden kann es nicht: Die hier erteilte Berechtigung umfasst nur Lesen und Schreiben, niemals Senden.",
+    "Margince liest nachts deine Deals und E-Mails, ordnet die Prioritäten des Tages und schreibt Notizen zurück, damit der Bericht bereitliegt, wenn du anfängst. Margince handelt in deinem Namen, sieht nur, was du sehen kannst, und sendet nie.",
   "overnightGrant.dangerTitle": "Vorbereitung über Nacht läuft nicht",
   "overnightGrant.danger":
     "Margince kann deinen Morgenbericht weder lesen noch mit Anmerkungen versehen. Deine Datensätze, die Worklist und der geplante Wochenrückblick bleiben verfügbar.",
@@ -6374,10 +6251,6 @@ export const de = {
     "Einzelne Nachrichten lassen sich nachträglich einschränken, Adressen oder Domains vorab ausschließen.",
   "mailSharing.danger":
     "Ohne das Teilen von E-Mails ist das CRM schwer zu nutzen. Neue E-Mails sind dann nur für die Beteiligten der jeweiligen Nachricht sichtbar.",
-  "mailSharing.posture.shared":
-    "Neu erfasste E-Mails sind für Teammitglieder lesbar, die den Kontakt sehen können.",
-  "mailSharing.posture.private":
-    "Neu erfasste E-Mails bleiben auf die Beteiligten der Nachricht und das erfassende Postfach beschränkt.",
   "mailSharing.posture.where": "In den Erfassungsregeln ändern",
   "mailSharing.sharedPosture.label":
     "Teilen beim Eingang für Postfächer erlauben",
@@ -6395,14 +6268,11 @@ export const de = {
   "connectors.originUnreachable": "Nicht erreichbar",
   "connectors.originUnchecked": "Nicht geprüft",
   "connectors.sub":
-    "Postfächer und Kalender, aus denen das CRM Daten erfasst. Beim Trennen bleiben die bereits erfassten Datensätze erhalten.",
+    "Verbinde das Konto, mit dem du arbeitest. Deine E-Mails landen bei den richtigen Kontakten und Deals, und dein Kalender bringt Termine auf die Datensätze und gibt deinem Buchungslink deine freien Zeiten.",
   "connectors.loading": "Connectors werden geladen…",
   "connectors.loadFailed":
     "Connectors konnten nicht geladen werden. Lade die Seite neu.",
-  "connectors.empty": "Noch kein Postfach und kein Kalender verbunden.",
-  "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
-  "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
   "connectors.provTestMailbox": "Testpostfach",
@@ -6416,9 +6286,6 @@ export const de = {
     "Verbinde dieses Postfach neu, um daraus zu senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern; der Anbieter erteilt die Sendeberechtigung nur bei einer neuen Verbindung.",
   "connectors.lastSynced": "Zuletzt synchronisiert {at}",
   "connectors.neverSynced": "Wartet auf erste Synchronisierung",
-  "connectors.nextCheck": "Nächste Prüfung gegen {at}",
-  "connectors.polled": "Nach Zeitplan abgefragt (kein Push-Abonnement)",
-  "connectors.pushRenewal": "Push-Erneuerung bis {at}",
   "connectors.notConfigured":
     "Die E-Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
@@ -6462,7 +6329,7 @@ export const de = {
   "captureNotice.yourControl":
     "Du entscheidest pro Absender und pro Thread, in den Einstellungen unter Verbindungen: einen Absender ganz ausschließen, einen Thread mit dem Team teilen oder löschen, was ein Absender eingebracht hat. Hier wird nicht um dein Einverständnis gebeten. Der Text beschreibt, was passiert, damit du es vor dem Verbinden weißt.",
   "connectors.mailPosture.label": "Sichtbarkeit der E-Mails",
-  "connectors.mailPosture.classified": "Bis zur Einstufung zurückgehalten",
+  "connectors.mailPosture.classified": "Bis zur Prüfung zurückgehalten",
   "connectors.mailPosture.held": "Immer zurückgehalten",
   "connectors.mailPosture.shared": "Mit dem Team geteilt",
   "connectors.mailPosture.sharedNeedsAdmin":
@@ -6478,9 +6345,6 @@ export const de = {
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
   "connectors.mailPosture.historyConfirm": "E-Mail-Sichtbarkeit ändern",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
-  "connectors.disconnectTitle": "Dieses Postfach trennen?",
-  "connectors.disconnectBody":
-    "Dadurch werden die gespeicherten Zugangsdaten dieses Postfachs gelöscht. Die Erfassung stoppt sofort; erfasste Datensätze bleiben im CRM, und beim erneuten Verbinden wird die Berechtigung wieder angefragt.",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieterzugriffen deines Kontos. Entferne es dort, um den Zugriff vollständig zu widerrufen.",
   "connectors.disconnectBodyMicrosoftNote":
@@ -6518,29 +6382,10 @@ export const de = {
   "connectors.dismissOutcome": "Schließen",
   "connectors.oauthConnected": "Verbunden",
   "connectors.oauthNotConnected": "Nichts verbunden",
-  "connectors.connectFailed": "Verbindung fehlgeschlagen",
   "connectors.imapConnectFailed": "Postfach nicht verbunden",
 
-  // Das "Verbindung hinzufügen"-Element (Task 1): ein Button in der Kopfzeile
-  // der Karte öffnet einen Dialog mit allen noch verfügbaren Anbietern, jeder
-  // mit dem Satz, den er braucht.
-  "connectors.addConnection": "Connector hinzufügen",
-  "connectors.addOpen": "Connector hinzufügen",
-  "connectors.connect": "Verbinden",
-  "connectors.connectProvider": "{provider} verbinden",
-  "connectors.rosterLabel": "Aktive Connectors",
-  "connectors.addGmailBrings":
-    "In Gmail gesendete und empfangene E-Mails. Margince kann auch darüber senden.",
-  "connectors.addGcalBrings":
-    "Dein Google Kalender, getrennt von Gmail verbunden.",
-  "connectors.addGraphBrings":
-    "Über ein Microsoft-Geschäftskonto gesendete und empfangene E-Mails. Margince kann auch darüber senden.",
-  "connectors.addGraphCalBrings":
-    "Dein Outlook-Kalender, getrennt von Outlook-E-Mail verbunden.",
-  "connectors.addImapBrings":
-    "Jeder andere Mailhost, mit einem App-Passwort. Nur Erfassung.",
-  "connectors.addTestMailboxBrings":
-    "Testpostfach für die Qualitätssicherung. Es werden keine echten E-Mails gesendet oder empfangen.",
+  // Der Button in der Kopfzeile der Karte, der den Verbindungsdialog öffnet.
+  "connectors.addOpen": "Konto hinzufügen",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 
@@ -6692,9 +6537,6 @@ export const de = {
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
   "ob.s4.scope4Rest": "Das CRM funktioniert weiter, erfasst aber nichts mehr.",
-  "ob.s4.capturedTitle": "Postfach verbunden",
-  "ob.s4.capturedBody":
-    "Neue E-Mails erscheinen hier, sobald der erste Durchlauf läuft, meist innerhalb weniger Minuten.",
   "ob.s4.connectFailed": "Postfach nicht verbunden",
   "ob.s4.notNow": "Nicht jetzt",
 
@@ -6851,46 +6693,15 @@ export const de = {
   "ob.conv.scene.decisionSub":
     "Deine Website nennt mehrere Rechtsträger. Der ausgewählte erscheint auf jedem Angebot und jeder Rechnung.",
   "ob.conv.scene.continue": "Weiter",
-  "ob.conv.connect.sceneTitle": "Deine Konten verbinden",
+  "ob.conv.connect.sceneTitle": "E-Mail und Kalender verbinden",
   "ob.conv.connect.sceneSub":
-    "Ich baue deine Kontakte, Unternehmen und den Verlauf aus den E-Mails auf, die schon in deinem Postfach liegen.",
-  "ob.conv.connect.mailboxTitle": "Dein Postfach",
-  "ob.conv.connect.mailboxHint":
-    "Wähle eins aus. Kontakte, Unternehmen und Verlauf stammen aus diesem Postfach.",
-  "ob.conv.connect.networkTitle": "Dein Netzwerk",
-  "ob.conv.connect.networkHint":
-    "Speichere dein Profil, damit ein später importiertes Netzwerk dir zugeordnet wird. Der Import liegt in den Einstellungen.",
+    "Margince macht aus deinen E-Mails Kontakte, Unternehmen und Verlauf, und dein Buchungslink bietet nur Zeiten an, in denen du frei bist.",
   "ob.conv.connect.recommended": "Empfohlen",
-  "ob.conv.connect.gmailBrings": "E-Mails über Google gelesen und gesendet",
-  "ob.conv.connect.microsoftBrings":
-    "E-Mails über Microsoft gelesen und gesendet",
-  "ob.conv.connect.imapBrings":
-    "E-Mails von jedem Host, mit deiner E-Mail-Adresse und einem App-Passwort",
-  "ob.conv.connect.linkedinAuth":
-    "Profillink, in deinem Nutzerkonto gespeichert",
-  "ob.conv.connect.saveCta": "Speichern",
   "ob.conv.connect.dialogDone": "Fertig",
-  "ob.conv.connect.scopeGoogle": "OAuth, Lese- und Sendeberechtigungen",
-  "ob.conv.connect.scopeMicrosoft": "OAuth, Graph API",
-  "ob.conv.connect.scopeImap": "E-Mail-Adresse und Passwort",
-  "ob.conv.connect.connectCta": "Verbinden",
-  "ob.conv.connect.connectedCta": "Verbunden",
   "ob.conv.connect.savedCta": "Gespeichert",
-  "ob.conv.connect.blockedCard":
-    "Ein Postfach ist bereits ausgewählt. Trenne es in den Einstellungen, um zu wechseln.",
-  "ob.conv.connect.guaranteesToggle": "Was das Verbinden bewirkt",
-  "ob.conv.connect.dialogHeadlineAccess": "Zugriff auf {name} nötig",
   "ob.conv.connect.dialogHeadlineImap": "E-Mail-Host verbinden",
-  "ob.conv.connect.appMissingCard":
-    "Dein Unternehmen hat seine {name}-App noch nicht registriert.",
-  "ob.conv.connect.appUnusableCard":
-    "Die {name}-App deines Unternehmens lässt sich nicht öffnen. Ein Admin muss sie reparieren; eine neue App ist nicht nötig.",
   "ob.conv.connect.unsupportedCard":
     "Diese Installation bietet {name} nicht an.",
-  "ob.conv.connect.appSetupLink": "In den Einstellungen einrichten",
-  "ob.conv.connect.dialogIntro":
-    "{brings}. Ich lese das Postfach einmal, um deine Kontakte und deinen Verlauf aufzubauen, und halte es danach synchron.",
-  "ob.conv.connect.linkedinName": "LinkedIn",
   "ob.conv.connect.linkedinSaved": "Profil gespeichert",
   "ob.conv.connect.linkedinSkippedNote":
     "Übersprungen: später in den Einstellungen hinzufügen",
@@ -6999,10 +6810,8 @@ export const de = {
     "LinkedIn-Profil gespeichert. Dein importiertes Netzwerk wird dir zugeordnet.",
   "ob.conv.linkedin.skipped":
     "LinkedIn übersprungen. Füge dein Profil jederzeit in den Einstellungen hinzu.",
-  "ob.conv.connect.skip": "Ohne Postfach fortfahren",
+  "ob.conv.connect.skip": "Vorerst überspringen",
   "ob.conv.connect.continue": "Weiter",
-  "ob.conv.connect.mailboxNeeded":
-    "Ein Postfach fehlt noch, denn gelesen und entworfen werden E-Mails. Verbinde oben eins oder mache vorerst ohne weiter.",
 
   // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
@@ -7155,7 +6964,6 @@ export const de = {
   // getrennt halten: Verbinden erteilt Zugriff, das Zurücklesen verbraucht
   // Budget, um den Verlauf zu lesen. Es liest nur und schreibt nichts,
   // solange der Leser nicht zustimmt.
-  "ob.backread.heading": "Importzeitraum",
   "ob.backread.estimating": "Nachrichten in diesem Zeitraum werden gezählt…",
   "ob.backread.estimate": "Etwa {messages} Nachrichten in diesem Zeitraum.",
   "ob.backread.estimateAtLeast":
@@ -7166,7 +6974,6 @@ export const de = {
     "Der Zeitraum konnte nicht geschätzt werden: {detail} Starte trotzdem oder wähle einen anderen Zeitraum.",
   "ob.backread.note":
     "Das Postfach wird nicht verändert. Importierte E-Mails und Kontakte erscheinen, während der Import läuft.",
-  "ob.backread.start": "Verbinden und importieren",
   "ob.backread.startFailed":
     "Der Import des Postfachverlaufs wurde nicht gestartet: {detail} Versuche es erneut oder mache weiter und starte ihn später in den Einstellungen.",
   "ob.backread.running": "Postfachverlauf wird importiert",
@@ -7192,8 +6999,6 @@ export const de = {
     "Der Import konnte nicht beendet werden: {detail} Er läuft währenddessen weiter. Versuche es erneut.",
   "ob.backread.detailUnavailable": "Ein unerwarteter Fehler ist aufgetreten.",
   "ob.backread.cancel": "Import beenden",
-  "ob.backread.explore": "Während des Imports weitermachen",
-  "ob.backread.skip": "Import des Postfachverlaufs überspringen",
 
   "auth.title": "Margince",
   "auth.checking": "Sitzung wird geprüft…",
@@ -7272,7 +7077,6 @@ export const de = {
   "password.cancel": "Abbrechen",
   "password.submit": "Neues Passwort speichern",
   "password.doneTitle": "Passwort geändert",
-  "password.done": "Alle anderen Geräte wurden abgemeldet.",
   "password.changeFailedTitle": "Passwort nicht geändert",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Versuche es erneut.",
@@ -7814,7 +7618,8 @@ export const de = {
   "settings.boundary.unknownTitle": "Einstellungsseite nicht gefunden",
   "settings.boundary.unknownBody":
     "Der Link ist möglicherweise veraltet oder falsch geschrieben. Die Einstellungsübersicht listet jede Seite auf, die deine Rolle öffnen kann.",
-  "settings.page.account.sub": "Wie du angezeigt wirst und dich anmeldest.",
+  "settings.page.account.sub":
+    "Wie Kollegen dich sehen, wie du dich anmeldest und in welcher Sprache und Darstellung Margince für dich erscheint.",
   "settings.page.voice.sub":
     "Die Formulierungen, die Entwürfe verwenden, wenn sie in deinem Namen schreiben.",
   "settings.page.agents.sub":
@@ -7828,7 +7633,7 @@ export const de = {
   "settings.page.company.sub":
     "Unternehmensname, Währung und Geschäftskontext für alle Datensätze.",
   "settings.page.authentication.sub":
-    "Wie sich Personen an dieser Installation anmelden, welche Apps für diese Installation handeln dürfen und welche IdP-Gruppen Rollen vergeben.",
+    "Die Google- und Microsoft-Apps, über die jeder E-Mail- und Kalender-Connector läuft, und die Wege, auf denen sich Personen anmelden.",
   "settings.page.members.sub":
     "Alle, die einen Platz haben, und worauf sie jeweils zugreifen können.",
   "settings.page.teams.sub":
@@ -8555,8 +8360,6 @@ export const de = {
   "extAccess.grantFailed": "Berechtigung nicht geändert",
   "extAccess.nobodyReads":
     "Keine Rolle hat Lesezugriff auf {object}, daher sieht jedes Mitglied für diese Erweiterung eine leere Ansicht. Vergib unten mindestens einer Rolle das Leserecht.",
-  "users.empty": "Noch keine Mitglieder.",
-  "users.adminOnly": "Deine Rolle darf keine Mitglieder verwalten.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "Noch keine Teams.",
@@ -8605,11 +8408,6 @@ export const de = {
   "users.access.maskOutside": "bei Datensätzen ohne Bearbeitungsrecht",
   "users.inviteSub":
     "Füge dieser Installation ein Mitglied hinzu und wähle seine Startrolle.",
-  "users.membersTitle": "Mitglieder",
-  "users.membersSub":
-    "Alle, die einen Platz haben, einschließlich deaktivierter Nutzerkonten.",
-  "users.memberCount_one": "{count} Mitglied",
-  "users.memberCount_other": "{count} Mitglieder",
   "users.teamMemberCount_one": "{count} Mitglied",
   "users.teamMemberCount_other": "{count} Mitglieder",
   "users.emailLabel": "E-Mail",
@@ -8622,14 +8420,10 @@ export const de = {
   "users.deactivateAgentConfirmBody":
     "Das ist die Agentenidentität des Unternehmens. Diese Identität meldet sich nirgends an, daher verliert niemand den Zugriff. Geplante Jobs von Erweiterungen laufen weiter; jeder Job handelt unter seiner eigenen Identität und erfasst unter der Berechtigung des Mitglieds, dessen Verbindung den Datensatz erzeugt hat.",
   "users.agentSeat": "Agent",
-  "users.agentSeatRole": "Handelt über einen Passport, nicht über eine Rolle",
   "users.roleLabel": "Rolle",
-  "users.inviteOpen": "Mitglied einladen",
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
-  "users.setRoleFor": "Rolle für {name} festlegen",
   "users.rowActions": "Aktionen für {name}",
-  "users.rolesHeld": "Hat {roles}. Eine Rollenauswahl ersetzt alle.",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
@@ -8853,18 +8647,75 @@ export const de = {
     "Nur Admins und Operations können das Aufrufprotokoll lesen. Es verzeichnet jeden Modellaufruf der Installation.",
   "aicalls.sub":
     "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
-  "aicalls.col.detail": "Details",
-  "aicalls.expandCall": "Versuche für {task} ({when}) anzeigen",
+  "aicalls.open": "Aufruf {feature} von {when} öffnen",
   "aicalls.col.when": "Zeitpunkt",
-  "aicalls.col.task": "Aufgabe",
+  "aicalls.col.feature": "Funktion",
   "aicalls.col.model": "Modell",
+  "aicalls.col.outcome": "Ergebnis",
   "aicalls.col.tokens": "Tokens",
   "aicalls.col.latency": "Latenz",
+  "aicalls.col.cost": "Kosten",
+  "aicalls.cost.unpriced": "Ohne Preis",
+  "aicalls.cost.unpricedHint": "Die Preisliste hat keinen Preis für ein Modell, das dieser Aufruf genutzt hat.",
   "aicalls.ms": "{value} ms",
+  "aicalls.outcome.ok": "Beantwortet",
+  "aicalls.outcome.fallback": "Ausweichmodell",
+  "aicalls.outcome.declined": "Abgelehnt",
+  "aicalls.outcome.error": "Fehlgeschlagen",
+  "aicalls.error.provider_quota": "Kontingent beim Anbieter aufgebraucht",
+  "aicalls.error.provider_throttled": "Ratenlimit beim Anbieter",
+  "aicalls.error.provider_refused": "Anbieter hat den Aufruf abgewiesen",
+  "aicalls.error.provider_error": "Fehler beim Anbieter",
+  "aicalls.error.output_withheld": "Anbieter hat die Antwort zurückgehalten",
+  "aicalls.error.request_rejected": "Anbieter hat die Anfrage abgelehnt",
+  "aicalls.error.budget_deferred": "Vom KI-Budget zurückgestellt",
+  "aicalls.error.budget_unavailable": "KI-Budget konnte nicht gelesen werden",
+  "aicalls.error.metering_failed": "Beantwortet, Verbrauch nicht erfasst",
+  "aicalls.error.request_failed": "Vor dem Routing fehlgeschlagen",
+  "aicalls.source.response": "Antwort des Anbieters",
+  "aicalls.source.echo": "Vom Anbieter zurückgemeldet",
+  "aicalls.source.configured": "Konfiguriertes Modell",
+  "aicalls.filter.search": "Aufrufe durchsuchen",
+  "aicalls.filter.searchPlaceholder": "Funktion, Modell oder Fehler suchen",
+  "aicalls.filter.window": "Zeitraum",
+  "aicalls.filter.anyOutcome": "Jedes Ergebnis",
+  "aicalls.filter.anyModel": "Jedes Modell",
+  "aicalls.window.any": "Jederzeit",
+  "aicalls.window.hour": "Letzte Stunde",
+  "aicalls.window.day": "Letzte 24 Stunden",
+  "aicalls.window.week": "Letzte 7 Tage",
+  "aicalls.clear": "Filter zurücksetzen",
+  "aicalls.filteredEmpty": "Keine Aufrufe passen zu diesen Filtern.",
+  "aicalls.prev": "Vorheriger Aufruf",
+  "aicalls.next": "Nächster Aufruf",
+  "aicalls.copy": "Kopieren",
+  "aicalls.copied": "Kopiert",
+  "aicalls.copyNamed": "{what} kopieren",
+  "aicalls.copyRemedy": "Markiere den Text im Feld und kopiere ihn von Hand.",
+  "aicalls.fact.served": "Ausgeliefertes Modell",
+  "aicalls.fact.configured": "Konfiguriertes Modell",
+  "aicalls.fact.provider": "Anbieter",
+  "aicalls.fact.tier": "Stufe",
+  "aicalls.fact.error": "Fehler",
+  "aicalls.fact.tokensInOut": "{in} Eingabe, {out} Ausgabe",
+  "aicalls.fact.reasoning": "Reasoning-Tokens",
+  "aicalls.fact.cached": "Gecachte Tokens",
+  "aicalls.fact.source": "Modell gemeldet von",
+  "aicalls.fact.context": "Unternehmenskontext",
+  "aicalls.fact.none": "Keiner",
+  "aicalls.fact.exactTime": "Genauer Zeitpunkt (UTC)",
+  "aicalls.fact.taskKey": "Aufgabenschlüssel",
+  "aicalls.fact.callId": "Aufruf-ID",
+  "aicalls.fact.logicalId": "Logische Aufruf-ID",
+  "aicalls.fact.correlationId": "Korrelations-ID",
+  "aicalls.fact.configHash": "Konfigurations-Hash",
+  "aicalls.fact.errorCode": "Fehlercode",
   "aicalls.badge.cacheHit": "Cache-Treffer",
-  "aicalls.badge.degraded": "Herabgestuft",
-  "aicalls.badge.retries": "Wiederholung ×{count}",
+  "aicalls.badge.degraded": "Vom Budget herabgestuft",
   "aicalls.badge.decision": "Entscheidungsmodell",
+  "aicalls.reason.provider_error": "Fehler beim Anbieter im Versuch davor",
+  "aicalls.reason.schema_invalid": "Antwort davor passte nicht zum Schema",
+  "aicalls.reason.budget_degrade": "Vom KI-Budget eine Stufe herabgesetzt",
   "aicalls.reason.decision_below_floor":
     "Entscheidungsmodell unter seiner Konfidenzschwelle",
   "aicalls.reason.decision_error": "Entscheidungsmodell fehlgeschlagen",
@@ -8878,14 +8729,13 @@ export const de = {
     "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
   "aicalls.callsLabel": "Letzte Aufrufe",
-  "aicalls.filter.all": "Alle Aufgaben",
-  "aicalls.loadMore": "Mehr laden",
+  "aicalls.filter.all": "Alle Funktionen",
   "aicalls.empty": "Noch keine KI-Aufrufe aufgezeichnet.",
-  "aicalls.detail.identity":
-    "{served} über {provider} ausgeliefert (konfiguriert: {configured})",
-  "aicalls.detail.source": "Quelle der ausgelieferten Identität: {source}",
-  "aicalls.detail.context": "Eingefügter Kontext: {scopes}",
-  "aicalls.detail.contextNone": "Kein Unternehmenskontext eingefügt",
+  "aicalls.taskEmpty":
+    "Für diese Funktion wurden noch keine Aufrufe aufgezeichnet.",
+  "aicalls.detail.call": "Aufruf",
+  "aicalls.detail.payload": "Nutzdaten",
+  "aicalls.detail.technical": "Technische Details",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
   "aicalls.detail.response": "Antwort-Nutzdaten",
@@ -8983,85 +8833,49 @@ export const de = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Wie sich Personen anmelden können. Die Liste zeigt die Anbieter, für die diese Installation Zugangsdaten hat: Ein Admin kann einen Anbieter ausschalten, aber keinen hinzufügen.",
+    "Die Schaltflächen auf der Anmeldeseite. Das Ausschalten verlangt eine Bestätigung, weil Personen, die eine davon nutzen, diesen Zugang verlieren.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
-    "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos ausschalten.",
-  "signInMethods.passwordReason":
-    "Die Anmeldung mit Passwort lässt sich nicht ausschalten. Dadurch bleibt die Installation zugänglich.",
-  "signInMethods.providerHint":
-    "Zeigt diesen Anbieter auf der Anmeldeseite. Beim Ausschalten werden laufende Anmeldungen abgebrochen; bestehende Sitzungen bleiben bestehen.",
+    "Immer verfügbar, damit niemand ausgesperrt ist, wenn eine andere Methode aus ist.",
   "signInMethods.noneConfigured":
     "Für diese Installation ist kein externer Anbieter konfiguriert. Das Passwort ist die einzige Anmeldemethode.",
-  "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
-    "Vergibt bei der Unternehmensanmeldung eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Konto entsteht dabei nicht: eine nicht eingeladene E-Mail-Adresse wird weiterhin abgewiesen, mit oder ohne Gruppen.",
-  "groupRoles.grantOnlyTitle": "Nur Vergabe: das Verzeichnis entzieht nie",
+    "Wenn sich jemand, den du eingeladen hast, mit Google oder Microsoft anmeldet, bekommt er die Rolle, die einer seiner Gruppen im Verzeichnis deines Unternehmens zugeordnet ist. Ohne Einladung kommt niemand hinein.",
+  "groupRoles.grantOnlyTitle": "Gruppen fügen immer nur eine Rolle hinzu",
   "groupRoles.grantOnly":
-    "Jede Anmeldung vergibt die zugeordneten Rollen und entfernt keine. Wer aus einer IdP-Gruppe entfernt wird, verliert die Rolle hier nicht: Der Entzug bleibt eine bewusste Admin-Entscheidung am Konto des Mitglieds.",
+    "Wer aus einer Verzeichnisgruppe entfernt wird, verliert die Rolle hier nicht. Ändere sie beim Eintrag unter „Mitglieder“.",
   "groupRoles.adminGrant":
-    "Wer eine Gruppe auf Admin abbildet, macht jedes eingeladene Mitglied dieser Gruppe bei der nächsten Anmeldung zum Admin.",
-  "groupRoles.group": "IdP-Gruppe",
-  "groupRoles.groupPlaceholder": "Gruppe, genau wie im ID-Token geschrieben",
-  "groupRoles.role": "Vergebene Rolle",
+    "Eine Gruppe mit der Rolle Admin macht jedes eingeladene Mitglied bei der nächsten Anmeldung zum Admin.",
+  "groupRoles.group": "Verzeichnisgruppe",
+  "groupRoles.groupPlaceholder":
+    "Gruppe, genau so, wie dein Verzeichnis sie nennt",
+  "groupRoles.role": "Rolle, die sie bekommen",
   "groupRoles.add": "Gruppe hinzufügen",
   "groupRoles.remove": "Diese Gruppenzuordnung entfernen",
   "groupRoles.removeNamed": "Zuordnung {group} entfernen",
-  "groupRoles.save": "Gruppenzuordnungen speichern",
+  "groupRoles.save": "Gruppenrollen speichern",
   "groupRoles.empty":
-    "Keine Gruppen zugeordnet. Die Unternehmensanmeldung vergibt nichts über das hinaus, was ein Mitglied bereits hält.",
+    "Keine Gruppen zugeordnet. Die Anmeldung mit Google oder Microsoft vergibt nichts über die Rolle hinaus, die ein Mitglied bereits hat.",
   "groupRoles.blankGroup": "Jede Zuordnung braucht einen Gruppennamen.",
   "groupRoles.whitespaceGroup":
-    "Ein Gruppenname darf nicht mit einem Leerzeichen beginnen oder enden. Er muss dem ID-Token genau entsprechen.",
+    "Ein Gruppenname darf nicht mit einem Leerzeichen beginnen oder enden. Er muss deinem Verzeichnis genau entsprechen.",
   "groupRoles.duplicateGroup": "Jede Gruppe kann nur einmal zugeordnet werden.",
   "groupRoles.tooMany": "Höchstens 64 Gruppen können zugeordnet werden.",
   "oauthApp.google.title": "Google-App",
-  "oauthApp.google.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die deinem Unternehmen gehört und dessen eigene Zugangsdaten nutzt. Auch die Anmeldung mit Google läuft darüber.",
-  "oauthApp.google.absent":
-    "Aus keiner Quelle ist eine App verfügbar. Gmail und Kalender lassen sich nicht verbinden, und die Anmeldung mit Google kann nicht angeboten werden.",
-  "oauthApp.google.redirectSub":
-    "Trage jede der folgenden URIs beim OAuth-Client in der Google Console ein. Fehlt eine URI, scheitert der Vorgang am Zustimmungsbildschirm mit redirect_uri_mismatch, ohne die URI zu nennen.",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "oauthApp.google.removeConfirmTitle": "Google-App entfernen?",
-  "oauthApp.google.removeConfirmBody":
-    "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus der Google Console eingetragen werden. Gmail- und Kalender-Verbindungen nutzen diese App; Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
   "oauthApp.microsoft.title": "Microsoft-App",
-  "oauthApp.microsoft.sub":
-    "Outlook-Postfächer und -Kalender werden über eine Entra-App-Registrierung verbunden, die deinem Unternehmen gehört und dessen eigene Zugangsdaten nutzt. Auch die Anmeldung mit Microsoft läuft darüber.",
-  "oauthApp.microsoft.absent":
-    "Aus keiner Quelle ist eine App verfügbar. Outlook-E-Mail und -Kalender lassen sich nicht verbinden, und die Anmeldung mit Microsoft kann nicht angeboten werden.",
-  "oauthApp.microsoft.redirectSub":
-    "Trage jede der folgenden URIs in der Entra-App-Registrierung unter „Authentifizierung“ als Web-Plattform ein. Fehlt eine URI, scheitert der Vorgang am Zustimmungsbildschirm mit AADSTS50011, ohne die URI zu nennen.",
   "oauthApp.microsoft.clientIdPlaceholder":
     "00000000-0000-0000-0000-000000000000",
   "oauthApp.microsoft.removeConfirmTitle": "Microsoft-App entfernen?",
-  "oauthApp.microsoft.removeConfirmBody":
-    "Der Clientschlüssel lässt sich nicht wieder auslesen. Um die App wiederherzustellen, müssen Client-ID und Clientschlüssel erneut aus dem Entra-Portal eingetragen werden. Outlook-E-Mail- und -Kalender-Verbindungen nutzen diese App; Google- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt erneut nach einer App.",
-  "oauthApp.configured": "In Verwendung: {clientId}",
-  "oauthApp.fromEnvironment":
-    "Aus der Konfiguration dieser Installation in Verwendung: {clientId}. Eine hier gespeicherte App hat Vorrang, bis sie entfernt wird.",
-  "oauthApp.pinnedToDirectory": "An das Verzeichnis {tenant} gebunden.",
-  "oauthApp.replaceHint":
-    "Ein neues Paar ersetzt das gespeicherte. Bestehende Verbindungen funktionieren weiter, bis sie neu verbunden werden.",
-  "oauthApp.store": "App speichern",
-  "oauthApp.replace": "App ersetzen",
-  "oauthApp.writeFailed": "Änderung nicht gespeichert",
   "oauthApp.remove": "App entfernen",
   "oauthApp.redirectCopied": "Kopiert",
   "oauthApp.redirectCopyFailed":
     "Markiere die Adresse und kopiere sie von Hand.",
-  "oauthApp.redirectCopy": "URI für {purpose} kopieren",
-  "oauthApp.redirect.mailbox_connect": "Postfach",
-  "oauthApp.redirect.calendar_connect": "Kalender",
   "oauthApp.redirect.sign_in": "Anmeldung",
-  "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
   "oauthApp.clientId": "Client-ID",
   "oauthApp.clientSecret": "Clientschlüssel",
-  "oauthApp.tenant": "Verzeichnis-ID (Mandant)",
-  "oauthApp.tenantHint":
-    "Optional. Bindet die App an ein Entra-Verzeichnis: Nur dessen Mitglieder können ein Postfach verbinden, und die Microsoft-Anmeldung nutzt es. Leer lassen, damit jedes Unternehmen verbinden kann; die Anmeldung wartet dann, bis der Server deine Verzeichnisse benennt.",
   "oauthApp.tenantPlaceholder": "00000000-0000-0000-0000-000000000000",
   "oauthApp.saveFailed": "App nicht gespeichert",
   "firstRun.continue": "Weiter",
@@ -9290,20 +9104,12 @@ export const de = {
     "Nur lesbar: Die Stufe jeder Aufgabe ist vertraglich festgelegt. Jede Zeile zeigt die Stufe und das Modell, auf dem sie gerade läuft.",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
   "aiTasks.viewCalls": "Aufrufe ansehen",
-  "workingHours.title": "Buchbare Zeiten",
-  "workingHours.sub":
-    "Persönliche Einstellung. Nur du legst deine Zeiten fest.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
     "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
-  "workingHours.start": "Tagesbeginn",
-  "workingHours.end": "Tagesende",
-  "workingHours.days": "Arbeitstage",
   "workingHours.timezone": "Zeitzone",
   "workingHours.browserZone":
     "Dein Browser verwendet {zone}. Die Auswahl oben ist die Zeitzone für die Verfügbarkeit.",
-  "workingHours.timezoneHelp":
-    "Zeitzone für die Verfügbarkeit. Suche nach einer Stadt oder Region.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.saveFailed": "Arbeitszeiten nicht gespeichert",
@@ -9357,26 +9163,28 @@ export const de = {
     "Gilt ab der nächsten Nachricht. Bereits erfasste Nachrichten bleiben erhalten.",
   "captureExclusions.current": "Geltende Regeln",
   "captureExclusions.empty": "Keine Ausschlüsse.",
-  "ownerIdentities.title": "Deine weiteren Adressen",
+  "ownerIdentities.title": "Deine weiteren E-Mail-Adressen",
   "ownerIdentities.sub":
-    "Adressen, die ebenfalls dir gehören: ein Alias zum Senden, eine private Domain, die du liest, eine Adresse, von der du weiterleitest. E-Mails zwischen diesen Adressen werden nicht erfasst und erzeugen nie einen Kontakt.",
+    "Aliasse, eine private Domain oder eine Adresse, von der du weiterleitest. Margince behandelt sie als dich: E-Mails zwischen ihnen werden nicht erfasst und erzeugen nie einen Kontakt.",
   "ownerIdentities.add": "Adresse hinzufügen",
   "ownerIdentities.addLabel": "Eigene Adresse hinzufügen",
-  "ownerIdentities.addDescription":
-    "Nur für dich sichtbar. Teammitglieder sehen diese Liste nie.",
-  "ownerIdentities.current": "Angegeben",
+  "ownerIdentities.emptyTitle": "Noch keine weiteren Adressen",
+  "ownerIdentities.emptyBody":
+    "Adressen, die du hinzufügst, und solche, die Margince in deinem verbundenen Postfach findet, stehen hier und gelten ab der nächsten Nachricht. Teammitglieder sehen diese Liste nie.",
   "ownerIdentities.notRetroactive":
     "Gilt ab der nächsten Nachricht. Bereits erfasste E-Mails bleiben, und ein bereits aus einem Alias angelegter Kontakt bleibt, bis du ihn zusammenführst oder entfernst.",
-  "ownerIdentities.empty": "Keine weiteren Adressen hinzugefügt.",
-  "ownerIdentities.remove": "Adresse entfernen",
+  "ownerIdentities.colAddress": "Adresse",
+  "ownerIdentities.colType": "Typ",
+  "ownerIdentities.colSource": "Herkunft",
+  "ownerIdentities.colRemove": "Entfernen",
+  "ownerIdentities.remove": "{value} entfernen",
   "ownerIdentities.added": "Adresse hinzugefügt",
   "ownerIdentities.confirm": "Hinzufügen",
   "ownerIdentities.kindLabel": "Typ",
   "ownerIdentities.kind.address": "Eine Adresse",
-  "ownerIdentities.learned.deliveredTo":
-    "Automatisch gefunden: E-Mails an diese Adresse kommen in deinem verbundenen Postfach an. Entferne sie, wenn sie nicht dir gehört.",
-  "ownerIdentities.learned.provider":
-    "Dein E-Mail-Anbieter meldet diese Adresse als eine deiner Adressen. Entferne sie, wenn sie nicht dir gehört.",
+  "ownerIdentities.source.user": "Von dir hinzugefügt",
+  "ownerIdentities.source.deliveredTo": "In deinem Postfach gefunden",
+  "ownerIdentities.source.provider": "Von deinem E-Mail-Anbieter",
   "ownerIdentities.kind.domain": "Eine ganze Domain",
   "ownerIdentities.valueLabel": "Adresse oder Domain",
   "ownerIdentities.addressPlaceholder": "du@beispiel.example",
@@ -10172,7 +9980,7 @@ export const de = {
   "provider.deleteDataConfirm.body":
     "Jeder Wert, den dieser Anbieter geliefert hat, wird von jedem Kontakt entfernt. Die Ausgabenaufzeichnungen bleiben, die Daten nicht. Das lässt sich nicht rückgängig machen.",
   "provider.deleteDataConfirm.typed":
-    "Zum Bestätigen den Namen des Anbieters eingeben",
+    "Gib zur Bestätigung den Namen des Anbieters ein:",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
     "Jeder Kontakt wird einmal nach den Angaben nachgeschlagen, die diese Verbindung auswählt und für die der Anbieter nichts berechnet, in der Regel Link zum beruflichen Profil, aktuelle Rolle und Arbeitgeber sowie Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft; sie kosten Credits und bleiben eine Entscheidung pro Kontakt.",
@@ -11442,8 +11250,6 @@ export const de = {
     "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Die Anmeldung erfolgt mit E-Mail-Adresse und Passwort.",
   "firstRun.platform.redirectTitle":
     "Diese Weiterleitungs-URIs in der App registrieren",
-  "firstRun.platform.redirectHint":
-    "Füge jede URI der App hinzu, bevor du hier speicherst. „Anmeldung“ bringt die Anmeldeschaltfläche auf die Anmeldeseite; mit „Postfach“ und „Kalender“ können Nutzende ihre eigenen verbinden. Fehlt eine URI, scheitert es am Zustimmungsbildschirm des Anbieters.",
   "firstRun.google.helpToggle": "Wo du diese Angaben findest",
   "firstRun.google.helpStep1":
     "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
@@ -11834,4 +11640,885 @@ export const de = {
     "Was du aus dieser Quelle siehst, kann unvollständig sein.",
   "magic.consequence.capture_history_incomplete":
     "Älterer Austausch aus dieser Quelle fehlt.",
+  "scheduling.linksTitle": "Buchungslinks",
+  "scheduling.status.paused": "Pausiert",
+  "scheduling.status.attention": "Braucht Aufmerksamkeit",
+  "scheduling.acceptBookings": "Buchungen annehmen",
+  "scheduling.acceptBookingsHelp":
+    "Alle mit deinem Link können eine freie Zeit wählen. Schalte es aus, um Buchungen zu pausieren; der Link bleibt gleich.",
+  "scheduling.acceptNeedsCalendar":
+    "Verfügbar, sobald ein Kalender verbunden ist. Wer deinen Link solange öffnet, sieht, dass Buchungen pausiert sind.",
+  "scheduling.acceptNeedsReconnect":
+    "Verfügbar, sobald dein Kalender wieder verbunden ist. Wer deinen Link solange öffnet, sieht, dass Buchungen pausiert sind.",
+  "scheduling.acceptNeedsChoice":
+    "Verfügbar, sobald unter Kalender ein Kalender für Buchungen gespeichert ist.",
+  "scheduling.col.link": "Link",
+  "scheduling.col.length": "Dauer",
+  "scheduling.col.status": "Status",
+  "scheduling.col.actions": "Aktionen",
+  "scheduling.videoCall": "Videoanruf",
+  "scheduling.row.live": "Aktiv",
+  "scheduling.row.noInvitations": "Keine Einladungen",
+  "scheduling.videoNotSet": "Nicht festgelegt",
+  "scheduling.video.ownShort": "Eigener Link",
+  "scheduling.mainLink": "(Hauptlink)",
+  "scheduling.linkActions": "Weitere Aktionen für {name}",
+  "scheduling.editLink": "Link bearbeiten",
+  "scheduling.createLink": "Buchungslink erstellen",
+  "scheduling.noLinkYet": "Noch kein Buchungslink.",
+  "scheduling.replaceAddress": "Adresse ersetzen",
+  "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
+  "scheduling.personalLinksFoot":
+    "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
+  "scheduling.liveNoInvitesTitle":
+    "Gäste können buchen, aber es gehen keine Einladungen raus",
+  "scheduling.attentionExpired":
+    "Deine Verbindung zu {provider} ist abgelaufen. Verbinde sie neu, damit Buchungen wieder in deinem Kalender landen, oder pausiere Buchungen bis dahin.",
+  "scheduling.attentionReadOnly":
+    "Deine Verbindung zu {provider} kann Termine lesen, aber nicht anlegen. Verbinde sie neu und erlaube Einladungen, oder pausiere Buchungen bis dahin.",
+  "scheduling.attentionMissing":
+    "Für Buchungen ist kein Kalender verbunden. Verbinde einen, damit Buchungen in deinem Kalender landen, oder pausiere Buchungen bis dahin.",
+  "scheduling.reconnectCalendar": "Kalender neu verbinden",
+  "scheduling.reconnect": "Neu verbinden",
+  "scheduling.openConnections": "Verbindungen öffnen",
+  "scheduling.drawerTitle": "Buchungslink bearbeiten",
+  "scheduling.drawerIntro":
+    "Änderungen gelten für neue Buchungen. Bereits gebuchte Termine behalten ihre Angaben.",
+  "scheduling.meetingName": "Terminname",
+  "scheduling.meetingNameHelp":
+    "Gäste sehen ihn auf der Buchungsseite und in der Einladung.",
+  "scheduling.linkAddress": "Linkadresse",
+  "scheduling.linkAddressHelp":
+    "Nach deiner Bestätigung bekommt der Link eine neue Adresse. Bereits gebuchte Termine behalten ihre eigenen Änderungslinks.",
+  "scheduling.lengthOther": "Andere",
+  "scheduling.lengthOtherHelp":
+    "Andere erlaubt jede Dauer von 15 Minuten bis 8 Stunden.",
+  "scheduling.lengthMinutes": "Dauer in Minuten",
+  "scheduling.lengthInvalid": "Gib eine Dauer von 15 bis 480 Minuten ein.",
+  "scheduling.video.meetHelp":
+    "Für jede Buchung wird ein neuer Meet-Link erstellt und der Einladung hinzugefügt. Nutzt deinen Google Kalender, {account}.",
+  "scheduling.video.teamsHelp":
+    "Für jede Buchung wird ein neuer Teams-Link erstellt und der Einladung hinzugefügt. Nutzt deinen Microsoft 365 Kalender, {account}.",
+  "scheduling.video.meetNeeds": "Braucht einen Google Kalender.",
+  "scheduling.video.teamsNeeds": "Braucht einen Microsoft 365 Kalender.",
+  "scheduling.video.meetOther":
+    "Gilt, wenn Buchungen in deinen Google Kalender gehen, gewählt unter Kalender.",
+  "scheduling.video.teamsOther":
+    "Gilt, wenn Buchungen in deinen Microsoft 365 Kalender gehen, gewählt unter Kalender.",
+  "scheduling.connectGoogle": "Google verbinden",
+  "scheduling.connectMicrosoft": "Microsoft 365 verbinden",
+  "scheduling.video.own": "Eigener Link oder eigene Adresse",
+  "scheduling.video.ownHelp":
+    "Ein Zoom-Raum, eine Telefonnummer oder eine Büroadresse. Für jede Buchung gleich.",
+  "scheduling.video.ownSaved": "Gespeicherte Adresse: {location}",
+  "scheduling.video.none": "Kein Ort",
+  "scheduling.video.noneHelp":
+    "Stimme die Details per E-Mail mit deinem Gast ab.",
+  "scheduling.locationLabel": "Link oder Adresse",
+  "scheduling.locationRequired": "Gib einen Link oder eine Adresse ein.",
+  "scheduling.usesHours":
+    "Nutzt deine Zeiten: {days}, {from} bis {until} Uhr, Zeitzone {zone}, mindestens {notice} im Voraus.",
+  "scheduling.usesHoursAnyNotice":
+    "Nutzt deine Zeiten: {days}, {from} bis {until} Uhr, Zeitzone {zone}.",
+  "scheduling.dayRange": "{from} bis {until}",
+  "scheduling.changeHours": "Zeiten ändern",
+  "scheduling.saveLink": "Link speichern",
+  "scheduling.readsBusy": "Liest belegte Zeiten",
+  "scheduling.sendsInvites": "Sendet Einladungen",
+  "scheduling.syncedAgo": "Synchronisiert {ago}",
+  "scheduling.reconnectNeeded": "Neu verbinden nötig",
+  "scheduling.expiredRow":
+    "Die Verbindung ist abgelaufen. Margince kann deine belegten Zeiten erst wieder lesen und Einladungen senden, wenn du sie neu verbindest.",
+  "scheduling.eventCalendar": "Gebuchte Termine eintragen in",
+  "scheduling.eventCalendarHelp":
+    "Jede Buchung wird hier ein Termin, mit dem Gast eingeladen und dem Videolink angehängt.",
+  "scheduling.blocking": "Ebenfalls als belegt zählen",
+  "scheduling.blockingRowHelp":
+    "Termine in diesen Kalendern verbergen die Zeit ebenfalls vor Gästen. Terminnamen bleiben privat.",
+  "scheduling.keptAsSaved":
+    "Wie gespeichert beibehalten. Du kannst es nach dem neuen Verbinden ändern.",
+  "scheduling.mainCalendar": "Hauptkalender",
+  "scheduling.savedCalendar": "Gespeicherter Kalender",
+  "scheduling.calendarCount_one": "{count} Kalender",
+  "scheduling.calendarCount_other": "{count} Kalender",
+  "scheduling.noneChosen": "Keiner",
+  "scheduling.saveCalendar": "Kalender speichern",
+  "scheduling.setup.title": "Verbinde einen Kalender für Buchungen",
+  "scheduling.setup.intro":
+    "Margince liest deine belegten Zeiten, damit Gäste nur freie Zeiten sehen, und trägt dann jede Buchung in deinen Kalender ein, mit eingeladenem Gast und angehängtem Videolink. Bis dahin bleibt dein Link pausiert.",
+  "scheduling.setup.step1": "Google oder Microsoft 365 verbinden",
+  "scheduling.setup.step1Help":
+    "Melde dich mit dem Konto an, zu dem dein Kalender gehört. Dauert etwa eine Minute.",
+  "scheduling.connectCalendar": "Kalender verbinden",
+  "scheduling.setup.step2": "Prüfe unten deine Zeiten",
+  "scheduling.setup.step2Help":
+    "Gästen werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten, bis du deine eigenen speicherst.",
+  "scheduling.setup.step2Done": "Deine Zeiten sind gespeichert.",
+  "scheduling.setup.step3": "Buchungen einschalten und Link teilen",
+  "scheduling.setup.step3Help":
+    "Dein Link existiert schon, du kannst ihn also jetzt in deine Signatur setzen.",
+  "scheduling.whenTitle": "Wann gebucht werden kann",
+  "scheduling.days": "Tage",
+  "workingHours.from": "Von",
+  "workingHours.until": "Bis",
+  "workingHours.zoneHelp":
+    "Gäste sehen diese Zeiten in ihrer eigenen Zeitzone.",
+  "scheduling.bookingRules": "Buchungsregeln",
+  "scheduling.noticeRow": "Mindestvorlauf",
+  "scheduling.noticeRowHelp":
+    "Niemand kann eine Zeit buchen, die früher als das beginnt.",
+  "scheduling.bufferRow": "Pause zwischen Terminen",
+  "scheduling.bufferRowHelp":
+    "Bleibt vor und nach jedem Termin in deinem Kalender frei.",
+  "scheduling.horizonRow": "Wie weit im Voraus",
+  "scheduling.horizonRowHelp":
+    "Gäste können ein Datum bis so weit in der Zukunft wählen.",
+  "scheduling.ruleOther": "Anderer Wert",
+  "scheduling.ruleMinutes": "Minuten",
+  "scheduling.ruleDays": "Tage im Voraus",
+  "scheduling.ruleInvalid": "Gib eine ganze Zahl von {min} bis {max} ein.",
+  "scheduling.unit.minutes_one": "{count} Minute",
+  "scheduling.unit.minutes_other": "{count} Minuten",
+  "scheduling.unit.hours_one": "{count} Stunde",
+  "scheduling.unit.hours_other": "{count} Stunden",
+  "scheduling.unit.days_one": "{count} Tag",
+  "scheduling.unit.days_other": "{count} Tage",
+  "scheduling.unit.weeks_one": "{count} Woche",
+  "scheduling.unit.weeks_other": "{count} Wochen",
+  "scheduling.rulesFoot": "Gilt für jede Buchung.",
+  "scheduling.rulesFootAttention":
+    "Gilt für jede Buchung. Du kannst das speichern, während der Kalender neu verbunden wird.",
+  "scheduling.saveAvailability": "Verfügbarkeit speichern",
+  "scheduling.rulesSaveFailed": "Buchungsregeln nicht gespeichert",
+  "scheduling.bookNeedsGrant":
+    "Termine buchen braucht eine Berechtigung von einem Admin.",
+  "scheduling.guestView": "Was Gäste sehen",
+  "scheduling.previewLabel": "Vorschau deiner öffentlichen Buchungsseite",
+  "scheduling.companyRow": "Unternehmensname und Logo",
+  "scheduling.companyRowHelp": "Aus dem Unternehmensprofil.",
+  "scheduling.companyNoLogo":
+    "Aus dem Unternehmensprofil. Noch ist kein Logo hochgeladen, daher sehen Gäste nur den Namen.",
+  "scheduling.companyNoName":
+    "Im Unternehmensprofil noch nicht gesetzt, daher sehen Gäste nur deinen Namen.",
+  "scheduling.addLogo": "Logo hinzufügen",
+  "scheduling.change": "Ändern",
+  "scheduling.yourName": "Dein Name",
+  "scheduling.yourNameHelp": "{name}, aus deinem Nutzerkonto.",
+  "scheduling.reminderRow": "Erinnerungs-E-Mail",
+  "scheduling.reminderFrom":
+    "Eine Stunde vor jedem Termin, gesendet von {mailbox}.",
+  "scheduling.reminderNoMailbox":
+    "Eine Stunde vor jedem Termin. Braucht ein verbundenes Postfach, das du unter Verbindungen hinzufügen kannst.",
+  "confirmPhrase.matches": "Satz stimmt überein",
+  "checklist.stepDone": "Erledigt",
+  "checklist.stepOpen": "Noch offen",
+  "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
+  "firstRun.platform.redirectHint":
+    "Füge jede URI der App hinzu, bevor du hier speicherst. „Anmeldung“ bringt die Anmeldeschaltfläche auf die Anmeldeseite; mit dem E-Mail- und dem Kalender-Connector können Nutzende ihre eigenen verbinden. Fehlt eine URI, scheitert es am Zustimmungsbildschirm des Anbieters.",
+  "oauthApp.redirect.mailbox_connect": "E-Mail-Connector",
+  "oauthApp.redirect.calendar_connect": "Kalender-Connector",
+  "oauthApp.redirectCopy": "Adresse für {purpose} kopieren",
+  "oauthApp.copyAll": "Alle kopieren",
+  "oauthApp.redirectTable": "Weiterleitungsadressen",
+  "oauthApp.redirectCol.usedFor": "Verwendet für",
+  "oauthApp.redirectCol.address": "Adresse",
+  "oauthApp.tenant": "Verzeichnis-ID",
+  "oauthApp.tenantHint":
+    "Beschränkt die App auf das Verzeichnis deines Unternehmens, sodass nur dessen Mitglieder ein Postfach verbinden können. Bleibt das Feld leer, kann jedes Microsoft-Arbeitskonto verbinden, aber „Weiter mit Microsoft“ erscheint erst auf der Anmeldeseite, wenn ein Verzeichnis eingetragen ist.",
+  "oauthApp.noWriteReason": "Nur Admins können Unternehmens-Apps einrichten",
+  "oauthApp.unlock.gmail": "Gmail",
+  "oauthApp.unlock.outlook": "Outlook-E-Mail",
+  "oauthApp.unlock.calendar": "Kalender",
+  "oauthApp.unlock.signIn": "Anmeldung",
+  "oauthApp.google.save": "Google-App speichern",
+  "oauthApp.microsoft.save": "Microsoft-App speichern",
+  "oauthApp.drawer.google.title": "Google-App einrichten",
+  "oauthApp.drawer.google.intro":
+    "Zwei Schritte in der Google Cloud Console, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Google-Cloud-Projekt deines Unternehmens.",
+  "oauthApp.drawer.google.value":
+    "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Gmail und Google Kalender verbinden, und „Weiter mit Google“ kann auf der Anmeldeseite erscheinen.",
+  "oauthApp.drawer.google.step1Title": "OAuth-Client in Google Cloud anlegen",
+  "oauthApp.drawer.google.step1Body":
+    "Öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an.",
+  "oauthApp.drawer.google.step1Link": "Google Cloud Console öffnen",
+  "oauthApp.drawer.google.step2Body":
+    "Im Client unter „Autorisierte Weiterleitungs-URIs“. Margince listet eine Adresse für alles, wofür diese Installation Google nutzt. Füge sie genau so ein; fehlt eine, bricht Google die Verbindung mit „redirect_uri_mismatch“ ab und nennt die Adresse nicht.",
+  "oauthApp.drawer.microsoft.title": "Microsoft-App einrichten",
+  "oauthApp.drawer.microsoft.intro":
+    "Zwei Schritte im Microsoft Entra Admin Center, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Entra-Verzeichnis deines Unternehmens.",
+  "oauthApp.drawer.microsoft.value":
+    "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Outlook-E-Mail und -Kalender verbinden, und „Weiter mit Microsoft“ kann auf der Anmeldeseite erscheinen.",
+  "oauthApp.drawer.microsoft.step1Title": "App in Microsoft Entra registrieren",
+  "oauthApp.drawer.microsoft.step1Body":
+    "Öffne „App-Registrierungen“, registriere eine neue App und füge unter „Zertifikate und Geheimnisse“ einen geheimen Clientschlüssel hinzu.",
+  "oauthApp.drawer.microsoft.step1Link": "Microsoft Entra Admin Center öffnen",
+  "oauthApp.drawer.microsoft.step2Body":
+    "In der App-Registrierung unter „Authentifizierung“ als Umleitungs-URIs der Web-Plattform. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
+  "oauthApp.drawer.step2Title": "Diese Weiterleitungsadressen eintragen",
+  "oauthApp.drawer.step3Title": "Client-ID und Clientschlüssel einfügen",
+  "oauthApp.drawer.step3Body":
+    "{vendor} zeigt beides an, sobald der Client angelegt ist.",
+  "oauthApp.drawer.secretHint":
+    "Wird verschlüsselt gespeichert und nie wieder angezeigt. Um ihn später zu ändern, ersetze die App.",
+  "oauthApp.drawer.foot": "Gilt für alle, sobald es gespeichert ist.",
+  "confirmPhrase.risk": "Mir ist das Risiko bewusst",
+  "confirmPhrase.riskPrompt": "Gib zur Bestätigung diesen Satz ein:",
+  "oauthApps.title": "Google- und Microsoft-Apps",
+  "oauthApps.statusNeedsSetup": "Einrichtung nötig",
+  "oauthApps.statusReady": "Bereit",
+  "oauthApps.noneTitle":
+    "Noch kann niemand Gmail, Outlook oder einen Kalender verbinden",
+  "oauthApps.noneBody":
+    "Alle, die du einlädst, sehen beim Verbinden eines Postfachs „Dein Unternehmen hat seine Google-App noch nicht registriert“. Richte die App für den Anbieter ein, den dein Unternehmen nutzt: Eine App reicht für alle.",
+  "oauthApps.readyIntro":
+    "Jeder E-Mail- und Kalender-Connector bei {company} läuft über eine dieser Apps. Alle verbinden ihr eigenes Postfach unter „Verbindungen“.",
+  "oauthApps.imapNote":
+    "Postfächer bei anderen Anbietern verbinden sich mit Adresse und Passwort (IMAP) und brauchen keine App.",
+  "oauthApp.status.none": "Nicht eingerichtet",
+  "oauthApp.status.stored": "Eingerichtet",
+  "oauthApp.status.environment": "Von dieser Installation vorgegeben",
+  "oauthApp.google.for": "Für Unternehmen mit Google Workspace oder Gmail.",
+  "oauthApp.microsoft.for": "Für Unternehmen mit Microsoft 365 oder Outlook.",
+  "oauthApp.unlocks": "Schaltet für alle frei:",
+  "oauthApp.clientLine": "Client-ID {clientId}",
+  "oauthApp.clientLineEnv":
+    "Client-ID {clientId}, aus der Konfiguration dieser Installation",
+  "oauthApp.directoryLine":
+    "Beschränkt auf das Verzeichnis deines Unternehmens {tenant}",
+  "oauthApp.google.setUp": "Google-App einrichten",
+  "oauthApp.microsoft.setUp": "Microsoft-App einrichten",
+  "oauthApp.useOwn": "Eigene App verwenden",
+  "oauthApp.menu": "Weitere Aktionen für {app}",
+  "oauthApp.menu.showRedirects": "Weiterleitungsadressen anzeigen",
+  "oauthApp.menu.replace": "Client-ID und Clientschlüssel ersetzen",
+  "oauthApp.removeImpactTitle": "Das ändert, wie alle ihre E-Mail verbinden",
+  "oauthApp.google.removeSecret":
+    "Der Clientschlüssel lässt sich nicht auslesen. Um die App wiederherzustellen, gib ID und Schlüssel erneut aus der Google Cloud Console ein.",
+  "oauthApp.google.removeUsedBy":
+    "Gmail- und Google-Kalender-Verbindungen nutzen diese App.",
+  "oauthApp.google.removeOthers":
+    "Microsoft- und IMAP-Postfächer sind nicht betroffen.",
+  "oauthApp.google.removeSignIn":
+    "„Weiter mit Google“ verschwindet von der Anmeldeseite, sofern diese Installation nicht selbst eine App konfiguriert.",
+  "oauthApp.microsoft.removeSecret":
+    "Der Clientschlüssel lässt sich nicht auslesen. Um die App wiederherzustellen, gib ID und Schlüssel erneut aus dem Microsoft Entra Admin Center ein.",
+  "oauthApp.microsoft.removeUsedBy":
+    "Outlook-E-Mail- und Kalender-Verbindungen nutzen diese App.",
+  "oauthApp.microsoft.removeOthers":
+    "Google- und IMAP-Postfächer sind nicht betroffen.",
+  "oauthApp.microsoft.removeSignIn":
+    "„Weiter mit Microsoft“ verschwindet von der Anmeldeseite, sofern diese Installation nicht selbst eine App konfiguriert.",
+  "oauthApp.removeFirstRun": "Die Ersteinrichtung fragt wieder nach einer App.",
+  "signInMethods.alwaysOn": "Immer an",
+  "signInMethods.desc.google":
+    "Eine Google-Schaltfläche für alle, deren Arbeitskonto bei Google liegt.",
+  "signInMethods.desc.microsoft":
+    "Eine Microsoft-Schaltfläche für alle, deren Arbeitskonto bei Microsoft 365 liegt.",
+  "signInMethods.onScreen": "Auf der Anmeldeseite",
+  "signInMethods.offScreen.noApp":
+    "Noch nicht auf der Anmeldeseite: Die {vendor}-App ist nicht eingerichtet.",
+  "signInMethods.offScreen.noDirectory":
+    "Noch nicht auf der Anmeldeseite: Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
+  "signInMethods.offScreen.unusable":
+    "Nicht auf der Anmeldeseite: Die {vendor}-App kann gerade nicht genutzt werden.",
+  "signInMethods.offScreen.turnedOff": "Ausgeschaltet",
+  "signInMethods.noWriteReason":
+    "Nur Admins oder Ops können Anmeldemethoden ändern",
+  "signInMethods.turnOffTitle": "{provider} ausschalten?",
+  "signInMethods.turnOffBody":
+    "Die {vendor}-Schaltfläche verschwindet für alle bei {company} von der Anmeldeseite. Du kannst sie jederzeit wieder einschalten.",
+  "signInMethods.impactTitle": "Das ändert, wie sich alle anmelden",
+  "signInMethods.impact.fallback":
+    "Wer {vendor} nutzt, meldet sich stattdessen mit E-Mail und Passwort an. Wer nie ein Passwort gesetzt hat, nutzt „Passwort vergessen“ auf der Anmeldeseite.",
+  "signInMethods.impact.inProgress":
+    "Eine laufende {vendor}-Anmeldung wird abgebrochen. Bereits offene Sitzungen bleiben bestehen.",
+  "signInMethods.impact.groups":
+    "Rollen aus Verzeichnisgruppen werden bei der {vendor}-Anmeldung nicht mehr vergeben.",
+  "signInMethods.impact.connectors":
+    "E-Mail- und Kalender-Connectoren funktionieren weiter, denn sie nutzen die {vendor}-App, nicht diese Schaltfläche.",
+  "signInMethods.turnOffConfirm": "{vendor}-Anmeldung ausschalten",
+  "signInMethods.keepOn": "Eingeschaltet lassen",
+  "groupRoles.disclosure": "Erweitert: Rollen aus Verzeichnisgruppen",
+  "groupRoles.countNone": "Keine zugeordnet",
+  "groupRoles.count_one": "{count} Gruppe zugeordnet",
+  "groupRoles.count_other": "{count} Gruppen zugeordnet",
+  "groupRoles.roleFor": "Rolle für die Gruppe {group}",
+  "groupRoles.help":
+    "Schreib jede Gruppe genau so, wie dein Verzeichnis sie nennt.",
+  "groupRoles.noWriteReason": "Nur Admins können diese Zuordnungen ändern",
+  "groupRoles.adminConfirmTitle":
+    "Alle Mitglieder von {group} zu Admins machen?",
+  "groupRoles.adminImpactTitle": "Das vergibt die höchste Rolle",
+  "groupRoles.adminImpact.signIn":
+    "Jedes eingeladene Mitglied der Gruppe wird bei der nächsten Anmeldung mit Google oder Microsoft Admin.",
+  "groupRoles.adminImpact.reach":
+    "Admins können jede Einstellung, jede Rolle und jeden Eintrag ändern.",
+  "groupRoles.adminImpact.keep":
+    "Wer die Gruppe später verlässt, behält die Rolle.",
+  "groupRoles.adminConfirm": "Speichern und Admin vergeben",
+  "connectors.vendorGoogle": "Google",
+  "connectors.vendorMicrosoft": "Microsoft 365",
+  "connectors.oauthConnectedTitle": "{provider} verbunden",
+  "connectors.oauthBoth": "Mail und Kalender werden synchronisiert.",
+  "connectors.oauthMailOnly": "Mail wird synchronisiert.",
+  "connectors.oauthCalendarOnly": "Kalender wird synchronisiert.",
+  "connectors.oauthImportRuns":
+    "Du kannst diese Seite verlassen: Der Import älterer E-Mails läuft von selbst weiter.",
+  "connectors.oauthCalendarDeclined":
+    "Mail ist verbunden. Der Kalender nicht, weil der Zugriff darauf nicht erlaubt wurde.",
+  "connectors.oauthCalendarFailed": "Mail ist verbunden. Der Kalender nicht.",
+  "connectors.connectCalendar": "Kalender verbinden",
+  "connectors.health.connected": "Verbunden",
+  "connectors.health.syncing": "Wird synchronisiert",
+  "connectors.health.upToDate": "Aktuell",
+  "connectors.health.reconnect": "Neuverbindung nötig",
+  "connectors.health.attention": "Handlungsbedarf",
+  "connectors.health.notConnected": "Nicht verbunden",
+  "connectFlow.title": "Mail und Kalender verbinden",
+  "connectFlow.progress": "Schritte",
+  "connectFlow.stepAccount": "Konto",
+  "connectFlow.stepBringIn": "Was übernommen wird",
+  "connectFlow.stepSignIn": "Anmelden",
+  "connectFlow.stepDone": "{step}, erledigt",
+  "connectFlow.where": "Wo liest du deine geschäftlichen E-Mails?",
+  "connectFlow.google": "Gmail und Google Kalender",
+  "connectFlow.microsoft":
+    "Outlook-Mail und -Kalender mit einem Geschäftskonto",
+  "connectFlow.otherHost": "Anderer Mail-Anbieter",
+  "connectFlow.otherHostDesc":
+    "IMAP mit einem App-Passwort. Nur Mail, kein Kalender, kein Senden.",
+  "connectFlow.alreadyConnected": "Bereits verbunden.",
+  "connectFlow.pickAccount": "Wähle zuerst ein Konto.",
+  "connectFlow.titleVendor": "{vendor} verbinden",
+  "connectFlow.titleImap": "Anderen Mail-Anbieter verbinden",
+  "connectFlow.mail": "Mail",
+  "connectFlow.calendar": "Kalender",
+  "connectFlow.mailHelp":
+    "E-Mails, die du sendest und empfängst, werden den richtigen Kontakten und Deals zugeordnet. Du kannst auch aus Margince senden.",
+  "connectFlow.mailHelpImap":
+    "E-Mails, die du sendest und empfängst, werden den richtigen Kontakten und Deals zugeordnet.",
+  "connectFlow.calendarHelp":
+    "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
+  "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
+  "connectFlow.pickService": "Wähle Mail, Kalender oder beides.",
+  "connectFlow.importLabel": "Ältere E-Mails importieren",
+  "connectFlow.importNone": "Keine",
+  "connectFlow.importAfter":
+    "Sobald du angemeldet bist, siehst du, wie viele E-Mails das sind. Ein kleiner Import startet von selbst, ein größerer wartet auf deinen Start, und du kannst beide jederzeit stoppen.",
+  "connectFlow.signInTitle": "Mit {vendor} anmelden",
+  "connectFlow.handoff":
+    "{vendor} öffnet sich in diesem Tab. Melde dich mit dem Konto an, mit dem du arbeitest, und erlaube jede Berechtigung, die {vendor} anzeigt:",
+  "connectFlow.permMail": "E-Mails lesen und senden",
+  "connectFlow.permMailFor": "Für Mail",
+  "connectFlow.permCalendar": "Kalendertermine sehen und bearbeiten",
+  "connectFlow.permCalendarFor": "Für den Kalender und deinen Buchungslink",
+  "connectFlow.asksTwice":
+    "{vendor} fragt zweimal: einmal für Mail, dann einmal für deinen Kalender.",
+  "connectFlow.afterBoth":
+    "Danach bist du wieder bei Verbindungen. Neue E-Mails und Termine kommen von selbst an.",
+  "connectFlow.afterMail":
+    "Danach bist du wieder bei Verbindungen. Neue E-Mails kommen von selbst an.",
+  "connectFlow.afterCalendar":
+    "Danach bist du wieder bei Verbindungen. Neue Termine kommen von selbst an.",
+  "connectFlow.back": "Zurück",
+  "connectFlow.next": "Weiter",
+  "connectFlow.continueTo": "Weiter zu {vendor}",
+  "connectors.bringsMail": "Mail",
+  "connectors.bringsCalendar": "Kalender",
+  "connectors.bringsSend": "Sendet aus Margince",
+  "connectors.servicesBoth": "Mail und Kalender",
+  "connectors.connectMail": "Mail verbinden",
+  "connectors.account.connectedOn": "Verbunden {date}",
+  "connectors.account.menu": "Weitere Aktionen für {account}",
+  "connectors.menu.bringsIn": "Ändern, was es einbringt",
+  "connectors.menu.importOlder": "Ältere E-Mails importieren",
+  "connectors.svc.list": "Was {account} einbringt",
+  "connectors.svc.newMail": "Neue E-Mails",
+  "connectors.svc.newMailDesc":
+    "E-Mails, die du sendest und empfängst, werden den richtigen Kontakten und Deals zugeordnet.",
+  "connectors.svc.pastEmail": "Frühere E-Mails",
+  "connectors.svc.pastEmailWindow": "Frühere E-Mails, {window}",
+  "connectors.svc.pastEmailDesc":
+    "Margince liest jede E-Mail, um Kontakte und Unternehmen zu finden. Alles Importierte bleibt, auch wenn du stoppst.",
+  "connectors.svc.checked_one": "{done} von etwa {count} E-Mail geprüft",
+  "connectors.svc.checked_other": "{done} von etwa {count} E-Mails geprüft",
+  "connectors.svc.notImported": "Nicht importiert",
+  "connectors.svc.importPast": "Frühere E-Mails importieren",
+  "connectors.svc.waiting": "Wartet auf dich",
+  "connectors.svc.heldNote":
+    "Dieser Import wartet auf dich. Prüfe, wie viele E-Mails er umfasst, und starte ihn dann.",
+  "connectors.svc.queued": "Startet gleich",
+  "connectors.svc.imported": "Importiert",
+  "connectors.svc.stopped": "Gestoppt",
+  "connectors.svc.calendar": "Kalender",
+  "connectors.svc.calendarDesc":
+    "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
+  "connectors.svc.bookingLink": "Buchungslink einrichten",
+  "connectors.accountSettings": "Wer E-Mails von {account} sieht",
+  "connectors.heldPointer.label": "Zurückgehaltene Threads und Absender",
+  "connectors.heldPointer.some_one":
+    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jeden Absender, den dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+  "connectors.heldPointer.some_other":
+    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jeden Absender, den dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+  "connectors.heldPointer.none":
+    "Gerade wird nichts vor dem Team zurückgehalten. Jeden Absender, den dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+  "connectors.heldPointer.unknown":
+    "Threads, die vor dem Team zurückgehalten werden, und jeden Absender, den dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+  "connectors.heldPointer.review": "Prüfen",
+  "connectors.advanced": "Erweitert",
+  "connectors.advancedCount_one": "{count} Einstellung",
+  "connectors.advancedCount_other": "{count} Einstellungen",
+  "connectors.disconnectAccountTitle": "{account} trennen?",
+  "connectors.stopServicesTitle": "{services} nicht mehr einbringen?",
+  "connectors.disconnectServicesBody":
+    "Damit stoppt {services}, und die gespeicherten Zugangsdaten werden gelöscht. Erfasstes bleibt im CRM, und beim erneuten Verbinden wird die Berechtigung wieder angefragt.",
+  "connectors.bringsIn.title": "Was {account} einbringt",
+  "connectors.bringsIn.addNote":
+    "{vendor} öffnet sich in diesem Tab und fragt nach der neuen Berechtigung.",
+  "connectors.bringsIn.unchanged": "Setze oder entferne zuerst einen Haken.",
+  "connectors.bringsIn.save": "Speichern",
+  "connectors.tile.google": "Gmail und Google Kalender",
+  "connectors.tile.microsoft": "Outlook-Mail und -Kalender",
+  "connectors.connectVendor": "{vendor} verbinden",
+  "connectors.strip.label": "So läuft das Verbinden",
+  "connectors.strip.pick": "Konto wählen",
+  "connectors.strip.tick": "Mail und Kalender ankreuzen",
+  "connectors.strip.signIn": "Anmelden",
+  "connectors.strip.syncs": "Die Synchronisierung startet von selbst",
+  "mailSharing.plate.scope": "Ganzes Unternehmen",
+  "mailSharing.plate.shared":
+    "{company} teilt neu erfasste E-Mails mit Teammitgliedern, die den Kontakt sehen können. Jedes Postfach kann seine E-Mails zusätzlich zurückhalten.",
+  "mailSharing.plate.private":
+    "{company} beschränkt neu erfasste E-Mails auf die Beteiligten der Nachricht und das erfassende Postfach.",
+  "connectors.originTitle": "Links in versendeten E-Mails",
+  "connectors.originSub":
+    "Die Adresse, die Margince in versendete Links setzt, etwa in Abmeldelinks. Ist sie von außen nicht erreichbar, öffnen diese Links nichts.",
+  "overnightGrant.choiceHelp":
+    "Margince liest nachts deine Deals und E-Mails, ordnet die Prioritäten des Tages und schreibt Notizen zurück. Es sendet nie. Gespeichert, wenn du mit verbundenem Postfach fortfährst.",
+  "overnightGrant.off": "Aus",
+  "overnightGrant.offNote":
+    "Solange dies aus ist, wird der Morgenbericht nicht vorab vorbereitet. Deine Datensätze, die Worklist und der Wochenrückblick funktionieren wie gewohnt.",
+  "linkedinImport.addProfile": "Profil hinzufügen",
+  "linkedinImport.notImported": "Nicht importiert",
+  "linkedinImport.importedCount_one": "{count} importiert",
+  "linkedinImport.importedCount_other": "{count} importiert",
+  "linkedinReach.emptyBody":
+    "Nach dem Import stehen hier erfasste Unternehmen, bei denen du jemanden kennst, als Tabelle, die meisten Verbindungen zuerst.",
+  "extUnits.managedElsewhere": "Wird auf einer eigenen Seite verwaltet.",
+  "ob.conv.connect.whereTitle": "Wo liegt dein Arbeitskonto?",
+  "ob.conv.connect.whereHint":
+    "Wähle den Dienst, den dein Unternehmen nutzt. E-Mail und Kalender kommen aus demselben Konto.",
+  "ob.conv.connect.tileGoogleDesc": "Gmail und Google Kalender",
+  "ob.conv.connect.tileMicrosoftDesc": "Outlook-E-Mail und Outlook-Kalender",
+  "ob.conv.connect.tileImap": "Anderer E-Mail-Anbieter",
+  "ob.conv.connect.tileImapDesc":
+    "Jeder Host mit IMAP. Nur E-Mail: Einen Kalender fügst du später in den Einstellungen hinzu.",
+  "ob.conv.connect.panelTitle": "Was du von {vendor} verbindest",
+  "ob.conv.connect.servicesLegend": "Was du verbindest",
+  "ob.conv.connect.serviceMail": "E-Mail",
+  "ob.conv.connect.serviceCalendar": "Kalender",
+  "ob.conv.connect.mailBrings":
+    "Kontakte, Unternehmen und Verlauf aus deinem Posteingang und deinen gesendeten E-Mails. Margince sendet nur, wenn du sendest oder einem Agenten das Senden erlaubst.",
+  "ob.conv.connect.calendarBrings":
+    "Termine landen bei den richtigen Deals und Kontakten, und dein Buchungslink bietet nur Zeiten an, in denen du frei bist.",
+  "ob.conv.connect.asksTwiceTitle":
+    "{vendor} fragt zweimal und bringt dich dann hierher zurück",
+  "ob.conv.connect.asksTwiceBody":
+    "Eine Seite für E-Mail, eine für den Kalender.",
+  "ob.conv.connect.asksOnceTitle":
+    "{vendor} fragt einmal und bringt dich dann hierher zurück",
+  "ob.conv.connect.meansTitle": "Was das Verbinden bedeutet",
+  "ob.conv.connect.meansSub":
+    "Wer deine E-Mails lesen kann und wie du die Verbindung trennst",
+  "ob.conv.connect.connectBoth": "E-Mail und Kalender verbinden",
+  "ob.conv.connect.connectMailOnly": "E-Mail verbinden",
+  "ob.conv.connect.connectCalendar": "Kalender verbinden",
+  "ob.conv.connect.pickService": "Wähle E-Mail, Kalender oder beides.",
+  "ob.conv.connect.skipCaption":
+    "Noch ist nichts verbunden. Deine Einrichtungsliste erinnert dich, wenn du überspringst.",
+  "ob.conv.connect.calendarFailedTitle": "Dein Kalender wurde nicht verbunden",
+  "ob.conv.connect.calendarDeclined":
+    "Der Zugriff auf den Kalender wurde nicht erlaubt. Deine Einrichtungsliste erinnert dich daran, ihn zu verbinden.",
+  "ob.conv.connect.waitingAdmin": "Wartet auf einen Admin",
+  "ob.conv.connect.availableNow": "Jetzt verfügbar",
+  "ob.conv.connect.yourCompany": "deinem Unternehmen",
+  "ob.conv.connect.appMissingTitle":
+    "{vendor} ist für dein Unternehmen noch nicht eingerichtet",
+  "ob.conv.connect.appMissingBody":
+    "Bevor jemand bei {company} ein {vendor}-Konto verbinden kann, registriert ein Admin die {vendor}-App des Unternehmens einmal in den Einstellungen unter {page}. In {vendor} musst du nichts tun.",
+  "ob.conv.connect.appMissingHolderBody":
+    "Bevor jemand bei {company} ein {vendor}-Konto verbinden kann, wird die {vendor}-App des Unternehmens einmal registriert. Das geht jetzt, ohne die Einrichtung zu verlassen: Lege die App in der {vendor}-Konsole an und füge hier ihre zwei Werte ein.",
+  "ob.conv.connect.appUnusableTitle":
+    "{vendor} lässt sich gerade nicht verbinden",
+  "ob.conv.connect.appUnusableBody":
+    "Die {vendor}-App bei {company} ist registriert, aber ihr Clientschlüssel lässt sich nicht mehr öffnen, deshalb kann sich kein {vendor}-Konto verbinden. Ein Admin ersetzt den Clientschlüssel in den Einstellungen unter {page}; eine neue App ist nicht nötig.",
+  "ob.conv.connect.appUnusableHolderBody":
+    "Die {vendor}-App bei {company} ist registriert, aber ihr Clientschlüssel lässt sich nicht mehr öffnen, deshalb kann sich kein {vendor}-Konto verbinden. Füge jetzt einen neuen Clientschlüssel ein; eine neue App ist nicht nötig.",
+  "ob.conv.connect.registerApp": "{vendor}-App des Unternehmens registrieren",
+  "ob.conv.connect.replaceApp": "{vendor}-Clientschlüssel ersetzen",
+  "ob.conv.connect.copyRequest": "Anfrage für deinen Admin kopieren",
+  "ob.conv.connect.requestCopied": "Anfrage kopiert",
+  "ob.conv.connect.requestCopyFailed":
+    "Schick deinem Admin diese Anfrage selbst: {request}",
+  "ob.conv.connect.requestText":
+    "Kannst du in Margince die {vendor}-App des Unternehmens registrieren, in den Einstellungen unter {page}? Dann kann ich meine E-Mails und meinen Kalender verbinden.",
+  "ob.conv.connect.requestTextUnusable":
+    "Kannst du in Margince den Clientschlüssel der {vendor}-App des Unternehmens ersetzen, in den Einstellungen unter {page}? Dann kann ich meine E-Mails und meinen Kalender verbinden.",
+  "ob.conv.connect.useImap": "Anderen E-Mail-Anbieter nutzen",
+  "ob.conv.connect.skipCaptionWaiting":
+    "Deine Einrichtungsliste erinnert dich ans Verbinden, sobald {vendor} bereit ist.",
+  "ob.conv.connect.connectedTitle": "{vendor} ist verbunden",
+  "ob.conv.connect.calendarNotConnected":
+    "Nicht verbunden. Verbinde ihn jetzt oder später über deine Einrichtungsliste.",
+  "ob.conv.connect.postureIntro":
+    "Wer die E-Mails lesen kann, die Margince aus diesem Postfach erfasst. Gespeichert, sobald du wählst, noch vor dem Import, damit ältere E-Mails derselben Regel folgen.",
+  "ob.conv.connect.importTitle": "Ältere E-Mails importieren",
+  "ob.conv.connect.importIntro":
+    "Baut deine Kontakte und deinen Verlauf aus vorhandenen E-Mails auf. Nichts startet, bevor du wählst.",
+  "ob.conv.connect.connectedCaption":
+    "E-Mail und Kalender verbunden. Du kannst all das in den Einstellungen unter {page} ändern.",
+  "ob.conv.connect.connectedCaptionMailOnly":
+    "E-Mail verbunden. Deine Einrichtungsliste erinnert dich an den Kalender.",
+  "ob.conv.connect.continueNoImport": "Ohne Import weiter",
+  "ob.conv.connect.importAndContinue": "{period} importieren und weiter",
+  "ob.conv.connect.alsoTitle": "Jetzt auch sinnvoll",
+  "ob.conv.connect.alsoSub":
+    "Optional. Beides kannst du später in den Einstellungen ändern.",
+  "ob.conv.connect.linkedinRow": "Dein LinkedIn-Profil",
+  "ob.conv.connect.linkedinAdd": "Profil hinzufügen",
+  "setup.reminder.trigger": "Einrichtung abschließen",
+  "setup.reminder.count": "{done} von {total}",
+  "setup.reminder.title": "Einrichtung abschließen",
+  "setup.reminder.hide": "Bis zur nächsten Anmeldung ausblenden",
+  "setup.step.mail": "E-Mail verbinden",
+  "setup.step.connectedAs": "{address}, {provider}",
+  "setup.step.calendar": "Kalender verbinden",
+  "setup.step.voiceDone": "Entwürfe klingen jetzt nach dir.",
+  "setup.step.booking": "Buchungslink einschalten",
+  "setup.step.bookingDone": "Kunden können Zeit bei dir buchen.",
+  "setup.action.mail": "E-Mail verbinden",
+  "setup.action.calendar": "Kalender verbinden",
+  "setup.action.voice": "Beispiele hinzufügen",
+  "setup.action.booking": "Einschalten",
+  "settings.home.setup.title": "Deine Einrichtung",
+  "settings.home.setup.count": "{done} von {total} erledigt",
+  "settings.home.setup.complete": "Die Einrichtung ist abgeschlossen",
+  "settings.home.setup.show": "Schritte anzeigen",
+  "connectors.tile.notSetUp": "Nicht eingerichtet",
+  "connectors.tile.askAdmin": "Ein Admin schaltet {vendor} unter {page} frei.",
+  "connectors.tile.registerApp":
+    "Richte die {vendor}-App des Unternehmens ein, um es freizuschalten.",
+  "connectors.tile.openPage": "{page} öffnen",
+  "connectors.imapRow.note":
+    "Nur Mail, kein Kalender. Anmeldung mit einem App-Passwort.",
+  "connectors.imapRow.connect": "Mit IMAP verbinden",
+  // end polish: connections-tiles
+  "setup.step.writingVoice": "Schreibstil trainieren",
+  "setup.caption.mail": "Bringt Kontakte und Verlauf mit.",
+  "setup.caption.calendar": "Legt Termine an deine Deals.",
+  "setup.caption.calendarSkipped": "Bei der Einrichtung übersprungen.",
+  "setup.caption.calendarNeedsVendor": "Braucht Google oder Microsoft.",
+  "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
+  "setup.caption.mailReconnect": "Verbindung abgelaufen.",
+  "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
+  "setup.caption.voice": "Braucht 800 eigene Wörter.",
+  "setup.caption.booking": "Kunden buchen deine freie Zeit.",
+  "setup.caption.bookingNeedsCalendar": "Braucht einen Kalender.",
+  "setup.reminder.waiting": "Wartet",
+  "setup.reminder.progress": "Fortschritt der Einrichtung",
+  // end polish: setup-popover
+  "account.profileCard": "Profil",
+  "account.signInCard": "Anmeldung",
+  "account.languageCard": "Sprache",
+  "account.browserCard": "Dieser Browser",
+  "account.emailsCard": "Geplante E-Mails",
+  "account.signatureHelp":
+    "Steht unter jeder Nachricht, die du aus Margince sendest, oberhalb der Fußzeile zum Abbestellen. KI-Entwürfe fügen nie eine eigene Grußformel hinzu.",
+  "account.signatureAdd": "Signatur hinzufügen",
+  "account.passwordHelp":
+    "Für die Anmeldung als {email}. Eine Änderung meldet dich überall sonst ab und trennt die Apps und Agenten, die für dich handeln.",
+  "account.passwordWarnTitle": "Alles andere, was als du angemeldet ist, endet",
+  "account.passwordWarnBody":
+    "Andere Browser und Geräte werden abgemeldet. Apps, die du mit deinem Konto verbunden hast, und Agenten, die für dich handeln, verlieren den Zugriff, bis du sie neu verbindest. Dieser Browser bleibt angemeldet.",
+  "account.passwordDone":
+    "Andere Geräte wurden abgemeldet, und verbundene Apps müssen neu verbunden werden.",
+  "account.signOutHelp":
+    "Beendet deine Sitzung in diesem Browser. Andere Geräte bleiben angemeldet.",
+  "account.languageHelp":
+    "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "account.appearanceHelp":
+    "Hell, dunkel oder wie dieser Computer eingestellt ist. Gilt nur in diesem Browser. Das Kontomenü ändert dieselbe Einstellung.",
+  // end polish: account
+  "users.roster.title": "Mitglieder",
+  "users.roster.inviteOpen": "Mitglied einladen",
+  "users.roster.empty": "Noch keine Mitglieder.",
+  "users.roster.foot":
+    "Deaktivierte Mitglieder bleiben abgemeldet in dieser Liste, damit du sie in ihrer Zeile wieder aktivieren kannst.",
+  "users.roster.readOnly": "Deine Rolle darf keine Mitglieder verwalten.",
+  "users.roster.searchLabel": "Mitglieder suchen",
+  "users.roster.searchPlaceholder": "Nach Name oder E-Mail suchen",
+  "users.roster.filterLabel": "Mitglieder anzeigen",
+  "users.roster.filter.all": "Alle",
+  "users.roster.filter.active": "Aktiv",
+  "users.roster.filter.invited": "Eingeladen",
+  "users.roster.filter.deactivated": "Deaktiviert",
+  "users.roster.emptyFilter.active": "Keine aktiven Mitglieder.",
+  "users.roster.emptyFilter.invited": "Keine eingeladenen Mitglieder.",
+  "users.roster.emptyFilter.deactivated": "Keine deaktivierten Mitglieder.",
+  "users.roster.noMatch": "Kein Mitglied passt zu dieser Suche.",
+  "users.roster.col.member": "Mitglied",
+  "users.roster.col.role": "Rolle",
+  "users.roster.col.teams": "Teams",
+  "users.roster.col.status": "Status",
+  "users.roster.col.actions": "Aktionen",
+  "users.roster.you": "(du)",
+  "users.roster.noTeam": "Kein Team",
+  "users.roster.noRole": "Keine Rolle",
+  "users.roster.agentRole":
+    "Handelt über Agent-Passports für das Unternehmen, hat keine Rolle",
+  "users.roster.roleLocked": "Diese Rolle kannst du nicht ändern",
+  "users.roster.changeRole": "Rolle ändern",
+  "users.roster.changeRoleTitle": "Rolle für {name} ändern",
+  "users.roster.roleToday": "Rolle heute: {role}",
+  "users.roster.newRole": "Neue Rolle",
+  "users.roster.replaceTitle": "Kein Rückgängigmachen",
+  "users.roster.replaceBody":
+    "Die neue Rolle ersetzt jede Rolle, die {name} hat. Um zurückzugehen, änderst du die Rolle erneut.",
+  // end polish: members
+  "leadVocab.col.source": "Quelle",
+  "leadVocab.col.reason": "Grund",
+  "leadVocab.col.score": "Wirkung auf den Lead-Score",
+  "leadVocab.col.leads": "Leads",
+  "leadVocab.col.offered": "Angeboten",
+  "leadVocab.score.high": "Erhöht den Score",
+  "leadVocab.score.neutral": "Keine Wirkung",
+  "leadVocab.score.low": "Senkt den Score",
+  "leadVocab.score.highDesc":
+    "Der Lead hat um Kontakt gebeten oder jemand hat ihn empfohlen.",
+  "leadVocab.score.neutralDesc":
+    "Die Quelle sagt nichts darüber, wie warm der Lead ist.",
+  "leadVocab.score.lowDesc":
+    "Gefunden oder in großer Menge gekauft, niemand hat um Kontakt gebeten.",
+  "leadVocab.score.for": "Wirkung auf den Lead-Score für {label}",
+  "leadVocab.score.rescoreNote":
+    "Bestehende Leads übernehmen eine Änderung bei ihrer nächsten Neuberechnung.",
+  "leadVocab.offerFor": "{label} anbieten",
+  "leadVocab.moreFor": "Weitere Aktionen für {label}",
+  "leadVocab.rename": "Umbenennen",
+  "leadVocab.renameTitle": "{label} umbenennen",
+  "leadVocab.nameField": "Name",
+  "leadVocab.save": "Speichern",
+  "leadVocab.new.title": "Neue Lead-Quelle",
+  "leadVocab.new.nameHint":
+    "Dein Vertriebsteam sieht diesen Namen im Formular „Neuer Lead“ und in den Lead-Filtern.",
+  "leadVocab.sources.title": "Woher Leads kommen",
+  "leadVocab.sources.count_one": "{count} Quelle",
+  "leadVocab.sources.count_other": "{count} Quellen",
+  "leadVocab.sources.intro":
+    "Die Auswahl im Formular „Neuer Lead“ und in den Lead-Filtern. Eine Quelle kann den Score eines Leads erhöhen oder senken.",
+  "leadVocab.sources.acquisitionLine":
+    "Um einen gewonnenen Deal einem Kanal zuzuordnen, nutze stattdessen die {link}.",
+  "leadVocab.sources.acquisitionLink": "Akquisequellen",
+  "leadVocab.sources.foot":
+    "Score-Änderungen gelten ab der nächsten Neuberechnung jedes Leads. Eine Quelle, die ein Lead nutzt, oder eine vorgegebene Quelle lässt sich nicht entfernen: Schalte stattdessen Angeboten aus.",
+  "leadVocab.sources.keyCaption":
+    "Integrationen erkennen diese Quelle an ihrem Schlüssel {key}. Umbenennen behält den Schlüssel.",
+  "leadVocab.sources.builtInKept":
+    "Vorgegebene Quellen lassen sich nicht entfernen. Schalte Angeboten aus, um diese vor dem Vertrieb auszublenden.",
+  "leadVocab.sources.inUse_one":
+    "{count} Lead nutzt diese Quelle, darum lässt sie sich nicht entfernen. Schalte Angeboten aus, um sie vor dem Vertrieb auszublenden.",
+  "leadVocab.sources.inUse_other":
+    "{count} Leads nutzen diese Quelle, darum lässt sie sich nicht entfernen. Schalte Angeboten aus, um sie vor dem Vertrieb auszublenden.",
+  "leadVocab.reasons.title": "Warum Leads aussortiert werden",
+  "leadVocab.reasons.count_one": "{count} Grund",
+  "leadVocab.reasons.count_other": "{count} Gründe",
+  "leadVocab.reasons.intro":
+    "Die Gründe, die beim Disqualifizieren eines Leads gewählt werden. Der Grund steht am Lead und in den Lead-Filtern.",
+  "leadVocab.reasons.placeholder":
+    "Grund hinzufügen, zum Beispiel Bereits Kunde",
+  "leadVocab.reasons.builtInKept":
+    "Vorgegebene Gründe lassen sich nicht entfernen. Schalte Angeboten aus, um diesen vor dem Vertrieb auszublenden.",
+  "leadVocab.reasons.inUse_one":
+    "{count} Lead hat diesen Grund, darum lässt er sich nicht entfernen. Schalte Angeboten aus, um ihn vor dem Vertrieb auszublenden.",
+  "leadVocab.reasons.inUse_other":
+    "{count} Leads haben diesen Grund, darum lässt er sich nicht entfernen. Schalte Angeboten aus, um ihn vor dem Vertrieb auszublenden.",
+  "leadVocab.deadline.title": "Antwortfrist",
+  "leadVocab.deadline.on": "An",
+  "leadVocab.deadline.off": "Aus",
+  "leadVocab.deadline.switch": "Jedem offenen Lead eine Antwortfrist geben",
+  "leadVocab.deadline.switchHint":
+    "Offene Leads zeigen, wann eine Antwort fällig ist. Die Lead-Liste erhält eine Ansicht Überfällig und zeigt überfällige Leads zuerst.",
+  "leadVocab.deadline.target": "Antworten innerhalb von (Minuten)",
+  "leadVocab.deadline.targetHint":
+    "Gezählt ab Anlage des Leads oder Zuweisung an jemanden im Vertrieb. Von 15 Minuten bis 7 Tage.",
+  // end polish: lead-sources
+  "reviewTemplates.how.title": "So erreicht ein Rückblick den Vertrieb",
+  "reviewTemplates.how.closedTitle": "Ein Deal wird abgeschlossen",
+  "reviewTemplates.how.closedBody":
+    "Auf dem Board oder der Deal-Seite, in jeder Pipeline. Ein Verlust braucht beim Abschließen immer einen Grund; ein Gewinn kann ohne Grund abgeschlossen werden.",
+  "reviewTemplates.how.openTitle": "Der Rückblick öffnet sich",
+  "reviewTemplates.how.openBody":
+    "Die Fragen unten erscheinen sofort, gefolgt von einem freien Notizfeld. Frage 1 enthält bereits den Abschlussgrund, wenn einer angegeben wurde.",
+  "reviewTemplates.how.keptTitle": "Antworten bleiben am Deal",
+  "reviewTemplates.how.keptBody":
+    "Gespeichert in der Zeitleiste des Deals. Der Rückblick lässt sich überspringen und später nachtragen; der Deal bleibt so oder so abgeschlossen.",
+  "reviewTemplates.how.changes":
+    "Änderungen gelten ab dem nächsten Abschluss. Bereits geschriebene Rückblicke behalten die Fragen, die damals gestellt wurden.",
+  "reviewTemplates.how.who":
+    "Einen Rückblick bekommt nur angeboten, wer Aktivitäten an Deals erfassen darf. Ein Rückblick lässt sich erst speichern, wenn die Pflichtfragen beantwortet sind.",
+  "reviewTemplates.questionCount_one": "{count} Frage",
+  "reviewTemplates.questionCount_other": "{count} Fragen",
+  "reviewTemplates.summary": "{questions}, {required} Pflicht",
+  "reviewTemplates.col.order": "Nr.",
+  "reviewTemplates.col.answer": "Antwort",
+  "reviewTemplates.col.needed": "Antwort nötig",
+  "reviewTemplates.prefilled":
+    "Mit dem Abschlussgrund gefüllt, wenn einer angegeben wurde",
+  "reviewTemplates.type.text": "Freitext",
+  "reviewTemplates.type.multiselect": "Auswahl aus einer Liste",
+  "reviewTemplates.requiredBadge": "Pflicht",
+  "reviewTemplates.optional": "Optional",
+  "reviewTemplates.outcomeNote.title":
+    "Rückblicke folgen dem Ergebnis, nicht einer Phase",
+  "reviewTemplates.outcomeNote.body":
+    "In jeder Pipeline werden dieselben Fragen gestellt. Die Phasen vor Gewonnen oder Verloren stehen unter {pipelines}; das automatische Weiterschieben von Deals unter {stageAutomation}.",
+  "reviewTemplates.emptyLine":
+    "Es sind keine Fragen für den Rückblick eingerichtet. Beim Abschließen eines Deals wird kein Rückblick angeboten.",
+  "reviewTemplates.drawer.lost":
+    "Wird angeboten, sobald ein Deal als verloren abgeschlossen wird, in jeder Pipeline. Änderungen gelten ab dem nächsten Abschluss; bereits geschriebene Rückblicke behalten ihre Fragen.",
+  "reviewTemplates.drawer.won":
+    "Wird angeboten, sobald ein Deal als gewonnen abgeschlossen wird, in jeder Pipeline. Änderungen gelten ab dem nächsten Abschluss; bereits geschriebene Rückblicke behalten ihre Fragen.",
+  "reviewTemplates.prefillCallout.title":
+    "Die erste Frage bekommt den Abschlussgrund",
+  "reviewTemplates.prefillCallout.body":
+    "Wurde beim Abschließen ein Grund eingegeben, landet er in Frage 1. Lass die Frage nach dem Warum oben stehen.",
+  "reviewTemplates.choices": "Auswahlmöglichkeiten, eine pro Zeile",
+  "reviewTemplates.choicesHint": "Mehrfachauswahl ist möglich.",
+  "reviewTemplates.moveUp": "Frage {n} nach oben",
+  "reviewTemplates.moveDown": "Frage {n} nach unten",
+  "reviewTemplates.removeNumbered": "Frage {n} entfernen",
+  "reviewTemplates.unsaved": "Ungespeicherte Änderungen",
+  "reviewTemplates.saveQuestions": "Fragen speichern",
+  // end polish: outcome-reviews
+  "settings.auditLog.title": "Änderungen",
+  "settings.auditLog.record": "Datensatz",
+  "settings.auditLog.recordSearch":
+    "Kontakt, Unternehmen, Deal oder Lead suchen, um nur dessen Änderungen zu sehen",
+  "settings.auditLog.when": "Wann",
+  "settings.auditLog.who": "Wer",
+  "settings.auditLog.what": "Was",
+  "settings.auditLog.action": "Aktion",
+  "settings.auditLog.recordType": "Datensatztyp",
+  "settings.auditLog.details": "Details",
+  "settings.auditLog.open": "Details zu dieser Änderung öffnen",
+  "settings.auditLog.anyTime": "Jederzeit",
+  "settings.auditLog.today": "Heute",
+  "settings.auditLog.last7": "Letzte 7 Tage",
+  "settings.auditLog.last30": "Letzte 30 Tage",
+  "settings.auditLog.custom": "Eigener Zeitraum",
+  "settings.auditLog.from": "Von",
+  "settings.auditLog.to": "Bis",
+  "settings.auditLog.anyone": "Alle",
+  "settings.auditLog.anyAction": "Jede Aktion",
+  "settings.auditLog.anyType": "Jeder Typ",
+  "settings.auditLog.byId": "Nach ID suchen",
+  "settings.auditLog.recordId": "Datensatz-ID",
+  "settings.auditLog.batchId": "Sammeländerungs-ID",
+  "settings.auditLog.actorId": "Akteurs-ID",
+  "settings.auditLog.countLine":
+    "Neueste zuerst, je 20. Zeiten und Datumsfilter folgen der Firmenuhr ({zone}).",
+  "settings.auditLog.shown_one": "Angezeigt: {count}",
+  "settings.auditLog.shown_other": "Angezeigt: {count}",
+  "settings.auditLog.shownMore_one": "Angezeigt: {count}, weitere unten",
+  "settings.auditLog.shownMore_other": "Angezeigt: {count}, weitere unten",
+  "settings.auditLog.clear": "Filter zurücksetzen",
+  "settings.auditLog.filteredEmpty":
+    "Keine Änderungen passen zu diesen Filtern",
+  "settings.auditLog.empty":
+    "Änderungen erscheinen hier, sobald jemand einen Datensatz anlegt oder bearbeitet.",
+  "settings.auditLog.noGrant":
+    "Deine Rolle kann das Audit-Log nicht lesen. Ein Admin kann deiner Rolle unter Rollen und Berechtigungen Zugriff auf das Audit-Log geben.",
+  "settings.auditLog.detailTitle": "Änderungsdetails",
+  "settings.auditLog.changed": "Was sich geändert hat",
+  "settings.auditLog.why": "Warum es erlaubt war",
+  "settings.auditLog.rule": "Berechtigungsregel",
+  "settings.auditLog.technical": "Technische Details",
+  "settings.auditLog.exactTime": "Genaue Zeit (UTC)",
+  "settings.auditLog.entryId": "Eintrags-ID",
+  "settings.auditLog.onBehalf": "Im Auftrag von",
+  "settings.auditLog.noDiff":
+    "Für diese Änderung wurden keine Feldwerte erfasst.",
+  "settings.auditLog.action.create": "Angelegt",
+  "settings.auditLog.action.update": "Geändert",
+  "settings.auditLog.action.archive": "Archiviert",
+  "settings.auditLog.action.merge": "Zusammengeführt",
+  "settings.auditLog.action.promote": "Hochgestuft",
+  "settings.auditLog.action.demote": "Herabgestuft",
+  "settings.auditLog.action.disqualify": "Disqualifiziert",
+  "settings.auditLog.action.restore": "Wiederhergestellt",
+  "settings.auditLog.action.export": "Exportiert",
+  "settings.auditLog.action.erase": "Unwiderruflich gelöscht",
+  "settings.auditLog.action.anonymize": "Anonymisiert",
+  "settings.auditLog.action.assign": "Zugewiesen",
+  "settings.auditLog.action.advance_stage": "Phase gewechselt",
+  "settings.auditLog.action.advance_phase": "Abschnitt gewechselt",
+  "settings.auditLog.action.send_email": "E-Mail gesendet",
+  "settings.auditLog.action.consent_grant": "Einwilligung erteilt",
+  "settings.auditLog.action.consent_withdraw": "Einwilligung widerrufen",
+  "settings.auditLog.action.approve": "Genehmigt",
+  "settings.auditLog.action.reject": "Abgelehnt",
+  "settings.auditLog.action.record_share": "Geteilt",
+  "settings.auditLog.action.record_unshare": "Freigabe entzogen",
+  "settings.auditLog.action.activity_relink": "Aktivität neu verknüpft",
+  "settings.auditLog.action.import": "Importiert",
+  "settings.auditLog.action.import_undo": "Import rückgängig gemacht",
+  "settings.auditLog.action.reset_data": "Daten zurückgesetzt",
+  "settings.auditLog.action.password_link_issued": "Passwort-Link ausgestellt",
+  "settings.auditLog.action.connect": "Verbunden",
+  "settings.auditLog.action.disconnect": "Getrennt",
+  "settings.auditLog.action.schedule": "Geplant",
+  "settings.auditLog.action.reschedule": "Verschoben",
+  "settings.auditLog.action.cancel": "Abgesagt",
+  "settings.auditLog.action.release": "Freigegeben",
+  "settings.auditLog.action.hold": "Angehalten",
+  "settings.auditLog.action.expire": "Abgelaufen",
+  "settings.auditLog.action.resolve": "Erledigt",
+  "settings.auditLog.action.restrict": "Eingeschränkt",
+  "settings.auditLog.action.pin": "Angeheftet",
+  "settings.auditLog.action.accrue": "Angefallen",
+  "settings.auditLog.action.pay": "Bezahlt",
+  "settings.auditLog.action.publish": "Veröffentlicht",
+  "settings.auditLog.action.pause": "Pausiert",
+  "settings.auditLog.action.resume": "Fortgesetzt",
+  "settings.auditLog.action.close": "Geschlossen",
+  "settings.auditLog.action.invite": "Eingeladen",
+  "settings.auditLog.action.revoke": "Widerrufen",
+  "settings.auditLog.action.delete": "Gelöscht",
+  "settings.auditLog.action.place_legal_hold": "Rechtliche Sperre gesetzt",
+  "settings.auditLog.action.lift_legal_hold": "Rechtliche Sperre aufgehoben",
+  "settings.auditLog.type.contact": "Kontakt",
+  "settings.auditLog.type.company": "Unternehmen",
+  "settings.auditLog.type.deal": "Deal",
+  "settings.auditLog.type.lead": "Lead",
+  "settings.auditLog.type.project": "Projekt",
+  "settings.auditLog.type.activity": "Aktivität",
+  "settings.auditLog.type.user": "Mitglied",
+  "settings.auditLog.type.offer": "Angebot",
+  "settings.auditLog.type.offer_template": "Angebotsvorlage",
+  "settings.auditLog.type.product": "Produkt",
+  "settings.auditLog.type.pipeline": "Pipeline",
+  "settings.auditLog.type.stage": "Pipeline-Phase",
+  "settings.auditLog.type.tag": "Tag",
+  "settings.auditLog.type.automation": "Automatisierung",
+  "settings.auditLog.type.attachment": "Anhang",
+  "settings.auditLog.type.relationship": "Beziehung",
+  "settings.auditLog.type.weekly_review": "Wochenrückblick",
+  "settings.auditLog.type.forecast_snapshot": "Forecast-Stand",
+  "settings.auditLog.type.forecast_capture_status": "Forecast-Erfassungsstatus",
+  "settings.auditLog.type.onboarding_wizard_state": "Einrichtungsfortschritt",
+  "settings.auditLog.type.privacy_notice_case": "Datenschutzhinweis-Fall",
+  "settings.auditLog.type.data_subject_request": "Betroffenenanfrage",
+  "settings.auditLog.type.provider_connection": "Anbieterverbindung",
+  "settings.auditLog.type.saved_view": "Gespeicherte Ansicht",
+  // end polish: audit-log
 } as const satisfies Record<MessageKey, string>;

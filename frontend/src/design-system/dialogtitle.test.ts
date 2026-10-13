@@ -28,11 +28,6 @@ const underTree = (pattern: RegExp) =>
 
 const EXCEPTIONS = [
   {
-    file: "screens/onboarding-conversation/connect-dialog.tsx",
-    classes: "ob-connect-dialog-title",
-    reason: "the intro and body under it set their own margin-top",
-  },
-  {
     file: "design-system/modal.stories.tsx",
     classes: "t-h2",
     reason: "a title and its subtitle pair tight inside the band",

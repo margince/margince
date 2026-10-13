@@ -1,65 +1,77 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Check, Copy } from "lucide-react";
+import { useState } from "react";
 import { api } from "../api/client";
-import { useCanWrite } from "../app/capability";
-import { Button, Field, TextInput } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Button } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
-import { ConfirmModal } from "../design-system/confirmmodal";
-import { Panel, PanelBody } from "../design-system/panel";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { DataTable } from "../design-system/datatable";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
+import { throwProblem } from "./common";
+import "./oauth-app.css";
 
 /**
- * A connector OAuth app a mailbox connection is made through — Google's, or
- * Microsoft's.
- *
- * ONE card, rendered once per vendor. The two ask for the same three things and
- * differ only in the words around them, so a second component would be a second
- * answer to how long a client SECRET lives in a mutation's `variables` — and the
- * two would drift on exactly that.
+ * The connector OAuth app a mailbox connection is made through: Google's, or
+ * Microsoft's. One set of hooks and one redirect table for both vendors, so
+ * how long a client SECRET lives in a mutation's `variables` has one answer.
  *
  * The secret is never read back. `GET` answers whether one is stored and the
- * client id, which is not a secret — it travels in every authorization redirect,
- * and an operator needs to see WHICH app their installation uses to check it
- * against the vendor's console.
+ * client id, which is not a secret: it travels in every authorization redirect.
  */
 
 export type Vendor = "google" | "microsoft";
 
-// vendorCopy is each vendor's own wording, as literal message keys.
-//
-// A record of literals rather than a template built from the provider name: the
-// translator's key type is a closed union, so a computed key types as a plain
-// string and a missing translation would reach a reader as a raw key instead of
-// failing the build.
+// Each vendor's own wording, as literal message keys: the translator's key
+// type is a closed union, so a key built from the vendor name would not type.
 export const vendorCopy = {
   google: {
     title: "oauthApp.google.title",
-    sub: "oauthApp.google.sub",
-    absent: "oauthApp.google.absent",
-    redirectSub: "oauthApp.google.redirectSub",
     clientIdPlaceholder: "oauthApp.google.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.google.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.google.removeConfirmBody",
   },
   microsoft: {
     title: "oauthApp.microsoft.title",
-    sub: "oauthApp.microsoft.sub",
-    absent: "oauthApp.microsoft.absent",
-    redirectSub: "oauthApp.microsoft.redirectSub",
     clientIdPlaceholder: "oauthApp.microsoft.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.microsoft.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.microsoft.removeConfirmBody",
   },
 } as const;
 
-// The query key carries the vendor, so storing one app does not blank the
-// other's card — one key for both would make every write invalidate a view it
-// says nothing about.
+/** Narrows a sign-in provider key to a vendor whose app this page reads. */
+export function isVendor(key: string): key is Vendor {
+  return key === "google" || key === "microsoft";
+}
+
+/** Where each vendor's client is created and its two values are read. */
+export const VENDOR_CONSOLE: Readonly<Record<Vendor, string>> = {
+  google: "https://console.cloud.google.com/apis/credentials",
+  microsoft:
+    "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+};
+
+/** The narrow sign-in policy read, keyed apart from the installation
+ * aggregate. Kept here because an app write is one of the things it answers. */
+export const AUTHENTICATION_POLICY_KEY = ["authentication-policy"] as const;
+
+// Keyed per vendor, so storing one app does not refetch the other's view.
 function appQueryKey(provider: Vendor) {
   return ["installation-oauth-app", provider];
+}
+
+// Every read an app write changes: the app itself, the setup report that names
+// it as outstanding, the connector roster whose availability it decides, and
+// the sign-in policy. Store and remove share it, so neither can forget one.
+async function refreshAfterAppWrite(queryClient: QueryClient, vendor: Vendor) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: appQueryKey(vendor) }),
+    queryClient.invalidateQueries({ queryKey: ["installation-setup"] }),
+    queryClient.invalidateQueries({ queryKey: ["connectors"] }),
+    queryClient.invalidateQueries({ queryKey: AUTHENTICATION_POLICY_KEY }),
+  ]);
 }
 
 export function useOAuthApp(provider: Vendor) {
@@ -81,9 +93,8 @@ export function useOAuthApp(provider: Vendor) {
 export function useSetOAuthApp(provider: Vendor) {
   const queryClient = useQueryClient();
   return useMutation({
-    // Collected the moment nothing observes it, because what this mutation's
-    // `variables` hold is a credential rather than a form field. The caller
-    // resets it once settled for the same reason.
+    // Collected the moment nothing observes it, because these `variables` hold
+    // a credential. The caller resets it once settled for the same reason.
     gcTime: 0,
     mutationFn: async (vars: {
       clientId: string;
@@ -104,19 +115,11 @@ export function useSetOAuthApp(provider: Vendor) {
         throwProblem(error);
       }
     },
-    onSuccess: async () => {
-      // All three: the card's own view, the setup report (which names this
-      // step as outstanding whether or not it blocks anything), and the
-      // connector roster, whose per-provider availability is decided by
-      // whether this app exists.
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
+    onSuccess: () => refreshAfterAppWrite(queryClient, provider),
   });
 }
 
-function useRemoveOAuthApp(provider: Vendor) {
+export function useRemoveOAuthApp(provider: Vendor) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
@@ -128,21 +131,12 @@ function useRemoveOAuthApp(provider: Vendor) {
         throwProblem(error);
       }
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-    },
+    onSuccess: () => refreshAfterAppWrite(queryClient, provider),
   });
 }
 
-// purposeLabel names one callback's flow. A lookup rather than a computed
-// message key, because the catalog is a closed union: a template key would type
-// as any string and a purpose the contract adds later would reach a reader as a
-// raw key rather than as words.
-//
-// Every purpose the contract declares has an arm. A missing one renders the raw
-// enum beside two translated rows, which is what a reader takes for a bug in the
-// list rather than in this switch.
+// A lookup rather than a computed key, so every purpose the contract declares
+// is translated; one it adds later shows its raw enum rather than a raw key.
 function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
   switch (purpose) {
     case "sign_in":
@@ -158,303 +152,104 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
 
 type RedirectUri = Readonly<{ purpose: string; url: string }>;
 
-// One callback address, with the verb that copies it.
-//
-// A component per row rather than one `copied` on the list: a failed copy has
-// something to SAY, and what it says belongs under the row the reader pressed.
-// It used to say nothing at all — the guard returned in silence, so on a
-// plain-http deployment this button was simply dead, which is the one outcome
-// the rest of the product already agreed not to ship.
-//
-// Which row reads Copied is the CARD's to decide, not the row's, so the label
-// comes from `copied` rather than from the hook: the clipboard holds one
-// address, and a row still claiming an earlier copy would send an operator to
-// paste the other row's URI into a vendor console, where a wrong callback
-// fails later and somewhere else.
-function RedirectUriRow({
+// One address and the control that copies it. A failed copy is said under the
+// address the reader pressed for; whether it reads Copied is the table's call,
+// because the clipboard holds one string and only one control may claim it.
+function RedirectAddress({
   uri,
   copied,
   onCopied,
 }: Readonly<{ uri: RedirectUri; copied: boolean; onCopied: () => void }>) {
   const t = useT();
-  const purpose = purposeLabel(uri.purpose, t);
+  const copyLabel = t("oauthApp.redirectCopy", {
+    purpose: purposeLabel(uri.purpose, t),
+  });
   const copy = useClipboardCopy(
     uri.url,
     {
-      copy: t("oauthApp.redirectCopy", { purpose }),
+      copy: copyLabel,
       copied: t("oauthApp.redirectCopied"),
       remedy: t("oauthApp.redirectCopyFailed"),
     },
     onCopied,
   );
   return (
-    <>
-      <SettingRow
-        label={purpose}
-        value={<code>{uri.url}</code>}
-        control={
-          <Button onClick={copy.copy}>
-            {copied
-              ? t("oauthApp.redirectCopied")
-              : t("oauthApp.redirectCopy", { purpose })}
-          </Button>
-        }
-      />
+    <div className="oauthapp-address">
+      <div className="oauthapp-address-line">
+        <code>{uri.url}</code>
+        <Button
+          iconOnly
+          aria-label={copied ? t("oauthApp.redirectCopied") : copyLabel}
+          onClick={copy.copy}
+        >
+          {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+        </Button>
+      </div>
       {copy.notice}
-    </>
-  );
-}
-
-// RedirectUris lists the callback URLs an operator must register on their OAuth
-// client, one per purpose this deployment actually serves.
-//
-// The URLs come from the response and are never built here. They have one job —
-// to be byte-identical to what the vendor receives — and a second spelling in the
-// client is exactly how the two come apart. The backend derives them from the
-// functions that send them, held by a fitness test in both directions.
-//
-// An empty list renders nothing rather than an empty heading: a deployment that
-// serves none of a vendor's flows has nothing to register, and a bare heading
-// would read as a list that failed to load.
-export function RedirectUris({
-  uris,
-  sub,
-}: Readonly<{
-  uris: readonly RedirectUri[] | undefined;
-  sub: string;
-}>) {
-  const t = useT();
-  // The address the clipboard actually holds, not a flag per row.
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  // Absent and empty are the same answer here — nothing to register — and the
-  // field is contract-required, but a body that lost one hands over `undefined`
-  // anyway. This card shares a screen with the installation's own settings, so
-  // reading a length off nothing would take that whole page down over a list
-  // the reader could not have acted on.
-  if (!uris || uris.length === 0) {
-    return null;
-  }
-  return (
-    <div>
-      <p className="t-label">{t("oauthApp.redirectTitle")}</p>
-      <p className="t-caption">{sub}</p>
-      <SettingList>
-        {uris.map((uri) => (
-          <RedirectUriRow
-            key={uri.purpose}
-            uri={uri}
-            copied={copiedUrl === uri.url}
-            onCopied={() => setCopiedUrl(uri.url)}
-          />
-        ))}
-      </SettingList>
     </div>
   );
 }
 
-export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
+// The callback addresses an operator registers on their OAuth client, one per
+// flow this deployment serves. They come from the response and are never built
+// here: their one job is to be byte-identical to what the vendor receives.
+//
+// Nothing to register renders nothing, not an empty table that reads as a list
+// that failed to load.
+export function RedirectUris({
+  uris,
+}: Readonly<{ uris: readonly RedirectUri[] | undefined }>) {
   const t = useT();
-  const copy = vendorCopy[provider];
-  const canManage = useCanWrite("capture_settings", "update");
-  const app = useOAuthApp(provider);
-  const save = useSetOAuthApp(provider);
-  const remove = useRemoveOAuthApp(provider);
-  const [clientId, setClientId] = useState("");
-  const [clientSecret, setClientSecret] = useState("");
-  // Microsoft only: an Entra app may be pinned to one directory, and Google has
-  // no such concept — a field that silently does nothing is worse than an absent
-  // one, because an operator who fills it in believes they narrowed something.
-  //
-  // `undefined` until the app has loaded, which is what separates "not typed in
-  // yet" from "deliberately cleared": rotating a pinned app with this blank
-  // would send no tenant and silently widen it to every company, which is
-  // the one change on this card nobody would see happen.
-  const [tenant, setTenant] = useState<string | undefined>(undefined);
-  const [confirming, setConfirming] = useState(false);
-  // Focus has to land somewhere that still exists. The button that opened the
-  // dialog is the natural target and the one that disappears: a successful
-  // removal invalidates the query, the app reads as absent, and the Remove
-  // button is gone by the time focus is restored to it.
-  const clientIdRef = useRef<HTMLInputElement>(null);
-
-  const busy = save.isPending || remove.isPending;
-  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
-  const failure = save.error ?? remove.error;
-
+  // The string the clipboard holds, so one control at most reads Copied: a
+  // row, or Copy all, never a stale earlier one.
+  const [held, setHeld] = useState<string | null>(null);
+  const rows = uris ?? [];
+  const all = rows.map((uri) => uri.url).join("\n");
+  const copyAll = useClipboardCopy(
+    all,
+    {
+      copy: t("oauthApp.copyAll"),
+      copied: t("oauthApp.redirectCopied"),
+      remedy: t("oauthApp.redirectCopyFailed"),
+    },
+    () => setHeld(all),
+  );
+  if (rows.length === 0) {
+    return null;
+  }
   return (
-    <Panel title={t(copy.title)}>
-      <PanelBody>
-        <p className="t-body">{t(copy.sub)}</p>
-        <QueryGate query={app} pendingLabel={t(copy.title)}>
-          {(status) => (
-            <>
-              {failure && (
-                <Callout
-                  kind="outcome"
-                  tone="danger"
-                  title={t("oauthApp.writeFailed")}
-                >
-                  {problemMessageOf(failure, t)}
-                </Callout>
-              )}
-              {/* Three states, because there are three answers. `configured`
-                  alone could not tell "nothing anywhere" from "the deployment
-                  supplies one", and the card said the former in both — telling
-                  an operator mail could not be connected on installations
-                  where it demonstrably could. */}
-              <p className="t-body">
-                {status.source === "stored" &&
-                  t("oauthApp.configured", { clientId: status.client_id })}
-                {status.source === "environment" &&
-                  t("oauthApp.fromEnvironment", {
-                    clientId: status.client_id,
-                  })}
-                {status.source === "none" && t(copy.absent)}
-              </p>
-              {/* Whatever the app's source: a directory pin is a fact about
-                  who can sign in, and an operator debugging a refused login
-                  needs it whether the app came from the environment or from
-                  this screen. */}
-              {status.tenant && (
-                <p className="t-caption">
-                  {t("oauthApp.pinnedToDirectory", { tenant: status.tenant })}
-                </p>
-              )}
-              <RedirectUris
-                uris={status.redirect_uris}
-                sub={t(copy.redirectSub)}
+    <div className="oauthapp-redirects">
+      <div className="oauthapp-redirects-head">
+        <Button onClick={copyAll.copy}>
+          {held === all ? <Check aria-hidden /> : <Copy aria-hidden />}
+          {held === all ? t("oauthApp.redirectCopied") : t("oauthApp.copyAll")}
+        </Button>
+      </div>
+      {copyAll.notice}
+      <DataTable
+        label={t("oauthApp.redirectTable")}
+        rows={[...rows]}
+        rowKey={(uri) => uri.purpose}
+        columns={[
+          {
+            key: "purpose",
+            header: t("oauthApp.redirectCol.usedFor"),
+            render: (uri) => purposeLabel(uri.purpose, t),
+          },
+          {
+            key: "address",
+            header: t("oauthApp.redirectCol.address"),
+            grow: true,
+            render: (uri) => (
+              <RedirectAddress
+                uri={uri}
+                copied={held === uri.url}
+                onCopied={() => setHeld(uri.url)}
               />
-              <Field
-                label={t("oauthApp.clientId")}
-                hint={
-                  status.source === "stored"
-                    ? t("oauthApp.replaceHint")
-                    : undefined
-                }
-              >
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    ref={clientIdRef}
-                    value={clientId}
-                    autoComplete="off"
-                    disabled={!canManage || busy}
-                    placeholder={t(copy.clientIdPlaceholder)}
-                    onChange={(e) => setClientId(e.target.value)}
-                  />
-                )}
-              </Field>
-              <Field label={t("oauthApp.clientSecret")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    type="password"
-                    autoComplete="off"
-                    value={clientSecret}
-                    disabled={!canManage || busy}
-                    onChange={(e) => setClientSecret(e.target.value)}
-                  />
-                )}
-              </Field>
-              {provider === "microsoft" && (
-                <Field
-                  label={t("oauthApp.tenant")}
-                  hint={t("oauthApp.tenantHint")}
-                >
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      // The stored directory until somebody edits it, so a
-                      // rotation carries the pinning forward. Emptying the
-                      // field is then a deliberate act, which is what widening
-                      // an app to every company ought to be.
-                      value={tenant ?? status.tenant ?? ""}
-                      autoComplete="off"
-                      disabled={!canManage || busy}
-                      placeholder={t("oauthApp.tenantPlaceholder")}
-                      onChange={(e) => setTenant(e.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-              <div className="form-actions">
-                <Button
-                  variant="primary"
-                  pending={save.isPending}
-                  disabled={!canManage || remove.isPending || !ready}
-                  onClick={() => {
-                    remove.reset();
-                    save.mutate(
-                      {
-                        clientId: clientId.trim(),
-                        clientSecret: clientSecret.trim(),
-                        tenant: (tenant ?? status.tenant ?? "").trim(),
-                      },
-                      {
-                        onSuccess: () => {
-                          // The field is the only copy this app holds, and it
-                          // has done its job.
-                          setClientSecret("");
-                          setClientId("");
-                          setTenant(undefined);
-                          save.reset();
-                        },
-                      },
-                    );
-                  }}
-                >
-                  {status.source === "stored"
-                    ? t("oauthApp.replace")
-                    : t("oauthApp.store")}
-                </Button>
-                {status.source === "stored" && (
-                  <Button
-                    variant="danger"
-                    pending={remove.isPending}
-                    disabled={!canManage || save.isPending}
-                    onClick={() => setConfirming(true)}
-                  >
-                    {t("oauthApp.remove")}
-                  </Button>
-                )}
-              </div>
-              <ConfirmModal
-                open={confirming}
-                onClose={() => setConfirming(false)}
-                title={t(copy.removeConfirmTitle)}
-                confirmLabel={t("oauthApp.remove")}
-                confirmVariant="danger"
-                pending={remove.isPending}
-                // A refused DELETE leaves this dialog OPEN, so the reason has
-                // to be inside it: the background Callout is behind a modal the
-                // reader cannot see past, which reads as a button that did
-                // nothing.
-                error={remove.error ? problemMessageOf(remove.error, t) : null}
-                returnFocusTo={() => clientIdRef.current}
-                onConfirm={() => {
-                  save.reset();
-                  remove.mutate(undefined, {
-                    onSuccess: () => {
-                      setConfirming(false);
-                      // AND THE DRAFT GOES WITH IT. An operator who typed
-                      // replacement credentials and then removed the app
-                      // instead was left with both fields populated and Store
-                      // app ready to press — offering to store a secret they
-                      // had just decided to be rid of, against an app that no
-                      // longer exists.
-                      setClientSecret("");
-                      setClientId("");
-                      setTenant(undefined);
-                    },
-                  });
-                }}
-              >
-                {t(copy.removeConfirmBody)}
-              </ConfirmModal>
-            </>
-          )}
-        </QueryGate>
-      </PanelBody>
-    </Panel>
+            ),
+          },
+        ]}
+      />
+    </div>
   );
 }

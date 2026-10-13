@@ -4,6 +4,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChoiceList } from "./choicelist";
 
@@ -198,5 +199,87 @@ describe("ChoiceList", () => {
     expect(
       screen.getAllByRole("radio").filter((r) => r.matches(":checked")),
     ).toHaveLength(2);
+  });
+});
+
+const SERVICES = [
+  { value: "mail" as const, label: "Mail" },
+  { value: "calendar" as const, label: "Calendar" },
+];
+
+function Services({
+  initial,
+  onChange,
+}: Readonly<{
+  initial: ("mail" | "calendar")[];
+  onChange: (next: ("mail" | "calendar")[]) => void;
+}>) {
+  const [value, setValue] = useState(initial);
+  return (
+    <ChoiceList
+      legend="What to connect"
+      multiple
+      layout="cards"
+      value={value}
+      choices={SERVICES}
+      onChange={(next) => {
+        setValue(next);
+        onChange(next);
+      }}
+    />
+  );
+}
+
+describe("ChoiceList multiple", () => {
+  it("draws checkboxes in one group named by the legend", () => {
+    render(<Services initial={["mail"]} onChange={() => {}} />);
+
+    const group = screen.getByRole("group", { name: "What to connect" });
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    const boxes = screen.getAllByRole("checkbox");
+    expect(boxes).toHaveLength(2);
+    expect(boxes.every((box) => box.closest("fieldset") === group)).toBe(true);
+    expect(boxes.map((box) => box.matches(":checked"))).toEqual([true, false]);
+  });
+
+  it("reports the picks in choice order, not press order", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Services initial={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole("checkbox", { name: "Calendar" }));
+    await user.click(screen.getByRole("checkbox", { name: "Mail" }));
+    expect(onChange).toHaveBeenLastCalledWith(["mail", "calendar"]);
+
+    await user.click(screen.getByRole("checkbox", { name: "Calendar" }));
+    expect(onChange).toHaveBeenLastCalledWith(["mail"]);
+  });
+
+  it("refuses a disabled answer and reads its reason with it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="What to connect"
+        multiple
+        value={["mail"]}
+        choices={[
+          SERVICES[0],
+          {
+            ...SERVICES[1],
+            disabled: true,
+            description: "IMAP has no calendar.",
+          },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    const calendar = screen.getByRole("checkbox", {
+      name: /Calendar.*IMAP has no calendar\./,
+    });
+    expect(calendar.hasAttribute("disabled")).toBe(true);
+    await user.click(calendar);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

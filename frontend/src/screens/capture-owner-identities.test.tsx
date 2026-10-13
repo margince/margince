@@ -8,12 +8,8 @@ import { en } from "../i18n/en";
 import { OwnerIdentitiesCard } from "./capture-owner-identities";
 import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 
-// Where a claim came from is only worth saying when the seat did not make it.
-//
-// An address somebody typed needs no explanation. One the product LEARNED does:
-// a seat scanning this card would otherwise find an address they never entered
-// and have no way to tell whether they forgot adding it or something else did —
-// and they are the colleague who decides whether it stays.
+// Where a claim came from is said on every row, so a seat can tell an address
+// they typed from one Margince learned, and the empty card offers the one verb.
 
 afterEach(() => {
   cleanup();
@@ -55,29 +51,50 @@ it("says a discovered alias was found rather than typed", async () => {
   showing([identity({ source: "delivered_to" })]);
 
   expect(
-    await screen.findByText(en["ownerIdentities.learned.deliveredTo"]),
+    await screen.findByText(en["ownerIdentities.source.deliveredTo"]),
   ).toBeTruthy();
+  expect(screen.queryByText(en["ownerIdentities.source.user"])).toBeNull();
 });
 
-it("says nothing about a row the seat declared themselves", async () => {
+it("marks a row the seat declared themselves as theirs", async () => {
   showing([identity({ source: "user" })]);
 
   await screen.findByText("founder@previous-employer.example");
-  expect(
-    screen.queryByText(en["ownerIdentities.learned.deliveredTo"]),
-  ).toBeNull();
-  expect(screen.queryByText(en["ownerIdentities.learned.provider"])).toBeNull();
+  expect(screen.getByText(en["ownerIdentities.source.user"])).toBeTruthy();
 });
 
-// The two learned sources are different facts and say different things: one is
-// the receiving server's delivery, the other the provider's own send-as list.
+// The two learned sources are different facts: one is the receiving server's
+// delivery, the other the provider's own send-as list.
 it("tells a provider-attested address from a discovered one", async () => {
   showing([identity({ source: "provider" })]);
 
   expect(
-    await screen.findByText(en["ownerIdentities.learned.provider"]),
+    await screen.findByText(en["ownerIdentities.source.provider"]),
   ).toBeTruthy();
   expect(
-    screen.queryByText(en["ownerIdentities.learned.deliveredTo"]),
+    screen.queryByText(en["ownerIdentities.source.deliveredTo"]),
   ).toBeNull();
+});
+
+it("offers Add address from the empty state, and nowhere else", async () => {
+  showing([]);
+
+  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
+  expect(
+    screen.getAllByRole("button", { name: en["ownerIdentities.add"] }),
+  ).toHaveLength(1);
+  expect(screen.queryByRole("table")).toBeNull();
+});
+
+it("names the address on its remove verb", async () => {
+  showing([identity({})]);
+
+  expect(
+    await screen.findByRole("button", {
+      name: "Remove founder@previous-employer.example",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getAllByRole("button", { name: en["ownerIdentities.add"] }),
+  ).toHaveLength(1);
 });
