@@ -1,656 +1,35 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
-  attr,
-  boxProps,
-  callOf,
-  capped,
-  childrenHosts,
-  childrenSlot,
-  classes,
-  cross,
-  declarations,
-  defOf,
   descendants,
   dialogSet,
-  domainOf,
-  elementsIn,
-  enclosing,
-  expanded,
-  flowOf,
-  fnOf,
-  givenTo,
-  handedJsx,
-  handedTo,
-  isDialogTag,
-  isZero,
-  jsxOf,
-  keyOf,
-  literalsIn,
   markupFiles,
   modalBoxes,
-  type Owners,
-  opening,
   ownersIn,
-  type Placed,
-  type Prop,
-  presetOf,
   primitiveKey,
-  propNames,
-  rendered,
-  returnedBy,
-  rootsOf,
   sheetTexts,
   srcDir,
-  tag,
   textCensus,
-  upper,
   type Values,
   weightOf,
-  whereOf,
-  within,
 } from "../../scripts/lib/dialoglayout";
+import {
+  dialogsIn,
+  FIELD_ROWS,
+  hints,
+  labelledIn,
+  NOT_ROWS,
+  rowsAcross,
+  SCOPE_CAP,
+} from "../../scripts/lib/dialogrows";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
-import { classVariants, type Given } from "../testing/classnames";
-
-// A dialog's rows sit one stack step apart: none flush, none doubled by its own
-// margin. Stacks and margins are read from the sheets in each box's context.
-
-type Verdict = "spaced" | "flush" | "doubled" | "unplaced";
-type Row = { at: string; where: string; verdict: Verdict; by?: string };
-// The class lists of the boxes from an element's parent out to its dialog.
-type Chain = string[][];
-// `via`: the components on the way to the call, so a recursion ends.
-type Guest = { def: ts.Node; outer: Chain[]; via: ReadonlySet<ts.Node> };
-// A component definition, mapped to the call that rendered it this time.
-type Links = Map<ts.Node, ts.Node>;
-type Slot = { roots: ts.Node[]; links: Links };
-// Rows rendered away from where they are written: a JSX variable or call
-// (`inline`), and JSX handed to a prop (`slots`), placed where it renders.
-type Placement = {
-  inline: Map<ts.Node, ts.Node[]>;
-  slots: Map<ts.Node, Slot[]>;
-  siteOf: Map<ts.Node, ts.Node>;
-  frameOf: Map<ts.Node, Links>;
-  unplaced: Map<ts.Node, ts.Node>;
-};
-type View = { placement: Placement; links: Links };
-type Keys = { keys: ReadonlySet<string>; modal: string };
-type Gate = Keys & { owners: Owners; outer: Chain[] };
-
-const FIELD_ROWS = new Map([
-  ["Field", "atoms"],
-  ["Checkbox", "atoms"],
-  ["Radio", "atoms"],
-  ["ChoiceList", "choicelist"],
-]);
-// Design-system controls that draw their own label and are not form rows.
-const NOT_ROWS = new Map([
-  ["InlineText", "edits a value in place, its label hidden"],
-  ["ChipValueList", "picks a list filter's values"],
-]);
-const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
-const HEADING = primitiveKey("heading", "Heading");
-const NO_LINKS: Links = new Map();
-const DIALOG: Chain[] = [[["modal"]]];
-
-const keyIs = (n: ts.Node, key: string) => {
-  const def = defOf(n);
-  return !!def && keyOf(def) === key;
-};
-const childOfJsx = (n: ts.Node) =>
-  !!n.parent && (ts.isJsxElement(n.parent) || ts.isJsxFragment(n.parent));
-// A component that renders a dialog around its children; `role` alone marks a box.
-const wraps = ({ keys }: Pick<Keys, "keys">, n: ts.Node) =>
-  upper(n) && isDialogTag(n.getSourceFile(), tag(n), keys);
-const isDialog = (g: Pick<Keys, "keys">, n: ts.Node) =>
-  literal(n, "role") === "dialog" || wraps(g, n);
-const dialogsIn = (source: ts.SourceFile, keys: ReadonlySet<string>) =>
-  elementsIn(source).filter((n) => isDialog({ keys }, n));
-// A call and the component it calls, whose props the call hands values.
-type Call = { at: ts.Node; def: ts.Node };
-const variantsOf = (n: ts.Node, call?: Call) =>
-  classVariants(
-    n.getSourceFile(),
-    attr(n, "className")?.initializer,
-    16,
-    call && givenAt(call),
-  );
-// What a component's props hold at one call: their literal branches, or the
-// default when the call leaves one out.
-function givenAt({ at, def }: Call): Given {
-  const names = propNames(def);
-  return (name) => {
-    if (!names.has(name)) return undefined;
-    const a = attr(at, name);
-    if (!a) return [presetOf(def, name)];
-    const init = a.initializer;
-    const x = init && ts.isJsxExpression(init) ? init.expression : init;
-    if (!x) return ["true"];
-    const domain = domainOf(def, name);
-    return literalsIn(x) ?? (domain && [...domain, undefined]);
-  };
-}
-// Only a label hidden in every render: `labelHidden={x}` shows it in one.
-const inPlace = (n: ts.Node) => {
-  const hidden = attr(n, "labelHidden");
-  const e = hidden?.initializer;
-  return (
-    !!hidden &&
-    (!e || (ts.isJsxExpression(e) && e.expression?.getText() === "true"))
-  );
-};
-function literal(n: ts.Node, name: string) {
-  const init = attr(n, name)?.initializer;
-  const e = init && ts.isJsxExpression(init) ? init.expression : init;
-  return e && ts.isStringLiteral(e) ? e.text : undefined;
-}
-
-// Where a component renders its prop `name`, following it through the
-// components that hand it on.
-function slotSite(
-  call: ts.Node,
-  name: string,
-  path: Links,
-  depth = 0,
-): { site: ts.Node; links: Links } | undefined {
-  const def = defOf(call);
-  if (!def || depth > 4) return undefined;
-  const links: Links = new Map(path).set(def, call);
-  const given = givenTo(def);
-  const site = descendants(def).find(
-    (x) =>
-      ((ts.isJsxExpression(x) && childOfJsx(x)) || ts.isReturnStatement(x)) &&
-      !!x.expression &&
-      rendered(x.expression).some((r) => given(r, name)),
-  );
-  if (site) return { site, links };
-  for (const a of descendants(def).filter(ts.isJsxAttribute)) {
-    const e = a.initializer;
-    if (!e || !ts.isJsxExpression(e) || !e.expression) continue;
-    if (!given(e.expression, name)) continue;
-    const found = slotSite(callOf(a), a.name.getText(), links, depth + 1);
-    if (found) return found;
-  }
-  return undefined;
-}
-
-function placeInline(source: ts.SourceFile, p: Placement) {
-  for (const x of descendants(source)) {
-    if (!ts.isJsxExpression(x) || !x.expression || !childOfJsx(x)) continue;
-    const e = x.expression;
-    const callee = ts.isCallExpression(e) ? e.expression : undefined;
-    const named = ts.isIdentifier(e) ? e : callee;
-    const decl = named && declarations(source).get(named.getText());
-    const value =
-      decl && ts.isIdentifier(e) && ts.isVariableDeclaration(decl)
-        ? jsxOf(decl.initializer)
-        : [];
-    const roots = callee && decl ? returnedBy(fnOf(decl)) : value;
-    if (roots.length === 0) continue;
-    p.inline.set(x, roots);
-    for (const r of roots) if (!p.siteOf.has(r)) p.siteOf.set(r, x);
-  }
-}
-function placeSlots(source: ts.SourceFile, p: Placement) {
-  for (const a of descendants(source).filter(ts.isJsxAttribute)) {
-    const roots = handedJsx(a);
-    const call = callOf(a);
-    if (roots.length === 0 || !upper(call)) continue;
-    const found = slotSite(call, a.name.getText(), new Map());
-    if (!found) {
-      for (const r of roots) p.unplaced.set(r, call);
-      continue;
-    }
-    const slot = { roots, links: found.links };
-    p.slots.set(found.site, [...(p.slots.get(found.site) ?? []), slot]);
-    for (const r of roots) {
-      p.siteOf.set(r, found.site);
-      p.frameOf.set(r, found.links);
-    }
-  }
-}
-const placements = new WeakMap<ts.SourceFile, Placement>();
-function placementIn(source: ts.SourceFile): Placement {
-  const known = placements.get(source);
-  if (known) return known;
-  const p: Placement = {
-    inline: new Map(),
-    slots: new Map(),
-    siteOf: new Map(),
-    frameOf: new Map(),
-    unplaced: new Map(),
-  };
-  placeInline(source, p);
-  placeSlots(source, p);
-  placements.set(source, p);
-  return p;
-}
-
-// Ancestors as rendered, not as written: a slotted root climbs to its site
-// and a definition's root to its call, each under the frame that placed it.
-function* climb(v: View, n: ts.Node): Generator<{ at: ts.Node; v: View }> {
-  let view = v;
-  for (let p = n, steps = 0; ; steps++) {
-    const frame = view.placement.frameOf.get(p);
-    if (frame && frame !== view.links) view = { ...view, links: frame };
-    const next =
-      view.placement.siteOf.get(p) ?? view.links.get(p)?.parent ?? p.parent;
-    if (!next) return;
-    if (steps > 4096) throw new Error(`${whereOf(n)}: renders inside itself`);
-    p = next;
-    yield { at: p, v: view };
-  }
-}
-function parentOf(v: View, n: ts.Node) {
-  for (const step of climb(v, n)) if (ts.isJsxElement(step.at)) return step;
-  return undefined;
-}
-const enclosingIn = (v: View, n: ts.Node) => parentOf(v, n)?.at;
-const hostedAt = (v: View, n: ts.Node) => [
-  ...(v.placement.inline.get(n) ?? []),
-  ...(v.placement.slots.get(n) ?? [])
-    .filter((s) => s.links === v.links)
-    .flatMap((s) => s.roots),
-];
-// Everything under `root` as rendered, what an expression hosts included.
-function walk(v: View, root: ts.Node): ts.Node[] {
-  const out: ts.Node[] = [];
-  const seen = new Set<ts.Node>();
-  const visit = (n: ts.Node) => {
-    if (seen.has(n)) return;
-    seen.add(n);
-    out.push(n);
-    for (const r of hostedAt(v, n)) visit(r);
-    ts.forEachChild(n, visit);
-  };
-  ts.forEachChild(root, visit);
-  return out;
-}
-function viewAt(placement: Placement, n: ts.Node): View {
-  for (let p: ts.Node | undefined = n; p; p = p.parent) {
-    const links = placement.frameOf.get(p);
-    if (links) return { placement, links };
-  }
-  return { placement, links: NO_LINKS };
-}
-function unplacedAt(placement: Placement, n: ts.Node) {
-  for (let p: ts.Node | undefined = n; p; p = p.parent) {
-    if (placement.unplaced.has(p)) return true;
-  }
-  return false;
-}
-
-// A field whose label is hidden edits a value in place among its text,
-// rather than standing as a row of a form.
-const isField = (n: ts.Node) =>
-  (rowKeys.some((k) => keyIs(n, k)) && !inPlace(n)) ||
-  classes(n).includes("form-row");
-// A component counts by the field rows it renders at its own root.
-function width(g: Gate, n: ts.Node) {
-  if (isField(n)) return 1;
-  const def = defOf(n);
-  if (!def || wraps(g, n)) return 0;
-  return rootsOf(def).filter(isField).length;
-}
-
-// What a prop on `e` can be: its literal branches, what the caller hands
-// when `e` forwards a prop of its own, and otherwise any value.
-function valuesOf(e: ts.Node, name: string, callers: ts.Node[]): Values {
-  const handed = handedTo(e, name);
-  const each = handed === "any" ? [] : handed.map((x) => valueAt(x, callers));
-  return handed === "any" || each.includes("any") ? "any" : each.flat();
-}
-function valueAt(x: ts.Expression | undefined, callers: ts.Node[]): Values {
-  const listed = x ? literalsIn(x) : [undefined];
-  if (listed) return listed;
-  const [caller, ...rest] = callers;
-  const def = caller && defOf(caller);
-  if (!x || !def || !givenTo(def)(x)) return "any";
-  const handed = ts.isPropertyAccessExpression(x) ? x.name.text : x.getText();
-  const outer = valuesOf(caller, handed, rest);
-  const preset = presetOf(def, handed);
-  return outer === "any" ? outer : outer.map((v) => v ?? preset);
-}
-// The box classes a dialog element draws: Modal's for each value its props
-// can take, or, for a wrapper, those of the dialog it renders around them.
-function dialogBoxes(g: Gate, e: ts.Node, callers: ts.Node[]): string[][] {
-  if (keyIs(e, g.modal)) {
-    const given = boxProps().map((p): [string, Values] => [
-      p,
-      valuesOf(e, p, callers),
-    ]);
-    return modalBoxes(new Map(given));
-  }
-  const def = defOf(e);
-  const inner = def && childrenHosts(def).find((h) => isDialog(g, h));
-  if (!inner || callers.length > 4) {
-    throw new Error(
-      `${whereOf(e)}: no Modal found around this dialog's children; render the wrapper's Modal around {children}`,
-    );
-  }
-  return dialogBoxes(g, inner, [e, ...callers]);
-}
-// A component's classes land on the root holding its children; a dialog's
-// box stands outside that root unless it is that root.
-function boxesAt(g: Gate, p: ts.Node): Chain[] {
-  const modal = keyIs(p, g.modal);
-  const slot = upper(p) && !modal ? childrenSlot(p) : undefined;
-  const def = defOf(p);
-  const inner = slot && def ? variantsOf(slot, { at: p, def }) : [[]];
-  const own = cross(variantsOf(p), inner, p);
-  if (!wraps(g, p)) return own.map((cls) => [cls]);
-  const boxes = dialogBoxes(g, p, []);
-  if (modal) return cross(own, boxes, p).map((cls) => [cls]);
-  return own.flatMap((cls) => boxes.map((box) => [cls, box]));
-}
-function ancestry(g: Gate, v: View, n: ts.Node): Chain[] {
-  let chains: Chain[] = [[]];
-  for (let s = parentOf(v, n); s; s = parentOf(s.v, s.at)) {
-    const p = s.at;
-    const boxes = boxesAt(g, p);
-    chains = capped(
-      chains.flatMap((c) => boxes.map((b) => [...c, ...b])),
-      p,
-    );
-    if (isDialog(g, p)) return chains;
-  }
-  return capped(
-    chains.flatMap((c) => g.outer.map((o) => [...c, ...o])),
-    n,
-  );
-}
-
-const subset = (need: Set<string>, cls: string[]) =>
-  [...need].every((c) => cls.includes(c));
-// Ancestors match innermost first, each further out than the last.
-function applies(r: Placed, cls: string[], chain: Chain) {
-  let from = 0;
-  return (
-    subset(r.subject, cls) &&
-    [...r.context].reverse().every((need, i) => {
-      const end = r.child && i === 0 ? 1 : chain.length;
-      const at = chain.slice(from, end).findIndex((a) => subset(need, a));
-      from += at + 1;
-      return at >= 0;
-    })
-  );
-}
-// The rule that sets `prop` on a box with these classes under this chain:
-// `!important` first, then the heavier, then the later.
-function resolve(
-  owners: Owners,
-  cls: string[],
-  chain: Chain,
-  prop: Prop,
-  skip: (r: Placed) => boolean = (r) => r.place !== undefined,
-) {
-  const rank = (r: Placed) => (/!important/.test(r.props[prop] ?? "") ? 1 : 0);
-  return [...cls, "*"]
-    .flatMap((c) => owners.placed.get(c) ?? [])
-    .filter((r) => r.props[prop] !== undefined && !skip(r))
-    .filter((r) => applies(r, cls, chain))
-    .sort(
-      (a, b) => rank(a) - rank(b) || a.weight - b.weight || a.order - b.order,
-    )
-    .at(-1);
-}
-function spaces(owners: Owners, cls: string[], chain: Chain, across: boolean) {
-  const get = (prop: Prop) => resolve(owners, cls, chain, prop)?.props[prop];
-  const flow = flowOf({
-    display: get("display"),
-    direction: get("direction"),
-    rowGap: get("rowGap"),
-    columnGap: get("columnGap"),
-  });
-  return flow.down || (across && flow.across);
-}
-// `across` counts a row's gap too; a margin doubles only a gap it stacks on.
-// A box with a conditional class stacks only if every branch does.
-function stacks(g: Gate, v: View, parent: ts.Node, across = true) {
-  const outer = ancestry(g, v, parent);
-  return boxesAt(g, parent).every(([box, ...outside]) =>
-    outer.every((chain) =>
-      expanded(g.owners, box, parent).every((cls) =>
-        spaces(g.owners, cls, [...outside, ...chain], across),
-      ),
-    ),
-  );
-}
-// What a row's own box can be: each branch of its classes, or of a
-// component's root elements' classes joined with the ones it is handed.
-function boxesOf(g: Gate, n: ts.Node, hops = 3, call?: Call): string[][] {
-  const own = variantsOf(n, call).flatMap((v) => expanded(g.owners, v, n));
-  const def = defOf(n);
-  if (!def || hops === 0 || wraps(g, n)) return own;
-  return rootsOf(def)
-    .flatMap((r) => boxesOf(g, r, hops - 1, { at: n, def }))
-    .flatMap((cls) => own.map((o) => [...cls, ...o]));
-}
-const inFlow = (owners: Owners) => (cls: string[]) =>
-  !cls.some((c) => owners.loose.has(c));
-// The rule that margins `n` vertically inside its stack, if any. A rule
-// written for a child OF this stack already counts the gap.
-function margined(g: Gate, v: View, n: ts.Node) {
-  const step = parentOf(v, n);
-  const peers = step ? peersOf(step.v, n, step.at) : [];
-  const elsewhere = (r: Placed) =>
-    (r.place === "first-child" && peers[0] !== n) ||
-    (r.place === "last-child" && peers.at(-1) !== n);
-  const edge = (cls: string[], chain: Chain, side: "top" | "bottom") => {
-    const won = resolve(g.owners, cls, chain, side, elsewhere);
-    const stack = won?.child ? won.context.at(-1) : undefined;
-    const aware = !!stack && stack.size > 0 && subset(stack, chain[0] ?? []);
-    return aware || isZero(won?.props[side] ?? "0") ? undefined : won;
-  };
-  const boxes = boxesOf(g, n).filter(inFlow(g.owners));
-  return ancestry(g, v, n)
-    .flatMap((chain) =>
-      boxes.flatMap((cls) => [
-        edge(cls, chain, "top"),
-        edge(cls, chain, "bottom"),
-      ]),
-    )
-    .find((m) => m !== undefined)?.selector;
-}
-// Whether any rule margins one of these boxes, whatever box holds it.
-function marginedAnywhere(g: Gate, n: ts.Node) {
-  return boxesOf(g, n)
-    .filter(inFlow(g.owners))
-    .some((cls) =>
-      [...cls, "*"]
-        .flatMap((c) => g.owners.placed.get(c) ?? [])
-        .some(
-          (r) =>
-            subset(r.subject, cls) &&
-            [r.props.top, r.props.bottom].some((m) => !!m && !isZero(m)),
-        ),
-    );
-}
-const has = (n: ts.Node | undefined, set: Set<string>) =>
-  !!n &&
-  opening(n) !== undefined &&
-  variantsOf(n).every((v) => v.some((c) => set.has(c)));
-const ternaries = new WeakMap<ts.SourceFile, ts.ConditionalExpression[]>();
-function exclusive(a: ts.Node, b: ts.Node) {
-  const file = a.getSourceFile();
-  const all =
-    ternaries.get(file) ?? descendants(file).filter(ts.isConditionalExpression);
-  ternaries.set(file, all);
-  return all.some(
-    (c) =>
-      (within(a, c.whenTrue) && within(b, c.whenFalse)) ||
-      (within(a, c.whenFalse) && within(b, c.whenTrue)),
-  );
-}
-const mapped = (k: ts.Node) =>
-  ts.isFunctionLike(k) &&
-  ts.isCallExpression(k.parent) &&
-  /\.(flatMap|map)$/.test(k.parent.expression.getText());
-function content(v: View, k: ts.Node, parent: ts.Node) {
-  if (opening(k)) return enclosingIn(v, k) === parent;
-  if (!childOfJsx(k) || enclosingIn(v, k) !== parent) return false;
-  if (ts.isJsxText(k)) return k.text.trim() !== "";
-  return (
-    ts.isJsxExpression(k) &&
-    !!k.expression &&
-    hostedAt(v, k).length === 0 &&
-    !descendants(k).some(opening)
-  );
-}
-const peersOf = (v: View, n: ts.Node, parent: ts.Node) =>
-  walk(v, parent).filter(
-    (k) => content(v, k, parent) && (k === n || !exclusive(k, n)),
-  );
-function judge(g: Gate, v: View, n: ts.Node, rows: number): Verdict {
-  const step = parentOf(v, n);
-  if (!step) return "spaced";
-  const parent = step.at;
-  if (stacks(g, step.v, parent)) {
-    return stacks(g, step.v, parent, false) && margined(g, v, n)
-      ? "doubled"
-      : "spaced";
-  }
-  const peers = peersOf(step.v, n, parent);
-  const at = peers.indexOf(n);
-  const [prev, next] = [peers[at - 1], peers[at + 1]];
-  const between = [...climb(v, n)].map((s) => s.at);
-  const mappedBetween = between.slice(0, between.indexOf(parent)).some(mapped);
-  if (rows > 1 || mappedBetween) return "flush";
-  if (!prev && !next && !isDialog(g, parent)) {
-    return judge(g, step.v, parent, 1);
-  }
-  const overhead = !prev || has(prev, g.owners.band) || has(n, g.owners.top);
-  const underfoot = !next || has(next, g.owners.top) || has(n, g.owners.band);
-  return overhead && underfoot ? "spaced" : "flush";
-}
-
-// Every element a dialog, or a guest's body, renders, slotted rows included,
-// and the components it hands on to as guests of their own.
-function scopeOf(
-  g: Gate,
-  source: ts.SourceFile,
-  placement: Placement,
-  hosted?: Guest,
-) {
-  const plain = { placement, links: NO_LINKS };
-  const dialogs = hosted ? [] : dialogsIn(source, g.keys);
-  const inside = new Set<ts.Node>();
-  const add = (v: View, r: ts.Node) => {
-    for (const e of [r, ...walk(v, r)].filter(opening)) inside.add(e);
-  };
-  for (const r of hosted ? [hosted.def] : dialogs) add(plain, r);
-  for (const [r, links] of hosted ? [] : placement.frameOf) {
-    const v = { placement, links };
-    const inDialog = [...climb(v, r)].some((s) => isDialog(g, s.at));
-    if (inDialog) add(v, r);
-  }
-  for (const [r, call] of hosted ? [] : placement.unplaced) {
-    const def = defOf(call);
-    if (def && elementsIn(def).some((e) => isDialog(g, e))) add(plain, r);
-  }
-  const via = new Set(hosted ? [...hosted.via, hosted.def] : []);
-  const guests: Guest[] = [];
-  for (const n of inside) {
-    const def = defOf(n);
-    if (!def || via.has(def) || wraps(g, n) || isField(n)) continue;
-    // An unplaced prop is not known to render inside the boxes `g.outer` names.
-    const at = unplacedAt(placement, n) ? { ...g, outer: DIALOG } : g;
-    guests.push({ def, outer: ancestry(at, viewAt(placement, n), n), via });
-  }
-  return { dialogs: dialogs.length, inside, guests };
-}
-
-const hints: Record<Exclude<Verdict, "spaced">, string> = {
-  flush: "stack the rows in a .form-stack, or a component that owns one",
-  doubled: "drop the margin the stack's gap already pays",
-  unplaced:
-    "the gate cannot follow that prop to where it renders; hand the rows as children, or render the prop as {prop} or {prop(…)}",
-};
-function rowAt(g: Gate, placement: Placement, n: ts.Node): Row | undefined {
-  const v = viewAt(placement, n);
-  const step = parentOf(v, n);
-  const where = whereOf(n);
-  const at = `${n.getSourceFile().fileName}:${n.getStart()}`;
-  const count = width(g, n);
-  if (unplacedAt(placement, n)) {
-    const loud = count > 0 || marginedAnywhere(g, n);
-    return loud ? { at, where, verdict: "unplaced" } : undefined;
-  }
-  if (!step) return undefined;
-  const verdict = count > 0 ? judge(g, v, n, count) : undefined;
-  const by = stacks(g, step.v, step.at, false) ? margined(g, v, n) : undefined;
-  if (verdict) return { at, where, verdict, by };
-  // The title's space is the title gate's to judge.
-  if (!by || keyIs(n, HEADING)) return undefined;
-  return { at, where, verdict: "doubled", by };
-}
-function rowsIn(g: Gate, source: ts.SourceFile, hosted?: Guest) {
-  const placement = placementIn(source);
-  const { dialogs, inside, guests } = scopeOf(g, source, placement, hosted);
-  const rows = [...inside].flatMap((n) => rowAt(g, placement, n) ?? []);
-  return { dialogs, rows, guests };
-}
-
-// A component a dialog renders is judged as part of that dialog under each
-// chain of boxes it is called in, and so is what it renders in turn.
-function rowsAcross(
-  entry: readonly ts.SourceFile[],
-  owners: Owners,
-  keys: Keys,
-) {
-  const base: Gate = { ...keys, owners, outer: DIALOG };
-  const rows = new Map<string, Row>();
-  const seen = new Set<string>();
-  let dialogs = 0;
-  let depth = 0;
-  const queue: Guest[] = [];
-  const take = (found: ReturnType<typeof rowsIn>) => {
-    for (const r of found.rows) rows.set(`${r.at} ${r.verdict}`, r);
-    queue.push(...found.guests);
-  };
-  for (const source of entry) {
-    const found = rowsIn(base, source);
-    dialogs += found.dialogs;
-    take(found);
-  }
-  for (; queue.length > 0; depth++) {
-    for (const q of queue.splice(0)) {
-      const key = `${keyOf(q.def)}#${JSON.stringify(q.outer)}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      take(rowsIn({ ...base, outer: q.outer }, q.def.getSourceFile(), q));
-    }
-  }
-  return { rows: [...rows.values()], dialogs, depth };
-}
-
-// A root that is already a row counts as one where the component is used,
-// so it is not followed.
-function drawsLabel(def: ts.Node, hops = 2): boolean {
-  return rootsOf(def).some((r) => {
-    if (tag(r) === "label") return true;
-    const inside = elementsIn(r).filter((e) => enclosing(e) === r);
-    if (inside.some((e) => ["label", "legend"].includes(tag(e)))) return true;
-    const inner = defOf(r);
-    if (!inner || isField(r)) return false;
-    return hops > 0 && drawsLabel(inner, hops - 1);
-  });
-}
-const exported = (def: ts.Node) =>
-  (ts.isFunctionDeclaration(def) || ts.isVariableDeclaration(def)) &&
-  (ts.getCombinedModifierFlags(def) & ts.ModifierFlags.Export) !== 0;
-const labelledIn = (source: ts.SourceFile) =>
-  [...declarations(source)]
-    .filter(([name, def]) => /^[A-Z]/.test(name) && exported(def))
-    .filter(([, def]) => drawsLabel(def))
-    .map(([name]) => name);
+import { classVariants } from "../testing/classnames";
 
 // Whichever test asks first builds the tree's census, inside its own timeout.
 const TREE_BUILD = 60_000;
@@ -694,6 +73,22 @@ function Explain({ body }) { return <Modal intent="form"><div className="form-st
 function Opened({ body, open }) { return <Modal intent="form">{open && body(1)}</Modal>; }
 function Kept({ body }) { const shown = body(1); return <Modal intent="form">{shown}</Modal>; }
 function Line({ control }) { return <div>{control}</div>; }
+function Passed({ className }) { return <div className={className}><div className="s"><p /><div className="m" /></div></div>; }
+function Merge({ className }) { return <div className={className}><p /><div className="m" /></div>; }
+function Forward({ className }) { return <Merge className={className} />; }
+function Lined({ look }) { return <div className={look}><Field /></div>; }
+function Paired({ look }) { return <div><p /><div className={look} /></div>; }
+function Gapped({ edge }) { return <div className="s"><p /><div className={edge} /></div>; }
+function Banded({ look }) { return <div><div className={look} /><Field /></div>; }
+function Hands({ edge }) { return <View slot={<div className={edge} />} />; }
+const W2 = Wrapped;
+const R2 = Rows;
+const Ref2 = Refusals;
+const O2 = Outer;
+const F2 = Field;
+function Ping() { return <div className="s"><p /><div className="m" /><Pong /></div>; }
+function Pong() { return <div className="f"><Ping /></div>; }
+function Tree() { return <div className="s"><p /><div className="m" />{open && <div className="f"><Tree /></div>}</div>; }
 function fields() { return <><p /><Field /></>; }
 const held = <><p /><Field /></>;
 export { Modal as Pane };`;
@@ -725,6 +120,12 @@ const HOSTED = inModal('<div className="f"><Wrapped /></div>');
 const HOSTED_STACK = `.f ${STACK} ${MARGIN}`;
 const HOSTED_MARGIN = `${STACK} .f ${MARGIN}`;
 type RowCase = { jsx: string; verdict: string; sheet: string };
+const tempDirs: string[] = [];
+const tempDir = (prefix: string) => {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+};
 
 // Three files, so a guest's guest is two files away from its dialog.
 function plantedAcross(
@@ -732,7 +133,7 @@ function plantedAcross(
   rows = "<div><p /><Field /></div>",
   own = owners(),
 ) {
-  const dir = mkdtempSync(join(tmpdir(), "dialogrows-"));
+  const dir = tempDir("dialogrows-");
   const ds = relative(dir, join(srcDir, "design-system"));
   writeFileSync(
     join(dir, "a.tsx"),
@@ -753,7 +154,7 @@ function plantedAcross(
 
 // A modal.tsx whose modalClass names and orders its parameters its own way.
 function plantedModal(body: string) {
-  const dir = mkdtempSync(join(tmpdir(), "dialogbox-"));
+  const dir = tempDir("dialogbox-");
   const path = join(dir, "modal.tsx");
   writeFileSync(
     path,
@@ -771,6 +172,10 @@ const classCall = (expression: string) => {
 };
 
 describe("a dialog's field rows have an owner for the space between them", () => {
+  afterAll(() => {
+    for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
+  });
+
   it(
     "walks every dialog the text spells, wrappers included",
     () => {
@@ -823,6 +228,18 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     expect(plantedAcross("<B />", stack, scoped).verdicts).toBe("flush");
   });
 
+  it("refuses a guest fan-out past its scope cap", () => {
+    const levels = Math.ceil(Math.log2(SCOPE_CAP));
+    const level = (i: number) =>
+      `function L${i}() { return <><div className="a"><L${i + 1} /></div><div className="b"><L${i + 1} /></div></>; }`;
+    const chain = Array.from({ length: levels }, (_, i) => level(i));
+    const text = `${PRELUDE}\nconst A = () => ${inModal("<L0 />")};\n${chain.join("\n")}`;
+    const source = parseSource(AT, text);
+    expect(() =>
+      rowsAcross([source], ownersIn([STACK]), keysOf(source)),
+    ).toThrow(/more than \d+ guest scopes to judge; call this component/);
+  });
+
   it("names every design-system control that draws its own label", () => {
     const ds = files().filter(
       (f) => f.includes("/design-system/") && !f.endsWith(".stories.tsx"),
@@ -833,9 +250,12 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     );
     const planted = parseSource(
       AT,
-      "export function Pick() { return <label><input /></label>; }",
+      `export function Pick() { return <label><input /></label>; }
+const P2 = Pick;
+export function Wrap() { return <P2 />; }
+export const Named = Pick;`,
     );
-    expect(labelledIn(planted)).toEqual(["Pick"]);
+    expect(labelledIn(planted)).toEqual(["Pick", "Wrap", "Named"]);
   });
 
   it("reads the Modal box classes by parameter position", () => {
@@ -979,6 +399,24 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /></>;`;
     ${"ends at a component that renders itself"}                | ${inModal("<Nest />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"keeps an unplaced prop out of another call's boxes"}     | ${'<><Modal intent="form"><div className="f"><HostsView /></div></Modal><Kept body={(n) => <Wrapped />} /></>'}           | ${"no rows"}              | ${HOSTED_STACK}
     ${"keeps a guest's unplaced prop out of its call's boxes"}  | ${inModal('<div className="f"><HostsView /></div>')}                                                                      | ${"no rows"}              | ${HOSTED_STACK}
+    ${"reads a guest under the class its call hands its root"}  | ${inModal('<Passed className="f" />')}                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
+    ${"reads a guest's root as the stack its call makes it"}    | ${inModal('<Merge className="s" />')}                                                                                     | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"judges a guest once for each class its calls hand"}      | ${inModal('<Merge className="t" /><Merge className="s" />')}                                                              | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"hands a class on through a guest's own call"}            | ${inModal('<Forward className="s" />')}                                                                                   | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"counts a root a call's class makes a form row"}          | ${inModal('<p /><Lined look="form-row" />')}                                                                              | ${"flush spaced"}         | ${""}
+    ${"counts a guest's element its call makes a form row"}     | ${inModal('<Paired look="form-row" />')}                                                                                  | ${"flush"}                | ${""}
+    ${"catches a margin a guest's call hands an element"}       | ${inModal('<Gapped edge="m" />')}                                                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads a band a guest's call hands the row above"}        | ${inModal('<Banded look="band" />')}                                                                                      | ${"spaced"}               | ${".band { margin-bottom: var(--space-3) }"}
+    ${"calls a margin a guest's call hands an unplaced prop"}   | ${inModal('<Hands edge="m" />')}                                                                                          | ${"unplaced"}             | ${MARGIN}
+    ${"follows a guest renamed by an alias"}                    | ${inModal('<div className="f"><W2 /></div>')}                                                                             | ${"doubled"}              | ${HOSTED_STACK}
+    ${"counts the rows an aliased component renders"}           | ${inModal("<R2 />")}                                                                                                      | ${"flush"}                | ${""}
+    ${"catches a margin on an aliased component's root"}        | ${"<ConfirmModal><Ref2 /></ConfirmModal>"}                                                                                | ${"doubled"}              | ${`${FORM_STACK} ${MARGIN}`}
+    ${"places a prop through an aliased component"}             | ${inModal("<O2 body={<><p /><Field /></>} />")}                                                                           | ${"spaced"}               | ${""}
+    ${"reads an alias of a field as a field"}                   | ${inModal("<p /><F2 />")}                                                                                                 | ${"flush"}                | ${""}
+    ${"reads the body of a component a call classes as a row"}  | ${inModal('<Wrapped className="form-row" />')}                                                                            | ${"flush doubled"}        | ${`${STACK} ${MARGIN}`}
+    ${"reads that body when the call sits in an unplaced prop"} | ${inModal('<View slot={<Wrapped className="form-row" />} />')}                                                            | ${"unplaced doubled"}     | ${`${STACK} ${MARGIN}`}
+    ${"judges a component again where a partner hosts it"}      | ${inModal("<Ping />")}                                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
+    ${"judges a component again where it hosts itself"}         | ${inModal("<Tree />")}                                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(
       verdict,
