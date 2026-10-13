@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // postMultipart sends a file upload and answers the parsed body, or throws the
 // server's problem. The generated client serializes JSON only, so a file part
