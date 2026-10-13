@@ -99,8 +99,8 @@ func TestASliceWritesTheRunRowOncePerFlushNotPerRow(t *testing.T) {
 	e := NewLeasedEngine(counted, leased, newMapWriters(counted, leased.Run))
 	// A clock that never moves, so only rows decide when the slice flushes.
 	stopped := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
-	e.now = func() time.Time { return stopped }
-	if done, err := e.RunSlice(ctx, leased.Run, contactSource(rows), Budget{FlushRows: flushRows}); err != nil || !done {
+	b := Budget{FlushRows: flushRows, Clock: func() time.Time { return stopped }}
+	if done, err := e.RunSlice(ctx, leased.Run, contactSource(rows), b); err != nil || !done {
 		t.Fatalf("RunSlice = done %v, %v; want the run finished", done, err)
 	}
 	flushes := rows / flushRows

@@ -212,7 +212,7 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	if err != nil {
 		return s.settle(ctx, system, runs, lease, err)
 	}
-	done, err := work(actorCtx, importSlice{db: db, runs: runs, lease: lease, run: run, budget: importSliceBudgetFrom(s.now())})
+	done, err := work(actorCtx, importSlice{db: db, runs: runs, lease: lease, run: run, budget: importSliceBudgetOn(s.now)})
 	if err == nil && !done {
 		return importSliceResult{end: importSliceContinues}, nil
 	}

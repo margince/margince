@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -90,6 +91,38 @@ func TestARowThatFailsFailsTheLeasedRunWithWhatLandedBeforeIt(t *testing.T) {
 	if got.Checkpoint != 1 || createdOf(got) != 1 {
 		t.Errorf("the failed run reads checkpoint %d with %d created, want the one row before the failure kept",
 			got.Checkpoint, createdOf(got))
+	}
+}
+
+// A slice whose setup or first read outlasts its time budget still lands a move
+// before it stops, so a run of seven moves ends in at most seven slices. Only the
+// first slice counts the source; later ones read the totals its flush recorded.
+func TestASliceWhoseSetupOutlastsItsBudgetStillLandsARow(t *testing.T) {
+	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
+	s := NewRunStore(db)
+	l := approvedRun(ctx, t, s)
+	clock := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	w := newMapWriters(s, l.Run)
+	w.reconciling = func() { clock = clock.Add(time.Hour) }
+	w.landing = func() { clock = clock.Add(2 * time.Second) }
+	src := twoObjectSource()
+	src.reading = func() { clock = clock.Add(time.Hour) }
+	b := Budget{Time: time.Second, Clock: func() time.Time { return clock }}
+
+	const moves = 7
+	slices := 0
+	for done := false; !done; slices++ {
+		if slices == moves {
+			t.Fatalf("%d slices did not finish a run of %d moves; every slice must land one", slices, moves)
+		}
+		before := mustGetStaged(ctx, t, s, l.Run).Checkpoint
+		done = sliceOf(ctx, t, s, l, w, src, b)
+		if after := mustGetStaged(ctx, t, s, l.Run).Checkpoint; !done && after <= before {
+			t.Fatalf("slice %d left the checkpoint at %d; a slice lands a move before its budget stops it", slices+1, after)
+		}
+	}
+	if src.counted != 1 {
+		t.Errorf("%d slices counted the source %d times, want once", slices, src.counted)
 	}
 }
 

@@ -8,17 +8,41 @@ import (
 	"time"
 )
 
-// Budget bounds one slice; a zero field is no bound. FlushRows and FlushEvery
+// Budget bounds one slice; a zero field is no bound. Time runs from when the
+// slice is ready to walk, so setup never spends it. FlushRows and FlushEvery
 // are how often a leased slice writes its progress before the slice ends.
 type Budget struct {
 	Rows       int
-	Until      time.Time
+	Time       time.Duration
 	FlushRows  int
 	FlushEvery time.Duration
+	// Clock is the slice's one clock; nil is the wall clock.
+	Clock func() time.Time
+	until time.Time
 }
 
-func (b Budget) spent(moves int, now time.Time) bool {
-	return (b.Rows > 0 && moves >= b.Rows) || (!b.Until.IsZero() && !now.Before(b.Until))
+func (b Budget) now() time.Time {
+	if b.Clock == nil {
+		return time.Now()
+	}
+	return b.Clock()
+}
+
+// started is the budget of a slice whose walk begins now.
+func (b Budget) started() Budget {
+	if b.Time > 0 {
+		b.until = b.now().Add(b.Time)
+	}
+	return b
+}
+
+// spent answers whether a started slice ends before its next move. A slice
+// lands one move first, so even a slow setup moves the run.
+func (b Budget) spent(moves int) bool {
+	if moves == 0 {
+		return false
+	}
+	return (b.Rows > 0 && moves >= b.Rows) || (!b.until.IsZero() && !b.now().Before(b.until))
 }
 
 func (b Budget) flushDue(moves int, since time.Duration) bool {
@@ -83,20 +107,16 @@ type walk struct {
 	object   string
 	replayed map[string]bool
 	budget   Budget
-	now      func() time.Time
 	// moves counts this slice's rows and edges; sinceFlush those since the
 	// last flush, which flushedAt dates.
 	moves, sinceFlush int
 	flushedAt         time.Time
 }
 
-func newWalk(id RunID, run Run, b Budget, now func() time.Time) *walk {
-	if now == nil {
-		now = time.Now
-	}
+func newWalk(id RunID, run Run, b Budget) *walk {
 	wk := &walk{
 		runID: id, start: run.Checkpoint, cursor: run.Checkpoint, legStart: run.Checkpoint,
-		budget: b, now: now, flushedAt: now(),
+		budget: b, flushedAt: b.now(),
 	}
 	if run.Progress != nil {
 		wk.counts = run.Progress.Counts
@@ -158,7 +178,7 @@ func (wk *walk) startLeg() {
 	if wk.cur != nil {
 		wk.cur = &ObjectReport{Object: wk.cur.Object, MirrorCount: wk.cur.MirrorCount}
 	}
-	wk.legStart, wk.sinceFlush, wk.flushedAt = wk.cursor, 0, wk.now()
+	wk.legStart, wk.sinceFlush, wk.flushedAt = wk.cursor, 0, wk.budget.now()
 }
 
 func (wk *walk) progress() Progress {

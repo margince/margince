@@ -19,7 +19,7 @@ func newTestLinkResolver(t *testing.T) *linkResolver {
 	t.Helper()
 	r := &linkResolver{
 		pending: map[linkKey]bool{}, landed: map[linkKey]ids.UUID{}, cache: map[linkKey]linkAnswer{},
-		names: map[string]pendingName{},
+		names: map[string]pendingName{}, named: map[linkKey]func(context.Context) (ids.UUID, bool){},
 	}
 	none := func(context.Context, string, string) (linkAnswer, error) { return linkAnswer{}, nil }
 	r.byBinding, r.byNaturalKey, r.byID = none, none, none
@@ -59,6 +59,28 @@ func TestARowNamedByIDAnswersItsRef(t *testing.T) {
 	r.markLanded("company", " CO-7", id)
 	if got, err := r.resolveCompany(context.Background(), "CO-7"); err != nil || !got.Found || got.ID != id {
 		t.Fatalf("got %+v err %v, want the record the row named", got, err)
+	}
+}
+
+// A company an earlier slice landed by id is checked only when a link asks for
+// its ref, and once, so a resumed slice pays for the links it writes.
+func TestANamedCompanyIsCheckedOnlyWhenALinkAsksForIt(t *testing.T) {
+	r := newTestLinkResolver(t)
+	id := ids.NewV7()
+	checked := map[string]int{}
+	for _, ref := range []string{"CO-1", "CO-2"} {
+		r.markNamed("company", ref, func(context.Context) (ids.UUID, bool) {
+			checked[ref]++
+			return id, true
+		})
+	}
+	for range 2 {
+		if got, err := r.resolveCompany(context.Background(), "CO-1"); err != nil || !got.Found || got.ID != id {
+			t.Fatalf("got %+v err %v, want the record the row named", got, err)
+		}
+	}
+	if len(checked) != 1 || checked["CO-1"] != 1 {
+		t.Errorf("checked %v, want CO-1 once and nothing no link asked for", checked)
 	}
 }
 

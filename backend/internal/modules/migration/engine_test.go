@@ -131,11 +131,16 @@ type fakeSource struct {
 	objects map[string][]Row
 	order   []string
 	assocs  []Assoc
+	// counted is how many times the source was counted.
+	counted int
+	// reading, when set, runs as each page is read: the time a read takes.
+	reading func()
 }
 
 func (f *fakeSource) Objects() []string { return f.order }
 
 func (f *fakeSource) Counts(context.Context) (map[string]int, error) {
+	f.counted++
 	c := make(map[string]int, len(f.objects))
 	for k, rows := range f.objects {
 		c[k] = len(rows)
@@ -144,6 +149,9 @@ func (f *fakeSource) Counts(context.Context) (map[string]int, error) {
 }
 
 func (f *fakeSource) Rows(_ context.Context, object string, offset, limit int) ([]Row, error) {
+	if f.reading != nil {
+		f.reading()
+	}
 	rows := f.objects[object]
 	if offset >= len(rows) {
 		return nil, nil

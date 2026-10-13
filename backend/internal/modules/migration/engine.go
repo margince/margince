@@ -138,7 +138,6 @@ type Engine struct {
 	// lease is set for a worker's slice, which writes fenced flushes; nil for
 	// the flip, which checkpoints every row.
 	lease *leasedRecords
-	now   func() time.Time
 }
 
 // NewEngine wires the engine over its two seams.
@@ -232,7 +231,7 @@ func (e *Engine) walkSlice(ctx context.Context, runID RunID, src Source, b Budge
 	if run.Status != StatusRunning {
 		return nil, false, fmt.Errorf("migration run %s is %s, not %s: %w", runID, run.Status, StatusRunning, apperrors.ErrConflict)
 	}
-	wk := newWalk(runID, run, b, e.now)
+	wk := newWalk(runID, run, b)
 	// Unconditionally, before the loop can duplicate anything: adopt
 	// records an earlier attempt created but never got to record.
 	//
@@ -245,13 +244,14 @@ func (e *Engine) walkSlice(ctx context.Context, runID RunID, src Source, b Budge
 	if err := e.w.ReconcileIdentities(ctx); err != nil {
 		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: reconciling a previous attempt's records: %w", err))
 	}
-	if wk.totals, err = src.Counts(ctx); err != nil {
+	wk.objects = src.Objects()
+	if wk.totals, err = totalsOf(ctx, src, wk.objects, run.Progress); err != nil {
 		return nil, false, e.fail(ctx, led, wk, fmt.Errorf("migration run: counting source rows: %w", err))
 	}
-	wk.objects = src.Objects()
 	if wk.replayed, err = led.replayed(ctx); err != nil {
 		return nil, false, err
 	}
+	wk.budget = b.started()
 	seen := 0 // global index of the first row of the object about to be walked
 	for _, object := range wk.objects {
 		next, stopped, err := e.importObject(ctx, led, wk, src, object, seen)
@@ -338,6 +338,22 @@ func (e *Engine) link(ctx context.Context, led ledger, wk *walk, assocs []Assoc,
 		}
 	}
 	return false, nil
+}
+
+// totalsOf is each object's row count. A run's source never changes, so the
+// totals its first flush recorded stand for every later slice.
+func totalsOf(ctx context.Context, src Source, objects []string, recorded *Progress) (map[string]int, error) {
+	if recorded == nil || len(recorded.Objects) != len(objects)+1 {
+		return src.Counts(ctx)
+	}
+	totals := make(map[string]int, len(objects))
+	for i, object := range objects {
+		if recorded.Objects[i].Object != object {
+			return src.Counts(ctx)
+		}
+		totals[object] = recorded.Objects[i].RowsTotal
+	}
+	return totals, nil
 }
 
 func (e *Engine) ensureRow(ctx context.Context, object string, row Row) (EnsureResult, error) {

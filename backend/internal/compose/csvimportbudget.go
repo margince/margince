@@ -67,12 +67,13 @@ const (
 	importWriteMaxWorkers = 1
 )
 
-// importSliceBudgetFrom is the budget of a slice that starts at now.
-func importSliceBudgetFrom(now time.Time) migration.Budget {
+// importSliceBudgetOn is a slice's budget, timed on clock.
+func importSliceBudgetOn(clock func() time.Time) migration.Budget {
 	return migration.Budget{
 		Rows:       importSliceRows,
-		Until:      now.Add(importSliceBudget),
+		Time:       importSliceBudget,
 		FlushRows:  importFlushRows,
 		FlushEvery: importFlushEvery,
+		Clock:      clock,
 	}
 }

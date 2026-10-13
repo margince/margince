@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -32,9 +33,13 @@ func TestASliceEndsBeforeItsJobTimesOut(t *testing.T) {
 func TestASliceBudgetEndsBySlicedRowsOrTime(t *testing.T) {
 	t.Parallel()
 	start := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
-	got := importSliceBudgetFrom(start)
-	want := migration.Budget{Rows: 500, Until: start.Add(12 * time.Second), FlushRows: 500, FlushEvery: 2 * time.Second}
-	if got != want {
+	got := importSliceBudgetOn(func() time.Time { return start })
+	if got.Clock == nil || !got.Clock().Equal(start) {
+		t.Fatal("the budget does not keep the slicer's clock")
+	}
+	got.Clock = nil
+	want := migration.Budget{Rows: 500, Time: 12 * time.Second, FlushRows: 500, FlushEvery: 2 * time.Second}
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("budget = %+v, want %+v", got, want)
 	}
 }

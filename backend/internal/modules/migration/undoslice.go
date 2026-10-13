@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,7 +40,7 @@ func (s *RunStore) UndoSlice(ctx context.Context, l Lease, w UndoWriters, b Budg
 		return false, fmt.Errorf("import run %s is undoing with no recorded progress: %w", l.Run, apperrors.ErrConflict)
 	}
 	rep := *run.UndoReport
-	done, err := s.undoPages(ctx, l, w, &rep, run.Checkpoint, b)
+	done, err := s.undoPages(ctx, l, w, &rep, run.Checkpoint, b.started())
 	if err != nil || !done {
 		return false, err
 	}
@@ -77,7 +76,7 @@ func (s *RunStore) undoPages(ctx context.Context, l Lease, w UndoWriters, rep *U
 			}
 			processed++
 			moves++
-			if b.spent(moves, time.Now()) {
+			if b.spent(moves) {
 				return false, s.advanceUndoCheckpoint(ctx, l, processed, *rep)
 			}
 		}

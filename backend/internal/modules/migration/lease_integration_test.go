@@ -33,6 +33,8 @@ type mapWriters struct {
 	dieAt string
 	// landing, when set, runs as each row lands: the time a write takes.
 	landing func()
+	// reconciling, when set, runs as a slice repairs its identities: setup time.
+	reconciling func()
 }
 
 func newMapWriters(s *RunStore, run RunID) *mapWriters {
@@ -44,7 +46,12 @@ func (w *mapWriters) Exists(ctx context.Context, object, ext string) (bool, erro
 	return found, err
 }
 
-func (*mapWriters) ReconcileIdentities(context.Context) error { return nil }
+func (w *mapWriters) ReconcileIdentities(context.Context) error {
+	if w.reconciling != nil {
+		w.reconciling()
+	}
+	return nil
+}
 
 func (w *mapWriters) Ensure(ctx context.Context, object string, row Row) (EnsureResult, error) {
 	if row.ExternalID == w.dieAt {
@@ -91,10 +98,15 @@ func approvedRun(ctx context.Context, t *testing.T, s *RunStore) Lease {
 // slice claims the lease and runs one slice of it, as the commit job does.
 func slice(ctx context.Context, t *testing.T, s *RunStore, l Lease, w Writers, b Budget) bool {
 	t.Helper()
+	return sliceOf(ctx, t, s, l, w, twoObjectSource(), b)
+}
+
+func sliceOf(ctx context.Context, t *testing.T, s *RunStore, l Lease, w Writers, src Source, b Budget) bool {
+	t.Helper()
 	if _, err := s.Claim(ctx, l); err != nil {
 		t.Fatalf("Claim: %v", err)
 	}
-	done, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, twoObjectSource(), b)
+	done, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, src, b)
 	if err != nil {
 		t.Fatalf("RunSlice: %v", err)
 	}
@@ -164,12 +176,11 @@ func TestASliceStopsAtItsBudgetAndResumesAtItsCursor(t *testing.T) {
 	start := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	clock := start
 	w.landing = func() { clock = start.Add(time.Second) }
-	e := NewLeasedEngine(s, l, w)
-	e.now = func() time.Time { return clock }
 	if _, err := s.Claim(ctx, l); err != nil {
 		t.Fatalf("Claim: %v", err)
 	}
-	done, err := e.RunSlice(ctx, l.Run, twoObjectSource(), Budget{Until: start.Add(time.Second)})
+	b := Budget{Time: time.Second, Clock: func() time.Time { return clock }}
+	done, err := NewLeasedEngine(s, l, w).RunSlice(ctx, l.Run, twoObjectSource(), b)
 	if err != nil || done {
 		t.Fatalf("a slice past its deadline = done %v, %v; want it stopped", done, err)
 	}

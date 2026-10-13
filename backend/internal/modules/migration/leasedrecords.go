@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,7 +23,7 @@ type leasedRecords struct {
 
 // NewLeasedEngine wires an engine whose every run write is fenced on the lease.
 func NewLeasedEngine(runs *RunStore, l Lease, w Writers) *Engine {
-	return &Engine{runs: runs, w: w, lease: &leasedRecords{runs: runs, lease: l}, now: time.Now}
+	return &Engine{runs: runs, w: w, lease: &leasedRecords{runs: runs, lease: l}}
 }
 
 func (r *leasedRecords) open(ctx context.Context, id RunID) (Run, error) {
@@ -73,7 +72,7 @@ func (*leasedRecords) landed(context.Context, *walk) error { return nil }
 func (r *leasedRecords) moved(ctx context.Context, wk *walk) error {
 	wk.moves++
 	wk.sinceFlush++
-	if wk.budget.flushDue(wk.sinceFlush, wk.now().Sub(wk.flushedAt)) {
+	if wk.budget.flushDue(wk.sinceFlush, wk.budget.now().Sub(wk.flushedAt)) {
 		return r.flush(ctx, wk)
 	}
 	return nil
@@ -83,7 +82,7 @@ func (r *leasedRecords) stop(ctx context.Context, wk *walk) (bool, error) {
 	if ctx.Err() != nil {
 		return true, errors.Join(ctx.Err(), r.stopFlush(ctx, wk))
 	}
-	if wk.budget.spent(wk.moves, wk.now()) {
+	if wk.budget.spent(wk.moves) {
 		return true, r.flush(ctx, wk)
 	}
 	return false, nil
