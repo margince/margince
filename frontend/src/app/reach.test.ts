@@ -38,7 +38,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = resolve(here, "..");
 const frontendRoot = resolve(srcRoot, "..");
 const extensionsDir = resolve(frontendRoot, "..", "extensions");
-const routerModule = join(here, "router.tsx");
+const routerModule = join(here, "..", "lib", "router.tsx");
 const thisGate = fileURLToPath(import.meta.url);
 
 /**
