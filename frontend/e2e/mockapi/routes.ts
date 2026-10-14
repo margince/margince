@@ -21,10 +21,13 @@ import {
   automationCatalog,
   brandt,
   captureActivity,
+  captureHealth,
+  extensionIngestHealth,
   installationJurisdiction,
   jobHealth,
   knowledgeCorpora,
   passports,
+  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
@@ -298,6 +301,12 @@ export const routes: readonly MockRoute[] = [
   { method: "GET", path: "/ai/task-overrides", handle: reply({}) },
   { path: "/ai/routing/schema", handle: reply({}) },
   { path: "/admin/job-health", handle: reply(jobHealth) },
+  { path: "/admin/capture-health", handle: reply(captureHealth) },
+  { path: "/admin/recovery-health", handle: reply(recoveryHealth) },
+  {
+    path: "/admin/extension-ingest-health",
+    handle: reply(extensionIngestHealth),
+  },
   { path: "/capture/settings", handle: capture.captureSettings },
   { path: "/capture/senders", handle: capture.senders },
   {

@@ -991,6 +991,82 @@ export const jobHealth: components["schemas"]["JobHealth"] = {
   ],
 };
 
+// A mailbox row and every sweep on schedule, so the sweeps measure the
+// card's tables rather than its failed read.
+export const captureHealth: components["schemas"]["CaptureHealth"] = {
+  generated_at: "2026-07-05T06:20:00Z",
+  mailboxes: [
+    {
+      user_id: "u1",
+      display_name: "Lena Fischer",
+      contacts_awaiting_decision: 0,
+      oldest_contact_age_seconds: null,
+      threads_awaiting_verdict: 0,
+      oldest_thread_age_seconds: null,
+    },
+  ],
+  classifier: { pending: 0, unsure: 0, exhausted: 0 },
+  held_meetings: { count: 0 },
+  sweeps: [
+    {
+      sweep: "settled_thread_verdicts",
+      cadence_seconds: 3_600,
+      last_succeeded_at: "2026-07-05T06:00:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:00:00Z",
+        processed: 14,
+        cap_hit: false,
+      },
+    },
+    {
+      sweep: "stranded_contacts",
+      cadence_seconds: 3_600,
+      last_succeeded_at: "2026-07-05T06:05:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:05:00Z",
+        processed: 3,
+        cap_hit: false,
+      },
+    },
+    {
+      sweep: "filed_meeting_holds",
+      cadence_seconds: 900,
+      last_succeeded_at: "2026-07-05T06:15:00Z",
+      last_run: {
+        outcome: "ok",
+        finished_at: "2026-07-05T06:15:00Z",
+        processed: 0,
+        cap_hit: false,
+      },
+    },
+  ],
+};
+
+export const recoveryHealth: components["schemas"]["RecoveryHealth"] = {
+  generated_at: "2026-07-05T06:20:00Z",
+  recovery_target_seconds: 14_400,
+  data_loss_target_seconds: 3_600,
+  last_drill: {
+    started_at: "2026-07-01T02:00:00Z",
+    finished_at: "2026-07-01T03:10:00Z",
+    restored_to: "2026-07-01T01:45:00Z",
+    outcome: "passed",
+    operator: "Lena Fischer",
+    notes: null,
+    recovery_seconds: 4_200,
+    data_loss_seconds: 900,
+  },
+};
+
+export const extensionIngestHealth: components["schemas"]["ExtensionIngestHealth"] =
+  {
+    generated_at: "2026-07-05T06:20:00Z",
+    window_days: 7,
+    units: [],
+  };
+
 export const publicSlots = [
   { start: "2026-07-06T09:00:00Z", end: "2026-07-06T09:30:00Z" },
   { start: "2026-07-06T10:00:00Z", end: "2026-07-06T10:30:00Z" },
