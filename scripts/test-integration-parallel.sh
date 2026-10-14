@@ -168,6 +168,9 @@ fi
 prebuild_log="$(mktemp)"
 ( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
 prebuild_pid=$!
+# A failed template build exits here under set -e; stop and reap the compiler
+# rather than leave it running. The lane's own EXIT trap below replaces this.
+trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
 
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
