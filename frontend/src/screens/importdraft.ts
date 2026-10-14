@@ -182,7 +182,7 @@ function isConflict(error: unknown): boolean {
  * So two quick edits never race each other into a conflict.
  * A conflict can only come from another tab.
  */
-export function useDraftWrites() {
+export function useDraftWrites(onConflict?: () => void) {
   const queryClient = useQueryClient();
   const tail = useRef<Promise<unknown>>(Promise.resolve());
   const carried = useRef<{ id: string; version: number } | null>(null);
@@ -220,6 +220,7 @@ export function useDraftWrites() {
     return run.catch((error: unknown) => {
       if (isConflict(error)) {
         setConflict(true);
+        onConflict?.();
         queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
       }
       throw error;

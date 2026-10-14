@@ -66,7 +66,12 @@ export function useImportWizard() {
   const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
   const cancelRun = useStopImportTest();
-  const writes = useDraftWrites();
+  // The refused save's edits lose to the other tab: the screen shows what the
+  // run holds and nothing is re-sent over it.
+  const writes = useDraftWrites(() => {
+    latest.current = NO_EDITS;
+    setEditsState(NO_EDITS);
+  });
   useLandedRecords([status]);
 
   // An edit reads the latest edits, not the render's, so two edits in one
@@ -128,15 +133,6 @@ export function useImportWizard() {
     sent.current = settled;
     if (toSave) save(runId, toSave);
   }, [settled, runId, draftOpen, toSave, save]);
-
-  // The refused save's edits are the other tab's loser: the screen shows what
-  // the run holds, and nothing is re-sent over it.
-  const { conflict } = writes;
-  useEffect(() => {
-    if (!conflict) return;
-    latest.current = NO_EDITS;
-    setEditsState(NO_EDITS);
-  }, [conflict]);
 
   const test = useMutation({
     mutationFn: async ({ id, patch }: Test) => {
