@@ -138,6 +138,21 @@ describe("the lead page's head", () => {
     expect(within(strip).getByRole("button", { name: "Assign" })).toBeTruthy();
   });
 
+  it("names an imported lead's upload as its source, never the stamp", async () => {
+    stubLead({
+      source: "mirror:csv:pipedrive-export:lead:l-7",
+      source_label: null,
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
+    const strip = document.querySelector(".record-facts") as HTMLElement;
+    expect(
+      within(strip).getByText("Imported from pipedrive-export"),
+    ).toBeTruthy();
+    expect(strip.textContent).not.toMatch(/mirror/i);
+  });
+
   it("puts a terminal status in its own tone", async () => {
     stubLead({
       status: "disqualified",

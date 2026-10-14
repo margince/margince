@@ -158,6 +158,7 @@ var tableOwners = map[string]string{
 	// compose's hourly deal_scout pass through deals.RecordSuggestionTx, and
 	// decided by a rep through the deals store.
 	"deal_suggestion":          "internal/modules/deals",
+	"legal_review":             "internal/modules/deals",
 	"tag_suggestion":           "internal/modules/collections",
 	"tag_suggestion_evidence":  "internal/modules/collections",
 	"deal_suggestion_evidence": "internal/modules/deals",

@@ -9279,7 +9279,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_tags, cannot_write_type, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_unset, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_not_found, link_not_found_dropped, linkedin_held, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, record_archived, row_key_empty, row_key_repeated, size_band_invalid, tag_created, tag_name_invalid, tag_new, value_refused, value_unreadable]
+      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_tags, cannot_write_type, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_unset, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_not_found, link_not_found_dropped, linkedin_held, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, size_band_invalid, tag_created, tag_name_invalid, tag_new, value_refused, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.'
     CreateImportRunRequest:
       type: object
@@ -14766,7 +14766,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
     StageEvidenceAuthorSide:
       type: string
       description: |-
@@ -14819,7 +14819,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     TransitionPolicyList:
       type: object
       required: [data, automation_enabled]

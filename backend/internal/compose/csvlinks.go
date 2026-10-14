@@ -54,12 +54,10 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
-	// landed holds the rows of this run that named their record by id. They
-	// get no identity row, because undo archives every record the map names.
+	// landed holds the rows of this slice that named their record by id, so a
+	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
-	// named holds the rows an earlier slice landed by id, checked on first use.
-	named map[linkKey]func(context.Context) (ids.UUID, bool)
-	cache map[linkKey]linkAnswer
+	cache  map[linkKey]linkAnswer
 	// employers caches one answer per folded company name, bounded by the
 	// names the file carries rather than by the estate.
 	employers map[string]employerCandidate
@@ -77,7 +75,6 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 		pool:         db.Pool(),
 		pending:      map[linkKey]bool{},
 		landed:       map[linkKey]ids.UUID{},
-		named:        map[linkKey]func(context.Context) (ids.UUID, bool){},
 		cache:        map[linkKey]linkAnswer{},
 		employers:    map[string]employerCandidate{},
 		names:        map[string]pendingName{},
@@ -140,15 +137,6 @@ func (p pendingName) over(hit employerCandidate) employerCandidate {
 func (r *linkResolver) markLanded(object, ref string, id ids.UUID) {
 	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
 	r.landed[key] = id
-	delete(r.named, key)
-	delete(r.cache, key)
-}
-
-// markNamed records a row an earlier slice landed by id. Its record is checked
-// only when a link asks for its ref, so a slice pays for the links it writes.
-func (r *linkResolver) markNamed(object, ref string, check func(context.Context) (ids.UUID, bool)) {
-	key := linkKey{Object: object, Key: strings.TrimSpace(ref)}
-	r.named[key] = check
 	delete(r.cache, key)
 }
 
@@ -170,12 +158,6 @@ func (r *linkResolver) resolveCompany(ctx context.Context, raw string) (linkAnsw
 func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, error) {
 	if r.pending[key] {
 		return linkAnswer{Pending: true}, nil
-	}
-	if check, ok := r.named[key]; ok {
-		delete(r.named, key)
-		if id, lands := check(ctx); lands {
-			r.landed[key] = id
-		}
 	}
 	if id, ok := r.landed[key]; ok {
 		return linkAnswer{ID: id, Found: true}, nil

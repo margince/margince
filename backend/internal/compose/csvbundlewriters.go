@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -169,48 +168,6 @@ func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy ma
 		}
 	}
 	return c.emails, c.names, nil
-}
-
-// bindNamedCompanies refills the ref of every company row the file names by id.
-// The binding lives in memory, so a resumed commit has none for the rows its
-// checkpoint passed. Each is checked when a link first asks for it.
-func (b *bundleWriters) bindNamedCompanies(ctx context.Context, source migration.Source) error {
-	w, ok := b.parts[migration.ObjectCompany]
-	if !ok {
-		return nil
-	}
-	companies, err := partSourceOf(source, migration.ObjectCompany)
-	if err != nil {
-		return err
-	}
-	for offset := 0; ; offset += importPredictPage {
-		rows, err := companies.Rows(ctx, migration.ObjectCompany, offset, importPredictPage)
-		if err != nil {
-			return err
-		}
-		for _, row := range rows {
-			if strings.TrimSpace(textFields(row.Fields)[csvTargetID]) == "" {
-				continue
-			}
-			b.links.markNamed(migration.ObjectCompany, row.ExternalID, func(ctx context.Context) (ids.UUID, bool) {
-				target, lands := w.namedTarget(ctx, row)
-				return target.id, lands && target.named
-			})
-		}
-		if len(rows) < importPredictPage {
-			return nil
-		}
-	}
-}
-
-// namedTarget is the record a company row names by id, and whether the row
-// lands. It follows Ensure's order for a company row, which has no link to check.
-func (w *csvWriters) namedTarget(ctx context.Context, row migration.Row) (targetID, bool) {
-	if _, invalid := w.checkedCells(row); invalid != nil {
-		return targetID{}, false
-	}
-	target := w.targetIDOf(ctx, row)
-	return target, target.why.Code == ""
 }
 
 // part is the writer of one type. A run with no file of that type answers a

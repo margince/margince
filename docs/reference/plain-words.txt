@@ -417,7 +417,6 @@ directive
 directory
 disable
 disagree
-disarmed
 discarded
 disclose
 discovery

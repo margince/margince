@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SKEW="${BACKEND_CLOCK_SKEW:-}"
-if [ -z "$SKEW" ]; then
+if [[ -z "$SKEW" ]]; then
 	echo "backend-clock-drift: BACKEND_CLOCK_SKEW is unset, so this would be the ordinary suite" >&2
 	echo "                     reporting its verdict under the drift lane's name — which reads" >&2
 	echo "                     exactly like a suite with no date-fragile fixtures left." >&2
@@ -57,7 +57,7 @@ make -C backend test-integration || suites=$?
 
 # The shift is proven again, on the failing path too: a time service that
 # re-synced mid-run makes the rest an ordinary run, and its verdict the lane's.
-if [ "${SKEW%%:*}" = machine ]; then
+if [[ "${SKEW%%:*}" == "machine" ]]; then
 	./scripts/clock-drift-host.sh assert "${SKEW##*:}"
 fi
 exit "$suites"

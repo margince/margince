@@ -220,9 +220,9 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 	// file said which company this is; nothing the importer could infer beats
 	// that, and inferring anyway is what made name-based updating unsafe.
 	if target.named {
-		// Bound even when reconcile refuses the update: the row still names a
-		// live company the caller can see, which the dry run counted as linkable.
-		w.links.markLanded(object, row.ExternalID, target.id)
+		if err := w.bind(ctx, row, target.id); err != nil {
+			return migration.EnsureResult{}, err
+		}
 		return w.reconcile(ctx, target.id, row, typed)
 	}
 	id, found, err := w.lookup(ctx, object, row.ExternalID)
@@ -471,7 +471,7 @@ func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx
 		if id, err = create(tx); err != nil {
 			return err
 		}
-		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id); err != nil {
+		if err := w.identities.RecordIdentityTx(ctx, tx, w.runID, w.sourceSystem, w.object, row.ExternalID, id, migration.OriginCreated); err != nil {
 			return err
 		}
 		if err := w.tagNames.applyAll(ctx, tx, w.object, id, textFields(row.Fields)[csvTargetTags]); err != nil {

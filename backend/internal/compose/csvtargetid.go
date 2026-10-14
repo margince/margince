@@ -68,5 +68,22 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 		storekit.LiveOnly); err != nil {
 		return targetID{named: true, why: migration.Why(migration.ReasonIdNotVisible, "value", raw)}
 	}
+	if why := w.refTakenBy(ctx, row.ExternalID, parsed); why.Code != "" {
+		return targetID{named: true, why: why}
+	}
 	return targetID{id: parsed, named: true}
+}
+
+// refTakenBy says why a ref cannot be bound to the named company: an earlier
+// import already maps it to another one. Every slice and resume must resolve
+// one ref to one record. An undone run's key is free, and the bind takes it over.
+func (w *csvWriters) refTakenBy(ctx context.Context, ref string, named ids.UUID) migration.Reason {
+	if ref == "" {
+		return migration.Reason{}
+	}
+	binding, found, err := w.bindingOf(ctx, ref)
+	if err != nil || !found || binding.RunStatus == migration.StatusUndone || binding.NativeID == named {
+		return migration.Reason{}
+	}
+	return migration.Why(migration.ReasonRefTakenByAnotherCompany, "ref", ref)
 }

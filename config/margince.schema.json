@@ -138,6 +138,13 @@
             "null"
           ]
         },
+        "legal_review": {
+          "description": "LegalReview set to false starts the installation with legal review switched off. Omitted or true leaves the default, which is on.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "ai_routing": {
           "description": "AIRouting is the tier→model binding a fresh installation is bootstrapped with, so a deployment can declare which vendor it uses in the file it reviews rather than having to call an API after first boot. Consumed exactly once, like every other seed here; the database is authoritative afterwards and an admin re-points a lane through /v1/ai/routing.",
           "$ref": "#/$defs/aiRouting"

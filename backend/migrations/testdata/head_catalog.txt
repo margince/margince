@@ -1373,7 +1373,7 @@ public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
 public.audit_log.actor_type text NOT NULL gen=- def=-
 public.audit_log.after jsonb gen=- def=-
-public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text, 'place_legal_hold'::text, 'lift_legal_hold'::text])))
+public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text, 'place_legal_hold'::text, 'lift_legal_hold'::text, 'request_legal_review'::text, 'withdraw_legal_review'::text])))
 public.audit_log.audit_log_actor_type_check CHECK ((actor_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text, 'buyer'::text])))
 public.audit_log.audit_log_images_are_absent_or_present CHECK (((before <> 'null'::jsonb) AND (after <> 'null'::jsonb)))
 public.audit_log.audit_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
@@ -2319,6 +2319,8 @@ public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS D
 public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
 public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
 public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
+public.company.company_logo_icon_names_its_origin CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))
+public.company.company_logo_names_its_origin CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))
 public.company.company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES company(id) ON DELETE SET NULL (merged_into_id)
 public.company.company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text])))
 public.company.company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))
@@ -3694,7 +3696,7 @@ public.deal_stage_evidence.deal_stage_evidence_pkey PRIMARY KEY (id)
 public.deal_stage_evidence.deal_stage_evidence_refutation_whole CHECK (((refuted_at IS NULL) = (refuted_by IS NULL)))
 public.deal_stage_evidence.deal_stage_evidence_refuted_by_fkey FOREIGN KEY (refuted_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal_stage_evidence.deal_stage_evidence_snippet_len CHECK (((snippet IS NULL) OR (length(snippet) <= 500)))
-public.deal_stage_evidence.deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text])))
+public.deal_stage_evidence.deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text, 'legal_review'::text])))
 public.deal_stage_evidence.deal_stage_evidence_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_stage_evidence.extracted_by text NOT NULL gen=- def=-
 public.deal_stage_evidence.id uuid NOT NULL gen=- def=uuidv7()
@@ -4531,6 +4533,12 @@ public.idx_lead_score_history_series CREATE INDEX idx_lead_score_history_series 
 public.idx_lead_search CREATE INDEX idx_lead_search ON public.lead USING gin (search_tsv)
 public.idx_lead_sla_open CREATE INDEX idx_lead_sla_open ON public.lead USING btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL))
 public.idx_lead_status_live CREATE INDEX idx_lead_status_live ON public.lead USING btree (status) WHERE (archived_at IS NULL)
+public.idx_legal_review_deal CREATE INDEX idx_legal_review_deal ON public.legal_review USING btree (deal_id, created_at DESC)
+public.idx_legal_review_decided CREATE INDEX idx_legal_review_decided ON public.legal_review USING btree (decided_at DESC, id DESC) WHERE (decided_at IS NOT NULL)
+public.idx_legal_review_decided_by CREATE INDEX idx_legal_review_decided_by ON public.legal_review USING btree (decided_by) WHERE (decided_by IS NOT NULL)
+public.idx_legal_review_previous CREATE INDEX idx_legal_review_previous ON public.legal_review USING btree (previous_review_id) WHERE (previous_review_id IS NOT NULL)
+public.idx_legal_review_queue CREATE INDEX idx_legal_review_queue ON public.legal_review USING btree (value_minor DESC NULLS LAST, expected_close_date, created_at, id) WHERE (status = 'requested'::text)
+public.idx_legal_review_requested_by CREATE INDEX idx_legal_review_requested_by ON public.legal_review USING btree (requested_by) WHERE (requested_by IS NOT NULL)
 public.idx_linkedin_connection_company CREATE INDEX idx_linkedin_connection_company ON public.linkedin_connection USING btree (matched_company_id) WHERE ((matched_company_id IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_linkedin_connection_email CREATE INDEX idx_linkedin_connection_email ON public.linkedin_connection USING btree (lower(email)) WHERE ((email IS NOT NULL) AND (tombstoned_at IS NULL))
 public.idx_linkedin_connection_match CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL)
@@ -4648,10 +4656,12 @@ public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
 public.import_record_map.import_record_map_import_run_id_fkey FOREIGN KEY (import_run_id) REFERENCES import_run(id) ON DELETE RESTRICT
+public.import_record_map.import_record_map_origin_check CHECK ((origin = ANY (ARRAY['created'::text, 'bound'::text])))
 public.import_record_map.import_record_map_pkey PRIMARY KEY (source_system, object, external_id)
 public.import_record_map.import_run_id uuid NOT NULL gen=- def=-
 public.import_record_map.native_id uuid NOT NULL gen=- def=-
 public.import_record_map.object text NOT NULL gen=- def=-
+public.import_record_map.origin text NOT NULL gen=- def='created'::text
 public.import_record_map.source_system text NOT NULL gen=- def=-
 public.import_record_map_pkey CREATE UNIQUE INDEX import_record_map_pkey ON public.import_record_map USING btree (source_system, object, external_id)
 public.import_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5049,6 +5059,38 @@ public.lead_source.trg_lead_source_updated CREATE TRIGGER trg_lead_source_update
 public.lead_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead_source.version bigint NOT NULL gen=- def=1
 public.lead_source_pkey CREATE UNIQUE INDEX lead_source_pkey ON public.lead_source USING btree (id)
+public.legal_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.legal_review.captured_by text NOT NULL gen=- def=-
+public.legal_review.comments text gen=- def=-
+public.legal_review.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_review.deal_id uuid NOT NULL gen=- def=-
+public.legal_review.decided_at timestamp with time zone gen=- def=-
+public.legal_review.decided_by uuid gen=- def=-
+public.legal_review.expected_close_date date gen=- def=-
+public.legal_review.id uuid NOT NULL gen=- def=uuidv7()
+public.legal_review.legal_review_comments_bounded CHECK (((comments IS NULL) OR (length(comments) <= 8000)))
+public.legal_review.legal_review_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.legal_review.legal_review_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.legal_review.legal_review_decided_shape CHECK (((status = ANY (ARRAY['approved'::text, 'changes_needed'::text])) = (decided_at IS NOT NULL)))
+public.legal_review.legal_review_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000)))
+public.legal_review.legal_review_pkey PRIMARY KEY (id)
+public.legal_review.legal_review_previous_review_id_fkey FOREIGN KEY (previous_review_id) REFERENCES legal_review(id) ON DELETE SET NULL
+public.legal_review.legal_review_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id) ON DELETE SET NULL
+public.legal_review.legal_review_status_check CHECK ((status = ANY (ARRAY['requested'::text, 'approved'::text, 'changes_needed'::text, 'withdrawn'::text])))
+public.legal_review.legal_review_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint)))
+public.legal_review.legal_review_value_pair CHECK (((value_minor IS NULL) = (value_currency IS NULL)))
+public.legal_review.legal_review_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.legal_review.note text gen=- def=-
+public.legal_review.packet jsonb NOT NULL gen=- def=-
+public.legal_review.previous_review_id uuid gen=- def=-
+public.legal_review.requested_by uuid gen=- def=-
+public.legal_review.status text NOT NULL gen=- def='requested'::text
+public.legal_review.trg_legal_review_updated CREATE TRIGGER trg_legal_review_updated BEFORE UPDATE ON public.legal_review FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.legal_review.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_review.value_currency character(3) gen=- def=-
+public.legal_review.value_minor bigint gen=- def=-
+public.legal_review.version bigint NOT NULL gen=- def=1
+public.legal_review_pkey CREATE UNIQUE INDEX legal_review_pkey ON public.legal_review USING btree (id)
 public.linkedin_account acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.linkedin_account.connected_at timestamp with time zone gen=- def=-
 public.linkedin_account.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6808,7 +6850,7 @@ public.stage_exit_criterion.position integer NOT NULL gen=- def=-
 public.stage_exit_criterion.required boolean NOT NULL gen=- def=true
 public.stage_exit_criterion.stage_exit_criterion_hint_len CHECK (((hint IS NULL) OR (length(hint) <= 500)))
 public.stage_exit_criterion.stage_exit_criterion_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text))
-public.stage_exit_criterion.stage_exit_criterion_kind_check CHECK ((kind = ANY (ARRAY['buyer_confirmed'::text, 'event_held'::text, 'document_signed'::text, 'role_identified'::text, 'terms_accepted'::text, 'custom'::text])))
+public.stage_exit_criterion.stage_exit_criterion_kind_check CHECK ((kind = ANY (ARRAY['buyer_confirmed'::text, 'event_held'::text, 'document_signed'::text, 'role_identified'::text, 'terms_accepted'::text, 'custom'::text, 'legal_reviewed'::text])))
 public.stage_exit_criterion.stage_exit_criterion_label_len CHECK (((length(label) >= 1) AND (length(label) <= 120)))
 public.stage_exit_criterion.stage_exit_criterion_pkey PRIMARY KEY (id)
 public.stage_exit_criterion.stage_exit_criterion_position_check CHECK (("position" >= 0))
@@ -7360,6 +7402,7 @@ public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notic
 public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
+public.uq_legal_review_open_deal CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text)
 public.uq_linkedin_connection_natural CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)
 public.uq_linkedin_connection_provider CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)
 public.uq_notice_dedupe CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)

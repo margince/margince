@@ -37,6 +37,7 @@ const (
 	ReasonIdOnNonCompany             ReasonCode = "id_on_non_company"
 	ReasonIdNotACompanyId            ReasonCode = "id_not_a_company_id"
 	ReasonIdNotVisible               ReasonCode = "id_not_visible"
+	ReasonRefTakenByAnotherCompany   ReasonCode = "ref_taken_by_another_company"
 	ReasonRowKeyRepeated             ReasonCode = "row_key_repeated"
 	ReasonRowKeyEmpty                ReasonCode = "row_key_empty"
 	ReasonFieldInactive              ReasonCode = "field_inactive"
@@ -212,6 +213,11 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.English:    "no company you can see has the id {value:q}; it may have been archived, merged away, or belong to a workspace this file did not come from",
 		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder zu einem Arbeitsbereich gehören, aus dem diese Datei nicht stammt.",
 		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
+	}},
+	ReasonRefTakenByAnotherCompany: {params: []string{"ref"}, text: map[textlang.Lang]string{
+		textlang.English:    "the reference {ref:q} already stands for another company from an earlier import, so this row is not applied; use a new reference for this company or fix the id column",
+		textlang.German:     "Die Referenz {ref:q} steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwenden Sie eine neue Referenz für dieses Unternehmen oder korrigieren Sie die ID-Spalte.",
+		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
 	}},
 	ReasonRowKeyRepeated: {params: []string{"column", "value", "line"}, text: map[textlang.Lang]string{
 		textlang.English:    "the {column:q} value {value:q} is already used by line {line}; each row needs its own, because it is what a re-import matches on and what an undo finds this row by",

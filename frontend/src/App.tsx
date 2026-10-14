@@ -66,10 +66,6 @@ import { WriteToHost } from "./screens/writetohost";
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
 
-// The routed screens arrive as their own chunks, so a visitor who has only
-// reached the login form downloads the form rather than every screen in the
-// product: a screen's code arrives when somebody navigates to it.
-//
 // What stays STATIC is what a first paint genuinely needs — the shell, the auth
 // surfaces, the router — plus screens/onboarding, whose company probe the shell
 // itself calls. A module that is imported statically anywhere lands in the entry
@@ -224,6 +220,13 @@ const ConfirmDetailsScreen = lazy(
 const AnalyticsScreen = lazy(
   routed(() =>
     import("./screens/analytics").then((m) => ({ default: m.AnalyticsScreen })),
+  ),
+);
+const LegalReviewsRoute = lazy(
+  routed(() =>
+    import("./screens/legalreviews").then((m) => ({
+      default: m.LegalReviewsRoute,
+    })),
   ),
 );
 const ScheduledSendsScreen = lazy(
@@ -471,15 +474,11 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     ),
     // The object or library section, and a saved view below it, ride the URL.
     filters: ({ id, id2 }) => <FiltersScreen id={id} view={id2} />,
-    // No segments: the queue is one page, and a single scheduled message has
-    // nothing to show that its row does not already carry.
-    //
-    // The literal rather than the screen's own SCHEDULED_SCREEN, which is the
-    // one place that constant is NOT used: importing it here would pull the
-    // module into the startup graph and the lazy() above would load a chunk the
-    // browser already has. The key is still typed against `Screen`, so a rename
-    // fails here too.
+    // No segments: the queue is one page, and a row carries all a message has.
+    // The literal, not SCHEDULED_SCREEN: importing that would pull the module
+    // into the startup graph. The key is still typed against `Screen`.
     scheduled: () => <ScheduledSendsScreen />,
+    "legal-reviews": ({ id }) => <LegalReviewsRoute id={id} />,
     offers: ({ id }) =>
       id ? (
         <OfferScreen id={id} />
