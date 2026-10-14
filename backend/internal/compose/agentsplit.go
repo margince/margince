@@ -26,17 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// opRenameCustomField is the one patch operation both this file and
-// agentcommand.go's restCommands table name: the sole action-shaped op
-// (comment below) that is ALSO a whole-record field patch the governance seam
-// stages, so it is the one place those two lists have to agree on the same
-// operationId spelled the same way.
-const opRenameCustomField = "renameCustomField"
-
-// The remaining four action-shaped ops named below are ALSO both this
-// file's and agentcommand.go's restCommands table's
-// (agentcommandnested.go): named once here so the two do not spell an
-// operationId twice each.
+// The action-shaped ops below are named in this file and in restCommands
+// (agentcommand.go), so each operationId is spelled once.
 const (
 	opApplyTag            = "applyTag"
 	opRemoveTag           = "removeTag"
@@ -59,20 +50,12 @@ const (
 // human-typed fields at risk are the parent's, and the call must take the full
 // §2.1 split. Reading the URL and stopping there is how such an operation ends
 // up here and silently loses that protection.
-//
-// renameCustomField is here for a different reason: its target is a
-// catalog CONFIG row, not record data — §2.1 human-edit precedence
-// protects human-typed record values from agent overwrite, while a
-// catalog label rename is the action the contract deliberately pins 🟢;
-// left to the split, the creating admin's audit trail would mark `label`
-// human-owned and silently convert every agent rename into a 🟡 staging.
 var actionShapedUpdateOps = map[string]bool{
 	opApplyTag:            true,
 	opRemoveTag:           true,
 	opAddOfferLineItem:    true,
 	opUpdateOfferLineItem: true,
 	opRemoveOfferLineItem: true,
-	opRenameCustomField:   true,
 }
 
 // patchTargetParam names the path parameter carrying the record a field patch
@@ -186,9 +169,8 @@ func splitHumanOwnedUpdate(w http.ResponseWriter, r *http.Request, next http.Han
 		// request again.
 		//
 		// stageRefusal resolves through the SAME command seam every other
-		// registered patch op does (agentcommand.go's patchCommand, now that
-		// all thirteen whole-record patch routes are registered), which means
-		// this branch carries patchResolver.Guards too: a records.Read plus
+		// registered patch op does (agentcommand.go's patchCommand). So this
+		// branch carries patchResolver.Guards too: a records.Read plus
 		// refuseStagingElsewhere the split path never ran on its own before
 		// that registration. That is deliberate, not a side effect nobody
 		// noticed — an approval staged here for a mirror-held

@@ -80,10 +80,9 @@ path enforces it instead of committing a write that changes nothing. Archive mar
 not delete it. A subscription that is archived, missing or in another workspace reads as `404` on
 every path, so no one learns it exists. Delivery stops at archive.
 
-**Agent access is 🟡.** A human in a session registers it directly. Create or update by an *agent*
-principal is a 🟡 governed tool (`x-mcp-tool` tier `confirmation_required`). Registering or growing
-an outbound target is staged for human approval, then carried out with an `X-Approval-Token`.
-Rotate, replay and all reads are for humans only.
+**No agent access.** Every webhook operation carries `x-agent-access: human-only`, so the REST gate
+refuses an agent principal whatever its scope. A human in a session registers a subscription
+directly, because a subscription decides where events leave the installation.
 
 ## 2. The signing secret: sealed at rest, shown once
 

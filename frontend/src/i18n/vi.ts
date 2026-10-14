@@ -5657,8 +5657,7 @@ export const vi = {
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
     "Gửi email, đặt lịch họp, cập nhật liên hệ hoặc deal: chạy ngay nếu agent có quyền đó. Cấp quyền chính là phê duyệt.",
-  "settings.tierWait":
-    "Bổ sung dữ liệu, trường tùy chỉnh, webhook, gộp thẻ: chờ trong Phê duyệt.",
+  "settings.tierWait": "Bổ sung dữ liệu, gộp thẻ: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn deal: chỉ chờ khi bước chuyển đó kết thúc deal với kết quả thắng hoặc thua.",
   "settings.locked": "Đã khóa",

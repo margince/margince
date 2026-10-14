@@ -5798,7 +5798,7 @@ export const de = {
   "settings.tierSend":
     "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
   "settings.tierWait":
-    "Anreicherung, eigene Felder, Webhooks, Zusammenführen von Tags: warten in Freigaben.",
+    "Anreicherung und Zusammenführen von Tags: warten in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase weiterschieben: wartet nur, wenn der Schritt den Deal als gewonnen oder verloren abschließt.",
   "settings.locked": "Gesperrt",

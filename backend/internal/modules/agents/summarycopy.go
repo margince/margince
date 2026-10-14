@@ -29,8 +29,8 @@ type summaryCopy struct {
 	enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
-	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem, retireCustomField,
-	customFieldOptions, setStakeholder, removeStakeholder, setCompany, removeCompany,
+	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
+	setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
 	mergeTags, changeList, dismissDuplicate, reopenDuplicate string
 
@@ -84,8 +84,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Add a line item to offer %s",
 		updateLineItem:      "Update line item %s on offer %s",
 		removeLineItem:      "Remove line item %s from offer %s",
-		retireCustomField:   "Retire custom field %s",
-		customFieldOptions:  "Update options for custom field %s",
 		setStakeholder:      "Set a stakeholder on project %s",
 		removeStakeholder:   "Remove stakeholder %s from project %s",
 		setCompany:          "Put a company on project %s",
@@ -160,8 +158,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Position zum Angebot %s hinzufügen",
 		updateLineItem:      "Position %s im Angebot %s ändern",
 		removeLineItem:      "Position %s aus dem Angebot %s entfernen",
-		retireCustomField:   "Benutzerdefiniertes Feld %s stilllegen",
-		customFieldOptions:  "Optionen des benutzerdefinierten Felds %s ändern",
 		setStakeholder:      "Stakeholder für Projekt %s festlegen",
 		removeStakeholder:   "Stakeholder %s aus Projekt %s entfernen",
 		setCompany:          "Projekt %s ein Unternehmen zuordnen",
@@ -236,8 +232,6 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		addLineItem:         "Thêm một dòng mục vào báo giá %s",
 		updateLineItem:      "Cập nhật dòng mục %s trong báo giá %s",
 		removeLineItem:      "Xóa dòng mục %s khỏi báo giá %s",
-		retireCustomField:   "Ngừng sử dụng trường tùy chỉnh %s",
-		customFieldOptions:  "Cập nhật tùy chọn của trường tùy chỉnh %s",
 		setStakeholder:      "Đặt một bên liên quan cho dự án %s",
 		removeStakeholder:   "Gỡ bên liên quan %s khỏi dự án %s",
 		setCompany:          "Gán một công ty cho dự án %s",
