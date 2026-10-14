@@ -38,7 +38,16 @@ export function provenanceOf(
   // seat on every row it wrote. That is true, and useless as a statement about
   // authorship. The author is the field that knows, and the tag prefers it.
   author?: SourceAuthor | null,
+  // The row's own `source` stamp. An import writes it inside the importer's
+  // namespace, and captured_by there names only the administrator who ran it.
+  stamp?: string | null,
 ): Provenance {
+  // An author already says where the row came from, and better. Without one,
+  // the administrator's seat would read "typed by you" over a migrated row.
+  const imported = author ? undefined : importProvenance(stamp);
+  if (imported) {
+    return imported;
+  }
   if (!capturedBy) {
     return { kind: "unknown" };
   }
@@ -130,4 +139,50 @@ const EXTENSION_MARKER = "ext";
 function connectorLabel(rest: string): string {
   const [head = "", ...tail] = rest.split(":");
   return head === EXTENSION_MARKER ? (tail[0] ?? "") : head;
+}
+
+/**
+ * The importer's reserved namespace. It mirrors the backend's
+ * `provenance.ReservedSourceSystemPrefix`; no client write path can spell it,
+ * so a `source` that starts with it was written by an import.
+ */
+const IMPORT_NAMESPACE = "mirror:";
+
+/** The connector segment the CSV importer writes after the namespace. */
+const IMPORT_CONNECTOR = "csv";
+
+/** The objects an import stamps after its upload name. */
+const IMPORT_OBJECTS = new Set(["company", "contact", "lead"]);
+
+/**
+ * The import arm a row's `source` stamp reads as, or undefined when no import
+ * wrote it. The CSV importer stamps `mirror:csv[:<upload>]:<object>:<id>`.
+ */
+export function importProvenance(
+  stamp: string | null | undefined,
+): Extract<Provenance, { kind: "import" }> | undefined {
+  if (!stamp?.startsWith(IMPORT_NAMESPACE)) {
+    return undefined;
+  }
+  const [connector, ...tail] = stamp.slice(IMPORT_NAMESPACE.length).split(":");
+  return { kind: "import", uploadName: uploadNameOf(connector, tail) };
+}
+
+// The upload is named only when an object and an id follow it.
+// So an unnamed upload whose id spells an object ("mirror:csv:company:contact")
+// has no name.
+// An upload called "contact" keeps its name.
+// An object the browser does not know yet reads "Imported", not a name.
+function uploadNameOf(
+  connector: string | undefined,
+  tail: readonly string[],
+): string | undefined {
+  if (
+    connector !== IMPORT_CONNECTOR ||
+    tail.length < 3 ||
+    !IMPORT_OBJECTS.has(tail[1] ?? "")
+  ) {
+    return undefined;
+  }
+  return tail[0] || undefined;
 }

@@ -23,6 +23,7 @@ import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
 import "./connected-agents.css";
 import "./settings-agents.css";
+import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 
@@ -326,6 +327,9 @@ function ConnectionTable({
   const dates = useConnectionDates();
   const stateOf = (connection: Connection) =>
     connectionStateOf(connection, now);
+  const usageDetail = usePassportUsageDetail<Connection>(
+    (connection) => connection.connection.client_name,
+  );
   const columns: DataTableColumn<Connection>[] = [
     {
       key: "client",
@@ -333,11 +337,14 @@ function ConnectionTable({
       grow: true,
       fold: "title",
       render: (connection) => (
-        <ClientName
-          connection={connection}
-          state={stateOf(connection)}
-          caption={dates.caption(connection, stateOf(connection))}
-        />
+        <span className="agents-name-usage">
+          <ClientName
+            connection={connection}
+            state={stateOf(connection)}
+            caption={dates.caption(connection, stateOf(connection))}
+          />
+          <PassportUsageLine passport={connection} />
+        </span>
       ),
     },
     {
@@ -387,6 +394,7 @@ function ConnectionTable({
       rows={[...connections]}
       rowKey={(connection) => connection.id}
       rowTestId={(connection) => `connection-${connection.id}`}
+      detail={usageDetail}
     />
   );
 }

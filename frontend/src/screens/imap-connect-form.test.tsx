@@ -12,8 +12,8 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { ImapConnectForm } from "./imap-connect-form";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The inline IMAP connect form (Task 6): first-connect and reconnect for the
 // one credential provider, done through the typed client — never a raw

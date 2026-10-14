@@ -4,10 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
 import { viewerZone } from "../format/timezone";
+import { StoryProviders } from "../testing/story-utils";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
 import { MagicTimeline } from "./magic.timeline";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof MagicTimeline> = {
   title: "Shell/Home/Receipt timeline",

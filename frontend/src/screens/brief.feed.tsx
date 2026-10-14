@@ -4,7 +4,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge, Button } from "../design-system/atoms";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
@@ -14,6 +13,7 @@ import { navigate } from "../lib/router";
 import { identity, Triage } from "./brief.focus";
 import { laneUnread } from "./brief.readings.honesty";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { worklistLaneHref } from "./worklist.header";
 import {
   type Worklist,

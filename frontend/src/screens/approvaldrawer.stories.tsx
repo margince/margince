@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { en } from "../i18n/en";
-import { ApprovalDecisionDrawer } from "./approvaldrawer";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ApprovalDecisionDrawer } from "./approvaldrawer";
 
 // The drawer a notice or a receipt line opens onto one pending decision.
 

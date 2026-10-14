@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { jsonResponse } from "../testing/story-utils";
 import { BookingScreen } from "./book";
 import { bookingStory } from "./book.storykit";
 import {
@@ -6,7 +7,6 @@ import {
   bookingInvitation,
   bookingProfile,
 } from "./book.testkit";
-import { jsonResponse } from "./story-utils";
 
 const meta: Meta<typeof BookingScreen> = {
   parameters: { layout: "fullscreen" },

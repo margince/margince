@@ -4,18 +4,18 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { company360 } from "./company.fixtures";
 import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
 import { CompanyIdentityFacts } from "./companyheaderfacts";
 import { CompanyNameLine } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 // The account header's own pieces (RecordView's nameBadge/pulse/badges/
 // actions slots in companies.tsx), mounted together rather than through

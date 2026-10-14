@@ -60,6 +60,8 @@ type Concern struct {
 	// any age reading, so a fleet screen reading only the condition cannot tell
 	// an hour-old outage from a connection idling between ticks.
 	FailingSince *time.Time
+	// LastSyncedAt is the connection's last good sync, nil when it never had one.
+	LastSyncedAt *time.Time
 }
 
 // HealthConcerns answers the CALLING human's unhealthy connections, in the
@@ -92,6 +94,7 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 			concern.AccountLabel = *view.AccountLabel
 		}
 		concern.FailingSince = view.FailingSince
+		concern.LastSyncedAt = view.LastSyncedAt
 		concerns = append(concerns, concern)
 	}
 	return concerns, nil

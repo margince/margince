@@ -17,6 +17,7 @@
 }
 
 .table {
+  --tableCellPadBlock: 10px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -26,7 +27,7 @@
   border-bottom: 1px solid var(--borderStrong);
 }
 .table td {
-  padding: 10px 12px;
+  padding: var(--tableCellPadBlock) 12px;
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
@@ -52,6 +53,12 @@
    disclosure that bleeds spans the pane with it. */
 .panel
   > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
   > .disclosure
   > .disclosure-body
   > .table-scroll {
@@ -66,12 +73,32 @@
   > .table
   > *
   > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
   > :first-child {
   padding-inline-start: var(--padPanel);
 }
 .panel > .table-scroll-bleed > .table > * > tr > :last-child,
 .panel
   > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
   > .disclosure
   > .disclosure-body
   > .table-scroll
@@ -287,6 +314,8 @@
   inset-inline-end: var(--space-4);
   /* Above the drawer's sticky head band (z-index 1), which it is drawn on. */
   z-index: 2;
+  display: flex;
+  gap: var(--gapActions);
 }
 
 /* The dialog's first line stops short of the control drawn over it. A heading
@@ -309,7 +338,17 @@
   > .drawer-head
   > :first-child
   > :is(h1, h2, h3, .modal-title):first-child {
-  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+/* An expandable drawer has Expand beside the X, and its title clears both. A
+   phone hides Expand, so there the corner is the X alone. */
+@media (min-width: 721px) {
+  .modal:has(> .modal-close > :nth-child(2)) {
+    --modal-corner: calc(var(--controlHeight) * 2 + var(--gapActions));
+  }
 }
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
@@ -417,6 +456,12 @@
   flex-direction: column;
   padding: 0;
 }
+/* An expanded drawer takes the window less the gap it floats in, whatever its
+   intent's width. After the intents' widths, which it replaces, and before the
+   phone sheet, which replaces it. */
+.modal-drawer-window {
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+}
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
 .modal .form-stack > * {
@@ -501,6 +546,11 @@
      exactly the two dimensions it would spend, so the sheet takes the glass. */
   .overlay-right {
     padding: 0;
+  }
+  /* The sheet is the whole window already, so Expand has nothing to give. The
+     X is the corner's last control, and everything before it is Expand. */
+  .modal-close > :not(:last-child) {
+    display: none;
   }
   /* A confirm stays a card over the scrim: it asks one question about the
      page it covers, and the page has to stay in view for that. */
@@ -1651,6 +1701,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
@@ -1658,13 +1714,8 @@ span.error-line {
   padding-top: var(--space-3);
 }
 
-/* The one chevron on a control that opens something: a `Disclosure`, the next
-   table row, a panel below the button. Keyed off `aria-expanded`, so the glyph
-   a reader sees and the state a screen reader hears cannot disagree.
-
-   The turn is unconditional — a reader who asked for less motion still needs
-   the chevron to point at an opened row — and only the tween is conditional.
-   It shares the fold's duration and curve, so glyph and body arrive together. */
+/* Keyed off `aria-expanded`, so the glyph and a screen reader agree. Reduced
+   motion keeps the turn and drops the tween, which runs on the fold's time. */
 .expander-chevron {
   transition: transform var(--dur-move) var(--ease-in-out);
 }
@@ -1672,9 +1723,8 @@ span.error-line {
 [aria-expanded="true"] .expander-chevron {
   transform: rotate(180deg);
 }
-/* A box `useFold` is moving between shut and open. In-out, not out: the box
-   travels between two places it rests in, and the close mirrors the open.
-   Clipped on the block axis only, so a focus ring inside keeps its sides. */
+/* In-out: a fold travels between two resting places. Clipped on the block axis
+   only, so a focus ring inside keeps its sides. */
 [data-folding] {
   box-sizing: border-box;
   overflow: visible clip;
@@ -1736,6 +1786,18 @@ span.error-line {
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
+}
+/* A menu opened from inside a dialog stands above that dialog's overlay and
+   below a popover. The panel is portalled out of the dialog, so on the layer
+   above, the dialog would cover its own menu. */
+.overflow-menu-items[data-layer="dialog"] {
+  z-index: 60;
+}
+/* Under a dialog opened after its own, it sinks under the scrim as a menu
+   outside any dialog does. A panel follows its own dialog in the body, so a
+   later overlay is a dialog on top, and the top dialog's menu stays above. */
+.overflow-menu-items[data-layer="dialog"]:has(~ .overlay) {
+  z-index: 35;
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
    so without this the closed menu stays open — the whole point of folding the

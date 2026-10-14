@@ -63,6 +63,7 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
   .filter((host) => host.length > 0);
 
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
+const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
 
 export default defineConfig({
   // serveMcpApps is `apply: "serve"` — a dev-only middleware that adds nothing
@@ -87,6 +88,7 @@ export default defineConfig({
   // browser. Empty is the local default, and empty disables the comparison.
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
+    __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:

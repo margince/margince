@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ModelPricesCard } from "./ai-price-sync";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The Model prices card: whether prices sync daily and what the last sync did.
 // Under that, the prices in force, one fold per vendor.

@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ConnectedAgentsCard } from "./connected-agents";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConnectedAgentsCard } from "./connected-agents";
 
 // The OAuth clients holding a credential of their own. The connect guide opens
 // itself only while nothing is connected, so `Connected` is the closed case.

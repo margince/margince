@@ -262,6 +262,10 @@ it("pads a bleeding table's outer cells to the pane, in a bleeding disclosure to
     const selectors = css.match(rule)?.[1] ?? "";
     expect(selectors).toMatch(/> \.disclosure-body\s+> \.table-scroll/);
   }
+  const spans = css.match(
+    /\.panel\s+> :is\(\.panel-body, \.settinglist-bleed\)\s+> \.disclosure\s+> \.disclosure-body\s+> \.table-scroll \{\s*margin-inline: ([^;]+);/,
+  );
+  expect(spans?.[1]).toBe("calc(-1 * var(--padPanel))");
 });
 
 type DemoMember = { name: string; email: string; role: string; team: string };
@@ -502,11 +506,11 @@ const CALL_COLUMNS: DataTableColumn<Call>[] = [
   { key: "task", header: "Task", render: (call) => call.task },
 ];
 
-const TRACE: DataTableDetail<Call> = {
+const TRACE = {
   header: "Detail",
   toggleLabel: (call) => `Show ${call.task}`,
   render: (call) => <p>{call.trace}</p>,
-};
+} satisfies DataTableDetail<Call>;
 
 function CallLog({
   fold,
@@ -585,7 +589,8 @@ it("opens one row at a time when the detail is single", async () => {
   expect(screen.queryByText("One attempt")).toBeNull();
 });
 
-// happy-dom runs no CSS, so the fold reports a height transition that the test ends.
+// happy-dom runs no CSS, so the test stubs `getAnimations` with a height
+// transition and ends it itself.
 it("keeps a closing detail on screen until its fold has ended", async () => {
   const user = userEvent.setup();
   render(<CallLog />);
@@ -606,38 +611,103 @@ it("keeps a closing detail on screen until its fold has ended", async () => {
   await user.click(screen.getByRole("button", { name: "Show Triage" }));
   expect(screen.getByText("Two attempts")).toBeTruthy();
   expect(fold?.closest("tr")?.hidden).toBe(false);
+  expect(
+    fold?.querySelector(".datatable-detail-body")?.hasAttribute("inert"),
+  ).toBe(true);
   await act(async () => end());
   expect(screen.queryByText("Two attempts")).toBeNull();
   expect(fold?.closest("tr")?.hidden).toBe(true);
 });
 
-it("asks a caller that holds the rows to close the open one before it opens the next", async () => {
-  const user = userEvent.setup();
-  const toggled: string[] = [];
-  const { rerender } = render(
+function HeldCalls({ open }: Readonly<{ open: string[] }>) {
+  return (
     <CallLog
       detail={{
         ...TRACE,
-        single: true,
-        expanded: new Set(["a"]),
-        onToggle: (key) => toggled.push(key),
+        render: (call) => <button type="button">Retry {call.task}</button>,
+        expanded: new Set(open),
+        onToggle: () => {},
       }}
-    />,
+    />
   );
-  await user.click(screen.getByText("Enrich"));
-  expect(toggled).toEqual(["a", "b"]);
-  rerender(
-    <CallLog
-      detail={{
-        ...TRACE,
-        single: true,
-        expanded: new Set(["a", "b"]),
-        onToggle: (key) => toggled.push(key),
-      }}
-    />,
+}
+
+it("hands focus to the row's toggle when code closes the detail that holds it", () => {
+  const { rerender } = render(<HeldCalls open={["a"]} />);
+  screen.getByRole("button", { name: "Retry Triage" }).focus();
+  rerender(<HeldCalls open={[]} />);
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Show Triage" }),
   );
-  expect(screen.getByText("Two attempts")).toBeTruthy();
-  expect(screen.getByText("One attempt")).toBeTruthy();
+});
+
+// A late read lands as a new height, and may bring a page scrollbar's new width
+// in the same observer tick.
+it("moves an open detail to its new height, with or without a new width", () => {
+  const size = { width: 300, height: 40 };
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    DOMRect.fromRect(size),
+  );
+  const ticks: (() => void)[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(tick: () => void) {
+        ticks.push(tick);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished: new Promise(() => {}),
+    transitionProperty: "height",
+  };
+  Object.defineProperty(HTMLDivElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [motion],
+  });
+  try {
+    render(<HeldCalls open={["a"]} />);
+    const fold = screen
+      .getByRole("button", { name: "Retry Triage" })
+      .closest<HTMLElement>(".datatable-detail-fold");
+    const tick = () => {
+      for (const each of ticks) each();
+    };
+    size.width = 280;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(false);
+    size.width = 260;
+    size.height = 80;
+    tick();
+    expect(fold?.hasAttribute("data-folding")).toBe(true);
+    expect(fold?.style.height).toBe("80px");
+  } finally {
+    Reflect.deleteProperty(HTMLDivElement.prototype, "getAnimations");
+    vi.unstubAllGlobals();
+  }
+});
+
+it("takes single only in a table that holds its own open rows", () => {
+  const held: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+  };
+  // @ts-expect-error a caller that holds the rows decides which stay open
+  const both: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+    single: true,
+  };
+  expect([held.single, both.single]).toEqual([undefined, true]);
 });
 
 it("gives a row with nothing to open no toggle and no pointer", async () => {

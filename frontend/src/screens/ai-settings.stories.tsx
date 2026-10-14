@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ProvidersStatus } from "./ai-settings";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The status line at the top of the Providers panel on AI models. The key count
 // rides `ai_routing:read`. The last call and the stand-in ride

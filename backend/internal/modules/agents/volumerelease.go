@@ -108,7 +108,7 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 	if !present || actor.PassportID == (ids.UUID{}) {
 		return refusal
 	}
-	proposal := agentvolume.NewReleaseProposal(refusal.Reading, actor.PassportID, refusal.Tool)
+	proposal := agentvolume.NewReleaseProposal(refusal.Reading, actor.PassportID, actor.ConnectionID, refusal.Tool)
 	id, staged, err := r.approvals.StageVolumeRelease(ctx, VolumeReleaseRequest{
 		Proposal: proposal,
 		Summary:  stepUpSummary(summaryIn(ctx, r.language), proposal),

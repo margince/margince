@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { AuditDetail } from "./settings-audit.detail";
 import type { AuditLogEntry } from "./settings-audit.format";
-import { StoryProviders } from "./story-utils";
 
 const UPDATE: AuditLogEntry = {
   id: "al-1",

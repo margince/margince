@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
-import { TaskVerb } from "./bulktask";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TaskVerb } from "./bulktask";
 
 // "Create task" in the bulk bar: the button, and the form it opens to say what
 // the task is before the preview files it under every selected record.

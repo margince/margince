@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { briefEmpty, briefReady, meetingFacts, preparedFor } from "./fixtures";
 import { type BriefViewState, MeetingBriefView } from "./view";
 // `.pe-disclosure` in the foot belongs to the contact record's sheet, which the

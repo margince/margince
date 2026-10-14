@@ -5,10 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import type { RecordAssignment } from "./recordassignments.queries";
 import { recordAssignmentsKey } from "./recordassignments.queries";
 import { RecordTeam } from "./recordteam";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // Who is responsible for a record.
 //

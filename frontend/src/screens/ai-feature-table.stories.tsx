@@ -5,9 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { feature } from "./ai-admin.testkit";
 import { AiFeatureTable } from "./ai-feature-table";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const ROWS = [
   {

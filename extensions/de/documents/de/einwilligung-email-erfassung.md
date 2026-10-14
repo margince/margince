@@ -5,8 +5,8 @@
 > Verbot durchgesetzt, trägt § 26 Abs. 1 BDSG die Verarbeitung und dieses
 > Dokument entfällt.
 
-**Verantwortlicher:** [Firma, Anschrift]
-**Beschäftigte:r:** [Name] · **Postfach:** [E-Mail-Adresse]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
+**Beschäftigte Person:** [Name] · **Postfach:** [E-Mail-Adresse]
 **Version:** [z. B. 1.0] · **Datum:** [Datum]
 
 ## Warum diese Einwilligung nötig ist
@@ -20,23 +20,23 @@ Verbindung mit § 26 Abs. 2 BDSG gestützt.
 
 ## Erklärung
 
-Ich willige ein, dass [Firma] die in meinem dienstlichen Postfach
+Ich willige ein, dass [Unternehmen] die in meinem dienstlichen Postfach
 [E-Mail-Adresse] eingehende und ausgehende Korrespondenz durch das CRM-System
 Margince erfassen lässt, einschließlich solcher Nachrichten, die privaten
 Charakter haben.
 
 Mir ist bekannt:
 
-1. **Was erfasst wird:** Absender, Empfänger, Betreff, Text und Anhänge,
+1. **Was erfasst wird:** Absende- und Empfangsadressen, Betreff, Text und Anhänge,
    sowie daraus abgeleitete Kontaktdatensätze.
 2. **Wer es lesen kann:** bei der Voreinstellung `classified` zunächst nur ich
    und die auf der Nachricht genannten Personen. Ein Klassifikator gibt danach
    nur gewöhnliche geschäftliche Threads für das Team frei. Als privat oder
-   beraterlich eingestufte Korrespondenz bleibt zurückgehalten. Eine
-   Administratorin kann zurückgehaltene Inhalte nicht lesen.
-3. **Was ich selbst steuern kann:** einzelne Absender ausschließen, bereits
+   beraterlich eingestufte Korrespondenz bleibt zurückgehalten. Auch mit
+   Adminrechten lassen sich zurückgehaltene Inhalte nicht lesen.
+3. **Was ich selbst steuern kann:** einzelne Absendeadressen ausschließen, bereits
    erfasste Post löschen, jede automatische Entscheidung auf der Seite
-   „Absender“ einsehen und korrigieren, einzelne Threads freigeben oder privat
+   „Absendeadressen“ einsehen und korrigieren, einzelne Threads freigeben oder privat
    halten, das Postfach jederzeit trennen.
 4. **Dass die Einwilligung freiwillig ist.** Ich kann sie verweigern oder
    jederzeit mit Wirkung für die Zukunft widerrufen, formlos gegenüber

@@ -5,7 +5,11 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DealWatchCard, DealWatchList } from "./dealwatchcard";
 
 type DealCommitments = components["schemas"]["DealCommitments"];

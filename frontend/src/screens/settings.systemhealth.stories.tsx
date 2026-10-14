@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { defaultOperations } from "./operationsettings.fixtures";
-import { SystemHealthPage } from "./settings.systemhealth";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { defaultOperations } from "./operationsettings.fixtures";
+import { SystemHealthPage } from "./settings.systemhealth";
 
 // The whole page: a row of readings, and under it only the cards that have
 // more to say than their answer.

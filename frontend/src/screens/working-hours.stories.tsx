@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { WorkingHoursCard } from "./working-hours";
 
 // When this reader is bookable, and on whose clock. Personal — an admin does

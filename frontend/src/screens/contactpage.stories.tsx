@@ -33,7 +33,7 @@ import {
   meRoute,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
 
 // The contact record page V2 (ADR-0096) — its own gallery, one per surface the
 // concept names: the whole page behind the three reads it makes, the lead

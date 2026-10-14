@@ -24,35 +24,63 @@ Worklist opens as a panel headed **Worklist**, with the day's count on the butto
 There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks,
 work queue, inbox, today list.
 
-### How do I snooze something on my worklist?
-To snooze a Worklist item in Margince, press **Snooze** on its row. It comes back tomorrow ("Back on
-your list tomorrow.").
+### How do I make my worklist fill the window?
+To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
 1. Open **Home** → **Show Worklist**.
-2. On the row, press **Snooze** for one day. Or open the arrow beside it (**Snooze duration**) for
-   more choices.
-3. Choose **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
+2. Press **Expand**, next to the close button. Press **Collapse** to make it narrow again.
+3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
+   always fills the screen.
+
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
+worklist, wide view.
+
+### How do I snooze something on my worklist?
+To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
+**Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
+1. Open **Home** → **Show Worklist**.
+2. At the end of the row, press **More actions**, the button with three dots.
+3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they
+   reply**.
 4. The note that follows offers **Undo**.
 
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also
 called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
-To pin a Worklist item in Margince, press **Pin** on its row. It moves to the top of your Worklist.
+To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
+the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
-2. Press **Pin** on the row. Press **Unpin** to put it back in its ranked place.
+2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
+   it back in its ranked place.
 
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is
 stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails:
 "Item was not pinned. Retry." Also called: star, flag, keep on top.
 
+### How do I hand a task on to a colleague?
+To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
+1. Open **Home** → **Show Worklist** and find the task.
+2. Press **More actions** at the end of the row and choose **Reassign**.
+3. Pick a colleague under **Reassign to** and press **Reassign**. **Cancel** keeps the task yours.
+
+The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on. If
+it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+
 ### How do I remove something from my worklist?
-To take an item off your Worklist in Margince, open **Remove from list** on its row and choose
-**Done**, **Not mine** or **Not a customer**.
+To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not
+a customer**, press **More actions** at the end of the row.
 1. Open **Home** → **Show Worklist** and find the row.
-2. Open **Remove from list**.
-3. Choose **Done** if you handled it another way, such as by phone.
-4. Or choose **Not mine** if someone else should answer, or **Not a customer**.
-5. Press **Undo** in the note if you picked wrong.
+2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in
+   **More actions**.
+3. Or press **More actions** and choose **Not mine** if someone else should answer, or **Not a
+   customer**.
+4. Press **Undo** in the note if you picked wrong.
+
+Every kind of row offers **Done**: a follow-up, a meeting, a deal at risk, a system or delivery
+problem. A row with no **Done** says why, such as "you can read this but not change it".
+
+To clear several rows at once, tick them, or press **Select all**, then press **Mark done**. One
+**Undo** brings them all back.
 
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
@@ -268,6 +296,10 @@ Taking an item off the Worklist uses four choices, and they reach different numb
 
 **Done** is for a message you handled another way: by phone, in a meeting, or with no reply
 owed. It does not count as a reply sent.
+
+On any other row, **Done** says "Marked done for you. It comes back if something new happens on
+it." A deal comes back after new activity or once its close date passes. A system or delivery row
+comes back when it fails again.
 
 **Not mine** shows only on a row someone else owns, or nobody owns. Point at it to read what it
 does. The record keeps its owner, and nobody is told.

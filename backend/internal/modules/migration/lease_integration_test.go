@@ -42,7 +42,7 @@ func newMapWriters(s *RunStore, run RunID) *mapWriters {
 }
 
 func (w *mapWriters) Exists(ctx context.Context, object, ext string) (bool, error) {
-	_, found, err := w.s.LookupIdentity(ctx, w.system, object, ext)
+	_, found, err := lookupNative(ctx, w.s, w.system, object, ext)
 	return found, err
 }
 
@@ -58,10 +58,10 @@ func (w *mapWriters) Ensure(ctx context.Context, object string, row Row) (Ensure
 		w.dieAt = ""
 		panic(errProcessDied)
 	}
-	if _, found, err := w.s.LookupIdentity(ctx, w.system, object, row.ExternalID); err != nil || found {
+	if _, found, err := lookupNative(ctx, w.s, w.system, object, row.ExternalID); err != nil || found {
 		return EnsureResult{Unchanged: found}, err
 	}
-	if err := w.s.RecordIdentity(ctx, w.run, w.system, object, row.ExternalID, ids.NewV7()); err != nil {
+	if err := recordCreated(ctx, w.s, w.run, w.system, object, row.ExternalID, ids.NewV7()); err != nil {
 		return EnsureResult{}, err
 	}
 	w.ensured[object+"/"+row.ExternalID]++

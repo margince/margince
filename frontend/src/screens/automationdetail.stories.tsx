@@ -4,12 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   AutomationInspectors,
   AutomationPreview,
   AutomationRuns,
   OutcomeBadge,
 } from "./automationdetail";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The two human-only automation panels rendered against static fixtures — the
 // same fetch-stub convention the unit tests use, so every visual state below

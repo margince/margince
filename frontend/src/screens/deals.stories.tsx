@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
-import { DealScreen, FxLine } from "./deals";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { DealScreen, FxLine } from "./deals";
 
 // FxLine is prop-driven (no fetch/react-query inside) — the deal 360 supplies
 // the amount/rate and the installation's base currency. Rendered here converted

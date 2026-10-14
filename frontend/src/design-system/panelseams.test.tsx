@@ -21,19 +21,16 @@ import {
 } from "./panel";
 import { SettingList, SettingRow } from "./settingrow";
 
-// One line between two bands of a pane, and it runs edge to edge. The shapes
-// are the ones settings screens stack, rendered under every design-system sheet.
-// happy-dom paints no pseudo-element, so each `::before` rule is copied onto its
-// element as custom properties, and happy-dom's cascade picks the winner.
-//
-// Blind to: screen sheets, `::after`, a shadow or ground drawn as a line, and
-// any media query below the 1280px window.
+// One edge-to-edge line per boundary; happy-dom paints no `::before`, so it is read off its host.
+// Blind to: screen sheets, `::after`, a shadow drawn as a line, grid columns, RTL, widths under 1280px.
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 const PROBED: Readonly<Record<string, string>> = {
   content: "--seam-content",
-  inset: "--seam-inset",
+  position: "--seam-position",
+  left: "--seam-left",
+  right: "--seam-right",
   height: "--seam-height",
   background: "--seam-background",
   "background-color": "--seam-background",
@@ -50,18 +47,49 @@ function declarations(body: string): [string, string][] {
 
 const BEFORE = /::?before$/;
 
-// happy-dom keeps `padding-inline` apart from `padding-left`, so a logical
-// declaration is rewritten to the physical sides it sets left to right.
-const LOGICAL = /^(padding|margin)-inline(-start|-end)?$/;
+// happy-dom keeps logical properties apart from physical ones, so each is
+// rewritten to the physical sides it sets in a left-to-right, top-down page.
+const LOGICAL =
+  /^(padding|margin|border|inset)-(inline|block)(-start|-end)?(-width|-style|-color)?$/;
+const SIDES = { inline: ["left", "right"], block: ["top", "bottom"] } as const;
+const SIZES: Readonly<Record<string, string>> = {
+  "block-size": "height",
+  "inline-size": "width",
+  "min-block-size": "min-height",
+  "min-inline-size": "min-width",
+  "max-block-size": "max-height",
+  "max-inline-size": "max-width",
+};
 
-function physical([property, value]: [string, string]): string[] {
+function physical([property, value]: [string, string]): [string, string][] {
+  if (property in SIZES) return [[SIZES[property], value]];
+  if (property === "inset") {
+    const [top, right = top, bottom = top, left = right] = splitTopLevel(
+      value,
+      " ",
+    );
+    return [
+      ["top", top],
+      ["right", right],
+      ["bottom", bottom],
+      ["left", left],
+    ];
+  }
   const logical = LOGICAL.exec(property);
-  if (!logical) return [`${property}: ${value}`];
-  const [box, side] = [logical[1], logical[2]];
-  if (side === "-start") return [`${box}-left: ${value}`];
-  if (side === "-end") return [`${box}-right: ${value}`];
-  const [start, end = start] = splitTopLevel(value, " ");
-  return [`${box}-left: ${start}`, `${box}-right: ${end}`];
+  if (!logical) return [[property, value]];
+  const [, box, axis, edge, part = ""] = logical;
+  const [start, end] = SIDES[axis as keyof typeof SIDES];
+  const name = (side: string) =>
+    box === "inset" ? side : `${box}-${side}${part}`;
+  if (edge === "-start") return [[name(start), value]];
+  if (edge === "-end") return [[name(end), value]];
+  // `border-inline: 1px solid` sets both sides alike; the rest take two values.
+  const [first, second = first] =
+    box === "border" && part === "" ? [value] : splitTopLevel(value, " ");
+  return [
+    [name(start), first],
+    [name(end), second],
+  ];
 }
 
 // Each `X::before` rule also gains a twin on `X` declaring the probed values as
@@ -70,8 +98,8 @@ function prepared(sheet: string): string {
   return withoutComments(sheet).replace(
     /([^{}]+)\{([^{}]*)\}/g,
     (_, prelude: string, body: string) => {
-      const own = declarations(body);
-      const rule = `${prelude}{ ${own.flatMap(physical).join("; ")} }`;
+      const own = declarations(body).flatMap(physical);
+      const rule = `${prelude}{ ${own.map(([p, v]) => `${p}: ${v}`).join("; ")} }`;
       const subjects = selectorList(prelude)
         .map((selector) => selector.trim())
         .filter((selector) => BEFORE.test(selector));
@@ -91,7 +119,7 @@ let installed: HTMLStyleElement | undefined;
 beforeAll(() => {
   installed = document.createElement("style");
   installed.textContent = [
-    "* { --seam-content: none; --seam-inset: auto; --seam-height: auto; --seam-background: none; }",
+    "* { --seam-content: none; --seam-position: static; --seam-left: auto; --seam-right: auto; --seam-height: auto; --seam-background: none; }",
     ...sheets.map((sheet) => prepared(readFileSync(sheet, "utf8"))),
   ].join("\n");
   document.head.append(installed);
@@ -163,13 +191,18 @@ function beforeLine(element: Element, pane: Element): Line | undefined {
   const height = style.getPropertyValue("--seam-height").trim();
   const ground = style.getPropertyValue("--seam-background").trim();
   if (content === "none" || height !== "1px" || ground === "none") return;
-  const sides = resolved(style.getPropertyValue("--seam-inset")).split(/\s+/);
-  const [, insetRight = sides[0], , insetLeft = insetRight] = sides;
+  // Insets count from the host only when the line is placed against it.
+  const placed = style.getPropertyValue("--seam-position").trim();
+  if (placed !== "absolute" || style.position === "static") {
+    throw new Error(
+      `${nameOf(element)} draws a line its insets do not place against it`,
+    );
+  }
   const [left, right] = standoff(element, pane);
   return {
     owner: element,
-    left: left + px(insetLeft),
-    right: right + px(insetRight),
+    left: left + px(style.getPropertyValue("--seam-left")),
+    right: right + px(style.getPropertyValue("--seam-right")),
   };
 }
 
@@ -244,8 +277,12 @@ function everyLine(pane: Element): Line[] {
     .filter((line): line is Line => line !== undefined);
 }
 
+function nameOf(element: Element): string {
+  return element.className || element.tagName;
+}
+
 function describeLine(line: Line): string {
-  return `${line.owner.className || line.owner.tagName} ${line.left}/${line.right}`;
+  return `${nameOf(line.owner)} ${line.left}/${line.right}`;
 }
 
 const rows = (
@@ -284,6 +321,12 @@ const fold = (
   </Disclosure>
 );
 
+const verbFold = (
+  <Disclosure summary="Thread" action={<button type="button">History</button>}>
+    <p>Three messages since Monday.</p>
+  </Disclosure>
+);
+
 // Lines at each boundary, head first. 0 is a boundary the pane leaves open.
 const SHAPES: readonly (readonly [string, ReactNode, readonly number[]])[] = [
   [
@@ -296,6 +339,14 @@ const SHAPES: readonly (readonly [string, ReactNode, readonly number[]])[] = [
     [
       <PanelBody key="a">One.</PanelBody>,
       <PanelBody key="b">{fold}</PanelBody>,
+    ],
+    [1, 1],
+  ],
+  [
+    "body, body opening with a disclosure that has an action",
+    [
+      <PanelBody key="a">One.</PanelBody>,
+      <PanelBody key="b">{verbFold}</PanelBody>,
     ],
     [1, 1],
   ],
@@ -422,11 +473,36 @@ describe("every line in a pane shares the pane's width", () => {
       </PanelBody>,
     ],
     [
+      "a disclosure with an action under an intro in one body",
+      <PanelBody key="a">
+        <PanelIntro>Mail with this account.</PanelIntro>
+        {verbFold}
+      </PanelBody>,
+    ],
+    [
       "a list nested in a disclosure of a body",
       [
         <PanelBody key="a">One.</PanelBody>,
         <PanelBody key="b">
           <Disclosure summary="Audit" open>
+            <SettingList>
+              <SettingRow label="Renamed" control={<span>Today</span>} />
+              <SettingRow label="Added" control={<span>Monday</span>} />
+            </SettingList>
+          </Disclosure>
+        </PanelBody>,
+      ],
+    ],
+    [
+      "a list nested in a disclosure with an action of a body",
+      [
+        <PanelBody key="a">One.</PanelBody>,
+        <PanelBody key="b">
+          <Disclosure
+            summary="Audit"
+            action={<button type="button">Export</button>}
+            open
+          >
             <SettingList>
               <SettingRow label="Renamed" control={<span>Today</span>} />
               <SettingRow label="Added" control={<span>Monday</span>} />

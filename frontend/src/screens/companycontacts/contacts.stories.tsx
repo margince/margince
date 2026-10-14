@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { CompanyContactsList } from "./contacts";
 
 // The company's contacts as the rep meets them: ranked, so whoever is waiting on

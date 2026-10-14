@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { ReportingCharts } from "./reporting.charts";
 import { reportingStoryEvaluation } from "./reporting.story-fixtures";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Graph layout",

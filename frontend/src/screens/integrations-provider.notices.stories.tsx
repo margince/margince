@@ -4,11 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { ProblemError } from "../lib/problem";
+import { StoryProviders } from "../testing/story-utils";
 import {
   BuyableRefused,
   PostureRefused,
 } from "./integrations-provider.notices";
-import { StoryProviders } from "./story-utils";
 
 // The two refused-switch bands, in the list they belong to: a non-row child of
 // `SettingList`, so the plate pays for its own interval and draws no hairline.

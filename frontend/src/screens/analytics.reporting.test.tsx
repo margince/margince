@@ -3,6 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../testing/mefixture";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import { render } from "./analytics.testkit";
 import { ReportingForecastGraphs } from "./reporting.forecast";
@@ -11,7 +12,6 @@ import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 afterEach(() => {
   cleanup();

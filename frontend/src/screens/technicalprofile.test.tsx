@@ -4,14 +4,13 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { isTechnicalFact, TechnicalProfilePanel } from "./companytechnical";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { isTechnicalFact, TechnicalProfilePanel } from "./companytechnical";
 
 const COMPANY = "019ff000-0000-7000-8000-0000000000a1";
 

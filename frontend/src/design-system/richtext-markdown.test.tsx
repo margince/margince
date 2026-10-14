@@ -99,6 +99,15 @@ describe("a markdown body in the editor", () => {
     expect(markdownOf(editorOf(steps))).toBe(steps);
   });
 
+  it("leaves the spaces a selection caught outside the mark", () => {
+    const node = document.createElement("div");
+    node.innerHTML = "<p>say<strong> loudly </strong>now</p>";
+
+    // `** loudly **` is not bold to a reader, so the mark hugs the word and
+    // the spaces stay where the sentence needs them.
+    expect(markdownOf(node)).toBe("say **loudly** now");
+  });
+
   it("writes italic around bold so the reader reads it back", () => {
     const node = document.createElement("div");
     node.innerHTML = "<p><em><strong>both</strong></em></p>";

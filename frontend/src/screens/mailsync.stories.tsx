@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MailSyncCard } from "./capture-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSyncCard } from "./capture-settings";
 
 // How often a mailbox syncs, editable and refused.
 function story(allow: Parameters<typeof meRoute>[0]) {

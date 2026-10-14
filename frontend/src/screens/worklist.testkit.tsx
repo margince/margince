@@ -15,10 +15,11 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type RenderResult, render } from "@testing-library/react";
+import { type RenderResult, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
 
 export type Worklist = components["schemas"]["Worklist"];
@@ -158,6 +159,23 @@ export function panelNamed(heading: HTMLElement): HTMLElement {
     throw new Error(`no panel around the heading "${heading.textContent}"`);
   }
   return panel;
+}
+
+/** The name of a row's menu, which names the row it belongs to. */
+export function rowMenuName(title: string): string {
+  return en["worklist.rowMenu"].replace("{title}", title);
+}
+
+/**
+ * The menu of the one row on screen, by the start of its name: the rest is the
+ * row's title as the row composes it.
+ */
+export function findRowMenu(): Promise<HTMLElement> {
+  const menu = en["worklist.rowMenu"];
+  const lead = menu.slice(0, menu.indexOf("{title}"));
+  return screen.findByRole("button", {
+    name: (name) => name.startsWith(lead),
+  });
 }
 
 export function renderWorklist(

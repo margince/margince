@@ -8,7 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { IntroRequestModal } from "./introrequest";
 
 // The dialog that turns a route into a move.

@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiUsageCard } from "./aiusage";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card gates itself on ai_diagnostics:read — the grant `GET /ai/usage`
 // asks for — so /me is not optional furniture here: it decides which of the

@@ -4,21 +4,20 @@
 import { useState } from "react";
 import { Button, Checkbox } from "../design-system/atoms";
 import { SelectionBar } from "../design-system/selectionbar";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { BulkChangeDialog, type BulkChangeRequest } from "./bulkchange";
+import { useMarkRowsDone, type WorklistRowRef } from "./worklist.donequeries";
 import type { WorklistItem } from "./worklist.queries";
 import { rowIdentity } from "./worklist.rowidentity";
 
-// Marking several Worklist tasks and promises done in one change.
+// Marking several Worklist rows done in one change.
 //
-// Only a row whose own Done marks a task or a promise done is selectable: a
-// waiting message, an approval and a system row carry no checkbox. "Select
-// all" takes every such row the Worklist has LOADED under its current filter,
-// and its label says "shown": rows past the last loaded page are not selected.
-// The change runs through the bulk dialog, which previews it, asks for the
-// confirmation above ten rows, reports the rows it left alone, and offers one
-// Undo for the whole batch.
+// Every row that offers Done takes a checkbox. Tasks and promises go through
+// the bulk dialog, which previews the change and offers one Undo. Every other
+// row leaves the reader's own list in one call, with one Undo. "Select all"
+// takes the rows LOADED under the current filter, so its label says "shown".
 
 /** The sources whose Done marks a task or a promise done. */
 const BULK_DONE_SOURCES: ReadonlySet<string> = new Set([
@@ -26,13 +25,20 @@ const BULK_DONE_SOURCES: ReadonlySet<string> = new Set([
   "conversation_claim",
 ]);
 
-/** Whether this row takes a checkbox. */
-export function bulkDoneEligible(item: WorklistItem): boolean {
+/** Whether Done on this row ticks a task or a promise done. */
+function completesInBulk(item: WorklistItem): boolean {
   return (
     BULK_DONE_SOURCES.has(item.source) &&
     item.category !== "system" &&
     item.actions.includes("complete") &&
     item.version !== undefined
+  );
+}
+
+/** Whether this row takes a checkbox. */
+export function bulkDoneEligible(item: WorklistItem): boolean {
+  return (
+    completesInBulk(item) || (item.dispositions?.includes("handled") ?? false)
   );
 }
 
@@ -117,6 +123,45 @@ function RowPick({
   );
 }
 
+/** Takes rows off the reader's own list in one call, with one Undo for all. */
+function usePutDownRows() {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const toast = useToast();
+  const done = useMarkRowsDone();
+  return (rows: readonly WorklistRowRef[]) =>
+    done.mutate(
+      { rows },
+      {
+        onSuccess: () =>
+          toast.show(
+            plural("worklist.bulk.doneCount", rows.length, {
+              count: formatNumber(rows.length, locale),
+            }),
+            {
+              action: {
+                kind: "undo",
+                label: t("worklist.disposition.undo"),
+                onAct: () =>
+                  done.mutate(
+                    { rows, reopen: true },
+                    {
+                      onError: () =>
+                        toast.show(t("worklist.disposition.undoFailed"), {
+                          tone: "danger",
+                        }),
+                    },
+                  ),
+              },
+            },
+          ),
+        onError: () =>
+          toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
+      },
+    );
+}
+
 /**
  * The bar over the queue while it holds a row that can be marked done: the
  * way to select every such row shown, and once any is selected, the count and
@@ -130,18 +175,19 @@ export function WorklistBulkBar({
   const { locale } = useLocale();
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
   const { eligible, rows, selectAll, clear } = selection;
+  const putDown = usePutDownRows();
   if (eligible.length === 0 && request === null) {
     return null;
   }
-  const markDone = () =>
+  // Each record once: two rows may name one record, and the change refuses
+  // an id named twice.
+  const completeInDialog = (completing: readonly WorklistItem[]) =>
     setRequest({
       recordType: "worklist_item",
       verb: "complete",
-      // Each record once: two rows may name one record, and the change
-      // refuses an id named twice.
       rows: [
         ...new Map(
-          rows.map((item) => [
+          completing.map((item) => [
             item.id,
             {
               id: item.id,
@@ -153,6 +199,20 @@ export function WorklistBulkBar({
       ],
       openId: crypto.randomUUID(),
     });
+  const markDone = () => {
+    const completing = rows.filter(completesInBulk);
+    const leaving = rows
+      .filter((item) => !completesInBulk(item))
+      .map((item) => ({ source: item.source, row_id: item.id }));
+    if (leaving.length > 0) {
+      putDown(leaving);
+    }
+    if (completing.length > 0) {
+      completeInDialog(completing);
+    } else {
+      clear();
+    }
+  };
   return (
     <SelectionBar>
       {rows.length > 0 && (

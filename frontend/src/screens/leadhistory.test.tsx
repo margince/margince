@@ -6,8 +6,8 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import { LeadHistoryTab } from "./leadhistory";
-import { jsonResponse, stubWithSession } from "./story-utils";
 
 type Lead = components["schemas"]["Lead"];
 

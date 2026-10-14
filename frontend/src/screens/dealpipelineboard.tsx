@@ -9,10 +9,10 @@ import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { routeHash } from "../lib/router";
+import { useWriteTo } from "../lib/writeto";
 import { dealMailAside } from "./dealmailaside";
 import { DealStatusCardPanel } from "./dealstatus";
 import { LogActivityAction } from "./logactivity";
-import { useWriteTo } from "./writeto";
 
 // The pipeline board as the deals screen draws it: the design-system board
 // with the screen's half of every card — the mail flyout read from the

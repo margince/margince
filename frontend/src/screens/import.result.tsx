@@ -11,14 +11,15 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { UndoConfirm, UndoErrors } from "./import.notices";
+import { hasProgress, ImportProgressPanel } from "./import.progress";
 import { PartCounts, partsOf, problemsHref } from "./import.testrun";
-import type { ImportWizardState } from "./importflow";
 import type {
   ImportFormat,
   ImportReport,
   ImportRun,
   ImportRunPart,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 import { settingsHref } from "./settingsrouting";
 
 type PartProgress = Readonly<{
@@ -91,7 +92,7 @@ export function PartProgressList({
 }
 
 /**
- * The import while it runs, read again every two seconds: one bar per file. A
+ * The import while it runs: one bar per file. A
  * run that stopped says why and resumes from where it stopped.
  */
 export function ImportProgress({
@@ -108,7 +109,11 @@ export function ImportProgress({
   const failed = run.status === "failed";
   return (
     <div className="import">
-      <PartProgressList run={run} order={format.order} />
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.progress.working")} />
+      ) : (
+        <PartProgressList run={run} order={format.order} />
+      )}
       {failed ? (
         <>
           <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
@@ -231,7 +236,11 @@ function ResultBody({
       {run.status === "undone" ? <UndoOutcome undo={report.undo} /> : null}
       <div className="import__actions">
         {report.issues.length > 0 ? (
-          <a className="link-button" href={problemsHref(run.id)} download>
+          <a
+            className="link-button"
+            href={problemsHref(run.id, locale)}
+            download
+          >
             {t("import.result.problemsFile")}
           </a>
         ) : null}

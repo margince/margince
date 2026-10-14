@@ -21,6 +21,7 @@ import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
+import { loggedActivityKeys } from "../lib/activitykeys";
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
@@ -34,7 +35,6 @@ import {
   NO_ATTENDEES,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
-import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
 import "./logactivity.css";
 import { MeetingAttendeeFields } from "./meetingattendees";

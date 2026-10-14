@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,7 +39,7 @@ const KindVolumeRelease = "volume_release"
 // serves no agents composes none, and its releases are then a loud absence
 // rather than a silent no-op.
 type VolumeReleaser interface {
-	Release(ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64) (bool, error)
+	Release(ctx context.Context, ws, passport ids.UUID, c agentvolume.Counter, bucket int64, length time.Duration) (bool, error)
 }
 
 // WithVolumeReleaser installs the meter an approved step-up widens.
@@ -85,7 +86,11 @@ func (s *Service) applyVolumeRelease(ctx context.Context, a row) error {
 	if err != nil {
 		return err
 	}
-	if _, err := s.quota.Release(ctx, wsID, a.PassportID.UUID, proposal.Counter, bucket); err != nil {
+	length, err := proposal.Length()
+	if err != nil {
+		return err
+	}
+	if _, err := s.quota.Release(ctx, wsID, a.PassportID.UUID, proposal.Counter, bucket, length); err != nil {
 		return fmt.Errorf("crmapprovals: releasing the %s window: %w", proposal.Counter, err)
 	}
 	return nil

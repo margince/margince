@@ -17,6 +17,7 @@ import {
   useTimelineFilters,
 } from "../../design-system/recordtimeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
+import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab } from "../history";
@@ -30,7 +31,6 @@ import {
 } from "../recordchronology";
 import { invalidateRecord } from "../recordwritekeys";
 import { TimelineActions } from "../timelineactions";
-import { groupChronology } from "../timelinegroups";
 
 type Deal = components["schemas"]["Deal"];
 

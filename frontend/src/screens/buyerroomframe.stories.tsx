@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { BuyerFrame, BuyerHero, ContactCard, DeadLink } from "./buyerroomframe";
-import { installFetchStub, StoryProviders } from "./story-utils";
 import "./buyerroom.css";
 
 // The page a client meets, without the board: the ground and our mark, the

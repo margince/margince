@@ -388,7 +388,7 @@ func TestCSVImportResolvesALegalNameAndRefusesASharedOne(t *testing.T) {
 		t.Fatalf("links = %+v, want the shared name reported unresolved rather than linked to "+
 			"whichever company the read happened to see first", report.Links)
 	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "more than one") {
+	if !strings.Contains(strings.ToLower(report.Links.Unresolved[0].Reason), "more than one") {
 		t.Errorf("reason = %q, want it to say the name is shared — a contact told 'not found' "+
 			"would go and create a third Faraday", report.Links.Unresolved[0].Reason)
 	}

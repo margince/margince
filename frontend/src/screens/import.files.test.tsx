@@ -64,6 +64,7 @@ describe("the files step", () => {
     });
 
     cleanup();
+    globalThis.location.hash = "";
     const again = stubRoutes();
     render(<ImportWizardPage />);
     await user.upload(

@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
 import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   archivedContact,
   archivedContactRoutes,
   archiveEntry,
@@ -11,12 +17,6 @@ import {
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
 import { view as liveView } from "./contactpage.testkit";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 afterEach(cleanup);
 

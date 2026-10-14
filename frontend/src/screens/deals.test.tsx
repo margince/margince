@@ -1300,12 +1300,12 @@ describe("DealsScreen", () => {
       "Other",
     );
 
-    const confirm = screen.getByRole("button", { name: "Confirm" });
-    expect(confirm.hasAttribute("disabled")).toBe(true);
+    const confirm = () => screen.getByRole("button", { name: "Confirm" });
+    expect(confirm().hasAttribute("disabled")).toBe(true);
 
     await user.type(screen.getByLabelText("Details"), "a barter deal");
-    expect(confirm.hasAttribute("disabled")).toBe(false);
-    await user.click(confirm);
+    expect(confirm().hasAttribute("disabled")).toBe(false);
+    await user.click(confirm());
 
     await waitFor(() => expect(advances).toHaveLength(2));
     expect(advances[1]).toEqual({

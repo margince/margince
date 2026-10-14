@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button, OverflowMenu } from "../design-system/atoms";
-import { ContactRecordActions } from "./contactrecordactions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactRecordActions } from "./contactrecordactions";
 
 type Contact = components["schemas"]["Contact"];
 

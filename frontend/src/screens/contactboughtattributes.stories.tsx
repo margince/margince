@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { FieldGrid } from "../design-system/fieldgrid";
+import { StoryProviders } from "../testing/story-utils";
 import { BoughtAttributes } from "./contactboughtattributes";
-import { StoryProviders } from "./story-utils";
 
 type Profile = components["schemas"]["ContactProviderProfile"];
 

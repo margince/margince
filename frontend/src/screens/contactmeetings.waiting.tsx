@@ -20,8 +20,8 @@ import { formatDayMonth, formatNumber } from "../format/format";
 import { formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { entityTimelineKeys } from "../lib/activitykeys";
 import { unwrap } from "../lib/problem";
-import { entityTimelineKeys } from "./activitykeys";
 import { proposalEmailBody } from "./booking-proposal-message";
 import { ComposeModal } from "./compose";
 

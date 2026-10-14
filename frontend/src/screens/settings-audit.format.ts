@@ -79,6 +79,8 @@ const AUDIT_ACTIONS = {
   delete: true,
   place_legal_hold: true,
   lift_legal_hold: true,
+  request_legal_review: true,
+  withdraw_legal_review: true,
 } as const satisfies Record<AuditLogEntry["action"], true>;
 
 export const AUDIT_ACTION_VALUES: readonly string[] =

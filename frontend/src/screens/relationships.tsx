@@ -17,10 +17,10 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { isOption } from "../lib/options";
 import { unwrap } from "../lib/problem";
-import { DEAL_COVERAGE_KEY } from "./activitykeys";
 import type { CreateField } from "./create";
 import {
   type Candidate,

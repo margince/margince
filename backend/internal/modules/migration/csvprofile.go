@@ -4,7 +4,6 @@
 package migration
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -123,7 +122,7 @@ func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
 // profileRows reads up to rowLimit data rows, counting the filled cells per
 // column and keeping the first few values of each. It reports how many rows it
 // actually read, which is the denominator every fill rate is quoted against.
-func profileRows(cr *csv.Reader, columns, rowLimit int) (filled []int, samples [][]string, rows int, err error) {
+func profileRows(cr recordReader, columns, rowLimit int) (filled []int, samples [][]string, rows int, err error) {
 	filled = make([]int, columns)
 	samples = make([][]string, columns)
 	for rows < rowLimit {

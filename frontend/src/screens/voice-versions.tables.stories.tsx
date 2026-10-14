@@ -8,7 +8,7 @@ import { DataTable } from "../design-system/datatable";
 import { Panel } from "../design-system/panel";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { changeColumns, versionColumns } from "./voice-versions.tables";
 
 // Every version status and every change outcome, drawn from the column sets

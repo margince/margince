@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { OAuthAppCard } from "./oauth-app";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The card has THREE states, and the middle one is why it was rewritten: an app
 // the DEPLOYMENT supplies is neither a stored app nor the absence of one, and

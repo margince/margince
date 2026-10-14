@@ -67,6 +67,10 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 		due := *deal.ExpectedCloseDate
 		item.DueAt = &due
 	}
+	if !deal.LastTouchedAt.IsZero() {
+		touched := deal.LastTouchedAt
+		item.SubjectMovedAt = &touched
+	}
 	return item
 }
 

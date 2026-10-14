@@ -28,16 +28,12 @@ import (
 // tagObject is the RBAC object of the tag vocabulary.
 const tagObject = "tag"
 
-// ownerRefusedReason is the report's word for a seat the importer may not
-// name as an owner.
-const ownerRefusedReason = "You cannot make this user an owner, so you become the owner of their rows"
-
 // grantNeed is one grant the commit will exercise, and what the report says
 // when the importer lacks it.
 type grantNeed struct {
 	Object string
 	Action principal.Action
-	Why    string
+	Why    migration.Reason
 }
 
 // tagGrants says which tag grants a run's commit takes.
@@ -52,40 +48,39 @@ type tagGrants struct {
 func grantsFor(parts []migration.PartMapping, tags tagGrants) []grantNeed {
 	var needs []grantNeed
 	for _, part := range parts {
-		edit := cannotEditReason(part.Object)
+		edit := cannotEditWhy(part.Object)
 		if columnFor(part.Fields, csvTargetTags) != "" {
-			edit += " and no tag is added to one"
+			edit = migration.Why(migration.ReasonCannotEditAndTag, "plural", pluralOf(part.Object))
 		}
 		needs = append(needs,
-			grantNeed{Object: part.Object, Action: principal.ActionCreate, Why: cannotCreateReason(part.Object)},
+			grantNeed{Object: part.Object, Action: principal.ActionCreate, Why: cannotCreateWhy(part.Object)},
 			grantNeed{Object: part.Object, Action: principal.ActionUpdate, Why: edit})
 	}
 	if tags.applies {
 		needs = append(needs, grantNeed{
 			Object: tagObject, Action: principal.ActionRead,
-			Why: "You cannot read tags, so the tags column is not imported",
+			Why: migration.Why(migration.ReasonCannotReadTags),
 		})
 	}
 	if tags.createsNew {
 		needs = append(needs, grantNeed{
 			Object: tagObject, Action: principal.ActionCreate,
-			Why: "You cannot create tags, so a tag new to the CRM is not added",
+			Why: migration.Why(migration.ReasonCannotCreateTags),
 		})
 	}
 	return needs
 }
 
-// cannotCreateReason is what a part's every row says when the importer may not
+// cannotCreateWhy is what a part's every row says when the importer may not
 // create its type: the test run's warning and the commit's skip alike.
-func cannotCreateReason(object string) string {
-	plural := pluralOf(object)
-	return "You cannot create " + plural + ", so the " + plural + " file is skipped"
+func cannotCreateWhy(object string) migration.Reason {
+	return migration.Why(migration.ReasonCannotCreate, "plural", pluralOf(object))
 }
 
-// cannotEditReason is what a row says that would change a record the importer
+// cannotEditWhy is what a row says that would change a record the importer
 // may not edit.
-func cannotEditReason(object string) string {
-	return "You cannot edit " + pluralOf(object) + ", so a row that changes one already in the CRM is skipped"
+func cannotEditWhy(object string) migration.Reason {
+	return migration.Why(migration.ReasonCannotEdit, "plural", pluralOf(object))
 }
 
 // pluralOf is the type's name as its template file spells it.
@@ -104,8 +99,8 @@ func missingGrants(ctx context.Context, needs []grantNeed) []migration.SkippedRo
 	for _, need := range needs {
 		if !auth.Allows(ctx, need.Object, need.Action) {
 			problems = append(problems, migration.SkippedRow{
-				Kind: migration.ProblemPermission, Value: grantValue(need.Object, need.Action), Reason: need.Why,
-			})
+				Kind: migration.ProblemPermission, Value: grantValue(need.Object, need.Action),
+			}.Because(need.Why))
 		}
 	}
 	return problems
@@ -127,7 +122,7 @@ func checkGrants(
 	}
 	for _, email := range refused {
 		owners.refuse(email)
-		problems = append(problems, migration.SkippedRow{Kind: migration.ProblemPermission, Value: email, Reason: ownerRefusedReason})
+		problems = append(problems, migration.SkippedRow{Kind: migration.ProblemPermission, Value: email}.Because(ownerRefusedWhy))
 	}
 	return problems, nil
 }
@@ -191,8 +186,9 @@ func (w *csvWriters) createRefusal(ctx context.Context, row migration.Row) *migr
 	if auth.Allows(ctx, w.object, principal.ActionCreate) {
 		return nil
 	}
-	return &migration.SkippedRow{
+	refusal := migration.SkippedRow{
 		ExternalID: row.ExternalID, Line: row.Line, Kind: migration.ProblemPermission,
-		Value: grantValue(w.object, principal.ActionCreate), Reason: cannotCreateReason(w.object),
-	}
+		Value: grantValue(w.object, principal.ActionCreate),
+	}.Because(cannotCreateWhy(w.object))
+	return &refusal
 }

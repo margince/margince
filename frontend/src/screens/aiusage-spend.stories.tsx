@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
 import { Panel } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import { aggregate, SpendByDay, SpendByTask, spendRows } from "./aiusage-spend";
-import { StoryProviders } from "./story-utils";
 
 const line = (
   task: string,

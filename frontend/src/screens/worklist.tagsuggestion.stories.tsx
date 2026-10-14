@@ -11,7 +11,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { TagSuggestionDecision } from "./worklist.tagsuggestion";
 
 // A tag suggestion, decided on its Worklist row: the word, the mail and notes

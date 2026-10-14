@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { VerdictLine } from "./worklist.verdict";
 // The line is drawn INSIDE a queue row, and everything about its measure — the
 // badge sitting on the sentence's baseline, the reading date trailing it — is

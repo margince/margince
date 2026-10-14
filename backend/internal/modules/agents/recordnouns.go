@@ -28,7 +28,7 @@ var recordNounsByLang = map[textlang.Lang]map[string]string{
 		"contact":              "Kontakt",
 		"custom_field":         "Benutzerdefiniertes Feld",
 		"deal":                 "Deal",
-		"deal_room":            "Deal-Room",
+		"deal_room":            "Deal Room",
 		"deal_room_comment":    "Deal-Room-Kommentar",
 		"deal_room_thread":     "Deal-Room-Thread",
 		"lead":                 "Lead",
@@ -38,7 +38,7 @@ var recordNounsByLang = map[textlang.Lang]map[string]string{
 		"project":              "Projekt",
 		"relationship":         "Beziehung",
 		"saved_view":           "Gespeicherte Ansicht",
-		"tag":                  "Schlagwort",
+		"tag":                  "Tag",
 		"webhook_subscription": "Webhook-Abonnement",
 	},
 	textlang.Vietnamese: {

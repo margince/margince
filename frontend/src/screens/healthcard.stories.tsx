@@ -10,8 +10,12 @@ import type { QueryLike } from "../design-system/querystates";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ProblemError } from "../lib/problem";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { HealthCard, type HealthSlot, HealthStrip } from "./healthcard";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The shell System health cards wear, with the least body that can stand in.
 // In order: a reading, an empty report the body draws, the withheld notice, a

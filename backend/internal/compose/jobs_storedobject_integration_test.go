@@ -306,7 +306,7 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 	case storedobjects.KindLogo:
 		// The ICON column, not the wide one: a check reading only logo_object_key
 		// calls this unreferenced, which is the four-column finding this pins.
-		e.WsExec(t, `UPDATE company SET logo_icon_object_key = $1 WHERE id = $2`,
+		e.WsExec(t, `UPDATE company SET logo_icon_object_key = $1, logo_icon_origin = 'upload' WHERE id = $2`,
 			key, e.SeedCompany(t, "Referenced Mark GmbH", nil))
 	case storedobjects.KindOffer:
 		e.WsExec(t, `

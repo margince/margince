@@ -8716,7 +8716,7 @@ components:
       description: |-
         The installation's identity and reporting basis. Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
       properties:
         name:
           type: string
@@ -8790,6 +8790,8 @@ components:
             they were issued with.
         operations:
           $ref: '#/components/schemas/OperationSettings'
+        agent_allowances:
+          $ref: '#/components/schemas/AgentAllowanceSettings'
         dead_work_banner_hours:
           type: integer
           minimum: 1
@@ -8847,6 +8849,48 @@ components:
         send_rate_limit: {type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.'}
         send_rate_window_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.'}
         send_max_age_hours: {type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.'}
+    AgentAllowanceSettings:
+      type: object
+      additionalProperties: false
+      description: |-
+        How much one agent may do in one window. A passport a user minted has its own allowance;
+        a connected MCP client has one allowance for all its passports, so a renewed credential
+        keeps counting where the last one stopped. An agent that reaches a count is refused on
+        its next call until the window resets or the user who lent it releases more. A change to
+        a count applies within a minute, in the window that is running: a raised count gives
+        headroom within that minute, and a lowered one refuses an agent already past it on its
+        next call. The per-minute limits are fixed by the build and shown here read-only.
+      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      properties:
+        agent_reads_per_window: {type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.'}
+        agent_writes_per_window: {type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.'}
+        agent_egress_per_window: {type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.'}
+        agent_calls_per_window: {type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.'}
+        agent_window_hours:
+          type: integer
+          minimum: 1
+          maximum: 168
+          description: |-
+            How long the window in force lasts, in hours. Default 24. Every passport's window
+            resets at the same moment, a whole number of windows since 1970-01-01 UTC.
+        agent_window_resets_at:
+          type: string
+          format: date-time
+          description: When the window in force resets and every count starts again from zero.
+        agent_window_next_hours:
+          type: [integer, 'null']
+          description: |-
+            The window length an admin saved that is not in force yet, in hours. Null when no
+            change is waiting.
+        agent_window_next_starts_at:
+          type: [string, 'null']
+          format: date-time
+          description: |-
+            When the saved window length takes over: the next reset of the window in force that
+            is at least a minute away. Null when no change is waiting. The first window under the
+            new length may be shorter than that length, never longer.
+        mcp_calls_per_minute: {type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.'}
+        mcp_stream_opens_per_minute: {type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.'}
     SourceAuthor:
       type: object
       description: |-
@@ -9277,6 +9321,10 @@ components:
       type: string
       enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+    ImportReasonCode:
+      type: string
+      enum: [author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_read_tags, cannot_write_type, company_duplicate_found, company_duplicate_skipped, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_unnamed, currency_unset, description_too_long, domain_held, duplicate_email, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, id_not_a_company_id, id_not_visible, id_on_non_company, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_not_found, link_not_found_dropped, link_row_not_imported, linkedin_held, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, size_band_invalid, tag_created, tag_name_invalid, tag_new, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, value_refused, value_unreadable]
+      description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.'
     CreateImportRunRequest:
       type: object
       description: |-
@@ -9368,6 +9416,11 @@ components:
         from: {type: string, description: 'The record the link starts at, by the key the file identified it with.'}
         to: {type: string, description: 'What the file named as the other end — a company name, not an id, because no id was found.'}
         reason: {type: string, description: 'Why it was not applied, in the words of the contact who made the file.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: The values `reason_code`'s sentence names. Absent on a report stored before codes.
     ImportRunDisposition:
       type: object
       description: What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
@@ -9448,6 +9501,11 @@ components:
         kind: {$ref: '#/components/schemas/ImportProblemKind'}
         value: {type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.'}
         reason: {type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.'
     ImportPartReport:
       type: object
       description: One file's slice of a run's report.
@@ -9554,6 +9612,7 @@ components:
               object: {$ref: '#/components/schemas/ImportObject'}
               id: {type: string, format: uuid}
               reason: {type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.'}
+              reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
     ImportRun:
       type: object
       required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
@@ -9585,6 +9644,45 @@ components:
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        phase: {$ref: '#/components/schemas/ImportRunPhase'}
+        phase_object: {type: string, description: 'The object the run is working on in `phase`, when it is working on one.'}
+        progress: {$ref: '#/components/schemas/ImportRunProgress'}
+        started_at: {type: string, format: date-time, description: 'When a worker took up the run''s current job: its test, its commit or its undo. Absent while the job only waits.'}
+        finished_at: {type: string, format: date-time, description: 'When the run reached a final status: complete, undone or cancelled. Absent while it can still move.'}
+        elapsed_seconds: {type: integer, minimum: 0, description: 'Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.'}
+        idle_seconds: {type: integer, minimum: 0, description: 'Seconds since the run last made progress. Absent when the run is not being worked.'}
+        heartbeat_age_seconds: {type: integer, minimum: 0, description: 'Seconds since the worker last said it is alive. Absent when the run is not being worked.'}
+        rate_rows_per_second: {type: number, minimum: 0, description: 'Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.'}
+        eta_seconds_low: {type: integer, minimum: 1, description: 'The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.'}
+        eta_seconds_high: {type: integer, minimum: 1, description: 'The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.'}
+        eta_scope: {type: string, enum: [object, run], description: '`object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.'}
+    ImportRunPhase:
+      type: string
+      enum: [reading, checking, creating_tags, importing, linking, undoing, finishing]
+      description: 'What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.'
+    ImportRunProgress:
+      type: object
+      description: 'What a run has done so far, per object and in total. Absent on a run that never moved.'
+      required: [objects, counts]
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            required: [object, rows_done, rows_total]
+            properties:
+              object: {type: string, description: 'An import object, or `links` for the link phase after every object.'}
+              rows_done: {type: integer, minimum: 0}
+              rows_total: {type: integer, minimum: 0}
+        counts:
+          type: object
+          required: [created, updated, unchanged, skipped, problems]
+          properties:
+            created: {type: integer, minimum: 0}
+            updated: {type: integer, minimum: 0}
+            unchanged: {type: integer, minimum: 0}
+            skipped: {type: integer, minimum: 0}
+            problems: {type: integer, minimum: 0, description: 'Rows that carry a problem, skipped or landed.'}
     ImportRunPart:
       type: object
       required: [file, object, row_count]
@@ -9592,6 +9690,10 @@ components:
         file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
+        mapping:
+          type: object
+          additionalProperties: {type: string}
+          description: '`{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none.'
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.
@@ -12581,6 +12683,14 @@ components:
         evidence:
           type: array
           items: {$ref: '#/components/schemas/DealNextBestActionEvidence'}
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |-
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object
@@ -14714,7 +14824,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
     StageEvidenceAuthorSide:
       type: string
       description: |-
@@ -14767,7 +14877,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     TransitionPolicyList:
       type: object
       required: [data, automation_enabled]

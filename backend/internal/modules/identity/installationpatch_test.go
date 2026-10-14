@@ -29,10 +29,15 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	// the encoder it is checking.
 	filled := reflect.New(patchType).Elem()
 	operationsField, _ := patchType.FieldByName("Operations")
+	allowancesField, _ := patchType.FieldByName("AgentAllowances")
 	for i := range patchType.NumField() {
 		field := filled.Field(i)
-		if i == operationsField.Index[0] {
+		switch i {
+		case operationsField.Index[0]:
 			field.Set(reflect.ValueOf(filledOperationPatch(t)))
+			continue
+		case allowancesField.Index[0]:
+			field.Set(reflect.ValueOf(filledAgentAllowancePatch()))
 			continue
 		}
 		if field.Kind() != reflect.Pointer {
@@ -89,7 +94,9 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 		t.Fatalf("encoding a fully-populated patch: %v", err)
 	}
 
-	if want := patchType.NumField() - 1 + operationsField.Type.NumField(); len(encoded) != want {
+	// The window length is scheduled inside the transaction, not encoded.
+	allowanceWrites := allowancesField.Type.NumField() - 1
+	if want := patchType.NumField() - 2 + operationsField.Type.NumField() + allowanceWrites; len(encoded) != want {
 		t.Errorf("the encoder produced %d writes for %d patch fields — "+
 			"a field it does not encode is one that silently stops saving",
 			len(encoded), want)

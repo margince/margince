@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { stubClipboard } from "../design-system/clipboard-testing";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DealRoomAccess } from "./dealroomaccess";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 type DealRoom = components["schemas"]["DealRoom"];
 type Participant = components["schemas"]["DealRoomParticipant"];

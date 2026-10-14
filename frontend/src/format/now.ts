@@ -52,7 +52,14 @@ export function formatCountdown(
   if (msRemaining <= 0) {
     return t("countdown.expired");
   }
-  const totalSeconds = Math.floor(msRemaining / 1000);
+  return formatSpan(msRemaining, t, locale);
+}
+
+// The two-largest-units rendering of a span, without the expired sentinel: a
+// "no progress for" line has a span, not a deadline. Under an hour it reads
+// minutes and seconds, so a 20-minute span never rounds down to "0 h".
+export function formatSpan(ms: number, t: Translator, locale: Locale): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const totalMinutes = Math.floor(totalSeconds / SECONDS_PER_MINUTE);
   const totalHours = Math.floor(totalMinutes / MINUTES_PER_HOUR);
   const days = Math.floor(totalHours / HOURS_PER_DAY);

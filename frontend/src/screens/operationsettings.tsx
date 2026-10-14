@@ -24,7 +24,7 @@ import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
 type Operations = components["schemas"]["OperationSettings"];
-type Words = Readonly<{
+export type Words = Readonly<{
   t: Translator;
   plural: PluralTranslator;
   locale: Locale;
@@ -106,7 +106,7 @@ const PACING_ROWS: readonly OperationRow[] = [
   { property: "send_max_age_hours", copy: "sendMaxAge" },
 ];
 
-type Unit = "seconds" | "hours";
+export type Unit = "seconds" | "hours";
 
 // The wire property names its unit; a count such as the send limit has none.
 function unitOf(row: OperationRow): Unit | undefined {
@@ -119,28 +119,34 @@ const UNIT_SECONDS: Record<Unit, number> = { seconds: 1, hours: 3_600 };
 
 // The box holds the wire's unit. The line under it names that unit and, where
 // it differs, the span in words ("86,400 seconds = 1 day").
+export function unitReading(
+  unit: Unit,
+  typed: number,
+  { t, plural, locale }: Words,
+): string {
+  const count = formatNumber(typed, locale);
+  const amount =
+    unit === "hours"
+      ? plural("operations.unit.hours", typed, { count })
+      : plural("operations.unit.seconds", typed, { count });
+  const interval = formatInterval(typed * UNIT_SECONDS[unit], locale);
+  return amount === interval
+    ? interval
+    : t("operations.reading", { amount, interval });
+}
+
 function inWords(
   row: OperationRow,
-  { t, plural, locale }: Words,
+  words: Words,
 ): ((typed: number) => string) | undefined {
   const unit = unitOf(row);
   if (unit === undefined) {
     return undefined;
   }
-  return (typed) => {
-    if (typed === 0 && row.lowestOn !== undefined) {
-      return t("operations.off");
-    }
-    const count = formatNumber(typed, locale);
-    const amount =
-      unit === "hours"
-        ? plural("operations.unit.hours", typed, { count })
-        : plural("operations.unit.seconds", typed, { count });
-    const interval = formatInterval(typed * UNIT_SECONDS[unit], locale);
-    return amount === interval
-      ? interval
-      : t("operations.reading", { amount, interval });
-  };
+  return (typed) =>
+    typed === 0 && row.lowestOn !== undefined
+      ? words.t("operations.off")
+      : unitReading(unit, typed, words);
 }
 
 // The range is said only once a typed value breaks it, in the row's own unit.

@@ -23,9 +23,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { CoachControl, OwnerPicker, ReassignControl } from "./worklist.manager";
+import { CoachControl, OwnerPicker } from "./worklist.manager";
+import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
-import { jsonResponse, row } from "./worklist.testkit";
+import { RowActs } from "./worklist.rowverbs";
+import { findRowMenu, jsonResponse, row } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -146,19 +148,34 @@ function completionMark(container: HTMLElement) {
   return container.ownerDocument.body.querySelector(".toast-dot-success");
 }
 
+// The hand-off as a row offers it: a line of the row's menu.
+function rowOf(item: WorklistItem, owner: string) {
+  return (
+    <RowActs
+      item={item}
+      title="Send the quote"
+      href={undefined}
+      owner={owner}
+    />
+  );
+}
+
+async function openHandOff(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await findRowMenu());
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["worklist.manager.reassign"],
+    }),
+  );
+}
+
 describe("handing a task to somebody else", () => {
   it("AC-WORKLIST-MGR-03: writes the new assignee to the task the row names", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(
-      <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
-    );
+    renderUnderAToastRegion(rowOf(row({ id: "task-1" }), LENA));
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
+    await openHandOff(user);
     await user.click(await screen.findByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "Minh Tran" }));
     await user.click(
@@ -186,15 +203,9 @@ describe("handing a task to somebody else", () => {
   it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(
-      <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
-    );
+    renderUnderAToastRegion(rowOf(row({ id: "task-1" }), LENA));
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
+    await openHandOff(user);
 
     await user.click(await screen.findByRole("combobox"));
     expect(screen.getByRole("option", { name: "Minh Tran" })).toBeTruthy();
@@ -207,14 +218,10 @@ describe("handing a task to somebody else", () => {
     stubRosterAnd(() => refusal());
     const user = userEvent.setup();
     const { container } = renderUnderAToastRegion(
-      <ReassignControl item={row({ id: "task-1" })} owner={LENA} />,
+      rowOf(row({ id: "task-1" }), LENA),
     );
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
+    await openHandOff(user);
     await user.click(await screen.findByRole("combobox"));
     await user.click(screen.getByRole("option", { name: "Minh Tran" }));
     await user.click(
@@ -347,18 +354,13 @@ describe("leaving a note on somebody's queue", () => {
 describe("a rep hands on their own task", () => {
   it("offers everyone but the reader, when no rep is selected", async () => {
     stubRosterAnd(() => undefined);
-    renderUnderAToastRegion(
-      <ReassignControl item={row({ id: "a-1" })} owner="" />,
-    );
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
+    const user = userEvent.setup();
+    renderUnderAToastRegion(rowOf(row({ id: "a-1" }), ""));
+    await openHandOff(user);
     // The listbox is PORTALLED, so its options are not inside the labelled
     // trigger — reading them through `within(picker)` finds none and the
     // not-offered assertion below passes over an empty list.
-    await userEvent.click(
+    await user.click(
       await screen.findByLabelText(en["worklist.manager.reassignTo"]),
     );
     const offered = (await screen.findAllByRole("option")).map(
@@ -380,19 +382,14 @@ describe("a rep hands on their own task", () => {
     // holder is known before the picker can open, and removing the guard under
     // test changes nothing a click can see.
     const fetched = stubRosterAnd(() => undefined, { answerMe: false });
+    const user = userEvent.setup();
     const fetchedRoster = () =>
       fetched.mock.calls.some(([input]) =>
         String(input instanceof Request ? input.url : input).includes("/users"),
       );
-    renderUnderAToastRegion(
-      <ReassignControl item={row({ id: "a-1" })} owner="" />,
-    );
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: en["worklist.manager.reassign"],
-      }),
-    );
-    await userEvent.click(
+    renderUnderAToastRegion(rowOf(row({ id: "a-1" }), ""));
+    await openHandOff(user);
+    await user.click(
       await screen.findByLabelText(en["worklist.manager.reassignTo"]),
     );
     // The roster has to have LANDED first, or this passes because nothing has
@@ -409,12 +406,13 @@ describe("a rep hands on their own task", () => {
 
 // And the ROW offers it, which is the change this issue was about.
 //
-// The two tests above mount ReassignControl directly, so they hold what the
-// control does with an empty owner and prove nothing about whether the row
+// The two tests above mount the row's verbs alone, so they hold what the
+// hand-off does with an empty owner. They prove nothing about whether the row
 // still hides it. The condition that hid it lived in worklist.row.tsx.
 describe("the row a rep is standing on", () => {
   it("offers reassign on the reader's own task", async () => {
     stubRosterAnd(() => undefined);
+    const user = userEvent.setup();
     renderUnderAToastRegion(
       <WorklistRow
         item={row({ id: "a-1", source: "task" })}
@@ -426,6 +424,7 @@ describe("the row a rep is standing on", () => {
         onOpenEmail={() => {}}
       />,
     );
+    await user.click(await findRowMenu());
     expect(
       await screen.findByRole("button", {
         name: en["worklist.manager.reassign"],

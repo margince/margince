@@ -29,7 +29,7 @@ import { stubFetch } from "./company.testkit";
 import { companyEditFields, mapCompanyUpdate } from "./companyform";
 import { TodayOnThisAccount } from "./companytoday";
 import { listFetchLimit } from "./listquery";
-import { WriteToHost } from "./writeto";
+import { WriteToHost } from "./writetohost";
 
 // The same P-14/15/16/1 shared-block wiring as contacts
 // (contacts.test.tsx) — search/sort/pagination, the rich create modal

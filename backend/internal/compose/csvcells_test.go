@@ -42,10 +42,10 @@ func TestEveryCellIsCheckedAgainstItsFieldsType(t *testing.T) {
 		{vnd, "1500000.5", nil, "not an amount in VND"},
 		{noCurrency, "12000.50", nil, "has no currency set"},
 		{date, "2026-03-02", "2026-03-02", ""},
-		{date, "03/02/2026", nil, "write it as YYYY-MM-DD"},
-		{date, "2.3.2026", nil, "write it as YYYY-MM-DD"},
-		{date, "2026-03-02 10:00", nil, "write it as YYYY-MM-DD"},
-		{date, "45351", nil, "write it as YYYY-MM-DD"},
+		{date, "03/02/2026", nil, "Write it as YYYY-MM-DD"},
+		{date, "2.3.2026", nil, "Write it as YYYY-MM-DD"},
+		{date, "2026-03-02 10:00", nil, "Write it as YYYY-MM-DD"},
+		{date, "45351", nil, "Write it as YYYY-MM-DD"},
 		{number, "24", "24", ""},
 		{number, "24 seats", nil, "is not a number"},
 		{flag, "Yes", true, ""},
@@ -76,7 +76,7 @@ func TestAPicklistProblemNamesNoOptionToACallerWithoutCustomFieldRead(t *testing
 		raw string
 	}{{picklist, "Bronze"}, {multi, "HubSpot; Bronze"}} {
 		_, problem := checkCell(tc.col.Name, tc.col, tc.raw, false)
-		if problem == nil || !strings.Contains(problem.Message, "not one of this field's allowed values") {
+		if problem == nil || !strings.Contains(problem.Message, "not one of this field’s allowed values") {
 			t.Fatalf("%s %q → problem %+v, want the refusal without the list", tc.col.Type, tc.raw, problem)
 		}
 		for _, option := range tc.col.Options {

@@ -74,7 +74,9 @@ function writes(fetched: ReturnType<typeof vi.fn>): string[] {
     .filter((route): route is string => route !== null);
 }
 
-function stubWrites(): ReturnType<typeof vi.fn> {
+function stubWrites(
+  answer: ReturnType<typeof day> = aDayOfOneBriefItem(),
+): ReturnType<typeof vi.fn> {
   const fetched = vi.fn(async (input: RequestInfo | URL) => {
     const request = input instanceof Request ? input : undefined;
     const url = String(request?.url ?? input);
@@ -88,7 +90,7 @@ function stubWrites(): ReturnType<typeof vi.fn> {
       );
     }
     if (url.includes("/worklist")) {
-      return new Response(JSON.stringify(aDayOfOneBriefItem()), {
+      return new Response(JSON.stringify(answer), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
@@ -455,3 +457,87 @@ function stubHeldWrite(): {
 }
 
 // A folded group stands for a pile and names no single brief item, so it
+
+// The server folds a brief item into the at-risk row about the same deal, and
+// the surviving row carries the brief entry's id. Its two ways of declining
+// must still reach that entry, not the deal the row is keyed by.
+describe("a brief item folded into a deal at risk stays answerable", () => {
+  const folded = "01a05500-0000-7000-8000-0000000000f1";
+
+  function aDayOfOneFoldedRow() {
+    return day({
+      queue: [
+        row({
+          id: "01a05500-0000-7000-8000-0000000000bb",
+          source: "deal_at_risk",
+          category: "deals_at_risk",
+          title: "Northstar has gone quiet",
+          actions: ["open"],
+          brief_item_id: folded,
+          brief_actions: ["set_aside", "dismiss"],
+          subject: {
+            type: "deal",
+            id: "01a05500-0000-7000-8000-0000000000bb",
+            label: "Northstar",
+          },
+        }),
+      ],
+      summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+    });
+  }
+
+  it("dismisses the brief entry, not the deal", async () => {
+    const fetched = stubWrites(aDayOfOneFoldedRow());
+    renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Dismiss" }),
+    );
+
+    await waitFor(() => {
+      expect(writes(fetched)).toEqual([
+        `POST /v1/brief/items/${folded}/dismiss`,
+      ]);
+    });
+  });
+
+  it("sets the brief entry aside through the brief's snooze", async () => {
+    const fetched = stubWrites(aDayOfOneFoldedRow());
+    renderWorklist();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Snooze" }),
+    );
+
+    await waitFor(() => {
+      expect(writes(fetched)).toEqual([
+        `POST /v1/brief/items/${folded}/snooze`,
+      ]);
+    });
+  });
+
+  it("offers only the verbs the server sent for the brief entry", async () => {
+    const onlyDismiss = aDayOfOneFoldedRow();
+    onlyDismiss.queue[0].brief_actions = ["dismiss"];
+    stub(onlyDismiss);
+    renderWorklist();
+
+    await screen.findByText(/Northstar has gone quiet/);
+    expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeTruthy();
+  });
+
+  it("offers neither on an at-risk row the night did not raise", async () => {
+    const {
+      brief_item_id: _id,
+      brief_actions: _verbs,
+      ...plain
+    } = aDayOfOneFoldedRow().queue[0];
+    stub(day({ queue: [plain] }));
+    renderWorklist();
+
+    await screen.findByText(/Northstar has gone quiet/);
+    expect(screen.queryByRole("button", { name: "Snooze" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+  });
+});

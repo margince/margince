@@ -33,7 +33,7 @@ export function KeyedName({
 // A break opportunity after each underscore lets a long key wrap between its
 // words; `<wbr>` adds no character, so a copied key still greps.
 function KeyText({ code }: Readonly<{ code: string }>) {
-  return [...code.matchAll(/[^_]*_|[^_]+$/g)].map((part) => (
+  return [...code.matchAll(/(?:[^_]*_)|(?:[^_]+$)/g)].map((part) => (
     <Fragment key={part.index}>
       {part[0]}
       {part[0].endsWith("_") && <wbr />}

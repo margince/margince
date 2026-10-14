@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
-import { RestrictedRecordsCard } from "./restrictedrecords";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RestrictedRecordsCard } from "./restrictedrecords";
 
 // Settings → Privacy → Restricted records. Two states worth reviewing: a
 // record held under the statutory floor, named by its transactions and its

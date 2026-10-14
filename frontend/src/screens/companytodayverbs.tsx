@@ -13,7 +13,12 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { stable } from "../format/collate";
 import type { useT } from "../i18n";
-import { citationOpensRecord } from "./record360";
+import type { DeferOf } from "./companysetaside";
+import {
+  basisAddsARecord,
+  citationOpensRecord,
+  MomentEvidence,
+} from "./record360";
 import "./record360/record360.css";
 
 type Company360 = components["schemas"]["Company360"];
@@ -178,4 +183,24 @@ export function momentFallbackVerb({
       {secondary}
     </>
   );
+}
+
+// What the moment rests on, drawn only where that is a record its own
+// headline does not already name (`basisAddsARecord` says why).
+export function momentBasis(moment: Company360["moment"]): ReactNode {
+  return moment && basisAddsARecord(moment) ? (
+    <MomentEvidence evidence={moment.evidence} />
+  ) : undefined;
+}
+
+// The quiet rung is an answer rather than an item, so there is nothing to put
+// off. A promise card is set aside by its fingerprint, in the store the advice
+// rows under it use.
+export function momentDefer(
+  moment: NonNullable<Company360["moment"]>,
+  deferOf: DeferOf,
+) {
+  return moment.rule === "nothing_needed"
+    ? undefined
+    : deferOf(moment.evidence_fingerprint);
 }

@@ -6,6 +6,12 @@ import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
 import { openAnalyticsSection } from "./analytics.address";
 import {
   beforeHistoryWeeklyNumbers,
@@ -29,12 +35,6 @@ import { WeeklySection } from "./brief.weekly";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 // The week just gone, drawn on its own.
 //

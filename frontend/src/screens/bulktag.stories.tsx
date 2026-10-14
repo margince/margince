@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { TagVerbs } from "./bulktag";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { TagVerbs } from "./bulktag";
 
 // "Add tag" and "Remove tag" in the bulk bar: a tag picker and the two verbs,
 // which wait for a tag to be picked.

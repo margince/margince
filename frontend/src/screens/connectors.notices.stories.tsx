@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { OAuthOutcomeNote } from "./connectors.notices";
-import { StoryProviders } from "./story-utils";
 
 // What comes back from a consent round trip, which is the half of the
 // connections card no fixture can pose: the note reads the ADDRESS the provider

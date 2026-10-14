@@ -10,11 +10,11 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { ThemeToggle } from "../app/theme-toggle";
 import { AmbientWaves } from "./ambient-waves";
 import { Eyebrow } from "./eyebrow";
 import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
+import { ThemeToggle } from "./theme-toggle";
 import "./onboarding-stage.css";
 import { Heading } from "./heading";
 import { useScrollRegion } from "./scrollregion";

@@ -9,6 +9,7 @@
 // worklist row speaks to the BRIEF's endpoints rather than to an activity's,
 // and that distinction is the whole reason they are written carefully.
 
+import type { ReactNode } from "react";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { formatDateTime } from "../format/format";
@@ -194,12 +195,12 @@ export function BriefSetAsides({
   };
   return (
     <>
-      {brief.offered("set_aside") && (
+      {item.actions.includes("set_aside") && (
         <Button pending={brief.working} onClick={setAside}>
           {t("brief.snooze")}
         </Button>
       )}
-      {brief.offered("dismiss") && (
+      {item.actions.includes("dismiss") && (
         <Button
           pending={brief.working}
           onClick={() => brief.answer({ itemId: item.id, mark: "dismiss" })}
@@ -209,4 +210,39 @@ export function BriefSetAsides({
       )}
     </>
   );
+}
+
+/**
+ * The brief entry a deal row also stands for, as a row of its own to answer.
+ *
+ * The server folds a brief item into the at-risk row about the same deal. It
+ * sends the entry's id and the declining verbs that entry offers, and only on
+ * the reader's own queue, so this draws only what arrived.
+ */
+export function foldedBrief(item: WorklistItem): WorklistItem | null {
+  if (!item.brief_item_id || !item.brief_actions?.length || item.batch) {
+    return null;
+  }
+  return { ...item, id: item.brief_item_id, actions: item.brief_actions };
+}
+
+/** A row's own placement, with a folded brief entry's two verbs beside it. */
+export function withFoldedBrief<P extends Readonly<{ equals?: ReactNode }>>(
+  placement: P,
+  item: WorklistItem,
+  brief: BriefAnswer,
+): P {
+  const folded = foldedBrief(item);
+  if (!folded) {
+    return placement;
+  }
+  return {
+    ...placement,
+    equals: (
+      <>
+        {placement.equals}
+        <BriefSetAsides item={folded} brief={brief} />
+      </>
+    ),
+  };
 }

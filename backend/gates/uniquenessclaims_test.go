@@ -85,6 +85,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -94,21 +95,31 @@ import (
 // nothing it was supposed to.
 func allClaims(t *testing.T) []claim {
 	t.Helper()
+	all, err := claimCensus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.Clone(all)
+}
+
+// claimCensus walks the claimed trees once per run: seven tests read it, and
+// the tree cannot change while they do.
+var claimCensus = sync.OnceValues(func() ([]claim, error) {
 	var all []claim
 	for _, tree := range claimedTrees {
 		found, err := findClaims(tree.root)
 		if err != nil {
-			t.Fatalf("walking %s: %v", tree.root, err)
+			return nil, fmt.Errorf("walking %s: %w", tree.root, err)
 		}
 		if tree.mustHaveClaims && len(found) == 0 {
-			t.Fatalf("%s holds no uniqueness claim — a root that finds nothing passes exactly "+
+			return nil, fmt.Errorf("%s holds no uniqueness claim — a root that finds nothing passes exactly "+
 				"like a clean one, so either the root is stale or the tree has moved", tree.root)
 		}
 		all = append(all, found...)
 	}
 	sort.Slice(all, func(i, j int) bool { return all[i].key() < all[j].key() })
-	return all
-}
+	return all, nil
+})
 
 // gateFiles are this gate's own sources, by PATH relative to the backend root.
 // Both halves spell out the phrases they hunt for, so a sweep that read either

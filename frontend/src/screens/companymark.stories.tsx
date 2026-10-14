@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { CompanyMark } from "./companymark";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 // The installation's own face, at the head of the company card. The states
 // that matter here are not variants of one control — they are the answers to
