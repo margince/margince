@@ -10323,6 +10323,53 @@ export const vi = {
   "agentConnections.ttl.help": "Số phút nguyên, từ 5 đến 129.600 (90 ngày).",
   "agentConnections.ttl.refusal": "Nhập số phút nguyên từ 5 đến 129.600.",
   "agentConnections.updateFailed": "Không thể thay đổi cài đặt",
+  "agentAllowances.title": "Hạn mức passport của agent",
+  "agentAllowances.sub":
+    "Những gì một passport hoặc kết nối MCP được làm trong mỗi khung thời gian trước khi dừng. Thay đổi một con số có hiệu lực trong vòng một phút, ngay trong khung đang chạy. Một passport không bao giờ tự đổi được hạn mức của chính nó.",
+  "agentAllowances.reads.label": "Bản ghi đã đọc",
+  "agentAllowances.reads.help":
+    "Số bản ghi giao cho agent trước khi lần đọc tiếp theo phải chờ chủ sở hữu cho phép thêm, từ 100 đến 20.000.",
+  "agentAllowances.writes.label": "Thay đổi",
+  "agentAllowances.writes.help":
+    "Số lần tạo, sửa và xóa trước khi lần tiếp theo phải chờ chủ sở hữu xác nhận, từ 10 đến 5.000.",
+  "agentAllowances.egress.label": "Lượt gửi",
+  "agentAllowances.egress.help":
+    "Email và các lệnh gọi khác ra khỏi Margince. Việc gửi dừng cho đến khi khung thời gian đặt lại, từ 1 đến 200.",
+  "agentAllowances.calls.label": "Tổng số lệnh gọi",
+  "agentAllowances.calls.help":
+    "Mọi lệnh gọi công cụ hoặc API. Passport tạm dừng cho đến khi khung thời gian đặt lại, từ 50 đến 20.000.",
+  "agentAllowances.window.label": "Khung thời gian (giờ)",
+  "agentAllowances.window.help":
+    "Một hạn mức kéo dài bao lâu, từ 1 đến 168. Độ dài mới bắt đầu ở lần đặt lại kế tiếp.",
+  "agentAllowances.burst":
+    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport.",
+  "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
+  "agentAllowances.pending.body":
+    "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
+  "agentUsage.title": "Mức dùng agent theo thành viên",
+  "agentUsage.sub":
+    "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
+  "agentUsage.withheld":
+    "Chỉ quản trị viên, quản lý hoặc thành viên Vận hành mới xem được mức dùng agent.",
+  "agentUsage.empty":
+    "Chưa thành viên nào có passport hoặc kết nối còn hiệu lực.",
+  "agentUsage.resets": "Mọi hạn mức đặt lại lúc {date} UTC.",
+  "agentUsage.ofLimit": "{used} / {limit}",
+  "agentUsage.counter.reads": "Bản ghi đã đọc",
+  "agentUsage.counter.writes": "Thay đổi",
+  "agentUsage.counter.egress": "Lượt gửi",
+  "agentUsage.counter.calls": "Lệnh gọi",
+  "agentUsage.col.user": "Thành viên",
+  "agentUsage.col.passports": "Passport",
+  "agentUsage.col.state": "Trạng thái",
+  "agentUsage.state.ok": "Đang hoạt động",
+  "agentUsage.state.near": "Gần chạm giới hạn",
+  "agentUsage.state.stopped": "Đã dừng",
+  "settings.passportColWindow": "Khung này",
+  "settings.passportUsageToggle": "Xem mức dùng khung này của {name}",
+  "settings.passportsShowRevoked_one": "Hiện {count} passport đã thu hồi",
+  "settings.passportsShowRevoked_other": "Hiện {count} passport đã thu hồi",
+  "settings.passportsHideRevoked": "Ẩn passport đã thu hồi",
   "operations.schedules.title": "Lịch chạy nền",
   "operations.schedules.sub":
     "Tần suất chạy của từng tác vụ nền. Tiến trình nền đang chạy sẽ nhận thay đổi trong vòng một phút: tác vụ chạy một lần, rồi tiếp tục theo chu kỳ mới.",

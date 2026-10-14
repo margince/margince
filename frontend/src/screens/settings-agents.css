@@ -86,3 +86,29 @@
   align-items: center;
   gap: var(--space-2);
 }
+
+/* An allowance's figures over its bar. The figures never wrap, so a column of
+   meters lines its bars up. */
+.agent-usage-meter {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 7rem;
+}
+.agent-usage-figures {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.agent-usage-meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+.agent-usage-cell {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  inline-size: 10rem;
+}
