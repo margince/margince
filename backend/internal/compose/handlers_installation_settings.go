@@ -22,6 +22,9 @@ import (
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// afterSave runs once a patch has committed. The meter's ForgetPolicy, so
+	// this process binds a saved allowance on the next agent call.
+	afterSave func()
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
@@ -204,6 +207,9 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if h.afterSave != nil {
+		h.afterSave()
 	}
 	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
 }

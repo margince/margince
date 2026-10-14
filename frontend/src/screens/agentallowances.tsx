@@ -91,7 +91,7 @@ export function AgentAllowancesCard() {
                     label={t(`agentAllowances.${row.copy}.label`)}
                     description={t(`agentAllowances.${row.copy}.help`)}
                     testId={`allowance-${row.property}`}
-                    value={allowances[row.property]}
+                    value={shownValue(allowances, row.property)}
                     {...AGENT_ALLOWANCE_BOUNDS[row.property]}
                     refusal={t("operations.refusal")}
                     reading={
@@ -142,6 +142,15 @@ export function AgentAllowancesCard() {
       )}
     </Panel>
   );
+}
+
+// The window field shows the length the admin chose, waiting or not. Typing
+// the length in force again is then an edit, and it cancels the waiting change.
+function shownValue(allowances: Allowances, property: Editable): number {
+  if (property === "agent_window_hours") {
+    return allowances.agent_window_next_hours ?? allowances.agent_window_hours;
+  }
+  return allowances[property];
 }
 
 // A saved window length that has not taken over yet. Said out loud, because

@@ -102,6 +102,18 @@ func (m *Meter) record(p Policy, err error, now time.Time) Policy {
 	return p
 }
 
+// ForgetPolicy makes the next call read the source again. A process that just
+// saved the allowances calls it, so its own calls bind the new values at once;
+// other processes take them within PolicyRefresh.
+func (m *Meter) ForgetPolicy() {
+	if m.cache == nil {
+		return
+	}
+	m.cache.mu.Lock()
+	defer m.cache.mu.Unlock()
+	m.cache.nextRead = time.Time{}
+}
+
 func (c *policyCache) heldOr(fallback Policy) Policy {
 	if c.good {
 		return c.held

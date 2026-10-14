@@ -7,6 +7,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
@@ -79,16 +80,25 @@ describe("AgentUsageByUserCard", () => {
       "fetch",
       backendFor({ ai_diagnostics: ["read"] }, () => jsonResponse(PAGE)),
     );
+    const user = userEvent.setup();
     render(<AgentUsageByUserCard />);
 
     const row = (await screen.findByText("Minh Tran")).closest("tr");
     if (!row) {
       throw new Error("the user row is not rendered");
     }
+    // The allowance closest to its limit, and the state, fit the row.
     expect(within(row).getByText("400 of 400")).toBeTruthy();
-    expect(within(row).getByText("1,990 of 4,000")).toBeTruthy();
     expect(within(row).getByText("Stopped")).toBeTruthy();
-    expect(within(row).getAllByRole("meter")).toHaveLength(4);
+    expect(within(row).getAllByRole("meter")).toHaveLength(1);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Show this window’s usage for Minh Tran",
+      }),
+    );
+    expect(screen.getByText("1,990 of 4,000")).toBeTruthy();
+    expect(screen.getAllByRole("meter")).toHaveLength(5);
     expect(
       screen.getByText(/Every allowance resets .*2026.* UTC/),
     ).toBeTruthy();

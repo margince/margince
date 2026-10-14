@@ -117,21 +117,30 @@ describe("AgentAllowancesCard", () => {
     );
   });
 
-  it("says when a saved window length takes over", async () => {
-    vi.stubGlobal(
-      "fetch",
-      backendFor(EDITOR, {
-        ...defaultAgentAllowances,
-        agent_window_next_hours: 12,
-        agent_window_next_starts_at: "2026-10-15T00:00:00Z",
-      }).fetchMock,
-    );
+  it("says when a saved window length takes over, and cancels it on the length in force", async () => {
+    const backend = backendFor(EDITOR, {
+      ...defaultAgentAllowances,
+      agent_window_next_hours: 12,
+      agent_window_next_starts_at: "2026-10-15T00:00:00Z",
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
     render(<AgentAllowancesCard />);
+
+    const window = await screen.findByTestId<HTMLInputElement>(
+      "allowance-agent_window_hours",
+    );
+    expect(window.value).toBe("12");
 
     expect(
       await screen.findByText(translate("en", "agentAllowances.pending.title")),
     ).toBeTruthy();
-    expect(screen.getByText(/12 hours/)).toBeTruthy();
+    expect(screen.getByText(/Each window lasts 12 hours/)).toBeTruthy();
+    await user.clear(window);
+    await user.type(window, "24{Enter}");
+    await waitFor(() =>
+      expect(backend.patches).toEqual([{ agent_window_hours: 24 }]),
+    );
   });
 
   it("shows the fixed MCP limits and when the window resets", async () => {

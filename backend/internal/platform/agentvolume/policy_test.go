@@ -149,3 +149,18 @@ func (s *cancelAwareSource) Policy(ctx context.Context) (Policy, error) {
 	}
 	return s.policy, nil
 }
+
+// The process that saved the allowances binds them on its next call.
+func TestForgettingThePolicyReadsTheSourceAgain(t *testing.T) {
+	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
+	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 200}, Window: WindowPlan{Length: DefaultWindow}}}
+	meter := sourcedMeter(src, &at)
+	meter.window(t.Context())
+
+	src.policy.Limits.Writes = 10
+	meter.ForgetPolicy()
+
+	if got := meter.window(t.Context()).limits.Writes; got != 10 {
+		t.Errorf("after ForgetPolicy the write limit is %d, want the 10 just saved", got)
+	}
+}

@@ -120,6 +120,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// The meter pointer WithAgentVolume rebound, so the list reads the counters
 	// the gate charges.
 	srv.authHandlers = srv.WithPassportUsage(srv.volumeMeter)
+	srv.installationSettingsHandlers.afterSave = srv.volumeMeter.ForgetPolicy
 	// After the option loop, so /me's answer and the endpoints' gate resolve one
 	// rollout value whether or not WithCompanyContextRollout ran.
 	srv.publishCompanyContextAvailability()

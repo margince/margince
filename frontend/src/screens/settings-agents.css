@@ -92,7 +92,7 @@
 .agent-usage-meter {
   display: grid;
   gap: var(--space-1);
-  min-inline-size: 7rem;
+  min-inline-size: 6.5rem;
 }
 .agent-usage-figures {
   display: flex;
@@ -101,14 +101,18 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* Sized by the row it opens under, never the other way round: as wide as its
+   cell and no wider, so opening a row does not widen the table. */
 .agent-usage-meters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  inline-size: 0;
+  min-inline-size: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: var(--space-3) var(--space-4);
 }
 .agent-usage-cell {
   display: grid;
   gap: var(--space-1);
   justify-items: start;
-  inline-size: 10rem;
+  inline-size: 8rem;
 }

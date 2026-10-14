@@ -219,19 +219,10 @@ function UserUsageTable({ rows }: Readonly<{ rows: readonly UserUsage[] }>) {
       align: "end",
       render: (row) => formatNumber(row.passport_count, locale),
     },
-    ...AGENT_COUNTERS.map(
-      (counter): DataTableColumn<UserUsage> => ({
-        key: counter,
-        header: t(`agentUsage.counter.${counter}`),
-        render: (row) => (
-          <CounterMeter counter={counter} usage={row[counter]} named={false} />
-        ),
-      }),
-    ),
     {
-      key: "state",
-      header: t("agentUsage.col.state"),
-      render: (row) => <AgentUsageBadge state={row.state} />,
+      key: "window",
+      header: t("settings.passportColWindow"),
+      render: (row) => <AgentUsageCell usage={row} state={row.state} />,
     },
   ];
   return (
@@ -242,6 +233,12 @@ function UserUsageTable({ rows }: Readonly<{ rows: readonly UserUsage[] }>) {
       columns={columns}
       rows={[...rows]}
       rowKey={(row) => row.user_id}
+      detail={{
+        header: t("settings.passportColWindow"),
+        toggleLabel: (row) =>
+          t("settings.passportUsageToggle", { name: row.display_name }),
+        render: (row) => <AgentUsageMeters usage={row} />,
+      }}
     />
   );
 }

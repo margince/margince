@@ -192,10 +192,10 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 		t.Fatalf("the 11th write → admitted=%v err=%v, want refused", ok, err)
 	}
 
+	h.afterSave = meter.ForgetPolicy
 	if code, _ := patchAllowances(installationAdminCtx(e), t, h, `{"agent_writes_per_window":20}`); code != http.StatusOK {
 		t.Fatalf("raising the allowance to 20 → %d", code)
 	}
-	at = at.Add(agentvolume.PolicyRefresh)
 	if _, ok, err := meter.Reserve(agent, agentvolume.Writes, 1); err != nil || !ok {
 		t.Errorf("after the raise the 11th write → admitted=%v err=%v, want admitted", ok, err)
 	}
