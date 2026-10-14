@@ -16,7 +16,9 @@ const PolicyRefresh = time.Minute
 // A length never changes mid-window. The bucket is the moment divided by the
 // length. A new length now would move every counter to a key that reads zero,
 // which hands every passport a full allowance. NextFrom is always a reset of the
-// length in force, where every counter starts from zero anyway.
+// length in force, so the switch gives nothing away. Switching back to a length
+// inside one of its windows finds that window's earlier counts, which only
+// refuses sooner.
 type WindowPlan struct {
 	Length   time.Duration
 	Next     time.Duration

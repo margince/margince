@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
@@ -9,6 +10,7 @@ import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatInterval } from "../format/interval";
+import { UTC_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
@@ -55,7 +57,13 @@ export function AgentAllowancesCard() {
   const canRead = useCan("installation_settings", "read");
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
-  const update = useUpdateInstallationSettings(() => undefined);
+  const queryClient = useQueryClient();
+  // A new allowance is the limit every usage bar is drawn against.
+  const update = useUpdateInstallationSettings(() => {
+    for (const key of [["passports"], ["agent-usage"]]) {
+      void queryClient.invalidateQueries({ queryKey: key });
+    }
+  });
   const resetLine = useResetLine();
   if (!canRead) {
     return null;
@@ -151,7 +159,7 @@ function PendingWindow({ allowances }: Readonly<{ allowances: Allowances }>) {
     <Callout tone="info" title={t("agentAllowances.pending.title")}>
       {t("agentAllowances.pending.body", {
         interval: formatInterval(hours * 3_600, locale),
-        date: formatDateTime(from, locale, "UTC"),
+        date: formatDateTime(from, locale, UTC_ZONE),
       })}
     </Callout>
   );

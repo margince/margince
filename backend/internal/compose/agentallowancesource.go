@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -50,7 +51,9 @@ func (r connectionReleaser) Release(
 		connection, err = identity.PassportConnectionTx(ctx, tx, passport)
 		return err
 	})
-	if err != nil {
+	// A passport row that is gone leaves the passport counted as itself, the
+	// subject it had if it was not a connection's.
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return false, fmt.Errorf("compose: finding the connection of passport %s: %w", passport, err)
 	}
 	return r.meter.Release(ctx, ws, agentvolume.SubjectOf(passport, connection), c, bucket, length)

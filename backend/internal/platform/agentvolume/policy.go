@@ -26,12 +26,20 @@ type PolicySource interface {
 // one another shares it, so a process reads the settings at most once per
 // PolicyRefresh.
 type policyCache struct {
-	mu     sync.Mutex
-	held   Policy
-	good   bool
-	readAt time.Time
-	tried  bool
+	mu       sync.Mutex
+	held     Policy
+	good     bool
+	nextRead time.Time
+	reading  bool
 }
+
+// policyRetry is how soon a failed read is tried again. It is sooner than a
+// refresh, so a blip does not leave an admin's change unenforced for a minute.
+const policyRetry = 5 * time.Second
+
+// policyReadDeadline bounds one read of the source. The read is detached from its
+// caller, so without this a hung database would hold the refresh forever.
+const policyReadDeadline = 5 * time.Second
 
 // WithPolicySource makes the meter judge every call by the source's policy.
 // Set at assembly, before any request is served, like WithCostCeiling.
@@ -45,28 +53,52 @@ func (m *Meter) WithPolicySource(src PolicySource) *Meter {
 // A failed read keeps the last good policy. With none, the meter's own
 // limits bind, never an unbounded counter: withDefaults runs over whatever the
 // source answered, so a zero cannot lift a ceiling.
+//
+// Once a policy is held, a refresh runs outside the lock and the calls meanwhile
+// use the held one. Before that, calls wait for the first read, so none is
+// judged by the defaults while an admin's values are on their way.
 func (m *Meter) policy(ctx context.Context) Policy {
 	if m.source == nil {
 		return m.fallback
 	}
-	now := m.now()
 	c := m.cache
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.tried && now.Sub(c.readAt) < PolicyRefresh {
+	now := m.now()
+	if c.reading || now.Before(c.nextRead) {
+		defer c.mu.Unlock()
 		return c.heldOr(m.fallback)
 	}
-	c.tried, c.readAt = true, now
-	p, err := m.source.Policy(ctx)
+	// The caller's cancellation is dropped: one request giving up must not cost
+	// every other call the policy.
+	ask, cancel := context.WithTimeout(context.WithoutCancel(ctx), policyReadDeadline)
+	defer cancel()
+	if !c.good {
+		defer c.mu.Unlock()
+		p, err := m.source.Policy(ask)
+		return m.record(p, err, now)
+	}
+	c.reading = true
+	c.mu.Unlock()
+	p, err := m.source.Policy(ask)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.reading = false
+	return m.record(p, err, now)
+}
+
+// record stores a read's outcome; the caller holds the cache lock.
+func (m *Meter) record(p Policy, err error, now time.Time) Policy {
+	c := m.cache
 	if err != nil {
-		slog.WarnContext(ctx, "agent allowances could not be read; the last known allowances still bind", "err", err)
+		slog.Warn("agent allowances could not be read; the last known allowances still bind", "err", err)
+		c.nextRead = now.Add(policyRetry)
 		return c.heldOr(m.fallback)
 	}
 	p.Limits = p.Limits.withDefaults()
 	if p.Window.Length <= 0 {
 		p.Window.Length = m.fallback.Window.Length
 	}
-	c.held, c.good = p, true
+	c.held, c.good, c.nextRead = p, true, now.Add(PolicyRefresh)
 	return p
 }
 

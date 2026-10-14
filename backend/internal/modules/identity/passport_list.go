@@ -160,7 +160,9 @@ func (p PassportRow) UsageSubject() string {
 	return agentvolume.SubjectOf(p.ID.UUID, connection)
 }
 
-// live reports whether the passport can still make a call at now.
+// live reports whether the passport is neither revoked nor expired at now. It
+// is narrower than agentLivenessWhere. This list is read by its signed-in owner,
+// who already passes that rule's checks of the owner.
 func (p PassportRow) live(now time.Time) bool {
 	return p.RevokedAt == nil && p.ExpiresAt.After(now)
 }

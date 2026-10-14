@@ -651,6 +651,23 @@ describe("PassportCard: this window", () => {
     expect(screen.getAllByRole("meter", { name: "Changes" })).toHaveLength(2);
   });
 
+  it("shows no empty state over the toggle when every passport is revoked", async () => {
+    const revoked = { ...UNUSED, revoked_at: "2026-09-30T08:00:00Z" };
+    vi.stubGlobal("fetch", listBackend([revoked]));
+    render("agents");
+
+    const toggle = await screen.findByRole("button", {
+      name: "Show 1 revoked passport",
+    });
+    const card = screen
+      .getByRole("heading", { name: "Agent passports" })
+      .closest("section");
+    if (!card?.contains(toggle)) {
+      throw new Error("the toggle is not inside the passports card");
+    }
+    expect(within(card).queryByText("Nothing here yet.")).toBeNull();
+  });
+
   it("keeps revoked passports out of sight until asked for", async () => {
     const revoked = { ...UNUSED, revoked_at: "2026-09-30T08:00:00Z" };
     vi.stubGlobal("fetch", listBackend([USED, revoked]));

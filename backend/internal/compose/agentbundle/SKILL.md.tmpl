@@ -51,7 +51,7 @@ paste the passport into the chat. This form needs curl 8.3 or later.
 - `403` with code `permission_denied` means the user's own role does not allow the
   call, or that a human must make it in the app. Tell the user; do not retry.
 - `429` with code `rate_limited` means the passport has spent one of its allowances
-  for the current 24-hour window. The message says which, and what ends the refusal.
+  for the current allowance window. The message says which, and what ends the refusal.
   Stop and tell the user.
 
 ## Changes that wait for a human

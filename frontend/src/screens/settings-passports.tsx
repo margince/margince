@@ -107,7 +107,7 @@ export function PassportCard() {
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
       {list.isSuccess && shown.length > 0 ? (
         <PassportTable passports={shown} onRevoke={askRevoke} />
-      ) : (
+      ) : list.isSuccess && hidden.length > 0 ? null : (
         <PanelBody>
           <QueryStates query={list} pendingLabel={t("settings.passports")}>
             <EmptyState>{t("common.empty")}</EmptyState>

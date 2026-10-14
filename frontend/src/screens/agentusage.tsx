@@ -14,6 +14,7 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
+import { UTC_ZONE } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import {
   AGENT_COUNTERS,
@@ -145,7 +146,9 @@ export function useResetLine(): (resetsAt: string) => string {
   const t = useT();
   const { locale } = useLocale();
   return (resetsAt) =>
-    t("agentUsage.resets", { date: formatDateTime(resetsAt, locale, "UTC") });
+    t("agentUsage.resets", {
+      date: formatDateTime(resetsAt, locale, UTC_ZONE),
+    });
 }
 
 function useAgentUsageByUser(enabled: boolean) {

@@ -140,7 +140,8 @@ func shareOf(monthly int64, live int, window time.Duration) int {
 		return 0
 	}
 	perWindow := float64(monthly) * (window.Hours() / (24 * budgetShareWindowDays))
-	return int(perWindow / float64(live))
+	// At least one token: a share that rounds to zero would read as no ceiling.
+	return max(1, int(perWindow/float64(live)))
 }
 
 // livePassports counts the agent credentials sharing this workspace's budget.

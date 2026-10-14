@@ -10350,7 +10350,7 @@ export const vi = {
   "agentUsage.sub":
     "Khung thời gian này, cộng dồn theo các passport và kết nối của từng thành viên. Chỉ cho biết dùng bao nhiêu, không bao giờ cho biết passport nào hay đã đọc gì.",
   "agentUsage.withheld":
-    "Chỉ quản trị viên, quản lý hoặc thành viên Vận hành mới xem được mức dùng agent.",
+    "Chỉ thành viên Quản trị, Quản lý hoặc Vận hành mới xem được mức dùng agent.",
   "agentUsage.empty":
     "Chưa thành viên nào có passport hoặc kết nối còn hiệu lực.",
   "agentUsage.resets": "Mọi hạn mức đặt lại lúc {date} UTC.",

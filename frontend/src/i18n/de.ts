@@ -10574,7 +10574,7 @@ export const de = {
   "agentUsage.sub":
     "Dieses Zeitfenster, summiert über die Passports und Verbindungen jedes Mitglieds. Es zeigt, wie viel, nie welche Passports oder was sie gelesen haben.",
   "agentUsage.withheld":
-    "Nur Admins, Führungskräfte und das Betriebsteam sehen die Agenten-Nutzung.",
+    "Nur Admins, Geschäftsleitung und Ops sehen die Agenten-Nutzung.",
   "agentUsage.empty":
     "Kein Mitglied hat einen gültigen Passport oder eine Verbindung.",
   "agentUsage.resets": "Alle Kontingente werden am {date} UTC zurückgesetzt.",

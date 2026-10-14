@@ -62,9 +62,12 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 		into *int
 		key  string
 	}{
-		{&reads, AgentReadsPerWindow.Key()}, {&writes, AgentWritesPerWindow.Key()},
-		{&egress, AgentEgressPerWindow.Key()}, {&calls, AgentCallsPerWindow.Key()},
-		{&hours, AgentWindowHours.Key()}, {&nextHours, AgentWindowNextHours.Key()},
+		{&reads, AgentReadsPerWindow.Key()},
+		{&writes, AgentWritesPerWindow.Key()},
+		{&egress, AgentEgressPerWindow.Key()},
+		{&calls, AgentCallsPerWindow.Key()},
+		{&hours, AgentWindowHours.Key()},
+		{&nextHours, AgentWindowNextHours.Key()},
 		{&nextFrom, AgentWindowNextFrom.Key()},
 	} {
 		if err := json.Unmarshal(raw[f.key], f.into); err != nil {

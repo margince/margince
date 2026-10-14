@@ -10684,7 +10684,7 @@ export const en = {
   "agentUsage.sub":
     "This window, summed over each user’s passports and connections. It shows how much, never which passports or what they read.",
   "agentUsage.withheld":
-    "Only an administrator, manager or operations user can see agent usage.",
+    "Only an administrator, a Management user or an operations user can see agent usage.",
   "agentUsage.empty": "No user has a live passport or connection.",
   "agentUsage.resets": "Every allowance resets {date} UTC.",
   "agentUsage.ofLimit": "{used} of {limit}",

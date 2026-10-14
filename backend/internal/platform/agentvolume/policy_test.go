@@ -112,3 +112,40 @@ func TestARebindSharesTheSourceAndItsCache(t *testing.T) {
 		t.Errorf("two rebound meters read the source %d times, want 1", src.reads)
 	}
 }
+
+// A blip costs seconds, not the minute a good read is trusted for.
+func TestAFailedReadIsRetriedSoonerThanARefresh(t *testing.T) {
+	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
+	src := &scriptedSource{err: errors.New("settings unreachable")}
+	meter := sourcedMeter(src, &at)
+	meter.window(t.Context())
+
+	src.err, src.policy = nil, Policy{Limits: Limits{Writes: 10}, Window: WindowPlan{Length: DefaultWindow}}
+	at = at.Add(policyRetry)
+
+	if got := meter.window(t.Context()).limits.Writes; got != 10 {
+		t.Errorf("after the retry interval the write limit is %d, want the 10 the source now answers", got)
+	}
+}
+
+// One request giving up must not cost every other call the admin's policy.
+func TestACancelledCallStillReadsThePolicy(t *testing.T) {
+	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
+	src := &cancelAwareSource{policy: Policy{Limits: Limits{Writes: 10}, Window: WindowPlan{Length: DefaultWindow}}}
+	meter := NewWithClock(nil, Limits{}, DefaultWindow, func() time.Time { return at }).WithPolicySource(src)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if got := meter.window(ctx).limits.Writes; got != 10 {
+		t.Errorf("a cancelled caller left the write limit at %d, want 10", got)
+	}
+}
+
+type cancelAwareSource struct{ policy Policy }
+
+func (s *cancelAwareSource) Policy(ctx context.Context) (Policy, error) {
+	if err := ctx.Err(); err != nil {
+		return Policy{}, err
+	}
+	return s.policy, nil
+}

@@ -165,3 +165,31 @@ describe("AgentAllowancesCard", () => {
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 });
+
+it("redraws the usage bars against a saved allowance", async () => {
+  const backend = backendFor(EDITOR);
+  vi.stubGlobal("fetch", backend.fetchMock);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidate = vi.spyOn(client, "invalidateQueries");
+  const user = userEvent.setup();
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider>
+        <AgentAllowancesCard />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+
+  const box = await screen.findByTestId<HTMLInputElement>(
+    "allowance-agent_writes_per_window",
+  );
+  await user.clear(box);
+  await user.type(box, "50{Enter}");
+
+  await waitFor(() =>
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["agent-usage"] }),
+  );
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ["passports"] });
+});

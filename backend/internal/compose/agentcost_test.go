@@ -30,6 +30,7 @@ func TestTheShareIsAMonthlyBudgetProRatedToOneWindow(t *testing.T) {
 		{"one credential, one day of a 30-day budget", monthly, 1, 24 * time.Hour, 400_000},
 		{"four credentials share that day", monthly, 4, 24 * time.Hour, 100_000},
 		{"an hour is a 24th of the day's share", monthly, 1, time.Hour, 16_666},
+		{"a share too small to count is still a ceiling of one token", 100, 1, time.Hour, 1},
 		{"no budget is no ceiling", 0, 1, 24 * time.Hour, 0},
 		{"a negative budget is not a ceiling either", -5, 1, 24 * time.Hour, 0},
 		{"no window is no ceiling", monthly, 1, 0, 0},

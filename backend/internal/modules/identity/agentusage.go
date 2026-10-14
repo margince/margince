@@ -5,6 +5,7 @@ package identity
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,7 +29,7 @@ type AgentUsageHolder struct {
 }
 
 // AgentUsageHolders lists every user with a live passport or connection.
-// It reads passports across people, so it answers only how many and whose;
+// It reads passports across users, so it answers only how many and whose;
 // the handler adds how much and nothing else.
 func (s *Service) AgentUsageHolders(ctx context.Context, id Identity) ([]AgentUsageHolder, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -80,12 +81,9 @@ func (s *Service) AgentUsageHolders(ctx context.Context, id Identity) ([]AgentUs
 // grouped by user, so only the last holder can be theirs.
 func addHolderSubject(holders []AgentUsageHolder, user ids.UUID, name, subject string) []AgentUsageHolder {
 	if n := len(holders); n > 0 && holders[n-1].UserID == user {
-		for _, known := range holders[n-1].Subjects {
-			if known == subject {
-				return holders
-			}
+		if !slices.Contains(holders[n-1].Subjects, subject) {
+			holders[n-1].Subjects = append(holders[n-1].Subjects, subject)
 		}
-		holders[n-1].Subjects = append(holders[n-1].Subjects, subject)
 		return holders
 	}
 	return append(holders, AgentUsageHolder{UserID: user, DisplayName: name, Subjects: []string{subject}})

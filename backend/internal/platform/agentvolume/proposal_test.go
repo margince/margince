@@ -22,7 +22,7 @@ var proposalPassport = ids.New[ids.PassportKind]().UUID
 func TestAProposalCarriesTheQuestionItWasAskedFrom(t *testing.T) {
 	reading := Reading{Counter: Reads, Observed: 2431, Limit: 2000, Exceeded: true, Bucket: 42}
 
-	p := NewReleaseProposal(reading, proposalPassport, "search_records")
+	p := NewReleaseProposal(reading, proposalPassport, ids.UUID{}, "search_records")
 
 	if p.Counter != Reads || p.Observed != 2431 || p.Limit != 2000 || p.Tool != "search_records" {
 		t.Errorf("the proposal reads %+v; it must carry the reading it was built from", p)
@@ -36,7 +36,7 @@ func TestAProposalCarriesTheQuestionItWasAskedFrom(t *testing.T) {
 // A round trip through the stored payload changes nothing. It is the one thing
 // this type exists for: two modules read it, and neither may import the other.
 func TestAProposalSurvivesTheStoredPayloadUnchanged(t *testing.T) {
-	p := NewReleaseProposal(Reading{Counter: Writes, Observed: 240, Limit: 200, Bucket: 9}, proposalPassport, "update_record")
+	p := NewReleaseProposal(Reading{Counter: Writes, Observed: 240, Limit: 200, Bucket: 9}, proposalPassport, ids.UUID{}, "update_record")
 	raw, err := json.Marshal(p)
 	if err != nil {
 		t.Fatal(err)
@@ -90,11 +90,11 @@ func TestAnUnreadableWindowNamesNothing(t *testing.T) {
 // and answering it for one tool answers it for all of them.
 func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 	reading := Reading{Counter: Reads, Observed: 2431, Limit: 2000, Bucket: 42}
-	first, err := NewReleaseProposal(reading, proposalPassport, "search_records").Identity()
+	first, err := NewReleaseProposal(reading, proposalPassport, ids.UUID{}, "search_records").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := NewReleaseProposal(reading, proposalPassport, "list_records").Identity()
+	second, err := NewReleaseProposal(reading, proposalPassport, ids.UUID{}, "list_records").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,14 +104,14 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 	}
 
 	// A different window, or a different counter, IS a different question.
-	later, err := NewReleaseProposal(Reading{Counter: Reads, Bucket: 43}, proposalPassport, "search_records").Identity()
+	later, err := NewReleaseProposal(Reading{Counter: Reads, Bucket: 43}, proposalPassport, ids.UUID{}, "search_records").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(later) == string(first) {
 		t.Error("a crossing in the next window joined the previous window's question")
 	}
-	writes, err := NewReleaseProposal(Reading{Counter: Writes, Bucket: 42}, proposalPassport, "update_record").Identity()
+	writes, err := NewReleaseProposal(Reading{Counter: Writes, Bucket: 42}, proposalPassport, ids.UUID{}, "update_record").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 	// questions were one question, whichever lender answered would release only
 	// their own passport's window and the other agent would be left refused
 	// with nothing anybody can see.
-	other, err := NewReleaseProposal(reading, ids.New[ids.PassportKind]().UUID, "search_records").Identity()
+	other, err := NewReleaseProposal(reading, ids.New[ids.PassportKind]().UUID, ids.UUID{}, "search_records").Identity()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestOneCrossedWindowIsOneQuestionWhateverToolHitIt(t *testing.T) {
 // matches them by jsonb containment, so a member spelled differently on either
 // side silently stops deduplicating and the inbox fills up again.
 func TestTheIdentityIsContainedInTheStoredPayload(t *testing.T) {
-	p := NewReleaseProposal(Reading{Counter: Reads, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, "search_records")
+	p := NewReleaseProposal(Reading{Counter: Reads, Observed: 1, Limit: 2, Bucket: 7}, proposalPassport, ids.UUID{}, "search_records")
 	identity, err := p.Identity()
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func TestASoftCounterDoesNotFailClosed(t *testing.T) {
 }
 
 func TestAProposalCarriesTheLengthItsBucketWasCountedUnder(t *testing.T) {
-	p := NewReleaseProposal(Reading{Counter: Writes, Bucket: 7, Window: 12 * time.Hour}, ids.New[ids.PassportKind]().UUID, "update_record")
+	p := NewReleaseProposal(Reading{Counter: Writes, Bucket: 7, Window: 12 * time.Hour}, ids.New[ids.PassportKind]().UUID, ids.UUID{}, "update_record")
 
 	if length, err := p.Length(); err != nil || length != 12*time.Hour {
 		t.Errorf("the proposal names %v (err %v), want 12h", length, err)
@@ -216,5 +216,24 @@ func TestAProposalWithoutALengthWasCountedUnderTheDefaultWindow(t *testing.T) {
 	}
 	if _, err := (ReleaseProposal{Counter: Reads, Bucket: "7", WindowSeconds: "soon"}).Length(); err == nil {
 		t.Error("a length that is not a number was accepted")
+	}
+}
+
+// A renewal mints a new passport under the same connection. Its refusal is
+// the same question about the same counter, so it must join the first row.
+func TestTwoPassportsOfOneConnectionAskOneQuestion(t *testing.T) {
+	reading := Reading{Counter: Writes, Bucket: 42}
+	connection := ids.NewV7()
+	first, err := NewReleaseProposal(reading, ids.New[ids.PassportKind]().UUID, connection, "update_record").Identity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	renewed, err := NewReleaseProposal(reading, ids.New[ids.PassportKind]().UUID, connection, "update_record").Identity()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(first) != string(renewed) {
+		t.Errorf("a renewed passport asks a second question: %s vs %s", first, renewed)
 	}
 }

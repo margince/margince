@@ -356,7 +356,7 @@ no agent starts over early; the card says when it starts.
 allowance closest to running out; open a row to see all four. Revoked passports
 are hidden; the button under the list shows them. **AI usage › Agent usage by
 user** shows how much each user's agents used, never which passport or what it
-read. Administrators, managers and operations users see it.
+read. Administrators, Management and operations users see it.
 
 Only whoever approved the connection can answer a request to widen it. An
 administrator cannot, and neither can the owner of the company. An agent's

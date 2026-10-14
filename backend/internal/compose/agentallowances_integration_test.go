@@ -28,7 +28,7 @@ import (
 
 // patchAllowances sends one PATCH as ctx and returns the status and the
 // allowances the response carries.
-func patchAllowances(t *testing.T, ctx context.Context, h installationSettingsHandlers, body string) (int, crmcontracts.AgentAllowanceSettings) {
+func patchAllowances(ctx context.Context, t *testing.T, h installationSettingsHandlers, body string) (int, crmcontracts.AgentAllowanceSettings) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPatch, "/v1/installation/settings", strings.NewReader(body)).WithContext(ctx)
 	rec := httptest.NewRecorder()
@@ -53,7 +53,7 @@ func allowanceHandlers(t *testing.T, e *integration.Env, now func() time.Time) i
 	store := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool)).WithClock(now)
 	h := installationSettingsHandlers{store: store}
 	t.Cleanup(func() {
-		if code, _ := patchAllowances(t, installationAdminCtx(e), h, defaultAgentAllowances); code != http.StatusOK {
+		if code, _ := patchAllowances(installationAdminCtx(e), t, h, defaultAgentAllowances); code != http.StatusOK {
 			t.Errorf("restoring the defaults → %d", code)
 		}
 	})
@@ -64,7 +64,7 @@ func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
 
-	code, saved := patchAllowances(t, installationAdminCtx(e), h,
+	code, saved := patchAllowances(installationAdminCtx(e), t, h,
 		`{"agent_reads_per_window":500,"agent_writes_per_window":10,"agent_egress_per_window":3,"agent_calls_per_window":60}`)
 	if code != http.StatusOK {
 		t.Fatalf("saving the allowances → %d", code)
@@ -74,6 +74,18 @@ func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
 		t.Fatalf("the save answered %+v, want the values sent", saved)
 	}
 
+	// Each changed allowance leaves its before and after in the audit log.
+	var audited int
+	if err := e.Pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM audit_log
+		WHERE entity_type = 'installation_settings'
+		  AND after ->> $1 = '10'`,
+		identity.AgentWritesPerWindow.Key()).Scan(&audited); err != nil {
+		t.Fatalf("reading the audit log: %v", err)
+	}
+	if audited == 0 {
+		t.Errorf("no audit row records %s becoming 10", identity.AgentWritesPerWindow.Key())
+	}
 }
 
 func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
@@ -81,7 +93,7 @@ func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
 	clock := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	h := allowanceHandlers(t, e, func() time.Time { return clock })
 
-	code, saved := patchAllowances(t, installationAdminCtx(e), h, `{"agent_window_hours":12}`)
+	code, saved := patchAllowances(installationAdminCtx(e), t, h, `{"agent_window_hours":12}`)
 	if code != http.StatusOK {
 		t.Fatalf("saving a window length → %d", code)
 	}
@@ -97,7 +109,7 @@ func TestAWindowChangeWaitsForTheNextReset(t *testing.T) {
 		t.Errorf("the answer does not report the waiting change: %+v", saved)
 	}
 
-	code, _ = patchAllowances(t, installationAdminCtx(e), h, `{"agent_window_hours":24}`)
+	code, _ = patchAllowances(installationAdminCtx(e), t, h, `{"agent_window_hours":24}`)
 	if code != http.StatusOK {
 		t.Fatalf("cancelling the change → %d", code)
 	}
@@ -119,7 +131,7 @@ func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 		`{"agent_calls_per_window":49}`,
 		`{"agent_window_hours":169}`,
 	} {
-		if code, _ := patchAllowances(t, installationAdminCtx(e), h, body); code != http.StatusUnprocessableEntity {
+		if code, _ := patchAllowances(installationAdminCtx(e), t, h, body); code != http.StatusUnprocessableEntity {
 			t.Errorf("PATCH %s → %d, want 422", body, code)
 		}
 	}
@@ -138,7 +150,7 @@ func TestAnAgentCannotChangeItsOwnAllowance(t *testing.T) {
 		},
 	})
 
-	if code, _ := patchAllowances(t, ctx, h, `{"agent_writes_per_window":5000}`); code != http.StatusForbidden {
+	if code, _ := patchAllowances(ctx, t, h, `{"agent_writes_per_window":5000}`); code != http.StatusForbidden {
 		t.Fatalf("an agent raising its own allowance → %d, want 403", code)
 	}
 }
@@ -168,7 +180,7 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:importer", PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 	})
 
-	if code, _ := patchAllowances(t, installationAdminCtx(e), h, `{"agent_writes_per_window":10}`); code != http.StatusOK {
+	if code, _ := patchAllowances(installationAdminCtx(e), t, h, `{"agent_writes_per_window":10}`); code != http.StatusOK {
 		t.Fatalf("saving a write allowance of 10 → %d", code)
 	}
 	for i := range 10 {
@@ -180,7 +192,7 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 		t.Fatalf("the 11th write → admitted=%v err=%v, want refused", ok, err)
 	}
 
-	if code, _ := patchAllowances(t, installationAdminCtx(e), h, `{"agent_writes_per_window":20}`); code != http.StatusOK {
+	if code, _ := patchAllowances(installationAdminCtx(e), t, h, `{"agent_writes_per_window":20}`); code != http.StatusOK {
 		t.Fatalf("raising the allowance to 20 → %d", code)
 	}
 	at = at.Add(agentvolume.PolicyRefresh)
@@ -224,13 +236,19 @@ func seedConnectionPassport(t *testing.T, e *integration.Env) (passport, grant i
 		sql  string
 		args []any
 	}{
-		{`INSERT INTO oauth_client (client_id, client_name, redirect_uris) VALUES ($1, 'Claude', ARRAY['https://client.example/cb'])`,
-			[]any{client}},
-		{`INSERT INTO oauth_grant (id, client_id, user_id, scopes, refresh_allowed) VALUES ($1, $2, $3, ARRAY['read']::text[], true)`,
-			[]any{grant, client, e.Rep1}},
-		{`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
+		{
+			`INSERT INTO oauth_client (client_id, client_name, redirect_uris) VALUES ($1, 'Claude', ARRAY['https://client.example/cb'])`,
+			[]any{client},
+		},
+		{
+			`INSERT INTO oauth_grant (id, client_id, user_id, scopes, refresh_allowed) VALUES ($1, $2, $3, ARRAY['read']::text[], true)`,
+			[]any{grant, client, e.Rep1},
+		},
+		{
+			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
 		  VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
-			[]any{passport, e.Rep1, "hash-" + passport.String(), grant}},
+			[]any{passport, e.Rep1, "hash-" + passport.String(), grant},
+		},
 	} {
 		if _, err := e.Pool.Exec(ctx, stmt.sql, stmt.args...); err != nil {
 			t.Fatalf("seeding the connection: %v", err)
@@ -243,4 +261,19 @@ func seedConnectionPassport(t *testing.T, e *integration.Env) (passport, grant i
 func wallClock(t *testing.T) func() time.Time {
 	at := clocktest.Now(t)
 	return func() time.Time { return at }
+}
+
+// A step-up answered after its passport row is gone still decides. The
+// passport is counted as itself, as it was if it was not a connection's.
+func TestAReleaseOfAGonePassportStillDecides(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{Writes: 1}, time.Hour, wallClock(t))
+
+	applied, err := connectionReleaser{meter: meter, pool: e.Pool}.Release(ctx, e.WS, ids.NewV7(), agentvolume.Writes,
+		meter.Bucket(ctx), time.Hour)
+
+	if err != nil || !applied {
+		t.Fatalf("releasing a passport with no row → applied=%v err=%v, want applied", applied, err)
+	}
 }
