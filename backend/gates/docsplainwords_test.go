@@ -249,7 +249,7 @@ var plainCaps = map[string]int{
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages
 // used before they joined the bar. It must equal that count, so it only goes down.
-const glossaryLegacyMax = 440
+const glossaryLegacyMax = 439
 
 const glossaryLegacyHeading = "## Names without a meaning yet"
 

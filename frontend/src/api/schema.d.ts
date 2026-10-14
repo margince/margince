@@ -45207,8 +45207,19 @@ export interface components {
              *     folded into one, and this carries the brief entry's id so the verbs that
              *     belong to the brief (`/brief/items/{id}/act`, and its set-aside and
              *     dismiss) still reach it. Absent on a row the night did not raise.
+             *
+             *     Set only on the reader's own queue: the brief is the acting reader's,
+             *     so a page naming another owner never carries it.
              */
             brief_item_id?: string;
+            /**
+             * @description The verbs the folded brief entry offers, copied from that entry's own
+             *     row and posted to `/brief/items/{brief_item_id}/…`. The row's own
+             *     `actions` stay the row's: these answer the brief entry, not the deal.
+             *
+             *     Present exactly when `brief_item_id` is.
+             */
+            brief_actions?: ("set_aside" | "dismiss")[];
             /**
              * @description Which part of the morning this row belongs to, as a LABEL and never as an
              *     order.

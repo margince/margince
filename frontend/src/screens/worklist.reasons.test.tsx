@@ -313,3 +313,55 @@ describe("a row says its deadline once", () => {
     ).toMatch(/due today/i);
   });
 });
+
+describe("a follow-up row says why it is there", () => {
+  it("says how long the reader's message has gone unanswered", async () => {
+    const { container } = draw([
+      {
+        id: "f1",
+        source: "awaiting_reply",
+        category: "tasks",
+        level: 3,
+        consequence: "none",
+        title: "Pricing for the pilot",
+        because: [
+          { kind: "you_wrote_last" },
+          { kind: "no_reply_days", value: { kind: "days", days: 6 } },
+        ],
+        actions: [],
+      },
+    ]);
+
+    await screen.findByText(/Pricing for the pilot/);
+    const line = container.querySelector(".worklist-row-because")?.textContent;
+    expect(line).toMatch(/you wrote last/);
+    expect(line).toMatch(/no reply for 6 days/);
+  });
+
+  // The row a meeting with nobody on file leaves behind offers no "Draft
+  // follow-up", and this line is what tells the reader why.
+  it("says a meeting has no attendee on file", async () => {
+    const { container } = draw([
+      {
+        id: "m1",
+        source: "meeting_follow_up",
+        category: "meetings",
+        level: 3,
+        consequence: "none",
+        title: "Call with Acme and Dana",
+        because: [
+          { kind: "met_days_ago", value: { kind: "days", days: 1 } },
+          { kind: "nothing_sent_since" },
+          { kind: "no_attendee_on_file" },
+        ],
+        actions: [],
+      },
+    ]);
+
+    await screen.findByText(/Call with Acme and Dana/);
+    const line = container.querySelector(".worklist-row-because")?.textContent;
+    expect(line).toMatch(/met 1 day ago/);
+    expect(line).toMatch(/nothing sent since/);
+    expect(line).toMatch(/no attendee on file/);
+  });
+});

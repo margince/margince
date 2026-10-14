@@ -122,7 +122,7 @@ func TestTheCoverageWordsAreTheInstallationsLanguage(t *testing.T) {
 	body := MailBody(coveredFixture(everyFamilyNotRecorded(firstRecord)), "", mailcopy.For(string(mailcopy.German)))
 
 	for _, want := range []string{
-		"Diese Woche liegt vor den ersten Datensätzen",
+		"Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
 		"Nicht erfasst · Erfasst ab 2026-06-15",
 	} {
 		if !strings.Contains(body, want) {

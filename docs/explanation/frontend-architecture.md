@@ -133,7 +133,7 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Intelligence | `analytics` |
+| Insights | `analytics` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
 each group title keeps its place and shows a line there. So the
