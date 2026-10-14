@@ -41914,7 +41914,45 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /**
+             * @description What this passport has used of its allowances in the window that is running. A
+             *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
+             *     on a revoked or expired passport, and when the counters cannot be read: the list is
+             *     still answered, without the usage.
+             */
+            usage?: components["schemas"]["AgentUsage"];
         };
+        /** @description One window's use of the four agent allowances, and when they reset. */
+        AgentUsage: {
+            reads: components["schemas"]["AgentCounterUsage"];
+            writes: components["schemas"]["AgentCounterUsage"];
+            egress: components["schemas"]["AgentCounterUsage"];
+            calls: components["schemas"]["AgentCounterUsage"];
+            /**
+             * Format: date-time
+             * @description When the window resets and every count starts again from zero.
+             */
+            resets_at: string;
+            state: components["schemas"]["AgentUsageState"];
+        };
+        /** @description One allowance in the running window. */
+        AgentCounterUsage: {
+            /** @description What has been used in this window. */
+            used: number;
+            /**
+             * @description The allowance in force: the installation's value, plus one more allowance for each
+             *     release a person granted in this window.
+             */
+            limit: number;
+            /** @description How many times a person released more in this window. */
+            released: number;
+        };
+        /**
+         * @description The worst of the four allowances. `stopped` when one is used up, so the next call of
+         *     that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+         * @enum {string}
+         */
+        AgentUsageState: "ok" | "near" | "stopped";
         /**
          * @description The connection a grant-bound passport belongs to, so Settings can name it by the client the
          *     human actually approved instead of the raw DCR client id its label carries.

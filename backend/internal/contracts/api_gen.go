@@ -637,6 +637,27 @@ func (e AgentToolTier) Valid() bool {
 	}
 }
 
+// Defines values for AgentUsageState.
+const (
+	AgentUsageStateNear    AgentUsageState = "near"
+	AgentUsageStateOk      AgentUsageState = "ok"
+	AgentUsageStateStopped AgentUsageState = "stopped"
+)
+
+// Valid indicates whether the value is a known member of the AgentUsageState enum.
+func (e AgentUsageState) Valid() bool {
+	switch e {
+	case AgentUsageStateNear:
+		return true
+	case AgentUsageStateOk:
+		return true
+	case AgentUsageStateStopped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AiActivityItemState.
 const (
 	AiActivityItemStateDegraded AiActivityItemState = "degraded"
@@ -22890,6 +22911,19 @@ type AgentContextSection struct {
 	Name  string             `json:"name"`
 }
 
+// AgentCounterUsage One allowance in the running window.
+type AgentCounterUsage struct {
+	// Limit The allowance in force: the installation's value, plus one more allowance for each
+	// release a person granted in this window.
+	Limit int `json:"limit"`
+
+	// Released How many times a person released more in this window.
+	Released int `json:"released"`
+
+	// Used What has been used in this window.
+	Used int `json:"used"`
+}
+
 // AgentExcerpt A quoted passage and the field or record it was read from.
 type AgentExcerpt struct {
 	Snippet string `json:"snippet"`
@@ -23039,6 +23073,32 @@ type AgentToolTier string
 type AgentToolListResponse struct {
 	Data []AgentTool `json:"data"`
 }
+
+// AgentUsage One window's use of the four agent allowances, and when they reset.
+type AgentUsage struct {
+	// Calls One allowance in the running window.
+	Calls AgentCounterUsage `json:"calls"`
+
+	// Egress One allowance in the running window.
+	Egress AgentCounterUsage `json:"egress"`
+
+	// Reads One allowance in the running window.
+	Reads AgentCounterUsage `json:"reads"`
+
+	// ResetsAt When the window resets and every count starts again from zero.
+	ResetsAt time.Time `json:"resets_at"`
+
+	// State The worst of the four allowances. `stopped` when one is used up, so the next call of
+	// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+	State AgentUsageState `json:"state"`
+
+	// Writes One allowance in the running window.
+	Writes AgentCounterUsage `json:"writes"`
+}
+
+// AgentUsageState The worst of the four allowances. `stopped` when one is used up, so the next call of
+// that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
+type AgentUsageState string
 
 // AiActivity defines model for AiActivity.
 type AiActivity struct {
@@ -41314,6 +41374,12 @@ type PassportSummary struct {
 
 	// Scopes The granted MCP scopes (intersected with the minting human's role at bind time).
 	Scopes []string `json:"scopes"`
+
+	// Usage What this passport has used of its allowances in the window that is running. A
+	// connection's passports share one count, so a renewed credential keeps it. **Omitted**
+	// on a revoked or expired passport, and when the counters cannot be read: the list is
+	// still answered, without the usage.
+	Usage *AgentUsage `json:"usage,omitempty"`
 }
 
 // Pipeline A pipeline. Mirrors the `pipeline` table (with embedded stages on GET).

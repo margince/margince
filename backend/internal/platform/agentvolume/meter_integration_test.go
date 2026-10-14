@@ -353,3 +353,32 @@ func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 		t.Errorf("at the reset the passport reads %+v, want a fresh 12h window", reading)
 	}
 }
+
+// One usage read answers every subject's counts and releases at once.
+func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
+	at := time.Date(2026, 8, 8, 9, 30, 0, 0, time.UTC)
+	meter := NewWithClock(redistest.Client(t), Limits{Reads: 100, Writes: 10}, time.Hour, frozen(&at))
+	ws, busy, idle := aWorkspace(), aPassport(), aPassport()
+	if err := meter.Consume(meteredCall(t, ws, busy), Reads, 120); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := releaseIn(t, meter, ws, busy, Reads, meter.Bucket(t.Context())); err != nil {
+		t.Fatal(err)
+	}
+
+	usage, err := meter.Usage(t.Context(), ws, []string{busy.String(), idle.String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := usage[busy.String()]
+	if got.Reads != (CounterUsage{Used: 120, Limit: 200, Released: 1}) || got.Writes != (CounterUsage{Limit: 10}) {
+		t.Errorf("the busy passport reads %+v", got)
+	}
+	if want := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC); !got.ResetsAt.Equal(want) {
+		t.Errorf("resets at %v, want %v", got.ResetsAt, want)
+	}
+	if usage[idle.String()].Reads.Used != 0 {
+		t.Errorf("the idle passport reads %+v", usage[idle.String()])
+	}
+}

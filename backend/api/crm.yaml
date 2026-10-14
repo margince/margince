@@ -56111,6 +56111,49 @@ components:
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }
+        usage:
+          allOf: [ { $ref: '#/components/schemas/AgentUsage' } ]
+          description: |
+            What this passport has used of its allowances in the window that is running. A
+            connection's passports share one count, so a renewed credential keeps it. **Omitted**
+            on a revoked or expired passport, and when the counters cannot be read: the list is
+            still answered, without the usage.
+
+    AgentUsage:
+      type: object
+      description: One window's use of the four agent allowances, and when they reset.
+      required: [reads, writes, egress, calls, resets_at, state]
+      properties:
+        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
+        writes: { $ref: '#/components/schemas/AgentCounterUsage' }
+        egress: { $ref: '#/components/schemas/AgentCounterUsage' }
+        calls: { $ref: '#/components/schemas/AgentCounterUsage' }
+        resets_at:
+          type: string
+          format: date-time
+          description: When the window resets and every count starts again from zero.
+        state: { $ref: '#/components/schemas/AgentUsageState' }
+
+    AgentCounterUsage:
+      type: object
+      description: One allowance in the running window.
+      required: [used, limit, released]
+      properties:
+        used: { type: integer, minimum: 0, description: What has been used in this window. }
+        limit:
+          type: integer
+          minimum: 0
+          description: |
+            The allowance in force: the installation's value, plus one more allowance for each
+            release a person granted in this window.
+        released: { type: integer, minimum: 0, description: How many times a person released more in this window. }
+
+    AgentUsageState:
+      type: string
+      enum: [ok, near, stopped]
+      description: |
+        The worst of the four allowances. `stopped` when one is used up, so the next call of
+        that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 
     PassportConnection:
       type: object

@@ -117,6 +117,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	agentOrigin := agentAPIOrigin{api: srv.apiBaseURL, public: srv.send.PublicBaseURL, proxies: srv.trustedProxies}
 	srv.agentBundleHandlers = newAgentBundleHandlers(agentOrigin, log)
 	srv.authHandlers = srv.WithAgentAPIBase(agentOrigin.baseFor)
+	// The meter pointer WithAgentVolume rebound, so the list reads the counters
+	// the gate charges.
+	srv.authHandlers = srv.authHandlers.WithPassportUsage(srv.volumeMeter)
 	// After the option loop, so /me's answer and the endpoints' gate resolve one
 	// rollout value whether or not WithCompanyContextRollout ran.
 	srv.publishCompanyContextAvailability()
