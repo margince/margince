@@ -2245,7 +2245,7 @@ export function DealsScreen({
           unit: "unit.deals",
         })}
       />
-      <ErrorLine error={advanceErrorBehind(advance.error)} />
+      <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -3111,7 +3111,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                <ErrorLine error={advanceErrorBehind(advance.error)} />
+                <ErrorLine
+                  error={advanceErrorBehind(advance.error, pending !== null)}
+                />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

@@ -279,10 +279,13 @@ function wonAnswer(active: boolean, reason: WonReason | "", detail: string) {
   };
 }
 
-// The advance failure the screen behind the dialog shows. The dialog itself
-// answers the missing-evidence refusal, so that one is not printed twice.
-export function advanceErrorBehind(error: unknown): unknown {
-  return winEvidenceRefused(error) ? null : error;
+// The advance failure the screen behind the dialog shows. An open dialog
+// answers the missing-evidence refusal itself; once closed, the screen says it.
+export function advanceErrorBehind(
+  error: unknown,
+  dialogOpen: boolean,
+): unknown {
+  return dialogOpen && winEvidenceRefused(error) ? null : error;
 }
 
 // Whether a failed advance is the server asking how a contract-less deal was

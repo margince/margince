@@ -221,13 +221,15 @@ const WIN_EVIDENCE_REFUSAL = new ProblemError({
   },
 });
 
-// The dialog asks how the deal was won, so the screen behind it stays quiet.
-// Every other failure is still the screen's to show.
-it("leaves the win-evidence refusal to the dialog and shows every other failure", () => {
-  expect(advanceErrorBehind(WIN_EVIDENCE_REFUSAL)).toBeNull();
+// An open dialog asks how the deal was won, so the screen behind it stays
+// quiet. Once the reader cancels, the screen says why the deal did not move.
+it("leaves the win-evidence refusal to the open dialog and shows it once closed", () => {
+  expect(advanceErrorBehind(WIN_EVIDENCE_REFUSAL, true)).toBeNull();
+  expect(advanceErrorBehind(WIN_EVIDENCE_REFUSAL, false)).toBe(
+    WIN_EVIDENCE_REFUSAL,
+  );
   const conflict = new ProblemError({ code: "version_skew" });
-  expect(advanceErrorBehind(conflict)).toBe(conflict);
-  expect(advanceErrorBehind(null)).toBeNull();
+  expect(advanceErrorBehind(conflict, true)).toBe(conflict);
 });
 
 it("says a win marked Other needs details, and sends them on Enter", async () => {
