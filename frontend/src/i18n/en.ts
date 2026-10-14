@@ -6298,6 +6298,8 @@ export const en = {
   "systemHealth.providers.standIn": "Built-in test provider",
   "systemHealth.providers.standInDetail":
     "The bound models cannot be called. Add a key under AI models.",
+  "systemHealth.providers.standInPartialDetail":
+    "Some tiers answer from the built-in test provider. Add their keys under AI models.",
   "providerHealth.adminOnly":
     "AI provider status covers the whole installation and requires a permission your role does not have.",
   "providerHealth.healthy": "All AI providers are answering.",

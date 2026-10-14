@@ -29,6 +29,16 @@ export function answersFromStandIn(
   return configured?.includes("fake") === true;
 }
 
+// Whether every lane answers from the fake, so no real vendor is reachable.
+export function answersOnlyFromStandIn(
+  configured: readonly string[] | undefined,
+): boolean {
+  return (
+    answersFromStandIn(configured) &&
+    configured?.every((p) => p === "fake") === true
+  );
+}
+
 // A key, settings or routing save, and a successful key test, change what the
 // server holds about a provider's health; the badge reads it again now rather
 // than at the next poll.

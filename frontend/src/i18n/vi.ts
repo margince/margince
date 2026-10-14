@@ -6025,6 +6025,8 @@ export const vi = {
   "systemHealth.providers.standIn": "Nhà cung cấp thử nghiệm tích hợp",
   "systemHealth.providers.standInDetail":
     "Không thể gọi các mô hình đã gán. Thêm khóa trong mục Mô hình AI.",
+  "systemHealth.providers.standInPartialDetail":
+    "Một số bậc đang trả lời bằng nhà cung cấp thử nghiệm tích hợp. Thêm khóa của các bậc đó trong mục Mô hình AI.",
   "providerHealth.adminOnly":
     "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ bản cài đặt và cần quyền mà vai trò hiện tại không có.",
   "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",

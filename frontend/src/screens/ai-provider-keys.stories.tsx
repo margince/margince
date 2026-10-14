@@ -98,7 +98,7 @@ const jevCompatible = {
 };
 
 const meta = {
-  title: "Settings/AI/AI models/Model provider keys",
+  title: "Settings/AI/AI models/Providers",
   component: AiProviderKeysCard,
 } satisfies Meta<typeof AiProviderKeysCard>;
 export default meta;

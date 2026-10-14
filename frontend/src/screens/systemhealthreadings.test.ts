@@ -156,17 +156,32 @@ describe("providersReading", () => {
     ).toEqual({ card: { value: "Not set up", href }, panel: false });
   });
 
-  it("names the built-in test provider wherever a lane answers from it", () => {
-    for (const configured of [["fake"], ["anthropic", "fake"]]) {
-      expect(
-        providersReading({ providers: [], configured }, words, href).card,
-      ).toEqual({
-        value: "Built-in test provider",
-        tone: "info",
-        detail: "The bound models cannot be called. Add a key under AI models.",
+  it("says no bound model can be called when only the fake answers", () => {
+    expect(
+      providersReading({ providers: [], configured: ["fake"] }, words, href)
+        .card,
+    ).toEqual({
+      value: "Built-in test provider",
+      tone: "info",
+      detail: "The bound models cannot be called. Add a key under AI models.",
+      href,
+    });
+  });
+
+  it("says only some tiers fall back when real providers are mixed with the fake", () => {
+    expect(
+      providersReading(
+        { providers: [], configured: ["anthropic", "fake"] },
+        words,
         href,
-      });
-    }
+      ).card,
+    ).toEqual({
+      value: "Built-in test provider",
+      tone: "info",
+      detail:
+        "Some tiers answer from the built-in test provider. Add their keys under AI models.",
+      href,
+    });
   });
 
   it("answers for real providers that are all answering", () => {

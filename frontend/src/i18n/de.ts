@@ -6160,6 +6160,8 @@ export const de = {
   "systemHealth.providers.standIn": "Integrierter Testanbieter",
   "systemHealth.providers.standInDetail":
     "Die zugeordneten Modelle sind nicht aufrufbar. Füge unter KI-Modelle einen Schlüssel hinzu.",
+  "systemHealth.providers.standInPartialDetail":
+    "Einige Stufen antworten vom integrierten Testanbieter. Füge unter KI-Modelle ihre Schlüssel hinzu.",
   "providerHealth.adminOnly":
     "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "providerHealth.healthy": "Alle KI-Anbieter antworten.",

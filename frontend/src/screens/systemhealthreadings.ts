@@ -5,7 +5,10 @@ import type { components } from "../api/schema";
 import type { STAT_CARD_TONES } from "../design-system/statcard";
 import { formatNumber } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
-import { answersFromStandIn } from "./ai-provider-health";
+import {
+  answersFromStandIn,
+  answersOnlyFromStandIn,
+} from "./ai-provider-health";
 
 // Each System health report read down to one answer. It says what the slot in
 // the page's row shows, and whether the full card stands under the row.
@@ -192,7 +195,11 @@ export function providersReading(
       card: {
         value: t("systemHealth.providers.standIn"),
         tone: "info",
-        detail: t("systemHealth.providers.standInDetail"),
+        detail: t(
+          answersOnlyFromStandIn(health.configured)
+            ? "systemHealth.providers.standInDetail"
+            : "systemHealth.providers.standInPartialDetail",
+        ),
         href: setUpHref,
       },
       panel: false,
