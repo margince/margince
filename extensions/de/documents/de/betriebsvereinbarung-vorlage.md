@@ -3,7 +3,7 @@
 > Vorlage zur Verhandlung. Kein Muster zum unveränderten Abschluss: Ziffern 4
 > und 7 sind der Kern und gehören ausverhandelt.
 
-Zwischen [Firma] und dem Betriebsrat [Bezeichnung] wird Folgendes vereinbart.
+Zwischen [Unternehmen] und dem Betriebsrat [Bezeichnung] wird Folgendes vereinbart.
 
 ## 1. Gegenstand und Mitbestimmung
 
@@ -20,8 +20,8 @@ Die Verbindung erfolgt durch die beschäftigte Person selbst.
 
 ## 3. Was erfasst wird
 
-Absendende, Empfangende (auch in Kopie), Betreff, Text, Anhänge und Zeitpunkt
-geschäftlicher E-Mails; daraus abgeleitete Kontakt- und Firmendatensätze;
+Absende- und Empfangsadressen (auch in Kopie), Betreff, Text, Anhänge und Zeitpunkt
+geschäftlicher E-Mails; daraus abgeleitete Kontakt- und Unternehmensdatensätze;
 technische Protokolle über den Abruf.
 
 ## 4. Zweckbindung und Verwertungsverbot
@@ -63,7 +63,7 @@ dürfen nicht eingeschränkt werden.
 ## 7. Künstliche Intelligenz
 
 Die Klassifikatoren, die über die Vertraulichkeit von Absendeadressen und Threads
-entscheiden, laufen auf Modellen innerhalb der Infrastruktur von [Firma]. Welche
+entscheiden, laufen auf Modellen innerhalb der Infrastruktur von [Unternehmen]. Welche
 Aufgaben Text an externe Anbieter geben können, weist die Übersicht
 `docs/reference/ai-egress.md` aus; sie wird aus der Konfiguration erzeugt.
 
@@ -90,4 +90,4 @@ nach.
 
 Ort, Datum: ________________
 
-Für [Firma]: ________________  Für den Betriebsrat: ________________
+Für [Unternehmen]: ________________  Für den Betriebsrat: ________________

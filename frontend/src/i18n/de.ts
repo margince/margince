@@ -88,7 +88,7 @@ export const de = {
     "Aktiviere die Aufbewahrung von Snapshots, um Berichte zu planen. Du kannst diesen Zeitplan pausiert speichern.",
   "reporting.shareSnapshot": "Snapshot zum Teilen",
   "reporting.capturePending":
-    "Der Snapshot wurde in die Warteschlange eingereiht. Er wird hier angezeigt, sobald er fertig ist.",
+    "Der Snapshot ist geplant und wird hier angezeigt, sobald er fertig ist.",
   "reporting.createReport": "Aus Performance erstellen",
   "reporting.newCustomReport": "Neuer eigener Bericht",
   "reporting.observations_one": "Beobachtung: {count}",
@@ -1549,9 +1549,9 @@ export const de = {
   "common.error":
     "Inhalt konnte nicht geladen werden. Bitte lade die Seite neu.",
   "common.errorNoCause":
-    "Die Anfrage ist aufgrund einer unbekannten Ursache fehlgeschlagen.",
+    "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
   "common.assistantUnavailable":
-    "Der Assistent hat nicht geantwortet, deshalb wurde kein Entwurf erstellt. Du kannst die Details auch manuell eingeben oder einen Admin bitten, das Modell in den Einstellungen unter KI zu prüfen.",
+    "Der Assistent hat nicht geantwortet, deshalb wurde kein Entwurf erstellt. Du kannst die Details auch selbst eingeben oder einen Admin bitten, das Modell in den Einstellungen unter KI zu prüfen.",
   "common.providerOutOfCredit":
     "Beim KI-Anbieter ist kein Guthaben mehr vorhanden. Bitte wende dich an die Systemadministration.",
   "common.providerUnauthorized":
@@ -1738,13 +1738,13 @@ export const de = {
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
-    "Von einem Teammitglied im CRM erfasst, das versichert hat, dass dieser Kontakt außerhalb des Produkts seine Einwilligung für {label} erteilt hat. Dem Kontakt wurde hier kein Wortlaut angezeigt.",
+    "Von einem Teammitglied im CRM erfasst, das versichert hat, dass dieser Kontakt außerhalb des Produkts die Einwilligung für {label} erteilt hat. Dem Kontakt wurde hier kein Wortlaut angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
     "Nur dieser Kontakt kann diesen Zweck bestätigen. Der Bestätigungslink wird an die hinterlegte Adresse des Kontakts gesendet. Nutze dafür „Bestätigung der Angaben anfordern“ unter „Kontakterlaubnis“.",
   "consent.askToConfirm": "Bestätigung der Angaben anfordern",
   "consent.askToConfirmWhat":
-    "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link kann er sehen, welche Daten über ihn gespeichert sind, diese korrigieren und angeben, ob er von deinem Unternehmen hören möchte. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
+    "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link sieht der Kontakt die gespeicherten Daten, kann sie korrigieren und angeben, ob Nachrichten von deinem Unternehmen erwünscht sind. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
   "consent.askQueued": "Link für {address} zum Versand vorgemerkt.",
   "consent.askNotDelivered":
     "Der Link wurde für {address} erstellt, aber nicht gesendet, da diese Installation keine E-Mails versendet.",
@@ -6360,7 +6360,7 @@ export const de = {
   "privacy.correctionsSub":
     "Kontakte haben diese Korrekturen über den Link eingegeben, den sie per E-Mail erhalten haben. Noch keine Korrektur hat den Datensatz geändert. Eine Korrektur bleibt eine Anfrage, bis jemand sie annimmt.",
   "privacy.correctionsEmpty":
-    "Keine Korrekturen offen. Ein Kontakt sendet eine Korrektur über den Link, den er per E-Mail erhalten hat.",
+    "Keine Korrekturen offen. Ein Kontakt sendet eine Korrektur über den Link aus der erhaltenen E-Mail.",
   "privacy.correctionContact": "Kontakt",
   "privacy.correctionChange": "Gewünschte Änderung",
   "privacy.correctionReceived": "Eingegangen",
@@ -6681,7 +6681,8 @@ export const de = {
   "retention.scopeAiCallPayloadContent": "Nutzdaten von KI-Aufrufen",
 
   "retention.scopeRawCapture": "Gespeicherte Originalnachrichten",
-  "retention.scopeDealRiskDay": "Tägliche Liste wichtiger gefährdeter Deals",
+  "retention.scopeDealRiskDay":
+    "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
   "settings.pipelines": "Pipelines",
   "settings.pipelinesReadOnly":
     "Nur Lesezugriff. Deine Rolle darf Pipelines und Phasen nicht ändern.",
@@ -6837,8 +6838,8 @@ export const de = {
   "ob.ai.confirmCompany": "Unternehmen bestätigen und speichern",
   "ob.readStatus.queued": "Wird vorbereitet",
   "ob.readStatus.deferred": "Wartet auf KI-Kontingent",
-  "ob.readStatus.reading": "Wird gelesen",
-  "ob.readStatus.ready": "Lesen abgeschlossen",
+  "ob.readStatus.reading": "Wird analysiert",
+  "ob.readStatus.ready": "Analyse abgeschlossen",
   "ob.readStatus.partial": "Mit Lücken abgeschlossen",
   "ob.readStatus.failed": "Eingabe erforderlich",
   "ob.readStatus.confirmed": "Auswahl gespeichert",
@@ -7702,8 +7703,8 @@ export const de = {
   "ob.conv.triage.stateTyped": "von dir eingetragen",
   "ob.conv.triage.stateStored": "aus deinem Profil",
   "ob.conv.triage.stateStoredBadge": "Aus deinem Profil",
-  "ob.conv.triage.stateQuoted": "aus deinem Impressum gelesen",
-  "ob.conv.triage.stateQuotedBadge": "Aus deinem Impressum gelesen",
+  "ob.conv.triage.stateQuoted": "aus deinem Impressum übernommen",
+  "ob.conv.triage.stateQuotedBadge": "Aus deinem Impressum übernommen",
   "ob.conv.triage.emptyHint":
     "Hier steht noch nichts. Trage den Wert manuell ein.",
   "ob.conv.triage.legalNotPublished":
@@ -7891,7 +7892,7 @@ export const de = {
 
   // Die Setup-Leiste: fünf Stationen, je ein Wort. Lang genug, den Schritt zu
   // benennen, kurz genug, dass fünf davon bei 10px in eine Spalte passen.
-  "ob.rail.read": "Lesen",
+  "ob.rail.read": "Analysieren",
   "ob.rail.confirm": "Bestätigen",
   "ob.rail.basis": "Basis",
   "ob.rail.voice": "Schreibstil",
@@ -7961,7 +7962,7 @@ export const de = {
   // zurück. Der Satz sagt also, was stimmt, und nennt beide Türen, ohne dass
   // der Leser irgendetwas reparieren soll.
   "ob.gate.readPaused":
-    "Das Lesen ist pausiert. {detail} Das Lesen wird automatisch fortgesetzt. Du kannst auch eine andere Adresse oder die Angaben manuell eingeben.",
+    "Die Analyse ist pausiert. {detail} Die Analyse wird automatisch fortgesetzt. Du kannst auch eine andere Adresse oder die Angaben selbst eingeben.",
 
   // --- das Lese-Theater --------------------------------------------------
   // Sichtbar gemachtes Volumen. Die Schnittstelle liefert keinen Nenner für
@@ -8280,7 +8281,7 @@ export const de = {
     "Keine Anmeldung nötig. Dieser persönliche Link steuert nur Ihre E-Mail-Einstellungen. Geben Sie ihn nicht weiter.",
   "prefs.unsub.doneTitle": "Abbestellt",
   "prefs.unsub.doneBody":
-    "Sie erhalten von diesem Unternehmen keine {label} mehr. Die Änderung tritt sofort in Kraft.",
+    "Von diesem Unternehmen erhalten Sie nichts mehr zum Thema „{label}“. Die Änderung tritt sofort in Kraft.",
   "prefs.unsub.manage": "Einstellungen verwalten",
   "prefs.unsub.alreadyOff":
     "Diese E-Mails waren bereits deaktiviert. Es hat sich nichts geändert.",
@@ -8420,7 +8421,7 @@ export const de = {
   "confirm.field.none": "Nicht erfasst",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
-    "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird selbstverständlich respektiert.",
+    "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
   "confirm.marketing.yes": "Neuigkeiten abonnieren",
   "confirm.marketing.no": "Keine Neuigkeiten senden",
   "confirm.provenance.title": "Herkunft Ihrer Angaben",
@@ -8473,7 +8474,7 @@ export const de = {
     "„Senden Sie mir Antworten und direkte Nachrichten zu unseren Gesprächen.“",
   "prefs.wording.transactional":
     "„Senden Sie mir, was ich für einen von mir angeforderten Vorgang benötige.“",
-  "prefs.wordingGeneric": "„Senden Sie mir {label}.“",
+  "prefs.wordingGeneric": "„Senden Sie mir E-Mails zum Thema {label}.“",
   "prefs.wording.marketing_email":
     "„Senden Sie mir Produkt-Updates und gelegentlich Marketing-E-Mails.“",
   "prefs.wording.events":
@@ -8898,7 +8899,7 @@ export const de = {
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
   "jurisdiction.audience.employer": "den Arbeitgeber",
-  "jurisdiction.audience.operator": "den Betreiber",
+  "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",
   "jurisdiction.documentKind.template": "Vorlage",
   "jurisdiction.documentKind.readingCopy": "Lesefassung",
@@ -9696,7 +9697,7 @@ export const de = {
   "users.access.maskAlways": "immer",
   "users.access.maskOutside": "bei Datensätzen ohne Bearbeitungsrecht",
   "users.inviteSub":
-    "Füge dieser Installation ein Mitglied hinzu und wähle seine Startrolle.",
+    "Füge dieser Installation ein Mitglied hinzu und wähle die Startrolle.",
   "users.membersTitle": "Mitglieder",
   "users.col.member": "Name",
   "users.col.activity": "Aktivität",
@@ -9807,7 +9808,7 @@ export const de = {
   "settings.companyRefresh": "Von der Website aktualisieren",
   "settings.companyEssentials": "Grundlagen",
   "settings.companyPositioning":
-    "Positionierung, Käufergruppen und Vertriebsansatz",
+    "Positionierung, Zielgruppen und Vertriebsansatz",
   "settings.companyIdentity": "Identität und rechtliche Angaben",
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
@@ -12242,7 +12243,7 @@ export const de = {
   "project.stakeholders.add": "Stakeholder hinzufügen",
   "project.stakeholders.addConfirm": "Hinzufügen",
   "project.stakeholders.addHint":
-    "Eine Rolle pro Kontakt. Wird ein Kontakt hinzugefügt, der schon am Projekt beteiligt ist, wechselt seine Rolle auf die hier ausgewählte.",
+    "Eine Rolle pro Kontakt. Wird ein Kontakt hinzugefügt, der schon am Projekt beteiligt ist, wechselt die Rolle auf die hier ausgewählte.",
   "project.stakeholders.searchLabel": "Kontakte nach Name suchen",
   "project.stakeholders.removeTitle": "Stakeholder entfernen?",
   "project.stakeholders.removeConfirm":
@@ -12699,7 +12700,7 @@ export const de = {
   "worklist.untitled.dsr": "Offene Datenschutzanfrage",
   "noticeDuty.title": "Datenschutzhinweis geschuldet (DSGVO Art. 14)",
   "noticeDuty.what":
-    "Margince speichert Daten dieses Kontakts, hat sie aber nicht von ihm selbst: Du hast ihm geschrieben oder er stand in Kopie, und er hat dir nie geschrieben. Die DSGVO verlangt, ihn innerhalb eines Monats zu informieren, wer seine Daten hat und wozu.",
+    "Margince speichert Daten dieses Kontakts, hat sie aber nicht vom Kontakt selbst: Du hast an diese Adresse geschrieben oder sie stand in Kopie, und von dieser Adresse kam nie eine E-Mail an dich. Die DSGVO verlangt, den Kontakt innerhalb eines Monats zu informieren, wer die Daten hat und wozu.",
   "noticeDuty.how":
     "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
   "noticeDuty.sendNotice": "Datenschutzhinweis senden",
@@ -12864,7 +12865,7 @@ export const de = {
   "ob.digest.where": "Was Margince über das Unternehmen weiß",
   "ob.digest.written": "{n} von {m} Zeilen geschrieben",
   "ob.digest.companyLine":
-    "Unternehmensprofil von {host}, gelesene Seiten: {n}",
+    "Unternehmensprofil von {host}, analysierte Seiten: {n}",
   "ob.digest.citedCaption": "mit Quellseite",
   "ob.digest.openCaption": "noch offen",
   "ob.digest.section.identity": "Identität",
@@ -12885,7 +12886,7 @@ export const de = {
   "ob.digest.changed_other": "{count} ungespeicherte Zeilenänderungen",
   "ob.digest.pickFacts": "Zu behaltende Fakten auswählen",
   "ob.digest.referenceNote":
-    "Ein späteres erneutes Lesen kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die jemand bearbeitet hat, wird dabei nie überschrieben.",
+    "Eine spätere erneute Analyse kann Änderungen an diesem Datensatz vorschlagen. Eine Zeile, die jemand bearbeitet hat, wird dabei nie überschrieben.",
   "ob.digest.sidebarLabel": "Fakten zum Unternehmen",
   "ob.digest.sidebar.legalName": "Rechtlicher Name",
   "ob.digest.sidebar.founded": "Gegründet",
@@ -13284,7 +13285,7 @@ export const de = {
   "magic.aboutNamedAtLeast": "{label} und möglicherweise weitere",
   "magic.action.mail_filed": "Erfasste E-Mail diesem Kontakt zugeordnet",
   "magic.action.company_profile_read":
-    "Technisches Profil des Unternehmens gelesen",
+    "Technisches Profil des Unternehmens analysiert",
   "magic.action.fields_changed": "{fields} geändert",
   "magic.action.retention_lead_anonymize":
     "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
@@ -13325,9 +13326,9 @@ export const de = {
   "magic.by.mail_filing": "E-Mail-Zuordnung",
   "magic.by.company_lookup": "Unternehmensabfrage",
   "magic.by.website_reader": "Website-Analyse",
-  "magic.by.signature_reader": "Signatur-Leser",
+  "magic.by.signature_reader": "Signaturerkennung",
   "magic.by.overnight_agent": "Nacht-Agent",
-  "magic.by.mail_reader": "E-Mail-Leser",
+  "magic.by.mail_reader": "E-Mail-Analyse",
   "magic.by.auto_apply": "Automatische Übernahme",
   "magic.by.automation": "Automatisierung",
   "magic.by.lead_routing": "Lead-Verteilung",
@@ -13358,7 +13359,7 @@ export const de = {
   "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
   "magic.glance.label": "Was erledigt wurde",
   "magic.glance.emailsFiled": "E-Mails zugeordnet",
-  "magic.glance.profilesRead": "Unternehmensprofile gelesen",
+  "magic.glance.profilesRead": "Unternehmensprofile analysiert",
   "magic.glance.recordsUpdated": "Datensätze aktualisiert",
   "magic.glance.dealsMoved": "Deals weitergerückt",
   "magic.glance.leadsPromoted": "Leads zu Deals geworden",

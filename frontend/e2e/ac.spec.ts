@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { meFixture } from "../src/testing/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { openedAt, pageOverflow, textsOf } from "./waits";
@@ -1314,7 +1314,7 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await stageSelect.click();
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
-  // By role: a label lookup for "Wert" also matches a group whose name contains it.
+  // By role: getByLabel("Wert") matches any label containing the word.
   await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);

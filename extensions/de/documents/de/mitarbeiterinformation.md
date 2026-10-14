@@ -3,13 +3,13 @@
 > Vorlage. Platzhalter in `[eckigen Klammern]` ausfüllen. Diese Information ist
 > **vor** der ersten Verbindung eines Postfachs auszuhändigen.
 
-**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Firma, Anschrift]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
 **Datenschutzbeauftragte Person:** [Name, Kontakt]
 **Stand:** [Datum] · **Version:** [z. B. 1.0]
 
 ## Worum es geht
 
-[Firma] setzt das CRM-System Margince ein. Wenn Sie Ihr dienstliches Postfach
+[Unternehmen] setzt das CRM-System Margince ein. Wenn Sie Ihr dienstliches Postfach
 mit Margince verbinden, liest das System Ihre geschäftliche E-Mail-Korrespondenz
 und legt sie im CRM ab, damit Vorgänge nachvollziehbar bleiben, wenn Sie im
 Urlaub sind oder das Unternehmen verlassen.
@@ -19,13 +19,13 @@ E-Mail-Anbieter greift das System auf nichts zu.
 
 ## Welche Daten verarbeitet werden
 
-- Absendende, Empfangende (auch in Kopie), Betreff, Datum und Text Ihrer
+- Absende- und Empfangsadressen (auch in Kopie), Betreff, Datum und Text Ihrer
   geschäftlichen E-Mails sowie deren Anhänge
-- daraus abgeleitete Kontakt- und Firmendatensätze
+- daraus abgeleitete Kontakt- und Unternehmensdatensätze
 - technische Protokolle über den Abruf
 
 Spam, Papierkorb und Entwürfe werden nicht erfasst. Erfasst werden der Posteingang
-und der Ordner „Gesendet"; bei Microsoft 365 ausschließlich diese beiden Ordner,
+und der Ordner „Gesendet“; bei Microsoft 365 ausschließlich diese beiden Ordner,
 bei IMAP das eingerichtete Postfach und der Sendeordner.
 
 ## Zwecke und Rechtsgrundlagen
@@ -58,7 +58,7 @@ im Zweifel gegen die Sichtbarkeit.
 ## Was Sie selbst steuern
 
 - **Absendeadressen ausschließen:** Post von einer Adresse oder Domain gar nicht erst
-  erfassen: Einstellungen → Erfassungsaktivität, Karte „Erfassungsausschlüsse“.
+  erfassen: Einstellungen → Capture-Aktivität, Karte „Capture-Ausschlüsse“.
 - **Bereits erfasste Post löschen:** unwiderruflich, einschließlich Anhängen und
   abgeleiteter Daten. Löschen Sie eine erfasste Nachricht in Ihrem Postfach,
   wird die Kopie hier mitgelöscht. Ausgenommen ist eine Nachricht, die ein anderes

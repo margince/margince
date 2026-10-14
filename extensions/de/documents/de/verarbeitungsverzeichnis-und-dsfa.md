@@ -3,7 +3,7 @@
 > Vorlage. Jede Zeile nennt den Code-Pfad, der die Zusage durchsetzt, damit
 > prüfbar ist, ob das Verzeichnis das Produkt beschreibt oder eine Absicht.
 
-**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Firma, Anschrift] · **Stand:** [Datum]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift] · **Stand:** [Datum]
 
 ## Teil A: Verzeichnis nach Art. 30 DSGVO
 
@@ -13,7 +13,7 @@
 | --- | --- |
 | Zweck | Dokumentation geschäftlicher Vorgänge im CRM |
 | Betroffene | Beschäftigte; Personen, mit denen sie korrespondieren |
-| Datenkategorien | Absendende, Empfangende, Betreff, Text, Anhänge, Zeitpunkt |
+| Datenkategorien | Absende- und Empfangsadressen, Betreff, Text, Anhänge, Zeitpunkt |
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. b, f DSGVO; § 26 Abs. 1 BDSG; bei Privatnutzung zusätzlich lit. a |
 | Kategorien empfangender Stellen (Art. 30 Abs. 1 lit. d DSGVO) | Auftragsverarbeitende Stellen (Art. 28 DSGVO): Hosting (AVV); KI-Anbieter gemäß `docs/reference/ai-egress.md`; weitere von der betreibenden Stelle konfigurierte Dienste [eintragen]. Keine Übermittlung an Dritte zu deren eigenen Zwecken |
 | Löschfrist | Handelsbriefe [Frist]; übrige [Frist] |

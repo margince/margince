@@ -5,7 +5,7 @@
 > Verbot durchgesetzt, trägt § 26 Abs. 1 BDSG die Verarbeitung und dieses
 > Dokument entfällt.
 
-**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Firma, Anschrift]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
 **Beschäftigte Person:** [Name] · **Postfach:** [E-Mail-Adresse]
 **Version:** [z. B. 1.0] · **Datum:** [Datum]
 
@@ -20,14 +20,14 @@ Verbindung mit § 26 Abs. 2 BDSG gestützt.
 
 ## Erklärung
 
-Ich willige ein, dass [Firma] die in meinem dienstlichen Postfach
+Ich willige ein, dass [Unternehmen] die in meinem dienstlichen Postfach
 [E-Mail-Adresse] eingehende und ausgehende Korrespondenz durch das CRM-System
 Margince erfassen lässt, einschließlich solcher Nachrichten, die privaten
 Charakter haben.
 
 Mir ist bekannt:
 
-1. **Was erfasst wird:** Absendende, Empfangende, Betreff, Text und Anhänge,
+1. **Was erfasst wird:** Absende- und Empfangsadressen, Betreff, Text und Anhänge,
    sowie daraus abgeleitete Kontaktdatensätze.
 2. **Wer es lesen kann:** bei der Voreinstellung `classified` zunächst nur ich
    und die auf der Nachricht genannten Personen. Ein Klassifikator gibt danach

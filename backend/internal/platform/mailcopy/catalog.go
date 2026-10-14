@@ -158,7 +158,7 @@ func notificationLines(line writeLine) {
 		"Một phê duyệt đang chờ bạn quyết định.")
 	line(func(c *Copy) *string { return &c.NotificationOpen },
 		"Open your worklist",
-		"Arbeitsliste öffnen",
+		"Worklist öffnen",
 		"Mở danh sách công việc")
 }
 
@@ -181,7 +181,7 @@ func digestLines(line writeLine) {
 	// part of a message a reader checks against the clock.
 	line(func(c *Copy) *string { return &c.DigestSubject },
 		"What is waiting on your worklist",
-		"Das wartet auf deiner Arbeitsliste",
+		"Das wartet in deiner Worklist",
 		"Những việc đang chờ trong danh sách công việc của bạn")
 	// STILL WAITING, not "since yesterday", and the window is why. The pass
 	// reaches back two local-day labels and skips nothing a reader has left
@@ -191,7 +191,7 @@ func digestLines(line writeLine) {
 	// waiting.
 	line(func(c *Copy) *string { return &c.DigestIntro },
 		"Here is what is still waiting on your worklist.",
-		"Das wartet noch auf deiner Arbeitsliste.",
+		"Das wartet noch in deiner Worklist.",
 		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
 	// THE COUNT LAST IN GERMAN, like the retrospective's tail above: this line
 	// is reached with one, and a German adjective inflects for the count — a
@@ -202,7 +202,7 @@ func digestLines(line writeLine) {
 		"…và %d mục khác")
 	line(func(c *Copy) *string { return &c.DigestOpen },
 		"Open your worklist:",
-		"Arbeitsliste öffnen:",
+		"Worklist öffnen:",
 		"Mở danh sách công việc:")
 }
 
@@ -228,7 +228,7 @@ func confirmAskLines(line writeLine) {
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
-		"Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird selbstverständlich respektiert.",
+		"Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
 		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",

@@ -6,7 +6,7 @@
 > [Einwilligung](einwilligung-email-erfassung.md) ist ein eigenes Dokument und
 > nur bei erlaubter Privatnutzung erforderlich.
 
-**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Firma, Anschrift]
+**Verantwortliche Stelle (Art. 4 Nr. 7 DSGVO):** [Unternehmen, Anschrift]
 **Beschäftigte Person:** [Name] · **Postfach:** [E-Mail-Adresse]
 
 ## Ich bestätige
