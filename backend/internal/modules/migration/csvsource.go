@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ var ErrObjectNotInSource = errors.New("object is not in this import source")
 type SkippedLine struct {
 	Line   int
 	Reason string
+	Why    Reason
 }
 
 // CSVSource reads an uploaded delimited file out of the blobstore as a
@@ -221,10 +223,8 @@ func (c *rowCursor) next(s *CSVSource) (Row, bool, error) {
 		// arrived as one skip and a phantom `unchanged`, and the four counts
 		// stopped summing to rows_read.
 		if first, seen := c.claimed[row.ExternalID]; seen {
-			s.skip(line, fmt.Sprintf(
-				"the %q value %q is already used by line %d; each row needs its own, because it is "+
-					"what a re-import matches on and what an undo finds this row by",
-				s.sourceKey, row.ExternalID, first))
+			s.skip(line, Why(ReasonRowKeyRepeated,
+				"column", s.sourceKey, "value", row.ExternalID, "line", strconv.Itoa(first)))
 			continue
 		}
 		c.claimed[row.ExternalID] = line
@@ -264,13 +264,13 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		external = strings.TrimSpace(record[at])
 	}
 	if external == "" {
-		s.skip(line, fmt.Sprintf("the %q column is empty, so this row cannot be identified for re-import or undo", s.sourceKey))
+		s.skip(line, Why(ReasonRowKeyEmpty, "column", s.sourceKey))
 		return Row{}, false
 	}
 	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
 }
 
-func (s *CSVSource) skip(line int, reason string) {
+func (s *CSVSource) skip(line int, why Reason) {
 	for _, already := range s.skipped {
 		if already.Line == line {
 			// A page re-read after a resume walks the same rows again; the
@@ -278,7 +278,7 @@ func (s *CSVSource) skip(line int, reason string) {
 			return
 		}
 	}
-	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: reason})
+	s.skipped = append(s.skipped, SkippedLine{Line: line, Reason: why.English(), Why: why})
 }
 
 // Header names the file's own columns, and reads no further.

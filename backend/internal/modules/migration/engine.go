@@ -74,6 +74,9 @@ type EnsureResult struct {
 	Unchanged  bool
 	Skipped    bool
 	SkipReason string
+	// SkipWhy is SkipReason as a code, so the report can be read in another
+	// language. A writer that sets SkipReason sets this with it.
+	SkipWhy Reason
 	// Duplicate marks a row that named a record the estate ALREADY held and
 	// that this importer had not landed before. It is not an outcome — the row
 	// is also Created, or Skipped when the run asked for that — which is why it
@@ -166,7 +169,7 @@ func (e *Engine) DryRun(ctx context.Context, src Source) (Report, error) {
 			}
 			for _, row := range rows {
 				if len(row.Fields) == 0 {
-					or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: skipReasonEmptyPayload})
+					or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(skipReasonEmptyPayload))
 					continue
 				}
 				exists, err := e.w.Exists(ctx, object, row.ExternalID)
@@ -358,7 +361,7 @@ func totalsOf(ctx context.Context, src Source, objects []string, recorded *Progr
 
 func (e *Engine) ensureRow(ctx context.Context, object string, row Row) (EnsureResult, error) {
 	if len(row.Fields) == 0 {
-		return EnsureResult{Skipped: true, SkipReason: skipReasonEmptyPayload}, nil
+		return EnsureResult{Skipped: true, SkipReason: skipReasonEmptyPayload.English(), SkipWhy: skipReasonEmptyPayload}, nil
 	}
 	res, err := e.w.Ensure(ctx, object, row)
 	if err != nil {
