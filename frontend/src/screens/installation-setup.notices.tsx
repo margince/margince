@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { WriteRefused } from "./common";
+import { WriteRefused } from "../design-system/querystates";
 
 // What a cold start says when the model step's write was refused.
 //

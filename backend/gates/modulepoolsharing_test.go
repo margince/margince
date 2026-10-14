@@ -95,6 +95,9 @@ var ownPools = gatekit.Waive(map[string]string{
 	"internal/modules/activities/waitingownerplan_integration_test.go": "its subject is the statement the " +
 		"store sends, which only a tracer on ConnConfig can capture, and the shared pool must not carry one. " +
 		"Bounded by testdb.OwnPoolFromConfig, per-test and closed with the test.",
+	"internal/modules/migration/sliceflush_integration_test.go": "it counts the import_run updates a slice " +
+		"sends, which only a tracer on ConnConfig can see, and the shared pool must not carry one. Bounded " +
+		"by testdb.OwnPoolFromConfig, per-test and closed with the test.",
 })
 
 // TestModuleSuitesTakeTheProcessSharedPool fails when a module integration test

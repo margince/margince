@@ -4,8 +4,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { throwProblem } from "./common";
+import { useCan } from "../lib/capability";
+import { throwProblem } from "../lib/problem";
 
 export type DataCoverageRow =
   components["schemas"]["DataCoverage"]["sources"][number];

@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 

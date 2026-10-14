@@ -3,7 +3,6 @@ import { CalendarClock, Zap } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -14,14 +13,17 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { type QueryLike, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { RowOpen } from "../design-system/rowopen";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { type Translator, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
-import { type QueryLike, QueryStates, unwrap, useMe } from "./common";
 import "./automations.css";
 
 // The automations editor over the closed catalog. Every form field derives from

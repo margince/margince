@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ENTITY, type EntityKind } from "../../app/entity";
-import { navigate } from "../../app/router";
+import { ENTITY, type EntityKind } from "../../lib/entity";
+import { navigate } from "../../lib/router";
 
 // The cited kinds that open a screen, which the record registry routes. Not
 // `activity`, which opens its message per row, nor `company`, usually this page.

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { problemCode, throwProblem } from "./common";
+import { problemCode, throwProblem } from "../lib/problem";
 
 // The licensed-data-provider status vocabulary, in one place because two
 // surfaces render it: the Settings card says whether the connection works,

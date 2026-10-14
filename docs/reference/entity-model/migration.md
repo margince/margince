@@ -30,30 +30,56 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_run
 
-13 columns · primary key `(id)` · referenced by 1 foreign key
+34 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `actor` | `jsonb` |  |  |
+| `approved_at` | `timestamp with time zone` |  | When the run was approved. |
+| `approved_by` | `text` |  |  |
+| `attempt_correlation_id` | `uuid` |  |  |
 | `checkpoint` | `integer`, default `0` | yes | Absolute offset into the source's rows for a forward run (`running`/`failed`), or into import_record_map's rows once the run is `undoing`; 0 = not started either way. |
+| `claimed_attempt` | `integer` |  |  |
 | `connector` | `text` | yes | One of `csv`, `salesforce`. |
-| `error` | `text` |  | Why a failed run stopped, in the uploader's terms. |
+| `draft_step` | `text` |  | One of `files`, `map`. |
+| `error` | `text` |  | Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. |
+| `finished_at` | `timestamp with time zone` |  |  |
+| `heartbeat_at` | `timestamp with time zone` |  |  |
+| `job_attempt` | `integer`, default `0` | yes |  |
+| `job_status` | `text` |  |  |
 | `mapping` | `jsonb`, default `'{}'::jsonb` | yes |  |
+| `phase` | `text` |  | One of `reading`, `checking`, `creating_tags`, `importing`, `linking`, `undoing` and 1 more. |
+| `phase_object` | `text` |  |  |
+| `profile` | `jsonb` |  | What the upload read of the file. |
+| `progress` | `jsonb` |  |  |
+| `progress_at` | `timestamp with time zone` |  |  |
 | `report` | `jsonb` |  |  |
+| `resume_count` | `integer`, default `0` | yes |  |
+| `source_name` | `text`, generated as `COALESCE((mapping ->> 'source_name'::text), ''::text)` |  | Computed by the database. It cannot be written directly. |
 | `source_ref` | `text` | yes |  |
-| `status` | `text`, default `'pending'::text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 2 more. |
+| `source_released_at` | `timestamp with time zone` |  |  |
+| `started_at` | `timestamp with time zone` |  |  |
+| `status` | `text`, default `'pending'::text` | yes | One of `pending`, `validating`, `awaiting_approval`, `running`, `complete`, `failed` and 3 more. |
+| `superseded_by` | `uuid` |  | The run of the same source name that cancelled this one: a newer test run, or an undo that took the name back. |
 | `undo_report` | `jsonb` |  |  |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
+| `version` | `integer`, default `1` | yes | Bumped by every saved change of a choice. |
 
 **Rules**
 
 - `import_run_connector_check`: `CHECK ((connector = ANY (ARRAY['csv', 'salesforce'])))`
-- `import_run_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'validating', 'awaiting_approval', 'running', 'complete', 'failed', 'undoing', 'undone'])))`
+- `import_run_draft_step_check`: `CHECK ((draft_step = ANY (ARRAY['files', 'map'])))`
+- `import_run_phase_check`: `CHECK ((phase = ANY (ARRAY['reading', 'checking', 'creating_tags', 'importing', 'linking', 'undoing', 'finishing'])))`
+- `import_run_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'validating', 'awaiting_approval', 'running', 'complete', 'failed', 'undoing', 'undone', 'cancelled'])))`
 
 **Indexes**
 
 - `idx_import_run_status`: `btree (status)`
+- `import_run_one_active_per_source_name`: `unique, btree (source_name) WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
+- `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
+- `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`

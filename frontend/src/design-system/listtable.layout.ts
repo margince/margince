@@ -13,7 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { readStoredJson, STORAGE_KEYS, writeStored } from "../app/storage";
+import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
 
 /**
  * How the table divides its width when the reader has not resized anything.

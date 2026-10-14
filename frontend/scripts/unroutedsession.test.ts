@@ -18,7 +18,7 @@
 
 import { expect, it } from "vitest";
 import { installFetchStub } from "../src/screens/story-utils";
-import { takeUnroutedSessionProbes } from "../src/screens/unrouted-session";
+import { takeUnroutedSessionProbes } from "../src/testing/unrouted-session";
 
 it.fails("fails a case that asked for a session the stub was not given", async () => {
   installFetchStub({});

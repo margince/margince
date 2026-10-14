@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
-import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { RedirectUriGroup } from "./oauth-redirects";
 
 /**

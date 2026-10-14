@@ -18,7 +18,7 @@ import {
   searchCompanyCandidates,
 } from "./contactemployers";
 import { datePatch, validDateEntry } from "./employmentpatch";
-import "./common.css";
+import "../design-system/querystates.css";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the

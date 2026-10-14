@@ -1777,7 +1777,7 @@
    it left it one word wide with the date over the words. The mark keeps the
    title company; what is owed drops to a line of its own at the row's end,
    where a reader's eye already goes for it.
-   720px is the tree's own fold (`FOLD_MAX_WIDTH`, src/app/viewport.ts), which
+   720px is the tree's own fold (`FOLD_MAX_WIDTH`, src/lib/viewport.ts), which
    a stylesheet cannot read — the two are changed together. */
 @media (max-width: 720px) {
   .co-todo {

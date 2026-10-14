@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
 // The forward half of the weekly. `brief.queries.ts` reads the week that closed;

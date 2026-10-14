@@ -38,6 +38,7 @@ The 22 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `close_date_run_open`: `btree (as_of DESC) WHERE (status = 'running')`
 - `close_date_run_pkey`: `unique, btree (id)`
+- `uq_close_date_run_one_running`: `unique, btree (status) WHERE (status = 'running')`
 
 ## close_date_run_member
 

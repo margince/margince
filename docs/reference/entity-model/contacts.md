@@ -1060,6 +1060,7 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_name_trgm`: `gin (f_fold_apostrophes(lower(((COALESCE(full_name, '') || ' ') || COALESCE(company_name, '')))) gin_trgm_ops)`
 - `idx_lead_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_lead_project`: `btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))`
+- `idx_lead_promoted_contact`: `btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)`
 - `idx_lead_qualified_deal`: `btree (qualified_deal_id) WHERE (qualified_deal_id IS NOT NULL)`
 - `idx_lead_score`: `btree (score DESC) WHERE ((archived_at IS NULL) AND (status = ANY (ARRAY['new', 'contacted', 'engaged'])))`
 - `idx_lead_search`: `gin (search_tsv)`

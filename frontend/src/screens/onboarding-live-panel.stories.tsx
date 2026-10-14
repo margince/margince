@@ -69,7 +69,7 @@ export const StoppedEarly: Story = {
     // Collapsed is the default, and the header carries the count that makes
     // that safe — so the story that is about the ROWS has to open it.
     await userEvent.click(
-      await canvas.findByRole("button", { name: /What I read/ }),
+      await canvas.findByRole("button", { name: /Pages read and skipped/ }),
     );
     await canvas.findByText(/400 pages/);
   },

@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Card } from "../design-system/atoms";
+import type { Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../screens/lists.fixtures";
 import { LISTS_KEY, type List } from "../screens/lists.queries";
 import {
@@ -16,7 +17,6 @@ import {
 } from "../screens/story-utils";
 import type { NavCounts, NavSection } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
-import type { Route } from "./router";
 import { PageTitle, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
 

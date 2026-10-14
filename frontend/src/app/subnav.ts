@@ -5,8 +5,8 @@ import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { isScreen, type Route, routeHash } from "../lib/router";
 import { type CustomLabel, resolveCustomLabel } from "./custom";
-import { isScreen, type Route, routeHash } from "./router";
 
 // The sidebar is a STACK of navigation levels, not one rail with a special case
 // bolted on for Settings. Level one is the rail's own destinations; a screen

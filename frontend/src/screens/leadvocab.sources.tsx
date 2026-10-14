@@ -3,8 +3,6 @@
 
 import { type FormEvent, useId, useState } from "react";
 import { rowsOf } from "../api/rows";
-import { useCanWrite } from "../app/capability";
-import { isOption } from "../app/options";
 import {
   Badge,
   Button,
@@ -31,6 +29,7 @@ import {
 } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { useSinglePress } from "../design-system/presslatch";
+import { QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
@@ -43,7 +42,9 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, QueryStates } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { isOption } from "../lib/options";
+import { problemMessageOf } from "../lib/problem";
 import {
   type DiscoveredLeadSource,
   type LeadSource,

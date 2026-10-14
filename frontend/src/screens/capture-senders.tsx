@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Badge,
   Button,
@@ -19,13 +18,15 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RowOpen } from "../design-system/rowopen";
 import { useToast } from "../design-system/toast";
 import { formatDate, formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, throwProblem, unwrap } from "./common";
+import { throwProblem, unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { EntityRef } from "./entityref";
 import "./capture-senders.css";
 

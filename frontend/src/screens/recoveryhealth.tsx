@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { type Fact, FactList } from "../design-system/factlist";
 import { SettingList, SettingRow } from "../design-system/settingrow";
@@ -12,7 +11,8 @@ import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { unwrap } from "./common";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/recovery-health: when the restore procedure was last rehearsed,

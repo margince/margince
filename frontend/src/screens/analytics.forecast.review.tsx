@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { isEntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Disclosure } from "../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import {
   type ResolveAnswer,
   ResolveSheet,
@@ -14,8 +13,10 @@ import {
 } from "../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { isEntityKind } from "../lib/entity";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
-import { QueryGate, throwProblem, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 
 type InputCheck = components["schemas"]["InputCheck"];

@@ -12,7 +12,8 @@ import {
   useState,
 } from "react";
 import type { components } from "../api/schema";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatAiRunCost } from "../format/aicost";
+import { formatNumber } from "../format/format";
 import type { Locale } from "../i18n";
 import "./airuntimechip.css";
 import { coveredByDialog } from "./dialogfocus";
@@ -158,7 +159,7 @@ export function AiRuntimeChip({
   }, [open]);
 
   const spend = runtime
-    ? formatMicroUSD(runtime.estimated_cost_microusd, locale)
+    ? formatAiRunCost(runtime.estimated_cost_microusd, locale)
     : labels.awaiting;
 
   return (
@@ -362,15 +363,4 @@ function routes(runtime?: AiRunSummary) {
 
 function unique(values: string[]) {
   return values.filter((value, index) => values.indexOf(value) === index);
-}
-
-// Not `formatMoney`: it rounds a fraction-of-a-cent read to $0.00. The locale
-// stays the reader's, because a German reader writes 0,0043 $.
-function formatMicroUSD(value: number, locale: Locale) {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: value > 0 && value < 10_000 ? 4 : 2,
-    maximumFractionDigits: 6,
-  }).format(value / 1_000_000);
 }

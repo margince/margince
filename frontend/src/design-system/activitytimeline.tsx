@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
-import { provenanceOf } from "../screens/common";
 import {
   isTranscriptActivity,
   TranscriptReadCard,
@@ -18,6 +17,7 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
+import { provenanceOf } from "./provenanceof";
 
 type Activity = components["schemas"]["Activity"];
 

@@ -1,7 +1,6 @@
-import { skipToken, useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { useQuery } from "@tanstack/react-query";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { contactQuery } from "./contact.queries";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -69,20 +68,7 @@ export function useChannelReachable(
   contactId: string | undefined,
   provider: string | undefined,
 ) {
-  const contact = useQuery({
-    queryKey: ["contact", contactId],
-    queryFn:
-      contactId != null
-        ? async () => {
-            return unwrap(
-              await api.GET("/contacts/{id}", {
-                params: { path: { id: contactId } },
-              }),
-            );
-          }
-        : skipToken,
-    enabled: isChannel,
-  });
+  const contact = useQuery({ ...contactQuery(contactId), enabled: isChannel });
   if (!isChannel || contactId == null) return true;
   // Matched against the row's OWN transport. A hardcoded "telegram" here would
   // withhold the reply on every other transport's rows and offer it on a

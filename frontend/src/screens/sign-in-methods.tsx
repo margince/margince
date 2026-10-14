@@ -3,19 +3,20 @@ import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { INSTALLATION_SETTINGS_KEY } from "../app/uploadlimit";
 import { Button, EmptyState, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
-import { problemMessageOf, QueryGate, throwProblem, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { useMyMfa } from "./mfa.queries";
 import {
   type AssignableRole,

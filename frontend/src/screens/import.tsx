@@ -2,31 +2,34 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useCan, useCanWrite } from "../app/capability";
-import { navigate, routeHash } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryStates } from "../design-system/querystates";
 import { RecordBack } from "../design-system/recordview";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryStates, useMe } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { useMemberNames } from "../lib/membernames";
+import { problemMessageOf } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
 import { UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
+import { handOverUpload } from "./importflow";
 import {
-  handOverUpload,
   useImportFormat,
   useLandedRecords,
   useRecentImports,
   useUndoImport,
-} from "./importflow";
+  wroteNothing,
+} from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
-import { useMemberNames } from "./membernames";
 import {
   IMPORT_RUN_SUBPAGE,
   IMPORT_TEMPLATE_SUBPAGE,
@@ -165,6 +168,7 @@ const STATUS_TONE = {
   failed: "danger",
   undoing: "info",
   undone: "default",
+  cancelled: "default",
 } as const satisfies Record<ImportRun["status"], string>;
 
 // The rows a run holds, once a dry run has counted them.
@@ -179,7 +183,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const recent = useRecentImports();
-  const runs = recent.data ?? [];
+  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
   useLandedRecords(runs.map((one) => one.status));
   const names = useMemberNames(runs.map((one) => one.captured_by));
   const undo = useUndoImport();

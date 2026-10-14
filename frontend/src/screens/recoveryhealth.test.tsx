@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { RecoveryHealthCard } from "./recoveryhealth";
 import { jsonResponse, render } from "./settings.testkit";
 

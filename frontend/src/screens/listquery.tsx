@@ -10,14 +10,6 @@ import {
   useState,
 } from "react";
 import { FIRST_PAGE } from "../api/client";
-import { navigate, type Route, routeHash, useHash } from "../app/router";
-import { useScrollMemory } from "../app/scrollmemory";
-import {
-  currentParams,
-  GLOBAL_DIALS,
-  type UrlParams,
-  useUrlParams,
-} from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -29,7 +21,15 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
+import { navigate, type Route, routeHash, useHash } from "../lib/router";
+import { useScrollMemory } from "../lib/scrollmemory";
+import {
+  currentParams,
+  GLOBAL_DIALS,
+  type UrlParams,
+  useUrlParams,
+} from "../lib/urlstate";
 import { withoutStrandedTagMode } from "./tagfilter";
 import { useTagVocabulary } from "./tags.queries";
 import "./listquery.css";

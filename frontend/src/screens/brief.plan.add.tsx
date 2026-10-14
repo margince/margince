@@ -11,7 +11,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { useRecordTargets } from "./recordtargets";
 import { useAddCommitment } from "./weeklyplan.queries";
 

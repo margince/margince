@@ -20,16 +20,19 @@ the set of packages pinned by hash in `spdx-tools-requirements.txt`. So it is as
 SBOM images pinned by digest. The steps to build that file again are in its header. It fails on a
 document that is not valid, so the `Makefile` recipe gates on that, and shows its report on failure.
 
+The same set holds `PyYAML`. `make sbom-census` runs it in the same image to read every YAML
+document of `pnpm-lock.yaml`. The check fails when the SBOM misses a package that file resolves.
+
 ## Why SPDX 3.0 is checked by JSON schema only
 
 The semantic layer of SPDX 3.0 is SHACL, and the SPDX project points at
 [`spdx3-validate`](https://github.com/JPEWdev/spdx3-validate) /
 [`pyshacl`](https://github.com/spdx/spdx-3-model/blob/develop/serialization/jsonld/validation.md)
-for it. Neither can serve as a gate here. Run against the SPDX 3.0 output of syft 1.50,
-`spdx3-validate` reports about 1100 `sh:ClassConstraintComponent` violations. Every `Element`
+for it. Neither can serve as a gate here. Run against the SPDX 3.0 output of syft 1.54,
+`spdx3-validate` 0.0.7 reports about 1500 `sh:ClassConstraintComponent` violations. Every `Element`
 reference fails the class check, because the model loads without the OWL inference that makes
-`software_File` a subclass of `Element`. It also takes about 4 minutes, and fetches the model from
-`spdx.org` on every run.
+`software_File` a subclass of `Element`. It also takes more than ten minutes, and fetches the model
+from `spdx.org` on every run.
 
 A gate on it would fail `make sbom` on a document we do not own (the syft writer) and cannot patch
 (contract-first). So SPDX 3.0 gets a structural check by JSON schema, the layer the SPDX 3 model doc

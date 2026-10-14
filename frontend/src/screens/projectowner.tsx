@@ -9,7 +9,7 @@ import {
   type ListPopoverOption,
 } from "../design-system/listpopover";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useUpdateRecord } from "./edit";
 import type { Project } from "./projects.form";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./roster";

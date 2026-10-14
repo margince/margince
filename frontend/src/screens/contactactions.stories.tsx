@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
+import { en } from "../i18n/en";
 import { ContactActions } from "./contactactions";
 import {
   installFetchStub,
@@ -181,6 +182,32 @@ export const LogRefused: Story = {
     return (
       <StoryProviders>
         <Header />
+      </StoryProviders>
+    );
+  },
+};
+
+// An archived contact takes no activity either: every verb points at the
+// page's one sentence, and no second refusal is printed beside it.
+export const Archived: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header
+          view={{
+            ...VIEW,
+            contact: {
+              ...VIEW.contact,
+              writable: false,
+              archived_at: "2026-08-14T09:00:00Z",
+            },
+          }}
+          refusedReasonId="contact-archived"
+        />
+        <p id="contact-archived" className="t-caption">
+          {en["contact.rail.archivedReadOnly"]}
+        </p>
       </StoryProviders>
     );
   },

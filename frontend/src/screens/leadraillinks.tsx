@@ -3,12 +3,12 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
 import { ListPopover } from "../design-system/listpopover";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
+import { routeHash } from "../lib/router";
 // The row and section shapes this file draws (record-card, co-deal-card,
 // co-project-card, co-sect) are the account rail's own, defined in
 // company360.css and companyrailprojects.css. Imported HERE rather than
@@ -17,7 +17,7 @@ import { useT } from "../i18n";
 import "../design-system/recordcard.css";
 import "./company360.css";
 import "./companyrailprojects.css";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 import { SectionSummary } from "./companyrailshared";
 import { useEntityName } from "./entityref";
 import { LeadFillFromContact } from "./leadfillfromcontact";

@@ -39,6 +39,8 @@ package compose
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -46,6 +48,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -111,6 +114,19 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 	contact := ids.From[ids.ContactKind](env.Entity.ID)
 	return InstallationDB(g.pool).Tx(ctx, func(tx pgx.Tx) error {
 		done, err := g.store.PromoteContactCohortTx(ctx, tx, contact)
+		// The contact this event named has gone since, so no later pass finds
+		// it and retrying is work with no outcome. Reported as unactionable so
+		// the entry is acked once and loudly, rather than reclaimed every
+		// cycle for as long as the stream keeps it.
+		//
+		// Not the ordering race the consumer exists to fix. That race is a
+		// message arriving before its contact.
+		//
+		// The trigger here is the contact's own write, so the row existed when
+		// the event was emitted.
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return fmt.Errorf("%w: contact %s", events.ErrUnactionable, contact)
+		}
 		if err != nil {
 			return err
 		}

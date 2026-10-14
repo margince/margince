@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCan } from "../app/capability";
 import { Field } from "../design-system/atoms";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
 import { ForecastShareActions } from "./analytics.share";
-import { QueryGate, unwrap } from "./common";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { CaptureActivityTab } from "./capture-activity";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

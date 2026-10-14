@@ -305,6 +305,10 @@ jobs:
               # reason the backend scope carries 'scripts/**' too.
               - 'scripts/**'
               - 'Makefile'
+            images:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-bake.hcl'
             # Everything that can change WHICH packages are in the tree, and
             # therefore which licenses the gate below judges. `**/pnpm-lock.yaml`
             # is globbed on purpose: a Renovate lockfile-only PR is precisely
@@ -314,10 +318,6 @@ jobs:
             # /pnpm-lock.yaml now, which `**/` still matches because it matches
             # zero segments, so this keeps firing and needs no edit next time the
             # workspace moves.
-            images:
-              - 'Dockerfile'
-              - '.dockerignore'
-              - 'docker-bake.hcl'
             deps:
               - 'go.work'
               - 'go.work.sum'
@@ -333,6 +333,10 @@ jobs:
               - '.grant.yaml'
               - 'sbom-schemas/**'
               - 'Makefile'
+              # The census `make sbom` runs and the test of it this lane runs
+              # first, so an edit to either one alone still reaches the lane.
+              - 'scripts/sbom-census.sh'
+              - 'scripts/test-sbom-census.sh'
               # EVERY workflow, not just this one. syft catalogs a `uses:` as a
               # package, so any workflow that gains a reference changes what the
               # license gate judges — a pinned remote action brings its license,
@@ -775,9 +779,11 @@ jobs:
   # BEFORE the merge, not by the artifact producer that runs after it. sbom.yml
   # still gates its own signing path, which is what that copy exists for.
   #
-  # One `make sbom-gate` step: the gate judges the resolved dependency graph
-  # rather than the manifests, so the scan and the judgement travel together and
-  # a retry has to repeat both.
+  # The judging is one `make sbom-gate` step: the gate judges the resolved
+  # dependency graph rather than the manifests, so the scan and the judgement
+  # travel together and a retry has to repeat both. The `make sbom` inside it
+  # also holds the SBOM to the lockfile (`sbom-census`), and the step before it
+  # proves that census still fails on a short SBOM.
   license-gate:
     name: license gate
     timeout-minutes: 30
@@ -799,6 +805,12 @@ jobs:
           # (`git describe --tags --exact-match`), else the full revision —
           # resolving that needs the tags and history.
           fetch-depth: 0
+      # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
+      # passes, and only the census inside `make sbom` tells it apart. Planted
+      # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it
+      # still fails.
+      - name: the census still catches a short SBOM
+        run: make test-sbom-census
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets

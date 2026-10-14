@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "2bc2fb5712b5798fb30335b13cebbb17f2d68bdcc2453fa06c9b6a6bc60841fe"
+const JobContractHash = "49decc36196b5cf164daeb2a162ab41e2d73991118324ca975861d6542ece139"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -532,6 +532,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"import_commit": {
+		Kind:      "import_commit",
+		GoType:    "ImportCommitArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a failed row, an over-budget slice and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
 	"import_run_sweep": {
 		Kind:      "import_run_sweep",
 		GoType:    "ImportRunSweepArgs",
@@ -539,8 +549,27 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 15 * time.Minute},
-		Fault:     FaultPolicy{NilAfterLogging: "the warn line is this pass's FINDING, not a failure: it counts the runs it moved to failed, which approve now resumes. A pass that could not read or move them returns that through jobs.Fault."},
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
+	},
+	"import_undo": {
+		Kind:      "import_undo",
+		GoType:    "ImportUndoArgs",
+		Role:      Worker,
+		Queue:     "import_write",
+		Timeout:   TimeoutPolicy{Fixed: 1 * time.Minute, DerivedFrom: "importSliceTimeout"},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: an undo that stops stays undoing with its cause and its cursor, and a lost fence is a superseded attempt's quiet exit; a River retry would rerun a slice whose run already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"import_validate": {
+		Kind:      "import_validate",
+		GoType:    "ImportValidateArgs",
+		Role:      Worker,
+		Queue:     "import_check",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a refusal, an over-budget stop and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would test again a run whose state already says what happened."},
+		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
 	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",
@@ -931,6 +960,8 @@ var queues = map[string]int{
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,
+	"import_check":      2,
+	"import_write":      1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
 	"technical_lookup":  1,

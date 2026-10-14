@@ -3,8 +3,6 @@ import { sourceName } from "./worklist.sources";
 
 export { sourceName } from "./worklist.sources";
 
-import { ENTITY, recordRoute } from "../app/entity";
-import { routeHash } from "../app/router";
 import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import { floorFigure } from "../format/figure";
 import {
@@ -16,6 +14,8 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { isMessageKey, translatePlural } from "../i18n";
+import { ENTITY, recordRoute } from "../lib/entity";
+import { routeHash } from "../lib/router";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
@@ -477,9 +477,9 @@ function momentText(
 
 // Where the row's suggested step leads.
 //
-// The RECORD the thread belongs to, not the message: an activity is a timeline
-// entry with no page of its own — `app/entity.ts` says so in as many words —
-// so `#/activities/<id>` would be a control that goes nowhere.
+// The record the thread belongs to, not the message. An activity is a timeline
+// entry with no page of its own (`lib/entity.ts` says so), so
+// `#/activities/<id>` would be a control that goes nowhere.
 //
 // A `draft_reply` row whose subject is a CONTACT opens the composer, through
 // `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything

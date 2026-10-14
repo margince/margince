@@ -12,7 +12,7 @@ import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf, unwrap } from "./common";
+import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import { enteredCode, MfaCodeField } from "./mfacode";
 import "./mfacard.css";
 

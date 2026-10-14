@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { useCanWrite } from "../app/capability";
 import { Badge, Button } from "../design-system/atoms";
 import {
   Panel,
@@ -13,6 +12,7 @@ import {
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import {
   type ReviewTemplate,
   useReviewTemplates,

@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { QueryStates } from "../design-system/querystates";
 import { Meter } from "../design-system/readings";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryStates } from "./common";
+import { problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { UndoConfirm, UndoErrors } from "./import.notices";
 import { PartCounts, partsOf, problemsHref } from "./import.testrun";
 import type { ImportWizardState } from "./importflow";
@@ -120,7 +121,7 @@ export function ImportProgress({
             variant="primary"
             pending={wizard.approve.isPending}
             busyLabel={t("import.importing")}
-            onClick={() => wizard.approve.mutate(run.id)}
+            onClick={() => wizard.approve.mutate(run)}
           >
             {t("import.resume")}
           </Button>

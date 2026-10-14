@@ -9,7 +9,7 @@
 // page all mint links through here, so a spelling nothing mints cannot get into
 // circulation.
 
-import type { Route } from "../app/router";
+import type { Route } from "../lib/router";
 import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 
 /** The screen this module addresses, named once. */

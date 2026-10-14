@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { leadTodoRows } from "./leadtoday";
 import { TodayPanel } from "./record360/today";
 import { StoryProviders } from "./story-utils";

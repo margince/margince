@@ -4,17 +4,16 @@
 import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
-import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
-import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import { AddToShortlistAction } from "./addtoshortlist";
-import { useMe } from "./common";
 import { WorkAsLeadAction } from "./contactleadaction";
 import { ContactRecordActions } from "./contactrecordactions";
-import type { Transport } from "./contacttransports";
+import type { Transport, TransportSource } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
@@ -22,8 +21,6 @@ import { openContactTab } from "./worklist.return";
 
 // The header's verbs on the contact record page (contactpage.tsx): writing,
 // calling, meeting, logging, and the menu that holds everything else.
-
-type Contact360 = components["schemas"]["Contact360"];
 
 // Why the lead verb may not be pressed, in the reader's words, or undefined
 // when it may.
@@ -65,7 +62,7 @@ export function ContactActions({
   onAddTask,
   refusedReasonId,
 }: Readonly<{
-  view: Contact360;
+  view: TransportSource;
   contactId: string;
   onWrite: () => void;
   onResearch: () => void;
@@ -92,8 +89,12 @@ export function ContactActions({
   // `/me` has not decided is worse than a control that is briefly quiet —
   // the same rule writeRefusal states for the identical shape, above.
   const logGrantKnown = me.data?.authorization !== undefined;
-  const logRefused = logGrantKnown && !canLog ? logRefusedId : undefined;
-  const logPending = !logGrantKnown;
+  // An archived contact takes no activity either, and the page's one sentence
+  // says so for every verb here.
+  const archived = view.contact.archived_at ? refusedReasonId : undefined;
+  const logRefused =
+    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
+  const logPending = !archived && !logGrantKnown;
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -109,7 +110,8 @@ export function ContactActions({
       <EmailVerb
         label={write.label}
         icon={<WriteIcon size={15} aria-hidden="true" />}
-        reason={refusal}
+        reason={archived ? undefined : refusal}
+        reasonId={archived}
         onClick={onWrite}
       />
       {/* Square, because a phone and a calendar are verbs a reader already
@@ -120,17 +122,19 @@ export function ContactActions({
       <IconAction
         label={t("contact.action.call")}
         icon={<Phone aria-hidden="true" />}
+        reasonId={archived}
         onClick={() => openContactTab(contactId, "timeline")}
       />
       <IconAction
         label={t("contact.action.meetings")}
         icon={<CalendarDays aria-hidden="true" />}
+        reasonId={archived}
         onClick={() => openContactTab(contactId, "meetings")}
       />
       {/* A hairline between reaching the record and recording what happened
           to it: two groups of verbs, not one toolbar. */}
       <span className="record-actions-sep" aria-hidden="true" />
-      {logRefused && (
+      {logRefused === logRefusedId && (
         <p className="t-caption" id={logRefusedId}>
           {t("record.logActivityRefused")}
         </p>
@@ -186,12 +190,16 @@ export function ContactActions({
                 recordId={contactId}
                 disabledReasonId={refusedReasonId}
               />
-              <AddToShortlistAction entityType="contact" entityId={contactId} />
-              <WorkAsLeadAction contactId={contactId} />
+              <AddToShortlistAction
+                entityType="contact"
+                entityId={contactId}
+                reasonId={archived}
+              />
+              <WorkAsLeadAction contactId={contactId} reasonId={archived} />
               <Button onClick={() => openContactTab(contactId, "timeline")}>
                 {t("record.fullHistory")}
               </Button>
-              <Button onClick={onResearch}>
+              <Button reasonId={archived} onClick={onResearch}>
                 {t("contact.action.research")}
               </Button>
             </>

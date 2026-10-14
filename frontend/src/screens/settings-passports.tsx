@@ -5,7 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -25,16 +24,14 @@ import {
   PanelIntro,
 } from "../design-system/panel";
 import { ScopeChips, scopeChipLabel } from "../design-system/passportselect";
+import { QueryStates, WriteRefused } from "../design-system/querystates";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import {
-  QueryStates,
-  resetToSignedOut,
-  throwProblem,
-  WriteRefused,
-} from "./common";
+import { throwProblem } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { resetToSignedOut } from "../lib/session";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";

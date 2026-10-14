@@ -7,11 +7,11 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Badge } from "../design-system/atoms";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
 import "./audit.css";
 
 // Reusable audit attribution — turns a raw AuditLogEntry into a line a contact

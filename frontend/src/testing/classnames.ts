@@ -33,14 +33,10 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
       add([...new Set(names)].join(" "), node);
       return;
     }
-    // A LOCAL BINDING IS FOLLOWED. `const classes = [...].join(" ")` and then
-    // `className={classes}` is the ordinary way a component with three or four
-    // conditional classes is written, and a reader that stopped at the
-    // identifier recorded nothing for it — an orphan in one of those was
-    // invisible. Followed ONCE per name, because a binding that refers to
-    // itself would otherwise be walked forever.
+    // Stopping at a bound name would hide an orphan in it; an initializer is
+    // not re-entered while read, so a self-reference ends.
     if (ts.isIdentifier(node)) {
-      const initializer = read.bound.get(node.text);
+      const initializer = boundTo(node);
       if (initializer && !following.has(initializer)) {
         following.add(initializer);
         value(initializer);
@@ -68,10 +64,10 @@ export function classNamesOn(source: ts.SourceFile, on?: string): ClassName[] {
   return out;
 }
 
-/** The values a name the expression reads can hold, where the caller knows
- * them: a component's props as one call site hands them. */
+/** The values a prop the expression reads (`size`, `props.size`) can hold,
+ * where the caller knows them: a component's props as one call hands them. */
 export type Given = (
-  name: string,
+  read: ts.Expression,
 ) => readonly (string | undefined)[] | undefined;
 
 /** One class list per branch; a token with an unread part comes back as a
@@ -106,9 +102,10 @@ function readerFor(
   cap = Infinity,
   given?: Given,
 ) {
-  const bound = bindingsIn(source);
-  const handed = (n: ts.Node) =>
-    ts.isIdentifier(n) && !bound.has(n.text) ? given?.(n.text) : undefined;
+  const handed = (n: ts.Node) => {
+    if (ts.isIdentifier(n)) return boundTo(n) ? undefined : given?.(n);
+    return ts.isPropertyAccessExpression(n) ? given?.(n) : undefined;
+  };
   // Which way a test can go: both, unless it names a handed value.
   const ways = (test: ts.Expression) => {
     const values = handed(test);
@@ -130,14 +127,14 @@ function readerFor(
       [unit],
     );
   const followed = <T>(
-    n: ts.Identifier,
+    n: ts.Identifier | ts.PropertyAccessExpression,
     read: (e: ts.Node) => T[],
     none: T[],
     value: (v: string) => T,
   ) => {
     const values = handed(n);
     if (values) return values.map((v) => value(v ?? ""));
-    const initializer = bound.get(n.text);
+    const initializer = ts.isIdentifier(n) ? boundTo(n) : undefined;
     if (!initializer || following.has(initializer)) return none;
     following.add(initializer);
     const out = read(initializer);
@@ -155,7 +152,9 @@ function readerFor(
       ]);
       return product([[n.head.text], ...spans], (a, b) => a + b, "");
     }
-    if (ts.isIdentifier(n)) return followed(n, texts, [CUT], (v) => v);
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, texts, [CUT], (v) => v);
+    }
     if (ts.isConditionalExpression(n)) return chosen(n).flatMap(texts);
     if (ts.isParenthesizedExpression(n)) return texts(n.expression);
     return ts.isBinaryExpression(n) ? binaryTexts(n) : listTexts(n);
@@ -202,7 +201,9 @@ function readerFor(
     if (ts.isTemplateExpression(n)) {
       return texts(n).map((t) => tokensOf(t, true));
     }
-    if (ts.isIdentifier(n)) return followed(n, lists, [[]], words);
+    if (ts.isIdentifier(n) || ts.isPropertyAccessExpression(n)) {
+      return followed(n, lists, [[]], words);
+    }
     return ts.isBinaryExpression(n) ? binary(n) : compound(n);
   };
   const compound = (n: ts.Node): string[][] => {
@@ -213,7 +214,7 @@ function readerFor(
     const branches = capped(partsOf(n).flatMap(lists));
     return branches.length > 0 ? branches : [[]];
   };
-  return { bound, texts, lists };
+  return { texts, lists };
 }
 
 /**
@@ -270,31 +271,94 @@ function tagOf(attribute: ts.JsxAttribute): string | undefined {
     : undefined;
 }
 
-/**
- * Every `const` in the module, by name, with what it was assigned.
- *
- * Read once per file rather than resolved through the checker: what a class
- * list is assembled from is nearly always a literal in the same module, and a
- * name shadowed in an inner scope resolves to whichever the walk saw last —
- * which over-reads rather than under-reads, the direction a census is allowed
- * to be wrong in.
- */
-const boundIn = new WeakMap<ts.SourceFile, Map<string, ts.Expression>>();
-function bindingsIn(source: ts.SourceFile): Map<string, ts.Expression> {
-  const known = boundIn.get(source);
-  if (known) return known;
-  const out = new Map<string, ts.Expression>();
-  boundIn.set(source, out);
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      out.set(node.name.text, node.initializer);
+function boundTo(name: ts.Identifier): ts.Expression | undefined {
+  const declared = declarationOf(name);
+  return declared && ts.isVariableDeclaration(declared)
+    ? declared.initializer
+    : undefined;
+}
+
+type Declared =
+  | ts.VariableDeclaration
+  | ts.ParameterDeclaration
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ClassDeclaration
+  | ts.EnumDeclaration;
+
+/** The variable or function an identifier reads in its own scope. Nothing when
+ * its nearest binding is a parameter, a destructured name, a class or an enum. */
+export function declarationOf(
+  name: ts.Identifier,
+):
+  | ts.VariableDeclaration
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | undefined {
+  for (let scope = name.parent; scope; scope = scope.parent) {
+    const found = bindingsOf(scope).get(name.text);
+    if (!found) continue;
+    if (ts.isVariableDeclaration(found)) {
+      return ts.isIdentifier(found.name) ? found : undefined;
     }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
+    const fn =
+      ts.isFunctionDeclaration(found) || ts.isFunctionExpression(found);
+    return fn ? found : undefined;
+  }
+  return undefined;
+}
+
+const scopes = new WeakMap<ts.Node, Map<string, Declared>>();
+function bindingsOf(scope: ts.Node): Map<string, Declared> {
+  const known = scopes.get(scope);
+  if (known) return known;
+  const out = new Map<string, Declared>();
+  for (const declared of declaredIn(scope)) {
+    for (const name of declared.name ? namesOf(declared.name) : []) {
+      if (!out.has(name)) out.set(name, declared);
+    }
+  }
+  scopes.set(scope, out);
   return out;
+}
+
+// Parameters first: one sharing a function expression's name shadows it.
+function declaredIn(scope: ts.Node): readonly Declared[] {
+  if (ts.isFunctionLike(scope)) {
+    const named = ts.isFunctionExpression(scope) && scope.name ? [scope] : [];
+    return [...scope.parameters, ...named];
+  }
+  if (ts.isBlock(scope) || ts.isSourceFile(scope) || ts.isModuleBlock(scope)) {
+    return scope.statements.flatMap(declaredBy);
+  }
+  if (ts.isCaseBlock(scope)) {
+    return scope.clauses.flatMap((c) => c.statements.flatMap(declaredBy));
+  }
+  if (ts.isCatchClause(scope)) {
+    return scope.variableDeclaration ? [scope.variableDeclaration] : [];
+  }
+  const loop =
+    ts.isForStatement(scope) ||
+    ts.isForInStatement(scope) ||
+    ts.isForOfStatement(scope);
+  const head = loop ? scope.initializer : undefined;
+  return head && ts.isVariableDeclarationList(head) ? head.declarations : [];
+}
+
+function declaredBy(statement: ts.Statement): readonly Declared[] {
+  if (ts.isVariableStatement(statement)) {
+    return statement.declarationList.declarations;
+  }
+  const named =
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isEnumDeclaration(statement);
+  return named ? [statement] : [];
+}
+
+function namesOf(binding: ts.BindingName): string[] {
+  if (ts.isIdentifier(binding)) return [binding.text];
+  return binding.elements.flatMap((e) =>
+    ts.isBindingElement(e) ? namesOf(e.name) : [],
+  );
 }

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentProps, useId, useState } from "react";
-import { useCanWrite } from "../app/capability";
-import { routeHash } from "../app/router";
 import { Modal } from "../design-system/atoms";
 import { type BoardDeal, PipelineBoard } from "../design-system/composed";
 import type { DealCardActions } from "../design-system/dealcard";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { routeHash } from "../lib/router";
 import { dealMailAside } from "./dealmailaside";
 import { DealStatusCardPanel } from "./dealstatus";
 import { LogActivityAction } from "./logactivity";

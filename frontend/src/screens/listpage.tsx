@@ -7,7 +7,6 @@
 // list_id, so the page is never one request per member (listmembers.tsx).
 
 import { useEffect, useMemo, useRef } from "react";
-import { navigate } from "../app/router";
 import { useArrivalFocus } from "../design-system/arrivalfocus";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -18,7 +17,8 @@ import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { useMe } from "./common";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import { customColumnLabel, useFilterVocabulary } from "./filterdata";
 import { FocusedPending, FocusedState } from "./filterhead";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";

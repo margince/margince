@@ -10,10 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
+import { STORAGE_KEYS } from "../lib/storage";
+import { setThemeChoice } from "../lib/theme";
+import { meFixture } from "../testing/mefixture";
 import { AccountMenu } from "./account";
-import { meFixture } from "./mefixture";
-import { STORAGE_KEYS } from "./storage";
-import { setThemeChoice } from "./theme";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
@@ -21,8 +21,8 @@ const THEME_KEY = STORAGE_KEYS.theme.name;
 // A getter over a hoisted value lets each case set the release it needs. The
 // comparison rule stays the real one.
 const bundle = vi.hoisted(() => ({ release: "" }));
-vi.mock("./release", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./release")>();
+vi.mock("../lib/release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/release")>();
   return {
     ...actual,
     get SPA_RELEASE() {

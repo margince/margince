@@ -11,8 +11,8 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { isVersionSkewOf, problemMessageOf, unwrap } from "./common";
-import "./common.css";
+import { isVersionSkewOf, problemMessageOf, unwrap } from "../lib/problem";
+import "../design-system/querystates.css";
 
 // Moving one commission entry through the ledger's lifecycle.
 //

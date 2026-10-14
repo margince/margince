@@ -12,7 +12,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
@@ -20,7 +19,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { EntityRef } from "./entityref";
 import {
   acquisitionKindLabel,

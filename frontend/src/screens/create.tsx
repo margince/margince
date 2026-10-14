@@ -19,7 +19,6 @@ import {
   useState,
 } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { navigate, type Route, type Screen } from "../app/router";
 import {
   Button,
   Field,
@@ -41,7 +40,12 @@ import {
 } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { ProblemError, problemExistingId, problemMessageOf } from "./common";
+import {
+  ProblemError,
+  problemExistingId,
+  problemMessageOf,
+} from "../lib/problem";
+import { navigate, type Route, type Screen } from "../lib/router";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import {
   type NameOffers,
@@ -50,7 +54,7 @@ import {
 } from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 import "./create.css";
-import "./common.css";
+import "../design-system/querystates.css";
 
 // The shared create-record form: each screen declares its fields and keeps its
 // transport. The server validates: a 422's detail renders verbatim, unreworded.

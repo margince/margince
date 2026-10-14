@@ -11,10 +11,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { isEntityKind } from "../app/entity";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { isEntityKind } from "../lib/entity";
+import { problemMessageOf } from "../lib/problem";
 import { magicUndoReasonKey } from "./magic.keys";
 import { magicKey } from "./magic.queries";
 import { useRecordRestore } from "./recordrestore";

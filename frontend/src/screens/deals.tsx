@@ -20,14 +20,8 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
-import { useCanWriteRecord, useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { usePageName } from "../app/pagemeta";
-import { useRecordZone } from "../app/recordzone";
-import { scrollPageToTop } from "../app/reveal";
-import { navigate, routeHash } from "../app/router";
-import { currentParams, replaceDial, useUrlParams } from "../app/urlstate";
 import { ActionRow } from "../design-system/actionrow";
 import {
   Badge,
@@ -53,6 +47,8 @@ import {
 } from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useRecordTimeline } from "../design-system/recordtimeline";
@@ -71,6 +67,15 @@ import {
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { approvalDotTier, useAgentTierMap } from "../lib/autonomy";
+import { useCanWriteRecord, useRecordWriteRefusal } from "../lib/capability";
+import { useMemberNames } from "../lib/membernames";
+import { throwProblem, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { scrollPageToTop } from "../lib/reveal";
+import { navigate, routeHash } from "../lib/router";
+import { useMe, useViewerId } from "../lib/session";
+import { currentParams, replaceDial, useUrlParams } from "../lib/urlstate";
 import {
   type AcquisitionSource,
   useAcquisitionSources,
@@ -79,15 +84,6 @@ import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
 import { usePendingApprovals } from "./approvals.queries";
 import { toBoardDeal } from "./boarddeal";
-import {
-  LoadMoreButton,
-  provenanceOf,
-  QueryGate,
-  throwProblem,
-  unwrap,
-  useMe,
-  useViewerId,
-} from "./common";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import {
@@ -165,7 +161,6 @@ import {
   withListPage,
   withoutScreenDials,
 } from "./listquery";
-import { useMemberNames } from "./membernames";
 import { useOpenEmail } from "./openemail";
 import { useOwnerChips } from "./ownerdials";
 import { usePipelines } from "./pipelines.queries";

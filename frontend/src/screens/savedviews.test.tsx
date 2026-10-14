@@ -7,8 +7,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import type { ListQuery } from "./listquery";
 import { listStateOf, SaveViewAction, useSavedViewTabs } from "./savedviews";
 

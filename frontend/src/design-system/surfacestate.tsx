@@ -168,6 +168,20 @@ export function sectionState<Section extends string>(
   return count === 0 ? "empty" : "ready";
 }
 
+// Empty only when the server matched none: a capped answer with no rows in
+// hand still matched some.
+export function rowsState(
+  shown: number,
+  total: number | null | undefined,
+): Readonly<{
+  state: Extract<SectionState, "ready" | "empty" | "partial">;
+  remaining: number;
+}> {
+  const remaining = Math.max(0, (total ?? shown) - shown);
+  if (remaining > 0) return { state: "partial", remaining };
+  return { state: shown === 0 ? "empty" : "ready", remaining };
+}
+
 /**
  * SectionDetail is what the four §7 states need in order to say something a
  * reader can act on rather than a differently-worded "not here".

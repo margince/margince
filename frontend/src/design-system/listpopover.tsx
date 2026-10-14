@@ -10,10 +10,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useFoldedViewport } from "../app/viewport";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf } from "../screens/common";
+import { problemMessageOf } from "../lib/problem";
+import { useFoldedViewport } from "../lib/viewport";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { Button, type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";

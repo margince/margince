@@ -5,10 +5,10 @@ import { useMutation } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { navigate } from "../lib/router";
 import { AuthCardTitle, type AuthPhase } from "./auth-core";
 import { enteredCode, MfaCodeField } from "./mfacode";
 

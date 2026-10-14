@@ -11,10 +11,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { subscribableEventTypeValues } from "../api/public-events";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption, toggleOptions } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { WebhooksCard } from "./webhooks";
 
 // The Settings → Integrations subscription list: renders from the typed

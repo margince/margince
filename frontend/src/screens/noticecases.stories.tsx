@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { NoticeCasesCard } from "./noticecases";
 import {
   jsonResponse,

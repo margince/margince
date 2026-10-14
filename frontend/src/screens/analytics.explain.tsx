@@ -7,7 +7,7 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Stack } from "../design-system/stack";
-import { SurfaceState } from "../design-system/surfacestate";
+import { rowsState, SurfaceState } from "../design-system/surfacestate";
 import {
   formatDateTime,
   formatMoneyOrAbsent,
@@ -15,9 +15,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
 import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
-import { unwrap } from "./common";
 import { EntityRef, useEntityName } from "./entityref";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
@@ -249,13 +249,13 @@ function DerivationRows({
   const { locale } = useLocale();
   const columns = derivationColumns(derivation);
   const { rows } = derivation;
-  const remaining = (derivation.total_rows ?? 0) - rows.length;
+  const { state, remaining } = rowsState(rows.length, derivation.total_rows);
   const position = new Map(rows.map((row, index) => [row, index]));
   return (
     <>
       <SectionHeader title={t("explain.sources")} level={3} />
       <SurfaceState
-        state={rowsState(rows.length, remaining)}
+        state={state}
         emptyLabel={t("common.empty")}
         loadingLabel={t("explain.sources")}
         detail={{ remaining }}
@@ -280,16 +280,6 @@ function DerivationRows({
       </SurfaceState>
     </>
   );
-}
-
-// "None" only when the server matched none: a capped answer that returned no
-// rows still matched some, and says how many are not shown.
-function rowsState(
-  shown: number,
-  remaining: number,
-): "empty" | "partial" | "ready" {
-  if (remaining > 0) return "partial";
-  return shown === 0 ? "empty" : "ready";
 }
 
 // A field mask took these records out of the figure AND the rows, so the two

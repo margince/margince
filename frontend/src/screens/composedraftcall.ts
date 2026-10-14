@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { ProjectScope } from "../design-system/projectpicker";
 import type { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import type { RelinkKind } from "./composerelink";
 import { stripEveryKeyTag, withSubjectTag } from "./projectrecord";
 

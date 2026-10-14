@@ -8,7 +8,7 @@ import { Panel } from "../design-system/panel";
 import { usePasswordReveal } from "../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { isTooShort } from "./passwordrule";
 
 // Changing your own password, from the account settings page.

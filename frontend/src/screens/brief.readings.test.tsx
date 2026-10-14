@@ -3,11 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { formatDateAbbrev, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { RecordZoneProvider } from "../lib/recordzone";
 import {
   boundedDecisions,
   boundedLeads,

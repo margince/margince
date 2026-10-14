@@ -8,18 +8,26 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestARunStopsWithAFixedSentenceAndNeverTheErrorText(t *testing.T) {
+	driver := errors.New(`ERROR: relation "contact" does not exist (SQLSTATE 42P01)`)
+	late := fmt.Errorf("importing contact c-1: %w", context.DeadlineExceeded)
 	for _, tc := range []struct {
-		cause error
-		want  string
+		status string
+		cause  error
+		want   string
 	}{
-		{errors.New(`ERROR: relation "contact" does not exist (SQLSTATE 42P01)`), CauseStopped},
-		{fmt.Errorf("importing contact c-1: %w", context.DeadlineExceeded), CauseOverBudget},
+		{StatusRunning, driver, CauseStopped},
+		{StatusRunning, late, CauseOverBudget},
+		{StatusValidating, driver, CauseTestRunStopped},
+		{StatusValidating, late, CauseValidateOverBudget},
+		{StatusValidating, fmt.Errorf("reading: %w", apperrors.ErrPermissionDenied), CausePermission},
 	} {
-		if got := stopCause(tc.cause); got != tc.want {
-			t.Errorf("stopCause(%v) = %q, want %q", tc.cause, got, tc.want)
+		if got := StopCause(tc.status, tc.cause); got != tc.want {
+			t.Errorf("StopCause(%s, %v) = %q, want %q", tc.status, tc.cause, got, tc.want)
 		}
 	}
 }

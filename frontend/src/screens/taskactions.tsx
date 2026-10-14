@@ -7,7 +7,6 @@ import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useRecordZone } from "../app/recordzone";
 import {
   Badge,
   Button,
@@ -20,12 +19,14 @@ import { DateInput, isISODate } from "../design-system/dateinput";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Markdown } from "../design-system/markdown";
+import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { CLAIM_SETTLED_KEYS } from "./activitykeys";
-import { problemCodeOf, provenanceOf, unwrap } from "./common";
 import { EntityRef } from "./entityref";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";

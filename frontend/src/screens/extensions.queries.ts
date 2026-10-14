@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 // The extension units this installation composed, as the Extensions page and
 // the role editor read them. Gated on `extension_access:read` server-side.

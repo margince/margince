@@ -16,7 +16,7 @@ import { useToast } from "../design-system/toast";
 import { forReader } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
-import { problemMessageOf, unwrap } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { RosterPartialNote } from "./roster";
 import "./users-access.css";
 

@@ -4,14 +4,15 @@
 import type { Dispatch } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { useCanWrite } from "../../app/capability";
-import { useInstallationSettings } from "../../app/uploadlimit";
 import { Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { QueryGate } from "../../design-system/querystates";
 import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import { problemFieldErrorsOf, QueryGate } from "../common";
+import { useCanWrite } from "../../lib/capability";
+import { problemFieldErrorsOf } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import {
   currencyNote,
   useUpdateInstallationSettings,

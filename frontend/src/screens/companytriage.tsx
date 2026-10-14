@@ -12,7 +12,7 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { SectionSummary } from "./companyrailshared";
 import "./companytriage.css";
 

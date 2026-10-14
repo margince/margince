@@ -23,7 +23,7 @@ import {
   type AccessSnapshot,
   grants,
   type RbacObject,
-} from "../app/accessgrants";
+} from "../lib/accessgrants";
 
 type RbacAction = components["schemas"]["RbacAction"];
 

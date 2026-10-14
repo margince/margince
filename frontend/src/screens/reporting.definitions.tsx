@@ -4,7 +4,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import {
   Button,
   Checkbox,
@@ -15,12 +14,14 @@ import {
 } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, unwrap } from "./common";
 import { metricLabel } from "./reporting.model";
 
 type Framework = components["schemas"]["ReportingFramework"];

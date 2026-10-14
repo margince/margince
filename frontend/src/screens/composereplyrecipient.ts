@@ -3,7 +3,7 @@
 
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 /**
  * Who a reply to this anchor goes to, resolved without drafting.

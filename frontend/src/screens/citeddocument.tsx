@@ -8,7 +8,7 @@ import {
   type MarkdownHighlightOutcome,
 } from "../design-system/markdown";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The document half of the ask dialog: the file a citation points at, with the
 // quoted passage marked in it.

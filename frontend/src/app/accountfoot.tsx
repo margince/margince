@@ -4,8 +4,9 @@
 import { LogOut } from "lucide-react";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
-import { problemMessageOf, useLogout } from "../screens/common";
-import { comparableRelease, SPA_RELEASE } from "./release";
+import { problemMessageOf } from "../lib/problem";
+import { comparableRelease, SPA_RELEASE } from "../lib/release";
+import { useLogout } from "../lib/session";
 
 // The foot of the account menu: the way out, and the release the reader is on.
 // Apart from account.tsx so the menu's roving walk and its rows read on their own.

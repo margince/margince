@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 
 // The stored routing document and the ETag it was read at. One read, shared by
 // every card that shows a binding and every editor that writes one.

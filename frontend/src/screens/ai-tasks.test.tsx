@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
+import type { GrantSpec } from "../testing/mefixture";
 import { feature, status } from "./ai-admin.testkit";
 import { AiRoutingCard } from "./ai-routing";
 import { backendFor, jsonResponse, render } from "./ai-routing.testkit";

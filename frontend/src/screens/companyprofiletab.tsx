@@ -4,11 +4,11 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import { profileFieldLabel } from "./companies";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";

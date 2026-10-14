@@ -3,7 +3,6 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import {
   Button,
   Disclosure,
@@ -20,10 +19,11 @@ import { Switch } from "../design-system/switch";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
 import { useBookingIntent } from "./booking-common";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 import { proposalEmailBody } from "./booking-proposal-message";
-import { unwrap } from "./common";
 import { ComposeModal } from "./compose";
 import { refreshContactMeetings } from "./contactmeetings.waiting";
 

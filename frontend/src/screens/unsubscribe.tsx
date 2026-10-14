@@ -6,7 +6,7 @@ import { Button, Card, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
-import { throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import {
   explainPublicError,
   LinkInvalidError,

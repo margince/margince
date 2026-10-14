@@ -31,6 +31,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 )
@@ -82,6 +83,8 @@ func (s *scenario) previewImport(t *testing.T, csv string) agents.ImportPreviewR
 	})
 	var preview agents.ImportPreviewResult
 	got.JSON(t, &preview)
+	// The worker tests the file; the preview answers once it has queued that.
+	importjobtest.Drain(t, s.AppEnv)
 	return preview
 }
 
@@ -108,6 +111,7 @@ func (s *scenario) runImport(t *testing.T, csv string) importOutcome {
 	// commit_import is auto-execute: importing a file the user handed over is
 	// not a decision a second human makes.
 	s.MCP.CallOK(t, "commit_import", map[string]any{"run_id": preview.Run.RunID})
+	importjobtest.Drain(t, s.AppEnv)
 	return importOutcome{runID: preview.Run.RunID, report: s.readReport(t, preview.Run.RunID)}
 }
 
@@ -134,6 +138,7 @@ func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
 	}
 
 	s.MCP.CallOK(t, "commit_import", map[string]any{"run_id": preview.Run.RunID})
+	importjobtest.Drain(t, s.AppEnv)
 	happened := s.readReport(t, preview.Run.RunID)
 
 	if happened.Disposition.Created != promised.Disposition.Created {

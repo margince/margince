@@ -882,6 +882,7 @@ export const en = {
   "systemJob.graph_edge_reconcile": "Relationship strength update",
   "systemJob.handbook_corpus": "Handbook indexing",
   "systemJob.import_run_sweep": "Stopped import check",
+  "systemJob.import_worker": "Import worker",
   "systemJob.installation_setup_read": "Setup check",
   "systemJob.intro_advance": "Introduction follow-up",
   "systemJob.introduction_expiry": "Introduction expiry",
@@ -1612,7 +1613,7 @@ export const en = {
   "offline.retry": "Retry",
 
   // The shell's connectivity banner and the failure a refused write shows
-  // (app/connectivitybanner.tsx, app/connectivity.ts).
+  // (app/connectivitybanner.tsx, lib/connectivity.ts).
   "connectivity.offline.title": "Device offline",
   "connectivity.offline.body":
     "Changes cannot be saved until the connection returns.",
@@ -5198,6 +5199,7 @@ export const en = {
   "analytics.field.overdue_commitments": "Overdue commitments",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
+  "analytics.field.partner_sourced": "Partner-sourced",
   "analytics.field.period_month": "Close month",
   "analytics.field.period_quarter": "Close quarter",
   "analytics.field.period_year": "Close year",
@@ -5209,6 +5211,7 @@ export const en = {
   "analytics.field.size_band": "Company size",
   "analytics.field.source": "Source",
   "analytics.field.stage_id": "Stage",
+  "analytics.field.stalled": "Stalled",
   "analytics.field.status": "Status",
   "analytics.field.weighted_amount_minor": "Weighted amount",
   "analytics.field.weighted_base_minor": "Converted weighted amount",
@@ -5506,6 +5509,7 @@ export const en = {
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
   "analytics.reportOpenByCompany": "Open deals per company",
+  "analytics.retiredPipeline": "{name} (retired)",
   "analytics.forecastBanner":
     "Each tile shows the raw total and, below it, the probability-weighted total. Rounding is per deal, so it always matches Explain this number.",
   "analytics.company": "Company",
@@ -5992,7 +5996,7 @@ export const en = {
   "import.recent.files_other": "{count} files",
   "import.recent.filesBy": "{files} · by {name}",
   "import.recent.undo": "Undo",
-  "import.status.pending": "Pending",
+  "import.status.pending": "Draft",
   "import.status.validating": "Checking",
   "import.status.awaiting_approval": "Not imported",
   "import.status.running": "Importing",
@@ -6000,6 +6004,18 @@ export const en = {
   "import.status.failed": "Stopped",
   "import.status.undoing": "Undoing",
   "import.status.undone": "Undone",
+  "import.status.cancelled": "Canceled",
+  "import.closed.cancelled": "This import was canceled",
+  "import.closed.draft":
+    "This draft is not offered again. Upload the file again to start over.",
+  "import.closed.stopped": "This import stopped before anything was imported.",
+  "import.closed.upload": "Upload a file",
+  "import.sourceBusy":
+    "Another import of this source name is still writing. Wait for it to finish, then test again.",
+  "import.sourceBusyOpen": "Open that import",
+  "import.upload.tooManyRowsTitle": "File is too long for one test run",
+  "import.upload.tooManyRows":
+    "This file has more rows than one test run can read. Split it into smaller files and import each one.",
   "import.undoConfirm.title": "Undo this import?",
   "import.undoConfirm.confirm": "Undo import",
   "import.undoConfirm.order": "Undo runs in reverse order: {order}.",
@@ -6068,6 +6084,7 @@ export const en = {
   "import.map.run": "Run test",
   "import.map.running": "Running test…",
   "import.map.stageFailed": "Test run did not start",
+  "import.map.testStopped": "Test run stopped",
   "import.step.hintStaged":
     "A test run is staged, so the files and the map are fixed. Fix and re-upload starts again.",
   "import.progress.waiting": "Waiting",
@@ -6100,6 +6117,9 @@ export const en = {
   "import.test.import_other": "Import {count} rows",
   "import.test.importAnyway": "Import anyway",
   "import.test.counts": "Rows per record type",
+  "import.test.testing": "Testing your file…",
+  "import.test.stop": "Stop test",
+  "import.test.stopFailed": "The test did not stop. Press Stop test again.",
   "import.test.problems_one": "1 problem",
   "import.test.problems_other": "{count} problems",
   "import.test.col.where": "Where",
@@ -6224,6 +6244,9 @@ export const en = {
   "jobs.kind.graph_watch_renew": "Outlook push renewal scan",
   "jobs.kind.graph_watch_renew_connection": "Outlook push renewal",
   "jobs.kind.idempotency_retention": "Request replay cleanup",
+  "jobs.kind.import_commit": "Import commit",
+  "jobs.kind.import_undo": "Import undo",
+  "jobs.kind.import_validate": "Import test run",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",
   "jobs.kind.list_evaluate": "Live list check",

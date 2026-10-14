@@ -3,8 +3,6 @@
 
 import { type ReactNode, useRef } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import {
@@ -21,6 +19,8 @@ import {
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import { ProjectContractRow } from "./contractterms";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";

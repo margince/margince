@@ -10,8 +10,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../screens/story-utils";
+import { meFixture } from "../testing/mefixture";
 import { AccountMenu } from "./account";
-import { meFixture } from "./mefixture";
 // The strip's own sheet, loaded because THIS file builds a `.topbar` by hand and
 // imports nothing that would pull it in. `.storybook/preview.tsx` loads the
 // chrome sheets a story reaches by class rather than by module — but its list was

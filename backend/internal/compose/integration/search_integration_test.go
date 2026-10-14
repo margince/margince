@@ -432,6 +432,34 @@ func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants
 	})
 }
 
+// A word still being typed reaches records by prefix, and mail only once it is
+// whole. "contr" finds the contact and no mail; "contract" finds the mail.
+func TestAFragmentFindsRecordsByPrefixAndMailOnlyAsAWholeWord(t *testing.T) {
+	e := SetupSearch(t)
+	contact := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contreras Vega', 'manual', 'human:x')`)
+	mail := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
+		VALUES ($1, 'note', 'Renewal', 'The contract renews in March.', 'en', 'manual', 'human:x')`)
+	found := func(query string) map[ids.UUID]bool {
+		page, err := e.Store.Search(e.Admin(), search.Input{Query: query, Types: []string{"contact", "activity"}})
+		if err != nil {
+			t.Fatalf("searching %q: %v", query, err)
+		}
+		hits := map[ids.UUID]bool{}
+		for _, hit := range page.Hits {
+			hits[hit.ID] = true
+		}
+		return hits
+	}
+
+	typing := found("contr")
+	if !typing[contact] || typing[mail] {
+		t.Fatalf("\"contr\" found %v, want the contact by prefix and not the mail", typing)
+	}
+	if finished := found("contract"); !finished[mail] {
+		t.Fatalf("\"contract\" found %v, want the mail that says it", finished)
+	}
+}
+
 func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
 	e := SetupSearch(t)
 	want := map[string]bool{}

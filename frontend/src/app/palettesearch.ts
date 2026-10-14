@@ -16,9 +16,9 @@ import {
   problemFieldErrors,
   problemMessageOf,
   throwProblem,
-} from "../screens/common";
+} from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import type { Command } from "./palette";
-import { useRecordZone } from "./recordzone";
 import {
   groupSearchHits,
   SEARCH_GROUP_KEY,

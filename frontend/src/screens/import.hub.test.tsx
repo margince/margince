@@ -51,6 +51,25 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
+  it("the hub lists no draft or cancelled run", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+            { ...run, id: "r2", file_name: "gone.csv", status: "cancelled" },
+            { ...run, id: "r1", file_name: "leads.csv", status: "complete" },
+          ],
+        }),
+    });
+    render(<ImportCard />);
+    expect(
+      await screen.findByRole("link", { name: "leads.csv" }),
+    ).toBeVisible();
+    expect(screen.queryByText("draft.csv")).toBeNull();
+    expect(screen.queryByText("gone.csv")).toBeNull();
+  });
+
   it("names who ran an import and how many files and rows it took", async () => {
     stubRoutes({
       "GET /imports": () =>

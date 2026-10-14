@@ -3,9 +3,6 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
-import { useRecordZone } from "../app/recordzone";
-import { navigate } from "../app/router";
 import {
   Button,
   EmptyState,
@@ -18,9 +15,13 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Heading } from "../design-system/heading";
+import { QueryStates } from "../design-system/querystates";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, QueryStates, unwrap } from "./common";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate } from "../lib/router";
 import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import {
   FINISHED_STATES,

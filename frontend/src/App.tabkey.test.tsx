@@ -9,8 +9,8 @@ import {
   sessionOnlyFetch,
 } from "./testing/appharness";
 
-// A tab inside a record is a VIEW of that record, and the app keys its routed
-// subtree on what the address is ABOUT (app/router.tsx's routeIdentity) so that
+// A tab inside a record is a view of that record. The app keys its routed
+// subtree on what the address is about (lib/router.tsx's routeIdentity), so
 // moving between views is a re-render rather than a remount. What that buys is
 // visible: the record's header, its readings and the tab strip the reader just
 // clicked keep their DOM nodes, so design-system/enter.css plays the arrival

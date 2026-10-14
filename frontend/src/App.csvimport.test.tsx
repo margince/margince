@@ -11,10 +11,10 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
-import { meFixture } from "./app/mefixture";
-import { navigate } from "./app/router";
+import { navigate } from "./lib/router";
 import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp } from "./testing/appharness";
+import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.
@@ -49,10 +49,12 @@ function answers(): Readonly<Record<string, unknown>> {
     }),
     "GET /v1/imports/format": formatFixture,
     "POST /v1/imports/sources": {
+      run_id: "019ff-draft",
       source_ref: "ws/import/abc",
       object: "lead",
       file_name: "estate.csv",
       rows_profiled: 1,
+      row_count: 1,
       columns: [{ header: "Email", fill_rate: 1, samples: ["ada@x.test"] }],
       suggested_mapping: { Email: "email" },
       targets: ["full_name", "email"],

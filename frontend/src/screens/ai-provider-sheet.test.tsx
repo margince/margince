@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { providerState } from "./ai-provider-sheet";
 

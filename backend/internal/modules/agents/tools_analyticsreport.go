@@ -52,7 +52,7 @@ func (t composeAnalyticsReport) Spec() mcp.ToolSpec {
 		// than the one round trip it saves.
 		InputSchema: schema(`{
 			"type": "object",
-			"description": "Discover pipeline and stage IDs with list_pipelines.",
+			"description": "Discover pipeline and stage IDs with ` + pipelinesSource + `.",
 			"required": ["blocks"],
 			"additionalProperties": false,
 			"properties": {

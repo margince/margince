@@ -8,8 +8,8 @@ import { Badge, Button } from "../design-system/atoms";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { invalidateProviderHealth } from "./ai-provider-health";
-import { problemMessageOf, unwrap } from "./common";
 
 // Whether a stored key works, asked of the vendor that issued it.
 //

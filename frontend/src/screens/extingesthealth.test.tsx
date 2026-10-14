@@ -6,13 +6,13 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import { tableRowCells } from "../testing/tablerow.testkit";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 // The settings harness, rather than a fourth copy of the same twenty lines:
 // this card is a settings card, and `render` there already provides the two
 // providers every one of them needs.
 import { jsonResponse, render } from "./settings.testkit";
-import { tableRowCells } from "./tablerow.testkit";
 
 // One composed unit with a title and its copy, so the lookup runs as composed.
 // A refused unit outside the registry keeps its key alone.

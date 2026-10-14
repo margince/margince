@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ModelPricesCard } from "./ai-price-sync";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 

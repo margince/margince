@@ -69,6 +69,13 @@ in [the catalog](src/design-system/README.md#indigo-says-a-machine-did-it). `che
 holds that these values come from tokens; nothing can tell you that the token you use means the wrong
 thing.
 
+## Imports flow down
+
+`src/lib/` holds shared code that draws nothing. `lib`, `api`, `i18n` and `format` sit at the bottom:
+they never import `app/` or `screens/`, and the Biome rule `noRestrictedImports` fails one that
+does. Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the
+PR changes nothing else.
+
 ## Text follows the writing guides
 
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
@@ -143,6 +150,8 @@ What the gates cover, and what they do not:
 
 - `make fe-bundle` builds the catalog in CI and is a check that must pass. So a story that fails to
   compile, or fails to register, is found every time.
+- `make fe-uat ARGS="--all-stories"` renders every story the build registers, whatever the diff.
+  `scheduled.yml` runs it on `main` daily and files an issue when a story fails there.
 - `make fe-uat` is the render gate for what a change touches. It fails on a render error, on a
   changed component with no story, and on a changed story the build does not register. Two things
   limit it. It is a lane that need not pass, and `ARGS="--allow-missing"` turns the missing-story
