@@ -1177,6 +1177,8 @@ export const de = {
   "shell.signOutAria": "Abmelden",
   "shell.signOutErr": "Abmeldung fehlgeschlagen",
   "shell.version": "Version {version}",
+  "shell.instanceVersion": "Installation {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",

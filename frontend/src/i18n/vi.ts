@@ -1149,6 +1149,8 @@ export const vi = {
   "shell.signOutAria": "Đăng xuất",
   "shell.signOutErr": "Không thể đăng xuất",
   "shell.version": "Phiên bản {version}",
+  "shell.instanceVersion": "Bản triển khai {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",

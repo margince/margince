@@ -1152,6 +1152,8 @@ export const en = {
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
   "shell.version": "Version {version}",
+  "shell.instanceVersion": "Instance {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
