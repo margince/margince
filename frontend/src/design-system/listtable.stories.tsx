@@ -540,8 +540,14 @@ export const ShortListKeepsVerb: Story = {
   render: () => <Surface rows={companies(3)} hideShortChrome />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Sort by Company" });
+    // Under the narrow width the verbs fold into one menu.
+    const more = canvas.queryByRole("button", { name: "More actions" });
+    if (more) await userEvent.click(more);
     await expect(
-      await canvas.findByRole("button", { name: "New company" }),
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "New company",
+      }),
     ).toBeVisible();
     await expect(canvas.queryByText(/sorted by/)).toBeNull();
   },

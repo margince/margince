@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 import {
@@ -207,7 +207,7 @@ export const WaitingOnDecision: Story = {
   render: story(EVERY_KIND.slice(0, 2), WAITING),
   play: async ({ canvasElement }) => {
     const drawer = await openList(canvasElement, "Waiting on a decision");
-    await expect(drawer.getByText("Jana Keller")).toBeVisible();
+    await waitFor(() => expect(drawer.getByText("Jana Keller")).toBeVisible());
   },
 };
 

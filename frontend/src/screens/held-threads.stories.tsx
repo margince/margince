@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ConnectionOutcomesCard } from "./connection-outcomes";
 import {
@@ -147,7 +147,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// Wide, who a thread is with sits under its subject: no column of its own.
+// The drawer is narrower than the fold width, so who a thread is with is a
+// line of its own under line one, not a column.
 export const Mixed: Story = {
   render: story(MIXED),
   play: async ({ canvasElement }) => {
@@ -155,14 +156,12 @@ export const Mixed: Story = {
     await within(drawer).findByRole("button", {
       name: "Entwurf Aufhebungsvertrag",
     });
-    const drawn = [...drawer.querySelectorAll("th")].filter(
-      (heading) => heading.getBoundingClientRect().width > 0,
-    );
-    await expect(drawn.map((heading) => heading.textContent)).not.toContain(
-      "Participants",
-    );
-    const line = drawer.querySelector(".held-threads-parties");
-    await expect(line?.getBoundingClientRect().height).toBeGreaterThan(0);
+    await waitFor(() => {
+      const beside = drawer.querySelector(".held-threads-parties");
+      expect(beside?.getBoundingClientRect().height).toBe(0);
+      const cell = drawer.querySelector('td[data-fold="only"]:not(:empty)');
+      expect(cell?.getBoundingClientRect().height).toBeGreaterThan(0);
+    });
   },
 };
 
