@@ -46,7 +46,10 @@ describe("a problem's reason", () => {
   });
 
   it("reads the server's sentence, not the key, for a code this bundle does not know", () => {
-    const unknown = { ...coded, reason_code: "a_newer_code" } as ImportRowIssue;
+    const unknown = {
+      ...coded,
+      reason_code: "a_newer_code",
+    } as unknown as ImportRowIssue; // contract:cast a newer server sends a code this bundle lacks
     show(<ProblemTable issues={[unknown]} />, "de");
     expect(screen.getByText(coded.reason)).toBeVisible();
     expect(screen.queryByText(/import\.reason\./)).toBeNull();

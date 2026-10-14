@@ -147,13 +147,15 @@ describe("the wizard is the run", () => {
       expect(sent.map((s) => s.path)).toContain(`POST ${RUN}/validate`),
     );
     const writes = sent.filter((s) => s.method !== "GET");
-    const patch = writes.findLast((s) => s.method === "PATCH");
+    const patch = writes.filter((s) => s.method === "PATCH").pop();
     expect(patch?.body).toMatchObject({
       object: "lead",
       mapping: { Email: "email" },
       draft_step: "map",
     });
-    const validate = writes.findLast((s) => s.path === `POST ${RUN}/validate`);
+    const validate = writes
+      .filter((s) => s.path === `POST ${RUN}/validate`)
+      .pop();
     expect(validate?.body).toEqual({ version });
   });
 
