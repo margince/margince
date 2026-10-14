@@ -168,14 +168,19 @@ export function importProvenance(
   return { kind: "import", uploadName: uploadNameOf(connector, tail) };
 }
 
-// The upload is named only when the segment after it is an object. So an upload
-// called "contact" keeps its name. An object the browser does not know yet
+// The upload is named only when an object and an id follow it, so an unnamed
+// upload whose id spells an object ("mirror:csv:company:contact") has no name.
+// An upload called "contact" keeps its name. An object the browser does not know yet
 // reads "Imported" instead of passing for a name.
 function uploadNameOf(
   connector: string | undefined,
   tail: readonly string[],
 ): string | undefined {
-  if (connector !== IMPORT_CONNECTOR || !IMPORT_OBJECTS.has(tail[1] ?? "")) {
+  if (
+    connector !== IMPORT_CONNECTOR ||
+    tail.length < 3 ||
+    !IMPORT_OBJECTS.has(tail[1] ?? "")
+  ) {
     return undefined;
   }
   return tail[0] || undefined;

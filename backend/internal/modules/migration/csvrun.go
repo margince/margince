@@ -371,7 +371,7 @@ func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) 
 	out := map[string]Binding{}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT m.external_id, m.native_id, r.status FROM import_record_map m
+			SELECT m.external_id, m.native_id, r.status, m.origin FROM import_record_map m
 			  JOIN import_run r ON r.id = m.import_run_id
 			WHERE m.source_system = $1 AND m.object = $2`, sourceSystem, object)
 		if err != nil {
@@ -381,7 +381,7 @@ func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) 
 		for rows.Next() {
 			var external string
 			var binding Binding
-			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus); err != nil {
+			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus, &binding.Origin); err != nil {
 				return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
 			}
 			out[external] = binding

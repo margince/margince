@@ -85,3 +85,16 @@ func TestABoundRowIsNeverReplayedAsACreation(t *testing.T) {
 		t.Fatalf("replayed = %v, want only the created row", replayed)
 	}
 }
+
+// recordCreated records a ref the run created, in its own transaction.
+func recordCreated(ctx context.Context, s *RunStore, runID RunID, system, object, externalID string, native ids.UUID) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		return s.RecordIdentityTx(ctx, tx, runID, system, object, externalID, native, OriginCreated)
+	})
+}
+
+// lookupNative is the native id a ref resolves to, if any.
+func lookupNative(ctx context.Context, s *RunStore, system, object, externalID string) (ids.UUID, bool, error) {
+	binding, found, err := s.LookupBinding(ctx, system, object, externalID)
+	return binding.NativeID, found, err
+}

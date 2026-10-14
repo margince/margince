@@ -212,6 +212,9 @@ describe("a row the CSV importer wrote", () => {
     for (const stamp of [
       "mirror:csv:company:7",
       "mirror:csv:lead:l-3",
+      "mirror:csv:company:contact",
+      "mirror:csv:company:lead",
+      "mirror:csv:contact:company",
       "mirror:csv",
       "mirror:",
     ]) {

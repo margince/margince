@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -21,20 +20,13 @@ import (
 type Binding struct {
 	NativeID  ids.UUID
 	RunStatus string
+	Origin    Origin
 }
 
-// LookupIdentity resolves an external id to the native row a previous (or the
-// current) run landed for it. Only the engine-owned map says "already
-// imported". A row's own source columns are client-writable, so a caller could
-// pre-plant a row under a source id and pass it off as landed.
-func (s *RunStore) LookupIdentity(ctx context.Context, sourceSystem, object, externalID string) (ids.UUID, bool, error) {
-	binding, found, err := s.LookupBinding(ctx, sourceSystem, object, externalID)
-	return binding.NativeID, found, err
-}
-
-// LookupBinding is LookupIdentity plus the status of the run that made the
-// binding, which decides whether the key may be taken over. A bound ref
-// resolves like a created one.
+// LookupBinding resolves an external id to the native row a previous (or the
+// current) run landed for it, with the status and origin of the run's identity.
+// Only the engine-owned map says "already imported": a row's own source columns
+// are client-writable, so a caller could pre-plant one and pass it off as landed.
 func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, externalID string) (Binding, bool, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
 		return Binding{}, false, err
@@ -44,10 +36,10 @@ func (s *RunStore) LookupBinding(ctx context.Context, sourceSystem, object, exte
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
 			-- The workspace predicate is the lookup's own: tenant isolation
-			SELECT m.native_id, r.status FROM import_record_map m
+			SELECT m.native_id, r.status, m.origin FROM import_record_map m
 			  JOIN import_run r ON r.id = m.import_run_id
 			WHERE m.source_system = $1 AND m.object = $2 AND m.external_id = $3`,
-			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus)
+			sourceSystem, object, externalID).Scan(&binding.NativeID, &binding.RunStatus, &binding.Origin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -74,20 +66,9 @@ const (
 	OriginBound Origin = "bound"
 )
 
-// RecordIdentity records the external→native identity a run just landed.
-// Idempotent: a resumed run replaying its last page re-asserts the same
-// pair rather than failing.
-func (s *RunStore) RecordIdentity(ctx context.Context, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		return recordIdentityInTx(ctx, tx, runID, identityRow{sourceSystem, object, externalID, nativeID, OriginCreated})
-	})
-}
-
-// RecordIdentityTx is RecordIdentity in a transaction the caller opened. The
-// writer that lands a native row maps it in the same commit. A crash then
+// RecordIdentityTx records the external→native identity a run just landed, in
+// a transaction the caller opened. Idempotent: a resumed run replaying its last
+// page re-asserts the same pair. The writer that lands a native row maps it in the same commit. A crash then
 // cannot leave a record the resume has no name for.
 func (s *RunStore) RecordIdentityTx(
 	ctx context.Context, tx pgx.Tx, runID RunID, sourceSystem, object, externalID string, nativeID ids.UUID, origin Origin,
@@ -144,44 +125,4 @@ func recordIdentityInTx(ctx context.Context, tx pgx.Tx, runID RunID, row identit
 		return fmt.Errorf("migration: recording the %s %s identity: %w", row.object, row.externalID, err)
 	}
 	return nil
-}
-
-// IdentityPair is one source-record → native-record binding.
-type IdentityPair struct {
-	ExternalID string
-	NativeID   ids.UUID
-}
-
-// RecordIdentities records many bindings in one statement, for the
-// resume-time repair that adopts records a crashed attempt created but
-// never got to map. Same conflict rule as RecordIdentity: an existing
-// binding stands, so repairing twice is a no-op and a binding this run
-// already holds is never overwritten.
-func (s *RunStore) RecordIdentities(ctx context.Context, runID RunID, sourceSystem, object string, pairs []IdentityPair) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionCreate); err != nil {
-		return err
-	}
-	if len(pairs) == 0 {
-		return nil
-	}
-	externals := make([]string, len(pairs))
-	natives := make([]ids.UUID, len(pairs))
-	for i, p := range pairs {
-		externals[i], natives[i] = p.ExternalID, p.NativeID
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO import_record_map (source_system, object, external_id, native_id, import_run_id)
-			SELECT $1, $2, e, n, $5
-			FROM unnest($3::text[], $4::uuid[]) AS t(e, n)
-			ON CONFLICT (source_system, object, external_id) DO NOTHING`,
-			sourceSystem, object, externals, natives, runID)
-		if storekit.IsForeignKeyViolation(err) {
-			return fmt.Errorf("import run %s: %w", runID, apperrors.ErrNotFound)
-		}
-		if err != nil {
-			return fmt.Errorf("migration: recording %d %s identities: %w", len(pairs), object, err)
-		}
-		return nil
-	})
 }
