@@ -8260,7 +8260,7 @@ export const de = {
     "Keine Anmeldung nötig. Dieser persönliche Link steuert nur Ihre E-Mail-Einstellungen. Geben Sie ihn nicht weiter.",
   "prefs.unsub.doneTitle": "Abbestellt",
   "prefs.unsub.doneBody":
-    "Ihnen werden keine {label} mehr gesendet. Die Änderung tritt sofort in Kraft.",
+    "Sie erhalten von diesem Unternehmen keine {label} mehr. Die Änderung tritt sofort in Kraft.",
   "prefs.unsub.manage": "Einstellungen verwalten",
   "prefs.unsub.alreadyOff":
     "Diese E-Mails waren bereits deaktiviert. Es hat sich nichts geändert.",
@@ -8438,7 +8438,7 @@ export const de = {
   "prefs.save": "Einstellungen speichern",
   "prefs.discard": "Verwerfen",
   "prefs.cannotGrant":
-    "Folgendes lässt sich für diesen Eintrag nicht starten: {purposes}. Wenn Sie dies für falsch halten, antworten Sie auf eine der E-Mails, die Sie erhalten haben, damit der Fall geprüft wird.",
+    "Folgendes lässt sich für diesen Eintrag nicht starten: {purposes}. Wenn Sie dies für falsch halten, antworten Sie auf eine E-Mail dieses Unternehmens, damit der Fall geprüft wird.",
   "prefs.cannotGrantWhy":
     "Dies lässt sich für diesen Eintrag nicht aktivieren.",
   "prefs.choiceNotApplied":
@@ -8462,7 +8462,7 @@ export const de = {
   "prefs.unsubscribeAllHint":
     "Damit werden alle oben aufgeführten Marketingzwecke deaktiviert. Antworten auf Ihre eigenen Anfragen und alles, was Sie angefordert haben, werden weiterhin gesendet, da niemand Sie dafür angemeldet hat.",
   "prefs.oneClickDone":
-    "Sie haben diese Marketing-E-Mails abbestellt. Die Änderung gilt sofort für jede Kampagne.",
+    "Sie haben die Marketing-E-Mails dieses Unternehmens abbestellt. Die Änderung gilt sofort für jede Kampagne.",
   "prefs.oneClickAlreadyOff":
     "Diese E-Mails waren bereits deaktiviert. Es hat sich nichts geändert.",
   "prefs.undo": "Rückgängig machen und Marketing weiter erhalten",
@@ -9161,7 +9161,7 @@ export const de = {
   "pipeline.reason.awaiting_verdict":
     "die Prüfung der Absendeadresse steht noch aus",
   "pipeline.reason.judged_real":
-    "diese Absendeadresse wurde einer echten Person zugeordnet",
+    "hinter dieser Absendeadresse steht laut Einstufung eine echte Person",
   "pipeline.reason.judged_noise":
     "es wurde kein Datensatz erstellt, da diese Absendeadresse als Rauschen eingestuft wurde",
   "pipeline.reason.judged_rejected":
