@@ -111,9 +111,9 @@ func columnHeading(col crmcontracts.ImportFormatColumn) string {
 	return col.Name
 }
 
-// templateReadme lists the order, the key rules, every allowed value, the
-// pipelines with their stages, the size limit and the formula warning, then
-// each file's columns and guides.
+// templateReadme lists the order, key rules, allowed values, pipelines with
+// their stages, size limit and formula warning, then each file's columns and
+// guides.
 func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken, stages dealStages) string {
 	var b strings.Builder
 	line := func(indent int, text string) {

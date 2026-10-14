@@ -79,11 +79,11 @@ func (s *Store) ImportDealTx(
 	}, cols.cols)
 }
 
-// RefuseImportBirth asks, without writing, the refusals a closed or open import
-// birth can meet for reasons that live outside the row's own cells: the
-// pipeline has no open stage to be born on, a stage past a legal gate, a
-// closing that has no FX rate to freeze. It answers the stage the deal is born
-// on. ImportDealTx runs it before writing and the dry run runs it alone, so the
+// RefuseImportBirth asks, without writing, the refusals an import birth meets
+// outside the row's own cells. These are no open stage to be born on, a stage
+// past a legal gate, and a closing with no FX rate to freeze. It answers the
+// birth stage.
+// ImportDealTx runs it before writing and the dry run runs it alone, so the
 // preview and the commit refuse the same rows.
 func (s *Store) RefuseImportBirth(
 	ctx context.Context, tx pgx.Tx, in CreateDealInput, terminal *ImportTerminal,

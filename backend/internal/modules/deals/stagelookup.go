@@ -27,8 +27,8 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 }
 
 // StageGoneError is a stage nobody has or that is archived. It answers as
-// apperrors.ErrNotFound, so a transport keeps its 404, and names the cause for
-// a caller that holds a stage it read earlier, such as an import run.
+// apperrors.ErrNotFound, so a transport keeps its 404. It also names the cause
+// for a caller holding a stage it read earlier, such as an import run.
 type StageGoneError struct{ StageID ids.StageID }
 
 func (e *StageGoneError) Error() string {

@@ -57,17 +57,16 @@ func (w *csvWriters) createDeal(ctx context.Context, row migration.Row, typed ma
 	return migration.EnsureResult{Created: true}, nil
 }
 
-// dealBirthOf is what a row asks the deals store to birth, shared by the commit
-// and the dry run so both put the same question to the store.
+// dealBirthOf is what a row asks the deals store to birth. The commit and the
+// dry run share it so both put the same question.
 func (w *csvWriters) dealBirthOf(row migration.Row, typed map[string]any) (dealCreate, *deals.ImportTerminal) {
 	made := dealCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	return made, w.terminalOf(textFields(row.Fields), made)
 }
 
-// predictDealCreate asks the deals store the refusals a birth meets outside the
-// row's cells, without writing: the commit's own function answers, so a closed
-// deal in a currency with no rate is skipped in the preview for the reason the
-// commit gives.
+// predictDealCreate asks the deals store, without writing, the refusals a birth
+// meets outside the row's cells. The commit's own function answers, so the
+// preview skips a row for the reason the commit gives.
 func (w *csvWriters) predictDealCreate(ctx context.Context, row migration.Row, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	made, terminal := w.dealBirthOf(row, typed)
 	if made.Deal.StageID.IsZero() {
@@ -119,8 +118,8 @@ func (w *csvWriters) dealRefusal(err error, fields map[string]string) (migration
 }
 
 // dealRefusalOf is dealRefusal over the stages the run read. A stage archived
-// after that read still resolves from it and is refused by the store; the row
-// is answered as the stage it no longer is.
+// after that read still resolves from it and the store refuses it.
+// The row is answered as the stage it no longer is.
 func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migration.Reason, bool) {
 	if err == nil {
 		return migration.Reason{}, false

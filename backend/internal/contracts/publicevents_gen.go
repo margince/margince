@@ -1429,7 +1429,7 @@ type PublicEventConversationClaimChanged struct {
 	Status string `json:"status"`
 }
 
-// PublicEventDealArchived Payload for deal.archived — a deal was archived. Carries only the import mark, when an import's undo wrote the event.
+// PublicEventDealArchived Payload for deal.archived: a deal was archived. Carries only the import mark, when an import's undo wrote the event.
 type PublicEventDealArchived struct {
 	// ImportRunId The import run that wrote the event. Present when `imported` is true.
 	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`
@@ -1465,7 +1465,7 @@ type PublicEventDealOwnerChanged struct {
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
-// PublicEventDealRestored Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries only the import mark.
+// PublicEventDealRestored Payload for deal.restored: an archived deal was brought back. Its archive took down relationships, list memberships and tags, and those that can still come back return. Carries only the import mark.
 type PublicEventDealRestored struct {
 	// ImportRunId The import run that wrote the event. Present when `imported` is true.
 	ImportRunId *openapi_types.UUID `json:"import_run_id,omitempty"`

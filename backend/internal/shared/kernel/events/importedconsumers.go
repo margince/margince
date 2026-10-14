@@ -108,8 +108,8 @@ func carriesImportMarker(eventType string) bool {
 // that reads one of them owes a decision.
 //
 // The activity stream is listed ahead of its marker: no activity writer stamps
-// storekit.ImportMark yet, so its entries become live news to a group only once
-// the activity importer writes them.
+// storekit.ImportMark yet. A group sees its entries as live news only once the
+// activity importer writes them.
 func ImportedStreams() map[string]bool {
 	return map[string]bool{
 		StreamPrefix + dealStreamEntity:     true,

@@ -8,15 +8,10 @@
 package gates
 
 // Every consumer of a stream an import writes has decided what it does with an
-// imported event.
-//
-// A consumer that reacts to every deal event would start automations on old
-// moves and accrue commissions on sales paid for elsewhere. The decision lives in
-// events.ImportedDecisionOf, and the subscriber enforces it. The failure this
-// gate closes is a group nobody classified: it would act on imported events as
-// news, with nothing failing.
-//
-// The subjects are derived from events.Groups(), events.ImportedStreams() and
+// imported event. A group nobody classified would act on imported events as
+// news, starting automations and accruing commissions, with nothing failing.
+// The decision lives in events.ImportedDecisionOf; the subscriber enforces it.
+// Subjects come from events.Groups(), events.ImportedStreams() and
 // public-events.yaml.
 
 import (

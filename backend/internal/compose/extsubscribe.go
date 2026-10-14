@@ -45,17 +45,9 @@ type ComposedSubscription struct {
 }
 
 // GroupName is the consumer group this listener consumes on:
-// `cg:ext-<unit>-<subscription>`.
-//
-// One group per SUBSCRIPTION rather than per unit, which is the line the core's
-// own groups already draw (cg:graph-edge exists apart from cg:context-graph for
-// exactly this reason): consumers on one group share a pending entry, so a
-// handler that keeps failing would hold up a sibling that has nothing to do
-// with it.
-//
-// It is derived from names that never change under a unit — renaming a
-// subscription starts a fresh group, which re-reads the stream's retained
-// history from the beginning, and Subscription.Name says so.
+// `cg:ext-<unit>-<subscription>`. One group per subscription, not per unit, so
+// a handler that keeps failing cannot hold up an unrelated sibling.
+// Renaming a subscription starts a fresh group that re-reads retained history.
 func (c ComposedSubscription) GroupName() string {
 	return kevents.ExtensionGroupPrefix + string(c.Unit) + "-" + c.Sub.Name
 }

@@ -1014,7 +1014,7 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.archived — a deal was archived. Carries only the import
+        Payload for deal.archived: a deal was archived. Carries only the import
         mark, when an import's undo wrote the event.
       properties:
         imported:
@@ -1064,9 +1064,9 @@ components:
       x-entity-type: deal
       x-version: 1
       description: >-
-        Payload for deal.restored — an archived deal was brought back, with
-        the relationships, list memberships and tags its archive took down
-        where they can still come back. Carries only the import mark.
+        Payload for deal.restored: an archived deal was brought back. Its
+        archive took down relationships, list memberships and tags, and those
+        that can still come back return. Carries only the import mark.
       properties:
         imported:
           type: boolean

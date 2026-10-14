@@ -104,8 +104,8 @@ func (w *csvWriters) stakeholderToSeat(ctx context.Context, dealID ids.UUID, typ
 	}
 	var seated bool
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// Not read through the caller's edge scope: an edge the caller cannot
-		// see is still a seat, and counting it absent would add a second one.
+		// Not read through the caller's edge scope: an invisible edge is still
+		// a seat, and counting it absent would add a second one.
 		return tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM relationship r
 			                WHERE r.kind = $1 AND r.deal_id = $2 AND r.contact_id = $3

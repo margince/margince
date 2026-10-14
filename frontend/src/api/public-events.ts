@@ -463,7 +463,7 @@ export interface components {
              */
             import_run_id?: string;
         };
-        /** @description Payload for deal.archived — a deal was archived. Carries only the import mark, when an import's undo wrote the event. */
+        /** @description Payload for deal.archived: a deal was archived. Carries only the import mark, when an import's undo wrote the event. */
         PublicEventDealArchived: {
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;
@@ -487,7 +487,7 @@ export interface components {
              */
             import_run_id?: string;
         };
-        /** @description Payload for deal.restored — an archived deal was brought back, with the relationships, list memberships and tags its archive took down where they can still come back. Carries only the import mark. */
+        /** @description Payload for deal.restored: an archived deal was brought back. Its archive took down relationships, list memberships and tags, and those that can still come back return. Carries only the import mark. */
         PublicEventDealRestored: {
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;

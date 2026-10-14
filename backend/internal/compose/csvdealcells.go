@@ -94,8 +94,8 @@ func closedSemantic(s crmcontracts.StageSemantic) bool {
 }
 
 // checkCloseDate reads the close date as a day. An open deal's may not be in
-// the past, and a won or lost deal's may not be in the future; a row naming no
-// stage leaves that to the deals store's write.
+// the past; a won or lost deal's may not be in the future.
+// A row naming no stage leaves that to the deals store.
 func (d dealStages) checkCloseDate(fields map[string]string, choice stageChoice, typed map[string]any) *cellProblem {
 	text := strings.TrimSpace(fields[dealTargetCloseDate])
 	if text == "" {
