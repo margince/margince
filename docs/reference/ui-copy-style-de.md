@@ -217,9 +217,8 @@ the English opens lowercase ("Über Partner" for "via partner").
 - **No Gendersternchen, colon, underscore, Binnen-I or slash form**: never
   Nutzer\*innen, Nutzer:innen, NutzerInnen or Nutzer/-innen.
 - **Kunde**, Interessent, Anbieter and Partner are acceptable where they mean
-  a company or the customer side of a contract. Absender is acceptable for the
-  sending identity of a mail, which may be a role mailbox or a tool. A human
-  waiting for an answer is a Kontakt: "Kontakt wartet".
+  a company or the customer side of a contract. A human waiting for an answer
+  is a Kontakt: "Kontakt wartet".
 
 ## Anglicisms
 
@@ -297,6 +296,7 @@ gives, because it is ordinary German in another sense.
 | Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwendern` |
 | Staff | Mitarbeitende, Vertriebsmitarbeitende; a headcount is the Beschäftigtenzahl | `Mitarbeiter`, `Mitarbeitern`, `Vertriebsmitarbeiter` |
 | A message's recipients | Empfangende; one address is the Empfangsadresse; one human on a human-sense key is "die empfangende Person" | `Empfänger`, `Empfängern` |
+| A message's sender | Absendeadresse, Absendedomain; a human who sent it is "wer die E-Mail gesendet hat", several are Absendende | `Absender`, `Absenders`, `Absendern` |
 | Agent credential | Passport | Token or Schlüssel for a Passport (API-Schlüssel, Signaturschlüssel and Clientschlüssel name other credentials) |
 | A webhook's secret | Signaturschlüssel, in every value of one dialog | Schlüssel alone |
 | Mail or calendar link | Connector; a user links their own accounts with "Konten verknüpfen" | Integration for a Connector |

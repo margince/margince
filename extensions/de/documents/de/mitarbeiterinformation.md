@@ -65,7 +65,7 @@ im Zweifel gegen die Sichtbarkeit.
   ebenfalls erfasst hat, und ein Handelsbrief innerhalb seiner
   Aufbewahrungsfrist. Post, die auch eine Kollegin empfangen hat, bleibt ihr
   erhalten; Ihr Zugriff darauf endet.
-- **Absenderentscheidungen einsehen und korrigieren:** Die Seite „Absender“ zeigt
+- **Absenderentscheidungen einsehen und korrigieren:** Die Seite „Absendeadressen“ zeigt
   jede automatische Entscheidung über Ihre Korrespondenten. Ihre Korrektur ist
   endgültig; die Maschine überschreibt sie nicht.
 - **Einzelne Threads freigeben oder privat halten:** unabhängig davon, was der
@@ -81,7 +81,7 @@ Als privat eingestufte Post wird vernichtet. Wie lange das dauert, hängt
 davon ab, wer die Einstufung vorgenommen hat: sieben Tage, wenn Sie den Absender
 selbst als privat gekennzeichnet haben, und dreißig Tage, wenn der Klassifikator
 es war. Die längere Frist gilt der unbestätigten Entscheidung; bis dahin können
-Sie sie auf der Seite „Absender" korrigieren.
+Sie sie auf der Seite „Absendeadressen“ korrigieren.
 
 ## Ihre Rechte
 

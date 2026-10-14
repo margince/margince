@@ -36,7 +36,7 @@ Mir ist bekannt:
    Administratorin kann zurückgehaltene Inhalte nicht lesen.
 3. **Was ich selbst steuern kann:** einzelne Absender ausschließen, bereits
    erfasste Post löschen, jede automatische Entscheidung auf der Seite
-   „Absender“ einsehen und korrigieren, einzelne Threads freigeben oder privat
+   „Absendeadressen“ einsehen und korrigieren, einzelne Threads freigeben oder privat
    halten, das Postfach jederzeit trennen.
 4. **Dass die Einwilligung freiwillig ist.** Ich kann sie verweigern oder
    jederzeit mit Wirkung für die Zukunft widerrufen, formlos gegenüber

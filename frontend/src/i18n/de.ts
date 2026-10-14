@@ -4620,7 +4620,7 @@ export const de = {
   "files.empty":
     "Noch keine Dateien an diesem Deal. Lade eine Datei hoch oder verknüpfe eine E-Mail mit Anhang.",
   "files.origin": "Anhang einer Nachricht von {who}, {when}",
-  "files.originUnknown": "unbekanntem Absender",
+  "files.originUnknown": "unbekannter Absendeadresse",
   "files.uploaded": "Hochgeladen am {when}",
   "files.hiddenBadge": "Ausgeblendet",
   "files.hide": "An diesem Deal ausblenden",
@@ -6082,7 +6082,7 @@ export const de = {
   "jobs.kind.capture_backfill_reconcile": "Wiederaufnahme des E-Mail-Imports",
   "jobs.kind.capture_confidentiality_verdict":
     "Vertraulichkeitsprüfung von E-Mails",
-  "jobs.kind.capture_counterparty_verdict": "Prüfung der E-Mail-Absender",
+  "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
   "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
   "jobs.kind.capture_part_slim": "Bereinigung des E-Mail-Speichers",
@@ -6196,7 +6196,7 @@ export const de = {
   "extIngest.col.reasons": "Gründe",
   "extIngest.col.lastRefused": "Zuletzt abgewiesen",
   "extIngest.noDetail":
-    "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, da das abgewiesene Feld Inhalte des Absenders zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
+    "Zeigt nur Anzahlen und die abweisende Prüfung, nie den Datensatz, da das abgewiesene Feld eingesendete Inhalte zitieren kann. Das Connector-Protokoll enthält den vollständigen Grund für jeden Fall.",
   "extIngest.generatedAt": "Stand: {time}",
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
@@ -6257,9 +6257,10 @@ export const de = {
   "captureHealth.runsEvery": "Intervall: {interval}",
   "captureHealth.processed_one": "{count} Eintrag verarbeitet",
   "captureHealth.processed_other": "{count} Einträge verarbeitet",
-  "captureHealth.fact.pending": "Absender vor der Prüfung",
-  "captureHealth.fact.unsure": "Absender, bei denen die Prüfung unsicher ist",
-  "captureHealth.fact.exhausted": "Absender ohne verbleibende Versuche",
+  "captureHealth.fact.pending": "Absendeadressen vor der Prüfung",
+  "captureHealth.fact.unsure":
+    "Absendeadressen, bei denen die Prüfung unsicher ist",
+  "captureHealth.fact.exhausted": "Absendeadressen ohne verbleibende Versuche",
   "captureHealth.oldestWaited": "längste Wartezeit: {age}",
   "captureHealth.contactsWaiting_one": "{count} Kontakt wartet",
   "captureHealth.contactsWaiting_other": "{count} Kontakte warten",
@@ -7176,12 +7177,12 @@ export const de = {
   "heldThreads.kind.other": "Anderer Grund",
   "heldThreads.moreParticipants_one": "+{count} weitere",
   "heldThreads.moreParticipants_other": "+{count} weitere",
-  "senders.title": "Absender",
+  "senders.title": "Absendeadressen",
   "senders.sub":
     "Die Entscheidung zu jeder Adresse, die über dein Postfach eingegangen ist, und deine eigene Antwort, sofern gegeben. Nur du siehst diese Liste.",
   "senders.emptyBody":
-    "Sobald E-Mails in deinem Postfach eingehen, erscheint hier jeder Absender mit seinem Ergebnis.",
-  "senders.colSender": "Absender",
+    "Sobald E-Mails in deinem Postfach eingehen, erscheint hier jede Absendeadresse mit ihrem Ergebnis.",
+  "senders.colSender": "Absendeadresse",
   "senders.colDecision": "Entscheidung",
   "senders.colRecord": "Kontakt",
   "senders.recordNo": "Kein Kontakt",
@@ -7195,9 +7196,9 @@ export const de = {
   "senders.markBusiness": "Als geschäftlich markieren",
   "senders.keepOut": "Ausschließen",
   "senders.withdraw": "Antwort zurückziehen",
-  "senders.keepOutTitle": "Diesen Absender dauerhaft ausschließen?",
+  "senders.keepOutTitle": "Diese Absendeadresse dauerhaft ausschließen?",
   "senders.keepOutBody":
-    "Es wird kein Kontakt erstellt, und E-Mails, die dieser Absender bereits in dein Postfach gebracht hat, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",
+    "Es wird kein Kontakt erstellt, und E-Mails von dieser Absendeadresse, die bereits in dein Postfach gelangt sind, werden vernichtet. Kopien, die ein Teammitglied importiert hat, bleiben bei diesem Teammitglied.",
   "senders.keepOutConfirm": "Ausschließen und vernichten",
   "senders.kind.contact": "Person",
   "senders.kind.roleMailbox": "Funktionspostfach",
@@ -7213,7 +7214,7 @@ export const de = {
   "senders.kind.other": "Sonstiges",
   "senders.waiting.title": "Warten auf eine Entscheidung",
   "senders.waiting.sub":
-    "Kontakte aus deinen E-Mails, die nur du siehst, bis über ihren Absender entschieden ist.",
+    "Kontakte aus deinen E-Mails, die nur du siehst, bis über ihre Absendeadresse entschieden ist.",
   "senders.waiting.colContact": "Kontakt",
   "senders.waiting.colSince": "Wartet seit",
   "senders.waiting.moreAddresses_one": "+{count} weitere",
@@ -7313,7 +7314,7 @@ export const de = {
   "captureNotice.whoReads":
     "Ein neues Postfach wird standardmäßig zurückgehalten. Eine Nachricht bleibt bei den Beteiligten, bis ein Klassifikator den Thread als gewöhnliche geschäftliche Korrespondenz einstuft. Erst dann können andere Teammitglieder sie lesen. Du kannst das Postfach jederzeit so einstellen, dass stattdessen alles zurückgehalten wird.",
   "captureNotice.yourControl":
-    "Du entscheidest pro Absender und pro Thread, in den Einstellungen unter Verbindungen: einen Absender ganz ausschließen, einen Thread mit dem Team teilen oder löschen, was ein Absender eingebracht hat. Hier wird nicht um dein Einverständnis gebeten. Der Text beschreibt, was passiert, damit du es vor dem Verbinden weißt.",
+    "Du entscheidest pro Absendeadresse und pro Thread, in den Einstellungen unter Verbindungen: eine Absendeadresse ganz ausschließen, einen Thread mit dem Team teilen oder löschen, was über eine Absendeadresse eingegangen ist. Hier wird nicht um dein Einverständnis gebeten. Der Text beschreibt, was passiert, damit du es vor dem Verbinden weißt.",
   "connectors.mailPosture.label": "Sichtbarkeit der E-Mails",
   "connectors.mailPosture.classified": "Bis zur Einstufung zurückgehalten",
   "connectors.mailPosture.held": "Immer zurückgehalten",
@@ -8225,12 +8226,12 @@ export const de = {
 
   "client.back": "Zurück zu Margince",
   "client.title": "Margince neben deinem Postfach",
-  "client.sender": "Absender",
+  "client.sender": "Absendeadresse",
   "client.lookup": "Nachschlagen",
   "client.open360": "360-Ansicht öffnen",
   "client.unknown": "Noch nicht in deinem Unternehmen.",
   "client.unknownDetail":
-    "Dieser Absender entspricht keinem Kontakt, den du sehen kannst. Von woanders wurde nichts abgerufen.",
+    "Diese Absendeadresse entspricht keinem Kontakt, den du sehen kannst. Von woanders wurde nichts abgerufen.",
   "client.createLead": "Als Lead erfassen",
   "client.isolation": "Nur mit deinem Unternehmen verbunden",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
@@ -8259,7 +8260,7 @@ export const de = {
     "Keine Anmeldung nötig. Dieser persönliche Link steuert nur Ihre E-Mail-Einstellungen. Geben Sie ihn nicht weiter.",
   "prefs.unsub.doneTitle": "Abbestellt",
   "prefs.unsub.doneBody":
-    "Sie werden von diesem Absender keine {label} mehr erhalten. Die Änderung tritt sofort in Kraft.",
+    "Ihnen werden keine {label} mehr gesendet. Die Änderung tritt sofort in Kraft.",
   "prefs.unsub.manage": "Einstellungen verwalten",
   "prefs.unsub.alreadyOff":
     "Diese E-Mails waren bereits deaktiviert. Es hat sich nichts geändert.",
@@ -8437,7 +8438,7 @@ export const de = {
   "prefs.save": "Einstellungen speichern",
   "prefs.discard": "Verwerfen",
   "prefs.cannotGrant":
-    "Folgendes lässt sich für diesen Eintrag nicht starten: {purposes}. Wenn Sie dies für falsch halten, antworten Sie auf eine beliebige E-Mail dieses Absenders, damit der Fall geprüft wird.",
+    "Folgendes lässt sich für diesen Eintrag nicht starten: {purposes}. Wenn Sie dies für falsch halten, antworten Sie auf eine der E-Mails, die Sie erhalten haben, damit der Fall geprüft wird.",
   "prefs.cannotGrantWhy":
     "Dies lässt sich für diesen Eintrag nicht aktivieren.",
   "prefs.choiceNotApplied":
@@ -8461,7 +8462,7 @@ export const de = {
   "prefs.unsubscribeAllHint":
     "Damit werden alle oben aufgeführten Marketingzwecke deaktiviert. Antworten auf Ihre eigenen Anfragen und alles, was Sie angefordert haben, werden weiterhin gesendet, da niemand Sie dafür angemeldet hat.",
   "prefs.oneClickDone":
-    "Sie haben die Marketing-E-Mails dieses Absenders abbestellt. Die Änderung gilt sofort für jede Kampagne.",
+    "Sie haben diese Marketing-E-Mails abbestellt. Die Änderung gilt sofort für jede Kampagne.",
   "prefs.oneClickAlreadyOff":
     "Diese E-Mails waren bereits deaktiviert. Es hat sich nichts geändert.",
   "prefs.undo": "Rückgängig machen und Marketing weiter erhalten",
@@ -9017,7 +9018,7 @@ export const de = {
     "Die Sammlung konnte nicht erstellt werden. Bitte versuche es erneut.",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "settings.tab.capture-activity": "Capture-Aktivität",
-  "verdictPass.subject.senders": "Absender",
+  "verdictPass.subject.senders": "Absendeadressen",
   "verdictPass.subject.threads": "Threads",
   "verdictPass.every_one": "{subject} werden jede Minute geprüft.",
   "verdictPass.every_other": "{subject} werden alle {minutes} Minuten geprüft.",
@@ -9026,7 +9027,7 @@ export const de = {
   "verdictPass.running": "Eine Prüfung läuft gerade.",
   "captureActivity.title": "Capture-Aktivität",
   "captureActivity.sub":
-    "Was deine E-Mails der letzten 24 Stunden ergeben haben. Ausgeschlossene Absender stehen oben.",
+    "Was deine E-Mails der letzten 24 Stunden ergeben haben. Ausgeschlossene Absendeadressen stehen oben.",
   "captureActivity.scope.label": "Wessen Aktivität",
   "captureActivity.outcomes": "Ergebnisse",
   "captureActivity.messages": "Nachrichten",
@@ -9045,12 +9046,13 @@ export const de = {
   "captureActivity.loadMore": "Mehr laden",
   "captureActivity.empty": "Keine Capture-Aktivität in den letzten 24 Stunden.",
   "captureActivity.payloadsOff":
-    "Die Zeilen unten zeigen nur das Ergebnis, da diese Installation weder Absender noch Betreff von Nachrichten speichert.",
-  "captureActivity.contentNone": "Kein Absender erfasst",
+    "Die Zeilen unten zeigen nur das Ergebnis, da diese Installation weder Absendeadresse noch Betreff von Nachrichten speichert.",
+  "captureActivity.contentNone": "Keine Absendeadresse erfasst",
   "captureActivity.outcome.captured": "Erfasst",
   "captureActivity.outcome.internal": "Als intern verworfen",
   "captureActivity.outcome.suppressed": "Kein Kontakt erstellt",
-  "captureActivity.outcome.deferred": "Wartet auf Absenderprüfung",
+  "captureActivity.outcome.deferred":
+    "Wartet auf die Prüfung der Absendeadresse",
   "captureActivity.outcome.fault": "Ableitung fehlgeschlagen",
   "captureActivity.funnel.captured": "Erfasst",
   "captureActivity.funnel.internal": "Intern",
@@ -9062,9 +9064,9 @@ export const de = {
   "captureActivity.reason.deferral_capped":
     "Es folgt kein Ergebnis, da das Limit für offene Fragen erreicht war",
   "captureActivity.reason.noise_prior":
-    "Die Nachricht wird archiviert, da eine frühere Prüfung diesen Absender als Rauschen eingestuft hat",
+    "Die Nachricht wird archiviert, da eine frühere Prüfung diese Absendeadresse als Rauschen eingestuft hat",
   "captureActivity.reason.decided_prior":
-    "Es wird kein Kontakt erstellt, da über diesen Absender bereits entschieden wurde",
+    "Es wird kein Kontakt erstellt, da über diese Absendeadresse bereits entschieden wurde",
   "captureActivity.reason.no_granting_human":
     "Die Verbindung nennt kein Nutzerkonto, in dessen Namen gehandelt werden kann",
   "captureActivity.reason.invisible_incumbent":
@@ -9072,17 +9074,18 @@ export const de = {
   "captureActivity.reason.derivation_failed":
     "Der Kontaktschritt ist fehlgeschlagen, die Nachricht selbst ist nicht betroffen",
   "captureActivity.reason.no_counterparty":
-    "Kein Absender, der erfasst werden kann",
+    "Keine Absendeadresse, die erfasst werden kann",
   "captureActivity.reason.role_mailbox":
     "Ein Sammelpostfach, keine Person: gespeichert, aber kein Kontakt erstellt",
   "captureActivity.reason.private_thread":
     "Ein privater Thread: für dich gespeichert, aber kein Kontakt erstellt",
   "captureActivity.reason.transactional_infra":
-    "Der Absender ist E-Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
+    "Die Absendeadresse gehört zur E-Mail-Infrastruktur, nicht zu einem Unternehmen, mit dem du arbeitest",
   "captureActivity.reason.transactional_prefix":
-    "Der Absender wirkt wie ein automatisierter Versand, nicht wie eine Person",
+    "Die Absendeadresse wirkt wie ein automatisierter Versand, nicht wie eine Person",
   "captureActivity.outcome.deferred_capped": "Nicht geplant",
-  "captureActivity.outcome.deferred_sent": "Zur Absenderprüfung gesendet",
+  "captureActivity.outcome.deferred_sent":
+    "Zur Prüfung der Absendeadresse gesendet",
   "captureActivity.resolution.pending": "Wartet noch",
   "captureActivity.resolution.unsure": "Zur Prüfung weitergeleitet",
   "captureActivity.resolution.real": "Als echte Person eingestuft",
@@ -9091,14 +9094,14 @@ export const de = {
   "captureActivity.resolution.suppressed": "Unterdrückt",
   "captureActivity.windowTitle": "Letzte 24 Stunden",
   "captureActivity.col.when": "Zeitpunkt",
-  "captureActivity.col.message": "Absender und Betreff",
+  "captureActivity.col.message": "Absendeadresse und Betreff",
   "captureActivity.col.outcome": "Ergebnis",
   "captureActivity.col.via": "Über",
   "pipeline.title": "Wie diese Nachricht verarbeitet wurde",
   "pipeline.sub":
     "Jeder Erfassungsschritt, in der Reihenfolge, in der diese Nachricht ihn durchlaufen hat.",
   "pipeline.payloadsOff":
-    "Zu keinem Schritt sind Absender oder Betreff gespeichert: Die Speicherung von Inhalten ist auf dieser Installation deaktiviert.",
+    "Zu keinem Schritt sind Absendeadresse oder Betreff gespeichert: Die Speicherung von Inhalten ist auf dieser Installation deaktiviert.",
   "pipeline.transport": "Empfangen über",
   "pipeline.unavailable":
     "Die Erfassungsschritte für diese Nachricht konnten nicht geladen werden. Bitte versuche es erneut.",
@@ -9111,8 +9114,9 @@ export const de = {
   "pipeline.reason.record_not_available":
     "der Datensatz dieses Schritts wird nicht mehr aufbewahrt oder ist für dich nicht sichtbar (nach dem Löschen eines Datensatzes lässt sich beides nicht unterscheiden)",
   "pipeline.status.not_reported": "Hier nicht ausgewiesen",
-  "pipeline.subject.sender": "zum Absender, nicht nur zu dieser Nachricht",
-  "pipeline.subject.domain": "zur Domain des Absenders",
+  "pipeline.subject.sender":
+    "zur Absendeadresse, nicht nur zu dieser Nachricht",
+  "pipeline.subject.domain": "zur Absendedomain",
   "pipeline.subject.thread": "zum gesamten Thread",
   "pipeline.stage.connector_filter": "Connector-Filter",
   "pipeline.stage.ingress_gate": "Eingangsprüfung",
@@ -9121,7 +9125,7 @@ export const de = {
   "pipeline.stage.activity_write": "Im Verlauf gespeichert",
   "pipeline.stage.tier_ladder": "Entscheidung zum Kontakt",
   "pipeline.stage.contact_create": "Kontakt erstellt",
-  "pipeline.stage.verdict": "Absenderprüfung",
+  "pipeline.stage.verdict": "Prüfung der Absendeadresse",
   "pipeline.stage.company_triage": "Unternehmensprüfung",
   "pipeline.stage.attention_label": "Hinweis",
   "pipeline.stage.material_events": "Thread-Analyse",
@@ -9131,16 +9135,17 @@ export const de = {
   "pipeline.reason.invisible_incumbent":
     "sie passte zu einem Datensatz, den du nicht sehen kannst",
   "pipeline.reason.transactional_infra":
-    "der Absender ist E-Mail-Infrastruktur, kein Unternehmen, mit dem du arbeitest",
+    "die Absendeadresse gehört zur E-Mail-Infrastruktur, nicht zu einem Unternehmen, mit dem du arbeitest",
   "pipeline.reason.transactional_prefix":
-    "der Absender wirkt wie ein automatisierter Versand, nicht wie eine Person",
+    "die Absendeadresse wirkt wie ein automatisierter Versand, nicht wie eine Person",
   "pipeline.reason.deferral_capped":
     "es kommt kein Ergebnis, da das Limit für offene Fragen erreicht war",
   "pipeline.reason.noise_prior":
-    "die Nachricht wird archiviert, da eine frühere Prüfung diesen Absender als Rauschen eingestuft hat",
+    "die Nachricht wird archiviert, da eine frühere Prüfung diese Absendeadresse als Rauschen eingestuft hat",
   "pipeline.reason.decided_prior":
-    "es wird kein Kontakt erstellt, da über diesen Absender bereits entschieden wurde",
-  "pipeline.reason.no_counterparty": "kein Absender, der erfasst werden kann",
+    "es wird kein Kontakt erstellt, da über diese Absendeadresse bereits entschieden wurde",
+  "pipeline.reason.no_counterparty":
+    "keine Absendeadresse, die erfasst werden kann",
   "pipeline.reason.role_mailbox":
     "ein Sammelpostfach, keine Person: gespeichert, aber kein Kontakt erstellt",
   "pipeline.reason.private_thread":
@@ -9153,17 +9158,18 @@ export const de = {
     "mit dieser Nachricht ist noch kein Kontakt verknüpft",
   "pipeline.reason.no_contact_intended":
     "die Entscheidung zum Kontakt ergab, dass keiner zu erstellen war",
-  "pipeline.reason.awaiting_verdict": "die Absenderprüfung steht noch aus",
+  "pipeline.reason.awaiting_verdict":
+    "die Prüfung der Absendeadresse steht noch aus",
   "pipeline.reason.judged_real":
-    "dieser Absender wurde als echte Person eingestuft",
+    "diese Absendeadresse wurde einer echten Person zugeordnet",
   "pipeline.reason.judged_noise":
-    "es wurde kein Datensatz erstellt, da dieser Absender als Rauschen eingestuft wurde",
+    "es wurde kein Datensatz erstellt, da diese Absendeadresse als Rauschen eingestuft wurde",
   "pipeline.reason.judged_rejected":
-    "es wurde kein Datensatz erstellt, da dieser Absender abgelehnt wurde",
+    "es wurde kein Datensatz erstellt, da diese Absendeadresse abgelehnt wurde",
   "pipeline.reason.judged_suppressed":
-    "es wurde kein Datensatz erstellt, da dieser Absender unterdrückt wurde",
+    "es wurde kein Datensatz erstellt, da diese Absendeadresse unterdrückt wurde",
   "pipeline.reason.no_open_question":
-    "zu diesem Absender gab es keine offene Frage",
+    "zu dieser Absendeadresse gab es keine offene Frage",
   "pipeline.reason.thread_not_captured":
     "es gab nichts zu lesen, da in diesem Thread keine erfasste Nachricht mehr vorhanden ist",
   "pipeline.reason.events_raised":
@@ -9183,11 +9189,11 @@ export const de = {
   "pipeline.reason.thread_not_all_open":
     "eine Zusammenfassung des ganzen Threads würde eine Teilansicht als vollständig darstellen, da eine Nachricht in diesem Thread für einen Teil seiner Lesenden verborgen ist",
   "pipeline.reason.answered_on_the_company":
-    "dieser Schritt wird einmal beim Unternehmen beantwortet, nicht bei jeder Nachricht, da er die Domain des Absenders betrifft",
+    "dieser Schritt wird einmal beim Unternehmen beantwortet, nicht bei jeder Nachricht, da er die Absendedomain betrifft",
   "pipeline.reason.company_warranted":
     "für diese Domain wurde ein Unternehmensdatensatz als gerechtfertigt eingestuft, und dies ist er",
   "pipeline.reason.no_site_identified":
-    "stattdessen wurde der Name des Absenders verwendet, da nichts auf der Website dieser Domain auf ein Unternehmen hinwies",
+    "stattdessen wurde der Name verwendet, unter dem die E-Mail gesendet wurde, da nichts auf der Website dieser Domain auf ein Unternehmen hinwies",
   "pipeline.reason.triage_queued": "diese Domain wartet auf Prüfung",
   "pipeline.reason.triage_unevidenced":
     "nichts, was bisher von dieser Domain vorliegt, deutet auf ein Unternehmen hin",
@@ -9206,7 +9212,7 @@ export const de = {
   "pipeline.reason.transport_not_read":
     "dieser Schritt liest nur E-Mails, und die Nachricht kam über einen anderen Kanal",
   "pipeline.reason.sender_undecided":
-    "die Nachricht wird zurückgehalten, da die Absenderprüfung noch aussteht",
+    "die Nachricht wird zurückgehalten, da die Prüfung der Absendeadresse noch aussteht",
   "pipeline.reason.archived": "die Nachricht ist archiviert",
   "pipeline.reason.not_connector_captured":
     "die Nachricht wurde nicht von einem Connector erfasst",
@@ -10719,14 +10725,14 @@ export const de = {
   "capturePurge.openShort": "Passende E-Mails löschen",
   "captureExclusions.containerLabel": "Ordner oder Label",
   "captureExclusions.noContainers":
-    "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe Absender nach Adresse oder Domain aus.",
+    "Dieses Postfach hat keine Ordner gemeldet. Verbinde ein Postfach mit Ordnern, oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.containersPartial": "Diese Ordnerliste ist unvollständig",
   "captureExclusions.containersPartialBody":
-    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Um die E-Mails dieses Ordners fernzuhalten, schließe die Absender stattdessen nach Adresse oder Domain aus.",
+    "Dein Postfach hat mehr Ordner, als diese Liste lesen konnte. Ein gesuchter Ordner fehlt möglicherweise. Um die E-Mails dieses Ordners fernzuhalten, schließe sie stattdessen nach Absendeadresse oder Domain aus.",
   "captureExclusions.containersUnreadable":
     "Deine Ordner konnten nicht gelesen werden",
   "captureExclusions.containersUnreadableBody":
-    "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe Absender nach Adresse oder Domain aus.",
+    "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.kindLabel": "Typ",
   "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
   "captureExclusions.placeholder.address": "name@beispiel.example",
@@ -12782,9 +12788,9 @@ export const de = {
   "worklist.source.withheld": "Quelle für dich nicht verfügbar: {source}",
   "worklist.untitled.generic": "Eintrag braucht Aufmerksamkeit",
   "worklist.batch.likely_automated_one":
-    "{count} vermutlich automatisierter Absender",
+    "{count} vermutlich automatisierte Absendeadresse",
   "worklist.batch.likely_automated_other":
-    "{count} vermutlich automatisierte Absender",
+    "{count} vermutlich automatisierte Absendeadressen",
   "worklist.batch.company_match_one":
     "{count} Adresse bei einem bekannten Unternehmen",
   "worklist.batch.company_match_other":
@@ -13287,7 +13293,7 @@ export const de = {
   "magic.action.archive_lead": "Lead archiviert:",
   "magic.action.archive_project": "Projekt archiviert:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
-  "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
+  "magic.why.mail_filed": "Die Absendeadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
   "magic.why.site_read": "Aus der Analyse von {site}.",

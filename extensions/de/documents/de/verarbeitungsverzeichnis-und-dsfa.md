@@ -35,7 +35,7 @@
 | Zweck | Entscheidung, ob ein Absender ein Geschäftskontakt und ein Thread gewöhnliche Geschäftskorrespondenz ist |
 | Rechtsgrundlage | Art. 6 Abs. 1 lit. f DSGVO |
 | Modellbetrieb | lokal, siehe `docs/reference/ai-egress.md` |
-| Menschliches Eingreifen | Die Seite „Absender“ zeigt jede Entscheidung; eine Korrektur ist endgültig und wird von der Maschine nicht überschrieben |
+| Menschliches Eingreifen | Die Seite „Absendeadressen“ zeigt jede Entscheidung; eine Korrektur ist endgültig und wird von der Maschine nicht überschrieben |
 | Besonderheit | Nicht verfügbar oder ohne Budget bedeutet zurückgehalten. Ein Ausfall führt nie zu einer Freigabe |
 | Durchsetzung | `compose/captureverdict.go`, `compose/confidentialityverdict.go`; die Vorrangregel in `capture/senderoverride.go` |
 
