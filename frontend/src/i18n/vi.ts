@@ -7944,6 +7944,12 @@ export const vi = {
   "auth.unavailableTitle": "Bản cài đặt chưa sẵn sàng",
   "auth.unavailableBody":
     "Bản cài đặt Margince này chưa sẵn sàng để đăng nhập. Quản trị viên cần hoàn tất hoặc sửa lại phần thiết lập.",
+  "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.title": "Thiết lập đăng nhập hai bước",
+  "forcedMfa.body":
+    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+  "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
+  "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
   "forcedPassword.title": "Đặt mật khẩu của riêng bạn",
   "forcedPassword.body":
@@ -9957,9 +9963,9 @@ export const vi = {
     "Mọi thành viên cần có ứng dụng xác thực để dùng Margince.",
   "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
   "signInMethods.requireMfaConfirmBody":
-    "Thành viên chưa có ứng dụng xác thực sẽ không dùng được Margince cho tới khi có. Trước tiên, đảm bảo mọi thành viên đã thiết lập ứng dụng trong Cài đặt, mục Tài khoản.",
+    "Thành viên chưa có ứng dụng xác thực sẽ được yêu cầu thiết lập trước khi tiếp tục.",
   "signInMethods.requireMfaConfirmSelf":
-    "Bạn chưa thiết lập ứng dụng xác thực. Thiết lập trong Cài đặt, mục Tài khoản trước, nếu không bạn cũng không dùng được Margince.",
+    "Bạn chưa thiết lập ứng dụng xác thực, nên bạn cũng sẽ được yêu cầu thiết lập.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Cấp một vai trò khi đăng nhập doanh nghiệp cho mọi thành viên đã được mời thuộc một nhóm IdP. Viết tên nhóm đúng như claim groups trong ID token. Cách này không tạo tài khoản: email chưa được mời vẫn bị từ chối, dù có nhóm hay không.",

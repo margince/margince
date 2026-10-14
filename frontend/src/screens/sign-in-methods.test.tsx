@@ -201,7 +201,7 @@ describe("the second-factor requirement", () => {
 
     const dialog = await settledDialog();
     expect(
-      within(dialog).getByText(/cannot use margince until they have one/i),
+      within(dialog).getByText(/asked to set one up before they can continue/i),
     ).toBeTruthy();
     expect(calls).toEqual([]);
     await user.click(confirmButton(dialog));

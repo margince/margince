@@ -15,7 +15,7 @@
 # Format: <frozen-line-count> <path>
 969 frontend/src/screens/webhooks.tsx
 982 frontend/src/app/shell.tsx
-991 frontend/src/App.tsx
+989 frontend/src/App.tsx
 952 frontend/src/screens/installation-setup.tsx
 922 frontend/src/screens/auth.tsx
 1088 frontend/src/screens/onboarding-conversation/connect-act.test.tsx

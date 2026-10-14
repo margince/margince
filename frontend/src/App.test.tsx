@@ -461,6 +461,73 @@ describe("auth boundary states (login spec §4)", () => {
     ).toBeNull();
   });
 
+  it("offers two-step setup when the installation requires a factor the account lacks", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return new Response(
+            JSON.stringify({ code: "mfa_enrolment_required", detail: "x" }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+        }
+        return new Response(JSON.stringify({}), { status: 200 });
+      }),
+    );
+    mount();
+    expect(
+      await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeNull();
+  });
+
+  it("lands a sign-in that the factor requirement confines on the setup, not on an error", async () => {
+    let signedIn = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/auth/login")) {
+          signedIn = true;
+          return new Response(JSON.stringify({}), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (url.endsWith("/v1/me")) {
+          return new Response(
+            JSON.stringify(
+              signedIn
+                ? { code: "mfa_enrolment_required" }
+                : { code: "unauthorized" },
+            ),
+            {
+              status: signedIn ? 403 : 401,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+        }
+        return new Response(JSON.stringify({}), { status: 200 });
+      }),
+    );
+    mount();
+    await userEvent.type(await screen.findByLabelText("Email"), "a@b.com");
+    await userEvent.type(
+      screen.getByLabelText("Password"),
+      "a password{enter}",
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
   it("still renders login for an ordinary 403 that is not a forced change", async () => {
     // The kind is decided by the machine code, not the status: only the
     // refusal that names itself gets the change screen.

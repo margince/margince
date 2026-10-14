@@ -21,7 +21,10 @@ export type AuthProbeKind =
   // A distinct kind because the remedy is distinct. The login screen would
   // loop: the credentials are correct, and using them again lands in the
   // same refusal.
-  | "must-change-password";
+  | "must-change-password"
+  // The installation requires a second factor this account does not hold yet,
+  // and the server refuses every route but the enrolment ones.
+  | "must-enrol-mfa";
 
 export class AuthProbeError extends Error {
   readonly kind: AuthProbeKind;
@@ -41,6 +44,9 @@ function probeKindFor(status: number, code?: string): AuthProbeKind {
   if (status >= 500) return "connection";
   if (status === 403 && code === "password_change_required") {
     return "must-change-password";
+  }
+  if (status === 403 && code === "mfa_enrolment_required") {
+    return "must-enrol-mfa";
   }
   return "unauthorized";
 }

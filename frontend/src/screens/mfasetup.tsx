@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation } from "@tanstack/react-query";
-import { useId, useMemo, useState } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { encode } from "uqr";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -159,9 +159,157 @@ function StartState({
   );
 }
 
+/** Starts or restarts an enrolment; the secret it returns never reaches a cache. */
+export function useTotpStart() {
+  const t = useT();
+  return useMutation({
+    gcTime: 0,
+    mutationFn: async () => unwrap(await api.POST("/me/mfa/totp"), t),
+  });
+}
+
+export function useTotpConfirm() {
+  const t = useT();
+  const [code, setCode] = useState("");
+  const confirm = useMutation({
+    gcTime: 0,
+    mutationFn: async (typed: string) => {
+      const result = await api.POST("/me/mfa/totp/confirm", {
+        body: { code: typed },
+      });
+      const refusal = codeRefusalOf(result.response.status);
+      if (refusal) return { refusal, codes: [] };
+      return { refusal: null, codes: unwrap(result, t).recovery_codes };
+    },
+    onSuccess: (answer) => {
+      if (answer.refusal === "wrong-code") setCode("");
+    },
+  });
+  const entered = enteredCode(code);
+  return {
+    confirm,
+    code,
+    setCode,
+    entered,
+    codes: confirm.data?.refusal === null ? confirm.data.codes : null,
+    submit: () => {
+      if (entered !== "" && !confirm.isPending) confirm.mutate(entered);
+    },
+    reset: () => {
+      confirm.reset();
+      setCode("");
+    },
+  };
+}
+
+export type TotpConfirm = ReturnType<typeof useTotpConfirm>;
+
+/** The steps of a setup, shared by the Account dialog and the forced screen. */
+export function MfaSetupSteps({
+  flow,
+  formId,
+  enrolment,
+  starting,
+  startError,
+  onRetry,
+}: Readonly<{
+  flow: TotpConfirm;
+  formId: string;
+  enrolment: TotpEnrolment | undefined;
+  starting: boolean;
+  startError: unknown;
+  onRetry: () => void;
+}>) {
+  const t = useT();
+  const refused = refusalCopy(flow.confirm.data?.refusal);
+  if (flow.codes) return <RecoveryCodes codes={flow.codes} />;
+  if (!enrolment) {
+    return (
+      <StartState
+        starting={starting}
+        startError={startError}
+        onRetry={onRetry}
+      />
+    );
+  }
+  return (
+    <form
+      id={formId}
+      className="form-stack"
+      onSubmit={(event) => {
+        event.preventDefault();
+        flow.submit();
+      }}
+    >
+      <p>{t("mfa.scan")}</p>
+      <QrCode value={enrolment.otpauth_uri} label={t("mfa.qrLabel")} />
+      <SecretKey secret={enrolment.secret} />
+      {flow.confirm.isError && (
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={t("mfa.confirmFailedTitle")}
+        >
+          {mfaFailureMessage(flow.confirm.error, t)}
+        </Callout>
+      )}
+      <p>{t("mfa.signsOut")}</p>
+      <MfaCodeField
+        label={t("mfa.code")}
+        error={refused ? t(refused) : undefined}
+        value={flow.code}
+        onChange={flow.setCode}
+      />
+    </form>
+  );
+}
+
+/** Turn on until the codes show, then Done; `lead` goes before Turn on. */
+export function MfaSetupActions({
+  flow,
+  formId,
+  enrolment,
+  onDone,
+  lead,
+  className = "actions",
+}: Readonly<{
+  flow: TotpConfirm;
+  formId: string;
+  enrolment: TotpEnrolment | undefined;
+  onDone: () => void;
+  lead?: ReactNode;
+  className?: string;
+}>) {
+  const t = useT();
+  const pending = flow.confirm.isPending;
+  return (
+    <div className={className}>
+      {flow.codes ? (
+        <Button variant="primary" onClick={onDone}>
+          {t("mfa.done")}
+        </Button>
+      ) : (
+        <>
+          {lead}
+          <Button
+            type="submit"
+            form={formId}
+            variant="primary"
+            disabled={!pending && (!enrolment || flow.entered === "")}
+            pending={pending}
+            busyLabel={t("mfa.turningOn")}
+          >
+            {t("mfa.turnOn")}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /**
- * Setting up an authenticator: scan, confirm with a code, then the recovery
- * codes once. The secret and the codes never outlive the dialog.
+ * Setting up an authenticator from the Account page. The secret and the codes
+ * never outlive the dialog.
  */
 export function MfaSetupModal({
   open,
@@ -181,33 +329,14 @@ export function MfaSetupModal({
   const t = useT();
   const titleId = useId();
   const formId = useId();
-  const [code, setCode] = useState("");
-  const confirm = useMutation({
-    gcTime: 0,
-    mutationFn: async (typed: string) => {
-      const result = await api.POST("/me/mfa/totp/confirm", {
-        body: { code: typed },
-      });
-      const refusal = codeRefusalOf(result.response.status);
-      if (refusal) return { refusal, codes: [] };
-      return { refusal: null, codes: unwrap(result, t).recovery_codes };
-    },
-    onSuccess: (answer) => {
-      if (answer.refusal === "wrong-code") setCode("");
-    },
-  });
-  const codes = confirm.data?.refusal === null ? confirm.data.codes : null;
-  const refused = refusalCopy(confirm.data?.refusal);
-  const entered = enteredCode(code);
-
+  const flow = useTotpConfirm();
   const close = () => {
-    confirm.reset();
-    setCode("");
+    flow.reset();
     onClose();
   };
   // A pending confirm still enrols on the server, and its codes exist nowhere else.
   const dismiss = () => {
-    if (!confirm.isPending && !codes) close();
+    if (!flow.confirm.isPending && !flow.codes) close();
   };
 
   return (
@@ -216,77 +345,35 @@ export function MfaSetupModal({
       onClose={dismiss}
       labelledBy={titleId}
       intent="form"
-      closeDisabled={confirm.isPending}
-      closeReason={codes ? t("mfa.keepCodes") : undefined}
+      closeDisabled={flow.confirm.isPending}
+      closeReason={flow.codes ? t("mfa.keepCodes") : undefined}
     >
       <Heading size="large" className="t-h3 modal-title" id={titleId}>
         {t("mfa.setupTitle")}
       </Heading>
-      {codes && <RecoveryCodes codes={codes} />}
-      {!codes && !enrolment && (
-        <StartState
-          starting={starting}
-          startError={startError}
-          onRetry={onRetry}
-        />
-      )}
-      {!codes && enrolment && (
-        <form
-          id={formId}
-          className="form-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (entered !== "" && !confirm.isPending) confirm.mutate(entered);
-          }}
-        >
-          <p>{t("mfa.scan")}</p>
-          <QrCode value={enrolment.otpauth_uri} label={t("mfa.qrLabel")} />
-          <SecretKey secret={enrolment.secret} />
-          {confirm.isError && (
-            <Callout
-              kind="outcome"
-              tone="danger"
-              title={t("mfa.confirmFailedTitle")}
-            >
-              {mfaFailureMessage(confirm.error, t)}
-            </Callout>
-          )}
-          <p>{t("mfa.signsOut")}</p>
-          <MfaCodeField
-            label={t("mfa.code")}
-            error={refused ? t(refused) : undefined}
-            value={code}
-            onChange={setCode}
-          />
-        </form>
-      )}
-      <div className="actions">
-        {codes ? (
-          <Button variant="primary" onClick={close}>
-            {t("mfa.done")}
+      <MfaSetupSteps
+        flow={flow}
+        formId={formId}
+        enrolment={enrolment}
+        starting={starting}
+        startError={startError}
+        onRetry={onRetry}
+      />
+      <MfaSetupActions
+        flow={flow}
+        formId={formId}
+        enrolment={enrolment}
+        onDone={close}
+        lead={
+          <Button
+            variant="ghost"
+            onClick={close}
+            disabled={flow.confirm.isPending}
+          >
+            {t("mfa.cancel")}
           </Button>
-        ) : (
-          <>
-            <Button
-              variant="ghost"
-              onClick={close}
-              disabled={confirm.isPending}
-            >
-              {t("mfa.cancel")}
-            </Button>
-            <Button
-              type="submit"
-              form={formId}
-              variant="primary"
-              disabled={!confirm.isPending && (!enrolment || entered === "")}
-              pending={confirm.isPending}
-              busyLabel={t("mfa.turningOn")}
-            >
-              {t("mfa.turnOn")}
-            </Button>
-          </>
-        )}
-      </div>
+        }
+      />
     </Modal>
   );
 }

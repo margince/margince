@@ -20,6 +20,7 @@ import {
   MfaSetupModal,
   mfaFailureMessage,
   refusalCopy,
+  useTotpStart,
 } from "./mfasetup";
 
 const LOW_RECOVERY_CODES = 2;
@@ -150,11 +151,7 @@ export function MfaSettingRow() {
   const [setupOpen, setSetupOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [outcome, setOutcome] = useState<MessageKey | null>(null);
-  const start = useMutation({
-    gcTime: 0,
-    onMutate: () => setOutcome(null),
-    mutationFn: async () => unwrap(await api.POST("/me/mfa/totp"), t),
-  });
+  const start = useTotpStart();
   const refresh = () => queryClient.invalidateQueries({ queryKey: MY_MFA_KEY });
 
   const mfa = status.data;
@@ -163,6 +160,7 @@ export function MfaSettingRow() {
   const low = confirmed && mfa.recovery_codes_left <= LOW_RECOVERY_CODES;
 
   const openSetup = () => {
+    setOutcome(null);
     setSetupOpen(true);
     start.mutate();
   };

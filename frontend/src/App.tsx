@@ -54,7 +54,7 @@ import {
   RESET_ROUTE,
 } from "./screens/auth";
 import { isContactTab } from "./screens/contacttab";
-import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
+import { ConfinedAccountScreen } from "./screens/forcedpassword";
 import { useInstallationDescribed } from "./screens/installationcompany";
 import { OnboardingScreen } from "./screens/onboarding";
 import { useJourneyProgress } from "./screens/onboarding-journey";
@@ -835,13 +835,12 @@ function AuthedApp({
   if (me.isError) {
     const kind =
       me.error instanceof AuthProbeError ? me.error.kind : "connection";
-    // The account is authenticated but lacks a password of its own. The login
-    // screen would loop, since the same correct credentials meet the same
-    // refusal, so the boundary renders the one thing that can resolve it.
-    if (kind === "must-change-password") {
+    // An account confined to the one act that lifts its refusal: the login
+    // screen would loop, since the same correct credentials meet the same refusal.
+    if (kind === "must-change-password" || kind === "must-enrol-mfa") {
       return (
         <RaillessFrame>
-          <ForcedPasswordChangeScreen onChanged={() => me.refetch()} />
+          <ConfinedAccountScreen kind={kind} onResolved={() => me.refetch()} />
         </RaillessFrame>
       );
     }

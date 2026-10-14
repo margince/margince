@@ -8279,6 +8279,12 @@ export const en = {
   // the authority, not the session.
   // The account whose password an operator chose. Authenticated, and
   // able to do exactly one thing until it has a password of its own.
+  "forcedMfa.pageTitle": "Set up two-step sign-in",
+  "forcedMfa.title": "Set up two-step sign-in",
+  "forcedMfa.body":
+    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+  "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
+  "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
   "forcedPassword.title": "Set your own password",
   "forcedPassword.body":
@@ -10290,9 +10296,9 @@ export const en = {
     "Every member needs an authenticator app to use Margince.",
   "signInMethods.requireMfaConfirmTitle": "Require second factor?",
   "signInMethods.requireMfaConfirmBody":
-    "Members without an authenticator app cannot use Margince until they have one. Make sure every member has set one up in Account settings first.",
+    "Members without an authenticator app are asked to set one up before they can continue.",
   "signInMethods.requireMfaConfirmSelf":
-    "You have not set up an authenticator app yet. Set one up in Account settings first, or you cannot use Margince either.",
+    "You have not set up an authenticator app yet, so you are asked to set one up too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "Grant a role at corporate sign-in to every invited member of an IdP group. Spell the group exactly as the ID token’s groups claim does. No account is created this way: an email nobody invited is refused, whether they have groups or not.",

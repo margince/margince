@@ -8110,6 +8110,12 @@ export const de = {
   // wird korrigiert, nicht repariert — repariert werden Geräte.
   "auth.unavailableBody":
     "Diese Margince-Installation ist nicht für die Anmeldung bereit. Ein Admin muss die Einrichtung abschließen oder reparieren.",
+  "forcedMfa.pageTitle": "Zweistufige Anmeldung einrichten",
+  "forcedMfa.title": "Zweistufige Anmeldung einrichten",
+  "forcedMfa.body":
+    "Diese Installation verlangt die zweistufige Anmeldung. Richte eine Authenticator-App ein, um fortzufahren.",
+  "forcedMfa.alreadyOn": "Die zweistufige Anmeldung ist schon an.",
+  "forcedMfa.continue": "Weiter",
   "forcedPassword.pageTitle": "Passwort festlegen",
   "forcedPassword.title": "Eigenes Passwort festlegen",
   "forcedPassword.body":
@@ -10178,9 +10184,9 @@ export const de = {
     "Jedes Mitglied braucht eine Authenticator-App, um Margince zu nutzen.",
   "signInMethods.requireMfaConfirmTitle": "Zweiten Faktor verlangen?",
   "signInMethods.requireMfaConfirmBody":
-    "Mitglieder ohne Authenticator-App können Margince erst wieder nutzen, wenn sie eine eingerichtet haben. Sorge dafür, dass alle zuerst eine in den Kontoeinstellungen einrichten.",
+    "Mitglieder ohne Authenticator-App werden gebeten, eine einzurichten, bevor sie weitermachen können.",
   "signInMethods.requireMfaConfirmSelf":
-    "Du hast noch keine Authenticator-App eingerichtet. Richte zuerst eine in den Kontoeinstellungen ein, sonst kannst auch du Margince nicht nutzen.",
+    "Du hast noch keine Authenticator-App eingerichtet, deshalb wirst auch du gebeten, eine einzurichten.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
     "Vergibt bei der Unternehmensanmeldung eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Konto entsteht dabei nicht: eine nicht eingeladene E-Mail-Adresse wird weiterhin abgewiesen, mit oder ohne Gruppen.",
