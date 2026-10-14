@@ -4648,10 +4648,12 @@ public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
 public.import_record_map.import_record_map_import_run_id_fkey FOREIGN KEY (import_run_id) REFERENCES import_run(id) ON DELETE RESTRICT
+public.import_record_map.import_record_map_origin_check CHECK ((origin = ANY (ARRAY['created'::text, 'bound'::text])))
 public.import_record_map.import_record_map_pkey PRIMARY KEY (source_system, object, external_id)
 public.import_record_map.import_run_id uuid NOT NULL gen=- def=-
 public.import_record_map.native_id uuid NOT NULL gen=- def=-
 public.import_record_map.object text NOT NULL gen=- def=-
+public.import_record_map.origin text NOT NULL gen=- def='created'::text
 public.import_record_map.source_system text NOT NULL gen=- def=-
 public.import_record_map_pkey CREATE UNIQUE INDEX import_record_map_pkey ON public.import_record_map USING btree (source_system, object, external_id)
 public.import_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
