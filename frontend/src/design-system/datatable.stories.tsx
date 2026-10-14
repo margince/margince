@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   Badge,
@@ -656,6 +656,79 @@ export const RowDetailSingle: Story = {
     await waitFor(() =>
       expect(canvas.queryByText("Sent 3 emails")).not.toBeInTheDocument(),
     );
+  },
+};
+// A detail whose read lands while the row is opening: a short line first, then
+// a caption, a line and a verb. The fold follows the content and never snaps.
+function LateCriteria({ run }: Readonly<{ run: DemoRun }>) {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    const landing = setTimeout(() => setLoaded(true), 60);
+    return () => clearTimeout(landing);
+  }, []);
+  if (!loaded) {
+    return <p className="t-caption">Loading the run…</p>;
+  }
+  return (
+    <div style={{ display: "grid", gap: "var(--space-2)" }}>
+      <p className="t-caption">What {run.rule} did</p>
+      <p>{run.result}</p>
+      <div>
+        <Button>Run again</Button>
+      </div>
+    </div>
+  );
+}
+
+export const RowDetailLateContent: Story = {
+  render: () => (
+    <Panel title="Rule runs">
+      <DataTable<DemoRun>
+        bleed
+        label="Rule runs"
+        rows={RUNS}
+        rowKey={(run) => run.id}
+        columns={[{ key: "rule", header: "Rule", render: (run) => run.rule }]}
+        detail={{
+          header: "Detail",
+          toggleLabel: (run) => `Show the run of ${run.rule}`,
+          render: (run) => <LateCriteria run={run} />,
+        }}
+      />
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const toggle = await within(canvasElement).findByRole("button", {
+      name: "Show the run of Welcome new leads",
+    });
+    const frames: { height: number; folding: boolean }[] = [];
+    let sampling = true;
+    const sample = () => {
+      const fold = canvasElement.querySelector<HTMLElement>(
+        "tr.datatable-detail:not([hidden]) .datatable-detail-fold",
+      );
+      if (fold !== null) {
+        frames.push({
+          height: fold.getBoundingClientRect().height,
+          folding: fold.hasAttribute("data-folding"),
+        });
+      }
+      if (sampling) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    await userEvent.click(toggle);
+    await within(canvasElement).findByRole("button", { name: "Run again" });
+    await waitFor(() => expect(frames.at(-1)?.folding).toBe(false));
+    sampling = false;
+    const released = frames.findIndex((frame) => !frame.folding);
+    const before = frames[released - 1]?.height ?? 0;
+    const after = frames[released]?.height ?? 0;
+    await expect(Math.abs(after - before)).toBeLessThan(1);
+    for (const [index, frame] of frames.entries()) {
+      await expect(frame.height).toBeGreaterThanOrEqual(
+        (frames[index - 1]?.height ?? 0) - 0.5,
+      );
+    }
   },
 };
 export const RowDetailDark: Story = {

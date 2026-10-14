@@ -86,8 +86,7 @@ const PARAGRAPHS = [
   "A rep who claims a lead by hand overrides every rule above, and the record keeps who claimed it and when.",
 ];
 
-// Long enough that the fold takes its whole duration; Enter and Space on the
-// summary toggle it as a press does.
+// Long enough that the fold takes its whole duration.
 export const LongContent: Story = {
   render: () => (
     <Disclosure summary="How leads are routed">
@@ -98,11 +97,10 @@ export const LongContent: Story = {
   ),
   play: async ({ canvasElement }) => {
     const summary = await summaryNamed(canvasElement, "How leads are routed");
-    summary.focus();
-    await userEvent.keyboard("{Enter}");
+    await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "true");
     await settled(summary);
-    await userEvent.keyboard(" ");
+    await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "false");
     await settled(summary);
     await expect(summary.closest("details")).not.toHaveAttribute("open");

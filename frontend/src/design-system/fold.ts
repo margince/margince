@@ -54,12 +54,7 @@ export function useFold(
     if (!open) {
       return;
     }
-    const growing = element.getAnimations().filter(isHeight);
-    void Promise.allSettled(growing.map((each) => each.finished)).then(() => {
-      if (run.current === token) {
-        release(element);
-      }
-    });
+    grow(element, ends, () => run.current === token);
   }, [box, ends, open]);
   const { mounted } = usePresence({ open, element: box });
   useLayoutEffect(() => {
@@ -68,6 +63,37 @@ export function useFold(
     }
   }, [box, mounted]);
   return mounted;
+}
+
+// Content can arrive while the box grows, as a read that lands a frame later.
+// The open end follows it, and the box lets go once it has reached the content.
+function grow(element: HTMLElement, ends: FoldEnds, current: () => boolean) {
+  const target = () =>
+    element.style.setProperty("height", `${ends(element).open}px`);
+  const follow =
+    typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          if (current()) target();
+        })
+      : null;
+  for (const child of element.children) {
+    follow?.observe(child);
+  }
+  const settle = () => {
+    if (!current()) {
+      follow?.disconnect();
+      return;
+    }
+    target();
+    const moving = element.getAnimations().filter(isHeight);
+    if (moving.length > 0) {
+      void Promise.allSettled(moving.map((each) => each.finished)).then(settle);
+      return;
+    }
+    follow?.disconnect();
+    release(element);
+  };
+  settle();
 }
 
 function isHeight(animation: Animation): boolean {
