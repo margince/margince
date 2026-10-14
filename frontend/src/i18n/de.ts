@@ -10585,7 +10585,6 @@ export const de = {
   "agentUsage.counter.calls": "Aufrufe",
   "agentUsage.col.user": "Mitglied",
   "agentUsage.col.passports": "Passports",
-  "agentUsage.col.state": "Status",
   "agentUsage.state.ok": "Aktiv",
   "agentUsage.state.near": "Nahe an einer Grenze",
   "agentUsage.state.stopped": "Gestoppt",

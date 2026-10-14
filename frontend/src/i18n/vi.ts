@@ -10361,7 +10361,6 @@ export const vi = {
   "agentUsage.counter.calls": "Lệnh gọi",
   "agentUsage.col.user": "Thành viên",
   "agentUsage.col.passports": "Passport",
-  "agentUsage.col.state": "Trạng thái",
   "agentUsage.state.ok": "Đang hoạt động",
   "agentUsage.state.near": "Gần chạm giới hạn",
   "agentUsage.state.stopped": "Đã dừng",

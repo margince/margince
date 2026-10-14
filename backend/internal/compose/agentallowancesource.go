@@ -18,10 +18,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// agentAllowanceSource answers the meter with the allowances an admin saved.
-type agentAllowanceSource struct{ pool *pgxpool.Pool }
+// AgentAllowanceSource answers the meter with the allowances an admin saved.
+type AgentAllowanceSource struct{ pool *pgxpool.Pool }
 
-func (s agentAllowanceSource) Policy(ctx context.Context) (agentvolume.Policy, error) {
+// NewAgentAllowanceSource is the policy source cmd installs on the meter it
+// builds, so the admin's allowances bind every agent call.
+func NewAgentAllowanceSource(pool *pgxpool.Pool) AgentAllowanceSource {
+	return AgentAllowanceSource{pool: pool}
+}
+
+// Policy reads the allowances through identity's one machinery reader.
+func (s AgentAllowanceSource) Policy(ctx context.Context) (agentvolume.Policy, error) {
 	var policy agentvolume.Policy
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error

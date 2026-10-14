@@ -10694,7 +10694,6 @@ export const en = {
   "agentUsage.counter.calls": "Calls",
   "agentUsage.col.user": "User",
   "agentUsage.col.passports": "Passports",
-  "agentUsage.col.state": "State",
   "agentUsage.state.ok": "Working",
   "agentUsage.state.near": "Near a limit",
   "agentUsage.state.stopped": "Stopped",

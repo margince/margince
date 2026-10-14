@@ -175,7 +175,7 @@ func TestAWriteAllowanceSavedByAnAdminBindsTheAgent(t *testing.T) {
 	h := allowanceHandlers(t, e, wallClock(t))
 	at := clocktest.Now(t)
 	meter := agentvolume.NewWithClock(redistest.Client(t), agentvolume.Limits{}, agentvolume.DefaultWindow,
-		func() time.Time { return at }).WithPolicySource(agentAllowanceSource{pool: e.Pool})
+		func() time.Time { return at }).WithPolicySource(NewAgentAllowanceSource(e.Pool))
 	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:importer", PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 	})

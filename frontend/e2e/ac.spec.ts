@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { meFixture } from "../src/testing/mefixture";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
 import { anna, mockApi } from "./seed";
 import { openedAt, pageOverflow, textsOf } from "./waits";
@@ -1157,6 +1157,13 @@ test("AC-settings: the passport list is metadata-only and strikes revoked rows",
   // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
+  // A revoked passport can do nothing more, so it waits behind a toggle.
+  await expect(page.getByText("Alter Runner")).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: de["settings.passportsShowRevoked_one"].replace("{count}", "1"),
+    })
+    .click();
   const revoked = page.locator('[data-passport="pp-2"]');
   await expect(revoked.getByText("widerrufen")).toBeVisible();
   // Struck on the NAME rather than across the whole row: the row also carries
@@ -1235,9 +1242,7 @@ test("AC-book-public-409: a taken slot degrades honestly — no fabricated confi
       name: copy(de["scheduling.confirmAt"], { time: "12:00" }),
     })
     .click();
-  await expect(
-    page.getByText(de["common.duplicate.slotTaken"]),
-  ).toBeVisible();
+  await expect(page.getByText(de["common.duplicate.slotTaken"])).toBeVisible();
   await expect(page.getByText(de["scheduling.confirmed"])).toHaveCount(0);
 });
 
