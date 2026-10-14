@@ -493,6 +493,24 @@ describe("every line in a pane shares the pane's width", () => {
         </PanelBody>,
       ],
     ],
+    [
+      "a list nested in a disclosure with an action of a body",
+      [
+        <PanelBody key="a">One.</PanelBody>,
+        <PanelBody key="b">
+          <Disclosure
+            summary="Audit"
+            action={<button type="button">Export</button>}
+            open
+          >
+            <SettingList>
+              <SettingRow label="Renamed" control={<span>Today</span>} />
+              <SettingRow label="Added" control={<span>Monday</span>} />
+            </SettingList>
+          </Disclosure>
+        </PanelBody>,
+      ],
+    ],
   ])("%s", (_, children) => {
     const pane = renderShape(children);
     const lines = everyLine(pane);

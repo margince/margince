@@ -8,6 +8,7 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./atoms";
 import { Disclosure, DisclosureGroup } from "./disclosure";
 import { Panel, PanelBody, PanelIntro } from "./panel";
+import { SettingList, SettingRow } from "./settingrow";
 
 const meta = {
   title: "Components/Layout and structure/Disclosure",
@@ -233,4 +234,55 @@ export const WithActionInPanel: Story = {
     await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "true");
   },
+};
+
+// The verb keeps the summary's line, and the open body runs under it. A list
+// inside then bleeds to the pane's edges, as in a section without a verb.
+export const WithActionAndList: Story = {
+  render: () => (
+    <Panel title="Account">
+      <PanelBody>
+        <PanelIntro>Changes made to this account.</PanelIntro>
+        <Disclosure summary="Audit" action={<Button>Export</Button>} open>
+          <SettingList>
+            <SettingRow label="Renamed" control={<span>Today</span>} />
+            <SettingRow label="Added" control={<span>Monday</span>} />
+          </SettingList>
+        </Disclosure>
+      </PanelBody>
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const summary = await summaryNamed(canvasElement, "Audit");
+    await settled(summary);
+    const pane = canvasElement.querySelector(".panel");
+    const body = canvasElement.querySelector(".disclosure-body");
+    const action = canvasElement.querySelector(".disclosure-action");
+    const verb = within(canvasElement).getByRole("button", { name: "Export" });
+    const rows = canvasElement.querySelectorAll(".settingrow");
+    if (pane === null || body === null || action === null) {
+      throw new Error("the pane drew no section with a verb");
+    }
+    await expect(rows).toHaveLength(2);
+    const edges = pane.getBoundingClientRect();
+    for (const row of rows) {
+      const line = row.getBoundingClientRect();
+      await expect(Math.round(line.left - edges.left)).toBeLessThanOrEqual(1);
+      await expect(Math.round(edges.right - line.right)).toBeLessThanOrEqual(1);
+    }
+    const head = summary.getBoundingClientRect();
+    const button = verb.getBoundingClientRect();
+    const open = body.getBoundingClientRect();
+    await expect(Math.abs(button.top - head.top)).toBeLessThanOrEqual(1);
+    await expect(button.left).toBeGreaterThanOrEqual(head.right);
+    await expect(button.bottom).toBeLessThanOrEqual(open.top + 1);
+    await expect(
+      Math.abs(open.right - action.getBoundingClientRect().right),
+    ).toBeLessThanOrEqual(1);
+  },
+};
+export const WithActionAndListPhone: Story = {
+  ...WithActionAndList,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

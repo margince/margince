@@ -53,6 +53,12 @@
    disclosure that bleeds spans the pane with it. */
 .panel
   > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
   > .disclosure
   > .disclosure-body
   > .table-scroll {
@@ -67,12 +73,32 @@
   > .table
   > *
   > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
   > :first-child {
   padding-inline-start: var(--padPanel);
 }
 .panel > .table-scroll-bleed > .table > * > tr > :last-child,
 .panel
   > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
   > .disclosure
   > .disclosure-body
   > .table-scroll
@@ -1629,6 +1655,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
