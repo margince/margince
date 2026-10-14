@@ -34,9 +34,23 @@ TEST_CAP="${FE_TEST_FILE_LINE_CAP:-1000}"
 # and it cannot be tested against the real tree, where every case it must catch
 # would be a real failure. The defaults are the product's.
 ROOT="${FE_FILE_LENGTH_ROOT:-frontend/src}"
+# The build scripts take the same ceilings as the screens they build. They are
+# read by the same people, and a gate reading only the screens let one of them
+# reach a thousand lines unremarked.
+SCRIPTS_ROOT="${FE_FILE_LENGTH_SCRIPTS_ROOT:-frontend/scripts}"
 WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
 
-find "$ROOT" \( -name "*.ts" -o -name "*.tsx" \) \
+# A missing root is refused rather than walked past. `find` answers nothing for
+# a directory that is not there, and nothing is what a clean census looks like:
+# a renamed tree would report PASS over the half it could still see.
+for root in "$ROOT" "$SCRIPTS_ROOT"; do
+  if [ ! -d "$root" ]; then
+    echo "FAIL: fe-file-length — $root is not a directory, so this census would read short" >&2
+    exit 1
+  fi
+done
+
+find "$ROOT" "$SCRIPTS_ROOT" \( -name "*.ts" -o -name "*.tsx" -o -name "*.mjs" \) \
     ! -name "*.d.ts" \
     ! -path "$ROOT/api/public-events.ts" \
     ! -path "$ROOT/i18n/en.ts" \
@@ -59,11 +73,13 @@ BEGIN {
 # singular `fixture.ts` and a hyphenated `test-fixtures.ts`. A predicate that
 # knew only the dotted form would hand the other three the product cap, which
 # is a rule nobody wrote applied to files nobody meant.
+# The build scripts are written in plain ESM as well as TypeScript, and
+# fe-uat.test.mjs is a test by every reading but the extension.
 function istest(f) {
-  return f ~ /\.test\.tsx?$/ ||
-         f ~ /\.stories\.tsx?$/ ||
-         f ~ /\.testkit\.tsx?$/ ||
-         f ~ /(^|[\/.-])fixtures?\.tsx?$/
+  return f ~ /\.test\.(tsx?|mjs)$/ ||
+         f ~ /\.stories\.(tsx?|mjs)$/ ||
+         f ~ /\.testkit\.(tsx?|mjs)$/ ||
+         f ~ /(^|[\/.-])fixtures?\.(tsx?|mjs)$/
 }
 $2 == "total" { next }
 {
