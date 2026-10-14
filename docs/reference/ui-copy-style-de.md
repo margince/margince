@@ -4,10 +4,8 @@ German is translated from the English catalog beside it: `frontend/src/i18n/en.t
 for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
 `de.json` (for example `extensions/openchannel/frontend/i18n/en.json`).
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
-German adds or changes: address, grammar, mechanics, inclusive language and one
-German word per concept. It is the page the next German author reads, and the
-one a Vietnamese translator reads to know which German choices are intended;
-Vietnamese has its own page, [ui-copy-style-vi.md](ui-copy-style-vi.md).
+German adds or changes. Vietnamese has its own page,
+[ui-copy-style-vi.md](ui-copy-style-vi.md).
 
 Part of it is mechanical: [What the gate holds](#what-the-gate-holds) names
 the three tests that hold it. Everything else is the author's judgement, and a
@@ -113,7 +111,7 @@ English, rendered neutrally: "Wartet auf Antwort".
 | Statement | Impersonal; passive where the actor is the system | Der Link wird an die hinterlegte Adresse des Kontakts gesendet. |
 | Status | Adjective or past participle | Gesendet, Überfällig |
 | Success | Noun and past participle, no article, no period | Prognosekategorie geändert |
-| In progress | Passive or present with one ellipsis character | Wird gespeichert…, Die Website von {name} wird geladen… |
+| In progress | Passive or present with one ellipsis character | Wird gespeichert…, Die Website von {name} wird analysiert… |
 | Error | What could not happen, then the one action | Die Aufgabe konnte nicht abgeschlossen werden. Bitte versuche es erneut. |
 | Warning | What will happen, then what it costs | Beim Entfernen dieser Phase wandern 12 Deals in die Phase „Qualifizierung“. |
 | Confirmation | Title asks and names the object; primary button repeats verb and object; secondary is Abbrechen | Phase löschen? / Phase löschen |
@@ -132,10 +130,12 @@ und bearbeite" would put both forms in one sentence.
   ("Der Kalender hat die Einladung nicht angenommen"). The fact that opens an
   error message may be a short fragment: "Sitzung abgelaufen.", "Passwort
   abgelehnt.", "Übernahme fehlgeschlagen."
-- **A failure says what could not happen.** A message says "konnte nicht …
-  werden" or "… war nicht möglich": "Die wöchentlichen Erkenntnisse konnten
-  nicht erstellt werden." A short title, toast or status may say "wurde nicht"
-  or drop the verb: "Passwort wurde nicht geändert".
+- **A failure says what could not happen.** A standalone message says
+  "konnte nicht … werden" or "… war nicht möglich": "Die wöchentlichen
+  Erkenntnisse konnten nicht erstellt werden." A short title, toast or status
+  may say "wurde nicht" or drop the verb: "Passwort wurde nicht geändert". A
+  list lead-in or label with no subject stays a fragment: "Nicht rückgängig
+  gemacht und unverändert belassen:".
 - **Result first, reason after**, joined with "da": "Die heutigen Termine
   können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist."
 - **One fact per sentence.** No semicolons: split the sentence. Repeat the noun
@@ -167,7 +167,9 @@ the English opens lowercase ("Über Partner" for "via partner").
   turn to an admin or the Systemadministration. "Bitte lade die Seite neu.";
   the Sie families write "Bitte versuchen Sie es erneut." A step of the normal
   flow goes without it ("Melde dich erneut an, um fortzufahren."), and so does
-  a button, label or title. Never twice in one value.
+  a button, label or title. Never twice in one value, and never placed by
+  splitting a sentence: a step joined with "und" stays one sentence without it
+  ("Prüfe die Verbindung und versuche es erneut.").
 - **No abbreviations**: z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl.,
   ca., Tg. Write them out (zum Beispiel, das heißt, gegebenenfalls, zu,
   inklusive, etwa) or cut them; "beziehungsweise" is usually "oder".
@@ -229,19 +231,18 @@ Lizenz-Token).
 
 The English names of product areas stay English: Analytics (navigation),
 Insights (navigation group), Sales (settings group) and Capture, as the
-settings tab "Capture-Regeln" with no E-Mail prefix. Setup and Crawling stay
-where the English uses them: "Das Crawling ist abgeschlossen."
-Everything else is German: Einstellungen, Suche, hochladen, herunterladen,
+settings tab "Capture-Regeln" with no E-Mail prefix. Home, Lane and Snapshot
+stay too (see the Vocabulary table). Everything else is German: Einstellungen, Suche, hochladen, herunterladen,
 Termin, Aufgabe, Bericht, speichern.
 
 ## Compounds and officialese
 
-A compound of three or more noun parts, or a coined or opaque one, is resolved
-into a phrase: "Folgemaßnahmen von Terminen", "Termine ohne Protokoll". A
-fixed term of the domain stays whole: Gewinnwahrscheinlichkeit,
-Aufbewahrungsrichtlinie, Datenschutzbehörde. So does a transparent two-part
-compound, even one a corpus does not list: Berichtsname, Importergebnis. A
-retired word inside a compound is replaced too: Unternehmensprofil, never
+Only a coined or opaque compound, or one of three or more noun parts, is
+resolved into a phrase: "Folgemaßnahmen von Terminen", "Termine ohne
+Protokoll". An established everyday compound stays whole (Kundenarbeit,
+Teammitgliedschaft, Aufrufzahlen), and so does a fixed term of the domain
+(Gewinnwahrscheinlichkeit, Datenschutzbehörde) or a transparent two-part
+compound (Berichtsname, Importergebnis). A retired word inside a compound is replaced too: Unternehmensprofil, never
 Firmenprofil; Termindatum, never Meetingdatum. No gate measures compounds,
 because a length or noun count flags good words with the bad ones.
 
@@ -275,7 +276,7 @@ gives, because it is ordinary German in another sense.
 | Sales object | Deal, Deals; Chance only as the lifecycle stage of a company | `Opportunity`, `Opportunities`, `Verkaufschance`, `Verkaufschancen`, Geschäft for a deal |
 | Ordered stages | Pipeline | `Trichter`, `Funnel` |
 | A pipeline step | Phase (Deal-Phase, Pipeline-Phase) | Stufe for a pipeline step (Modellstufe is another concept) |
-| Forecast object | Prognose, Prognosen (Prognosekategorie, Prognosesicherheit); the categories Commit and Best Case stay English | `Forecast`, `Forecasts`, which the gate also finds in a hyphenated compound such as Forecast-Kategorie |
+| Forecast object | Prognose, Prognosen (Prognosekategorie, Prognosesicherheit); the categories Commit and Best Case stay English; plain negation for omitted: "nicht in der Prognose", not "in der Prognose ausgelassen" | `Forecast`, `Forecasts`, which the gate also finds in a hyphenated compound such as Forecast-Kategorie |
 | Manager's forecast number | Einschätzung | Call; Commit for this number (Commit is the per-deal category) |
 | The reader's queue | Worklist | `Arbeitsliste`; Warteschlange or Posteingang for the Worklist (the background job queue is a Warteschlange) |
 | Daily digest | Morgenbericht | `Briefing`, `Tagesbericht`, Digest |
@@ -301,7 +302,7 @@ gives, because it is ordinary German in another sense.
 | Buyer-facing deal page | Deal Room | `Deal-Room`; Portal for the Deal Room (a vendor's portal keeps its name: Entra-Portal) |
 | The mail thread of a record | Thread | `Spine`, Konversation |
 | Import of mailbox history | Import des Postfachverlaufs | `Backread` |
-| Full read of a web page | Seite vollständig lesen | `Deep Read` |
+| The AI reading a company website | analysieren, Analyse (Website-Analyse, "Website analysieren"); fetching one page is abrufen | `Deep Read`; lesen, laden or crawlen for this read |
 | Capture intake step | Eingangsprüfung | `Zulassungsprüfung` |
 | Audit log | Audit-Log | `Audit-Trail`, `Prüfprotokoll` |
 | Artificial intelligence | KI (KI-generiert, KI-Agent) | `AI` |
@@ -312,11 +313,16 @@ gives, because it is ordinary German in another sense.
 | Turn a setting on or off | aktivieren, deaktivieren; aktiviert, deaktiviert | einschalten, ausschalten, eingeschaltet, ausgeschaltet for a setting |
 | Pick from a list | auswählen, ausgewählt ("Wählen Sie aus, welche E-Mails Sie erhalten möchten") | anhaken, angehakt |
 | A job waiting its turn | geplant ("Zusammenfassung von {name} geplant"); the background queue keeps the noun Warteschlange | eingereiht |
-| Done by a person | manuell ("manuell eingeben") | von Hand |
+| Done without AI or automation | selbst ("Die E-Mail lässt sich weiterhin selbst schreiben"); manuell only for data entered by hand against an import or sync ("manuell eingeben") | von Hand; manuell against AI writing |
 | Statements a user confirmed | Angaben ("{count} bestätigte Angaben") | Aussagen for confirmed statements |
-| A job title | Stellenbezeichnung | Position for a job title |
+| A person's job title | Jobtitel | Stellenbezeichnung, Beruf, Position for a job title |
 | A reversing ledger entry | Gegenposten | `Gegenbuchung` |
 | Send | senden, gesendet | schicken, geschickt for sending |
+| In-app notification, its centre and settings | Benachrichtigung, Benachrichtigungen (Benachrichtigungs-E-Mail, Systembenachrichtigungen) | Meldung for a notification (a Fehlermeldung or a news Meldung stays) |
+| The in-app Home area | Home (nav label, title); "die Home-Seite" in running text | Startseite for the in-app page (a public website keeps its Startseite) |
+| An AI routing lane | Lane, Lanes (die Lane) | Strecke |
+| A saved report snapshot | Snapshot, Snapshots (der Snapshot) | Stand for a snapshot ("Stand {when}" for "as of" stays) |
+| The host of a booked meeting | die organisierende Person; the label "Organisiert von" | Ansprechperson, einladende Person, Gastgeber for the host |
 | A kind of email or item | Typ ("E-Mail-Typ") | Art for a kind of email or item |
 | A source no human runs | automatisiert ("eine automatisierte Quelle") | automatisch for a source |
 | A record named in running text | Eintrag ("Partnereintrag"); Datensatz stays the record noun in labels | Datensatz where it reads technical in a sentence, judged per key |
@@ -379,21 +385,15 @@ fails a key that names the record type and does not say Kontakt. It fails the
 whole word Person or Personen in a key outside its German human-sense list, and
 a listed key that no longer says it.
 
-None of them can see the rest of this page. These are the author's and the
-reviewer's judgement:
-
-- word order, tone, sentence case, articles, periods, slot grammar and the
-  imperative form
-- idiom, fragment or sentence, the failure shape, semicolons, the order of
-  result and reason, and whether a "Bitte" follows a system fault
-- compounds, and officialese other than the retired words
-- claim strength
-- du used where nobody needed addressing, and a neutral value beside a du value
-  on one surface
-- an edge space the English value does not have
-- number format and ranges, spelled dates and compact units
-- gendered singulars other than the listed nouns
-- a retired word inside a closed compound (Firmenkontingent), and the plain
-  words of the Never column
-- mein or mir used as the product's voice
-- length ceilings and message shapes
+None of them can see the rest of this page, which the author and the reviewer
+judge. That covers word order, tone, sentence case, articles, periods, slot
+grammar and the imperative form. It covers idiom, fragment or sentence, the
+failure shape, semicolons, the order of result and reason, and whether a
+"Bitte" follows a system fault. It covers compounds, officialese other than the
+retired words, and claim strength. It covers du where nobody needed
+addressing or beside a neutral value on one surface, and an edge space the
+English value does not have. It covers number format, ranges, spelled dates and
+compact units, and gendered singulars other than the listed nouns. It covers a
+retired word inside a closed compound (Firmenkontingent), the plain words of
+the Never column, mein or mir as the product's voice, and length ceilings and
+message shapes.

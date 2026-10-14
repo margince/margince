@@ -242,7 +242,7 @@ function accountTrigger(page: Page) {
 // Home owns the work queue; the queue opens in a drawer rather than occupying
 // a second sidebar destination.
 const primaryDestinations = [
-  "Startseite",
+  "Home",
   "Kontakte",
   "Unternehmen",
   "Leads",
@@ -1265,7 +1265,7 @@ test("AC-onboarding-1: onboarding is the rail-less conversational shell", async 
   await expect(page.locator(".stepper")).toHaveCount(0);
   await expect(page.getByLabel("Website-Adresse")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Website lesen" }),
+    page.getByRole("button", { name: "Website analysieren" }),
   ).toBeVisible();
   // The thread belongs to the working view, not the gate.
   await expect(

@@ -161,6 +161,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
+    "scheduling.guestRecovery",
+    "scheduling.deliveryUnknown",
+    "scheduling.personalGuest",
+    "scheduling.unavailable",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "settings.group.people",

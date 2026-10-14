@@ -5,7 +5,7 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de = {
-  "reporting.latestSnapshot": "Letzter Stand",
+  "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
   "reporting.targetExceeded": "{amount} über dem Ziel",
@@ -18,7 +18,7 @@ export const de = {
   "reporting.savePaused": "Pausiert speichern",
   "reporting.updateSchedule": "Zeitplan aktualisieren",
   "reporting.scheduleResult":
-    "Stände des vorherigen abgeschlossenen Zeitraums werden hier gespeichert.",
+    "Snapshots des vorherigen abgeschlossenen Zeitraums werden hier gespeichert.",
   "reporting.useCurrentSettings": "Aktuelle Berichtseinstellungen verwenden",
   "reporting.pinnedSettings": "Zuvor gespeicherte Einstellungen",
   "reporting.unallocated": "Nicht zugewiesen",
@@ -49,7 +49,7 @@ export const de = {
   "reporting.netChange": "Nettoänderung: {amount}",
   "reporting.change": "Änderung",
   "reporting.coverageAction":
-    "Für Quellen, die nicht geprüft werden konnten, muss der Zugriff wiederhergestellt werden. Bitte wende dich dazu an das für die Verbindung zuständige Teammitglied oder an einen Admin.",
+    "Bitte wende dich bei Quellen, die nicht geprüft werden konnten, an das für die Verbindung zuständige Teammitglied oder an einen Admin, damit der Zugriff wiederhergestellt wird.",
   "reporting.currentPipeline": "Offene Pipeline heute",
   "reporting.retiredHelp":
     "Stillgelegte Ziele bleiben im Verlauf. Bearbeite dieses Ziel und aktiviere es wieder, um dieselbe Zuweisung erneut zu nutzen.",
@@ -80,22 +80,22 @@ export const de = {
   "reporting.wholeCount": "Gib eine ganze Anzahl ein.",
   "reporting.retired": "Ziel stillgelegt",
   "reporting.comparisonHelp":
-    "Wähle benachbarte abgeschlossene Zeiträume. Stände desselben Zeitraums zeigen keinen Periodenvergleich.",
-  "reporting.loadOlder": "Ältere Stände laden",
+    "Wähle benachbarte abgeschlossene Zeiträume. Snapshots desselben Zeitraums zeigen keinen Periodenvergleich.",
+  "reporting.loadOlder": "Ältere Snapshots laden",
   "reporting.historicalBenchmark": "Historischer Vergleichswert",
   "reporting.retentionSettings": "Aufbewahrung öffnen",
   "reporting.scheduleSetup":
-    "Aktiviere die Aufbewahrung gespeicherter Stände, um Berichte zu planen. Du kannst diesen Zeitplan pausiert speichern.",
-  "reporting.shareSnapshot": "Stand zum Teilen",
+    "Aktiviere die Aufbewahrung von Snapshots, um Berichte zu planen. Du kannst diesen Zeitplan pausiert speichern.",
+  "reporting.shareSnapshot": "Snapshot zum Teilen",
   "reporting.capturePending":
-    "Stand geplant. Der Stand erscheint hier, sobald er bereit ist.",
+    "Der Snapshot wurde in die Warteschlange eingereiht. Er wird hier angezeigt, sobald er fertig ist.",
   "reporting.createReport": "Aus Performance erstellen",
   "reporting.newCustomReport": "Neuer eigener Bericht",
   "reporting.observations_one": "Beobachtung: {count}",
   "reporting.observations_other": "Beobachtungen: {count}",
   "reporting.observationsUnavailable": "Stichprobengröße nicht verfügbar",
   "reporting.earlierDefinition":
-    "Dieser Stand verwendet eine frühere Kennzahlendefinition. Die gespeicherten Werte wurden nicht neu berechnet.",
+    "Dieser Snapshot verwendet eine frühere Kennzahlendefinition. Die gespeicherten Werte wurden nicht neu berechnet.",
   "reporting.definition": "Berechnung anzeigen",
   "reporting.viewRecords": "Datensätze anzeigen",
   "reporting.copyName": "Kopie von {name}",
@@ -134,12 +134,12 @@ export const de = {
   "reporting.revision": "Revision {revision}",
   "reporting.duplicate": "Privat duplizieren",
   "reporting.archiveConfirm":
-    "Diesen Bericht archivieren und seine Zeitpläne pausieren? Gespeicherte Stände bleiben verfügbar.",
+    "Diesen Bericht archivieren und seine Zeitpläne pausieren? Gespeicherte Snapshots bleiben verfügbar.",
   "reporting.archive": "Bericht archivieren",
   "reporting.schedule": "Zeitplan",
-  "reporting.editions": "Gespeicherte Stände",
+  "reporting.editions": "Gespeicherte Snapshots",
   "reporting.executions": "Ausführungsverlauf",
-  "reporting.freeze": "Stand speichern",
+  "reporting.freeze": "Snapshot speichern",
   "reporting.all": "Alle Berichte",
   "reporting.scheduled": "Geplant",
   "reporting.frequency": "Häufigkeit",
@@ -151,9 +151,9 @@ export const de = {
   "reporting.nextRun": "Nächste Ausführung: {at}",
   "reporting.pause": "Pausiert",
   "reporting.resume": "Fortsetzen",
-  "reporting.compare": "Stände vergleichen",
-  "reporting.left": "Früherer Stand",
-  "reporting.right": "Späterer Stand",
+  "reporting.compare": "Snapshots vergleichen",
+  "reporting.left": "Früherer Snapshot",
+  "reporting.right": "Späterer Snapshot",
   "reporting.reason": "Begründung",
   "reporting.value": "Ziel",
   "reporting.newTarget": "Ziel festlegen",
@@ -162,7 +162,7 @@ export const de = {
   "reporting.down": "Nach unten",
   "reporting.periodStart": "Erster Tag des Zielzeitraums",
   "reporting.noComparison":
-    "Wähle zwei Stände mit gleichem Umfang aus aufeinanderfolgenden abgeschlossenen Zeiträumen.",
+    "Wähle zwei Snapshots mit gleichem Umfang aus aufeinanderfolgenden abgeschlossenen Zeiträumen.",
   "reporting.noSource": "Quelldetails sind nicht verfügbar.",
   "reporting.framework": "Berichtseinstellungen",
   "reporting.template": "Standardansicht",
@@ -171,7 +171,7 @@ export const de = {
   "reporting.qualification": "Qualifizierungsphasen",
   "reporting.publish": "Berichtseinstellungen speichern",
   "reporting.prospective":
-    "Änderungen gelten für zukünftige Ereignisse. Gespeicherte Stände behalten ihre Einstellungen.",
+    "Änderungen gelten für zukünftige Ereignisse. Gespeicherte Snapshots behalten ihre Einstellungen.",
   "reporting.performance": "Leistung",
   "reporting.reports": "Gespeicherte Berichte",
   "reporting.targets": "Ziele",
@@ -242,7 +242,7 @@ export const de = {
   "reporting.managerCall": "Einschätzung der Führungskraft",
   "reporting.independent":
     "Jede Zahl gilt für sich. Der Übergang zwischen Phasen wird nicht gemessen.",
-  "reporting.frozen": "Gespeicherter Stand",
+  "reporting.frozen": "Gespeicherter Snapshot",
   "reporting.redacted": "Aus Datenschutzgründen geschwärzt",
   "reporting.withheld":
     "Einige Beiträge sind aufgrund deiner aktuellen Berechtigungen ausgeblendet.",
@@ -336,13 +336,13 @@ export const de = {
     "Dein bisheriger Termin bleibt reserviert, bis der Kalender die Änderung bestätigt.",
   "scheduling.saveTime": "Neue Zeit bestätigen",
   "scheduling.hostRecovery":
-    "Verbinde deinen Kalender bei Bedarf neu. Bitte versuche es erneut. Solange die Zustellung unklar ist, bleibt die Zeit reserviert.",
+    "Verbinde deinen Kalender bei Bedarf neu und versuche es erneut. Solange die Zustellung unklar ist, bleibt die Zeit reserviert.",
   "scheduling.guestRecovery":
-    "Deine Ansprechperson muss diese Einladung prüfen. Deine Buchungsanfrage ist gespeichert.",
+    "Die organisierende Person muss diese Einladung prüfen. Deine Buchungsanfrage ist gespeichert.",
   "scheduling.deliveryUnknown":
-    "Der Server hat keine Einladung zurückgegeben. Frage bei deiner Ansprechperson nach, bevor du es erneut versuchst.",
+    "Der Server hat keine Einladung zurückgegeben. Frage bei der organisierenden Person nach, bevor du es erneut versuchst.",
   "scheduling.personalGuest":
-    "Diese Einladung ist für die Empfangsadresse dieses Links bestimmt. Der Termin verwendet die E-Mail-Adresse, die deine Ansprechperson gewählt hat.",
+    "Diese Einladung richtet sich an den Empfänger des Links. Für die Besprechung wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
   "scheduling.proposalGreeting": "Hallo,",
   "scheduling.proposalChoose":
     "Wähle hier eine Zeit oder finde einen anderen Termin:",
@@ -397,11 +397,11 @@ export const de = {
   "scheduling.providerChanged":
     "Dein gespeicherter Kalenderanbieter ist nicht verfügbar. Beim Speichern wird der hier angezeigte verbundene Kalender verwendet.",
   "scheduling.windowHorizon":
-    "Dieses Datum liegt außerhalb des Buchungszeitraums der einladenden Person. Wähle ein früheres Datum.",
+    "Dieses Datum liegt außerhalb des Buchungszeitraums der organisierenden Person. Wähle ein früheres Datum.",
   "scheduling.windowNotice":
     "Dieses Datum liegt vor der erforderlichen Vorlaufzeit. Wähle ein späteres Datum.",
   "scheduling.windowLimits":
-    "Die Vorlaufzeit lässt keine Zeit im Buchungszeitraum frei. Die einladende Person muss die Termineinstellungen anpassen.",
+    "Die Vorlaufzeit lässt keine Zeit im Buchungszeitraum frei. Die organisierende Person muss die Termineinstellungen anpassen.",
   "scheduling.openSettings": "Termineinstellungen öffnen",
   "scheduling.setupInSettings":
     "Richte Kalender und Verfügbarkeit unter Einstellungen → Termine ein. Dieser Entwurf bleibt geöffnet.",
@@ -497,7 +497,7 @@ export const de = {
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
   "scheduling.unavailable":
-    "Diese Buchungsseite ist nicht verfügbar. Wende dich an deine Ansprechperson.",
+    "Diese Buchungsseite ist nicht verfügbar. Wende dich an die organisierende Person.",
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du externe Buchungslinks teilst.",
   "scheduling.new": "Termin buchen",
@@ -576,7 +576,7 @@ export const de = {
     "Ab 80 % wechselt das Routing auf niedrigere Modellstufen. Das Modell kann dasselbe bleiben. Ab 100 % wartet KI-Arbeit im Hintergrund, und interaktive KI nutzt die niedrigste Modellstufe. Die Suchindexierung läuft weiter und zählt zur Nutzung.",
   "aiAdmin.saved": "Kontingent gespeichert",
   "aiAdmin.recovery":
-    "Berechtigte Aufträge für Website-Lesevorgänge, Unternehmensscans und den Aufbau von Stilprofilen werden beim nächsten Abgleich ausführbar, in der Regel innerhalb einer Minute. Ob die Aufträge abgeschlossen werden, hängt von der Worker-Kapazität, den aktuellen Berechtigungen und der Verfügbarkeit des Anbieters ab. Andere Hintergrundläufe behalten ihren normalen Zeitplan.",
+    "Berechtigte Aufträge für Website-Analysen, Unternehmensscans und den Aufbau von Stilprofilen werden beim nächsten Abgleich ausführbar, in der Regel innerhalb einer Minute. Ob die Aufträge abgeschlossen werden, hängt von der Worker-Kapazität, den aktuellen Berechtigungen und der Verfügbarkeit des Anbieters ab. Andere Hintergrundläufe behalten ihren normalen Zeitplan.",
   "aiAdmin.edit": "Kontingent bearbeiten",
   "aiAdmin.perUser": "Tokens pro vollem Platz und Monat",
   "aiAdmin.range": "Ganze Tokens, von 1 bis 1.000.000.000.000.",
@@ -597,12 +597,12 @@ export const de = {
     "Nur Nutzende mit Leserecht für die KI-Diagnose und für das KI-Kontingent sehen, welche Funktionen gerade aktiv sind.",
   "aiAdmin.save": "Kontingent speichern",
   "aiAdmin.cancel": "Abbrechen",
-  "aiAdmin.website": "Website-Lesevorgänge",
+  "aiAdmin.website": "Website-Analysen",
   "aiAdmin.scans": "Unternehmensscans",
   "aiAdmin.voice": "Aufbau von Stilprofilen",
   "aiAdmin.waiting": "Erfasste Arbeit, die auf das Kontingent wartet",
   "aiAdmin.coverage":
-    "Die Zahlen umfassen nur dauerhaft gespeicherte Aufträge für Website-Lesevorgänge, Unternehmensscans und den Aufbau von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
+    "Die Zahlen umfassen nur dauerhaft gespeicherte Aufträge für Website-Analysen, Unternehmensscans und den Aufbau von Stilprofilen. Nicht jeder geplante KI-Lauf wird gezählt, und die Zahlen garantieren nicht, dass eine Anfrage noch ausgeführt werden darf.",
   "aiAdmin.unavailable": "Nicht verfügbar",
   "aiAdmin.providerWaiting":
     "Wartet auf den KI-Anbieter: {waiting}. Die Arbeit läuft von selbst weiter, sobald der Anbieter antwortet.",
@@ -685,7 +685,7 @@ export const de = {
     "{count} Deals ohne Preis · nicht enthalten",
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wöchentliche Zusagen",
-  "brief.coverage.source.awaiting_reply": "Nachfassen",
+  "brief.coverage.source.awaiting_reply": "Folgeaufgaben",
   "brief.coverage.source.meeting_follow_up": "Folgemaßnahmen von Terminen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
@@ -861,7 +861,7 @@ export const de = {
   "systemJob.alias_discovery": "Erkennung von E-Mail-Adressen",
   "systemJob.approval_expiry": "Ablauf von Freigaben",
   "systemJob.approval_notice_retract": "Rücknahme von Freigabehinweisen",
-  "systemJob.approval_notify": "Meldung zu Freigaben",
+  "systemJob.approval_notify": "Freigabebenachrichtigung",
   "systemJob.assign_owner_release": "Freigabe der Zuständigkeit",
   "systemJob.assurance": "Prognoseprüfung",
   "systemJob.audience_rescope": "Aktualisierung der Zielgruppe",
@@ -918,8 +918,8 @@ export const de = {
   "systemJob.meeting_delivery": "Versand von Kalendereinladungen",
   "systemJob.merge": "Zusammenführung von Datensätzen",
   "systemJob.notice_case_open": "Aufnahme von Datenschutzanfragen",
-  "systemJob.notification_digest": "Zusammenfassung der Meldungen",
-  "systemJob.notification_mail": "E-Mail zu Meldungen",
+  "systemJob.notification_digest": "Benachrichtigungsübersicht",
+  "systemJob.notification_mail": "Benachrichtigungs-E-Mail",
   "systemJob.owed_verdict": "Prüfung offener Antworten",
   "systemJob.own_sent_mail_repair": "Korrektur gesendeter E-Mails",
   "systemJob.participant_backfill": "Ergänzung der Teilnehmenden von E-Mails",
@@ -1133,7 +1133,7 @@ export const de = {
   "history.field.submission_id": "Einreichung",
   "history.field.suppression_kind": "Typ der Sperre",
   "history.field.target_end_date": "Geplantes Ende",
-  "history.field.title": "Stellenbezeichnung",
+  "history.field.title": "Jobtitel",
   "history.field.wait_until": "Wartet bis",
   "history.field.commercial_motion": "Deal-Typ",
   "history.field.priority": "Priorität",
@@ -1147,7 +1147,7 @@ export const de = {
   "autonomy.auto": "Automatisch",
   "autonomy.confirm": "Zuerst bestätigen",
 
-  "nav.brief": "Startseite",
+  "nav.brief": "Home",
   "nav.contacts": "Kontakte",
   "nav.companies": "Unternehmen",
   "nav.leads": "Leads",
@@ -1166,7 +1166,7 @@ export const de = {
   "shell.railAria": "Hauptnavigation",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
-  "shell.companyLogoAria": "Startseite von {company}, läuft mit Margince",
+  "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
   "shell.poweredByPrefix": "Läuft mit",
   "shell.beta": "Beta",
@@ -2335,7 +2335,7 @@ export const de = {
   "co.dossier.unavailable":
     "Der Überblick konnte nicht geladen werden. Der Unternehmensdatensatz ist unverändert.",
   "co.dossier.empty":
-    "Zu diesem Unternehmen ist noch nichts erfasst. Lies die Website des Unternehmens oder vervollständige das Profil unten.",
+    "Zu diesem Unternehmen ist noch nichts erfasst. Analysiere die Website des Unternehmens oder vervollständige das Profil unten.",
   "co.dossier.stale": "Zuletzt vor über einem Monat gelesen",
   "co.dossier.rewrite": "Neu erzeugen",
   "co.dossier.rewriting": "Wird neu erzeugt…",
@@ -2352,7 +2352,7 @@ export const de = {
   "co.evidence.verifiedAt": "Von einer Person bestätigt am {when}",
   "co.evidence.confidence": "Konfidenz des Modells {percent} %",
   "co.evidence.gaps": "Nicht erfasst: {fields}.",
-  "co.evidence.kind.site_read": "Von der Unternehmenswebsite gelesen",
+  "co.evidence.kind.site_read": "Aus der Analyse der Unternehmenswebsite",
   "co.evidence.kind.connector": "Aus einem verbundenen System",
   "co.evidence.kind.human": "Von einer Person eingegeben",
   "co.evidence.kind.migration": "Importiert",
@@ -2386,7 +2386,7 @@ export const de = {
   "approval.kind.volume_release": "Agent weiterarbeiten lassen",
   "approval.kind.coldstart": "Neues Unternehmen ergänzen",
   "approval.kind.enrich": "Aus dem Web anreichern",
-  "approval.kind.deepread": "Unternehmenswebsite lesen",
+  "approval.kind.deepread": "Unternehmenswebsite analysieren",
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
@@ -2406,7 +2406,7 @@ export const de = {
   "approval.kind.advance_project_phase": "Projektphase voranbringen",
   "approval.kind.assign_owner": "Zuständigkeit zuweisen",
   "approval.kind.commit_import": "Import übernehmen",
-  "approval.kind.emit_flow_event": "Schritt einer Automatisierung erfassen",
+  "approval.kind.emit_flow_event": "Automatisierungsschritt erfassen",
   "approval.kind.relink_activity": "Aktivität neu zuordnen",
   "approval.kind.relink_thread": "Thread neu zuordnen",
   "approval.kind.relink_activities": "Aktivitäten neu zuordnen",
@@ -2432,13 +2432,13 @@ export const de = {
   "approval.field.email": "E-Mail",
   "approval.field.domain": "Domain",
   "approval.field.company": "Unternehmen",
-  "approval.field.title": "Stellenbezeichnung",
+  "approval.field.title": "Jobtitel",
   "approval.field.leadNameNow": "Aktueller Name",
   "approval.field.capturedName": "Name in der Nachricht",
   "approval.field.leadCompanyNow": "Aktuelles Unternehmen",
   "approval.field.capturedCompany": "Unternehmen in der Nachricht",
-  "approval.field.leadTitleNow": "Aktuelle Stellenbezeichnung",
-  "approval.field.capturedTitle": "Stellenbezeichnung in der Nachricht",
+  "approval.field.leadTitleNow": "Aktueller Jobtitel",
+  "approval.field.capturedTitle": "Jobtitel in der Nachricht",
   "approval.field.phone": "Telefon",
   "approval.field.url": "Website",
   "approval.field.address": "Adresse",
@@ -2874,10 +2874,10 @@ export const de = {
   "co.tech.services": "Dienste",
   "co.tech.hosting": "Hosting",
   "co.tech.empty":
-    "Noch keine technischen Daten. Die Daten werden automatisch ergänzt und aktualisiert, sobald die Website des Unternehmens gelesen wird.",
+    "Noch keine technischen Daten. Die Daten werden automatisch ergänzt und aktualisiert, sobald die Website des Unternehmens analysiert wird.",
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet. Das vorherige Ergebnis ist unverändert.",
-  "co.tech.laneRefused": "Die Website hat das Lesen blockiert.",
+  "co.tech.laneRefused": "Die Website hat die Analyse blockiert.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Zertifikate",
   "co.tech.lane.homepage": "Startseite",
@@ -2885,7 +2885,7 @@ export const de = {
   "co.factField.quantified_outcome": "Ergebnis",
   "co.facts.title": "Fakten zum Unternehmen",
   "co.facts.empty":
-    "Noch keine Fakten. Lies die Website oder ergänze, was du weißt.",
+    "Noch keine Fakten. Analysiere die Website oder ergänze, was du weißt.",
   "co.facts.add": "Fakt hinzufügen",
   "co.facts.addField": "Typ des Fakts",
   "co.facts.addValue": "Wert",
@@ -2897,7 +2897,7 @@ export const de = {
   "co.facts.removeTitle": "Diesen Fakt entfernen?",
   "co.facts.removeConfirm": "Entfernen",
   "co.facts.removeAsk":
-    "{field} ist als „{value}“ erfasst. Nach dem Entfernen gilt das nicht mehr als Fakt über das Unternehmen. Wird die Website später erneut gelesen, kann der Fakt wieder hinzukommen.",
+    "{field} ist als „{value}“ erfasst. Nach dem Entfernen gilt das nicht mehr als Fakt über das Unternehmen. Wird die Website später erneut analysiert, kann der Fakt wieder hinzukommen.",
   "co.facts.showAll": "Alle {count} anzeigen",
   "co.facts.showLess": "Weniger anzeigen",
   "co.project.new": "Neues Projekt",
@@ -3159,7 +3159,7 @@ export const de = {
     "Einen Grund mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "followUpSettings.title": "Nachfassen",
   "followUpSettings.sub":
-    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Startseite des sendenden Teammitglieds erscheint.",
+    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Home-Seite des sendenden Teammitglieds erscheint.",
   "followUpSettings.days": "Erinnern nach (Tagen)",
   "followUpSettings.daysHint":
     "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor das sendende Teammitglied ans Nachfassen erinnert wird, 1 bis 30.",
@@ -3286,9 +3286,9 @@ export const de = {
     "Eine Antwort oder ein Termin hebt den Score am stärksten.",
   "lead.shortfall.noSource": "Keine Quelle hinterlegt.",
   "lead.shortfall.sourcePenalised": "Die Quelle „{source}“ senkt den Score.",
-  "lead.shortfall.noTitle": "Keine Stellenbezeichnung hinterlegt.",
+  "lead.shortfall.noTitle": "Kein Jobtitel hinterlegt.",
   "lead.shortfall.titleNotSenior":
-    "„{title}“ ist keine Führungsposition, die das Modell erkennt.",
+    "„{title}“ ist kein Jobtitel einer Führungskraft, den das Modell erkennt.",
   "lead.shortfall.sourceNoIntent":
     "Die Quelle „{source}“ zeigt für sich allein kein Kaufinteresse an.",
   "lead.scoreNotStoredYet":
@@ -3301,8 +3301,7 @@ export const de = {
   "lead.scoreDecayed": "{base}, halbiert alle 14 Tage",
   "lead.scoreSources": "Aktivitäten: {count}",
   "lead.scoreReconciles": "Summe {raw}, gerundet auf {rounded}, Score {score}",
-  "lead.factor.decision_maker_title":
-    "Entscheidungsbefugnis laut Stellenbezeichnung",
+  "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
   "lead.factor.high_intent_source": "Quelle mit hohem Kaufinteresse",
   "lead.factor.low_intent_source": "Quelle mit geringem Kaufinteresse",
   "lead.factor.reply": "Lead hat geantwortet",
@@ -3501,7 +3500,7 @@ export const de = {
   "deal.forecast.commit": "Commit",
   "deal.forecast.bestCase": "Best Case",
   "deal.forecast.pipeline": "Pipeline",
-  "deal.forecast.omitted": "in der Prognose ausgelassen",
+  "deal.forecast.omitted": "nicht in der Prognose",
   "deal.pulse.yourMove": "Deine Antwort ist fällig.",
   "deal.pulse.nothingFlagged": "Keine Antwort fällig.",
   "deal.pulse.nothingFlaggedWhy":
@@ -3949,7 +3948,7 @@ export const de = {
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Zusagen dieser Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
-  "brief.view.label": "Ansicht der Startseite",
+  "brief.view.label": "Home-Ansicht",
   "brief.view.morning": "Morgen",
   "brief.view.weekly": "Woche",
   "brief.scope.label": "Wessen Morgenbericht",
@@ -4212,9 +4211,8 @@ export const de = {
   "brief.readings.urgentBasis": "Kontakt wartet · Zusage fällig",
   "brief.readings.decisions": "Prüfungen",
   "brief.readings.decisionsBasis": "Vorschläge · Datensatzprüfungen",
-  "brief.readings.decisionsBlocking_one": "1 hält Arbeit für Kunden auf",
-  "brief.readings.decisionsBlocking_other":
-    "{count} halten Arbeit für Kunden auf",
+  "brief.readings.decisionsBlocking_one": "1 blockiert Kundenarbeit",
+  "brief.readings.decisionsBlocking_other": "{count} blockieren Kundenarbeit",
   "brief.snooze.done": "Zurückgestellt bis {at}",
   "brief.snooze.undo": "Rückgängig",
   "brief.readings.meetings": "Anstehende Termine",
@@ -4274,25 +4272,25 @@ export const de = {
   "deepread.sub":
     "Durchsucht die Website des Unternehmens nach Domain, Branche, Größe und Standorten und schlägt dann einen ersten Schritt vor. Die Befunde bleiben vorgemerkt, bis du sie annimmst. Niemand, der auf der Website genannt wird, wird übernommen.",
   "deepread.cta": "Unternehmensrecherche starten",
-  "deepread.ctaAgain": "Website erneut lesen",
+  "deepread.ctaAgain": "Website erneut analysieren",
   "deepread.starting": "Wird gestartet…",
   "deepread.unavailable":
     "Die Website-Recherche ist auf diesem Server nicht eingerichtet.",
   "deepread.statusQueued": "Geplant",
   "deepread.statusDeferred": "Wartet auf KI-Kontingent",
-  "deepread.statusRunning": "Website wird gelesen…",
+  "deepread.statusRunning": "Website wird analysiert…",
   "deepread.statusDone": "Fertig",
   "deepread.statusPartial": "Vorzeitig beendet",
-  "deepread.statusPageCapped": "Bis zum Seitenlimit gelesen",
-  "deepread.statusByteCapped": "Bis zum Größenlimit gelesen",
-  "deepread.statusTimeCapped": "Bis zum Zeitlimit gelesen",
+  "deepread.statusPageCapped": "Bis zum Seitenlimit analysiert",
+  "deepread.statusByteCapped": "Bis zum Größenlimit analysiert",
+  "deepread.statusTimeCapped": "Bis zum Zeitlimit analysiert",
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird am {when} automatisch fortgesetzt.",
-  "deepread.pagesSoFar_one": "Bisher {count} Seite gelesen",
-  "deepread.pagesSoFar_other": "Bisher {count} Seiten gelesen",
+  "deepread.pagesSoFar_one": "Bisher {count} Seite analysiert",
+  "deepread.pagesSoFar_other": "Bisher {count} Seiten analysiert",
   "deepread.stoppedEarly": "Vorzeitig beendet: {reason}",
-  "deepread.stage.crawling": "Website wird gelesen",
+  "deepread.stage.crawling": "Website wird analysiert",
   "deepread.stage.extracting": "Fakten werden extrahiert",
   "deepread.step.done": "fertig",
   "deepread.step.running": "läuft",
@@ -4373,7 +4371,7 @@ export const de = {
   "create.fullName": "Vollständiger Name",
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
-  "create.contactTitle": "Stellenbezeichnung",
+  "create.contactTitle": "Jobtitel",
   "create.email": "E-Mail",
   "create.phone": "Telefon",
   "create.linkedin": "LinkedIn",
@@ -4415,7 +4413,7 @@ export const de = {
   "field.addRegisterVat": "USt-ID hinzufügen",
   "field.addRegisteredAddress": "Eingetragene Anschrift hinzufügen",
 
-  "field.addTitle": "Stellenbezeichnung hinzufügen",
+  "field.addTitle": "Jobtitel hinzufügen",
 
   "field.domain": "Domain",
 
@@ -4803,7 +4801,7 @@ export const de = {
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
   "compose.noGroundableRecipient":
-    "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht manuell oder erstelle zuerst einen Kontakt.",
+    "Noch keine Kontakte bei diesem Unternehmen. Schreibe die Nachricht selbst oder erstelle zuerst einen Kontakt.",
   "compose.draftTo": "Entwurf an",
   "compose.draftToUnset": "Kontakt wählen",
   "compose.relatedTo": "Bezug",
@@ -5009,9 +5007,9 @@ export const de = {
     "Die Prüfung konnte nicht angefordert werden. Bitte versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
-    "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin manuell schreiben.",
+    "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
-    "KI-Entwürfe sind auf dieser Seite nicht verfügbar. Die E-Mail lässt sich weiterhin manuell schreiben.",
+    "KI-Entwürfe sind auf dieser Seite nicht verfügbar. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.sendUnavailable":
     "Senden ist nicht verfügbar, da kein Versanddienst konfiguriert ist.",
   "compose.mailboxNotSendCapable":
@@ -5056,7 +5054,7 @@ export const de = {
   "analytics.currency": "Währung",
   "analytics.count": "Offene Deals",
   "analytics.unweighted": "Deal-Wert",
-  "analytics.weighted": "Nach Wahrscheinlichkeit gewichtet",
+  "analytics.weighted": "Wahrscheinlichkeitsbereinigter Wert",
   "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
@@ -5454,13 +5452,13 @@ export const de = {
   "settings.saved": "Gespeichert",
   "settings.signatureFromTemplate": "Unternehmensvorlage",
   "settings.signatureTemplateHint":
-    "Deine E-Mails enden mit der Signaturvorlage deines Unternehmens. Die Vorlage füllt deinen Namen, deine Stellenbezeichnung und deine Telefonnummer ein.",
-  "settings.signatureTitle": "Stellenbezeichnung",
+    "Deine E-Mails enden mit der Signaturvorlage deines Unternehmens. Die Vorlage füllt deinen Namen, deinen Jobtitel und deine Telefonnummer ein.",
+  "settings.signatureTitle": "Jobtitel",
   "settings.signaturePhone": "Telefon",
   "settings.signaturePreview": "Signaturvorschau",
   "signatureTemplate.title": "E-Mail-Signaturvorlage",
   "signatureTemplate.sub":
-    "Ein Signaturlayout für alle. In die E-Mails jedes Mitglieds werden der eigene Name, die Stellenbezeichnung und die Telefonnummer eingesetzt.",
+    "Ein Signaturlayout für alle. In die E-Mails jedes Mitglieds werden der eigene Name, der Jobtitel und die Telefonnummer eingesetzt.",
   "signatureTemplate.label": "Vorlage (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
@@ -5478,7 +5476,7 @@ export const de = {
   "settings.signatureCancel": "Abbrechen",
   "delivery.morningLabel": "Morgenbericht",
   "delivery.morningHelp":
-    "Sendet den Morgenbericht des Tages zusätzlich per E-Mail. Auf der Startseite erscheint der Morgenbericht immer.",
+    "Sendet den täglichen Morgenbericht der Home-Seite zusätzlich per E-Mail.",
   "delivery.weeklyLabel": "Wochenrückblick",
   "delivery.weeklyHelp":
     "Sendet den Wochenrückblick vom Montag zusätzlich per E-Mail.",
@@ -5581,7 +5579,7 @@ export const de = {
   "agent.activity.weeklyLearnings.degraded":
     "Die Woche wurde ausgewertet, aber es wurden keine Erkenntnisse gefunden.",
   "agent.activity.weeklyLearnings.failed":
-    "Die wöchentlichen Erkenntnisse konnten nicht erstellt werden.",
+    "Wöchentliche Erkenntnisse fehlgeschlagen",
   "agent.activity.morningBrief.queued": "Morgenbericht geplant",
   "agent.activity.morningBrief.running": "Der Morgenbericht wird vorbereitet…",
   "agent.activity.morningBrief.done": "Morgenbericht bereit",
@@ -5653,25 +5651,26 @@ export const de = {
     "Der Schreibstil wurde teilweise gelernt.",
   "agent.activity.voiceBuild.failed":
     "Der Schreibstil konnte nicht gelernt werden.",
-  "agent.activity.siteRead.queued": "Laden der Unternehmenswebsite geplant",
-  "agent.activity.siteRead.running": "Die Unternehmenswebsite wird geladen…",
+  "agent.activity.siteRead.queued": "Analyse der Unternehmenswebsite geplant",
+  "agent.activity.siteRead.running": "Die Unternehmenswebsite wird analysiert…",
   "agent.activity.siteRead.stalled":
-    "Das Laden der Unternehmenswebsite dauert ungewöhnlich lange.",
-  "agent.activity.siteRead.done": "Unternehmenswebsite geladen",
+    "Die Analyse der Unternehmenswebsite dauert ungewöhnlich lange.",
+  "agent.activity.siteRead.done": "Unternehmenswebsite analysiert",
   "agent.activity.siteRead.degraded":
-    "Das Laden der Unternehmenswebsite wurde vorzeitig abgebrochen.",
+    "Die Analyse der Unternehmenswebsite wurde vorzeitig abgebrochen.",
   "agent.activity.siteRead.failed":
-    "Laden der Unternehmenswebsite fehlgeschlagen",
-  "agent.activity.siteReadNamed.queued": "Laden der Website von {name} geplant",
+    "Analyse der Unternehmenswebsite fehlgeschlagen",
+  "agent.activity.siteReadNamed.queued":
+    "Analyse der Website von {name} geplant",
   "agent.activity.siteReadNamed.running":
-    "Die Website von {name} wird geladen…",
+    "Die Website von {name} wird analysiert…",
   "agent.activity.siteReadNamed.stalled":
-    "Das Laden der Website von {name} dauert ungewöhnlich lange.",
-  "agent.activity.siteReadNamed.done": "Website von {name} geladen",
+    "Die Analyse der Website von {name} dauert ungewöhnlich lange.",
+  "agent.activity.siteReadNamed.done": "Website von {name} analysiert",
   "agent.activity.siteReadNamed.degraded":
-    "Das Laden der Website von {name} wurde vorzeitig abgebrochen.",
+    "Die Analyse der Website von {name} wurde vorzeitig abgebrochen.",
   "agent.activity.siteReadNamed.failed":
-    "Laden der Website von {name} fehlgeschlagen",
+    "Analyse der Website von {name} fehlgeschlagen",
   "agent.activity.summarize.queued": "Zusammenfassung geplant",
   "agent.activity.summarize.running": "Die Zusammenfassung wird geschrieben…",
   "agent.activity.summarize.done": "Zusammenfassung bereit",
@@ -5735,7 +5734,7 @@ export const de = {
   "agent.fact.noModel": "Kein Modell konfiguriert",
   "agent.line.waiting_one": "{count} Freigabe steht aus",
   "agent.line.waiting_other": "{count} Freigaben stehen aus",
-  "agent.line.allClear": "Nichts erfordert Aufmerksamkeit",
+  "agent.line.allClear": "Nichts verlangt nach Aufmerksamkeit",
   "agent.line.cannotReach": "{sources} nicht erreichbar",
   "agent.line.runFailed": "Ein Lauf ist fehlgeschlagen",
   "agent.line.runStopped": "Ein Lauf wurde vorzeitig beendet",
@@ -5837,7 +5836,7 @@ export const de = {
   "import.undoReversed_other": "{rows} Zeilen rückgängig gemacht.",
   "import.undoKeptLead": "Beibehalten, da nach dem Import bearbeitet:",
   "import.undoErroredLead":
-    "Konnten nicht rückgängig gemacht werden und bleiben unverändert:",
+    "Nicht rückgängig gemacht und unverändert belassen:",
   "import.hub.title": "Neuer Import",
   "import.hub.templateTitle": "Vorlage",
   "import.hub.templateBody":
@@ -6028,7 +6027,7 @@ export const de = {
   "jobs.adminOnly":
     "Der Zustand der Hintergrund-Jobs umfasst die gesamte Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
   "jobs.empty":
-    "Die Warteschlange ist leer. Keine Jobs warten, laufen, werden wiederholt oder sind gestoppt.",
+    "Die Hintergrundwarteschlange ist leer. Keine Jobs warten, laufen, werden wiederholt oder sind gestoppt.",
   "jobs.workspaceKinds": "Dieses Unternehmen",
   "jobs.workspaceEmpty": "Keine Hintergrund-Jobs für dieses Unternehmen.",
   "jobs.dispatcherKinds": "Flotten-Dispatcher",
@@ -6118,7 +6117,7 @@ export const de = {
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
-  "jobs.kind.notification_email": "E-Mail zu Meldungen",
+  "jobs.kind.notification_email": "Benachrichtigungs-E-Mail",
   "jobs.kind.privacy_retention": "Anwendung der Aufbewahrungsregeln",
   "jobs.kind.provider_lookup_sweep": "Anreicherung bestehender Kontakte",
   "jobs.kind.provider_run_poll_sweep": "Abruf der Anreicherungsergebnisse",
@@ -6126,7 +6125,7 @@ export const de = {
   "jobs.kind.report_schedule_sweep": "Geplante Berichte",
   "jobs.kind.risk_verdict_sweep": "Prüfung des Deal-Risikos",
   "jobs.kind.signal_scan": "Suche nach Signalen",
-  "jobs.kind.site_deep_read": "Lesen der Unternehmenswebsite",
+  "jobs.kind.site_deep_read": "Analyse der Unternehmenswebsite",
   "jobs.kind.stored_object_reap": "Bereinigung des Dateispeichers",
   "jobs.kind.suppression_journal_export": "Export des Löschjournals",
   "jobs.kind.tag_scout": "Tag-Vorschläge",
@@ -6250,7 +6249,7 @@ export const de = {
   "captureHealth.col.runsEvery": "Intervall",
   "captureHealth.col.processed": "Verarbeitet",
   "captureHealth.col.state": "Status",
-  "captureHealth.col.owner": "Nutzerkonto",
+  "captureHealth.col.owner": "Inhaber des Postfachs",
   "captureHealth.col.contacts": "Wartende Kontakte",
   "captureHealth.col.threads": "Wartende Threads",
   "captureHealth.col.oldestWait": "Längste Wartezeit",
@@ -6417,24 +6416,24 @@ export const de = {
   "notice.sendConfirm": "Hinweis senden",
   "notice.sentTo": "Datenschutzhinweis an {address} gesendet",
   "notice.overdue": "Überfällig",
-  "notifications.bell": "Meldungen",
+  "notifications.bell": "Benachrichtigungen",
   // Both forms read the same because "offen" is an adjective: German agrees its
   // verb with the count, so "wartet"/"warten" would need the pair to differ.
-  "notifications.bellWaiting_one": "Meldungen, {count} offen",
-  "notifications.bellWaiting_other": "Meldungen, {count} offen",
-  "notifications.centre": "Meldungen",
+  "notifications.bellWaiting_one": "Benachrichtigungen, {count} offen",
+  "notifications.bellWaiting_other": "Benachrichtigungen, {count} offen",
+  "notifications.centre": "Benachrichtigungen",
   "notifications.markAllRead": "Alle als gelesen markieren",
   "notifications.markRead": "Als gelesen markieren",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
   "notifications.markReadFailed":
-    "Diese Meldung wurde nicht als gelesen markiert",
+    "Diese Benachrichtigung wurde nicht als gelesen markiert",
   "notifications.new": "Neu",
   "notifications.byAgent": "Von einem Agenten",
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
-  "notifications.title": "Wie dich jeder Meldungstyp erreicht",
+  "notifications.title": "Auf welche Weise dich Benachrichtigungen erreichen",
   "notifications.sub":
-    "Jede Meldung bleibt unter „Meldungen“ erhalten, egal was du hier wählst. Diese Einstellung legt fest, was zusätzlich geschieht, wenn eine Meldung eintrifft.",
+    "Jede Benachrichtigung bleibt unter „Benachrichtigungen“ erhalten, egal was du hier wählst. Diese Einstellung legt fest, was zusätzlich geschieht, wenn eine Benachrichtigung eintrifft.",
   "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
   "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
   "notifications.class.approval_pending.label":
@@ -6450,7 +6449,7 @@ export const de = {
   "notifications.class.capture.label": "E-Mail-Erfassung",
   "notifications.class.capture.help":
     "Probleme beim Lesen eines deiner Postfächer oder ein Rückstand, der sich nicht mehr bewegt.",
-  "notifications.class.system.label": "Systemmeldungen",
+  "notifications.class.system.label": "Systembenachrichtigungen",
   "notifications.class.system.help":
     "Wartung, ein erreichtes Limit und alles andere, was die Installation dir mitteilen muss.",
   "notifications.class.coach.label": "Hinweis aus dem Team",
@@ -6615,7 +6614,7 @@ export const de = {
   "retention.keepDays_one": "{count} Tag",
   "retention.keepDays_other": "{count} Tage",
   "retention.editScope": "{scope} bearbeiten",
-  "retention.retainOnly": "Modus „Nur aufbewahren“",
+  "retention.retainOnly": "Nur-Behalten-Modus",
   "retention.retainOnlyHelp":
     "Solange dieser Modus aktiviert ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Das Archivieren läuft weiter. Ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
   "retention.adminOnly":
@@ -6629,7 +6628,7 @@ export const de = {
   "retention.windowInvalid": "Gib eine ganze Zahl von Tagen ein, mindestens 1.",
   "retention.action": "Aktion",
   "retention.actionHint":
-    "Archivieren behält den Datensatz. Anonymisieren und Löschen vernichten Daten und werden im Modus „Nur aufbewahren“ zurückgehalten.",
+    "Archivieren behält den Datensatz. Anonymisieren und Löschen vernichten Daten und werden im Nur-Behalten-Modus zurückgehalten.",
   "retention.lawfulBasis": "Rechtsgrundlage",
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
@@ -6644,7 +6643,7 @@ export const de = {
     "Für diesen Bereich gibt es bereits eine Regel. Jeder Bereich hat höchstens 1 Regel. Bearbeite stattdessen die vorhandene Regel.",
   "retention.empty":
     "Noch keine Aufbewahrungsregel. In dieser Installation verfällt nichts.",
-  "retention.effectSuppressed": "Durch den Modus „Nur aufbewahren“ pausiert",
+  "retention.effectSuppressed": "Durch den Nur-Behalten-Modus pausiert",
   "retention.effectDisabled": "Deaktiviert",
   "retention.disabledWhy":
     "Deaktiviert und beibehalten. Die Frist bleibt erhalten, und in diesem Bereich verfällt nichts, solange die Regel deaktiviert ist.",
@@ -6854,7 +6853,7 @@ export const de = {
   "ob.s1.saveFailed": "Unternehmen nicht gespeichert",
   "ob.s1.savedNote":
     "Im Unternehmen gespeichert. Änderungen hier werden beim Fortfahren erneut gespeichert.",
-  "ob.readFromSite": "von der Website gelesen",
+  "ob.readFromSite": "aus der Website-Analyse",
 
   "ob.manualChapterLegal": "Rechtsträger",
   "ob.manualChapterOffer": "Produkte und Angebot",
@@ -7561,18 +7560,18 @@ export const de = {
   "ob.s4.connectFailed": "Postfach nicht verbunden",
   "ob.s4.notNow": "Nicht jetzt",
 
-  "ob.conv.read.started": "Ich lese {host} und berichte, was ich finde.",
-  "ob.conv.read.pages": "Bisher gelesene Seiten: {pages}.",
+  "ob.conv.read.started": "Ich analysiere {host} und berichte, was ich finde.",
+  "ob.conv.read.pages": "Bisher analysierte Seiten: {pages}.",
   "ob.conv.read.learnedField": "{field} gelernt: {value}",
   "ob.conv.read.extracting":
-    "Das Crawling ist abgeschlossen. Nun werden die Informationen extrahiert, die die Website über das Unternehmen enthält.",
+    "Die Seiten wurden abgerufen. Nun werden die Informationen extrahiert, die die Website über das Unternehmen enthält.",
   "ob.conv.read.warning": "Hinweis: {warning}",
   "ob.conv.read.failed":
-    "Die Website konnte nicht gelesen werden. Probiere eine andere URL aus oder gib die Angaben manuell ein.",
+    "Die Website konnte nicht analysiert werden. Probiere eine andere URL aus oder gib die Angaben manuell ein.",
   "ob.conv.read.pollFailed":
-    "Die Verbindung ist beim Lesen abgebrochen. Die bisher gefundenen Angaben bleiben erhalten.",
+    "Die Verbindung ist während der Analyse abgebrochen. Die bisher gefundenen Angaben bleiben erhalten.",
   "ob.conv.read.deferred":
-    "Das Lesen ist pausiert. Ich setze das Lesen automatisch fort.",
+    "Die Analyse ist pausiert. Ich setze die Analyse automatisch fort.",
   "ob.conv.company.confirmed":
     "Unternehmensprofil bestätigt. Jeder gespeicherte Wert hält seine Quelle fest.",
   "ob.conv.manual.chosen": "Ich gebe es manuell ein.",
@@ -7809,13 +7808,13 @@ export const de = {
   "ob.conv.voice.dimSentenceEvidence": "Im Schnitt {count} Wörter pro Satz.",
   "ob.conv.scene.evidence": "Beleg",
   "ob.conv.scene.hideEvidence": "Beleg ausblenden",
-  "ob.conv.scene.whyThis": "Was ich gelesen habe",
+  "ob.conv.scene.whyThis": "Was ich analysiert habe",
   "ob.conv.scene.foundOn": "Gefunden auf",
   "ob.conv.showField": "Anzeigen",
   "ob.conv.review.editDirectly": "Felder direkt bearbeiten",
   "ob.conv.review.backToDossier": "Zurück zum Dossier",
   "ob.conv.review.proposalFallback":
-    "Die vorbereitete Zuordnung konnte nicht geladen werden. Prüfe die gelesenen Angaben direkt. Jedes Feld behält seine Quelle.",
+    "Die vorbereitete Zuordnung konnte nicht geladen werden. Prüfe die Angaben aus der Analyse direkt. Jedes Feld behält seine Quelle.",
   "ob.conv.review.confirmFailed":
     "Die Eingabe konnte nicht gespeichert werden: {detail} Korrigiere die Eingabe und übernimm sie erneut.",
   "ob.conv.review.confirmVersionSkew":
@@ -7824,11 +7823,11 @@ export const de = {
     "„Weiter“ würde erneut fehlschlagen, da sich noch nichts geändert hat. Prüfe die Angaben erneut oder versuche es gleich noch einmal.",
   "ob.conv.review.refusalTitle": "„Weiter“ wurde nicht abgeschlossen",
   "ob.conv.review.confirmNotReady":
-    "Dieser Lesevorgang hat noch keinen Entwurf zum Bestätigen. Prüfe erneut, wenn der Lesevorgang abgeschlossen ist, oder starte einen neuen Lesevorgang.",
+    "Diese Analyse hat noch keinen Entwurf zum Bestätigen. Prüfe erneut, wenn die Analyse abgeschlossen ist, oder starte eine neue Analyse.",
   "ob.conv.review.confirmCheckFailed":
-    "Dieser Lesevorgang ist bestätigt, aber das daraus erstellte Unternehmen konnte nicht geladen werden. Bitte versuche es gleich erneut.",
+    "Diese Analyse ist bestätigt, aber das daraus erstellte Unternehmen konnte nicht geladen werden. Bitte versuche es gleich erneut.",
   "ob.conv.artifact.empty":
-    "Noch nichts gelesen. Gib eine Website ein, um diesen Bereich mit belegten Befunden zu füllen.",
+    "Noch nichts analysiert. Gib eine Website ein, um diesen Bereich mit belegten Befunden zu füllen.",
   "ob.conv.results.continue": "Weiter",
   "ob.conv.recap.back":
     "Willkommen zurück. Hier ist der aktuelle Stand der Einrichtung.",
@@ -7842,13 +7841,13 @@ export const de = {
   "ob.conv.recap.corpus":
     "Dein Korpus enthält bereits {words} deiner eigenen Wörter.",
   "ob.conv.recap.readTerminal":
-    "Ich habe {host} fertig gelesen. Belegte Befunde: {count}, unten angezeigt.",
+    "Ich habe die Analyse von {host} abgeschlossen. Belegte Befunde: {count}, unten angezeigt.",
   "ob.conv.recap.readReading":
-    "Ich lese {host} noch. Bisher gelesene Seiten: {pages}.",
+    "Ich analysiere {host} noch. Bisher analysierte Seiten: {pages}.",
   "ob.conv.recap.readFailed":
-    "Der frühere Lesevorgang von {host} konnte nicht abgeschlossen werden. Gib erneut eine Website ein oder trage die Angaben manuell ein.",
+    "Die frühere Analyse von {host} konnte nicht abgeschlossen werden. Gib erneut eine Website ein oder trage die Angaben manuell ein.",
   "ob.conv.recap.readDeferred":
-    "Mein Lesevorgang von {host} ist pausiert. Gib erneut eine Website ein oder trage die Angaben manuell ein.",
+    "Meine Analyse von {host} ist pausiert. Gib erneut eine Website ein oder trage die Angaben manuell ein.",
   "ob.conv.linkedin.cardBody":
     "Deine Profiladresse, damit eine importierte Verbindung „Anna kennt sie“ lautet, nicht „das Unternehmen kennt sie“.",
   "ob.conv.linkedin.dialogHeadline": "Dein LinkedIn-Profil",
@@ -7920,13 +7919,13 @@ export const de = {
   "ob.gate.title": "Willkommen, {name}",
   "ob.gate.titleAnonymous": "Willkommen bei Margince",
   "ob.gate.sub":
-    "Margince liest deine Website und entwirft das Unternehmensprofil. Gespeichert wird erst nach deiner Freigabe. Etwa 2 Minuten.",
+    "Margince analysiert deine Website und entwirft das Unternehmensprofil. Gespeichert wird erst nach deiner Freigabe. Etwa 2 Minuten.",
   "ob.gate.trustToggle": "So funktioniert es",
   "ob.gate.trustBody":
-    "Gelesen werden nur öffentliche Seiten. Gespeichert wird erst, wenn du bestätigst, und beim Lesen der Website wird an niemanden etwas gesendet.",
+    "Analysiert werden nur öffentliche Seiten. Gespeichert wird erst, wenn du bestätigst, und bei der Analyse der Website wird an niemanden etwas gesendet.",
   "ob.gate.field": "Website-Adresse",
   "ob.gate.placeholder": "deinunternehmen.de",
-  "ob.gate.submit": "Website lesen",
+  "ob.gate.submit": "Website analysieren",
   "ob.gate.altPrompt": "Keine Website?",
   "ob.gate.altAction": "Angaben manuell eingeben",
   "ob.gate.invalidUrl":
@@ -7936,7 +7935,7 @@ export const de = {
   // {detail} ist die Erklärung des Servers und kann leer sein — der Satz muss
   // also auch ohne sie tragen.
   "ob.gate.startFailed":
-    "Die Website konnte nicht gelesen werden. {detail} Versuche eine andere Adresse oder gib die Angaben manuell ein.",
+    "Die Website konnte nicht analysiert werden. {detail} Versuche eine andere Adresse oder gib die Angaben manuell ein.",
   // Ein aufgeschobenes Lesen ist vertagt, nicht kaputt: der Server kommt darauf
   // zurück. Der Satz sagt also, was stimmt, und nennt beide Türen, ohne dass
   // der Leser irgendetwas reparieren soll.
@@ -7948,34 +7947,33 @@ export const de = {
   // die Seitenzahl, also ist jede Zahl hier ein offener Zähler — nie "14 von
   // 18", nie ein Balken mit bekanntem Ende, denn die Gesamtzahl zu erfinden
   // hieße, Daten zu erfinden.
-  "ob.scan.title": "{host} wird gelesen",
+  "ob.scan.title": "{host} wird analysiert",
   "ob.scan.sub":
     "Jeder Fakt behält die Seite, von der er stammt, damit sich jede Aussage prüfen lässt.",
-  "ob.scan.doneTitle": "{host} gelesen",
+  "ob.scan.doneTitle": "{host} analysiert",
   "ob.scan.doneSub":
     "Fakten: {facts}, Profilfelder: {fields}, jeweils mit Quellseite. Die Prüfung wird geöffnet.",
   "ob.scan.phaseCrawling": "Seiten werden abgerufen",
   "ob.scan.phaseExtracting": "Angebot des Unternehmens wird ermittelt",
   "ob.scan.phaseQueued": "Geplant",
   "ob.scan.phaseDeferred": "Pausiert",
-  "ob.scan.pagesRead": "Gelesene Seiten: {pages}",
+  "ob.scan.pagesRead": "Analysierte Seiten: {pages}",
   "ob.scan.pagesSkipped": "Übersprungen: {count}",
-  "ob.scan.stillReading": "wird noch gelesen",
-  "ob.scan.pageStripLabel": "Bisher gelesene Seiten",
-  "ob.scan.logLabel": "Gelesene Seiten, neueste zuerst",
-  "ob.scan.pageFetched": "{url}: gelesen",
+  "ob.scan.stillReading": "wird noch analysiert",
+  "ob.scan.pageStripLabel": "Bisher analysierte Seiten",
+  "ob.scan.logLabel": "Analysierte Seiten, neueste zuerst",
+  "ob.scan.pageFetched": "{url}: analysiert",
   "ob.scan.pageSkipped": "{url}: übersprungen, {reason}",
   "ob.scan.pageFailed": "{url}: nicht lesbar, {reason}",
   "ob.scan.pageNoReason": "kein Grund erfasst",
-  "ob.scan.pageStatusFetched": "gelesen",
+  "ob.scan.pageStatusFetched": "analysiert",
   "ob.scan.pageStatusSkipped": "übersprungen: {reason}",
   "ob.scan.pageStatusFailed": "nicht lesbar: {reason}",
-  "ob.scan.skipReason.robots": "die Website erlaubt das Lesen nicht",
+  "ob.scan.skipReason.robots": "die Website erlaubt die Analyse nicht",
   "ob.scan.skipReason.offDomain": "sie liegt auf einer anderen Domain",
   "ob.scan.skipReason.pageCap":
-    "das Seitenlimit für einen Lesevorgang wurde erreicht",
-  "ob.scan.skipReason.byteCap":
-    "das Textlimit für einen Lesevorgang wurde erreicht",
+    "das Seitenlimit für eine Analyse wurde erreicht",
+  "ob.scan.skipReason.byteCap": "das Textlimit für eine Analyse wurde erreicht",
   "ob.scan.skipReason.unreadable": "die Seite konnte nicht gelesen werden",
   "ob.scan.transparency": "Transparenz",
   "ob.scan.costLine": "Aufrufe: {calls} · Tokens: {tokens} · {cost}",
@@ -7985,19 +7983,19 @@ export const de = {
   // --- das Live-Panel: was der Lauf abgedeckt hat und was nicht ----------
   "ob.live.review": "Prüfen",
   "ob.live.hide": "Ausblenden",
-  "ob.live.countPages": "{read} gelesen · {skipped} übersprungen",
-  "ob.live.cardCoverage": "Gelesene und übersprungene Seiten",
+  "ob.live.countPages": "{read} analysiert · {skipped} übersprungen",
+  "ob.live.cardCoverage": "Analysierte und übersprungene Seiten",
   "ob.live.coverageWarning": "Warnung",
   "ob.live.coverageStopped": "Vorzeitig beendet",
   "ob.live.coverageCapped": "Limit erreicht",
   "ob.live.stoppedPageCap":
-    "Einige Seiten wurden nicht geöffnet, da das Seitenlimit für einen Lesevorgang erreicht wurde.",
+    "Einige Seiten wurden nicht geöffnet, da das Seitenlimit für eine Analyse erreicht wurde.",
   "ob.live.stoppedByteCap":
-    "Einige Seiten wurden nicht geöffnet, da das Größenlimit für einen Lesevorgang erreicht wurde.",
+    "Einige Seiten wurden nicht geöffnet, da das Größenlimit für eine Analyse erreicht wurde.",
   "ob.live.stoppedBudget":
     "Einige Seiten wurden nicht geöffnet, da das KI-Kontingent erreicht wurde.",
   "ob.live.stoppedDeadline":
-    "Einige Seiten wurden nicht geöffnet, da das Zeitlimit für einen Lesevorgang erreicht wurde.",
+    "Einige Seiten wurden nicht geöffnet, da das Zeitlimit für eine Analyse erreicht wurde.",
   "ob.live.coverageSkipped": "Übersprungen",
   "ob.live.coverageFailed": "Nicht lesbar",
   "ob.live.coverageClean":
@@ -8104,7 +8102,7 @@ export const de = {
     "Anmeldung fehlgeschlagen. Prüfe E-Mail-Adresse und Passwort und versuche es erneut.",
   "auth.errRateLimited": "Zu viele Anmeldeversuche. Versuche es später erneut.",
   "auth.errUnreachable":
-    "Margince war nicht erreichbar. Prüfe die Verbindung. Bitte versuche es erneut.",
+    "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.retry": "Erneut versuchen",
   "auth.noticeSignedOut": "Du wurdest abgemeldet.",
   "auth.noticeSessionExpired":
@@ -8113,7 +8111,7 @@ export const de = {
     "Die Anmeldung mit Google ist fehlgeschlagen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
   "auth.connectionTitle": "Margince war nicht erreichbar",
   "auth.connectionBody":
-    "Prüfe die Verbindung. Bitte versuche es erneut. Wenn das Problem bestehen bleibt, wird der Server möglicherweise gerade neu gestartet.",
+    "Prüfe die Verbindung und versuche es erneut. Wenn das Problem bestehen bleibt, wird der Server möglicherweise gerade neu gestartet.",
   "auth.unavailableTitle": "Installation nicht bereit",
   // "Betreiber", nicht "Operator": ein Operator ist im Deutschen ein
   // mathematisches Zeichen oder eine Telefonvermittlung. Und eine Einrichtung
@@ -8180,7 +8178,7 @@ export const de = {
   "setup.errorServer":
     "Die Einrichtung konnte nicht abgeschlossen werden. Es wurde nichts erstellt. Bitte versuche es gleich erneut und prüfe das Serverprotokoll, falls der Fehler wieder auftritt.",
   "setup.errorNetwork":
-    "Margince war nicht erreichbar. Prüfe die Verbindung. Bitte versuche es erneut.",
+    "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.forgotLink": "Passwort vergessen?",
   "auth.forgotTitle": "Passwort zurücksetzen",
   // "gibt", nicht "existiert" (Amtsdeutsch), und das Feld will eine Adresse, keine
@@ -8369,7 +8367,7 @@ export const de = {
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
   "deal360.verdict.live": "Aktiv",
-  "deal360.verdict.drifting": "Stockt",
+  "deal360.verdict.drifting": "Stagnierend",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
   "dealmail.title": "E-Mail",
@@ -8394,7 +8392,7 @@ export const de = {
     "Margince, ein KI-System, führt dieses CRM. Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
   "confirm.card.title": "Erfasste Angaben",
   "confirm.field.fullName": "Name",
-  "confirm.field.title": "Stellenbezeichnung",
+  "confirm.field.title": "Jobtitel",
   "confirm.field.email": "E-Mail",
   "confirm.field.phone": "Telefon",
   "confirm.field.company": "Unternehmen",
@@ -8527,7 +8525,7 @@ export const de = {
   "auto.trigger.activityCaptured": "Aktivität erfasst",
   "auto.trigger.listEvaluated": "Live-Liste geändert",
   "auto.action.createTask": "Aufgabe erstellen",
-  "auto.action.notify": "Meldung senden",
+  "auto.action.notify": "Benachrichtigung senden",
   "auto.action.assignOwner": "Zuständigkeit zuweisen",
   "auto.action.setField": "Feld setzen",
   "auto.action.draftEmail": "E-Mail entwerfen",
@@ -8712,7 +8710,7 @@ export const de = {
   "settings.page.agents.sub":
     "Was ein Agent unbeaufsichtigt tun darf und welche Clients deine Zugangsdaten halten.",
   "settings.page.notifications.sub":
-    "Welche Meldungstypen dich erreichen, und auf welchem Weg.",
+    "Welche Benachrichtigungstypen dich erreichen und auf welchem Weg.",
   "settings.page.connections.sub":
     "Postfächer und Adressen, die für diesen Platz gelesen werden.",
   "settings.page.capture-activity.sub":
@@ -8724,7 +8722,7 @@ export const de = {
   "settings.page.members.sub":
     "Alle, die einen Platz haben, und worauf sie jeweils zugreifen können.",
   "settings.page.teams.sub":
-    "Zugehörigkeit zu Teams, die den teambezogenen Zugriff auf Datensätze bestimmt.",
+    "Teammitgliedschaft, die den teambezogenen Zugriff auf Datensätze bestimmt.",
   "settings.page.roles.sub":
     "Was jede Rolle darf und auf welche Datensätze sie zugreifen kann.",
   "settings.page.seats.sub":
@@ -8815,7 +8813,7 @@ export const de = {
   "settings.tab.account": "Nutzerkonto",
   "settings.tab.voice": "Schreibstil",
   "settings.tab.agents": "Agenten",
-  "settings.tab.notifications": "Meldungen",
+  "settings.tab.notifications": "Benachrichtigungen",
   "settings.tab.connections": "Verbindungen",
   "settings.tab.extensions": "Erweiterungen",
   "settings.tab.jurisdiction": "Rechtsraum",
@@ -9727,7 +9725,7 @@ export const de = {
   "users.link.failed":
     "Das Mitglied existiert, kann sich aber erst anmelden, wenn es einen Link erhält.",
   "users.link.offline":
-    "Der Server war nicht erreichbar. Prüfe die Verbindung. Bitte versuche es erneut.",
+    "Der Server war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "users.link.retry": "Erneut versuchen",
   "users.link.done": "Fertig",
   "settings.companyReadOnly":
@@ -9746,7 +9744,7 @@ export const de = {
   "settings.companyMarkWidePresent":
     "Wird hier und oben in der ausgeklappten Seitenleiste angezeigt.",
   "settings.companyMarkWideNone":
-    "Noch kein Logo. Es werden Initialen angezeigt. Füge hier ein Logo hinzu oder lies die Website aus, um ein Logo zu finden.",
+    "Noch kein Logo. Es werden Initialen angezeigt. Füge hier ein Logo hinzu oder analysiere die Website, um ein Logo zu finden.",
   "settings.companyMarkIcon": "Quadratisches Symbol",
   "settings.companyMarkIconPresent":
     "Wird in der eingeklappten Seitenleiste angezeigt, wo das breite Logo zu klein zum Lesen ist.",
@@ -9771,11 +9769,11 @@ export const de = {
   "settings.companyMarkIconEmpty": "Symbol hier ablegen oder Datei auswählen",
   "settings.companyWebsite": "Öffentliche Unternehmenswebsite",
   "settings.companyWebsiteHint":
-    "Die öffentliche Website, mit der das Lesen beginnt.",
+    "Die öffentliche Website, mit der die Analyse beginnt.",
   "settings.companySourceTitle": "Quelle",
-  "settings.companyRefreshRow": "Website erneut lesen",
+  "settings.companyRefreshRow": "Website erneut analysieren",
   "settings.companyRefreshHint":
-    "Margince liest die öffentlichen Seiten und schlägt Änderungen vor. Nichts gelangt ins Profil, bevor du die Änderungen geprüft und übernommen hast.",
+    "Margince analysiert die öffentlichen Seiten und schlägt Änderungen vor. Nichts gelangt ins Profil, bevor du die Änderungen geprüft und übernommen hast.",
   "settings.companyEdit": "Bearbeiten",
   "settings.companyEditField": "{field} bearbeiten",
   "settings.companyWebsiteRequired":
@@ -9788,16 +9786,16 @@ export const de = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
-  "settings.companyRefreshFailed": "Lesen der Website nicht abgeschlossen",
+  "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
-  "settings.companyRefreshWarnings": "Warnungen aus diesem Lesevorgang",
+  "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",
   "settings.companyRefreshUnreadable":
-    "Der Status dieses Website-Lesevorgangs ist verloren gegangen. Starte die Aktualisierung erneut.",
+    "Der Status dieser Website-Analyse ist verloren gegangen. Starte die Aktualisierung erneut.",
   "settings.companyRefreshStale":
     "Der Website-Vorschlag hat sich geändert. Prüfe den aktualisierten Vergleich, bevor du ihn übernimmst.",
   "settings.companyRefreshReview": "Website-Vergleich",
   "settings.companyRefreshReady": "Änderungen prüfen",
-  "settings.companyRefreshReading": "Website wird gelesen…",
+  "settings.companyRefreshReading": "Website wird analysiert…",
   "settings.companyCoverage": "Abgedeckte Seiten",
   "settings.companyResolveAll":
     "Wähle für jeden Konflikt mit einem manuell eingegebenen Wert eine Lösung.",
@@ -9814,7 +9812,7 @@ export const de = {
   "settings.companyManualKicker": "Manuelle Einrichtung",
   "settings.companyManualTitle": "Grundlagen des Unternehmens",
   "settings.companyManualSub":
-    "Das Lesen von Websites ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
+    "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
   "product.title": "Produkte",
   "product.readOnly":
@@ -10285,8 +10283,7 @@ export const de = {
   "serviceAccountKey.unreadable":
     "Die Datei konnte nicht gelesen werden. Wähle die Datei erneut aus oder füge den Inhalt der Datei ein.",
   "aiRouting.location.label": "Standort",
-  "aiRouting.location.help":
-    "Wo Google die Aufrufe dieser Strecke verarbeitet.",
+  "aiRouting.location.help": "Wo Google die Aufrufe dieser Lane verarbeitet.",
   "aiRouting.location.loading":
     "Google wird gefragt, welche Standorte dieser Schlüssel erreicht…",
   "aiRouting.location.noKey":
@@ -10517,29 +10514,29 @@ export const de = {
     "Jedes neue Unternehmen aus erfassten E-Mails erhält automatisch ein Webprofil, das aus seiner Website erstellt wird. Läuft innerhalb eines Tageslimits.",
   "captureSettings.signatureEnrich.label": "Kontaktdaten aus E-Mails lesen",
   "captureSettings.signatureEnrich.help":
-    "Wenn aktiviert, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Stellenbezeichnung, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen. Eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens. Ein Postfach mit eigener Einstellung behält diese Einstellung.",
+    "Wenn aktiviert, liest Margince, was eine Person in E-Mails an dich unter ihrem eigenen Namen angibt: eine Signatur oder eine angehängte Visitenkarte mit Jobtitel, Telefonnummer, Adresse oder Unternehmen. Das geschieht innerhalb von Minuten nach Eingang. Nichts wird erschlossen. Eine Angabe, die die E-Mail nicht enthält, wird nicht geschrieben. Das ist die Standardeinstellung des Unternehmens. Ein Postfach mit eigener Einstellung behält diese Einstellung.",
   "captureSettings.addFailed": "Ausschluss nicht hinzugefügt",
   "captureSettings.updateFailed": "Einstellung nicht geändert",
-  "captureReading.title": "Website-Lesevorgänge",
+  "captureReading.title": "Website-Analysen",
   "captureReading.sub":
-    "Wie viel Margince von Unternehmenswebsites liest. Eine Änderung gilt ab dem nächsten Lesevorgang.",
-  "captureReading.dailyCap.label": "Automatische Lesevorgänge pro Tag",
+    "Wie viel Margince von Unternehmenswebsites analysiert. Eine Änderung gilt ab der nächsten Analyse.",
+  "captureReading.dailyCap.label": "Automatische Analysen pro Tag",
   "captureReading.dailyCap.help":
-    "Lesevorgänge, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
+    "Analysen, die niemand angestoßen hat, über alle Unternehmen, 1 bis 20.000 pro Tag.",
   "captureReading.dailyCap.refusal":
     "Gib eine ganze Zahl von 1 bis 20.000 ein.",
-  "captureReading.maxPages.label": "Seiten pro Lesevorgang",
+  "captureReading.maxPages.label": "Seiten pro Analyse",
   "captureReading.maxPages.help":
-    "Höchstzahl der Seiten eines Lesevorgangs, 1 bis 200 (automatische Lesevorgänge enden bei 12).",
+    "Höchstzahl der Seiten einer Analyse, 1 bis 200 (automatische Analysen enden bei 12).",
   "captureReading.maxPages.refusal":
     "Gib eine ganze Zahl von 1 bis 200 Seiten ein.",
-  "captureReading.maxMiB.label": "Größe pro Lesevorgang (MiB)",
+  "captureReading.maxMiB.label": "Größe pro Analyse (MiB)",
   "captureReading.maxMiB.help":
-    "Höchstmenge an Daten eines Lesevorgangs über alle Seiten, 1 bis 128 MiB.",
+    "Höchstmenge an Daten einer Analyse über alle Seiten, 1 bis 128 MiB.",
   "captureReading.maxMiB.refusal": "Gib eine ganze Zahl von 1 bis 128 MiB ein.",
-  "captureReading.wall.label": "Lesedauer (Sekunden)",
+  "captureReading.wall.label": "Analysedauer (Sekunden)",
   "captureReading.wall.help":
-    "Längste Dauer eines Lesevorgangs, bevor er das Gefundene behält, 30 bis 600 Sekunden.",
+    "Längste Dauer einer Analyse, bevor sie das Gefundene behält, 30 bis 600 Sekunden.",
   "captureReading.wall.refusal":
     "Gib eine ganze Zahl von 30 bis 600 Sekunden ein.",
   "agentConnections.title": "Agent-Verbindungen",
@@ -10896,7 +10893,7 @@ export const de = {
   "contact.confirm.review": "Prüfen",
   "contact.enriched.sub":
     "Jeder Wert mit dem Text, aus dem er gelesen wurde. Ein korrigierter Wert bleibt erhalten.",
-  "contact.enriched.field.title": "Stellenbezeichnung",
+  "contact.enriched.field.title": "Jobtitel",
   "contact.enriched.field.phone": "Telefon",
   "contact.enriched.field.role": "Rolle",
   "contact.enriched.field.linkedin": "LinkedIn",
@@ -11359,7 +11356,7 @@ export const de = {
     "Ergänze Wert, Zitat und Link, um diese Aussage zu speichern.",
   "contact.research.saved_one": "{count} Aussage zum Datensatz hinzugefügt",
   "contact.research.saved_other": "{count} Aussagen zum Datensatz hinzugefügt",
-  "contact.research.field.title": "Stellenbezeichnung",
+  "contact.research.field.title": "Jobtitel",
   "contact.research.field.role": "Rolle",
   "contact.research.field.company_name": "Unternehmen",
   "contact.research.field.phone": "Telefon",
@@ -11532,7 +11529,7 @@ export const de = {
   "provider.profile.rateLimited":
     "Nicht gekauft: Der Anbieter drosselt Anfragen.",
   "provider.profile.providerError":
-    "Die letzte Abfrage ist fehlgeschlagen. Bitte versuche es erneut. Falls der Fehler bleibt, prüfe die Karte des Anbieters in den Einstellungen.",
+    "Die letzte Abfrage ist fehlgeschlagen. Bitte versuche es erneut oder prüfe die Karte des Anbieters in den Einstellungen, falls der Fehler bleibt.",
   "provider.profile.submissionUnknown":
     "Das Ergebnis dieser Abfrage ist unbekannt. Möglicherweise wurden Credits verbraucht.",
   "provider.profile.claimsUnwritten":
@@ -12333,8 +12330,7 @@ export const de = {
   "worklist.bandClear.now":
     "Keine dringenden Einträge. Weitere Arbeit steht unten.",
   "worklist.bandClear.build_pipeline": "Keine Akquise-Arbeit offen.",
-  "worklist.bandClear.keep_momentum":
-    "Keine vereinbarte Arbeit gerät ins Stocken.",
+  "worklist.bandClear.keep_momentum": "Keine vereinbarte Arbeit stagniert.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
@@ -12476,8 +12472,8 @@ export const de = {
     "Die Zählung ist unvollständig. Jede Zahl ist ein Mindestwert.",
   "worklist.readings.label": "Zahlen von heute",
   "worklist.readings.revenue": "Gefährdeter Umsatz",
-  "worklist.readings.revenue.detail": "Heute stockende Deals",
-  "worklist.readings.revenue.unpriced": "Stockende Deals · keiner mit Preis",
+  "worklist.readings.revenue.detail": "Heute stagnierende Deals",
+  "worklist.readings.revenue.unpriced": "Stagnierende Deals · keiner mit Preis",
   "worklist.readings.revenue.noFigure": "Ohne Preis",
   "worklist.readings.replies": "Antworten der Käuferseite",
   "worklist.readings.replies.detail": "Wartende Kontakte",
@@ -12630,7 +12626,7 @@ export const de = {
   "worklist.above.crowded":
     "Steht über dem nächsten Eintrag, der einer von vielen seiner Art ist.",
   "worklist.verdict.live": "Aktiv",
-  "worklist.verdict.drifting": "Stockt",
+  "worklist.verdict.drifting": "Stagnierend",
   "worklist.verdict.blocked": "Blockiert",
   "worklist.verdict.cold": "Kalt",
   "worklist.verdict.believes": "Bewertung",
@@ -12640,7 +12636,8 @@ export const de = {
     "Ohne Reaktion wartet die Käuferseite weiter.",
   "worklist.consequence.promise_breaks":
     "Ohne Reaktion wird eine Zusage gebrochen.",
-  "worklist.consequence.deal_drifts": "Ohne Reaktion stockt der Deal weiter.",
+  "worklist.consequence.deal_drifts":
+    "Ohne Reaktion stagniert der Deal weiter.",
   "worklist.consequence.deal_slips_past_close":
     "Ohne Reaktion verstreicht das vereinbarte Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
@@ -12669,7 +12666,7 @@ export const de = {
   "worklist.untitled.conversation_claim": "Deine Zusage",
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
-  "worklist.untitled.deal_at_risk": "Deal stockt",
+  "worklist.untitled.deal_at_risk": "Deal stagniert",
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",
@@ -12751,7 +12748,7 @@ export const de = {
   "worklist.verb.retryRefusedNotFailed":
     "Nichts erneut auszuführen. Dieser Lauf wurde absichtlich gestoppt, nicht durch einen Fehler.",
   "worklist.verb.retryRefusedRepeats":
-    "Diese Regel darf nicht zweimal laufen, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
+    "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
@@ -12835,7 +12832,7 @@ export const de = {
   "ob.core.working": "Core · arbeitet",
   "ob.core.warning": "Core · braucht Aufmerksamkeit",
   "ob.core.error": "Core · angehalten",
-  "ob.scan.tallyPages": "gelesene Seiten",
+  "ob.scan.tallyPages": "analysierte Seiten",
   "ob.scan.tallyFacts": "gefundene Fakten",
   "ob.scan.tallyUncertain": "für dich offen gelassen",
   "ob.scan.tickerFact": "{field}: {value}",
@@ -12904,7 +12901,7 @@ export const de = {
   "ob.deck.eyebrow": "Weitere belegte Fakten",
   "ob.deck.title": "Fragen an dich",
   "ob.stage.flow": "Einrichtung",
-  "ob.stop.read": "Website lesen",
+  "ob.stop.read": "Website analysieren",
   "firstRun.ai.rankedHint":
     "Listet außerdem die 10 am besten bewerteten Modelle, die OpenRouter aktuell anbietet, sortiert nach {rankedBy}, mit Anbieterpreisen.",
   "firstRun.ai.rankedUnavailable":
@@ -12917,7 +12914,7 @@ export const de = {
   "firstRun.ignite.canNow": "Kann jetzt",
   "firstRun.ignite.cannot": "Kann nicht",
   "firstRun.ignite.read":
-    "die Website des Unternehmens lesen und über die Befunde berichten",
+    "die Website des Unternehmens analysieren und über die Befunde berichten",
   "firstRun.ignite.draft":
     "Entwürfe in dem Schreibstil schreiben, den du trainiert hast",
   "firstRun.ignite.act":
@@ -13246,7 +13243,7 @@ export const de = {
   "magic.count.watching_one": "{count} muss wiederhergestellt werden",
   "magic.count.watching_other": "{count} müssen wiederhergestellt werden",
   "magic.incomplete": "{lane}: möglicherweise unvollständig",
-  "magic.loading": "Wird geladen, was die Automatik getan hat",
+  "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",
   "magic.lane.needsYou": "Wartet auf dich",
   "magic.lane.couldNotComplete": "Konnte nicht abgeschlossen werden",
@@ -13293,16 +13290,16 @@ export const de = {
   "magic.why.mail_filed": "Die Absenderadresse gehört zu diesem Kontakt.",
   "magic.why.public_records":
     "Aus der öffentlichen Website und den DNS-Einträgen des Unternehmens.",
-  "magic.why.site_read": "Gelesen auf {site}.",
-  "magic.why.site_read_unnamed": "Auf der Website des Unternehmens gelesen.",
+  "magic.why.site_read": "Aus der Analyse von {site}.",
+  "magic.why.site_read_unnamed": "Aus der Analyse der Unternehmenswebsite.",
   "magic.why.site_read_each":
-    "Auf der jeweiligen Website des Unternehmens gelesen.",
+    "Aus der Analyse der jeweiligen Unternehmenswebsite.",
   "magic.why.signature": "Aus einer E-Mail-Signatur übernommen.",
   "magic.why.retention": "Aufbewahrungsregel: nach {days} Tagen.",
   "magic.by.retention": "Aufbewahrung",
   "magic.by.mail_filing": "E-Mail-Zuordnung",
   "magic.by.company_lookup": "Unternehmensabfrage",
-  "magic.by.website_reader": "Website-Leser",
+  "magic.by.website_reader": "Website-Analyse",
   "magic.by.signature_reader": "Signatur-Leser",
   "magic.by.overnight_agent": "Nacht-Agent",
   "magic.by.mail_reader": "E-Mail-Leser",
@@ -13432,7 +13429,7 @@ export const de = {
   "aiFigures.empty": "Keine Aufrufe in diesem Zeitraum.",
   "aiFigures.pending": "Das Aufrufprotokoll wird geladen…",
   "aiFigures.unread":
-    "Die Kennzahlen der Aufrufe konnten nicht gelesen werden. Bitte versuche es gleich erneut.",
+    "Die Aufrufzahlen konnten nicht gelesen werden. Bitte versuche es gleich erneut.",
   "aiFigures.col.calls": "Aufrufe",
   "aiFigures.col.failed": "Fehlgeschlagen",
   "aiFigures.col.timeouts": "Zeitüberschreitungen",
@@ -13491,7 +13488,7 @@ export const de = {
   "aiServing.empty":
     "Ohne Eintrag gilt die mitgelieferte Vorgabe: nach Durchsatz sortieren, fp16 oder bf16, nur Hosts, die alle gesendeten Parameter unterstützen. {} lässt OpenRouter selbst routen.",
   "aiServing.empty.embeddings":
-    "Ohne Eintrag kommt nichts zu den Host-Regeln der Verbindung hinzu. Diese Strecke akzeptiert nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
+    "Ohne Eintrag kommt nichts zu den Host-Regeln der Verbindung hinzu. Diese Lane akzeptiert nur only, ignore, allow_fallbacks, zdr, data_collection und enforce_distillable_text.",
   "aiServing.json": "Bereitstellungs-JSON",
   "aiServing.format": "Formatieren",
   "aiServing.example": "Beispiel einfügen",
