@@ -3,18 +3,25 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { day, renderWorklist, row, stub } from "./worklist.testkit";
+import {
+  day,
+  findRowMenu,
+  renderWorklist,
+  row,
+  stub,
+} from "./worklist.testkit";
 
 // The pin says what it does.
 //
-// The control is a glyph and its whole vocabulary was "Pin" / "Unpin". A reader
-// could not tell from it whether pinning marks the row urgent, whether a
-// colleague sees it, or how long it lasts — and the answers matter: it is a
-// personal ordering preference, private to one reader, that holds until undone.
+// The control's whole vocabulary is "Pin" / "Unpin". A reader could not tell
+// from it whether pinning marks the row urgent, whether a colleague sees it, or
+// how long it lasts. It is a personal ordering preference that holds until
+// undone.
 //
-// The row has no space for a sentence, so it is the control's DESCRIPTION,
+// A menu line has no space for a sentence, so it is the control's DESCRIPTION,
 // reached by hover, by focus and by a screen reader.
 
 afterEach(() => {
@@ -31,6 +38,7 @@ describe("the pin verb", () => {
       }),
     );
     renderWorklist();
+    await userEvent.click(await findRowMenu());
 
     // Still named by the bare verb: the sentence must not reach the NAME, or a
     // queue of thirty rows repeats it thirty times in a control list.
@@ -62,6 +70,7 @@ describe("the pin verb", () => {
       }),
     );
     renderWorklist();
+    await userEvent.click(await findRowMenu());
 
     const unpin = await screen.findByRole("button", {
       name: en["worklist.verb.unpin"],

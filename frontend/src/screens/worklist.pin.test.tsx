@@ -18,7 +18,12 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { WorklistScreen } from "./worklist";
-import { day, renderWorklist, row } from "./worklist.testkit";
+import { day, findRowMenu, renderWorklist, row } from "./worklist.testkit";
+
+// The pin is a line of the row's menu, so every press opens that first.
+async function openRowMenu() {
+  await userEvent.click(await findRowMenu());
+}
 
 // The confirmation this suite reads lives in a toast, and renderWorklist mounts
 // no region — the conformance gate allows exactly one ToastProvider and one
@@ -89,6 +94,7 @@ describe("a reader can put a row at the top of their own day", () => {
     ]);
     renderWorklist();
 
+    await openRowMenu();
     await userEvent.click(
       await screen.findByRole("button", { name: en["worklist.verb.pin"] }),
     );
@@ -120,6 +126,7 @@ describe("a reader can put a row at the top of their own day", () => {
     ]);
     renderWorklist();
 
+    await openRowMenu();
     await userEvent.click(
       await screen.findByRole("button", { name: en["worklist.verb.unpin"] }),
     );
@@ -132,16 +139,14 @@ describe("a reader can put a row at the top of their own day", () => {
     });
   });
 
-  // The pin is a GLYPH now, and a glyph has no words on screen to say which way
-  // it is set. `aria-pressed` is the whole difference between "this row leads my
-  // day" and "make this row lead my day" for anybody who is not looking at the
-  // fill, so it is read from the row's own `pinned` reason and asserted in both
-  // directions — a control stuck at one value looks correct in whichever state
-  // the test happened to render.
+  // The pin is a verb in the menu, named for the press it offers and read from
+  // the row's own `pinned` reason. Asserted in both directions, since a control
+  // stuck at one word looks right in one of them. No `aria-pressed`: that would
+  // make it a switch the menu stays open over.
   it.each([
     { pinned: false, verb: "worklist.verb.pin" as const },
     { pinned: true, verb: "worklist.verb.unpin" as const },
-  ])("says which way it is set when pinned is $pinned", async (state) => {
+  ])("names the press it offers when pinned is $pinned", async (state) => {
     stubbing([
       row({
         id: "task-1",
@@ -152,8 +157,9 @@ describe("a reader can put a row at the top of their own day", () => {
     ]);
     renderWorklist();
 
+    await openRowMenu();
     const pin = await screen.findByRole("button", { name: en[state.verb] });
-    expect(pin.getAttribute("aria-pressed")).toBe(String(state.pinned));
+    expect(pin.hasAttribute("aria-pressed")).toBe(false);
   });
 
   it("says so when the write is refused, rather than leaving the row unmoved and silent", async () => {
@@ -194,6 +200,7 @@ describe("a reader can put a row at the top of their own day", () => {
     vi.stubGlobal("fetch", fetched);
     renderUnderAToastRegion();
 
+    await openRowMenu();
     await userEvent.click(
       await screen.findByRole("button", { name: en["worklist.verb.pin"] }),
     );
@@ -253,15 +260,16 @@ describe("a reader can put a row at the top of their own day", () => {
     vi.stubGlobal("fetch", fetched);
     renderUnderAToastRegion();
 
-    const pin = await screen.findByRole("button", {
-      name: en["worklist.verb.pin"],
-    });
-    await userEvent.click(pin);
+    const menu = await findRowMenu();
+    await userEvent.click(menu);
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["worklist.verb.pin"] }),
+    );
 
     expect(await screen.findByText(en["worklist.verb.pinFailed"])).toBeTruthy();
-    // The control the reader pressed still holds the keyboard, so their next
-    // key reaches the row they were working rather than the top of the page.
-    expect(document.activeElement).toBe(pin);
+    // The menu the press came from holds the keyboard, as after any line. So
+    // the reader's next key reaches the row they were working on.
+    expect(document.activeElement).toBe(menu);
   });
 
   it("offers no pin on a folded group, whose id the fold mints", async () => {
@@ -276,9 +284,14 @@ describe("a reader can put a row at the top of their own day", () => {
     renderWorklist();
 
     await screen.findByText(/12 addresses to review/);
-    // A group's id is synthetic and minted by the fold, so a pin on one names a
-    // group that will not exist under that key on the next read — the reader
-    // would press it, and their day would look unchanged forever.
+    // A group's id is minted by the fold. A pin on one names a group that will
+    // not exist under that key on the next read. Nothing else
+    // in the row's menu applies to a group either, so it draws no menu.
+    const menu = en["worklist.rowMenu"];
+    const lead = menu.slice(0, menu.indexOf("{title}"));
+    expect(
+      screen.queryByRole("button", { name: (name) => name.startsWith(lead) }),
+    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: en["worklist.verb.pin"] }),
     ).toBeNull();

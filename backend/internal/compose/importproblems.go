@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -98,7 +99,7 @@ func writeImportProblems(w io.Writer, rep crmcontracts.ImportRunReport, lang tex
 			derefString(issue.File), lineText(issue.Line), derefString(issue.Column), problemText(issue, lang), derefString(issue.Value),
 		}
 		for i := range row {
-			row[i] = guardCSVFormula(row[i])
+			row[i] = formulacell.Guard(row[i])
 		}
 		if err := out.Write(row); err != nil {
 			return fmt.Errorf("import problems: %w", err)

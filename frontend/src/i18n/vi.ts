@@ -1233,6 +1233,8 @@ export const vi = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.expand": "Mở rộng",
+  "common.collapse": "Thu gọn",
   "clipboard.copyFailedTitle": "Truy cập bộ nhớ tạm bị từ chối",
 
   "explain.open": "Giải thích con số này",
@@ -12226,7 +12228,6 @@ export const vi = {
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
-  "worklist.disposition.snoozeFor": "Thời gian tạm hoãn",
   "worklist.disposition.snoozeUntil.reply": "Đến khi họ trả lời",
   "worklist.disposition.verb.handled": "Xong",
   "worklist.disposition.verb.not_mine": "Không phải việc của tôi",
@@ -12244,7 +12245,6 @@ export const vi = {
     "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
   "worklist.disposition.swipeCancel": "Giữ lại",
-  "worklist.disposition.menu": "Gỡ khỏi danh sách",
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed":
     "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách.",
@@ -12359,6 +12359,7 @@ export const vi = {
   "worklist.board.promises": "Cam kết đến hạn",
   "worklist.board.truncated":
     "Số đếm chưa đầy đủ. Mỗi con số là mức tối thiểu.",
+  "worklist.rowMenu": "Thao tác khác cho {title}",
   "worklist.readings.label": "Số liệu hôm nay",
   "worklist.readings.revenue": "Doanh thu có rủi ro",
   "worklist.readings.revenue.detail": "Deal đang chững lại hôm nay",

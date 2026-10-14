@@ -13,6 +13,7 @@ import { ForecastShareActions } from "./analytics.share";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
+  type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
@@ -22,7 +23,6 @@ export function ReportingForecastGraphs({
   scope,
 }: Readonly<{ scope: AnalyticsScope }>) {
   const t = useT();
-  const { locale } = useLocale();
   const showCharts = useCan("report_definition", "read");
   const [snapshot, setSnapshot] = useState("latest");
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
@@ -45,14 +45,24 @@ export function ReportingForecastGraphs({
       );
     },
   });
+  const evaluated = showCharts ? query.data : undefined;
   return (
-    <>
-      <div className="reporting-toolbar">
+    <div className="reporting-results">
+      {/* The snapshot and the verbs that share it, as one row: the choice only
+          means something to the share beside it. */}
+      <div className="reporting-toolbar reporting-share-bar">
+        {evaluated?.charts.some((chart) => chart.snapshot_id) && (
+          <SnapshotPicker
+            evaluation={evaluated}
+            value={snapshot}
+            onChange={setSnapshot}
+          />
+        )}
         <ForecastShareActions
           target="forecast"
           scope={scope}
           snapshotId={
-            (showCharts ? query.data?.charts : undefined)?.find(
+            evaluated?.charts.find(
               (chart) => chart.kind === "pipeline_movement",
             )?.[snapshot === "opening" ? "opening_snapshot_id" : "snapshot_id"]
           }
@@ -62,45 +72,6 @@ export function ReportingForecastGraphs({
         <QueryGate query={query} pendingLabel={t("reporting.forecast_support")}>
           {(evaluation) => (
             <>
-              {evaluation.charts.some((chart) => chart.snapshot_id) && (
-                <div className="reporting-toolbar">
-                  <Field label={t("reporting.shareSnapshot")}>
-                    {(field) => (
-                      <Select
-                        {...field}
-                        value={snapshot}
-                        onChange={setSnapshot}
-                        options={evaluation.charts
-                          .filter((chart) => chart.kind === "pipeline_movement")
-                          .flatMap((chart) => [
-                            {
-                              value: "latest",
-                              label: chart.state_at
-                                ? formatDateTime(
-                                    chart.state_at,
-                                    locale,
-                                    evaluation.context.timezone,
-                                  )
-                                : t("reporting.live"),
-                            },
-                            ...(chart.opening_snapshot_id && chart.interval
-                              ? [
-                                  {
-                                    value: "opening",
-                                    label: formatDateTime(
-                                      chart.interval.start_at,
-                                      locale,
-                                      evaluation.context.timezone,
-                                    ),
-                                  },
-                                ]
-                              : []),
-                          ])}
-                      />
-                    )}
-                  </Field>
-                </div>
-              )}
               <ReportingCharts
                 evaluation={evaluation}
                 onEvidence={setEvidence}
@@ -117,6 +88,53 @@ export function ReportingForecastGraphs({
           )}
         </QueryGate>
       )}
-    </>
+    </div>
+  );
+}
+
+function SnapshotPicker({
+  evaluation,
+  value,
+  onChange,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  value: string;
+  onChange: (value: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { timezone } = evaluation.context;
+  return (
+    <Field label={t("reporting.shareSnapshot")}>
+      {(field) => (
+        <Select
+          {...field}
+          value={value}
+          onChange={onChange}
+          options={evaluation.charts
+            .filter((chart) => chart.kind === "pipeline_movement")
+            .flatMap((chart) => [
+              {
+                value: "latest",
+                label: chart.state_at
+                  ? formatDateTime(chart.state_at, locale, timezone)
+                  : t("reporting.live"),
+              },
+              ...(chart.opening_snapshot_id && chart.interval
+                ? [
+                    {
+                      value: "opening",
+                      label: formatDateTime(
+                        chart.interval.start_at,
+                        locale,
+                        timezone,
+                      ),
+                    },
+                  ]
+                : []),
+            ])}
+        />
+      )}
+    </Field>
   );
 }

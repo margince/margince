@@ -202,8 +202,11 @@ describe("a meeting the reader has sent nothing after", () => {
     );
     renderWorklist();
 
-    await screen.findByText(/Pricing review/);
-    expect(await screen.findByRole("link", { name: /^open$/i })).not.toBeNull();
+    // The title links the deal, so the row needs no Open of its own.
+    const title = await screen.findByRole("link", { name: /Pricing review/ });
+    expect(title.getAttribute("href")).toContain(
+      "01a05500-0000-7000-8000-0000000000e1",
+    );
     expect(
       screen.queryByRole("button", { name: /draft follow-up/i }),
     ).toBeNull();

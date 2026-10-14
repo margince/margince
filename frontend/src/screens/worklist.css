@@ -482,60 +482,6 @@
   }
 }
 
-/* The spans behind the snooze's caret, as LINES of a list.
-   Four answers to one question — "come back tomorrow, in three days, next week,
-   when they reply" — so they are read down rather than across, and each takes
-   the panel's full width so the words start at one x and the whole line is the
-   press target. Stretched rather than left-aligned: at `flex-start` each button
-   shrink-wrapped its own sentence, which drew four pills of four different
-   widths and read as four controls instead of four choices. */
-.worklist-snooze-spans {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
-}
-
-/* What a LINE is, as opposed to a button: the words start at the panel's
-   leading edge and there is no pill drawn round them. Four bordered fills
-   stacked in a floating panel say "here are four controls" where the reader
-   asked "how long for?", and the four widths a shrink-wrapped sentence takes
-   read as four unrelated things.
-
-   `.overflow-menu-items .btn` says the same thing about the folded menu's rows
-   and this is deliberately NOT that rule reused: it is scoped to `OverflowMenu`'s
-   own panel, and this panel is a `Popover`'s — whose contract is that the
-   caller's content keeps the caller's face, which is why the popover's
-   stylesheet does not touch it. The two are one look with two owners today. If
-   a third surface needs it, the rule belongs in the design system as "a list of
-   choices in a floating panel" rather than copied a third time.
-
-   No inset of its own: `.btn` already carries one, and restating it here
-   would be this sheet inventing a geometry the control tier owns. */
-.worklist-snooze-spans > .btn {
-  justify-content: flex-start;
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-}
-
-/* And the line the pointer is ON, which the rule above took away: it strips the
-   ghost ground at `.btn-ghost:hover`'s own specificity, and this sheet arrives
-   after the base one, so the four choices answered a hovering pointer with
-   nothing at all. Stated here at a specificity that beats both, because a tie
-   settled by load order is a hover state that comes and goes with the bundler.
-
-   The GROUND is the whole state — the resting ink is untouched above and needs
-   no restating — and it is the same `--bgHover` the folded menu's rows take,
-   which is what keeps these two spellings of a list of choices one look.
-
-   `:not(:disabled)` because a choice stands down while one of the others is
-   being written, and a control that refuses the press must not light up under
-   the pointer as though it would take it. */
-.worklist-snooze-spans > .btn:hover:not(:disabled) {
-  background: var(--bgHover);
-}
-
 /* The queue on a phone.
  *
  * The row is a three-column line — rank, text, verbs — and the verbs are
