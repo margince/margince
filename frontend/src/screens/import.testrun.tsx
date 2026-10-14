@@ -13,6 +13,7 @@ import type { Locale } from "../i18n/locale";
 import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
+import { hasProgress, ImportProgressPanel } from "./import.progress";
 import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
@@ -82,7 +83,7 @@ export function TestRunStep({
   const t = useT();
   const { report, runId } = wizard;
   if (wizard.run.data?.status === "validating") {
-    return <TestingBody runId={wizard.run.data.id} />;
+    return <TestingBody run={wizard.run.data} />;
   }
   return (
     <QueryStates query={report} pendingLabel={t("common.loading")}>
@@ -99,14 +100,18 @@ export function TestRunStep({
 }
 
 // A test can read for minutes, so the one waiting on it can stop it.
-function TestingBody({ runId }: Readonly<{ runId: string }>) {
+function TestingBody({ run }: Readonly<{ run: ImportRun }>) {
   const t = useT();
   const stop = useStopImportTest();
   return (
     <div className="import">
-      <PendingBody visible label={t("import.test.testing")} />
+      {hasProgress(run) ? (
+        <ImportProgressPanel run={run} waiting={t("import.test.testing")} />
+      ) : (
+        <PendingBody visible label={t("import.test.testing")} />
+      )}
       <div className="import__actions">
-        <Button pending={stop.isPending} onClick={() => stop.mutate(runId)}>
+        <Button pending={stop.isPending} onClick={() => stop.mutate(run.id)}>
           {t("import.test.stop")}
         </Button>
       </div>
