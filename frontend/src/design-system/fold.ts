@@ -4,9 +4,8 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { usePresence } from "./presence";
 
-// Height cannot move to or from `auto`, so the box is held at measured pixels
-// while `[data-folding]` gives it the transition. The stylesheet owns the time,
-// the curve and the reduced-motion answer.
+// Height cannot move to or from `auto`: the box is held at measured pixels while
+// `[data-folding]` moves it. The stylesheet owns the time, curve and reduced motion.
 
 /** The box's border-box height shut and open, measured while it is open. */
 export type FoldEnds = (box: HTMLElement) => Readonly<{
@@ -16,13 +15,8 @@ export type FoldEnds = (box: HTMLElement) => Readonly<{
 
 const FOLDING = "data-folding";
 
-/**
- * Animate `box` between its shut and open heights as `open` flips. It returns
- * whether the content is still on screen: true while open and through the close.
- *
- * A flip mid-motion turns the box from where it is. With nothing that moves
- * (reduced motion, jsdom) the box lands at once.
- */
+/** Moves `box` between its shut and open heights, and with its content while open.
+ * Returns whether the content is on screen: while open and through the close. */
 export function useFold(
   box: RefObject<HTMLElement | null>,
   open: boolean,
@@ -39,22 +33,23 @@ export function useFold(
     }
     last.current = open;
     run.current += 1;
-    if (element === null || typeof element.getAnimations !== "function") {
+    if (element === null || !moves(element)) {
+      return;
+    }
+    const at = ends(element);
+    moveTo(element, open ? at.shut : at.open, open ? at.open : at.shut);
+  }, [box, ends, open]);
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!open || element === null || !moves(element)) {
       return;
     }
     const token = run.current;
-    const at = ends(element);
-    if (!element.hasAttribute(FOLDING)) {
-      element.style.setProperty("height", `${open ? at.shut : at.open}px`);
-      element.setAttribute(FOLDING, "");
-      // A layout read commits the start height, so the next one transitions.
-      element.getBoundingClientRect();
-    }
-    element.style.setProperty("height", `${open ? at.open : at.shut}px`);
-    if (!open) {
-      return;
-    }
-    grow(element, ends, () => run.current === token);
+    const stop = follow(element, ends, () => run.current === token);
+    return () => {
+      run.current += 1;
+      stop();
+    };
   }, [box, ends, open]);
   const { mounted } = usePresence({ open, element: box });
   useLayoutEffect(() => {
@@ -65,35 +60,93 @@ export function useFold(
   return mounted;
 }
 
-// Content can arrive while the box grows, as a read that lands a frame later.
-// The open end follows it, and the box lets go once it has reached the content.
-function grow(element: HTMLElement, ends: FoldEnds, current: () => boolean) {
-  const target = () =>
-    element.style.setProperty("height", `${ends(element).open}px`);
-  const follow =
-    typeof ResizeObserver === "function"
-      ? new ResizeObserver(() => {
-          if (current()) target();
-        })
-      : null;
-  for (const child of element.children) {
-    follow?.observe(child);
-  }
-  const settle = () => {
-    if (!current()) {
-      follow?.disconnect();
+/** When code closes a body that holds focus, focus goes to the control naming it in
+ * `aria-controls`; `inert` would drop it to the page. */
+export function useFocusHandBack(body: string, open: boolean) {
+  const was = useRef(open);
+  useLayoutEffect(() => {
+    const closed = was.current && !open;
+    was.current = open;
+    const region = document.getElementById(body);
+    if (
+      !closed ||
+      region === null ||
+      !region.contains(document.activeElement)
+    ) {
       return;
     }
-    target();
+    const control = [...document.querySelectorAll("[aria-controls]")].find(
+      (each) => each.getAttribute("aria-controls") === body,
+    );
+    if (control instanceof HTMLElement) {
+      control.focus();
+    }
+  }, [body, open]);
+}
+
+// While open the box follows its content: through the open motion, and to each
+// new height a late read brings. A new width alone only re-measures.
+function follow(
+  element: HTMLElement,
+  ends: FoldEnds,
+  current: () => boolean,
+): () => void {
+  let rest = 0;
+  const measure = () => {
+    rest = ends(element).open;
+  };
+  const settle = () => {
+    if (!current() || !element.hasAttribute(FOLDING)) {
+      return;
+    }
+    element.style.setProperty("height", `${ends(element).open}px`);
     const moving = element.getAnimations().filter(isHeight);
     if (moving.length > 0) {
       void Promise.allSettled(moving.map((each) => each.finished)).then(settle);
       return;
     }
-    follow?.disconnect();
     release(element);
+    measure();
   };
+  const resized = () => {
+    if (!current()) {
+      return;
+    }
+    if (element.hasAttribute(FOLDING)) {
+      element.style.setProperty("height", `${ends(element).open}px`);
+      return;
+    }
+    const before = rest;
+    measure();
+    if (Math.abs(rest - before) < 0.5) {
+      return;
+    }
+    moveTo(element, before, rest);
+    settle();
+  };
+  measure();
+  const observer =
+    typeof ResizeObserver === "function" ? new ResizeObserver(resized) : null;
+  for (const child of element.children) {
+    observer?.observe(child);
+  }
   settle();
+  return () => observer?.disconnect();
+}
+
+function moves(element: HTMLElement): boolean {
+  return typeof element.getAnimations === "function";
+}
+
+// A box already moving turns from where it is.
+function moveTo(element: HTMLElement, from: number, to: number) {
+  if (!element.hasAttribute(FOLDING)) {
+    element.style.setProperty("height", `${from}px`);
+    element.setAttribute(FOLDING, "");
+    // A layout read commits the start height, so the next one transitions.
+    element.getBoundingClientRect();
+  }
+  element.style.setProperty("height", `${to}px`);
 }
 
 function isHeight(animation: Animation): boolean {

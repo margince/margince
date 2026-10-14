@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CaptureActivityTab } from "./capture-activity";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The states worth seeing side by side are the ones that differ in what the
 // surface may HONESTLY say: content it holds, content it deliberately does not,

@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
-import { ContactActions } from "./contactactions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactActions } from "./contactactions";
 
 type Contact360 = components["schemas"]["Contact360"];
 

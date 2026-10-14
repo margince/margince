@@ -176,6 +176,19 @@ func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmc
 
 // ApproveApprovalBundle decides every still-pending member of one bundle at
 // once. Each member is decided on its own terms, so the response is per member.
+// AcknowledgeApprovalFailure takes the caller's failed decision off their Worklist.
+func (h Handlers) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AcknowledgeApprovalFailureJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.svc.AcknowledgeEffectFailure(r.Context(), pathID[ids.ApprovalKind](id), req.FailedAt); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h Handlers) ApproveApprovalBundle(w http.ResponseWriter, r *http.Request, bundleID crmcontracts.BundleId) {
 	h.decideBundle(w, r, bundleID, true)
 }

@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Disclosure } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
-import { DisclosureGroup } from "../design-system/disclosure";
+import { Disclosure, DisclosureGroup } from "../design-system/disclosure";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
@@ -119,13 +119,10 @@ export function CompanyRail({
         </>
       )}
       <Panel>
-        {/* One section opens at a time, so only the top one starts open: a
-            second `open` would claim the group and shut the first. */}
         <DisclosureGroup>
           {resolved && (
             <Disclosure
               className="co-sect"
-              open
               summary={<SectionSummary title={t("record.registration")} />}
             >
               <PanelBody>
@@ -237,9 +234,11 @@ function ContactsSection({
   // twenty-five arrived.
   const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
+  // Starts open while the reader has opened no other section of the rail.
   return (
     <Disclosure
       className="co-sect"
+      open
       summary={
         <SectionSummary
           title={t("co.rail.contacts.title")}

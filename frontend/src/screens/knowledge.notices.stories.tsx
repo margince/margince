@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ReindexingNotice, UploadRefusals } from "./knowledge.notices";
-import { StoryProviders } from "./story-utils";
 
 // What the document-sets card says about itself. The refusal list is the one
 // worth reading side by side with the rest: it is a single heading over a list

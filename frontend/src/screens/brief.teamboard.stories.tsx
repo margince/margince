@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { BriefTeamBoard } from "./brief.teamboard";
-import { jsonResponse, StoryProviders } from "./story-utils";
 
 // THE TEAM BOARD AS BRIEF DRAWS IT — the same panel the Worklist renders, on
 // the page a lead opens first.

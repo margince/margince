@@ -10,11 +10,15 @@ import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ShortlistVerb } from "./bulkshortlist";
 import { ValueControl } from "./filtervalue";
 import { listsMe, shortlist } from "./lists.fixtures";
 import type { LeafValue } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(cleanup);
 

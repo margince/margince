@@ -3,8 +3,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../testing/mefixture";
+import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { WorkAsLeadAction } from "./contactleadaction";
-import { jsonResponse, StoryProviders } from "./story-utils";
 
 /** The backend the action talks to; `answer` decides what the create says. */
 function stubBackend(

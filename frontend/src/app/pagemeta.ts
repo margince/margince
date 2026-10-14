@@ -107,6 +107,8 @@ export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
   // results it had just found.
   tags: "nav.tags",
   lists: "lists.page",
+  // Reached from the deals page and a deal's legal tab, by a reader who reviews.
+  "legal-reviews": "legalReview.queueTitle",
 };
 
 export function resolveTitle(

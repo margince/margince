@@ -334,16 +334,15 @@ func writableOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived stor
 	return offer, nil
 }
 
-// visibleOfferLocked is the MUTATION spelling of visibleOffer: it takes
-// the offer's row lock before the status/visibility reads, so two
-// concurrent editors — or an edit racing a send — linearize and the
-// stored totals can never miss a committed line. The returned witness
-// lets the caller patch under the held lock (storekit.ApplyLocked).
-//
-// It also asks the harder authority question, and that is what makes it the
-// mutation spelling rather than merely the locked one — writableOffer above
-// is where that question is spelled.
+// visibleOfferLocked is the MUTATION spelling of visibleOffer. It locks the
+// deal (lockOfferDeal), then the offer, before the status and visibility reads.
+// So concurrent editors linearize and the totals never miss a line. The
+// witness lets the caller patch under the held lock (storekit.ApplyLocked).
+// It also asks the harder authority question, spelled in writableOffer above.
 func visibleOfferLocked(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, storekit.RowLock, error) {
+	if err := lockOfferDeal(ctx, tx, id); err != nil {
+		return crmcontracts.Offer{}, storekit.RowLock{}, err
+	}
 	lock, err := storekit.LockRow(ctx, tx, "offer", id.UUID, storekit.LiveOnly)
 	if err != nil {
 		return crmcontracts.Offer{}, storekit.RowLock{}, err

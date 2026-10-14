@@ -88,13 +88,13 @@ move() {
 assert() {
 	local days short
 	days=$(days "$1")
-	if [ ! -r "$BASELINE" ]; then
+	if [[ ! -r "$BASELINE" ]]; then
 		echo "clock-drift-host: no baseline at $BASELINE — nothing recorded the real instant, so the" >&2
 		echo "                  shift cannot be proven and a green run would prove nothing." >&2
 		exit 1
 	fi
 	short=$(shortfall "$days")
-	if [ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]; then
+	if [[ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]]; then
 		echo "clock-drift-host: the clock reads ${short}s short of the ${days}-day offset." >&2
 		echo "                  Either the jump did not take or a time service re-synced during the" >&2
 		echo "                  run; in both cases the suite ran at a clock nobody chose, so this run" >&2
@@ -113,14 +113,14 @@ assert() {
 restore() {
 	local days short
 	days=$(days "$1")
-	if [ ! -r "$BASELINE" ]; then
+	if [[ ! -r "$BASELINE" ]]; then
 		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
 		sudo timedatectl set-ntp true
 		return 0
 	fi
 	short=$(shortfall "$days")
 	rm -f "$BASELINE"
-	if [ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]; then
+	if [[ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]]; then
 		echo "clock-drift-host: the clock is already back (${short}s short of the offset) — leaving it alone."
 		sudo timedatectl set-ntp true
 		return 0
@@ -131,8 +131,8 @@ restore() {
 }
 
 case "${1:-}" in
-move) [ $# -eq 2 ] || usage; move "$2" ;;
-assert) [ $# -eq 2 ] || usage; assert "$2" ;;
-restore) [ $# -eq 2 ] || usage; restore "$2" ;;
+move) [[ $# -eq 2 ]] || usage; move "$2" ;;
+assert) [[ $# -eq 2 ]] || usage; assert "$2" ;;
+restore) [[ $# -eq 2 ]] || usage; restore "$2" ;;
 *) usage ;;
 esac

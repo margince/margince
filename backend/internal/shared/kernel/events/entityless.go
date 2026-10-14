@@ -52,6 +52,11 @@ var pipelineEventTypes = map[string]struct{}{
 	"deal_suggestion.accepted":   {},
 	"deal_suggestion.dismissed":  {},
 	"deal_suggestion.superseded": {},
+	// A legal review's note and pack are for holders of the legal_review
+	// grant, and no subscriber can be held to that. The audit row names the deal.
+	"legal_review.requested": {},
+	"legal_review.decided":   {},
+	"legal_review.withdrawn": {},
 	// The same holds for a tag suggestion, whose evidence may be one owner's mail.
 	"tag_suggestion.created":    {},
 	"tag_suggestion.accepted":   {},

@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { viewerZone } from "../format/timezone";
 import { en } from "../i18n/en";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   RenameTeamAction,
   TeamMembersModal,

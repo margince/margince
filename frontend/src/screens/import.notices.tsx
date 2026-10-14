@@ -12,6 +12,7 @@ import {
 } from "../lib/problem";
 import { isRecord } from "../lib/problembody";
 import { runHref } from "./importaddress";
+import { reasonText } from "./importreason";
 import type { ImportObject, ImportReport } from "./importtypes";
 
 // What an UNDO says about itself: that it stopped part-way, and which rows it
@@ -43,7 +44,8 @@ export function UndoErrors({
       <ul className="import__issues t-sub">
         {rows.map((row) => (
           <li key={`${row.object}-${row.id}`}>
-            {t(`import.object.${row.object}`)} — {row.id}: {row.reason}
+            {t(`import.object.${row.object}`)} — {row.id}:{" "}
+            {reasonText(t, row.reason, row.reason_code, undefined)}
           </li>
         ))}
       </ul>

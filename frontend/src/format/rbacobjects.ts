@@ -55,6 +55,7 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   offer: { area: "sales", label: "roles.object.offer" },
   offer_template: { area: "sales", label: "roles.object.offer_template" },
   contract: { area: "sales", label: "roles.object.contract" },
+  legal_review: { area: "sales", label: "roles.object.legal_review" },
   commission: { area: "sales", label: "roles.object.commission" },
   deal_room: { area: "sales", label: "roles.object.deal_room" },
   forecast: { area: "sales", label: "roles.object.forecast" },

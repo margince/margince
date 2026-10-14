@@ -3,6 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   boundedLeads,
   digest,
   NOT_FOUND,
@@ -17,13 +24,6 @@ import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
 import { BriefReadingsStrip } from "./brief.readings";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 // Brief, one part at a time.
 //

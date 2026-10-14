@@ -655,7 +655,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell />, "de");
 
     const bell = await screen.findByRole("button", {
-      name: "Meldungen, 2 offen",
+      name: "Benachrichtigungen, 2 offen",
     });
     await user.click(bell);
 

@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CaptureSettingsCard, WebsiteReadingCard } from "./capture-settings";
 
 // The posture toggle, in the three answers it can give a reader. The write gate
 // is `capture_settings:update`, so the denied fixture names a seat that holds

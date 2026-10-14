@@ -168,6 +168,13 @@ func (s *Service) WithPins(p Pins) *Service {
 	return s
 }
 
+// WithDone binds the reader's own Done set. Unbound, no row is hidden as done
+// and every Done is refused as not found.
+func (s *Service) WithDone(d DoneStore) *Service {
+	s.marked.store = d
+	return s
+}
+
 // WithWalks binds the store that holds one reader's walk still while they page
 // it — an option for the reason WithPins is one.
 //

@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 )
 
 var byteOrderMark = []byte{0xEF, 0xBB, 0xBF}
@@ -21,23 +23,37 @@ var byteOrderMark = []byte{0xEF, 0xBB, 0xBF}
 // sniffWindow bounds how much of the header line is read to choose a delimiter.
 const sniffWindow = 64 << 10
 
+// recordReader removes the formula guard an export put on a cell, so an
+// unedited export imports as the values it was written from.
+type recordReader struct {
+	*csv.Reader
+}
+
+func (r recordReader) Read() ([]string, error) {
+	record, err := r.Reader.Read()
+	for i, cell := range record {
+		record[i] = formulacell.Unguard(cell)
+	}
+	return record, err
+}
+
 // newRecordReader is the reader both the profile and the walk use, so the
 // columns a mapping is written against are the columns a run reads.
-func newRecordReader(r io.Reader) (*csv.Reader, error) {
+func newRecordReader(r io.Reader) (recordReader, error) {
 	buffered := bufio.NewReaderSize(r, sniffWindow)
 	if head, err := buffered.Peek(len(byteOrderMark)); err == nil && bytes.Equal(head, byteOrderMark) {
 		if _, err := buffered.Discard(len(byteOrderMark)); err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return recordReader{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
 		}
 	}
 	head, err := buffered.Peek(sniffWindow)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, bufio.ErrBufferFull) {
-		return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return recordReader{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
 	}
 	reader := csv.NewReader(buffered)
 	reader.Comma = delimiterOf(head)
 	reader.TrimLeadingSpace = true
-	return reader, nil
+	return recordReader{reader}, nil
 }
 
 // delimiterOf counts candidate delimiters outside quotes on the first line and

@@ -203,6 +203,10 @@ func (stubs) RefreshAiModelRates(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RefreshAiModelRates")
 }
 
+func (stubs) ListAgentUsageByUser(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListAgentUsageByUser")
+}
+
 func (stubs) ListAvailableModels(w nethttp.ResponseWriter, r *nethttp.Request, provider string, params crmcontracts.ListAvailableModelsParams) {
 	httperr.NotImplemented(w, r, "ListAvailableModels")
 }
@@ -497,6 +501,10 @@ func (stubs) GetApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 
 func (stubs) ApproveApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ApproveApprovalParams) {
 	httperr.NotImplemented(w, r, "ApproveApproval")
+}
+
+func (stubs) AcknowledgeApprovalFailure(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcknowledgeApprovalFailure")
 }
 
 func (stubs) RejectApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1095,6 +1103,10 @@ func (stubs) GetCompanyStrength(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "GetCompanyStrength")
 }
 
+func (stubs) RestoreCompanySuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreCompanySuggestionParams) {
+	httperr.NotImplemented(w, r, "RestoreCompanySuggestion")
+}
+
 func (stubs) DismissCompanySuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DismissCompanySuggestion")
 }
@@ -1365,6 +1377,10 @@ func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id
 
 func (stubs) MergeContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeContactParams) {
 	httperr.NotImplemented(w, r, "MergeContact")
+}
+
+func (stubs) RestoreContactMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreContactMomentParams) {
+	httperr.NotImplemented(w, r, "RestoreContactMoment")
 }
 
 func (stubs) DismissContactMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1651,6 +1667,22 @@ func (stubs) HideDealDocument(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "HideDealDocument")
 }
 
+func (stubs) ListDealLegalReviews(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListDealLegalReviews")
+}
+
+func (stubs) RequestLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestLegalReview")
+}
+
+func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {
+	httperr.NotImplemented(w, r, "RestoreDealMove")
+}
+
+func (stubs) DismissDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissDealMove")
+}
+
 func (stubs) ListDealOffers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealOffersParams) {
 	httperr.NotImplemented(w, r, "ListDealOffers")
 }
@@ -1883,7 +1915,7 @@ func (stubs) CancelImportRun(w nethttp.ResponseWriter, r *nethttp.Request, id op
 	httperr.NotImplemented(w, r, "CancelImportRun")
 }
 
-func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+func (stubs) DownloadImportProblems(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.DownloadImportProblemsParams) {
 	httperr.NotImplemented(w, r, "DownloadImportProblems")
 }
 
@@ -2105,6 +2137,30 @@ func (stubs) ReopenLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 
 func (stubs) ExplainLeadScore(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ExplainLeadScoreParams) {
 	httperr.NotImplemented(w, r, "ExplainLeadScore")
+}
+
+func (stubs) ListLegalReviews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLegalReviewsParams) {
+	httperr.NotImplemented(w, r, "ListLegalReviews")
+}
+
+func (stubs) GetLegalReviewSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetLegalReviewSettings")
+}
+
+func (stubs) UpdateLegalReviewSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateLegalReviewSettings")
+}
+
+func (stubs) GetLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetLegalReview")
+}
+
+func (stubs) DecideLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DecideLegalReview")
+}
+
+func (stubs) WithdrawLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawLegalReview")
 }
 
 func (stubs) ListLists(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListListsParams) {
@@ -3289,6 +3345,14 @@ func (stubs) GetActingIdentity(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetWorklist(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetWorklistParams) {
 	httperr.NotImplemented(w, r, "GetWorklist")
+}
+
+func (stubs) MarkWorklistRowsDone(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "MarkWorklistRowsDone")
+}
+
+func (stubs) ReopenWorklistRows(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReopenWorklistRows")
 }
 
 func (stubs) GetTeamExceptions(w nethttp.ResponseWriter, r *nethttp.Request) {

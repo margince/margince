@@ -7,7 +7,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { Button } from "./atoms";
 import { QueryGate, WriteRefused } from "./querystates";
 

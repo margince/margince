@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { SignatureTemplateCard } from "./signaturetemplatecard";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { SignatureTemplateCard } from "./signaturetemplatecard";
 
 // One signature layout for the whole workspace, with the reader's own
 // signature rendered from it underneath.

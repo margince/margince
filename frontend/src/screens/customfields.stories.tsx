@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CustomFieldsAdmin, FieldBuilder } from "./customfields";
 
 // The custom-fields admin sub-components rendered with direct props so the
 // fe-uat render lane exercises them without a network round-trip. FieldBuilder

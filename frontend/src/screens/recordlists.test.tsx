@@ -19,6 +19,11 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   LIVE_ID,
   listsMe,
   liveList,
@@ -30,7 +35,6 @@ import {
 } from "./lists.fixtures";
 import { RecordListsPanel } from "./recordlists";
 import { recordWriteKeys } from "./recordwritekeys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 afterEach(() => {
   cleanup();

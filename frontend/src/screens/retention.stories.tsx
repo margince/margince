@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { RetentionCard } from "./retention";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RetentionCard } from "./retention";
 
 // Settings → Privacy → Retention. The state worth reviewing here is the one
 // the screen exists for: with the retain-only posture ON, an enabled `erase`

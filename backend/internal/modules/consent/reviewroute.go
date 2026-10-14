@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -299,40 +300,72 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 // BOUNDED, because a queue read has to answer in time whatever the backlog is.
 // A list at its limit is a list with more behind it, and the caller is told so
 // by the count rather than by discovering it.
-func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int, error) {
+func (s *Store) AwaitingDecision(ctx context.Context, limit int, cursor string) ([]Review, int, string, error) {
 	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
 	// refuses buyers and agents and lets CONNECTORS through, and a connector
 	// runs with the granting human's own grants — so it would hold whatever
 	// this queue is gated on and could read the installation's refused
 	// correspondence wholesale. This list is a colleague's work queue.
 	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	// READ rather than create, for ReviewForReader's reason: seeing the queue
 	// and overriding the engine are different authorities, and an installation
 	// can grant the first without the second.
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionRead); err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 	if limit <= 0 || limit > maxAwaitingDecision {
 		limit = maxAwaitingDecision
 	}
+	// The position to resume from, zero when the caller sent none.
+	//
+	// An undecodable token is the caller's to fix, so it is refused rather than
+	// read as the start of the queue. Serving page one again is how a client
+	// loops on a token it keeps re-sending.
+	after := storekit.Cursor{}
+	if cursor != "" {
+		decoded, err := storekit.DecodeCursor(cursor)
+		if err != nil {
+			return nil, 0, "", err
+		}
+		after = decoded
+	}
 	var out []Review
 	var total int
+	var lastOpened time.Time
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Count and page share a statement snapshot, even when another colleague
 		// routes or resolves a review while this request is reading.
+		// The count is taken over the whole queue, and the page cut from it in
+		// the outer query. Both in one statement.
+		//
+		// A window count after the keyset filter counts the remainder, so
+		// `total` would fall as a caller paged. A documented number would then
+		// mean something else on page two.
+		//
+		// id breaks the tie opened_at leaves. Two reviews opened in the same
+		// microsecond are otherwise ordered by nothing, and a keyset over an
+		// unstable order repeats one row and skips another.
 		rows, err := tx.Query(ctx, `
-			SELECT id, state, kind,
-			       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
-			       refusals, reason_code,
-			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid),
-			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
-			       count(*) OVER ()
-			  FROM communication_review
-			 WHERE state = 'awaiting_decision' AND resolved_at IS NULL
-			 ORDER BY opened_at
-			 LIMIT $1`, limit)
+			SELECT q.id, q.state, q.kind, q.delivery_intent_id, q.refusals, q.reason_code,
+			       q.initiated_by, q.approval_id, q.opened_at, q.total
+			  FROM (
+			       SELECT id, state, kind,
+			              coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS delivery_intent_id,
+			              refusals, reason_code,
+			              coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS initiated_by,
+			              coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid)
+			                AS approval_id,
+			              opened_at, count(*) OVER () AS total
+			         FROM communication_review
+			        WHERE state = 'awaiting_decision' AND resolved_at IS NULL
+			       ) q
+			 WHERE $2::timestamptz IS NULL OR (q.opened_at, q.id) > ($2, $3)
+			 ORDER BY q.opened_at, q.id
+			 LIMIT $1`, limit, nullableTime(after.CreatedAt), after.ID)
 		if err != nil {
 			return fmt.Errorf("consent: reading the refused sends waiting for a decision: %w", err)
 		}
@@ -341,7 +374,7 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 			var r Review
 			var payload []byte
 			if err := rows.Scan(&r.ID, &r.State, &r.Kind, &r.IntentID, &payload,
-				&r.ReasonCode, &r.InitiatedBy, &r.ApprovalID, &total); err != nil {
+				&r.ReasonCode, &r.InitiatedBy, &r.ApprovalID, &lastOpened, &total); err != nil {
 				return fmt.Errorf("consent: reading a waiting review: %w", err)
 			}
 			if err := json.Unmarshal(payload, &r.Refusals); err != nil {
@@ -351,7 +384,28 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 		}
 		return rows.Err()
 	})
-	return out, total, err
+	if err != nil {
+		return nil, 0, "", err
+	}
+	// A token only where a page was filled. A short page is the end of the
+	// queue, and a cursor there offers a page that is never answered.
+	if len(out) < limit {
+		return out, total, "", nil
+	}
+	next, err := storekit.EncodeCursor(lastOpened, out[len(out)-1].ID)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	return out, total, next, nil
+}
+
+// nullableTime hands Postgres NULL for the zero instant, which is how the
+// keyset predicate above reads "no cursor" without a second statement.
+func nullableTime(at time.Time) *time.Time {
+	if at.IsZero() {
+		return nil
+	}
+	return &at
 }
 
 // maxAwaitingDecision bounds one page of the queue. Oldest first, so a backlog

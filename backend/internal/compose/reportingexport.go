@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,7 +49,7 @@ func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
 			unit = "minor_units"
 		}
-		rows = append(rows, []string{metric, block, guardCSVFormula(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, evaluation.Context.Currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, evaluation.Context.Currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
 		appendRow(string(metric.Id), "headline", string(metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))

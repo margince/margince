@@ -101,6 +101,10 @@ A row with an `id` **updates that company**. Read the companies out first to get
 file, and import it back. An empty `id` creates a company. An ID that matches no record is reported as a
 skip, never created under a new ID. Nothing is written to `id` itself.
 
+The column that names the row
+([below](#which-column-names-a-row)) names that company from then on, so a later import under the same
+`source_name` finds it. Undo does not archive it, because the run did not create it.
+
 ### Which column names a row
 
 Every row needs one column that names it *within your file*. That column makes an import of the same file

@@ -130,22 +130,24 @@ func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
 type attentionFailedEffects struct{ svc *approvals.Service }
 
 func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attention.FailedEffect, error) {
-	rows, _, err := f.svc.ListWire(ctx, approvals.ListInput{FailedForDecider: true, Limit: limit})
+	decisions, err := f.svc.OwnFailedDecisions(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]attention.FailedEffect, 0, len(rows))
-	for _, row := range rows {
+	out := make([]attention.FailedEffect, 0, len(decisions))
+	for _, decision := range decisions {
+		row := decision.Approval
 		if row.EffectFailedAt == nil || row.EffectFailure == nil {
 			// The SQL filter guarantees the pair; the re-check is what makes
 			// the derefs safe in this package, where that SQL is elsewhere.
 			continue
 		}
 		failed := attention.FailedEffect{
-			ID:       ids.UUID(row.Id),
-			Kind:     row.Kind,
-			Sentence: *row.EffectFailure,
-			FailedAt: *row.EffectFailedAt,
+			ID:        ids.UUID(row.Id),
+			Kind:      row.Kind,
+			Sentence:  *row.EffectFailure,
+			FailedAt:  *row.EffectFailedAt,
+			Retryable: decision.Retryable,
 		}
 		// Both or neither: a type with no id names nothing, and an id with no
 		// type says where to look without saying at what.
@@ -259,6 +261,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
+		WithDone(attentionPins{pool: pool, store: activities.NewStore(db)}).
 		// One reader's walk, held still while they page it. Without it the
 		// cursor is an offset into a ranking rebuilt on every read, so the
 		// count above the queue climbs as work arrives behind somebody who is

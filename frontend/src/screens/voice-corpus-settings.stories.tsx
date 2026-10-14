@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 
 // Where a writing sample arrives: dropped on the zone, or chosen through it.

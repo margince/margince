@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge } from "../design-system/atoms";
+import { StoryProviders } from "../testing/story-utils";
 import type {
   BoardDocument,
   BoardGroup,
@@ -10,7 +11,6 @@ import type {
   ThreadVerbs,
 } from "./dealroomthreads";
 import { DocumentBoard } from "./dealroomthreads";
-import { StoryProviders } from "./story-utils";
 
 // The room's documents and the conversation about them, drawn as ONE board:
 // a thread sits inside the document it is about, so a reader never has to work

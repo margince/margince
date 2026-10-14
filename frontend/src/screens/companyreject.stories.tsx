@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { CompanyRejectAction } from "./companyreject";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The states worth reviewing are what a reader is OFFERED, because that is what
 // the first attempt at this verb got wrong. It differs by authority and by the

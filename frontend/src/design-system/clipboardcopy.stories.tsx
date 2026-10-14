@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { Button } from "./atoms";
 import { holdClipboard, stubClipboard } from "./clipboard-testing";
 import { CopyableText, useClipboardCopy } from "./clipboardcopy";

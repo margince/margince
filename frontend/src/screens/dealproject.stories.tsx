@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DealProjectChip, StartDeliveryPrompt } from "./dealproject";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The delivery half of a deal: which project it feeds, and the one offer a won
 // deal gets when its company has exactly one open project to feed.

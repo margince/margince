@@ -3,10 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { ExtensionUnit } from "./extensions.queries";
 import type { Role } from "./roles.queries";
 import { RoleDrawer } from "./roles-drawer";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // One role open in its drawer. The head holds the name, the badges and the
 // verb that archives or restores it; the body scrolls the editor.

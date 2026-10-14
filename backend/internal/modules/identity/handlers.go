@@ -140,6 +140,9 @@ type Handlers struct {
 	// agentAPIBase answers where a passport calls the API, for the Settings
 	// card's snippet. Nil answers "".
 	agentAPIBase func(*http.Request) string
+	// passportUsage reads each live passport's running window. Nil lists
+	// passports without usage.
+	passportUsage PassportUsageReader
 
 	// oidcProviders/stateSigner/oidcRoutes wire /auth/oidc/{provider}/start
 	// and /callback (WithOIDCProviders). Absent from oidcProviders means the

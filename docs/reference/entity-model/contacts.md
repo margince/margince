@@ -71,6 +71,8 @@ The 39 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_geocode_status_check`: `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
 - `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'customer', 'former_customer', 'disqualified'])))`
 - `company_linkedin_url_shape`: `CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$')))`
+- `company_logo_icon_names_its_origin`: `CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))`
+- `company_logo_names_its_origin`: `CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))`
 - `company_name_source_check`: `CHECK ((name_source = ANY (ARRAY['human', 'dossier', 'signature', 'domain'])))`
 - `company_not_own_parent`: `CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id)))`
 - `company_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`

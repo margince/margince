@@ -10,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { VoiceSamples } from "./voice-samples";
 
 // The samples a voice is built from, one row each. Only a sample left out

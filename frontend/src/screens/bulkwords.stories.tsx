@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { DataTable } from "../design-system/datatable";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { SampleState, SkipReason } from "./bulkwords";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // How the bulk preview names each verb's before and after, and why a record
 // was left alone — the words every bulk change shows.

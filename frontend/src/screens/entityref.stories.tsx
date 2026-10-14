@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { EntityRef } from "./entityref";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // EntityRef resolves a record id to its display name and backlinks to the
 // 360, and its unresolved readings are all captured here because they are

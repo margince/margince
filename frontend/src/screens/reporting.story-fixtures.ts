@@ -1,3 +1,4 @@
+import { jsonResponse, meRoute, type RouteMap } from "../testing/story-utils";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
@@ -7,7 +8,6 @@ import {
   reportingStoryReport,
   reportingStoryScope,
 } from "./reporting.fixtures";
-import { jsonResponse, meRoute, type RouteMap } from "./story-utils";
 
 export {
   reportingStoryCatalog,

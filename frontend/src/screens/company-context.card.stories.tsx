@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { CompanyContextCard } from "./company-context";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyContextCard } from "./company-context";
 
 // Two conditions, not one: a rollout flag says whether the surface exists, the
 // company grant whether this reader may change it.

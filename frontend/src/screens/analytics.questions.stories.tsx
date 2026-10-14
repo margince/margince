@@ -4,6 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  type RouteMap,
+  StoryProviders,
+} from "../testing/story-utils";
 import { QuestionsView } from "./analytics.questions";
 import {
   ANSWER,
@@ -16,13 +23,6 @@ import {
   USERS,
   WITHHELD_ANSWER,
 } from "./analytics.questions.testkit";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
 
 // The Questions section of Analytics: the schema read, the builder, the answer
 // it asks for, and a saved question opened at its own address.

@@ -26,6 +26,8 @@
 // afterwards), deal_suggestion and deal_suggestion_evidence (Deal Scout's
 // proposals to open a deal and the evidence each cites, written by compose's
 // hourly pass through RecordSuggestionTx and decided by a rep here).
+// It also owns legal_review: a deal's request for legal's approval, the pack
+// it was asked on, and legal's answer.
 //
 // The project moved OUT of this module into modules/projects, superseding
 // ADR-0073 — see that package's doc.go for the reasoning and for the two

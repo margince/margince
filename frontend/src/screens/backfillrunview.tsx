@@ -7,7 +7,9 @@ import { Badge, Button } from "../design-system/atoms";
 import { CountUp } from "../design-system/countup";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
-import { formatDuration, formatNumber, formatPercent } from "../format/format";
+import { ProgressBar } from "../design-system/progressbar";
+import { formatNumber, formatPercent } from "../format/format";
+import { formatSpan } from "../format/now";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { progressFraction } from "../lib/capture-progress";
@@ -348,11 +350,17 @@ function RunProgress({
       {staleForMs !== null && (
         <p className="t-caption">
           {t("backfill.staleUpdated", {
-            duration: formatDuration(staleForMs, locale),
+            duration: formatSpan(staleForMs, t, locale),
           })}
         </p>
       )}
-      {fraction !== null && <RunBar fraction={fraction} />}
+      {fraction !== null && (
+        <ProgressBar
+          fraction={fraction}
+          label={t("backfill.progressLabel")}
+          valueText={formatPercent(fraction, locale)}
+        />
+      )}
       <p className="t-caption capture-scanned" aria-live="polite">
         <span>
           {plural("backfill.countScanned", scanned, {
@@ -364,30 +372,6 @@ function RunProgress({
         )}
       </p>
     </>
-  );
-}
-
-// The bar draws the fraction the line under it states in words, and exposes
-// the same number to assistive tech through the progressbar role rather than
-// through a native `<progress>`, whose track and fill are the browser's colours
-// and the one thing on this card no token could reach.
-function RunBar({ fraction }: { fraction: number }) {
-  const t = useT();
-  const percent = Math.round(fraction * 100);
-  return (
-    <div
-      className="capture-bar"
-      role="progressbar"
-      aria-label={t("backfill.progressLabel")}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-    >
-      <span
-        className="capture-bar-fill"
-        style={{ inlineSize: `${percent}%` }}
-      />
-    </div>
   );
 }
 

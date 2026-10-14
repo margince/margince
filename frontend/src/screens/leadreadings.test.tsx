@@ -5,8 +5,12 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { LeadReadings } from "./leadreadings";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // Whose judgement the score rests on.
 //

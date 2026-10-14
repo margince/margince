@@ -231,7 +231,7 @@ func recordPin(
 		// folded group's id is synthetic, so pinEntityID answers the nil id for
 		// every one of them. Without this the trail would hold a row of
 		// identical entries saying a batch was pinned and never which.
-		"row_id":    row.RowID,
+		fieldRowID:  row.RowID,
 		"reader_id": reader.String(),
 	}
 	_, err := storekit.AuditEvent(ctx, tx, "update", "worklist_pin", pinEntityID(row), after)

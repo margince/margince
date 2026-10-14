@@ -4,6 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ListColumn } from "../design-system/listtable";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   type FilterSpec,
   type ListPage,
   type ListQuery,
@@ -11,7 +16,6 @@ import {
   useListQuery,
   type ViewSpec,
 } from "./listquery";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ListTable (screens/listquery.tsx) binds useListQuery's server-query state
 // to the design-system list surface (ListTable in listtable.tsx, imported

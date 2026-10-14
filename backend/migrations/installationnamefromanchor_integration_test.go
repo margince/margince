@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-const installationNameMigration = "core/1791968194_the_installation_carries_its_companys_name.up.sql"
+const installationNameMigration = "core/1791994619_the_installation_carries_its_companys_name.up.sql"
 
 func seedInstallationName(ctx context.Context, t *testing.T, conn *pgx.Conn, name string) {
 	t.Helper()

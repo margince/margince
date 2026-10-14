@@ -9,12 +9,13 @@ package agentvolume
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Release grants one more allowance of counter c to passport, in the window
-// named by bucket, and reports whether it applied.
+// Release grants one more allowance of counter c to subject (SubjectOf), in
+// the window named by bucket under length, and reports whether it applied.
 //
 // IT TAKES ITS SUBJECT EXPLICITLY rather than reading the context, and that is
 // the whole shape of this call. Every other method here meters the caller; this
@@ -36,17 +37,24 @@ import (
 // it did not have. A bucket in the FUTURE is refused for the opposite reason: it
 // would pre-authorize a window nobody has looked at, and the payload a release
 // reads is editable before it is approved.
-func (m *Meter) Release(ctx context.Context, ws, passport ids.UUID, c Counter, bucket int64) (bool, error) {
+//
+// A window counted under another length applies to nothing either: the length
+// changed at a reset, so that window has ended.
+func (m *Meter) Release(ctx context.Context, ws ids.UUID, subject string, c Counter, bucket int64, length time.Duration) (bool, error) {
 	// Every argument is judged BEFORE the meter's own reachability, so a caller
 	// defect reads the same whether or not Redis is up. The other order hides a
 	// wiring fault in exactly the deployment where one is most likely.
 	if !c.Releasable() {
 		return false, fmt.Errorf("agentvolume: %s is not a releasable counter", c)
 	}
-	if ws == (ids.UUID{}) || passport == (ids.UUID{}) {
-		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport", c)
+	if ws == (ids.UUID{}) || subject == "" {
+		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport or connection", c)
 	}
-	current := m.Bucket()
+	w := m.window(ctx)
+	if length != w.length {
+		return false, nil
+	}
+	current := w.bucket
 	if bucket > current {
 		return false, fmt.Errorf("agentvolume: cannot release %s for a window that has not started", c)
 	}
@@ -63,8 +71,8 @@ func (m *Meter) Release(ctx context.Context, ws, passport ids.UUID, c Counter, b
 		// record must not be reported as one.
 		return false, nil
 	}
-	key := m.releaseKey(ws, passport.String(), c, bucket)
-	if err := addScript.Run(ctx, m.rdb, []string{key}, 1, m.ttlSeconds()).Err(); err != nil {
+	key := m.releaseKey(ws, subject, c, bucket)
+	if err := addScript.Run(ctx, m.rdb, []string{key}, 1, w.ttlSeconds()).Err(); err != nil {
 		return false, fmt.Errorf("agentvolume: recording a release of %s: %w", c, err)
 	}
 	return true, nil

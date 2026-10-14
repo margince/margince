@@ -9,8 +9,8 @@ package migration
 // create has nothing to archive and no previous value to put back.
 //
 // import_record_map holds one row per identity, written by the run that first
-// landed it. A later run correcting the same identity writes none, so the
-// reversal walks that map, finds nothing, and reverses nothing.
+// landed it. A later run correcting the same identity writes none. A row naming
+// its record by id writes a bound row, which the reversal never reads.
 //
 // Counting it separates a run that did nothing from a run that left something
 // standing. Somebody undoing a wrong correction was told it had been taken

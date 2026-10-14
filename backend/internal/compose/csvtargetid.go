@@ -22,7 +22,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -32,56 +31,59 @@ import (
 
 // targetID is the record a row names, and whether it named one at all.
 type targetID struct {
-	id     ids.UUID
-	named  bool
-	reason string // why a named id cannot be used, "" when it can
+	id    ids.UUID
+	named bool
+	why   migration.Reason // why a named id cannot be used, empty when it can
 }
 
 // targetIDOf reads the `id` column and resolves it against the estate.
 //
-// Three refusals, each returned as a row-level reason rather than an error,
-// because one bad line in a spreadsheet is a thing to fix in the file and not a
-// reason to fail the run:
+// Three refusals, each a row-level reason and not an error. One bad line is
+// a fix in the file, not a reason to fail the run:
 //
 //   - unparseable: the column holds something that is not an id at all;
 //   - not found: a well-formed id no company in this workspace has;
 //   - not visible: a company the caller may not read.
 //
-// The last two answer the SAME sentence deliberately. Distinguishing them would
-// tell a caller that an id they cannot read nonetheless exists — an oracle over
-// a colleague's owner-private capture, one row at a time — and the honest thing
-// to say is the thing that is true from where they stand: no company you can see
-// has this id.
+// The last two share one sentence. Two would make an oracle: they would tell a
+// caller that an id they cannot read exists.
 func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID {
 	raw := strings.TrimSpace(textFields(row.Fields)[csvTargetID])
 	if raw == "" {
 		return targetID{}
 	}
 	if w.object != migration.ObjectCompany {
-		return targetID{named: true, reason: fmt.Sprintf(
-			"only a company row can name an %q; a %s row is identified by its own key",
-			csvTargetID, w.object)}
+		return targetID{named: true, why: migration.Why(migration.ReasonIDOnNonCompany,
+			"column", csvTargetID, "object", w.object)}
 	}
 	parsed, err := ids.Parse(raw)
 	if err != nil {
-		// The parse failure is the ANSWER, not a fault to propagate: one bad cell
-		// in a spreadsheet is a thing to fix in the file, and failing the whole
-		// run over it would tell a contact nothing about which line to look at.
-		return targetID{named: true, reason: fmt.Sprintf(
-			"%q is not a company id; export the companies to get theirs, or leave the column empty "+
-				"to import this row as a new company", raw)}
+		// A bad cell is a line to fix in the file, not a fault of the run.
+		return targetID{named: true, why: migration.Why(migration.ReasonIDNotACompanyID, "value", raw)}
 	}
-	// GetCompany runs under the caller's own row scope, so a company they
-	// may not read answers not-found here exactly as it would anywhere else.
-	// That is what makes one sentence cover both cases honestly.
-	// Likewise: a read that does not answer means no company this caller can see
-	// has that id, which is the sentence the report shows. Distinguishing "gone"
-	// from "not yours" would tell a caller that an id they cannot read exists.
+	// GetCompany runs under the caller's own row scope, so a company they may not
+	// read answers not-found, as it would anywhere else. "Gone" and "not yours"
+	// share one sentence so the answer is no oracle.
 	if _, err := w.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](parsed),
 		storekit.LiveOnly); err != nil {
-		return targetID{named: true, reason: fmt.Sprintf(
-			"no company you can see has the id %q; it may have been archived, merged away, or belong "+
-				"to a workspace this file did not come from", raw)}
+		return targetID{named: true, why: migration.Why(migration.ReasonIDNotVisible, "value", raw)}
+	}
+	if why := w.refTakenBy(ctx, row.ExternalID, parsed); why.Code != "" {
+		return targetID{named: true, why: why}
 	}
 	return targetID{id: parsed, named: true}
+}
+
+// refTakenBy says why a ref cannot be bound to the named company: an earlier
+// import already maps it to another one. Every slice and resume must resolve
+// one ref to one record. An undone run's key is free, and the bind takes it over.
+func (w *csvWriters) refTakenBy(ctx context.Context, ref string, named ids.UUID) migration.Reason {
+	if ref == "" {
+		return migration.Reason{}
+	}
+	binding, found, err := w.bindingOf(ctx, ref)
+	if err != nil || !found || binding.RunStatus == migration.StatusUndone || binding.NativeID == named {
+		return migration.Reason{}
+	}
+	return migration.Why(migration.ReasonRefTakenByAnotherCompany, "ref", ref)
 }

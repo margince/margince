@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { CompanyMark } from "./companymark";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 // The installation's own face, first on the company page: the two marks it can
 // wear, the monogram when it wears neither, and the read-only panel.

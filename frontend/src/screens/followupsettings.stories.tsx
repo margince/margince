@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { FollowUpSettingsCard } from "./followupsettings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { FollowUpSettingsCard } from "./followupsettings";
 
 // How long a sent message may go unanswered before its sender's Home asks for a
 // follow-up: one number, written as it is committed.

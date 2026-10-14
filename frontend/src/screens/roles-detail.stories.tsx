@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { Role } from "./roles.queries";
 import { RoleDetail, useRoleWrites } from "./roles-detail";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The body a role's drawer hosts, drawn without the drawer around it.
 

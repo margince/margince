@@ -56,17 +56,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
 		{"Latest", func() error { _, err := s.Latest(ctx, connectorSalesforce); return err }},
-		{"LookupIdentity", func() error {
-			_, _, err := s.LookupIdentity(ctx, "legacy_crm", "contact", "1")
-			return err
-		}},
-		{"RecordIdentity", func() error {
-			return s.RecordIdentity(ctx, runID, "legacy_crm", "contact", "1", ids.NewV7())
-		}},
-		{"RecordIdentities", func() error {
-			return s.RecordIdentities(ctx, runID, "legacy_crm", "contact",
-				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
-		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
 		{"RecordImportSourceIntent", func() error {
 			return s.RecordImportSourceIntent(ctx, "ws/import/x")
@@ -79,11 +68,11 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0, queueNothing); return err }},
 		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0, queueNothing); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
-		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
+		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20, ViewAll); return err }},
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7(), OriginCreated)
 		}},
 		{"BindingsOf", func() error {
 			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
@@ -344,7 +333,7 @@ func TestDryRunClassifiesWithoutWriting(t *testing.T) {
 	if contact.WillCreate != 1 || contact.WillUpdate != 1 {
 		t.Errorf("contact report = %+v, want 1 create + 1 update", contact)
 	}
-	if len(contact.Skipped) != 1 || contact.Skipped[0].Reason != "empty_payload" || contact.Skipped[0].ExternalID != "p-2" {
+	if len(contact.Skipped) != 1 || contact.Skipped[0].Code != ReasonEmptyPayload || contact.Skipped[0].ExternalID != "p-2" {
 		t.Errorf("contact skips = %+v, want p-2 skipped as empty_payload", contact.Skipped)
 	}
 	if rep.Associations != 2 {
@@ -393,7 +382,7 @@ func TestRunImportsInOrderWithSkipsDisclosed(t *testing.T) {
 			contactRep = or
 		}
 	}
-	if len(contactRep.Skipped) != 1 || contactRep.Skipped[0].Reason != "empty_payload" {
+	if len(contactRep.Skipped) != 1 || contactRep.Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("contact skips = %+v, want the payload-less row disclosed", contactRep.Skipped)
 	}
 }
@@ -573,7 +562,7 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 		t.Fatalf("dry-run report = %+v, want one object", dry.Objects)
 	}
 	if got := dry.Objects[0]; got.WillCreate != 1 || len(got.Skipped) != 1 ||
-		got.Skipped[0].ExternalID != "p-blank" || got.Skipped[0].Reason != "empty_payload" {
+		got.Skipped[0].ExternalID != "p-blank" || got.Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("dry-run contact = %+v, want p-blank skipped and only p-real counted", got)
 	}
 
@@ -589,7 +578,7 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 		t.Errorf("imported = %d, want 1; a nameless row counted as imported overstates the cutover", rep.Imported)
 	}
 	if len(rep.Objects) != 1 || len(rep.Objects[0].Skipped) != 1 ||
-		rep.Objects[0].Skipped[0].Reason != "empty_payload" {
+		rep.Objects[0].Skipped[0].Code != ReasonEmptyPayload {
 		t.Errorf("import report = %+v, want the owned blank row disclosed as empty_payload", rep.Objects)
 	}
 }
@@ -683,8 +672,7 @@ func TestTheRepairRunsEvenWhenNoCheckpointWasEverRecorded(t *testing.T) {
 // ungranted human, which is what this table proves.
 func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
-		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
-		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
+		"Create": true, "Get": true, "Latest": true, "Resume": true,
 		"RunOfSource": true, "DiscardOwnDraft": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true,

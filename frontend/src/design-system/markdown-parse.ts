@@ -82,7 +82,7 @@ export type MarkdownDocument = {
 };
 
 const FENCE = /^ {0,3}(```|~~~)/;
-const HEADING = /^ {0,3}(#{1,6})\s+(.*)$/;
+const HEADING = /^ {0,3}(#{1,6})[ \t]+(.*)$/;
 const RULE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
 const QUOTE = /^ {0,3}>[ \t]?/;
 const BULLET = /^ {0,3}[-*+][ \t]+(.*)$/;

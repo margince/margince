@@ -132,6 +132,17 @@ jobs:
         if: steps.gate-binaries.outputs.cache-hit != 'true'
         working-directory: .
         run: make tools
+      # The entry every PR's first push restores: a PR can read only its own
+      # entries and main's, and ci.yml runs on no push to main.
+      - name: Compute the golangci cache key
+        id: golangci-key
+        uses: ./.github/actions/golangci-cache-key
+      - name: Cache the golangci-lint analysis cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
+          restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
       - name: Gate binaries onto PATH
         run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Compile what the gate compiles (make check-backend)

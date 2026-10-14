@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
+import { StoryProviders } from "../testing/story-utils";
 import type { Employment } from "./contactemployers";
 import { EmploymentLogo } from "./contactemployersummary";
-import { StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 type Company = components["schemas"]["Company"];

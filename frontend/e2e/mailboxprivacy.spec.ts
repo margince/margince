@@ -111,7 +111,9 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  const senders = page
+    .locator(".panel", { hasText: de["senders.title"] })
+    .first();
   await expect(senders).toBeVisible();
   await expect(senders).toContainText(de["senders.kind.contact"]);
   await expect(senders).toContainText(de["senders.kind.newsletter"]);
@@ -135,7 +137,9 @@ test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  const senders = page.locator(".panel", { hasText: "Absender" }).first();
+  const senders = page
+    .locator(".panel", { hasText: de["senders.title"] })
+    .first();
   await expect(senders).toContainText("anne@hotmail.com");
   await openRowMenu(page, "anne@hotmail.com");
   await page

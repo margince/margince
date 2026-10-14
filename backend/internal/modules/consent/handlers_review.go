@@ -161,7 +161,11 @@ func (h Handlers) ListCommunicationReviews(
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	reviews, total, err := h.store.AwaitingDecision(r.Context(), limit)
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	reviews, total, next, err := h.store.AwaitingDecision(r.Context(), limit, cursor)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -170,7 +174,13 @@ func (h Handlers) ListCommunicationReviews(
 	for _, review := range reviews {
 		out = append(out, wireReview(review))
 	}
+	// total stays at the top level where it shipped, and page carries where
+	// this read was cut. A caller reading only total keeps working.
+	page := crmcontracts.PageInfo{HasMore: next != "", Total: &total}
+	if next != "" {
+		page.NextCursor = &next
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CommunicationReviewList{
-		Data: out, Total: total,
+		Data: out, Page: page, Total: total,
 	})
 }

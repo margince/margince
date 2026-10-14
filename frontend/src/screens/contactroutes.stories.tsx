@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { RoutesPanel } from "./contactroutes";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The ways in to a contact, as a zone of the network tab.
 //

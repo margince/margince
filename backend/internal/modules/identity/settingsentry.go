@@ -220,7 +220,7 @@ func Definitions() []settings.Definition {
 		OidcGroupRoleMap,
 		SMTPPasswordRef,
 		LicenseTokenRef,
-	}, append(scheduleDefinitions(), sendPacingDefinitions()...)...)
+	}, append(append(scheduleDefinitions(), sendPacingDefinitions()...), agentAllowanceDefinitions()...)...)
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a

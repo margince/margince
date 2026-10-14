@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { CustomFieldsPanel } from "./customfields.card";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CustomFieldsPanel } from "./customfields.card";
 
 // The custom fields an installation added, shown on the record they were added
 // to. Each row is one field's own type rendered the way that type reads — a

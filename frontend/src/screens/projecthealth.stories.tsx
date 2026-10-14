@@ -5,10 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { ProjectHealth } from "./projecthealth";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { projectHealthKey } from "./projecthealth.queries";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // How a delivery is going, and how it has been going.
 //

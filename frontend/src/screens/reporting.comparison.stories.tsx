@@ -1,10 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { screen } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingComparison } from "./reporting.comparison";
 import { reportingEditions } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = { title: "Records/Reports/Analytics/Compare editions" };
 export default meta;

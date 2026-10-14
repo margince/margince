@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { jsonResponse, stubWithSession } from "../story-utils";
+import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { DealRoomTab } from "./dealroomtab";
 
 // The deal record's own door into the Deal Room: the tab draws the room's

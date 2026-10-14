@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The three states this panel has to keep apart. WITHHELD renders nothing,
 // EMPTY says nobody is named, and a populated list reads in invoice order.

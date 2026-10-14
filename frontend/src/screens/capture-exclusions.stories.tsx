@@ -3,13 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { CaptureExclusionsCard } from "./capture-exclusions";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CaptureExclusionsCard } from "./capture-exclusions";
 
 // Pre-capture exclusions: the addresses and domains whose mail never enters the
 // CRM. Two scopes live on one card, and telling them apart is the whole point —

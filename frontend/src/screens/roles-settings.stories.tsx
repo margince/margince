@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { GrantSpec } from "../testing/mefixture";
-import { RolesSettings } from "./roles-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RolesSettings } from "./roles-settings";
 
 // The role list, and one role open in its drawer. The drawer holds its name,
 // whose records it reaches, the object grid and the preview.

@@ -142,31 +142,42 @@ func TestTokenPathsReachTheTokenRowBeforeTheMemberRow(t *testing.T) {
 	}
 }
 
+// callSite is a word-bounded call: a plain substring makes canIssuePasswordLink
+// look like a caller of IssuePasswordLink, dragging unrelated bodies in.
+var callSite = regexp.MustCompile(`\b(\w+)\(`)
+
+// calledNames returns the package functions fn's body calls, by name.
+func calledNames(fn identityFunc, byName map[string]identityFunc) []string {
+	var names []string
+	for _, match := range callSite.FindAllStringSubmatch(fn.body, -1) {
+		if _, ok := byName[match[1]]; ok && match[1] != fn.name {
+			names = append(names, match[1])
+		}
+	}
+	return names
+}
+
 // reachableBody returns fn's source plus that of every package function it
 // calls, transitively. A body read in isolation misses the common shape here:
 // the function that mints is not always the one that supersedes or takes the
 // lock, so neither half alone would identify the path.
-func reachableBody(fn identityFunc, byName map[string]identityFunc, seen map[string]bool) string {
+func reachableBody(fn identityFunc, byName map[string]identityFunc, calls map[string][]string, seen map[string]bool) string {
 	if seen[fn.name] {
 		return ""
 	}
 	seen[fn.name] = true
-	text := fn.body
-	var textSb155 strings.Builder
-	for name, callee := range byName {
-		// Word-bounded: a plain substring makes canIssuePasswordLink look like
-		// a caller of IssuePasswordLink, dragging unrelated bodies in and
-		// reporting the wrong function.
-		if name == fn.name {
-			continue
-		}
-		callsCallee := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\(`)
-		if callsCallee.MatchString(fn.body) {
-			textSb155.WriteString(reachableBody(callee, byName, seen))
-		}
+	// byName keeps one body per name, so a root that is the other definition
+	// of a shared name reads its own calls.
+	callees, ok := calls[fn.name]
+	if !ok || byName[fn.name].body != fn.body {
+		callees = calledNames(fn, byName)
 	}
-	text += textSb155.String()
-	return text
+	var text strings.Builder
+	text.WriteString(fn.body)
+	for _, name := range callees {
+		text.WriteString(reachableBody(byName[name], byName, calls, seen))
+	}
+	return text.String()
 }
 
 func TestTokenSupersedersSerializeOnTheMember(t *testing.T) {
@@ -175,9 +186,13 @@ func TestTokenSupersedersSerializeOnTheMember(t *testing.T) {
 	for _, fn := range funcs {
 		byName[fn.name] = fn
 	}
+	calls := make(map[string][]string, len(byName))
+	for name, fn := range byName {
+		calls[name] = calledNames(fn, byName)
+	}
 	checked := 0
 	for _, fn := range funcs {
-		fn.body = reachableBody(fn, byName, map[string]bool{})
+		fn.body = reachableBody(fn, byName, calls, map[string]bool{})
 		// Superseding-then-inserting is the shape that needs serializing: two
 		// racers at READ COMMITTED each miss the other's uncommitted insert and
 		// both leave a live token. A mint that supersedes nothing (a brand-new

@@ -19,14 +19,14 @@ import { TAG_TONES } from "../design-system/tagpill";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { translate } from "../i18n";
 import { en } from "../i18n/en";
-import { useSentenceWords } from "./filtersentence";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { useSentenceWords } from "./filtersentence";
 import { TagVocabularyCard } from "./tagadmin";
 
 // Settings › Data model: the one door that coins a word. Every verb but merge

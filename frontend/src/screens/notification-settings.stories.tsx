@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { NotificationSettingsCard } from "./notification-settings";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { NotificationSettingsCard } from "./notification-settings";
 
 // Where each class of notice reaches this seat. There is no permission story
 // here: both endpoints read and write the reader's own rows, so no seat can be

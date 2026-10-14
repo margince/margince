@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
+import { StoryProviders } from "../testing/story-utils";
 import { AudienceMembers } from "./audiencemembers";
-import { StoryProviders } from "./story-utils";
 
 // The checklist behind the `selected` audience, shown in the two states it
 // actually has: a roster to tick, and a roster that has not arrived. It takes

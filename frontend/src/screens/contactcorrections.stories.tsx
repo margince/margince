@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { EnrichedFields } from "./contactcorrections";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The card where the page stops asserting and starts asking: what a machine
 // read, the snippet it read it from, and the two verdicts a reader may record.

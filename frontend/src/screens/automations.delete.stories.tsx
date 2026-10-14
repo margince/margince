@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { DeleteAutomationAction } from "./automations.delete";
 import { configuredAutomations } from "./automations.fixtures";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 function Delete() {
   installFetchStub({

@@ -41,7 +41,7 @@ func weeklyCoverageLines(line writeLine) {
 		"{value} (một phần)")
 	line(func(c *Copy) *string { return &c.WeeklyBeforeHistory },
 		"This week falls before the first records, so it has no figures to report.",
-		"Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
+		"Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
 		"Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.")
 	line(func(c *Copy) *string { return &c.WeeklyUnavailable },
 		"Unavailable",
