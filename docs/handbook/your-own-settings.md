@@ -55,6 +55,15 @@ Also called: MFA, second sign-in step, sign-in code, code app.
 
 A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
 
+### What if Margince asks me to set up two-step sign-in before I can continue?
+Your installation requires two-step sign-in, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**.
+Choose **Set up**. The steps are the same as on the **Account** page, from the picture to **Turn on**.
+Keep your **Recovery codes**, choose **Done**, and Margince opens.
+
+If you are already signed in when the switch goes on, you see this page the next time Margince checks.
+**Sign out** leaves without setting it up.
+Also called: required two-step sign-in, must set up, cannot continue.
+
 ### How do I sign in with two-step sign-in?
 To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
 Type the code your phone app shows now, or one of your backup codes, into **Code**, and choose **Verify code**.
@@ -68,8 +77,7 @@ To turn off two-step sign-in in Margince, open Settings → **Account**, choose 
 The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
 For new backup codes, or to move to a new phone, remove it and set it up again.
 
-If your installation requires two-step sign-in, removing it means you cannot use Margince until it is set up again.
-So leave it on, or ask an administrator to turn off **Require second factor** first.
+If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there.
 Also called: new phone, new backup codes, lost phone.
 
 Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
