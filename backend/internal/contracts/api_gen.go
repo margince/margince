@@ -18895,6 +18895,24 @@ func (e WorklistItemBand) Valid() bool {
 	}
 }
 
+// Defines values for WorklistItemBriefActions.
+const (
+	WorklistItemBriefActionsDismiss  WorklistItemBriefActions = "dismiss"
+	WorklistItemBriefActionsSetAside WorklistItemBriefActions = "set_aside"
+)
+
+// Valid indicates whether the value is a known member of the WorklistItemBriefActions enum.
+func (e WorklistItemBriefActions) Valid() bool {
+	switch e {
+	case WorklistItemBriefActionsDismiss:
+		return true
+	case WorklistItemBriefActionsSetAside:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorklistItemBriefSection.
 const (
 	WorklistItemBriefSectionBriefSectionBuildPipeline        WorklistItemBriefSection = "build_pipeline"
@@ -50144,6 +50162,13 @@ type WorklistItem struct {
 	// Because The facts that put this item at this level, in the order they were weighed.
 	Because []WorklistReason `json:"because"`
 
+	// BriefActions The verbs the folded brief entry offers, copied from that entry's own
+	// row and posted to `/brief/items/{brief_item_id}/…`. The row's own
+	// `actions` stay the row's: these answer the brief entry, not the deal.
+	//
+	// Present exactly when `brief_item_id` is.
+	BriefActions *[]WorklistItemBriefActions `json:"brief_actions,omitempty"`
+
 	// BriefItemId The overnight brief entry this row also stands for, where the night
 	// surfaced the same deal the day's own lanes did.
 	//
@@ -50153,6 +50178,9 @@ type WorklistItem struct {
 	// folded into one, and this carries the brief entry's id so the verbs that
 	// belong to the brief (`/brief/items/{id}/act`, and its set-aside and
 	// dismiss) still reach it. Absent on a row the night did not raise.
+	//
+	// Set only on the reader's own queue: the brief is the acting reader's,
+	// so a page naming another owner never carries it.
 	BriefItemId *openapi_types.UUID `json:"brief_item_id,omitempty"`
 
 	// BriefSection Which part of the morning this row belongs to, as a LABEL and never as an
@@ -50466,6 +50494,9 @@ type WorklistItemActions string
 // interleave prospecting and deal follow-up. A client
 // draws a heading when the band changes and never re-sorts.
 type WorklistItemBand string
+
+// WorklistItemBriefActions defines model for WorklistItem.BriefActions.
+type WorklistItemBriefActions string
 
 // WorklistItemBriefSection Which part of the morning this row belongs to, as a LABEL and never as an
 // order.

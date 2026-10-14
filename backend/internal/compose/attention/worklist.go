@@ -238,20 +238,6 @@ func (s *Service) worklistFrom(
 	// it judges against is the same wherever it sits. A fourth pass that
 	// removed waiting rows would break that, and would have to run last.
 	rows = dropDecayAlreadyWaiting(rows)
-	// One deal is ONE row: a deal the night surfaced and the day also found
-	// arrives twice, and the row that survives keeps the brief's id and score.
-	//
-	// LAST of the folds, and the three comments above say why. Each of those
-	// drops rows of a source none of the others reads, so their order among
-	// themselves does not matter. This one is different: it attaches the brief's
-	// id to a row the others may then REMOVE. Run earlier, a deal that is both in
-	// the night's brief and has an unanswered message lost its brief verbs
-	// entirely — the at-risk row took the id and dropDealsAlreadyWaiting then
-	// deleted that row, and the waiting row it was absorbed into inherits the
-	// deal's figures and reasons but not the brief's id. So this runs against
-	// whatever actually survives.
-	rows = foldBriefIntoRisk(rows)
-
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -262,6 +248,13 @@ func (s *Service) worklistFrom(
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
 	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	// One deal is one row. A deal both the night and the day found arrives
+	// twice, and the surviving row keeps the brief's id and score.
+	//
+	// This runs after the drops above, because they may remove the row that
+	// took the brief's id. It runs after the scope, because the brief is the
+	// acting reader's. A named owner's page drops every brief row first.
+	rows = foldBriefIntoRisk(rows)
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	// The same rule for the who-is-waiting source, and for the same reason it
