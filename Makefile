@@ -925,7 +925,7 @@ craft-static: test-craft-pin
 ## this branch's diff to an external model API and get a reading of what a
 ## syntax tree cannot see. It calls a paid API, so nothing calls it for you —
 ## no hook, no CI job, no prerequisite. `make craft-static` is the arm that is
-## enforced and it is the one that blocks a push.
+## enforced, by `make check` and CI's craftsmanship job.
 ##
 ##   ANTHROPIC_API_KEY=... make craft-review              # vs origin/main
 ##   ANTHROPIC_API_KEY=... BASE=<ref> make craft-review

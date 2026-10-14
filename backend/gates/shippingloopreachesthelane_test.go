@@ -22,10 +22,24 @@ import (
 
 const (
 	integrationJob     = "integration"
-	integrationScope   = "needs.changes.outputs.backend_db"
+	integrationScope   = "backend_db"
 	integrationRoutine = "check-all"
 	packageRoutine     = "test-it"
+	scopeJob           = "changes"
+	scopeStep          = "filter"
+	backendPaths       = "backend/**"
 )
+
+type scopedWorkflow struct {
+	Jobs map[string]struct {
+		Needs []string `yaml:"needs"`
+		If    string   `yaml:"if"`
+		Steps []struct {
+			ID   string         `yaml:"id"`
+			With map[string]any `yaml:"with"`
+		} `yaml:"steps"`
+	} `yaml:"jobs"`
+}
 
 func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 	t.Parallel()
@@ -33,26 +47,56 @@ func TestEveryBackendPullRequestRunsTheIntegrationLane(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
-	var wf aggregateJobs
+	var wf scopedWorkflow
 	if err := yaml.Unmarshal(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
-	if !slices.Contains(wf.Jobs[aggregateJob].Needs, integrationJob) {
+	agg, ok := wf.Jobs[aggregateJob]
+	if !ok {
+		t.Fatalf("%s declares no %q job, so nothing requires the integration lane", aggregateWorkflow, aggregateJob)
+	}
+	lane, ok := wf.Jobs[integrationJob]
+	if !ok {
+		t.Fatalf("%s declares no %q job, so no PR runs the integration lane", aggregateWorkflow, integrationJob)
+	}
+	if !slices.Contains(agg.Needs, integrationJob) {
 		t.Errorf("the required %q check no longer needs %q, so a red integration lane merges",
 			aggregateJob, integrationJob)
 	}
-	if !strings.Contains(wf.Jobs[integrationJob].If, integrationScope) {
-		t.Errorf("job %q no longer runs on %s, so this gate cannot say which changes reach it",
-			integrationJob, integrationScope)
+	trigger := "needs." + scopeJob + ".outputs." + integrationScope + " == 'true'"
+	if !strings.Contains(normalizeCondition(lane.If), trigger) {
+		t.Errorf("job %q no longer runs on `%s`, so this gate cannot say which changes reach it",
+			integrationJob, trigger)
 	}
-	scope := section(t, string(raw), "backend_db: &backend_db")
-	if end := strings.Index(scope, "\n            frontend:"); end >= 0 {
-		scope = scope[:end]
+	if !slices.Contains(scopeFilters(t, wf)[integrationScope], any(backendPaths)) {
+		t.Errorf("the %s scope no longer lists %q, so a backend Go change can skip the integration lane",
+			integrationScope, backendPaths)
 	}
-	if !strings.Contains(scope, "- 'backend/**'") {
-		t.Errorf("the backend_db scope no longer lists 'backend/**', so a backend Go change can " +
-			"skip the integration lane")
+}
+
+// scopeFilters parses the paths-filter step's `filters` block, so a path is
+// judged by the scope that holds it and the YAML anchors resolve as CI's do.
+func scopeFilters(t *testing.T, wf scopedWorkflow) map[string][]any {
+	t.Helper()
+	for _, step := range wf.Jobs[scopeJob].Steps {
+		if step.ID != scopeStep {
+			continue
+		}
+		block, ok := step.With["filters"].(string)
+		if !ok {
+			t.Fatalf("the %s step of job %q carries no `filters` block", scopeStep, scopeJob)
+		}
+		var filters map[string][]any
+		if err := yaml.Unmarshal([]byte(block), &filters); err != nil {
+			t.Fatalf("the %s step's filters: %v", scopeStep, err)
+		}
+		if _, ok := filters[integrationScope]; !ok {
+			t.Fatalf("the %s step declares no %q scope", scopeStep, integrationScope)
+		}
+		return filters
 	}
+	t.Fatalf("job %q has no step with id %q, so no scope decides which PRs run the lane", scopeJob, scopeStep)
+	return nil
 }
 
 func TestTheShippingLoopNamesTheIntegrationRoutines(t *testing.T) {
