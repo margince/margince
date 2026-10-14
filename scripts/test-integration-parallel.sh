@@ -30,7 +30,7 @@
 # Shard mode (the CI matrix): INTEGRATION_SHARD="k/N" slices the lane across N
 # independent runners BY TEST, not by package — package-level fan-out bottoms
 # out at the heaviest package (compose/integration is minutes of serial tests),
-# so each shard runs a deterministic round-robin slice of every package's
+# so each shard runs a deterministic, duration-balanced slice of every package's
 # top-level Test functions via -run. Discovery is static (`func Test…` in the
 # package's *_test.go files) so it costs no compile; files under the known
 # opt-in lane tags (e2e_llm, livesmoke, voicelive) and the by-hand benchmark lane
@@ -187,7 +187,7 @@ done > "$CANDIDATES"
 
 CONSTRAINT_SCOPE="$(mktemp)" LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
 DISCOVERY="$(mktemp)" ASSIGNED="$(mktemp)" RAN="$(mktemp)" UNTAGGED="$(mktemp)"
-TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
+TIMING="$(mktemp)" TEST_TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
 # The packages go test KILLED for exceeding the budget. Kept apart from
 # FAILED_PKGS because a timeout explains something no other failure does: every
 # one of that package's assigned tests is missing from the run, and the
@@ -215,7 +215,7 @@ OUTDIR="$(mktemp -d)"
 # needs the evidence, because the re-run that would reproduce it usually passes.
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
-trap 'rm -f "$CANDIDATES" "$CONSTRAINT_SCOPE" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+trap 'rm -f "$CANDIDATES" "$CONSTRAINT_SCOPE" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
 
 # The ONE spelling of "which build constraints does this file declare": the
 # region above the `package` clause, one expression per line. Both passes below
@@ -376,11 +376,11 @@ if (( SHARD_TOTAL > 0 )); then
     echo "FAIL: discovered only $NTESTS integration tests for $SHARD_TOTAL shards — the discovery is broken or the shard count is absurd"
     exit 1
   fi
-  # Deterministic round-robin over the sorted list: line i goes to shard
-  # ((i-1) % N) + 1. Every shard computes the same list from the same commit,
-  # so the slices are complete and disjoint by construction — and the fan-in
-  # verifies exactly that instead of trusting it.
-  awk -v k="$SHARD_IDX" -v n="$SHARD_TOTAL" 'NR % n == k % n' "$DISCOVERY" > "$ASSIGNED"
+  # Split by measured duration, so slow tests do not land on one shard; the
+  # rules live in scripts/lib-laneorder.sh, which is unit-tested. Every shard
+  # computes the same split from the same commit, and the fan-in verifies that
+  # the slices are complete and disjoint instead of trusting it.
+  assign_shard "$DISCOVERY" "$ROOT/scripts/integration-test-timing.txt" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
 else
   # Unsharded: the whole lane is this run's slice. Naming it explicitly is what
   # lets the -run union and the ran==assigned teeth below serve both modes.
@@ -561,6 +561,10 @@ for base in $(cd "$OUTDIR" && ls -1 -- *.log 2>/dev/null | sort -n); do
   # "assigned but not run" instead, which names the reconciliation rather than
   # the skip and sends the reader looking for a dead worker.
   grep -E '^--- (PASS|FAIL|SKIP): ' "$log" | awk -v p="$d|$rel|" '{print p $3}' >> "$RAN" || true
+  # "dir|rel|TestName|seconds", the line shape scripts/integration-test-timing.txt
+  # is refreshed from.
+  grep -E '^--- (PASS|FAIL|SKIP): ' "$log" \
+    | awk -v p="$d|$rel|" '{ secs = $4; gsub(/[()s]/, "", secs); print p $3 "|" secs }' >> "$TEST_TIMING" || true
   # Cost, taken from `go test`'s own trailing "ok <pkg> <n>s" — millisecond
   # precision already in the log, and it excludes the clone provisioning around
   # it, so what it prices is the tests themselves.
@@ -793,6 +797,7 @@ if [[ -n "$SHARD_OUT" ]]; then
   # "rel|seconds|tests" per package, so cost can be tracked across runs rather
   # than re-derived by eye from a scrolled log.
   cp "$TIMING" "$SHARD_OUT/timing.txt"
+  cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
   printf 'shard=%s\ntotal=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" > "$SHARD_OUT/meta.txt"
 fi
 
