@@ -477,6 +477,9 @@
   --dialogFormWidth: 600px;
   --drawerWidth: 560px;
   --drawerReadingWidth: 880px;
+  /* A drawer grown to the window stops here: past it a row is a line too long
+     to read across. */
+  --drawerWindowWidth: 1440px;
   --dialogFullWidth: 1240px;
 
   /* Vertical-rhythm scale — the 4/8/12/16/24 rungs the screens were already

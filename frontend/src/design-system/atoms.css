@@ -407,7 +407,7 @@
    intent's width. After the intents' widths, which it replaces, and before the
    phone sheet, which replaces it. */
 .modal-drawer-window {
-  width: calc(100vw - var(--space-4) * 2);
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
 }
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */

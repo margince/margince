@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
 import { announceAddressChanged } from "../lib/router";
+import { removeStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,10 +23,7 @@ import {
 } from "./brief.fixtures";
 import { BriefQueue } from "./brief.queue";
 
-function QueueFrame({
-  day,
-  address = "#/home?queue=1",
-}: Readonly<{ day?: Worklist; address?: string }>) {
+function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {
   useEffect(() => {
     const before = window.location.hash;
     installFetchStub({
@@ -66,16 +64,16 @@ function QueueFrame({
           truncated: false,
         }),
     });
-    window.location.hash = address;
+    window.location.hash = "#/home?queue=1";
     announceAddressChanged();
     return () => {
       window.location.hash = before;
       announceAddressChanged();
     };
-    // The day and address this frame serves. A story hands them once. The stub
-    // is installed inside the effect, so a frame that swapped its fixture would
-    // otherwise keep serving the first one.
-  }, [day, address]);
+    // The day this frame serves. A story hands it once and never changes it,
+    // but the stub is installed inside the effect, so a frame that swapped its
+    // fixture would otherwise keep serving the first one.
+  }, [day]);
   return (
     <StoryProviders>
       <BriefQueue />
@@ -87,6 +85,9 @@ const meta: Meta<typeof BriefQueue> = {
   title: "Shell/Home/Work queue",
   component: BriefQueue,
   render: () => <QueueFrame />,
+  // The drawer's size is remembered by the browser, so every frame starts from
+  // the default unless it says otherwise.
+  beforeEach: () => removeStored(STORAGE_KEYS.worklistDrawerWide),
 };
 export default meta;
 type Story = StoryObj<typeof BriefQueue>;
@@ -143,14 +144,13 @@ export const AFullDayInDark: Story = {
 };
 
 /**
- * The same day with the drawer expanded to the window (`wide=1`). What to
+ * The same day with the drawer expanded to the window, as remembered. What to
  * check: each row's verbs are one line beside the work, and Collapse sits
  * beside the X. The first row's menu opens above the drawer.
  */
 export const AFullDayExpanded: Story = {
-  render: () => (
-    <QueueFrame day={aLeadsDay()} address="#/home?queue=1&wide=1" />
-  ),
+  beforeEach: () => writeStored(STORAGE_KEYS.worklistDrawerWide, "1"),
+  render: () => <QueueFrame day={aLeadsDay()} />,
   play: async () => {
     const drawer = await within(document.body).findByRole("dialog", {
       name: en["brief.queue.title"],

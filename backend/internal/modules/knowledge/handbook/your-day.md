@@ -28,9 +28,11 @@ work queue, inbox, today list.
 To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
 1. Open **Home** → **Show Worklist**.
 2. Press **Expand**, next to the close button. Press **Collapse** to make it narrow again.
-3. A refresh of the page keeps the size you chose. On a phone the panel always fills the screen.
+3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
+   always fills the screen.
 
-Also called: full screen, big worklist, wide view.
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
+worklist, wide view.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose

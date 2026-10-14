@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
@@ -9,9 +9,10 @@ import type { DrawerSpan } from "../design-system/modal";
 import { useT } from "../i18n";
 import { navigateReplacing, useHash } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useUrlParams } from "../lib/urlstate";
 import { WorklistScreen } from "./worklist";
-import { DRAWER_WIDE_PARAM, drawerScope } from "./worklist.address";
+import { drawerScope } from "./worklist.address";
 import { worklistFilterFrom } from "./worklist.header";
 import { WorklistReturnScope } from "./worklist.return";
 import "./brief.css";
@@ -47,18 +48,19 @@ export function BriefQueue() {
     `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
     "load",
   );
-  // Closing keeps `wide`, as it keeps the scope: the next opening is as wide
-  // as the reader left it.
   const close = () => {
     const next = new Map(params);
     next.delete("queue");
     setParams(next);
   };
-  const changeSpan = (span: DrawerSpan) => {
-    const next = new Map(params);
-    if (span === "window") next.set(DRAWER_WIDE_PARAM, "1");
-    else next.delete(DRAWER_WIDE_PARAM);
-    setParams(next);
+  // Kept by this browser, so every way into the drawer opens it as wide as the
+  // reader left it. A shared link carries no one's layout.
+  const [span, setSpan] = useState<DrawerSpan>(() =>
+    readStored(STORAGE_KEYS.worklistDrawerWide) === "1" ? "window" : "intent",
+  );
+  const changeSpan = (next: DrawerSpan) => {
+    setSpan(next);
+    writeStored(STORAGE_KEYS.worklistDrawerWide, next === "window" ? "1" : "0");
   };
   return (
     <Modal
@@ -66,7 +68,7 @@ export function BriefQueue() {
       onClose={close}
       labelledBy={titleId}
       intent="drawer-reading"
-      span={params.get(DRAWER_WIDE_PARAM) === "1" ? "window" : "intent"}
+      span={span}
       onSpanChange={changeSpan}
     >
       {/* The BANDED head, not the composer's one scrolling column: the queue is

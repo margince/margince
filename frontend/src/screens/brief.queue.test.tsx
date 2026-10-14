@@ -4,6 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../lib/storage";
 import { BriefScreen } from "./brief";
 import { readingsDay, taskRow } from "./brief.fixtures";
 import { BriefQueue, WorklistRedirect } from "./brief.queue";
@@ -13,6 +19,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
+  removeStored(STORAGE_KEYS.worklistDrawerWide);
 });
 
 it("redirects legacy owner links without losing their filter or email", async () => {
@@ -47,9 +54,10 @@ it("keeps queue scope separate from the weekly team brief and closes with Escape
   expect(window.location.hash).not.toContain("queue=1");
 });
 
-it("opens as wide as the address says, and writes the reader's choice there", async () => {
+it("opens as wide as this browser last left it, and remembers each press", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/home?queue=1&wide=1";
+  writeStored(STORAGE_KEYS.worklistDrawerWide, "1");
+  window.location.hash = "#/home?queue=1";
   stubApi({
     "GET /worklist": () =>
       jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
@@ -64,13 +72,15 @@ it("opens as wide as the address says, and writes the reader's choice there", as
   await waitFor(() =>
     expect(drawer.classList.contains("modal-drawer-window")).toBe(false),
   );
-  expect(window.location.hash).toBe("#/home?queue=1");
+  expect(readStored(STORAGE_KEYS.worklistDrawerWide)).toBe("0");
 
   await user.click(screen.getByRole("button", { name: en["common.expand"] }));
   await waitFor(() =>
     expect(drawer.classList.contains("modal-drawer-window")).toBe(true),
   );
-  expect(window.location.hash).toBe("#/home?queue=1&wide=1");
+  expect(readStored(STORAGE_KEYS.worklistDrawerWide)).toBe("1");
+  // The address stays the queue's alone, so a shared link carries no layout.
+  expect(window.location.hash).toBe("#/home?queue=1");
 });
 
 it("restores the queue opener's keyboard focus after closing", async () => {

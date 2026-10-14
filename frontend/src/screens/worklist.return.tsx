@@ -19,7 +19,6 @@ import {
   useUrlParams,
 } from "../lib/urlstate";
 import { type ContactTab, contactTabRoute } from "./contacttab";
-import { DRAWER_WIDE_PARAM } from "./worklist.address";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 // The way back from a record to the Worklist drawer it was opened from.
@@ -30,12 +29,7 @@ import { WORKLIST_FILTER_PARAM } from "./worklist.header";
 
 const FROM_PARAM = "from";
 const FROM_WORKLIST = "worklist";
-const DRAWER_DIALS = [
-  WORKLIST_FILTER_PARAM,
-  "queue_scope",
-  "owner",
-  DRAWER_WIDE_PARAM,
-] as const;
+const DRAWER_DIALS = [WORKLIST_FILTER_PARAM, "queue_scope", "owner"] as const;
 
 // The records whose head draws the way back. Any other destination a row
 // links to (a settings queue, a privacy case) gets an untouched address, so

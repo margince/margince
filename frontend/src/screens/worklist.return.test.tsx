@@ -32,9 +32,9 @@ function linkTo(name: string): URLSearchParams {
 }
 
 describe("a row opened from the Worklist drawer", () => {
-  it("carries the drawer's filter, scope, owner and width onto the record link", async () => {
+  it("carries the drawer's filter, scope and owner onto the record link", async () => {
     window.location.hash =
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team&wide=1";
+      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team";
     stubApi({
       "GET /worklist": () => jsonResponse(readingsDay({}, [aboutWeber])),
     });
@@ -46,7 +46,6 @@ describe("a row opened from the Worklist drawer", () => {
     expect(dials.get("filter")).toBe("tasks");
     expect(dials.get("queue_scope")).toBe("team");
     expect(dials.get("owner")).toBe("u-7");
-    expect(dials.get("wide")).toBe("1");
     expect(dials.has("queue"), "the record would open the drawer over it").toBe(
       false,
     );
@@ -75,12 +74,12 @@ describe("a row opened from the Worklist drawer", () => {
 describe("Back to Worklist on the record", () => {
   it("returns to Home with the drawer open on the carried dials", () => {
     window.location.hash =
-      "#/contacts/c-1?filter=tasks&from=worklist&owner=u-7&queue_scope=team&wide=1";
+      "#/contacts/c-1?filter=tasks&from=worklist&owner=u-7&queue_scope=team";
     render(<WorklistReturnLink />);
 
     const back = screen.getByRole("link", { name: en["brief.queue.back"] });
     expect(back.getAttribute("href")).toBe(
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team&wide=1",
+      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
     );
   });
 
