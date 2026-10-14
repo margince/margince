@@ -7,9 +7,9 @@ import { screen } from "storybook/test";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
+import { StoryProviders } from "../testing/story-utils";
 import type { ContractDraft } from "./contractform";
 import { ContractTermsFields } from "./contracttermsfields";
-import { StoryProviders } from "./story-utils";
 
 // The component spaces its own rows, whichever dialog holds it.
 

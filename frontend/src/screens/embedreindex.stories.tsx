@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { EmbedReindexCard } from "./embedreindex";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const STATUS_NEEDED = {
   configured_identity: "anthropic/voyage-3@1024",

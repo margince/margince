@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { StoryProviders } from "../testing/story-utils";
 import { formatFixture } from "./import.fixtures";
 import { ColumnGuide, ColumnGuideButton } from "./import.guide";
-import { StoryProviders } from "./story-utils";
 
 // What goes in one column, opened where the column is named. The words come
 // from the server's format, the ones the template's README and the agent read.

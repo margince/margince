@@ -11,8 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { UnsavedGuard } from "../app/unsaved";
 import { en } from "../i18n/en";
+import { jsonResponse } from "../testing/story-utils";
 import { mount, view } from "./contactpage.testkit";
-import { jsonResponse } from "./story-utils";
 
 const sparse: components["schemas"]["Contact360"] = {
   as_of: view.as_of,

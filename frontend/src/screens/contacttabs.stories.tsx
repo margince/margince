@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactTimelineTab } from "./contacttabs";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 // The contact's history tab. The dials are what this file is for. The cuts (All / Threads / Changes) sit

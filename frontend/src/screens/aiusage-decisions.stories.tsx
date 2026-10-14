@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import { DecisionSummary } from "./aiusage-decisions";
-import { StoryProviders } from "./story-utils";
 
 const DECISIONS: components["schemas"]["AiDecisionSummary"][] = [
   {

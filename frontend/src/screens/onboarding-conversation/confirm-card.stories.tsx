@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { StoryProviders } from "../../testing/story-utils";
 import {
   type CompanyDraft,
   changeDraftField,
   EMPTY_DRAFT,
   REQUIRED_FIELDS,
 } from "../onboarding";
-import { StoryProviders } from "../story-utils";
 import type { ClarifyAnswer } from "./company-proposal";
 import { CompanyConfirmCard } from "./confirm-card";
 

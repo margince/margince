@@ -5,16 +5,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../design-system/panel";
 import type { GrantSpec } from "../testing/mefixture";
 import {
-  type DataSubjectRequest,
-  DsrDetail,
-  DsrTable,
-} from "./privacy.requests";
-import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import {
+  type DataSubjectRequest,
+  DsrDetail,
+  DsrTable,
+} from "./privacy.requests";
 
 // One subject request, as the queue's table row and as the drawer it opens.
 

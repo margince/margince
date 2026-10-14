@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ManualCompanySetup } from "./company-context";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The floor below the `onboarding` rollout stage never asks for the rollout's
 // capabilities, so these stories route no capability read.

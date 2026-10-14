@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { taskWriteKeys } from "./activitykeys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { taskWriteKeys } from "../lib/activitykeys";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   TaskCompleteCheck,
   TaskDetailModal,

@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { StoryProviders } from "../testing/story-utils";
 import { ForcedPasswordChangeScreen } from "./forcedpassword";
-import { StoryProviders } from "./story-utils";
 
 // Where an installation's first admin lands while their password is still the
 // one a deployment file handed them.

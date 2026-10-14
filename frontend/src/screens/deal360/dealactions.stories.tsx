@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DealActions } from "./dealactions";
 
 // The verbs a deal's header offers: mail first, a hairline, then what the

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { QueryKey } from "@tanstack/react-query";
-import { derivedRecordKeys } from "./activitykeys";
+import { derivedRecordKeys } from "../lib/activitykeys";
 
 // Which cached reads a write to ONE lead makes stale, and the keys those reads
 // are filed under — spelled here rather than at each site, the way

@@ -97,6 +97,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 		drift:    "stage valuation picks its rate with the process clock's day, not the installation's; " + readersDisagree,
 	},
 	"deal_suggestion.proposed_close_date": {calendar: installationDay},
+	"legal_review.expected_close_date":    {calendar: installationDay},
 	"extension_ingest_refusal.day": {
 		calendar: utcDay,
 		why:      "an operator health counter, written and windowed with time.Now().UTC() on both sides",

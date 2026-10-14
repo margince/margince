@@ -15,6 +15,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ListScreen } from "./listpage";
 import {
   LIVE_ID,
@@ -25,7 +30,6 @@ import {
   SHORTLIST_ID,
   shortlist,
 } from "./lists.fixtures";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // A list's members are acted on as explicit records: the reader ticks them, or
 // selects every member the list shows them, and the bulk dialog previews the

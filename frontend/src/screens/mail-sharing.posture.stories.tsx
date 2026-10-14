@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { MailSharingPostureRow } from "./mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { MailSharingPostureRow } from "./mail-sharing";
 
 // The sharing rule as stated on a member's own Connections page. The answer is
 // a sentence under the row's name. A reader who may change it gets the link.

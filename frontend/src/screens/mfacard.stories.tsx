@@ -5,10 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { SettingList } from "../design-system/settingrow";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { MfaStatus } from "./mfa.queries";
 import { MfaSettingRow } from "./mfacard";
 import { MfaSetupModal } from "./mfasetup";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof MfaSettingRow> = {
   title: "Settings/You/Account/Two-step sign-in",

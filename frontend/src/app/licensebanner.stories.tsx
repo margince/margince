@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../screens/story-utils";
-import { type GrantSpec, meFixture } from "../testing/mefixture";
+} from "../testing/story-utils";
 import { LicenseBanner } from "./licensebanner";
 
 type LicenseState = components["schemas"]["LicenseEntitlement"]["state"];

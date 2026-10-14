@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactElement } from "react";
+import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
-import { installFetchStub, StoryProviders } from "./story-utils";
 
 const API_BASE = "https://crm.example.com/v1";
 

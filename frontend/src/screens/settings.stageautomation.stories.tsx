@@ -5,14 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { StageAutomationCard } from "./settings.stageautomation";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { StageAutomationCard } from "./settings.stageautomation";
 
 // What each stage transition has earned, and what each is allowed to do. Three
 // states are told apart on purpose: a report with rows, a pipeline nothing has

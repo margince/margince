@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { dealOutcomeReviewsKey } from "../lib/activitykeys";
 import { throwProblem } from "../lib/problem";
-import { dealOutcomeReviewsKey } from "./activitykeys";
 
 // The outcome review: what a closed deal recorded about how it went.
 //

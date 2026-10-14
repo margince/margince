@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight

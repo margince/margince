@@ -703,9 +703,9 @@ be replied to on anything, and the gate refuses it.
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which
 `make test-extensions` runs on the composed workspace. Its Go files are under the same craftsmanship and license
-header gates as `backend/`. `make craft-static` scans `extensions/`, and the `pre-push` hook checks the extension
-files a push changes. Pin the legal content, so a changed length or class name is a planned, reviewed edit (copy
-the shape from `extensions/de/de_test.go`):
+header gates as `backend/`. `make craft-static`, which `make check` runs, scans `extensions/`. Pin the legal
+content, so a changed length or class name is a planned, reviewed edit (copy the shape from
+`extensions/de/de_test.go`):
 
 ```go
 func TestNewDeclaresTheFloors(t *testing.T) {

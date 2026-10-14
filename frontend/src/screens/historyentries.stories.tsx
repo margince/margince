@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { RecordHistory } from "./historyentries";
 import {
   emptyPage,
   expectNameAndValueApart,
@@ -11,7 +10,8 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordHistory } from "./historyentries";
 
 // The plain-language change list (B-EP09.x), on its own rather than behind
 // RecordHistoryTab's SegmentedControl: history.stories.tsx already covers

@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RecordHistoryTab } from "./history";
 import {
   emptyPage,
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RecordHistoryTab } from "./history";
 
 // RecordHistoryTab (B-EP09.x) reads through two endpoints depending on the
 // SegmentedControl toggle — GET /records/{entity_type}/{id}/history (Changes,

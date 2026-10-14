@@ -40,15 +40,15 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
+import { isTranscriptActivity } from "../design-system/transcriptread";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { useT } from "../i18n";
+import { useActivity } from "../lib/activityread";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { outgoingBody } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
-import { useActivity } from "./activityread";
 import { useMeetingOutcome } from "./taskactions";
-import { isTranscriptActivity } from "./transcriptread";
 import { worklistKey } from "./worklist.queries";
 
 // The two statuses the dialog can record. `canceled` is deliberately absent:

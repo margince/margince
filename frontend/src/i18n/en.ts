@@ -823,6 +823,8 @@ export const en = {
   "trust.loggedInByVia": "Logged in {via} by {name}",
   "trust.loggedInBy": "Logged by {name}",
   "trust.sourceUnknown": "Source not recorded",
+  "trust.imported": "Imported",
+  "trust.importedFrom": "Imported from {uploadName}",
   "trust.agentTag": "Automated by {agent}",
   // A passport call stamps an opaque id and nothing on this side resolves it to
   // a name, so the tag says the kind and stops rather than printing an
@@ -1152,6 +1154,8 @@ export const en = {
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
   "shell.version": "Version {version}",
+  "shell.instanceVersion": "Instance {version}",
+  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
@@ -1251,6 +1255,8 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
   // The one sentence every copy failure opens with. It is a fact about the
   // BROWSER rather than about the link, the secret or the agenda, so the
   // screens differ only in the way out they offer after it.
@@ -3484,6 +3490,9 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
+  "deals.lostReasonNeeded": "Enter why the deal was lost.",
+  "deals.winReasonNeeded": "Pick how the deal was won.",
+  "deals.winDetailNeeded": "Describe how the deal was won.",
   "deals.closeTasks.legend_one":
     "What happens to the {count} open task on this deal?",
   "deals.closeTasks.legend_other":
@@ -12525,7 +12534,6 @@ export const en = {
   "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
-  "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",
@@ -12542,7 +12550,6 @@ export const en = {
     "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
   "worklist.disposition.swipeCancel": "Keep",
-  "worklist.disposition.menu": "Remove from list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
@@ -12656,6 +12663,7 @@ export const en = {
   "worklist.board.promises": "Commitments due",
   "worklist.board.truncated":
     "Counts are incomplete. Each figure is a minimum.",
+  "worklist.rowMenu": "More actions for {title}",
   "worklist.readings.label": "Today’s figures",
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Deals drifting today",
@@ -13855,6 +13863,89 @@ export const en = {
     "A legal hold sits on a record this activity is linked to, so its retention mark stays until the hold is lifted.",
   "projectFiling.refusal.hidden_project":
     "A project you cannot see still holds this activity. Ask someone who can see it to undo the filing.",
+  "legalReview.tab": "Legal review",
+  "legalReview.request": "Request legal review",
+  "legalReview.requestAgain": "Request again",
+  "legalReview.requestConfirm": "Send request",
+  "legalReview.packIntro":
+    "Legal reads a pack built from this deal: company, value, stage, close date, current offer, stage history, and the contract, legal and offer documents.",
+  "legalReview.noteLabel": "Note for legal",
+  "legalReview.noteHint": "What legal should look at. Optional.",
+  "legalReview.empty": "No legal review yet.",
+  "legalReview.requestedBy": "Requested by {name}",
+  "legalReview.decidedBy": "Answered by {name}",
+  "legalReview.someone": "a former colleague",
+  "legalReview.noteShown": "Note: {note}",
+  "legalReview.commentsShown": "Legal: {comments}",
+  "legalReview.openPack": "Open review pack",
+  "legalReview.withdraw": "Withdraw request",
+  "legalReview.withdrawTitle": "Withdraw request?",
+  "legalReview.withdrawText":
+    "The request leaves the legal queue. The deal can be sent again later.",
+  "legalReview.status.requested": "Waiting for legal",
+  "legalReview.status.approved": "Approved",
+  "legalReview.status.changes_needed": "Changes needed",
+  "legalReview.status.withdrawn": "Withdrawn",
+  "legalReview.queueTitle": "Legal reviews",
+  "legalReview.queueOpen": "Waiting",
+  "legalReview.queueDecided": "Answered",
+  "legalReview.queueEmptyOpen": "No request waits for legal.",
+  "legalReview.queueEmptyDecided": "No review answered yet.",
+  "legalReview.closesOn": "Closes {date}",
+  "legalReview.back": "All legal reviews",
+  "legalReview.packTitle": "Review pack",
+  "legalReview.decideTitle": "Answer",
+  "legalReview.ownRequest":
+    "You asked for this review, so a colleague answers it.",
+  "legalReview.outcome": "Outcome",
+  "legalReview.outcomeApproved": "Approve",
+  "legalReview.outcomeApprovedHint":
+    "The deal can pass a stage that needs legal’s approval.",
+  "legalReview.outcomeChanges": "Changes needed",
+  "legalReview.outcomeChangesHint":
+    "The deal stays at its stage until it is sent again and approved.",
+  "legalReview.commentsLabel": "Comments",
+  "legalReview.commentsHint": "Required when changes are needed.",
+  "legalReview.decide": "Record answer",
+  "legalReview.earlier": "Earlier reviews",
+  "legalReview.packCompany": "Company",
+  "legalReview.packValue": "Value",
+  "legalReview.packStage": "Stage",
+  "legalReview.packClose": "Close date",
+  "legalReview.packOwner": "Owner",
+  "legalReview.packOffer": "Current offer",
+  "legalReview.offerNumber": "Offer",
+  "legalReview.offerRevision": "{number}, revision {revision}",
+  "legalReview.offerTotal": "Total",
+  "legalReview.offerValidUntil": "Valid until",
+  "legalReview.offerTerms": "Terms",
+  "legalReview.packNoOffer": "No offer on this deal.",
+  "legalReview.packDocuments": "Documents",
+  "legalReview.packNoDocuments":
+    "No contract, legal or offer document you can open.",
+  "legalReview.docCategory.contract": "Contract",
+  "legalReview.docCategory.offer": "Offer",
+  "legalReview.docCategory.legal": "Legal",
+  "legalReview.docState.draft": "Draft",
+  "legalReview.docState.current": "Current",
+  "legalReview.docState.final": "Final",
+  "legalReview.packHistory": "Stage history",
+  "legalReview.enteredStage": "{stage}, entered {date}",
+  "legalReview.settingsTitle": "Legal review",
+  "legalReview.settingsSwitch": "Legal review on deals",
+  "legalReview.settingsHint":
+    "Deal owners can ask legal to review a deal, and a stage can require legal’s approval. Off hides both and keeps every review already recorded.",
+  "legalReview.settingsReadOnly": "An admin changes this setting.",
+  "legalReview.notSaved": "Setting was not saved.",
+  "stage.criteria.kindLegalReviewed": "Legal approved",
+  "legalReview.docUnavailable":
+    "You cannot open this file. Ask the colleague who requested the review.",
+  "legalReview.offerLine": "Line {number}",
+  "legalReview.offerLineText": "{quantity} × {description} at {price}",
+  "legalReview.offerLineRecurring_one": "{cadence} for {count} period",
+  "legalReview.offerLineRecurring_other": "{cadence} for {count} periods",
+  "legalReview.offerLineStaged": "Proposed, not yet in the total",
+  "legalReview.packBinding": "Other offers sent to the buyer",
 } as const;
 
 export type MessageKey = keyof typeof en;

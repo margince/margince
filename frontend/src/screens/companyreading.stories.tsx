@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { company, company360 } from "./company.fixtures";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The head of an account's Overview, read off its 360. An archived account
 // has no 360, so its page draws none of this; the page story shows that.

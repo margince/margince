@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { type AiCallDetail, ExportScenarioDialog } from "./aiexport";
-import { StoryProviders } from "./story-utils";
 
 const call = {
   task: "capture_classify",

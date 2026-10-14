@@ -8,7 +8,6 @@ import { useHasUnsavedChanges } from "../app/unsaved";
 import { Badge, Modal } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { IdentityLine } from "../design-system/identityline";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
 import { RecordView } from "../design-system/recordview";
@@ -16,12 +15,14 @@ import { useTooltip } from "../design-system/tooltip";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRecordWriteRefusal } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { revealOnceMounted, scrollPageToTop } from "../lib/reveal";
 import { navigate } from "../lib/router";
 import { useUrlParams } from "../lib/urlstate";
 import { useFoldedViewport } from "../lib/viewport";
+import { useWriteTo, type WriteTo, WriteToProvider } from "../lib/writeto";
 import { BriefQueue } from "./brief.queue";
 import { ComposeModal } from "./compose";
 import { intentAbout } from "./compose.intent";
@@ -51,14 +52,9 @@ import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { RecordAccess } from "./recordaccess";
-import {
-  useMailboxConnected,
-  useWriteTo,
-  type WriteTo,
-  WriteToProvider,
-} from "./writeto";
+import { useMailboxConnected } from "./writetohost";
 import "./contact360.css";
 import { navigateKeepingReturn, WorklistReturnLink } from "./worklist.return";
 

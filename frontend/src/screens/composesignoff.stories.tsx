@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../testing/story-utils";
 import { SignOffPreview } from "./composesignoff";
-import { jsonResponse, StoryProviders, stubWithSession } from "./story-utils";
 
 // The block under the composer's body: what the send appends, as the server
 // answers it.

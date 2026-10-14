@@ -56,17 +56,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
 		{"Latest", func() error { _, err := s.Latest(ctx, connectorSalesforce); return err }},
-		{"LookupIdentity", func() error {
-			_, _, err := s.LookupIdentity(ctx, "legacy_crm", "contact", "1")
-			return err
-		}},
-		{"RecordIdentity", func() error {
-			return s.RecordIdentity(ctx, runID, "legacy_crm", "contact", "1", ids.NewV7())
-		}},
-		{"RecordIdentities", func() error {
-			return s.RecordIdentities(ctx, runID, "legacy_crm", "contact",
-				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
-		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
 		{"RecordImportSourceIntent", func() error {
 			return s.RecordImportSourceIntent(ctx, "ws/import/x")
@@ -83,7 +72,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7(), OriginCreated)
 		}},
 		{"BindingsOf", func() error {
 			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
@@ -683,8 +672,7 @@ func TestTheRepairRunsEvenWhenNoCheckpointWasEverRecorded(t *testing.T) {
 // ungranted human, which is what this table proves.
 func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
-		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
-		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
+		"Create": true, "Get": true, "Latest": true, "Resume": true,
 		"RunOfSource": true, "DiscardOwnDraft": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
 		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true,

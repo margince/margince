@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { CaptureSendersCard } from "./capture-senders";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CaptureSendersCard } from "./capture-senders";
 
 // What the classifier decided about a mailbox's senders. The states worth a
 // picture are the ones a reader has to tell apart at a glance: a machine

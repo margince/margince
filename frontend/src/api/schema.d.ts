@@ -3182,6 +3182,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/legal-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The legal reviews asked for on this deal, newest first.
+         * @description Every review of the deal with its status, the request's note and the
+         *     reviewer's comments, so the deal's owner can act on "changes needed".
+         *     Needs `deal.read`. The review pack itself is served only to a reviewer,
+         *     by `GET /legal-reviews/{id}`. While legal review is switched off for the
+         *     installation this answers `404 legal_review_off`.
+         */
+        get: operations["listDealLegalReviews"];
+        put?: never;
+        /**
+         * Ask legal to review this deal.
+         * @description Builds the review pack from the deal as it stands: its company, value,
+         *     stage, close date, current offer, stage history, and the contract, legal
+         *     and offer documents the caller can see on it. Needs `deal.update` on a
+         *     live deal the caller may change, and `offer.read`. Audited on the deal
+         *     as `request_legal_review`. A new request replaces any earlier approval
+         *     on the deal's stage criteria: legal answers again before a gated stage is
+         *     passed.
+         *
+         *     `previous_review_id` names an earlier `changes_needed` review of this
+         *     deal that this request asks again after. `409 legal_review_already_open`
+         *     when the deal already has an open request. `404 legal_review_off` while
+         *     legal review is switched off.
+         */
+        post: operations["requestLegalReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The reviewer's queue.
+         * @description `status=open` (the default) lists the requests waiting for an answer,
+         *     the largest deal value first and then the nearest close date; a review
+         *     with no value or no close date sorts after those that have one.
+         *     `status=decided` lists the answered reviews, newest decision first.
+         *     Needs `legal_review.read`. `404 legal_review_off` while legal review is
+         *     switched off.
+         */
+        get: operations["listLegalReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-reviews/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether legal review is switched on for this installation.
+         * @description On by default (`deals.legal_review_enabled`). Read by every seat, because
+         *     the deal page, the stage settings and the queue show or hide the feature
+         *     by it. Needs `installation_settings.read`.
+         */
+        get: operations["getLegalReviewSettings"];
+        /**
+         * Switch legal review on or off for this installation.
+         * @description Admin only: the admin role, not the installation_settings grant, which
+         *     ops also holds. Off hides the request action, the
+         *     queue and the `legal_reviewed` criterion kind, and a stage's
+         *     `legal_reviewed` criterion stops blocking an advance. Reviews already
+         *     recorded are kept, and come back when the switch is turned on again.
+         */
+        put: operations["updateLegalReviewSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * One review with its pack and the deal's earlier reviews.
+         * @description Needs `legal_review.read`. The pack is the deal as it stood at the
+         *     request. A document's name and whether it can still be opened are read
+         *     now, so a file removed since reads as unavailable. `404 legal_review_off`
+         *     while legal review is switched off.
+         */
+        get: operations["getLegalReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-reviews/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record legal's answer on a request.
+         * @description Needs `legal_review.read` and `legal_review.update`, from a seated
+         *     contact who did not ask for this review (`422 own_request`).
+         *     `changes_needed` needs comments saying what to change. Audited on the
+         *     review as `resolve`. An approval settles every `legal_reviewed` criterion
+         *     on the deal's current stage in the same transaction. `409
+         *     legal_review_decided` unless the review is still open.
+         */
+        post: operations["decideLegalReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-reviews/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back an open request.
+         * @description Needs `deal.update` on a live deal the caller may change. Audited on the
+         *     deal as `withdraw_legal_review`. `409 legal_review_decided` unless the
+         *     review is still open.
+         */
+        post: operations["withdrawLegalReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deal-suggestions": {
         parameters: {
             query?: never;
@@ -8023,6 +8199,9 @@ export interface paths {
          *     the export is then listed on the list as a use. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
+         *     A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
+         *     with a quote so a spreadsheet does not evaluate it; a bare international phone number
+         *     (`+` and 6 to 15 digits) is left unquoted.
          */
         post: operations["createFilteredExport"];
         delete?: never;
@@ -12808,8 +12987,9 @@ export interface paths {
          *     An assignee-scoped list would leave a card nobody could find the moment the colleague it named
          *     went on leave.
          *
-         *     Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-         *     caller to discover it.
+         *     Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+         *     waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+         *     stranded the oldest reviews, which are the ones a reviewer most needs.
          */
         get: operations["listCommunicationReviews"];
         put?: never;
@@ -16974,6 +17154,7 @@ export interface paths {
          *
          *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
          *     opening the file reads them as the text the record holds rather than evaluating them.
+         *     A bare international phone number (`+` and 6 to 15 digits) is left unquoted.
          */
         get: operations["exportForecastShare"];
         put?: never;
@@ -18940,6 +19121,11 @@ export interface paths {
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
          *     are left behind.
+         *
+         *     A cell an export quoted against formula evaluation (a quote before `=`,
+         *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
+         *     quote, here and in the run, so an unedited export imports as the values
+         *     it was written from.
          */
         post: operations["uploadImportSource"];
         delete?: never;
@@ -22585,6 +22771,200 @@ export interface components {
                     owner_id?: string | null;
                 }[];
             };
+        };
+        /**
+         * @description `requested` waits for legal. `approved` and `changes_needed` are legal's
+         *     answers. `withdrawn` is a request the deal's side took back.
+         * @enum {string}
+         */
+        LegalReviewStatus: "requested" | "approved" | "changes_needed" | "withdrawn";
+        /** @enum {string} */
+        LegalReviewOutcome: "approved" | "changes_needed";
+        /** @description One legal review of a deal, without its pack. */
+        LegalReviewSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            deal_id: string;
+            status: components["schemas"]["LegalReviewStatus"];
+            /** @description What the requester asked legal to look at. */
+            note?: string | null;
+            /** @description What legal answered. */
+            comments?: string | null;
+            /**
+             * Format: uuid
+             * @description The changes_needed review this request asks again after.
+             */
+            previous_review_id?: string | null;
+            /** Format: uuid */
+            requested_by?: string | null;
+            requested_by_name?: string | null;
+            /** Format: uuid */
+            decided_by?: string | null;
+            decided_by_name?: string | null;
+            /** Format: date-time */
+            decided_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int64 */
+            version: number;
+        };
+        /** @description One row of the reviewer's queue, with the facts it is sorted by. */
+        LegalReviewQueueItem: {
+            review: components["schemas"]["LegalReviewSummary"];
+            deal_name: string;
+            company_name?: string | null;
+            stage_name?: string | null;
+            /**
+             * Format: int64
+             * @description The deal's amount in the base currency, priced on the request day.
+             */
+            value_minor?: number | null;
+            value_currency?: string | null;
+            /** Format: date */
+            expected_close_date?: string | null;
+        };
+        LegalReviewListResponse: {
+            data: components["schemas"]["LegalReviewQueueItem"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        DealLegalReviewListResponse: {
+            data: components["schemas"]["LegalReviewSummary"][];
+        };
+        /** @description A review as the reviewer reads it. */
+        LegalReview: {
+            review: components["schemas"]["LegalReviewSummary"];
+            packet: components["schemas"]["LegalReviewPacket"];
+            /** @description The deal's other reviews, newest first, so a repeated request reads with its history. */
+            earlier: components["schemas"]["LegalReviewSummary"][];
+        };
+        /**
+         * @description The deal as it stood when the review was asked for, as this reader may
+         *     see it now. The deal, company and owner names are read now. Without `deal.read` the deal reads as its name alone. The
+         *     amount follows the reader's field masks, the company their sight of it,
+         *     the offer their `offer.read`, and each document its own read gate.
+         */
+        LegalReviewPacket: {
+            deal: components["schemas"]["LegalReviewPacketDeal"];
+            /** Format: int64 */
+            value_minor?: number | null;
+            value_currency?: string | null;
+            /** @description The current offer, or null when the deal has none. */
+            offer?: components["schemas"]["LegalReviewPacketOffer"] | null;
+            /** @description Every other offer the buyer was sent or accepted. The approval binds to these too. */
+            binding?: components["schemas"]["LegalReviewPacketOffer"][];
+            /** @description Each stage the deal entered, oldest first. */
+            history: components["schemas"]["LegalReviewPacketStage"][];
+            /** @description The deal's contract, legal and offer documents, newest first. */
+            documents: components["schemas"]["LegalReviewPacketDocument"][];
+        };
+        LegalReviewPacketDeal: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uuid */
+            company_id?: string | null;
+            company_name?: string | null;
+            /** Format: int64 */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /** Format: uuid */
+            stage_id?: string | null;
+            stage_name?: string | null;
+            /** Format: date */
+            expected_close_date?: string | null;
+            /** Format: uuid */
+            owner_id?: string | null;
+            owner_name?: string | null;
+        };
+        /**
+         * @description Shown only to a reader holding `offer.read`. Its money is null for a
+         *     reader whose field masks withhold the deal's amount.
+         */
+        LegalReviewPacketOffer: {
+            /** @description The offer's lines in their order, as legal read them. */
+            lines: components["schemas"]["LegalReviewPacketOfferLine"][];
+            /** Format: uuid */
+            id: string;
+            offer_number: string;
+            revision: number;
+            status: string;
+            /** Format: int64 */
+            net_minor?: number | null;
+            /** Format: int64 */
+            tax_minor?: number | null;
+            /** Format: int64 */
+            gross_minor?: number | null;
+            currency: string;
+            /** Format: date */
+            valid_until?: string | null;
+            intro_text?: string | null;
+            terms_text?: string | null;
+            has_pdf: boolean;
+        };
+        LegalReviewPacketOfferLine: {
+            /** @description The line's place in the offer. */
+            position: number;
+            description: string;
+            unit?: string | null;
+            /** @description The quantity as a decimal string. */
+            quantity: string;
+            /** Format: int64 */
+            unit_price_minor?: number | null;
+            /** @description The discount in percent, as a decimal string. */
+            discount_pct?: string | null;
+            /** @description The tax rate in percent, as a decimal string. */
+            tax_rate?: string | null;
+            /** @description one_time or recurring. Null means nobody has classified it. */
+            billing_model?: string | null;
+            /** @description How many months one billing period spans. */
+            billing_interval_months?: number | null;
+            /** @description How many billing periods the buyer commits to. */
+            interval_count?: number | null;
+            /** @description A proposed line nobody has accepted yet. It is not in the totals. */
+            staged?: boolean;
+        };
+        LegalReviewPacketStage: {
+            stage_name: string;
+            /** Format: date-time */
+            entered_at: string;
+        };
+        /**
+         * @description One document as it stood at the request, read now for this reader. A
+         *     file this reader may open carries its name, type and size. A file
+         *     that came with a message outside this reader's audience, or any file
+         *     for a reader without `deal.read`, is not listed at all. A file
+         *     uploaded on the deal and archived or removed since reads as
+         *     unavailable, with no name, type or size.
+         */
+        LegalReviewPacketDocument: {
+            /** Format: uuid */
+            attachment_id: string;
+            /** @enum {string} */
+            category: "contract" | "offer" | "legal";
+            /** @enum {string} */
+            doc_state: "draft" | "current" | "final";
+            content_type?: string | null;
+            /** Format: int64 */
+            byte_size?: number | null;
+            /** Format: date-time */
+            added_at: string;
+            title?: string | null;
+            filename?: string | null;
+            available: boolean;
+        };
+        RequestLegalReviewRequest: {
+            note?: string | null;
+            /** Format: uuid */
+            previous_review_id?: string | null;
+        };
+        DecideLegalReviewRequest: {
+            outcome: components["schemas"]["LegalReviewOutcome"];
+            /** @description Required for changes_needed. */
+            comments?: string | null;
+        };
+        LegalReviewSettings: {
+            enabled: boolean;
         };
         /** @description One Deal Scout suggestion: a deal the evidence says should exist on a company with no open deal. */
         DealSuggestion: {
@@ -30659,7 +31039,7 @@ export interface components {
          * @description What kind of record the observation was read from.
          * @enum {string}
          */
-        StageEvidenceSource: "activity" | "contract";
+        StageEvidenceSource: "activity" | "contract" | "legal_review";
         /**
          * @description Who authored the cited thing. Computed by the engine from the activity's
          *     direction, its participants and the installation's own email domains —
@@ -30731,7 +31111,7 @@ export interface components {
          *     BUYER did, so a seller's own message can never settle one.
          * @enum {string}
          */
-        StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom";
+        StageCriterionKind: "buyer_confirmed" | "event_held" | "document_signed" | "role_identified" | "terms_accepted" | "custom" | "legal_reviewed";
         CreateStageExitCriterionRequest: {
             key: string;
             label: string;
@@ -36325,7 +36705,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -36761,7 +37141,7 @@ export interface components {
              */
             batch_id?: string | null;
             /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold";
+            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
             entity_type: string;
             /**
              * Format: uuid
@@ -39282,6 +39662,11 @@ export interface components {
         /** @description A page of refused sends waiting for a decision. */
         CommunicationReviewList: {
             data: components["schemas"]["CommunicationReview"][];
+            /**
+             * @description Where this page was cut. `total` beside it is the same count this object may carry, kept
+             *     at the top level because it shipped there: a client reading it keeps working.
+             */
+            page: components["schemas"]["PageInfo"];
             /**
              * @description How many are waiting in total. A page at its limit has more behind it, and this is how
              *     the caller knows rather than by discovering it.
@@ -50132,6 +50517,227 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listDealLegalReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's reviews. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealLegalReviewListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestLegalReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RequestLegalReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The request. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLegalReviews: {
+        parameters: {
+            query?: {
+                status?: "open" | "decided";
+                /** @description Opaque keyset cursor. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getLegalReviewSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The switch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateLegalReviewSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalReviewSettings"];
+            };
+        };
+        responses: {
+            /** @description The switch as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getLegalReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    decideLegalReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideLegalReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The decided review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawLegalReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The withdrawn review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalReviewSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDealSuggestions: {
@@ -64951,6 +65557,17 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;

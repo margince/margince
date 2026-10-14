@@ -7,14 +7,14 @@ import { PageTitle, SettingsRail } from "../app/shell";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import type { GrantSpec } from "../testing/mefixture";
-import { SETTINGS_SCREEN, useSettingsSection } from "./settingsnav";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
   WithInstallationBrand,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { SETTINGS_SCREEN, useSettingsSection } from "./settingsnav";
 import "./settings.css";
 
 // The sidebar's settings level as the shell mounts it, built by

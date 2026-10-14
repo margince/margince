@@ -51,3 +51,37 @@ func TestTheWalkFramesAFileExactlyAsTheProfileDid(t *testing.T) {
 		t.Fatalf("rows = %+v, want one row from line 2 with its name", rows)
 	}
 }
+
+func TestAnExportedFileReadsBackAsTheValuesItWasWrittenFrom(t *testing.T) {
+	body := "Name,Industry,Description,Phone\n" +
+		"'=Name,'-Retail,\"'@mention, \"\"quoted\"\" and, comma\",'+84901234567\n"
+	want := map[string]string{
+		"name": "=Name", "industry": "-Retail",
+		"description": `@mention, "quoted" and, comma`, "phone": "+84901234567",
+	}
+
+	p, err := ProfileCSV(strings.NewReader(body), ProfileRowLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range p.Columns {
+		if got := c.Samples[0]; got != want[strings.ToLower(c.Header)] {
+			t.Errorf("profile sample for %s = %q, want %q", c.Header, got, want[strings.ToLower(c.Header)])
+		}
+	}
+
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectCompany,
+		map[string]string{"Name": "name", "Industry": "industry", "Description": "description", "Phone": "phone"}, "Name")
+	rows, err := src.Rows(context.Background(), ObjectCompany, 0, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows = %+v, want one", rows)
+	}
+	for field, value := range want {
+		if got := rows[0].Fields[field]; got != value {
+			t.Errorf("walked %s = %q, want %q", field, got, value)
+		}
+	}
+}

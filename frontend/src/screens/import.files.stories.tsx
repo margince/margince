@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { ImportDropzone } from "./import.files";
-import { formatFixture, recentRunsFixture } from "./import.fixtures";
-import { ImportWizardPage } from "./import.wizard";
-import { ImportMappingTable } from "./importmapping";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ImportDropzone } from "./import.files";
+import { formatFixture, recentRunsFixture } from "./import.fixtures";
+import { ImportWizardPage } from "./import.wizard";
+import { ImportMappingTable } from "./importmapping";
 
 // The wizard's first three steps: drop a file, check the type of each file in
 // it, and map each file's columns on its own tab. A story reaches a step by

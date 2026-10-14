@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { archivedContact } from "./contactarchived.fixtures";
 import { ContactFacts } from "./contactfacts";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The facts strip under a contact's name, read off the row alone. So the
 // archived page, which has no 360, draws the same strip as the live one.

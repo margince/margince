@@ -75,7 +75,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree.
+  tree. No file in `design-system/` imports `app/` or `screens/`: a part that needs
+  a feature, such as the record page's mail drawer, lives in `screens/`.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -356,7 +357,7 @@ even if the test tree breaks.
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
-`craft static`, in the push hook and in CI, reads only the comment lines a
+`craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
 merge gate and needs Node and pnpm. Run `make check-fe` (or
 `make frontend-check`) before pushing a frontend change.

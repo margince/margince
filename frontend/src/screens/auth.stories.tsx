@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { Locale } from "../i18n";
-import { AuthScreen, AvailabilityScreen } from "./auth";
-import { AuthExperience } from "./auth-core";
-import { ProviderButtons } from "./auth-providers";
-import { MfaForm } from "./auth-signin";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AuthScreen, AvailabilityScreen } from "./auth";
+import { AuthExperience } from "./auth-core";
+import { ProviderButtons } from "./auth-providers";
+import { MfaForm } from "./auth-signin";
 
 /**
  * The unauthenticated surface, whole (ADR-0076).

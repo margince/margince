@@ -67,11 +67,11 @@ export const PrimaryOnly: Story = {
 };
 
 // A secondary that is PRESENT and draws nothing — the shape a queue row takes
-// where the server offers it no judgements and `<DispositionVerbs/>` is one
-// child returning null. It has to read exactly like `PrimaryOnly` above: the
-// leading group IS drawn, because the row cannot know what a child will render,
-// and `.action-row-lead:empty` then takes it off the flex line so the one verb
-// keeps its own line rather than sitting under a band of air.
+// where the server offers it no judgements. There `<DoneVerb/>` is one child
+// returning null. It has to read like `PrimaryOnly` above. The leading group
+// is drawn, because the row cannot know what a child will render. Then
+// `.action-row-lead:empty` takes it off the flex line, so the one verb keeps
+// its own line rather than sitting under a band of air.
 function NoVerbsHere() {
   return null;
 }

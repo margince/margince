@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { SEEDED_ASSIGNABLE_ROLES } from "./roles.testkit";
-import { StoryProviders } from "./story-utils";
 import { RoleCell } from "./users-rolecell";
 
 // The member row's role picker on its own: a seeded role under its translated

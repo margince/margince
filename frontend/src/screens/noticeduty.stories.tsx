@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { NoticeDuty } from "./noticeduty";
-import { StoryProviders, stubWithSession } from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 
 // The privacy-notice duty on the worklist's pane: what the duty is, what its

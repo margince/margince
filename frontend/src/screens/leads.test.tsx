@@ -26,7 +26,7 @@ import {
   scoreTone,
   terminalBadge,
 } from "./leads";
-import { WriteToHost } from "./writeto";
+import { WriteToHost } from "./writetohost";
 
 // The status/score-override/assign-to-me controls (Phase 4) resolve the
 // session principal via /v1/me, which needs a workspace slug before it will

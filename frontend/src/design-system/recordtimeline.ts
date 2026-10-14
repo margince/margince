@@ -6,10 +6,10 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
 import { startOfDayInZone } from "../format/timezone";
+import { timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
-import { timelineBaseKey } from "../screens/activitykeys";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];

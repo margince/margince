@@ -5,12 +5,16 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   AUTOMATION_CATALOG,
   configuredAutomations,
 } from "./automations.fixtures";
 import { ConfiguredAutomations } from "./automations.instances";
 import { RulePausedReason } from "./automations.lists";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const meta: Meta = {
   title: "Settings/AI/Automations/Configured automations",

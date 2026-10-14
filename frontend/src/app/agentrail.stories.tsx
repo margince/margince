@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../screens/story-utils";
-import type { GrantSpec } from "../testing/mefixture";
+} from "../testing/story-utils";
 import { AgentRail } from "./agentrail";
 
 // The section's states come from what the installation ANSWERS, so a story is

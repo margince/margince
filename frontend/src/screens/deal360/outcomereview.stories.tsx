@@ -7,7 +7,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../story-utils";
+} from "../../testing/story-utils";
 import { OutcomeReviewPanel } from "./outcomereview";
 
 // The three states this panel has to keep apart, and only one of them is the

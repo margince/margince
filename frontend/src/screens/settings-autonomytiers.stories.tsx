@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof AutonomyTiersCard> = {
   title: "Settings/You/Agents/Autonomy tiers",

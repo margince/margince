@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../i18n";
+import { StoryProviders } from "../testing/story-utils";
 import { MfaCodeField } from "./mfacode";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof MfaCodeField> = {
   title: "Signed out/Second-factor code field",

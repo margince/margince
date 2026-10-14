@@ -3,16 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { deckItems } from "./brief";
-import { DecisionsSection } from "./brief.decisions";
-import { bundle, proposal, singles } from "./brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { deckItems } from "./brief";
+import { DecisionsSection } from "./brief.decisions";
+import { bundle, proposal, singles } from "./brief.fixtures";
 
 // WAITING ON YOU — the zone, and what the redesign gave it.
 //

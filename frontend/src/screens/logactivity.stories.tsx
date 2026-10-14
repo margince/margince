@@ -5,8 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CheckSquare, FileText } from "lucide-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LogActivity, LogActivityAction } from "./logactivity";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The log-an-activity form embedded in every 360 (contact/company/deal/lead).
 // It reads GET /me only for the caller's own grant; the form itself never

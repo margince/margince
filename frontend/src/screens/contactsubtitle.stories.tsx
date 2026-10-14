@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { ContactSubtitle } from "./contactsubtitle";
-import { StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
