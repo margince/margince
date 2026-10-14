@@ -1053,6 +1053,7 @@ public.app_user.work_end_minute smallint gen=- def=-
 public.app_user.work_start_minute smallint gen=- def=-
 public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING btree (id)
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval.acknowledged_effect_failed_at timestamp with time zone gen=- def=-
 public.approval.approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
@@ -1076,6 +1077,7 @@ public.approval.decision_reason text gen=- def=-
 public.approval.diff_hash text NOT NULL gen=- def=-
 public.approval.effect_failed_at timestamp with time zone gen=- def=-
 public.approval.effect_failure text gen=- def=-
+public.approval.effect_ran_at timestamp with time zone gen=- def=-
 public.approval.evidence jsonb gen=- def=-
 public.approval.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.approval.id uuid NOT NULL gen=- def=uuidv7()

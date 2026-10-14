@@ -130,22 +130,24 @@ func primaryLink(row crmcontracts.Activity) (string, ids.UUID) {
 type attentionFailedEffects struct{ svc *approvals.Service }
 
 func (f attentionFailedEffects) Failed(ctx context.Context, limit int) ([]attention.FailedEffect, error) {
-	rows, _, err := f.svc.ListWire(ctx, approvals.ListInput{FailedForDecider: true, Limit: limit})
+	decisions, err := f.svc.OwnFailedDecisions(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]attention.FailedEffect, 0, len(rows))
-	for _, row := range rows {
+	out := make([]attention.FailedEffect, 0, len(decisions))
+	for _, decision := range decisions {
+		row := decision.Approval
 		if row.EffectFailedAt == nil || row.EffectFailure == nil {
 			// The SQL filter guarantees the pair; the re-check is what makes
 			// the derefs safe in this package, where that SQL is elsewhere.
 			continue
 		}
 		failed := attention.FailedEffect{
-			ID:       ids.UUID(row.Id),
-			Kind:     row.Kind,
-			Sentence: *row.EffectFailure,
-			FailedAt: *row.EffectFailedAt,
+			ID:        ids.UUID(row.Id),
+			Kind:      row.Kind,
+			Sentence:  *row.EffectFailure,
+			FailedAt:  *row.EffectFailedAt,
+			Retryable: decision.Retryable,
 		}
 		// Both or neither: a type with no id names nothing, and an id with no
 		// type says where to look without saying at what.

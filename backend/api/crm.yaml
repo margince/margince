@@ -18706,6 +18706,57 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /approvals/{id}/failure-acknowledgement:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Approvals]
+      operationId: acknowledgeApprovalFailure
+      x-agent-access: human-only
+      # Session cookie only: seeing that your own decision did not take effect
+      # is the decider's judgement, and an agent has no Worklist to clear.
+      security: [{ cookieAuth: [] }]
+      summary: Say you have seen that an approved change did not run, so it leaves your Worklist.
+      description: |
+        An approval whose released work failed is carried back to the contact who approved it
+        on the Worklist. This takes that row off their list. The approval and its failure stay
+        on the record, and the Approval still reports `effect_failed_at`.
+
+        The acknowledgement is held against the failure it saw. If the same approval fails
+        again later, for example after the decider approves it once more to retry the work,
+        the new failure shows again.
+
+        Only the contact who decided the approval may acknowledge its failure. Any other
+        caller, and an approval with no failure, answers `404`.
+
+        The request names the failure the reader saw, by its `effect_failed_at`. If the
+        approval has failed again since, the newer failure is not acknowledged: the call
+        answers `409` and the row stays on the list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [failed_at]
+              additionalProperties: false
+              properties:
+                failed_at:
+                  type: string
+                  format: date-time
+                  description: The `effect_failed_at` of the failure the reader saw, as the Worklist row's `occurred_at` carries it.
+      responses:
+        '204': { description: 'Acknowledged. Acknowledging the same failure again is the same success.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The approval failed again after the failure named in the request.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---- Approval bundles: one act's proposals, decided together (D2/R7) -------
   /approval-bundles/{bundle_id}/approve:
     parameters:

@@ -98,7 +98,7 @@ const baseArgs = {
 };
 
 // A notice, and the one verb the row draws inline rather than as a link — see
-// NoticeAcknowledge in worklist.row.tsx for why.
+// NoticeAcknowledge in worklist.acknowledge.tsx for why.
 export const ANoticeToSettle: Story = {
   args: { ...baseArgs, item: noticeItem() },
   render: (args) => {

@@ -12717,6 +12717,9 @@ export const vi = {
   "worklist.verb.retryRefusedEventGone":
     "Sự kiện kích hoạt không còn tồn tại, nên không thể chạy lại. Quy tắc theo lịch sẽ tự kiểm tra lại.",
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem. Thử lại.",
+  "worklist.verb.approvalRetried": "Đã thực hiện thay đổi đã duyệt",
+  "worklist.verb.approvalRetryFailed":
+    "Thay đổi đã duyệt vẫn chưa được thực hiện. Thử lại sau, hoặc đánh dấu đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn tất việc cần làm. Thử lại.",
   "worklist.verb.completeStale":
     "Việc cần làm này đã thay đổi từ khi được mở, nên chưa hoàn tất ở đây. Đã làm mới danh sách.",

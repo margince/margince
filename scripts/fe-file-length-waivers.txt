@@ -29,7 +29,7 @@
 904 frontend/src/screens/contactpage.tsx
 1182 frontend/src/screens/privacy.test.tsx
 1171 frontend/src/screens/contactprovider.test.tsx
-959 frontend/src/screens/worklist.row.tsx
+936 frontend/src/screens/worklist.row.tsx
 1125 frontend/src/screens/analytics.test.tsx
 1289 frontend/src/screens/company-context.tsx
 1278 frontend/src/screens/listquery.test.tsx

@@ -13029,6 +13029,9 @@ export const de = {
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
     "Der Eintrag konnte nicht als gesehen markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.approvalRetried": "Genehmigte Änderung ausgeführt",
+  "worklist.verb.approvalRetryFailed":
+    "Die genehmigte Änderung konnte erneut nicht ausgeführt werden. Bitte versuche es später erneut oder nimm sie zur Kenntnis.",
   "worklist.verb.completeFailed":
     "Die Aufgabe konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
   "worklist.verb.completeStale":

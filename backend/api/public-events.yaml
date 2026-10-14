@@ -157,6 +157,7 @@ components:
         - onboarding.state_changed
         - approval.requested
         - approval.decided
+        - approval.failure_acknowledged
         - coldstart.read_back_proposed
         - coldstart.accepted
         - coldstart.rejected
@@ -4215,6 +4216,29 @@ components:
             (the runner's resume consumer decodes it as json.RawMessage
             off the wire; a fixed struct here would drop fields a future
             staging kind adds).
+      additionalProperties: false
+
+    PublicEventApprovalFailureAcknowledged:
+      type: object
+      x-event-type: approval.failure_acknowledged
+      x-entity-type: approval
+      x-version: 1
+      description: >-
+        Payload for approval.failure_acknowledged: the human who approved a
+        decision has seen that its work did not run, and the failure leaves
+        their Worklist (approvals/failureack.go). A later failure of the same
+        approval carries a newer failed_at and shows again.
+      required:
+        - kind
+        - failed_at
+      properties:
+        kind:
+          type: string
+          description: The approval's kind.
+        failed_at:
+          type: string
+          format: date-time
+          description: When the failure that was acknowledged was recorded.
       additionalProperties: false
 
     PublicEventColdstartReadBackProposed:

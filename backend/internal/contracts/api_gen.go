@@ -52416,6 +52416,12 @@ type ApproveApprovalParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AcknowledgeApprovalFailureJSONBody defines parameters for AcknowledgeApprovalFailure.
+type AcknowledgeApprovalFailureJSONBody struct {
+	// FailedAt The `effect_failed_at` of the failure the reader saw, as the Worklist row's `occurred_at` carries it.
+	FailedAt time.Time `json:"failed_at"`
+}
+
 // RejectApprovalJSONBody defines parameters for RejectApproval.
 type RejectApprovalJSONBody struct {
 	Reason *string `json:"reason,omitempty"`
@@ -58091,6 +58097,9 @@ type RejectApprovalBundleJSONRequestBody = ApprovalBundleDecisionRequest
 
 // ApproveApprovalJSONRequestBody defines body for ApproveApproval for application/json ContentType.
 type ApproveApprovalJSONRequestBody = ApproveRequest
+
+// AcknowledgeApprovalFailureJSONRequestBody defines body for AcknowledgeApprovalFailure for application/json ContentType.
+type AcknowledgeApprovalFailureJSONRequestBody AcknowledgeApprovalFailureJSONBody
 
 // RejectApprovalJSONRequestBody defines body for RejectApproval for application/json ContentType.
 type RejectApprovalJSONRequestBody RejectApprovalJSONBody
@@ -69834,6 +69843,9 @@ type ServerInterface interface {
 	// Approve a staged action (commits it; mints the approval token).
 	// (POST /approvals/{id}/approve)
 	ApproveApproval(w http.ResponseWriter, r *http.Request, id Id, params ApproveApprovalParams)
+	// Say you have seen that an approved change did not run, so it leaves your Worklist.
+	// (POST /approvals/{id}/failure-acknowledgement)
+	AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request, id Id)
 	// Reject a staged action (discards it; nothing commits).
 	// (POST /approvals/{id}/reject)
 	RejectApproval(w http.ResponseWriter, r *http.Request, id Id)
@@ -72720,6 +72732,12 @@ func (_ Unimplemented) GetApproval(w http.ResponseWriter, r *http.Request, id Id
 // Approve a staged action (commits it; mints the approval token).
 // (POST /approvals/{id}/approve)
 func (_ Unimplemented) ApproveApproval(w http.ResponseWriter, r *http.Request, id Id, params ApproveApprovalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say you have seen that an approved change did not run, so it leaves your Worklist.
+// (POST /approvals/{id}/failure-acknowledgement)
+func (_ Unimplemented) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -82300,6 +82318,38 @@ func (siw *ServerInterfaceWrapper) ApproveApproval(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ApproveApproval(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcknowledgeApprovalFailure operation middleware
+func (siw *ServerInterfaceWrapper) AcknowledgeApprovalFailure(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcknowledgeApprovalFailure(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -113299,6 +113349,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approvals/{id}/approve", wrapper.ApproveApproval)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/approvals/{id}/failure-acknowledgement", wrapper.AcknowledgeApprovalFailure)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/approvals/{id}/reject", wrapper.RejectApproval)

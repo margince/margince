@@ -503,6 +503,10 @@ func (stubs) ApproveApproval(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "ApproveApproval")
 }
 
+func (stubs) AcknowledgeApprovalFailure(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcknowledgeApprovalFailure")
+}
+
 func (stubs) RejectApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RejectApproval")
 }
