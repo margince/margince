@@ -62,7 +62,9 @@ const TemplateSubscriptionQuestion = "subscription_question"
 //
 // Held by: TestThePublishedQuestionIsTheOneTheScreenAsks
 // (backend/gates/marketingquestion_test.go), which compares this catalog
-// against the frontend's own strings.
+// against the frontend's own strings, and by
+// TestEveryPublishedQuestionIsPinnedToItsVersion, which pins the words to this
+// version.
 const marketingQuestionVersion = 5
 
 // QuestionKeyForLink names which published question a link will ask.
