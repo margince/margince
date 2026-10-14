@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useRecordZone } from "../app/recordzone";
 import { Field } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
 import { Select } from "../design-system/select";
 import { dayInZone, startOfDayInZone } from "../format/timezone";
 import { useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingSelection } from "./reporting.model";

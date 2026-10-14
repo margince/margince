@@ -11,14 +11,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
-import { ContactResearchDrawer } from "./contactdrawers";
-import { providerCompletedProfile } from "./contactprovider.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactResearchDrawer } from "./contactdrawers";
+import { providerCompletedProfile } from "./contactprovider.fixtures";
 
 // Two capabilities share this drawer: contact data BOUGHT from a licensed
 // provider at the top, and a public-source research run under it. Each has its

@@ -10,13 +10,13 @@ import type { MessageKey } from "../i18n/en";
 // about one field.
 //
 // It is its own map rather than a reuse of the three that already exist,
-// because none of them is about this subject: `COLD_FIELD_LABELS`
-// (screens/common.tsx) names the enrichment vocabulary, `PROFILE_FIELD_LABELS`
-// (screens/companies.tsx) names company profile facts, and today.merge's
-// map names the fields a merge compares. This one names the columns a record's
-// UPDATE writes, and `historyfieldlabels.test.ts` derives that set from the
-// contract so a field added upstream fails the gate instead of reaching a
-// reader raw.
+// because none of them is about this subject. `COLD_FIELD_LABELS`
+// (screens/coldfieldlabels.ts) names the enrichment vocabulary.
+// `PROFILE_FIELD_LABELS` (screens/companies.tsx) names company profile facts,
+// and today.merge's map names the fields a merge compares. This one names the
+// columns a record's UPDATE writes. `historyfieldlabels.test.ts` derives that
+// set from the contract, so a field added upstream fails the gate instead of
+// reaching a reader raw.
 //
 // A Map, not an object: `get` answers `MessageKey | undefined` with no cast,
 // and no prototype key can answer for a field the server never sent.

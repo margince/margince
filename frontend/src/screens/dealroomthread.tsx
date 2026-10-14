@@ -16,7 +16,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { problemMessageOf } from "../lib/problem";
 
 // One thread of a Deal Room's conversation, and the composer that opens
 // another: what was said, by whom and when, the reply under it, and the verbs

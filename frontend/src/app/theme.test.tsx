@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ThemeToggle } from "../design-system/theme-toggle";
 import { LocaleProvider, translate } from "../i18n";
 import { STORAGE_KEYS } from "../lib/storage";
 import {
@@ -14,9 +15,8 @@ import {
   THEME_CHOICES,
   type Theme,
   type ThemeChoice,
-} from "./theme";
+} from "../lib/theme";
 import { resetTheme } from "./theme-reset";
-import { ThemeToggle } from "./theme-toggle";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
@@ -253,7 +253,7 @@ describe("a stored value this build cannot name", () => {
       const machine = stubSystemPreference(true);
 
       vi.resetModules();
-      const booted = await import("./theme");
+      const booted = await import("../lib/theme");
       booted.startTheme();
 
       expect(booted.resolveTheme()).toBe("dark");
@@ -273,7 +273,7 @@ describe("a stored value this build cannot name", () => {
     const machine = stubSystemPreference(true);
 
     vi.resetModules();
-    const booted = await import("./theme");
+    const booted = await import("../lib/theme");
     booted.startTheme();
 
     expect(document.documentElement.dataset.theme).toBe("dark");

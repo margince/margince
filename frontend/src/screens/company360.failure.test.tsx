@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { AppErrorBoundary } from "../app/errorboundary";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { CompanyScreen } from "./companies";
 
 // What the company record page does when its composite read FAILS.

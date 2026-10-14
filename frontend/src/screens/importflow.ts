@@ -4,7 +4,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
-import { unwrap } from "./common";
+import { postMultipart } from "../lib/multipart";
+import { unwrap } from "../lib/problem";
 import { useAddressedRun } from "./importaddress";
 import { asProfile } from "./importprofile";
 import {
@@ -21,7 +22,6 @@ import type {
   ImportRun,
 } from "./importtypes";
 import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
-import { postMultipart } from "./multipart";
 
 // The file the hub's drop zone took, held for the run page to start with. A
 // File cannot ride an address, and the two are separate routes.
@@ -242,7 +242,7 @@ export function useImportWizard() {
   const [runId, setRunId] = useAddressedRun();
   const run = useImportRun(runId);
   const status = run.data?.status;
-  const report = useImportReport(runId, status);
+  const report = useImportReport(runId, status, run.data?.version);
   const undo = useUndoImport();
   useLandedRecords([status]);
 

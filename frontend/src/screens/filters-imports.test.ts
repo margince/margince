@@ -64,9 +64,11 @@ function violations(entries: readonly string[]): string[] {
 
 describe("the filters split holds transitively", () => {
   it("no shell module reaches a filter page", () => {
-    expect(violations(productionModulesUnder(join(srcRoot, "app")))).toEqual(
-      [],
+    // lib/ is the shell's own infrastructure, loaded with it.
+    const shell = ["app", "lib"].flatMap((dir) =>
+      productionModulesUnder(join(srcRoot, dir)),
     );
+    expect(violations(shell)).toEqual([]);
   });
 
   it("neither light module reaches a filter page", () => {

@@ -8,8 +8,8 @@ import "@testing-library/jest-dom/vitest";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { DealRoomPage } from "./dealroompage";
 
 // The head of the seller's Deal Room: what the room is, what it is called, how

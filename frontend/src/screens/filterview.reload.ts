@@ -3,7 +3,7 @@
 
 import type { QueryObserverResult } from "@tanstack/react-query";
 import { useState } from "react";
-import { problemCodeOf } from "./common";
+import { problemCodeOf } from "../lib/problem";
 import { openableTree, type SavedView } from "./savedviews.queries";
 import type { Node } from "./segmentpredicate";
 

@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { OnboardingBackread } from "./onboarding-backread";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { OnboardingBackread } from "./onboarding-backread";
 
 // The backread step for the fe-uat render gate — one story per honest branch:
 // the window pick with its scope, a failed estimate that still allows the read,
@@ -77,9 +77,9 @@ export const Counting: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(/Counting the messages/i);
+    await canvas.findByText(/Counting messages in this period/i);
     await expect(
-      canvas.getByRole("button", { name: /Connect and read/i }),
+      canvas.getByRole("button", { name: /Connect and import/i }),
     ).toBeEnabled();
   },
 };
@@ -111,7 +111,7 @@ export const EstimateFailed: Story = {
     },
   ),
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByText(/could not estimate that window/i);
+    await within(canvasElement).findByText(/period could not be estimated/i);
   },
 };
 
@@ -224,7 +224,7 @@ export const Stopping: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: /stop reading/i }),
+      await canvas.findByRole("button", { name: /stop import/i }),
     );
     await canvas.findByText(/Nothing was written/i);
   },

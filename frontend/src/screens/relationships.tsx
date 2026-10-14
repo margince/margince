@@ -5,8 +5,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import type { EntityKind } from "../app/entity";
-import { isOption } from "../app/options";
 import { SEARCH_HIT_KIND_KEY } from "../app/searchkinds";
 import {
   Button,
@@ -19,8 +17,10 @@ import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { DEAL_COVERAGE_KEY } from "./activitykeys";
-import { unwrap } from "./common";
+import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
+import type { EntityKind } from "../lib/entity";
+import { isOption } from "../lib/options";
+import { unwrap } from "../lib/problem";
 import type { CreateField } from "./create";
 import {
   type Candidate,
@@ -29,7 +29,7 @@ import {
 } from "./relationshipcandidates";
 import { KIND_LABELS } from "./relationshipkinds";
 import "./candidatepicker.css";
-import "./common.css";
+import "../design-system/querystates.css";
 import "./relationships.css";
 import { ErrorLine } from "../design-system/errorline";
 

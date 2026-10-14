@@ -2,17 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { useCan, useCanWrite } from "../app/capability";
-import { navigate, routeHash } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { provenanceOf } from "../design-system/provenanceof";
+import { QueryStates } from "../design-system/querystates";
 import { RecordBack } from "../design-system/recordview";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, QueryStates, useMe } from "./common";
+import { useCan, useCanWrite } from "../lib/capability";
+import { useMemberNames } from "../lib/membernames";
+import { problemMessageOf } from "../lib/problem";
+import { navigate, routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
 import { UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
@@ -27,7 +31,6 @@ import {
   wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
-import { useMemberNames } from "./membernames";
 import {
   IMPORT_RUN_SUBPAGE,
   IMPORT_TEMPLATE_SUBPAGE,
@@ -174,6 +177,13 @@ function rowsOf(run: ImportRun): number {
   return (run.parts ?? []).reduce((sum, part) => sum + part.row_count, 0);
 }
 
+// The seat that started a run. `captured_by` is the principal, `human:<uuid>`,
+// and the names endpoint takes the uuid alone; an agent holds no seat to name.
+function starterOf(run: ImportRun): string | undefined {
+  const by = provenanceOf(run.captured_by);
+  return by.kind === "human" ? by.userId : undefined;
+}
+
 // The runs made so far, newest first. Undo is offered on a complete run only:
 // every other state either is still moving or has nothing left to reverse.
 function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
@@ -183,7 +193,7 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const recent = useRecentImports();
   const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
   useLandedRecords(runs.map((one) => one.status));
-  const names = useMemberNames(runs.map((one) => one.captured_by));
+  const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);
   const close = () => {
@@ -218,7 +228,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                       one.parts?.length ?? 0,
                       { count: formatNumber(one.parts?.length ?? 0, locale) },
                     );
-                    const by = names.get(one.captured_by);
+                    const starter = starterOf(one);
+                    const by = starter && names.get(starter);
                     return (
                       <>
                         <a className="cell-link" href={runHref(one.id)}>

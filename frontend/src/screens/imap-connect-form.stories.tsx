@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ImapConnectForm } from "./imap-connect-form";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ImapConnectForm stories for the fe-uat render gate: the idle form, and the
 // two IMAP-specific error states it branches on by problemCode — each

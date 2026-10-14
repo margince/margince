@@ -233,14 +233,23 @@ func (i importSeam) Commit(ctx context.Context, id ids.UUID) (crmcontracts.Impor
 	return i.door().commitRun(ctx, openapi_types.UUID(id), 0)
 }
 
-// ready refuses the three verbs that need the source bytes when this role
-// stores no objects.
+// errNoImportQueue refuses a test or a commit on a role that cannot queue the
+// worker's job, which is where both run.
+var errNoImportQueue = fmt.Errorf("this role queues no import work, so it cannot test or commit an import: %w", apperrors.ErrConflict)
+
+// ready refuses the verbs that need the source bytes or the worker when this
+// role stores no objects or queues no import work. It is checked before a file
+// is stored, so a role that could never test it keeps no orphan.
 //
 // The reads do not call it. They touch only the database, and refusing them
 // for want of a blobstore would hide a run that exists.
 func (i importSeam) ready() error {
-	if i.door().blobs == nil {
+	door := i.door()
+	if door.blobs == nil {
 		return errNoObjectStore
+	}
+	if door.queue == nil {
+		return errNoImportQueue
 	}
 	return nil
 }

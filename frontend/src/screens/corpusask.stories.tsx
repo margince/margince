@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { AskMarginceModal } from "./corpusask";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AskMarginceModal } from "./corpusask";
 
 // Ask your documents: the one question box in the product whose search is
 // BOUNDED, which is what lets it refuse instead of guessing.

@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
-import { CompanyDocumentsCard } from "./companydocuments";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { CompanyDocumentsCard } from "./companydocuments";
 
 // The account's document library. The rule the card is built around is
 // invisible on a well-behaved fixture: `doc_state` is asserted, never inferred

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { FieldRow } from "../design-system/fieldgrid";
 import { useT } from "../i18n";
+import { useCanWriteRecord } from "../lib/capability";
 import {
   ADDRESS_FIELDS,
   addressFrom,

@@ -50,5 +50,12 @@ must_not_mention:
   # correct sentence and must not trip this.
   - "(?<!not )(?<!n't )(?:I|we)(?:'ve| have)? (?:tagged|applied|put|added)(?! no)[^.\n]{0,80}(?:K5|Nora|her)|(?:she|Nora|the tag)(?: is| was| has been| is now) (?:tagged|applied)|(?:Nora|her record) (?:now )?carries the (?:K5|tag)"
 
+
+# The card's title lands on the contact, and the conference word does not:
+# an offer is not an application.
+must_end_with:
+  - contact "Nora Feld" title=Head of Procurement
+  - contact "Nora Feld" untagged=K5 Conference 2026
+
 runs: 3
 pass_at: 2

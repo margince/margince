@@ -58,7 +58,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithSuggestionEffects(dealSuggestionEffects{})
+		WithSuggestionEffects(dealSuggestionEffects{}).
+		WithSettings(NewSettingsStore(pool)).
+		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "../api/client";
 import { useModelCallsInFlight } from "../api/model-inflight";
 import type { components } from "../api/schema";
-import { unwrap } from "../screens/common";
+import { unwrap } from "../lib/problem";
 import { displayedKinds } from "./ai-activity-speak";
 
 type AiActivityItem = components["schemas"]["AiActivityItem"];

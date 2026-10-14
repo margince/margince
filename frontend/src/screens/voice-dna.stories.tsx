@@ -10,7 +10,7 @@ import {
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card off canned profile/corpus reads — never a live

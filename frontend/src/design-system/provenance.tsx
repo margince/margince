@@ -17,11 +17,11 @@ import "./trust.css";
 // carries and which four screens render without staging anything at all.
 
 // Provenance is an agent (`agent:capture`), a connector (`connector:gmail`), a
-// job the installation ran itself (`system:contact_auto_enrich`), a human, or a
-// buyer — the shapes captured_by can take, plus the honest last arm for a row
-// that records none of them. A reader has to be able to tell WHICH KIND of
-// thing produced a value, so each is its own arm: a scheduled sweep announced
-// as an AI agent misdescribes both.
+// job the installation ran itself (`system:contact_auto_enrich`), a human or a
+// buyer. Those are the shapes captured_by can take. An import is one more arm,
+// and the last arm is a row that records none of them. A reader has to tell
+// which kind of thing produced a value, so each is its own arm. A scheduled
+// sweep announced as an AI agent misdescribes both.
 //
 // `buyer` is the contact on the other side of a Deal Room: outside the
 // company, holding no seat and named in no member directory. It is its own
@@ -30,6 +30,10 @@ import "./trust.css";
 // nobody recorded a source — here the source IS recorded, and it is a contact.
 // Nothing to name today: a Deal Room participant resolves to no display name on
 // the read path, so the tag says the kind, the way `agent` and `system` do.
+//
+// `import` is read from the record's `source` stamp, because captured_by on an
+// imported row names only the administrator who ran the import. It reads
+// "Imported from <upload name>", or "Imported" when the upload has no name.
 //
 // `human` carries whether that human is the reader. "Typed by you" over a
 // colleague's entry is a false statement about who to ask, and it was also
@@ -54,6 +58,9 @@ export type Provenance =
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
   | { kind: "buyer" }
+  // A row the CSV importer wrote. `uploadName` is what the administrator called
+  // the upload, never the record's `source` stamp that carries it.
+  | { kind: "import"; uploadName?: string }
   | { kind: "unknown" };
 
 // Who wrote an imported row where it came from, as the contract reports it.
@@ -108,11 +115,26 @@ export function provenanceLabel(
       return t("trust.connectorTag", { connector: provenance.connector });
     case "buyer":
       return t("trust.typedByBuyer");
+    case "import":
+      return importLabel(provenance, t);
     case "unknown":
       return t("trust.sourceUnknown");
     case "human":
       return humanLabel(provenance, t, renderUser);
   }
+}
+
+/**
+ * The import arm in words. Exported for a reader that shows a record's source
+ * as plain text (a lead's Source fact) rather than as a tag.
+ */
+export function importLabel(
+  provenance: Extract<Provenance, { kind: "import" }>,
+  t: Translator,
+): string {
+  return provenance.uploadName
+    ? t("trust.importedFrom", { uploadName: provenance.uploadName })
+    : t("trust.imported");
 }
 
 /**

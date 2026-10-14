@@ -15,3 +15,20 @@ var listColleaguesCopy = toolCopy{
 	Instead: "search_records/contact finds a CUSTOMER contact; this finds a colleague.",
 	Retain:  "user_id is what assignee_id and owner_id take. Never assign to an is_agent seat.",
 }
+
+var readDirectoryCopy = toolCopy{
+	Purpose: "Read how this workspace is set up. colleagues: who works HERE, the seats that can " +
+		"receive work, not the contacts stored as records; `q` narrows by name. pipelines: every " +
+		"pipeline with its live stages, each open, won or lost. channel_providers: the messaging " +
+		"transports this installation composed.",
+	Limits: "A `q` matching nobody answers with `all_colleagues` and a warning, which decides " +
+		"whether someone truly has no seat. A deal cannot be created, or moved anywhere new, " +
+		"without pipelines: a deal you read carries only its current stage, and a stage's " +
+		"semantic, not its name, says whether it closes the deal. supplies_transport=false means " +
+		"a reply on that transport will be refused.",
+	Instead: "search_records finds a CUSTOMER contact; this finds a colleague.",
+	Retain: "user_id is what assignee_id and owner_id take; never assign to an is_agent seat. " +
+		"Keep the pipeline_id and stage_id: create_record for a deal needs both, and progress_deal " +
+		"takes the stage_id as to_stage_id. Carry `provider` verbatim: log_activity takes it as " +
+		"channel_provider when kind is \"message\".",
+}

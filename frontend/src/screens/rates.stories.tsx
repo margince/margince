@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { FxRatesCard, ModelCostsCard } from "./rates";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // READ before create. Both cards gate on `useCan(<object>, "read")` and skip
 // their query entirely without it, so a create-only fixture reached the withheld

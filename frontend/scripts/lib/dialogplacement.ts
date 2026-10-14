@@ -5,9 +5,9 @@
 // handed to a prop, placed at the site that renders it.
 
 import ts from "typescript";
+import { declarationOf } from "../../src/testing/classnames";
 import {
   callOf,
-  declarations,
   defOf,
   descendants,
   fnOf,
@@ -65,10 +65,10 @@ function slotSite(
   return undefined;
 }
 
-function inlineRoots(source: ts.SourceFile, e: ts.Expression): ts.Node[] {
+function inlineRoots(e: ts.Expression): ts.Node[] {
   const callee = ts.isCallExpression(e) ? e.expression : undefined;
-  const named = ts.isIdentifier(e) ? e : callee;
-  const decl = named && declarations(source).get(named.getText());
+  const named = callee ?? e;
+  const decl = ts.isIdentifier(named) ? declarationOf(named) : undefined;
   if (!decl) return [];
   if (callee) return returnedBy(fnOf(decl));
   return ts.isVariableDeclaration(decl) ? jsxOf(decl.initializer) : [];
@@ -76,7 +76,7 @@ function inlineRoots(source: ts.SourceFile, e: ts.Expression): ts.Node[] {
 function placeInline(source: ts.SourceFile, p: Placement) {
   for (const x of descendants(source)) {
     if (!ts.isJsxExpression(x) || !x.expression || !childOfJsx(x)) continue;
-    const roots = inlineRoots(source, x.expression);
+    const roots = inlineRoots(x.expression);
     if (roots.length === 0) continue;
     p.inline.set(x, roots);
     for (const r of roots) if (!p.siteOf.has(r)) p.siteOf.set(r, x);

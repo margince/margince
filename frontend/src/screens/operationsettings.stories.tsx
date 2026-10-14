@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentType } from "react";
-import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
-import { defaultOperations } from "./operationsettings.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BackgroundSchedulesCard, SendPacingCard } from "./operationsettings";
+import { defaultOperations } from "./operationsettings.fixtures";
 
 // The two operating-value cards, editable and refused. The refused seat holds
 // the read and not the write, so it sees the numbers and the sentence saying

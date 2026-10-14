@@ -12,8 +12,8 @@ import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "./common";
-import { postMultipart } from "./multipart";
+import { postMultipart } from "../lib/multipart";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,

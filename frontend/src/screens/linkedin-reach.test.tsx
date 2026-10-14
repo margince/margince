@@ -8,10 +8,10 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
+import { installFetchStub, jsonResponse } from "../testing/story-utils";
 import { LinkedInReachCard } from "./linkedin-reach";
-import { installFetchStub, jsonResponse } from "./story-utils";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those

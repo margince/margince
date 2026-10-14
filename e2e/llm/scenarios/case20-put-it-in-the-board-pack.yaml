@@ -91,7 +91,7 @@ may_call:
   - describe_vocabulary
   - run_report
   - query_workspace
-  - list_pipelines
+  - read_directory
   - search_records
 
 must_mention:

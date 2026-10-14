@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders } from "../story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { DealWatchList } from "./dealwatchcard";
 
 // What the customer committed to that a deal waits on. The states worth seeing
@@ -14,13 +18,17 @@ const meta: Meta<typeof DealWatchList> = {
   component: DealWatchList,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <div style={{ maxWidth: 560 }}>
-          <Story />
-        </div>
-      </StoryProviders>
-    ),
+    (Story) => {
+      // Dismissing a commitment writes the contact, so the reader may update one.
+      installFetchStub({ "GET /me": meRoute({ contact: ["update"] }) });
+      return (
+        <StoryProviders>
+          <div style={{ maxWidth: 560 }}>
+            <Story />
+          </div>
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;

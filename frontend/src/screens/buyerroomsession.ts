@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { useT } from "../i18n";
+import { throwProblem } from "../lib/problem";
 import {
   readStored,
   removeStored,
   STORAGE_KEYS,
   writeStored,
 } from "../lib/storage";
-import { throwProblem } from "./common";
 
 // The buyer's session, as this tab holds it: the token the credential exchange
 // issued, kept in sessionStorage and presented as a Bearer on every call, and

@@ -12,8 +12,8 @@
 import type { components } from "../api/schema";
 import { isMessageKey, type useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemDetails } from "../lib/problembody";
 import type { Reference } from "./filterreference";
-import { problemDetails } from "./problembody";
 import type { FilterOp } from "./segmentpredicate";
 
 export type AnalyticsQuery = components["schemas"]["AnalyticsQuery"];

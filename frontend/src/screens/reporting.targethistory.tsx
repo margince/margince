@@ -2,8 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Disclosure } from "../design-system/atoms";
+import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
-import { QueryGate, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { reportingAmount } from "./reporting.model";
 
 type Target = components["schemas"]["ReportingTarget"];

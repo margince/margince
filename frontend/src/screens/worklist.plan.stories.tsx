@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
 import { Panel } from "../design-system/panel";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 

@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ConfirmDetailsScreen } from "./confirm";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The public, anonymous confirm-your-details page: no session, no rail, and a
 // token in the URL as the whole capability. The order on screen is the point —

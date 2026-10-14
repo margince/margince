@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { OnboardingGate, ReadTheatre } from "./onboarding-gate";
-import { StoryProviders } from "./story-utils";
 import "./onboarding.css";
 
 // The first two states of onboarding, each from a fixture that is shaped exactly

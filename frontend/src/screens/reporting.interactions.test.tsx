@@ -11,8 +11,14 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { pickOption } from "../design-system/select-testing";
+import { RecordZoneProvider } from "../lib/recordzone";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingOverview } from "./reporting.overview";
 import { ReportingReportDetail } from "./reporting.report";
@@ -23,12 +29,6 @@ import {
   reportingStoryRoutes,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {

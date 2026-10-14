@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ConsentAndChannels } from "./contactconsentpanel";
-import { ContactOverview } from "./contactoverview";
-import { ContactPageV2 } from "./contactpage";
-import { MoveButton } from "./movebutton";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ConsentAndChannels } from "./contactconsentpanel";
+import { ContactOverview } from "./contactoverview";
+import { ContactPageV2 } from "./contactpage";
+import { MoveButton } from "./movebutton";
 import "./contact360.css";
 
 const meta: Meta = {

@@ -11,8 +11,8 @@ import {
 } from "../design-system/listpopover";
 import { TagPill } from "../design-system/tagpill";
 import { useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import type { PickedTag } from "./bulktag";
-import { problemMessageOf } from "./common";
 import type { RecordTag, TaggableType } from "./tags.queries";
 import { useApplyTag, useTagVocabulary } from "./tags.queries";
 

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { ErasureRefusals } from "./privacy.notices";
-import { StoryProviders } from "./story-utils";
 import "./privacy.css";
 
 // Why an erasure will not go through, as the confirm dialog says it. Both flags

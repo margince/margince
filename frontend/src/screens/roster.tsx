@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
 // `/teams`, cached once, and the hooks that read it. Split out of entityref.tsx,

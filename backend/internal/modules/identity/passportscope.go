@@ -7,6 +7,7 @@ package identity
 // can be wrong.
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,14 +29,11 @@ func passportScopeList() string {
 	return strings.Join(names, "|")
 }
 
-// admitScopes refuses the two scope faults a mint can carry, which are
-// different mistakes and read as different sentences.
+// admitScopes refuses each scope fault a mint can carry with its own sentence.
+// Every mint path runs it, grant-backed ones included.
 //
-// No scope at all is a missing field: the contract declares `scopes` required
-// with `minItems` 1.
-//
-// Answered as a vocabulary fault, it told a caller who sent no scope that
-// their scope was not in the list.
+// No scope at all is a missing field, not a vocabulary fault: the contract
+// declares `scopes` required with `minItems` 1.
 func admitScopes(scopes []string) error {
 	if len(scopes) == 0 {
 		return &InvalidPassportFieldError{
@@ -47,6 +45,9 @@ func admitScopes(scopes []string) error {
 		if !validScopes[principal.Scope(sc)] {
 			return &InvalidScopeError{Scope: sc}
 		}
+	}
+	if len(slices.Compact(slices.Sorted(slices.Values(scopes)))) != len(scopes) {
+		return &InvalidPassportFieldError{Field: fieldScopes, Code: "duplicate_scope", Message: "must not repeat a scope"}
 	}
 	return nil
 }

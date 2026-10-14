@@ -3,6 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { BriefFeed } from "./brief.feed";
 import {
   leadRow,
@@ -10,7 +15,6 @@ import {
   overnightRow,
   type Worklist,
 } from "./brief.fixtures";
-import { StoryProviders } from "./story-utils";
 
 // TODAY — the panel's own states, the ones the redesign added.
 //
@@ -28,11 +32,15 @@ const meta: Meta<typeof BriefFeed> = {
   component: BriefFeed,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => (
-      <StoryProviders>
-        <Story />
-      </StoryProviders>
-    ),
+    (Story) => {
+      // The reassign picker reads /me only to drop the reader; it checks no grant.
+      installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
   ],
 };
 export default meta;

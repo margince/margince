@@ -218,7 +218,7 @@ func writePipelineSource(b *strings.Builder, catalog []ReportCatalogEntry) {
 
 // pipelineIDProvenance is the one sentence saying where those ids come from,
 // read by run_report's description and by the published document.
-const pipelineIDProvenance = "A `pipeline_id` or `stage_id` used in a plan comes from list_pipelines."
+const pipelineIDProvenance = "A `pipeline_id` or `stage_id` used in a plan comes from " + pipelinesSource + "."
 
 // catalogNamesAPipelineID reports whether any rendered vocabulary names an id a
 // caller has to obtain elsewhere. Keyed on what is actually rendered, so a

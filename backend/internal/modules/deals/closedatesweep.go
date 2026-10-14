@@ -149,6 +149,13 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 		}
 		return err
 	}); err != nil {
+		// Another worker opened the pass between this one finding none and
+		// trying to start it. The winner walks the set and the next tick
+		// resumes it, so there is nothing for this tick to do and nothing
+		// wrong to report.
+		if errors.Is(err, errPassAlreadyOpen) {
+			return nil
+		}
 		return err
 	}
 

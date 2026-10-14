@@ -11,10 +11,10 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../vitest.budget";
-import { meFixture } from "./app/mefixture";
-import { navigate } from "./app/router";
+import { navigate } from "./lib/router";
 import { formatFixture } from "./screens/import.fixtures";
 import { memoryStorage, renderApp } from "./testing/appharness";
+import { meFixture } from "./testing/mefixture";
 
 // The run page's unsaved guard is the shell's own (App.tsx), which holds the
 // address without its query; a guard wired in the test would prove only itself.

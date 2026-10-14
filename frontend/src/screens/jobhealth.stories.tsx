@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { JobHealthCard } from "./jobhealth";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const CLASSIFY = {
   kind: "capture_classify",

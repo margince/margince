@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
-import { RolesSettings } from "./roles-settings";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { RolesSettings } from "./roles-settings";
 
 // The role list with one role open beneath it: its name, whose records it
 // reaches, the object grid with an extension section, and the preview.

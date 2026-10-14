@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ProblemError } from "./common";
+import { ProblemError } from "../lib/problem";
 import { sendReviewOf } from "./sendreview";
 
 // What a rep can do about a refused send, read from the refusal itself.

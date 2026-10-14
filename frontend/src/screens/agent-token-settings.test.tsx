@@ -10,8 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider, translate } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentConnectionsCard } from "./agent-token-settings";
 
 // Settings → Sign-in and apps: how long a connected agent's passport lives.

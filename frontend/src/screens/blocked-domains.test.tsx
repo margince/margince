@@ -13,17 +13,17 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { BlockedDomainsCard } from "./blocked-domains";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
-} from "./story-utils";
-import { openRowMenu } from "./tablerow.testkit";
+} from "../testing/story-utils";
+import { openRowMenu } from "../testing/tablerow.testkit";
+import { BlockedDomainsCard } from "./blocked-domains";
 
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it

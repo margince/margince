@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { meFixture } from "../../app/mefixture";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import type { IntroRequest } from "../introrequests";
 import { DecisionStrip } from "./decision";
 

@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../app/mefixture";
-import { ContactDealRooms } from "./contactdealrooms";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   jsonResponse,
   type RouteMap,
   StoryProviders,
   stubWithSession,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ContactDealRooms } from "./contactdealrooms";
 
 // The rooms a contact can still enter, on the contact's own page. An admin
 // removing "Max, who left the buyer" knows the NAME, not the deals — the room

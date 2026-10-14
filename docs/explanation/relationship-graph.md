@@ -34,7 +34,8 @@ is `deals.EngagedStakeholders`, which walks `activity_link` directly. The engage
 about a deal's own conversations, not a ranking over a contact's history.
 
 The agent surface asks the same questions through the same seams. `who_knows`, `company_coverage`,
-`intro_path_to` and `at_risk_relationships` are all 🟢 read tools under `ScopeRead`. They reach
+`intro_path_to` and `at_risk_relationships` are all 🟢 read tools under `ScopeRead`; a client reaches the
+first three through `read_relationships`. They reach
 records only through the row-scoped reads the HTTP surface uses. So a governed tool can never see
 more than the human who uses it ([agent-surface.md](agent-surface.md)).
 

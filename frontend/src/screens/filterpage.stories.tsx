@@ -4,6 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { FilterVocabulary } from "./filterdata";
 import { useFilterDraft } from "./filterdraft";
 import { FilterEditor } from "./filtereditor";
@@ -12,7 +17,6 @@ import { usePlainWords } from "./filterpropose";
 import { FiltersScreen } from "./filters";
 import { listsMe } from "./lists.fixtures";
 import { newGroup, newLeaf } from "./segmentpredicate";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // `#/filters/contacts`: a new filter, from the calm start to a filter worth
 // keeping. The page grows only as the reader builds, so most states are

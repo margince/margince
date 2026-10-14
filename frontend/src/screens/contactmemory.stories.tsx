@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { ContactMemory } from "./contactmemory";
-import { StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 // Conversation memory: the threads and meetings a contact is remembered by,

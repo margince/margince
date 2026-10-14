@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { IssuedNotice } from "./dealroomaccess.notices";
-import { StoryProviders } from "./story-utils";
 
 // What became of the invitation a rep just issued, in the two readings of one
 // press. Their own frames because the link itself is shown once and never

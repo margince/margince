@@ -2,16 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../app/aicaches";
-import { useCanWrite } from "../app/capability";
 import { useUnsavedGuard } from "../app/unsaved";
-// Shared with every upload form, which reads the ceiling off this same record.
-// One query, one key: two hooks on one key would let whichever mounted first
-// decide how a failure behaves for the other.
-import {
-  INSTALLATION_SETTINGS_KEY,
-  useInstallationSettings,
-} from "../app/uploadlimit";
 import {
   Button,
   Field,
@@ -28,18 +19,23 @@ import {
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { fiscalYearLabel } from "../format/fiscalyear";
 import { identifierNumber, monthName } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../lib/aicaches";
+import { useCanWrite } from "../lib/capability";
+import { problemFieldErrorsOf, problemMessageOf, unwrap } from "../lib/problem";
+// Shared with every upload form, which reads the ceiling off this same record.
+// One query, one key: two hooks on one key would let whichever mounted first
+// decide how a failure behaves for the other.
 import {
-  problemFieldErrorsOf,
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-} from "./common";
+  INSTALLATION_SETTINGS_KEY,
+  useInstallationSettings,
+} from "../lib/uploadlimit";
 import {
   RegionalSettingsFields,
   RegionalSettingsRows,

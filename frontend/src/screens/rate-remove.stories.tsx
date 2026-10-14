@@ -2,8 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { RemovePriceDialog } from "./rate-remove";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The question asked before a model's price entry leaves the sheet: every date
 // of it goes, and the calls it priced read as unpriced from then on.

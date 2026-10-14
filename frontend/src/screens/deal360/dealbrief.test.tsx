@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { PageAsideProvider, usePageAside } from "../../app/pageaside";
+import { StoryProviders } from "../../testing/story-utils";
 import { RecordFields } from "../recordfields";
-import { StoryProviders } from "../story-utils";
 import { DealBrief } from "./dealbrief";
 
 afterEach(cleanup);

@@ -9,10 +9,10 @@ import {
   problemCode,
   problemFieldErrorsOf,
   problemMessageOf,
-} from "./common";
+} from "../lib/problem";
+import { isRecord } from "../lib/problembody";
 import { runHref } from "./importaddress";
 import type { ImportObject, ImportReport } from "./importtypes";
-import { isRecord } from "./problembody";
 
 // What an UNDO says about itself: that it stopped part-way, and which rows it
 // could not put back.

@@ -11,22 +11,25 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { STORAGE_KEYS } from "../lib/storage";
+import { setThemeChoice } from "../lib/theme";
+import { meFixture } from "../testing/mefixture";
 import { AccountMenu } from "./account";
-import { meFixture } from "./mefixture";
-import { setThemeChoice } from "./theme";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
-// The bundle's release is compiled in, and every local build leaves it empty.
-// A getter over a hoisted value lets each case set the release it needs. The
-// comparison rule stays the real one.
-const bundle = vi.hoisted(() => ({ release: "" }));
-vi.mock("./release", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./release")>();
+// The bundle's releases are compiled in, and every local build leaves them
+// empty. Getters over a hoisted value let each case set the releases it needs.
+// The comparison rule stays the real one.
+const bundle = vi.hoisted(() => ({ release: "", core: "" }));
+vi.mock("../lib/release", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/release")>();
   return {
     ...actual,
     get SPA_RELEASE() {
       return bundle.release;
+    },
+    get CORE_RELEASE() {
+      return bundle.core;
     },
   };
 });
@@ -47,6 +50,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   bundle.release = "";
+  bundle.core = "";
   vi.unstubAllGlobals();
   window.localStorage.removeItem(THEME_KEY);
 });
@@ -404,6 +408,58 @@ describe("AccountMenu", () => {
       expect(container.querySelector(".acctversion")).toBeNull();
     },
   );
+
+  // An instance build stamps the core release it pins, and the reader then
+  // sees both: the instance's own release and the core under it.
+  it("names the instance and the core release on an instance build", async () => {
+    bundle.release = "v0.4.1";
+    bundle.core = "v0.0.5";
+    const user = userEvent.setup();
+    render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
+    const core = screen.getByText("Core v0.0.5");
+    expect(core.closest("[role=menuitem]")).toBeNull();
+    expect(screen.queryByText(/^Version/)).toBeNull();
+    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
+  });
+
+  // Equal values are still two facts about two repositories.
+  it("keeps both lines when the instance and core releases are equal", async () => {
+    bundle.release = "v0.4.1";
+    bundle.core = "v0.4.1";
+    const user = userEvent.setup();
+    render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
+    expect(screen.getByText("Core v0.4.1")).toBeInTheDocument();
+  });
+
+  it.each(["", "dev"])(
+    "an instance build with an unstamped instance release (%j) names only the core",
+    async (release) => {
+      bundle.release = release;
+      bundle.core = "v0.0.5";
+      const user = userEvent.setup();
+      render(<AccountMenu />);
+      await openMenu(user, railTrigger());
+      expect(screen.getByText("Core v0.0.5")).toBeInTheDocument();
+      expect(screen.queryByText(/^Instance/)).toBeNull();
+      expect(screen.queryByText(/^Version/)).toBeNull();
+    },
+  );
+
+  // "dev" is what a plain docker build stamps, so it is no core release.
+  it('treats a core release of "dev" as a core-only build', async () => {
+    bundle.release = "v1.4.0";
+    bundle.core = "dev";
+    const user = userEvent.setup();
+    render(<AccountMenu />);
+    await openMenu(user, railTrigger());
+    expect(screen.getByText("Version v1.4.0")).toBeInTheDocument();
+    expect(screen.queryByText(/^Core/)).toBeNull();
+    expect(screen.queryByText(/^Instance/)).toBeNull();
+  });
 
   // Closed, the panel is not rendered at all — so there is nothing behind the
   // trigger for Tab to land on, and nothing for a screen reader to read out of

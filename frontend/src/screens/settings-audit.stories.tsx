@@ -3,10 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AuditLogCard } from "./settings-audit";
 import type { AuditLogEntry } from "./settings-audit.format";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const VIEWER = "u-ada";
 

@@ -89,7 +89,7 @@ export type CustomScreen = {
    * A component, not a rendered node — React needs a stable type to mount, and
    * a registry of elements would build every fork screen on every route change
    * including the ones nobody navigated to. The same reason the extension
-   * registry holds components (app/extensions.ts).
+   * registry holds components (lib/extensions.ts).
    */
   component: ComponentType;
   /** A rail entry, if this screen is a destination a contact navigates TO. */
@@ -189,12 +189,11 @@ export function buildRegistry(
   return registry;
 }
 
-// The three readers below are pure functions OF a registry, defaulting to the
-// discovered one. Not test scaffolding, and the same reason app/extensions.ts
-// gives for the same shape: upstream's registry is empty by construction, so a
-// reader that closed over the module binding could only ever be exercised on
-// its miss path — every answer it gave a fork would be one nothing upstream had
-// ever run.
+// The three readers below are pure functions of a registry, defaulting to the
+// discovered one. This is not test scaffolding; lib/extensions.ts has the same
+// shape for the same reason. Upstream's registry is empty by construction. A
+// reader closed over the module binding could only run its miss path, so its
+// answers to a fork would be untested upstream.
 
 /** The screen a `#/x/<key>` address names, or undefined for one nothing declares. */
 export function findCustomScreen(

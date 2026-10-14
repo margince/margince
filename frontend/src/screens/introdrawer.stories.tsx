@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { IntroDrawer } from "./introdrawer";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import "./contactnetwork.css";
 
 // The requester's side of an introduction: pick the route, say why, write the

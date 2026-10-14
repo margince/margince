@@ -4,11 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import {
   ImapConnectPanel,
   OAuthConnectPanel,
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The onboarding connect panels for the fe-uat render gate (G-10): the
 // idle IMAP form, its post-connect state (the honest "building itself"

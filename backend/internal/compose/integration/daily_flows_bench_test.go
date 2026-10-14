@@ -79,7 +79,7 @@ var dailyFlows = []dailyFlow{
 	{Name: "worklist", ID: "PERF-8", Budget: Perf8Budget, PerCall: true, Calls: worklistCalls},
 	{Name: "home", ID: "PERF-8", Budget: Perf8Budget, PerCall: true, Calls: homeCalls},
 	{Name: "palette_search", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: paletteCalls},
-	{Name: "palette_search_prefix", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Allow422: true, Calls: prefixCalls},
+	{Name: "palette_search_prefix", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: prefixCalls},
 	{Name: "results_search", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: resultsCalls},
 	{Name: "lists", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: listCalls},
 	{Name: "record_open", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Calls: recordOpenCalls},

@@ -24,12 +24,13 @@ import {
   PanelGroupHead,
   PanelRow,
 } from "../design-system/panel";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { LoadMoreButton, QueryGate, throwProblem } from "./common";
+import { throwProblem } from "../lib/problem";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];

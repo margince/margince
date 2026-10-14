@@ -10,8 +10,8 @@ import {
 import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import { formatFixture } from "./import.fixtures";
 
@@ -110,7 +110,7 @@ export const run = {
   version: 3,
   source_released: false,
   source: "import_api",
-  captured_by: "u-ada",
+  captured_by: "human:u-ada",
   created_at: "2026-08-13T10:00:00Z",
   updated_at: "2026-08-13T10:00:00Z",
 };
@@ -144,7 +144,7 @@ const EXACT_DEFAULTS: Routes = {
   "GET /imports": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /users/names": () => jsonResponse({ data: [] }),
   "POST /imports/sources": () => jsonResponse(profile),
-  "POST /imports": () => jsonResponse(run, 202),
+  "POST /imports": () => jsonResponse({ ...run, status: "validating" }, 202),
 };
 
 const RUN_PATH = /^GET \/imports\/([^/]+)$/;
@@ -164,7 +164,10 @@ function runDefault(key: string): Response | undefined {
     });
   }
   if (key.startsWith("POST /imports/") && key.endsWith("/validate")) {
-    return jsonResponse({ ...run, version: run.version + 1 });
+    return jsonResponse(
+      { ...run, status: "validating", version: run.version + 1 },
+      202,
+    );
   }
   if (key.startsWith("GET /imports/") && key.endsWith("/report")) {
     return jsonResponse(dryRun);

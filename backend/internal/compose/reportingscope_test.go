@@ -14,7 +14,7 @@ import (
 func TestScopedReportHandleKeepsItsPopulation(t *testing.T) {
 	owner := ids.NewV7()
 	scope := &RequestedScope{Kind: "owner", ID: &owner}
-	handle := scopedDerivationURL("pipeline-current", nil, []string{"stage_id"}, nil, nil, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), scope)
+	handle := scopedDerivationURL("pipeline-current", nil, []string{"stage_id"}, nil, nil, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), "", scope)
 	parsed, err := url.Parse(handle)
 	if err != nil {
 		t.Fatal(err)

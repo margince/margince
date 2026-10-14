@@ -9,16 +9,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"strings"
 	"testing"
-	"time"
+
+	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -42,10 +45,14 @@ func statusOf(t *testing.T, e *integration.Env, id migration.RunID) string {
 }
 
 // leadSourceHandlers stores a small lead file the way an upload does, opening
-// its draft run.
-func leadSourceHandlers(t *testing.T, e *integration.Env, budget time.Duration) (importHandlers, crmcontracts.ImportSourceProfile) {
+// its draft run. Its test runs queue on the real inserter.
+func leadSourceHandlers(t *testing.T, e *integration.Env) (importHandlers, crmcontracts.ImportSourceProfile) {
 	t.Helper()
-	h := importHandlers{db: e.DB(), blobs: blobstore.NewMemory(), uploadLimit: 1 << 20, testRunBudget: budget}
+	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatalf("building the job inserter: %v", err)
+	}
+	h := importHandlers{db: e.DB(), blobs: blobstore.NewMemory(), uploadLimit: 1 << 20, queue: &importEnqueuer{runner: inserter}}
 	profile, err := h.profileAndStore(importAdmin(e), migration.ObjectLead, "leads.csv",
 		[]byte("Email,Full Name\nada@lovelace.example,Ada\n"))
 	if err != nil {
@@ -54,55 +61,57 @@ func leadSourceHandlers(t *testing.T, e *integration.Env, budget time.Duration) 
 	return h, profile
 }
 
-func TestATestRunStoppedByItsRequestDeadlineStillReturnsToItsDraft(t *testing.T) {
-	e := integration.Setup(t)
-	_, profile := leadSourceHandlers(t, e, 0)
-	runs := migration.NewRunStore(e.DB())
-	id := migration.RunID(profile.RunId)
-	if _, _, err := runs.QueueValidation(importAdmin(e), id, 1); err != nil {
-		t.Fatalf("starting the test run: %v", err)
+// queuedLeadTest starts the test run of the lead file as the handler does, and
+// answers the job's args.
+func queuedLeadTest(t *testing.T, e *integration.Env, h importHandlers, profile crmcontracts.ImportSourceProfile) ImportValidateArgs {
+	t.Helper()
+	object := crmcontracts.ImportObject(migration.ObjectLead)
+	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
+	queued, err := h.stageRun(importAdmin(e), crmcontracts.CreateImportRunRequest{
+		Connector: crmcontracts.CreateImportRunRequestConnectorCsv, Object: &object, SourceRef: profile.SourceRef, Mapping: &mapping,
+	})
+	if err != nil || queued.Status != crmcontracts.ImportRunStatusValidating {
+		t.Fatalf("starting the test run: %s (%v), want validating", queued.Status, err)
 	}
-
-	expired, release := context.WithDeadline(importAdmin(e), time.Unix(0, 0))
-	defer release()
-	returnToDraft(expired, runs, id, context.DeadlineExceeded)
-
-	run, err := runs.GetStaged(importAdmin(e), id)
+	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), migration.RunID(profile.RunId))
 	if err != nil {
-		t.Fatalf("reading the run: %v", err)
+		t.Fatalf("reading the queued run: %v", err)
 	}
-	if run.Status != migration.StatusPending || run.Error != migration.CauseTestRunStopped {
-		t.Fatalf("run = %s with %q, want pending with the fixed sentence: a run left validating shows as checking for good",
-			run.Status, run.Error)
+	return ImportValidateArgs{Workspace: e.WS, RunID: run.ID, Attempt: run.JobAttempt}
+}
+
+func validateWorkerFor(e *integration.Env, h importHandlers) *importValidateWorker {
+	return &importValidateWorker{
+		slicer: newImportSlicer(e.Pool, slog.New(slog.DiscardHandler)), blobs: h.blobs, uploadCap: h.uploadLimit,
 	}
 }
 
 func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 	e := integration.Setup(t)
-	h, profile := leadSourceHandlers(t, e, time.Nanosecond)
-	object := crmcontracts.ImportObject(migration.ObjectLead)
-	mapping := map[string]string{"Email": "email", "Full Name": "full_name"}
-
-	_, err := h.stageRun(importAdmin(e), crmcontracts.CreateImportRunRequest{
-		Connector: crmcontracts.CreateImportRunRequestConnectorCsv, Object: &object, SourceRef: profile.SourceRef, Mapping: &mapping,
-	})
-	var refusal *httperr.DetailedError
-	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "test_run_too_long" {
-		t.Fatalf("err = %v, want the test_run_too_long refusal", err)
+	e.GrantRole(t, e.AdminUser, "admin")
+	h, profile := leadSourceHandlers(t, e)
+	args := queuedLeadTest(t, e, h, profile)
+	if err := h.blobs.Delete(context.Background(), profile.SourceRef); err != nil {
+		t.Fatalf("losing the stored file: %v", err)
 	}
 
-	listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10)
-	if err != nil || len(listed) != 1 || listed[0].ID != migration.RunID(profile.RunId) {
-		t.Fatalf("runs = %+v (%v), want only the upload's draft", listed, err)
+	if err := validateWorkerFor(e, h).Work(context.Background(), &river.Job[ImportValidateArgs]{Args: args}); err != nil {
+		t.Fatalf("the test run answered %v, want nil once its run says why it stopped", err)
 	}
-	if listed[0].Status != migration.StatusPending || listed[0].Error != refusal.Detail {
-		t.Fatalf("run = %s with %q, want pending with the refusal's reason %q", listed[0].Status, listed[0].Error, refusal.Detail)
+	run, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), args.RunID)
+	if err != nil {
+		t.Fatalf("reading the run: %v", err)
+	}
+	want, _ := httperr.Classify(importProblem(blobstore.ErrNotFound))
+	if run.Status != migration.StatusPending || run.Error != want.Detail || run.Progress != nil {
+		t.Fatalf("run = %s with %q and progress %+v, want pending with the refusal's reason %q",
+			run.Status, run.Error, run.Progress, want.Detail)
 	}
 }
 
 func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 	e := integration.Setup(t)
-	h, profile := leadSourceHandlers(t, e, 0)
+	h, profile := leadSourceHandlers(t, e)
 	draft, err := migration.NewRunStore(e.DB()).GetStaged(importAdmin(e), migration.RunID(profile.RunId))
 	if err != nil || draft.Status != migration.StatusPending || draft.SourceRef != profile.SourceRef || len(draft.Profile) == 0 {
 		t.Fatalf("draft = %+v (%v), want a pending run holding the upload and its profile", draft, err)
@@ -113,14 +122,14 @@ func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 
 	var file strings.Builder
 	file.WriteString("Email,Full Name\n")
-	for i := range importTestRunRowCap + 1 {
+	for i := range importRowCap + 1 {
 		fmt.Fprintf(&file, "p%d@cap.example,P %d\n", i, i)
 	}
 	h.uploadLimit = 10_000_000
 	_, err = h.profileAndStore(importAdmin(e), migration.ObjectLead, "", []byte(file.String()))
 	var refusal *httperr.DetailedError
 	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "too_many_rows" ||
-		!strings.Contains(refusal.Detail, fmt.Sprint(importTestRunRowCap+1)) {
+		!strings.Contains(refusal.Detail, fmt.Sprint(importRowCap+1)) {
 		t.Fatalf("err = %v, want the row-cap refusal naming the file's row count", err)
 	}
 	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10); err != nil || len(listed) != 1 {

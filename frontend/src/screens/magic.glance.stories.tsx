@@ -3,10 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../design-system/panel";
+import { StoryProviders } from "../testing/story-utils";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import { MagicGlance } from "./magic.glance";
 import type { MagicLine } from "./magic.queries";
-import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof MagicGlance> = {
   title: "Shell/Home/Receipt at a glance",

@@ -1,9 +1,9 @@
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useFinanceSummary } from "./common";
+import { useRecordZone } from "../lib/recordzone";
+import { useFinanceSummary } from "./financesummary";
 import type { Grounding } from "./record360";
 
 // A leaf for the small lookup tables the company page and its rail both need

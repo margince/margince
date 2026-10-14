@@ -15,8 +15,8 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../vitest.budget";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   CUSTOMER_FIELDS,
   EMPTY_DRAFT,

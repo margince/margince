@@ -1,6 +1,6 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf } from "./common";
+import { problemCodeOf } from "../lib/problem";
 
 // The retention-authoring screen's pure half: the authorable vocabulary, the
 // three states a stored policy can be in, and the two server refusals this

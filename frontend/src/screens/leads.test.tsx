@@ -13,12 +13,12 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { pickOption } from "../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import {
   LeadScreen,
   LeadsScreen,
@@ -26,7 +26,7 @@ import {
   scoreTone,
   terminalBadge,
 } from "./leads";
-import { WriteToHost } from "./writeto";
+import { WriteToHost } from "./writetohost";
 
 // The status/score-override/assign-to-me controls (Phase 4) resolve the
 // session principal via /v1/me, which needs a workspace slug before it will

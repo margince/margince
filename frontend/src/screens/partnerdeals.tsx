@@ -4,10 +4,11 @@ import type { components } from "../api/schema";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { FieldGuard } from "../design-system/rbac";
 import { formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import { QueryGate, unwrap } from "./common";
+import { unwrap } from "../lib/problem";
 import { dealStatusTone } from "./deals";
 import { EntityRef } from "./entityref";
 

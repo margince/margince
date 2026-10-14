@@ -2,9 +2,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import type { ListColumn } from "../design-system/listtable";
 import { LocaleProvider, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { leadColumns } from "./leads.columns";
 
 type Lead = components["schemas"]["Lead"];
@@ -83,5 +83,15 @@ describe("the lead table's columns", () => {
   it("show the tags a lead is filed under", () => {
     renderCell("tags");
     expect(screen.getByTestId("cell").textContent).toContain("Product A");
+  });
+
+  it("name an imported lead's upload in the source column, never its stamp", () => {
+    renderCell("source", {
+      ...lead,
+      source: "mirror:csv:pipedrive-export:lead:l-7",
+    });
+    expect(screen.getByTestId("cell").textContent).toBe(
+      "Imported from pipedrive-export",
+    );
   });
 });

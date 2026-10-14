@@ -28,38 +28,21 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 	p.WriteString("~4-bytes-per-token estimate the window itself uses, over what the runner's own\n")
 	p.WriteString("renderer produces (`runner.FixedStepCost`).\n\n")
 
-	p.WriteString("## Why this page exists\n\n")
-	p.WriteString("A scheduled agent's tool listing is written into the system prompt of **every step**\n")
-	p.WriteString("of its run, and each tool's input schema rides every step a second time, as its branch\n")
-	p.WriteString("of the step schema the provider enforces. The window elides neither; only the\n")
-	p.WriteString("transcript gives way. So a tool attached to an agent is paid for twice on every turn of\n")
-	p.WriteString("every run for as long as that agent exists, and what it displaces is the observations\n")
-	p.WriteString("the run is reasoning over.\n\n")
-	p.WriteString("`agent_loop` is the engine; each of its sites in\n")
-	p.WriteString("[`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml) is one scheduled agent, and\n")
-	p.WriteString("the site's `tools:` are the only tools that run is offered. Read the numbers below\n")
-	p.WriteString("before adding one.\n\n")
-	fmt.Fprintf(&p, "The window is %d tokens. What an agent's step pays before its transcript (the frame,\n"+
-		"the listing and the step schema) may take %d of them (%d/%d).\n\n",
-		b.PromptCeiling, b.AgentBudget, listingBudgetNumerator, listingBudgetDenominator)
-	p.WriteString("## No run is offered the whole catalog\n\n")
-	p.WriteString("A run attaches the tools its goal needs. The whole served catalog is listed below for\n")
-	p.WriteString("scale only: no scheduled run, and no certification scenario, is ever offered it. These\n")
-	p.WriteString("are the checks that fail when that stops being true:\n\n")
-	p.WriteString("| Check | Refuses |\n|---|---|\n")
-	for _, held := range b.Held {
-		fmt.Fprintf(&p, "| `%s` | %s |\n", held.Check, held.Refuses)
+	p.WriteString("## In short\n\n")
+	p.WriteString("A scheduled agent pays for its whole tool menu on every step of every run, before it reads\n")
+	p.WriteString("anything. This page shows what each declared agent pays, how much room that leaves, and\n")
+	p.WriteString("what to check before adding a tool. Each tool's own cost is the Prompt tokens column of\n")
+	p.WriteString("[mcp-info.md](mcp-info.md#index).\n\n")
+	if len(b.Agents) > 0 {
+		top := b.Agents[0]
+		for _, a := range b.Agents {
+			if a.PercentOf > top.PercentOf {
+				top = a
+			}
+		}
+		fmt.Fprintf(&p, "The heaviest menu is `%s`: %d of the window's %d tokens per step (%d%%).\n\n",
+			top.Name, top.Tokens, b.PromptCeiling, top.PercentOf)
 	}
-	p.WriteString("\nNothing bounds how many tools a run attaches below the whole catalog except the\n")
-	p.WriteString("listing budget above; whether each attached tool is one its goal needs is a reviewer's\n")
-	p.WriteString("judgement. An MCP client connecting from outside is served the whole catalog by\n")
-	p.WriteString("`tools/list`, but that is its own agent's window rather than a run of this engine.\n\n")
-	fmt.Fprintf(&p, "Before any tool is listed the frame itself costs **%d tokens**: the output contract,\n", b.Catalog.Frame)
-	p.WriteString("the rules and the prompt fence. It is shown here because moving a rule from each\n")
-	p.WriteString("tool's schema into the frame costs one sentence per run instead of one per tool.\n")
-	p.WriteString("It is part of every agent's per-step figure below, so a frame that grows a paragraph\n")
-	p.WriteString("spends it on every run of every agent.\n\n")
-
 	p.WriteString("## The declared agents\n\n")
 	p.WriteString("| Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |\n")
 	p.WriteString("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
@@ -91,6 +74,38 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 			p.WriteString("\n")
 		}
 	}
+
+	p.WriteString("## Why a tool is paid for twice\n\n")
+	p.WriteString("A scheduled agent's tool listing is written into the system prompt of **every step**\n")
+	p.WriteString("of its run, and each tool's input schema rides every step a second time, as its branch\n")
+	p.WriteString("of the step schema the provider enforces. The window elides neither; only the\n")
+	p.WriteString("transcript gives way. So a tool attached to an agent is paid for twice on every turn of\n")
+	p.WriteString("every run for as long as that agent exists, and what it displaces is the observations\n")
+	p.WriteString("the run is reasoning over.\n\n")
+	p.WriteString("`agent_loop` is the engine; each of its sites in\n")
+	p.WriteString("[`backend/api/ai-tasks.yaml`](../../backend/api/ai-tasks.yaml) is one scheduled agent, and\n")
+	p.WriteString("the site's `tools:` are the only tools that run is offered. Read the numbers below\n")
+	p.WriteString("before adding one.\n\n")
+	fmt.Fprintf(&p, "The window is %d tokens. What an agent's step pays before its transcript (the frame,\n"+
+		"the listing and the step schema) may take %d of them (%d/%d).\n\n",
+		b.PromptCeiling, b.AgentBudget, listingBudgetNumerator, listingBudgetDenominator)
+	p.WriteString("## No run is offered the whole catalog\n\n")
+	p.WriteString("A run attaches the tools its goal needs. The whole served catalog is listed below for\n")
+	p.WriteString("scale only: no scheduled run, and no certification scenario, is ever offered it. These\n")
+	p.WriteString("are the checks that fail when that stops being true:\n\n")
+	p.WriteString("| Check | Refuses |\n|---|---|\n")
+	for _, held := range b.Held {
+		fmt.Fprintf(&p, "| `%s` | %s |\n", held.Check, held.Refuses)
+	}
+	p.WriteString("\nNothing bounds how many tools a run attaches below the whole catalog except the\n")
+	p.WriteString("listing budget above; whether each attached tool is one its goal needs is a reviewer's\n")
+	p.WriteString("judgement. An MCP client connecting from outside is served the whole catalog by\n")
+	p.WriteString("`tools/list`, but that is its own agent's window rather than a run of this engine.\n\n")
+	fmt.Fprintf(&p, "Before any tool is listed the frame itself costs **%d tokens**: the output contract,\n", b.Catalog.Frame)
+	p.WriteString("the rules and the prompt fence. It is shown here because moving a rule from each\n")
+	p.WriteString("tool's schema into the frame costs one sentence per run instead of one per tool.\n")
+	p.WriteString("It is part of every agent's per-step figure below, so a frame that grows a paragraph\n")
+	p.WriteString("spends it on every run of every agent.\n\n")
 
 	p.WriteString("## How to read the two derived columns\n\n")
 	p.WriteString("Both are prose heuristics over text that was written for humans. They are useful for\n")
@@ -140,34 +155,11 @@ func renderAgentToolBudgetPage(b agentToolBudget) []byte {
 		p.WriteString("\n")
 	}
 
-	p.WriteString("## What each tool costs, largest first\n\n")
-	fmt.Fprintf(&p, "Median %d tokens, mean %d, across %d served tools.\n\n",
-		b.Catalog.Median, b.Catalog.Mean, b.Catalog.Tools)
-	p.WriteString("Each row is one tool rendered alone, so the rows do not add up to the catalog total:\n")
-	p.WriteString("every row carries its own rounding, and the catalog figure divides the whole rendered\n")
-	p.WriteString("listing once. Read a row as what that tool costs a menu.\n\n")
-	p.WriteString("| Tool | Tokens | Named as the wrong reach in |\n|---|---:|---:|\n")
-	reach := map[string]int{}
-	for _, r := range b.WrongReach {
-		reach[r.Name] = r.Scenarios
-	}
-	for _, row := range b.ToolCost {
-		named := ""
-		if n := reach[row.Name]; n > 0 {
-			named = fmt.Sprintf("%d scenario", n)
-			if n > 1 {
-				named += "s"
-			}
-		}
-		fmt.Fprintf(&p, "| `%s` | %d | %s |\n", row.Name, row.Tokens, named)
-	}
-	p.WriteString("\n")
-
 	p.WriteString("## Related\n\n")
-	p.WriteString("- [mcp-info.md](mcp-info.md): the whole served surface as a client receives it,\n")
-	p.WriteString("  including the output schemas a run is never charged for.\n")
-	p.WriteString("- [agent-tools.md](agent-tools.md): the governed catalog: what each tool is, what it\n")
-	p.WriteString("  costs in passport scope, and whether a human must approve it.\n")
+	p.WriteString("- [agent-tools.md](agent-tools.md): the tool catalog. What each tool is, its scope, and\n")
+	p.WriteString("  whether a human must approve it.\n")
+	p.WriteString("- [mcp-info.md](mcp-info.md): each tool's description as a client receives it.\n")
+	p.WriteString("- [ai-certification.md](ai-certification.md): the scenarios behind the temptation weight.\n")
 	return []byte(p.String())
 }
 

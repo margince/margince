@@ -11,9 +11,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DateFormatsProvider } from "../app/dateformats";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { formatDate } from "../format/format";
 import { LocaleProvider, useLocale } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Installation: the company's name, reporting zone and base

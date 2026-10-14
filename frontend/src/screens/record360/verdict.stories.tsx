@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { StoryProviders } from "../story-utils";
+import { StoryProviders } from "../../testing/story-utils";
 import { Proof, SignalStrip, VerdictHead } from "./verdict";
 
 // The head of a record's reading: the call, the line that says why, and the

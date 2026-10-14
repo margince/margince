@@ -3,39 +3,37 @@ import type { ReactNode } from "react";
 import { useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
-import { useRecordZone } from "../app/recordzone";
-import { revealOnceMounted, scrollPageToTop } from "../app/reveal";
-import { navigate } from "../app/router";
 import { useHasUnsavedChanges } from "../app/unsaved";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Modal } from "../design-system/atoms";
-import { ContactLink } from "../design-system/contactlink";
 import { Heading } from "../design-system/heading";
 import { IdentityLine } from "../design-system/identityline";
-import { OffsiteLink } from "../design-system/offsitelink";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Popover } from "../design-system/popover";
 import { liveProjects } from "../design-system/projectpicker";
-import { Fact, RecordFacts } from "../design-system/recordfacts";
 import { RecordTabs } from "../design-system/recordtabs";
 import { RecordView } from "../design-system/recordview";
 import { useTooltip } from "../design-system/tooltip";
-import { ProvenanceTag } from "../design-system/trust";
-import { formatDateAbbrev } from "../format/format";
-import { linkedinUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useRecordWriteRefusal } from "../lib/capability";
+import { useOpenEmail } from "../lib/openemail";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { revealOnceMounted, scrollPageToTop } from "../lib/reveal";
+import { navigate } from "../lib/router";
+import { useUrlParams } from "../lib/urlstate";
 import { useFoldedViewport } from "../lib/viewport";
+import { useWriteTo, type WriteTo, WriteToProvider } from "../lib/writeto";
 import { BriefQueue } from "./brief.queue";
-import { provenanceOf, unwrap, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
 import { intentAbout } from "./compose.intent";
 import { useWaitingDraftBand } from "./composewaitingdraft";
+import { contactPageState, contactQuery } from "./contact.queries";
+import { useContact360 } from "./contact360";
 import { ContactActions } from "./contactactions";
+import { ArchivedContactPage } from "./contactarchived";
 import { ContactDealsTab } from "./contactdeals";
 import { ContactResearchDrawer } from "./contactdrawers";
+import { ContactFacts } from "./contactfacts";
 import { ContactFilesTab } from "./contactfiles";
 import { ContactMeetingsTab } from "./contactmeetings";
 import { ContactNetworkTab } from "./contactnetwork";
@@ -52,20 +50,12 @@ import { ContactSubtitle } from "./contactsubtitle";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import { ContactTimelineTab } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { rosterOwnerName } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
-import { useMemberName } from "./membernames";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import { RecordAccess } from "./recordaccess";
-import {
-  useMailboxConnected,
-  useWriteTo,
-  type WriteTo,
-  WriteToProvider,
-} from "./writeto";
+import { useMailboxConnected } from "./writetohost";
 import "./contact360.css";
-import { buyingRoleLabel } from "./companycontacts/summary";
 import { navigateKeepingReturn, WorklistReturnLink } from "./worklist.return";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -114,30 +104,6 @@ function composerIntentOf(
   // helper, because the queue's prepared reply seeds the same field and a
   // phrase joined two ways is two answers to what the model is being told.
   return intentAbout(t(key), prefill?.subject);
-}
-
-/**
- * ProfileLink is the header's LinkedIn fact: a link when the recorded address
- * really is LinkedIn, the word alone when it is not.
- *
- * The label is the fixed word rather than the address, which makes it a CLAIM
- * about the destination — and `social` is an open map a crawl or a connector
- * can write. An arbitrary host under that word is a phishing link wearing the
- * product's own chrome, so the host is checked before the anchor is drawn. The
- * fact is kept either way: that this contact has a profile recorded is true
- * whatever the value turns out to be.
- */
-function ProfileLink({ href }: Readonly<{ href: string }>) {
-  const t = useT();
-  const label = t("contact.page.linkedin");
-  if (!linkedinUrl(href)) {
-    return label;
-  }
-  return (
-    <OffsiteLink href={href} className="pe-meta-link">
-      {label}
-    </OffsiteLink>
-  );
 }
 
 /**
@@ -307,22 +273,18 @@ export function ContactPageV2({
   const closeMobileDetails = () => {
     if (!detailsDirty) setMobileDetails(false);
   };
+  const record = useQuery(contactQuery(id));
+  // The server refuses the 360, the brief and the guard for an archived row.
+  // The 360 runs beside the row read; the other two wait for its answer.
+  const live = record.isSuccess && !record.data.archived_at;
   // Read at screen level and handed down, so the schema request runs BESIDE
   // the contact's rather than after it — an edit opened before this landed
   // would otherwise offer a form with no custom fields on it.
-  const view = useQuery({
-    queryKey: ["contact360", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/contacts/{id}/360", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
+  const view = useContact360(id, !record.data?.archived_at);
 
   const brief = useQuery({
     queryKey: ["contactBrief", id],
+    enabled: live,
     queryFn: async () => {
       return unwrap(
         await api.GET("/contacts/{id}/brief", {
@@ -334,6 +296,7 @@ export function ContactPageV2({
 
   const guard = useQuery({
     queryKey: ["contactConsentGuard", id],
+    enabled: live,
     queryFn: async () => {
       return unwrap(
         await api.GET("/contacts/{id}/consent/guard", {
@@ -379,7 +342,9 @@ export function ContactPageV2({
   // the same of the same row (contactrail.tsx); this is the header's and the
   // tabs' copy of the answer, and the one sentence both point at.
   const readOnlyReasonId = useId();
-  const readOnlyReason = useRecordWriteRefusal("contact", view.data?.contact, {
+  // A 360 cached from before the archive would not say the row is archived.
+  const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
+  const readOnlyReason = useRecordWriteRefusal("contact", shownRow, {
     archived: t("contact.rail.archivedReadOnly"),
     notYours: t("contact.notYoursToChange"),
   });
@@ -392,8 +357,18 @@ export function ContactPageV2({
     readOnlyReasonId,
   });
 
-  if (view.isLoading) return <ContactOpening id={id} />;
-  if (view.isError || !view.data) {
+  if (record.data?.archived_at) {
+    return (
+      <ArchivedContactPage
+        contact={record.data}
+        band={band}
+        refusedReasonId={readOnlyReasonId}
+      />
+    );
+  }
+  const reads = contactPageState(record, view);
+  if (reads === "opening") return <ContactOpening id={id} />;
+  if (reads === "notOpened" || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;
   }
 
@@ -461,7 +436,12 @@ export function ContactPageV2({
             // lines under a masthead.
             nameBadge={<ContactSubtitle view={view.data} />}
             pulse={<ContactMarks view={view.data} tab={tab} />}
-            badges={<ContactFacts view={view.data} />}
+            badges={
+              <ContactFacts
+                contact={contact}
+                buyingRole={view.data.commercial?.role}
+              />
+            }
             actions={
               // refusedReasonId is the SAME sentence the band below states —
               // one write-gate for the whole header, not a narrower one per
@@ -819,90 +799,6 @@ function StandingChip({
       {children}
       {tip}
     </button>
-  );
-}
-
-// The facts strip across the head: how to reach them and who holds the
-// record, each as a caption over its value. The address opens this page's own
-// composer (the same drawer the Write verb opens, behind the same consent
-// gate) and the number dials; the rest are read. The role is what the
-// relationship edge records, never inferred from a title, so a contact with a
-// title can still have no buying role and the strip simply omits the cell.
-function ContactFacts({ view }: Readonly<{ view: Contact360 }>): ReactNode {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const viewerId = useViewerId();
-  const ownerName = useMemberName(view.contact.owner_id);
-  const contact = view.contact;
-  const email = contact.emails?.[0]?.email;
-  const phone = contact.phones?.[0]?.phone;
-  const role = view.commercial?.role;
-  return (
-    <RecordFacts>
-      {email && (
-        <Fact label={t("history.field.email")}>
-          <ContactLink
-            kind="email"
-            value={email}
-            record={{ entityType: "contact", entityId: contact.id }}
-            readOnly={Boolean(contact.archived_at)}
-            className="pe-meta-link"
-          >
-            {email}
-          </ContactLink>
-        </Fact>
-      )}
-      {phone && (
-        <Fact label={t("create.phone")}>
-          <ContactLink kind="phone" value={phone} className="pe-meta-link">
-            {phone}
-          </ContactLink>
-        </Fact>
-      )}
-      {contact.address?.city && (
-        <Fact label={t("create.city")}>{contact.address.city}</Fact>
-      )}
-      {typeof contact.social?.linkedin === "string" && (
-        <Fact label={t("contact.page.linkedin")}>
-          <ProfileLink href={contact.social.linkedin} />
-        </Fact>
-      )}
-      <Fact label={t("contact.page.owner")}>
-        {rosterOwnerName(
-          contact.owner_id,
-          ownerName,
-          t,
-          t("contact.page.ownerUnassigned"),
-        )}
-      </Fact>
-      {role && (
-        <Fact label={t("contact.page.buyingRole")}>
-          {buyingRoleLabel(role, t)}
-        </Fact>
-      )}
-      <Fact label={t("list.created")}>
-        {formatDateAbbrev(contact.created_at, locale, zone)}
-      </Fact>
-      {/* The provenance pill names the KIND of source (the sparkle, the
-          words); the popover behind it answers WHICH one, which for a mailbox
-          capture is a message id no reader should have to scan past. */}
-      <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                contact.captured_by,
-                viewerId,
-                contact.author,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
-        </Popover>
-      </Fact>
-    </RecordFacts>
   );
 }
 

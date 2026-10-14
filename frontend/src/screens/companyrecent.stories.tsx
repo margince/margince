@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { CompanyRecentList } from "./companyrecent";
-import { StoryProviders } from "./story-utils";
 
 // "Recent activity" (co360's own row-per-exchange reading): the deal a
 // row is ABOUT, named when `nameOf` can resolve it and left the honest

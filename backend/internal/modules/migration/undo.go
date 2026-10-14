@@ -89,66 +89,6 @@ type mapRow struct {
 	createdAt time.Time
 }
 
-// Undo reverses a completed CSV import run row by row. An untouched row is
-// archived; a row a human touched is kept and listed in `kept` (A93). A row
-// that fails lands in `errored` and never aborts the rows after it.
-//
-// lockUndo refuses a concurrent call; undoPageSize bounds memory and the report.
-func (s *RunStore) Undo(ctx context.Context, id RunID, w UndoWriters) (UndoReport, error) {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return UndoReport{}, err
-	}
-	release, err := s.lockUndo(ctx, id)
-	if err != nil {
-		return UndoReport{}, err
-	}
-	defer release()
-
-	run, rep, err := s.beginUndo(ctx, id)
-	if err != nil {
-		return UndoReport{}, err
-	}
-
-	processed := run.Checkpoint
-	for {
-		rows, err := s.mapRowsForRun(ctx, id, processed, undoPageSize)
-		if err != nil {
-			return UndoReport{}, err
-		}
-		if len(rows) == 0 {
-			break
-		}
-		touched, err := s.humanTouchedSince(ctx, id, rows)
-		if err != nil {
-			return UndoReport{}, err
-		}
-		for _, r := range rows {
-			if unreachable := reverseOneRow(ctx, w, r, touched[r.nativeID], &rep); unreachable != nil {
-				// The estate itself could not be reached (a dropped
-				// connection, a timeout) — not a fact about this one row.
-				// Persist what this page already did and leave the run
-				// resumable rather than final.
-				if cpErr := s.advanceUndoCheckpoint(ctx, id, processed, rep); cpErr != nil {
-					return UndoReport{}, cpErr
-				}
-				return UndoReport{}, fmt.Errorf("import run %s undo: reversing %s %s: %w", id, r.object, r.nativeID, unreachable)
-			}
-			processed++
-		}
-		if err := s.advanceUndoCheckpoint(ctx, id, processed, rep); err != nil {
-			return UndoReport{}, err
-		}
-		if len(rows) < undoPageSize {
-			break
-		}
-	}
-
-	if err := s.completeUndo(ctx, id, rep); err != nil {
-		return UndoReport{}, err
-	}
-	return rep, nil
-}
-
 // reverseOneRow decides and records one row's fate: kept (a human has
 // touched it), reversed, or errored (a refusal that belongs to the row
 // itself). Returns non-nil only when Reverse failed for a reason that is
@@ -200,28 +140,38 @@ func reversalRefusalReason(err error) string {
 	}
 }
 
-// lockUndo takes a session-scoped advisory lock on this run's undo for the
-// whole Undo call. beginUndo's row lock ends with its transaction, but the
-// reversal spans many, so two concurrent undos would both pass its check.
-func (s *RunStore) lockUndo(ctx context.Context, id RunID) (func(), error) {
+// ErrRunWritesHeld refuses a commit or undo slice while another holds the run.
+var ErrRunWritesHeld = fmt.Errorf("another commit or undo of this import run is under way: %w", apperrors.ErrConflict)
+
+// importRunWriteClass is the advisory-lock namespace of import run writes: the
+// two-argument form, apart from the flip's single-argument liveness key.
+const importRunWriteClass = 723
+
+// LockRunWrites holds the run's write lock on a connection of its own until
+// release is called. The commit and the undo of one run share it, so two
+// attempts never land rows of one run at the same time. A dead process frees
+// it with its connection.
+func (s *RunStore) LockRunWrites(ctx context.Context, id RunID) (func(), error) {
+	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	return s.acquireRunWrites(ctx, id)
+}
+
+func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), error) {
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("import run %s: acquiring the undo lock connection: %w", id, err)
+		return nil, fmt.Errorf("import run %s: acquiring the write lock connection: %w", id, err)
 	}
 	var acquired bool
-	// Two-argument form, classid fixed to this feature's own namespace: the
-	// lock space is import_run undo alone, never shared with another
-	// advisory-lock user in the codebase (the flip's own liveness probe
-	// keys the single-argument form differently).
-	const undoLockClass = 723 // this feature's own issue number, as good a fixed namespace as any
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1, hashtext($2::text))`,
-		undoLockClass, id.String()).Scan(&acquired); err != nil {
+		importRunWriteClass, id.String()).Scan(&acquired); err != nil {
 		conn.Release()
-		return nil, fmt.Errorf("import run %s: acquiring the undo lock: %w", id, err)
+		return nil, fmt.Errorf("import run %s: acquiring the write lock: %w", id, err)
 	}
 	if !acquired {
 		conn.Release()
-		return nil, fmt.Errorf("import run %s: an undo is already under way for this run: %w", id, apperrors.ErrConflict)
+		return nil, fmt.Errorf("import run %s: %w", id, ErrRunWritesHeld)
 	}
 	var once sync.Once
 	//nolint:contextcheck // deliberately context.Background() below, not the caller's ctx: the caller's
@@ -229,18 +179,14 @@ func (s *RunStore) lockUndo(ctx context.Context, id RunID) (func(), error) {
 	// later caller is not wedged behind a lock nobody will ever release.
 	return func() {
 		once.Do(func() {
-			if _, err := conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1, hashtext($2::text))`, undoLockClass, id.String()); err != nil {
-				// A session-level lock lives exactly as long as its session,
-				// and Release hands this connection back to the pool with
-				// that session intact — so a failed unlock would leave the
-				// claim held by an idle pooled connection and wedge every
-				// later undo of this run (the same reasoning claimFlip
-				// already established). Destroy the session instead; the
-				// lock cannot outlive it.
-				slog.Warn("import undo: releasing the undo lock failed; closing the connection so the claim cannot outlive it", "run_id", id.String(), "err", err)
+			if _, err := conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1, hashtext($2::text))`, importRunWriteClass, id.String()); err != nil {
+				// A session lock lives as long as its session, and Release
+				// keeps the session. A failed unlock would leave the lock on
+				// an idle pooled connection, so the session is destroyed.
+				slog.Warn("import run: releasing the write lock failed; closing the connection so the claim cannot outlive it", "run_id", id.String(), "err", err)
 				if hijacked := conn.Hijack(); hijacked != nil {
 					if cerr := hijacked.Close(context.Background()); cerr != nil {
-						slog.Warn("import undo: closing the hijacked undo-lock connection failed", "run_id", id.String(), "err", cerr)
+						slog.Warn("import run: closing the hijacked write-lock connection failed", "run_id", id.String(), "err", cerr)
 					}
 				}
 				return
@@ -250,17 +196,15 @@ func (s *RunStore) lockUndo(ctx context.Context, id RunID) (func(), error) {
 	}, nil
 }
 
-// beginUndo validates the run and starts (or resumes) its reversal,
-// returning the run as it stood and the report to carry forward: fresh
-// when starting, or a resumed attempt's own progress when continuing one
-// `undoing` already.
-func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, error) {
+// beginUndo validates the run, opens a new attempt of its reversal and queues
+// that attempt's job. The attempt carries the run's own progress if it was
+// undoing already.
+func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, error) {
 	var run Run
-	var rep UndoReport
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var undoReportRaw []byte
 		// FOR UPDATE: two calls reaching beginUndo back to back do not both
-		// read `complete` and both start a fresh reversal. lockUndo refuses a
+		// read `complete` and both start a fresh reversal. acquireRunWrites refuses a
 		// concurrent second caller; this covers one retrying right after the
 		// first releases its lock.
 		var reportRaw []byte
@@ -284,46 +228,65 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID) (Run, UndoReport, er
 			return fmt.Errorf("import run %s is a %s run, and undo is built for csv only: %w", id, run.Connector, apperrors.ErrConflict)
 		}
 		before := run.Status
-		switch run.Status {
-		case StatusComplete:
-			if err := supersedeName(ctx, tx, id, sourceName, CauseReplacedByUndo); err != nil {
-				return err
-			}
-			updated, err := updatesInRun(reportRaw)
-			if err != nil {
-				return fmt.Errorf("reading import run %s's own report: %w", id, err)
-			}
-			rep = UndoReport{UpdatesNotReversed: updated}
-			run.Checkpoint = 0
-		case StatusUndoing:
-			if len(undoReportRaw) == 0 {
-				return fmt.Errorf("import run %s is undoing with no recorded progress: %w", id, apperrors.ErrConflict)
-			}
-			if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
-				return fmt.Errorf("decoding import run %s undo progress: %w", id, err)
-			}
-		default:
-			return fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", id, run.Status, apperrors.ErrConflict)
+		rep, err := undoStartReport(ctx, tx, &run, reportRaw, undoReportRaw, sourceName)
+		if err != nil {
+			return err
 		}
 		encoded, err := json.Marshal(rep)
 		if err != nil {
 			return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
 		}
+		actor, err := encodeActorOf(ctx)
+		if err != nil {
+			return err
+		}
+		// A new attempt for every undo request, so a job queued for an older one is fenced off.
 		if err := execHoldingName(ctx, tx, id, `
-			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now()
+			UPDATE import_run SET status = $2, checkpoint = $3, undo_report = $4, updated_at = now(), error = NULL,
+			       `+openAttempt+`, job_status = $2, actor = $5, attempt_correlation_id = $6
 			 WHERE id = $1`,
-			id, StatusUndoing, run.Checkpoint, encoded); err != nil {
+			id, StatusUndoing, run.Checkpoint, encoded, actor, ids.NewV7()); err != nil {
 			return fmt.Errorf("starting import run %s undo: %w", id, err)
 		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing})
+		if _, err := storekit.Audit(ctx, tx, "update", ImportRunObject, id,
+			map[string]any{auditFieldStatus: before}, map[string]any{auditFieldStatus: StatusUndoing}); err != nil {
+			return err
+		}
+		run, err = queueMoved(ctx, tx, id, enqueue)
 		return err
 	})
 	if err != nil {
-		return Run{}, UndoReport{}, err
+		return Run{}, err
 	}
-	run.Status = StatusUndoing
-	return run, rep, nil
+	return run, nil
+}
+
+// undoStartReport is the report an undo of run carries forward: fresh for a
+// complete run, whose name it supersedes, or an undoing run's own progress.
+func undoStartReport(ctx context.Context, tx pgx.Tx, run *Run, reportRaw, undoReportRaw []byte, sourceName string) (UndoReport, error) {
+	var rep UndoReport
+	switch run.Status {
+	case StatusComplete:
+		if err := supersedeName(ctx, tx, run.ID, sourceName, CauseReplacedByUndo); err != nil {
+			return UndoReport{}, err
+		}
+		updated, err := updatesInRun(reportRaw)
+		if err != nil {
+			return UndoReport{}, fmt.Errorf("reading import run %s's own report: %w", run.ID, err)
+		}
+		run.Checkpoint = 0
+		return UndoReport{UpdatesNotReversed: updated}, nil
+	case StatusUndoing:
+		if len(undoReportRaw) == 0 {
+			return UndoReport{}, fmt.Errorf("import run %s is undoing with no recorded progress: %w", run.ID, apperrors.ErrConflict)
+		}
+		if err := json.Unmarshal(undoReportRaw, &rep); err != nil {
+			return UndoReport{}, fmt.Errorf("decoding import run %s undo progress: %w", run.ID, err)
+		}
+		return rep, nil
+	default:
+		return UndoReport{}, fmt.Errorf("import run %s is %s, not complete, so it cannot be undone: %w", run.ID, run.Status, apperrors.ErrConflict)
+	}
 }
 
 // mapRowsForRun reads one page of the rows this run created, past the prefix
@@ -335,7 +298,7 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 		r, err := tx.Query(ctx, `
 			SELECT object, native_id, created_at
 			  FROM import_record_map
-			 WHERE import_run_id = $1
+			 WHERE import_run_id = $1 AND origin = 'created'
 			 ORDER BY array_position($4::text[], object), created_at, external_id
 			 OFFSET $2 LIMIT $3`, id, skip, limit, reverseImportOrder())
 		if err != nil {
@@ -364,10 +327,9 @@ func (s *RunStore) mapRowsForRun(ctx context.Context, id RunID, skip, limit int)
 // import_record_map.created_at in SQL rather than a single run-level
 // instant passed from Go, one indexed scan per object class.
 //
-// "Touched" is any human-actor audit row on the entity, not narrowly
-// action='update': a human who independently archived or otherwise acted
-// on an imported row is exactly the case A93's protection exists for, and
-// a narrower filter would silently reverse their action too.
+// "Touched" is any human-actor audit row on the entity, not only an update:
+// a human who archived an imported row is the case A93 protects. A row
+// audited under this run's own batch is the import's own write.
 func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRow) (map[ids.UUID]bool, error) {
 	touched := map[ids.UUID]bool{}
 	if len(rows) == 0 {
@@ -382,12 +344,13 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 			r, err := tx.Query(ctx, `
 				SELECT m.native_id
 				  FROM import_record_map m
-				 WHERE m.import_run_id = $1 AND m.object = $2
+				 WHERE m.import_run_id = $1 AND m.object = $2 AND m.origin = 'created'
 				   AND m.native_id = ANY($3)
 				   AND EXISTS (
 				     SELECT 1 FROM audit_log a
 				      WHERE a.entity_type = $2 AND a.entity_id = m.native_id
-				        AND a.actor_type = 'human' AND a.occurred_at > m.created_at)`,
+				        AND a.actor_type = 'human' AND a.occurred_at > m.created_at
+				        AND a.batch_id IS DISTINCT FROM m.import_run_id)`,
 				id, object, nativeIDs)
 			if err != nil {
 				return fmt.Errorf("checking which %s rows a human touched since import: %w", object, err)
@@ -413,54 +376,6 @@ func (s *RunStore) humanTouchedSince(ctx context.Context, id RunID, rows []mapRo
 		return nil, err
 	}
 	return touched, nil
-}
-
-// advanceUndoCheckpoint moves the resume cursor forward one page and
-// persists the report so far, the undo's own mirror of advanceCheckpoint —
-// once per page rather than once per row, so a run with a long kept/errored
-// list does not rewrite an ever-growing jsonb blob on every single row.
-func (s *RunStore) advanceUndoCheckpoint(ctx context.Context, id RunID, checkpoint int, rep UndoReport) error {
-	encoded, err := json.Marshal(rep)
-	if err != nil {
-		return fmt.Errorf("encoding import run %s undo progress: %w", id, err)
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET checkpoint = $2, undo_report = $3, updated_at = now()
-			 WHERE id = $1
-			   AND status = $4 AND checkpoint <= $2`, id, checkpoint, encoded, StatusUndoing)
-		if err != nil {
-			return fmt.Errorf("advancing import run %s undo checkpoint: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("import run %s cannot advance undo to %d (not undoing, or cursor moved past it): %w", id, checkpoint, apperrors.ErrConflict)
-		}
-		return nil
-	})
-}
-
-// completeUndo records the finished reversal, audited.
-func (s *RunStore) completeUndo(ctx context.Context, id RunID, rep UndoReport) error {
-	encoded, err := json.Marshal(rep)
-	if err != nil {
-		return fmt.Errorf("encoding import run %s undo report: %w", id, err)
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET status = $2, undo_report = $3, updated_at = now()
-			 WHERE id = $1
-			   AND status = $4`, id, StatusUndone, encoded, StatusUndoing)
-		if err != nil {
-			return fmt.Errorf("completing import run %s undo: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("import run %s is not undoing, cannot complete undo: %w", id, apperrors.ErrConflict)
-		}
-		_, err = storekit.Audit(ctx, tx, "import_undo", ImportRunObject, id,
-			map[string]any{auditFieldStatus: StatusUndoing},
-			map[string]any{auditFieldStatus: StatusUndone, "reversed_count": rep.ReversedCount, "kept_count": len(rep.Kept), "errored_count": len(rep.Errored)})
-		return err
-	})
 }
 
 // reverseImportOrder is ImportOrder backwards: the order an undo reverses types.

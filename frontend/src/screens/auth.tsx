@@ -2,12 +2,6 @@ import { useMutation } from "@tanstack/react-query";
 import { Lock, Mail } from "lucide-react";
 import { type FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import { useAuthCapabilities } from "../app/capabilities";
-import {
-  forgetHashCredential,
-  navigate,
-  takeHashCredential,
-} from "../app/router";
 import {
   previewedOidcProviders,
   previewedPasswordReset,
@@ -21,7 +15,15 @@ import { usePasswordReveal } from "../design-system/passwordreveal";
 import { providerBrandName } from "../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useAuthCapabilities } from "../lib/capabilities";
 import { useOutageRecovery } from "../lib/connectivity";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import {
+  forgetHashCredential,
+  navigate,
+  takeHashCredential,
+} from "../lib/router";
+import { sessionAnswers } from "../lib/session";
 import { AuthCardTitle, AuthExperience, type AuthPhase } from "./auth-core";
 import {
   FederatedOnlyCard,
@@ -29,7 +31,6 @@ import {
   ProviderButtons,
   startFederatedSignIn,
 } from "./auth-providers";
-import { problemMessageOf, sessionAnswers, unwrap } from "./common";
 import { isTooShort, MIN_PASSWORD } from "./passwordrule";
 import "./auth.css";
 
@@ -54,13 +55,13 @@ export type AuthNotice =
   | "oidc-failed"
   | null;
 
-// The OIDC callback's neutral-failure redirect lands on this exact route
-// (cmd/api/googlesignin.go's FailureURL) — not a Screen this app routes to
-// (no "login" entry in app/router.tsx's SCREENS), because the unauthenticated
-// gate in App.tsx renders AuthScreen ahead of any route match regardless of
-// what the hash names. Consumed the same way clearResetHash below scrubs its
-// own marker: read once on mount, then rewritten out of the address so a
-// reload or a Back press cannot replay it.
+// The OIDC callback's neutral-failure redirect lands on this route
+// (cmd/api/googlesignin.go's FailureURL). It is not a Screen this app routes to
+// (no "login" entry in lib/router.tsx's SCREENS). The unauthenticated gate in
+// App.tsx renders AuthScreen ahead of any route match, whatever the hash names.
+// It is consumed the way clearResetHash below scrubs its own marker. It is read
+// once on mount, then rewritten out of the address so a reload or a Back press
+// cannot replay it.
 const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
 // isOidcFailureMarker is a PURE read — no mutation — so it is safe under
@@ -110,14 +111,14 @@ type View =
  * Referer header, and it is not part of a Cache Storage key, so nothing that
  * keys on a URL persists it to disk. Parsing it as this app's own hash route
  * also means any static host serves index.html for `/` with no SPA fallback.
- * What is left is the history entry, and app/router.tsx takes the token out of
+ * What is left is the history entry, and lib/router.tsx takes the token out of
  * that before anything renders.
  */
 export const RESET_ROUTE = "reset-password";
 
 // clearResetHash drops a lingering `#/reset-password` from the address bar
-// once the reset entry is done with — the token itself left with the router
-// (app/router.tsx), but the bare route survives until this runs.
+// once the reset entry is done with. The token itself left with the router
+// (lib/router.tsx), but the bare route survives until this runs.
 // Left in place, it would make LoginForm's "restore the originally requested
 // route" check see a non-empty hash and skip the post-login redirect to
 // the Brief, stranding a completed reset on a screen this app never routes to.
@@ -144,7 +145,7 @@ export function AuthScreen({
   const t = useT();
   // The emailed deep link lands wherever the unauthenticated gate renders this
   // screen, so no route table entry is needed. The token is already out of the
-  // address bar: app/router.tsx takes it as it reads the hash, ahead of every
+  // address bar. lib/router.tsx takes it as it reads the hash, ahead of every
   // gate that can render instead of this screen, and hands it over in memory.
   const [view, setView] = useState<View>(() => {
     const token = takeHashCredential(RESET_ROUTE);

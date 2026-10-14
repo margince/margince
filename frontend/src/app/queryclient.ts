@@ -5,13 +5,13 @@ import {
   QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
+import { isRecordRead } from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
-import { isRecordRead } from "../screens/activitykeys";
-import { logUnexpectedError, ProblemError } from "../screens/common";
+import { logUnexpectedError, ProblemError } from "../lib/problem";
 import { ENTITY_NAME_KEY } from "../screens/entityref";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The

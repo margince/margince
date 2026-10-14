@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { AiProviderKeysCard } from "./ai-provider-keys";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The card draws a credential surface, so what these stories are for is
 // checking what is NOT on screen: a configured provider must read as

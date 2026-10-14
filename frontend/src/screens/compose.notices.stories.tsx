@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { StoryProviders } from "../testing/story-utils";
 import { StaleThreadNotice, VoiceDegradedNotice } from "./compose.notices";
-import { StoryProviders } from "./story-utils";
 
 // The two notices the composer says about the draft rather than about the
 // message. Their own frames because reaching either in the composer itself

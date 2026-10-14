@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMe } from "./common";
+import { useMe } from "../lib/session";
 import "./signaturehtml.css";
 
 // What {logo} points at in the markup: the image the message carries inside
@@ -63,7 +63,8 @@ function dataUrl(blob: Blob): Promise<string> {
       typeof reader.result === "string"
         ? resolve(reader.result)
         : reject(new Error("the workspace logo did not read as a data URL"));
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("the workspace logo could not be read"));
     reader.readAsDataURL(blob);
   });
 }

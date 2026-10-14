@@ -16,8 +16,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../design-system/atoms";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
-import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "./attachmentupload";
 
 // What this dialog owes the reader: the file lands on the record they chose,
 // and when the two requests behind one press disagree, it says which half
@@ -49,9 +49,9 @@ const OLDER_DEAL = {
   status: "open",
 };
 
-// /me refuses a payload without `user` (common.tsx:105), so a fixture that
-// carried only the authorization block would leave every control refused for a
-// reason the test was not testing.
+// /me refuses a payload without `user` (lib/session.ts). A fixture that
+// carried only the authorization block would leave every control refused, for
+// a reason the test was not testing.
 const USER = { id: "u-1", email: "rep@example.com", name: "Demo Rep" };
 
 const GRANTS = {

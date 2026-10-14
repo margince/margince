@@ -7,7 +7,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "../screens/story-utils";
+} from "../testing/story-utils";
 import { CaptureChip } from "./capture-chip";
 
 // The chip has one state — mail is arriving — and two ways of saying how far:

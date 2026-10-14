@@ -6,9 +6,9 @@ import { useT } from "../i18n";
 
 // What the company-context card says about ITSELF: the confirmation a save
 // leaves behind, and the caveats a website read came back with. Its four
-// refusals — the cold-start form, the profile dialog, the site-read panel and
-// the review's Apply — are the shared `WriteRefused` in `common.tsx`, which is
-// where the same nine lines went once every card's copy of them was one.
+// refusals (the cold-start form, the profile dialog, the site-read panel and
+// the review's Apply) use the shared `WriteRefused` in `querystates.tsx`. The
+// same nine lines moved there once every card's copy of them was identical.
 
 /**
  * The save landed, and the dialog it landed in is gone — so the confirmation

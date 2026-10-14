@@ -12,11 +12,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { type GrantSpec, meFixture } from "../app/mefixture";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ForecastShareActions, ShareViewButton } from "./analytics.share";
 import { OPEN_SHARES_KEY } from "./analytics.sharelist";
 

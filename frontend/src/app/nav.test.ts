@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { parseHash, routeHash } from "../lib/router";
 import {
   NAV,
   RAIL_LESS_SCREENS,
@@ -9,7 +10,6 @@ import {
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
-import { parseHash, routeHash } from "./router";
 
 describe("the rail and a composed unit", () => {
   // The product's own destinations, and no group an installation can add to.

@@ -3,15 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
-import type { GrantSpec } from "../app/mefixture";
-import type { ReviewTemplate } from "./outcomereview.queries";
-import { ReviewTemplatesCard } from "./reviewtemplates";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import type { ReviewTemplate } from "./outcomereview.queries";
+import { ReviewTemplatesCard } from "./reviewtemplates";
 
 // The questions a closed deal is asked. The picture worth keeping is the list
 // an administrator actually meets: a win and a loss template side by side, each

@@ -27,7 +27,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-type previewImport struct{ imports Imports }
+// previewImport stages a run's test and waits for its report.
+type previewImport struct {
+	imports Imports
+	wait    importWait
+}
 
 func (t previewImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -115,13 +119,9 @@ func (t previewImport) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	args.applyRunOptions(&req)
 	run, err := t.imports.StageRun(ctx, req)
 	if err != nil {
-		// Kept: a refused test leaves its draft pending with the reason, and
-		// createImportRun on the same source_ref tests it again.
-		// The sweep cancels a draft nobody returns to.
-		return nil, namingTheBusyRun(err)
+		return nil, stagingRefused(ctx, t.imports, profile.SourceRef, err)
 	}
-	return json.Marshal(ImportPreviewResult{
-		Run:      importRunResult(run),
+	return t.answered(ctx, run, ImportPreviewResult{
 		Mapping:  mapping,
 		Columns:  columnNames(profile),
 		Unmapped: unmappedColumns(profile, mapping),
@@ -149,21 +149,42 @@ func discarding(ctx context.Context, imports Imports, ref string, cause error) e
 	return cause
 }
 
-// namingTheBusyRun points a refusal for a source name still being written at
-// the run writing it, when the caller may read that run.
+// busyRunCopy is what a busy refusal tells the caller to do with the run it
+// names, by the refusal's code.
+var busyRunCopy = map[string]string{
+	httperr.SourceBusyCode: "import run %s of this source_name is still writing. read_import that run " +
+		"until its state is complete or failed, then preview again",
+	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
+		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
+		"then preview again",
+}
+
+// stagingRefused answers a refused StageRun. A refusal for this agent's other
+// test discards the draft. The caller is told to preview again, so a looping
+// caller would leave one upload per call. Any other refused draft is kept.
+// createImportRun on its source_ref tests it again, and the sweep cancels one
+// nobody returns to.
+func stagingRefused(ctx context.Context, imports Imports, ref string, err error) error {
+	if busy, ok := errors.AsType[*httperr.DetailedError](err); ok && busy.Code == httperr.AgentBusyCode {
+		err = discarding(ctx, imports, ref, err)
+	}
+	return namingTheBusyRun(err)
+}
+
+// namingTheBusyRun points a busy refusal at the run it names, when the caller
+// may read that run.
 func namingTheBusyRun(err error) error {
 	busy, ok := errors.AsType[*httperr.DetailedError](err)
-	if !ok || busy.Code != httperr.SourceBusyCode {
+	if !ok {
 		return err
 	}
+	detail, known := busyRunCopy[busy.Code]
 	runID, named := busy.Details["run_id"].(string)
-	if !named {
+	if !known || !named {
 		return err
 	}
 	return &httperr.DetailedError{
-		Status: busy.Status, Code: busy.Code, Details: busy.Details,
-		Detail: "import run " + runID + " of this source_name is still writing. read_import that run " +
-			"until its state is complete or failed, then preview again",
+		Status: busy.Status, Code: busy.Code, Details: busy.Details, Detail: fmt.Sprintf(detail, runID),
 	}
 }
 

@@ -15,9 +15,9 @@
 // tab.
 
 import type { components } from "../../api/schema";
-import { useRecordZone } from "../../app/recordzone";
 import { formatDate, formatMoneyOrAbsent } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import { DealStageLadder } from "../deals.stepper";
 import "./dealcockpit.css";
 

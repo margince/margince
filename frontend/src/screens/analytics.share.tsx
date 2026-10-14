@@ -1,19 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
-import { useCan, useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { type AnalyticsScope, writableScope } from "./analytics.context";
 import {
   closeShare,
   OPEN_SHARES_KEY,
   SharedLinksButton,
 } from "./analytics.sharelist";
-import { problemMessageOf, unwrap } from "./common";
 
 // Sharing a forecast view.
 //

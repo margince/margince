@@ -19,8 +19,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { showsAMessage } from "./activitykeys";
-import { unwrap } from "./common";
+import { showsAMessage } from "../lib/activitykeys";
+import { unwrap } from "../lib/problem";
 
 type ThreadAudienceOutcome = components["schemas"]["ThreadAudienceOutcome"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];

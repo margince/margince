@@ -1,5 +1,5 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
-import { problemCodeOf } from "./common";
+import { problemCodeOf } from "../lib/problem";
 
 // The task's own detail read is refreshed too, always: a modal open on the task
 // that was just changed would otherwise keep showing the old due date and

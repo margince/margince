@@ -5,27 +5,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Info, KeyRound, Route, Timer } from "lucide-react";
 import { type ReactNode, useEffect, useId } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanMutate } from "../app/capability";
+import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
+import {
+  QueryGate,
+  type QueryLike,
+  QueryStates,
+} from "../design-system/querystates";
+import { INTL_LOCALE } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { useCan, useCanMutate } from "../lib/capability";
 import {
   composedScreens,
   EXTENSION_SCREEN,
   findExtension,
-} from "../app/extensions";
-import { routeHash } from "../app/router";
-import { Badge, Disclosure, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
-import { Panel, PanelBody, PanelGroupHead } from "../design-system/panel";
-import { INTL_LOCALE } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import {
-  isVersionSkew,
-  ProblemError,
-  problemMessageOf,
-  QueryGate,
-  type QueryLike,
-  QueryStates,
-  useMe,
-} from "./common";
+} from "../lib/extensions";
+import { isVersionSkew, ProblemError, problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import "./extension-access.css";
 import {
   EXTENSIONS_KEY,

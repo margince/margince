@@ -5,14 +5,14 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCanWrite } from "../app/capability";
 import { Button, Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { useArchiveRecord } from "./archive";
-import { unwrap } from "./common";
-import "./common.css";
+import "../design-system/querystates.css";
 
 type Company = components["schemas"]["Company"];
 

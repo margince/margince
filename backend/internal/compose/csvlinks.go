@@ -54,8 +54,8 @@ type linkResolver struct {
 	identities   *migration.RunStore
 	pool         *pgxpool.Pool
 	pending      map[linkKey]bool
-	// landed holds the rows of this run that named their record by id. They
-	// get no identity row, because undo archives every record the map names.
+	// landed holds the rows of this slice that named their record by id, so a
+	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
 	cache  map[linkKey]linkAnswer
 	// employers caches one answer per folded company name, bounded by the

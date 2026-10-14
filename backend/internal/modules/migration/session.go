@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,6 +36,14 @@ type Session struct {
 	ApprovedAt     *time.Time
 	SupersededBy   *RunID
 	SourceReleased bool
+	// JobAttempt is the attempt the run's current job was queued under; zero
+	// for a run only older code moved.
+	JobAttempt int
+	// Actor is who moved the run to the work it is queued for; the job acts as it.
+	Actor                *StoredActor
+	AttemptCorrelationID *ids.UUID
+	Phase                string
+	Progress             *Progress
 }
 
 // The wizard steps a draft can be reopened on.
@@ -55,6 +64,7 @@ const (
 	moveValidate  moveName = "validate"
 	moveReport    moveName = "report"
 	moveRefuse    moveName = "refuse"
+	moveStopTest  moveName = "stop_test"
 	moveApprove   moveName = "approve"
 	moveResume    moveName = "resume"
 	moveCancel    moveName = "cancel"
@@ -75,6 +85,7 @@ var sessionMoves = map[moveName]sessionMove{
 	moveValidate:  {from: []string{StatusPending, StatusAwaitingApproval}, to: StatusValidating},
 	moveReport:    {from: []string{StatusValidating}, to: StatusAwaitingApproval},
 	moveRefuse:    {from: []string{StatusValidating}, to: StatusPending},
+	moveStopTest:  {from: []string{StatusValidating}, to: StatusPending},
 	moveApprove:   {from: []string{StatusAwaitingApproval}, to: StatusRunning},
 	moveResume:    {from: []string{StatusFailed}, to: StatusRunning},
 	moveCancel:    {from: []string{StatusPending, StatusAwaitingApproval}, to: StatusCancelled},
@@ -97,7 +108,13 @@ type runChange struct {
 	version int
 	// approved admits the move only for a run someone approved.
 	approved bool
-	values   []runValue
+	// queue marks a move that queues work: it opens a new attempt, which
+	// fences off every older one, and stores who the job acts as.
+	queue bool
+	// lease, when set, admits the move only for that attempt, so a job the
+	// run moved on from writes nothing.
+	lease  *Lease
+	values []runValue
 	// literals are fixed assignments such as "report = NULL".
 	literals      []string
 	before, after map[string]any
@@ -106,7 +123,7 @@ type runChange struct {
 // sessionState is the locked row a move decides on.
 type sessionState struct {
 	status, connector, sourceName, sourceRef, draftStep string
-	version                                             int
+	version, jobAttempt                                 int
 	approved, released                                  bool
 	supersededBy                                        *RunID
 	mapping                                             []byte
@@ -117,11 +134,11 @@ type sessionState struct {
 func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error) {
 	var state sessionState
 	err := tx.QueryRow(ctx, `
-		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version,
+		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version, job_attempt,
 		       approved_at IS NOT NULL, source_released_at IS NOT NULL, superseded_by, mapping
 		  FROM import_run WHERE id = $1 FOR UPDATE`, id).Scan(
 		&state.status, &state.connector, &state.sourceName, &state.sourceRef, &state.draftStep,
-		&state.version, &state.approved, &state.released, &state.supersededBy, &state.mapping)
+		&state.version, &state.jobAttempt, &state.approved, &state.released, &state.supersededBy, &state.mapping)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sessionState{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
 	}
@@ -134,6 +151,10 @@ func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error)
 // admits answers why move may not start from state, or nil when it may.
 func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 	move := sessionMoves[name]
+	if c.lease != nil && (state.status != c.lease.Status || state.jobAttempt != c.lease.Attempt) {
+		return fmt.Errorf("import run %s is %s at attempt %d, not %s at %d: %w",
+			id, state.status, state.jobAttempt, c.lease.Status, c.lease.Attempt, ErrSuperseded)
+	}
 	if state.connector != ConnectorCSV {
 		return fmt.Errorf("import run %s is a %s run, which keeps no session: %w", id, state.connector, apperrors.ErrConflict)
 	}
@@ -141,7 +162,7 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return &SupersededError{RunID: id, By: *state.supersededBy}
 	}
 	if !slices.Contains(move.from, state.status) {
-		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, state.status, move.to, apperrors.ErrConflict)
+		return refusedStart(id, state.status, move.to)
 	}
 	if err := c.admitsVersion(id, state); err != nil {
 		return err
@@ -153,6 +174,25 @@ func (c runChange) admits(id RunID, name moveName, state sessionState) error {
 		return fmt.Errorf("import run %s no longer holds its uploaded file, so it cannot run; upload the file again: %w", id, apperrors.ErrConflict)
 	}
 	return nil
+}
+
+// nextStepWhenAlready is what a caller whose move the run has already made
+// should do instead; a repeated approve or validate is the common case.
+var nextStepWhenAlready = map[string]string{
+	StatusRunning:    "read it until it completes",
+	StatusValidating: "read it until its report is ready",
+	StatusCancelled:  "start a new import to bring the file in",
+}
+
+// refusedStart is the conflict for a move that may not start from status.
+func refusedStart(id RunID, status, to string) error {
+	if status != to {
+		return fmt.Errorf("import run %s is %s, so it cannot become %s: %w", id, status, to, apperrors.ErrConflict)
+	}
+	if next, ok := nextStepWhenAlready[status]; ok {
+		return fmt.Errorf("import run %s is already %s; %s: %w", id, status, next, apperrors.ErrConflict)
+	}
+	return fmt.Errorf("import run %s is already %s: %w", id, status, apperrors.ErrConflict)
 }
 
 // admitsVersion refuses a version other than zero that is not the run's.
@@ -184,6 +224,15 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 	for _, literal := range change.literals {
 		set.WriteString(", " + literal)
 	}
+	if change.queue {
+		actor, err := encodeActorOf(ctx)
+		if err != nil {
+			return err
+		}
+		set.WriteString(", " + openAttempt)
+		set.WriteString(storekit.SQLf(`, job_status = $%d, actor = $%d, attempt_correlation_id = $%d`,
+			arg(to), arg(actor), arg(ids.NewV7())))
+	}
 	where := storekit.SQLf(` WHERE id = $1 AND status = $%d`, arg(state.status))
 	if err := execHoldingName(ctx, tx, id, `UPDATE import_run SET `+set.String()+where, args...); err != nil {
 		return fmt.Errorf("moving import run %s to %s: %w", id, to, err)
@@ -199,14 +248,19 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 }
 
 // QueueValidation moves a draft or a report to `validating`: the test run of
-// version, after superseding every unwritten run of the same source name. It
-// answers whether it moved the run. A run already validating that version is
-// left as it stands, so a second request starts no second test.
-func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (Run, bool, error) {
+// version. It first supersedes every unwritten run of the same source name, and
+// queues the job in the same transaction. It answers whether it moved the run.
+// A run already validating that version is left as it stands, so a second
+// request starts no second test and fences off none. derived is the mapping the
+// test checked; the move fills from it each default the run left empty.
+func (s *RunStore) QueueValidation(
+	ctx context.Context, id RunID, version int, derived RunMapping, enqueue Enqueue,
+) (Run, bool, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, false, err
 	}
 	moved := false
+	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := lockSourceName(ctx, tx, id); err != nil {
 			return err
@@ -224,16 +278,28 @@ func (s *RunStore) QueueValidation(ctx context.Context, id RunID, version int) (
 		if err := supersedeName(ctx, tx, id, state.sourceName, CauseSuperseded); err != nil {
 			return err
 		}
+		change := runChange{
+			version: version, queue: true, literals: []string{"report = NULL", "error = NULL"},
+			before: map[string]any{}, after: map[string]any{},
+		}
+		if err := change.fillDefaults(state.mapping, derived); err != nil {
+			return err
+		}
+		if err := stageTransition(ctx, tx, id, moveValidate, change); err != nil {
+			return err
+		}
 		moved = true
-		return stageTransition(ctx, tx, id, moveValidate, runChange{
-			version: version, literals: []string{"report = NULL", "error = NULL"},
-		})
+		run, err = queueMoved(ctx, tx, id, enqueue)
+		return err
 	})
 	if err != nil {
 		return Run{}, false, err
 	}
-	run, err := s.GetStaged(ctx, id)
-	return run, moved, err
+	if moved {
+		return run, true, nil
+	}
+	run, err = s.GetStaged(ctx, id)
+	return run, false, err
 }
 
 // lockSourceName holds the run's source name until the transaction ends. Two
@@ -249,20 +315,10 @@ func lockSourceName(ctx context.Context, tx pgx.Tx, id RunID) error {
 	return nil
 }
 
-// ReturnToDraft ends a test run that was refused, keeping why on the draft so
-// the importer sees it beside the choices they can change.
-func (s *RunStore) ReturnToDraft(ctx context.Context, id RunID, cause string) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		return stageTransition(ctx, tx, id, moveRefuse, runChange{values: []runValue{{"error", cause}}})
-	})
-}
-
 // Cancel ends a draft or a report that nobody will approve, and releases its
 // file. Neither has written anything, so nothing is left to undo. A run already
-// cancelled is answered as it stands, so a second click is no error.
+// cancelled is answered as it stands, so a second click is no error. A test run
+// returns to its draft instead, fenced off, so the job still reading writes nothing.
 func (s *RunStore) Cancel(ctx context.Context, id RunID) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
 		return Run{}, err
@@ -272,10 +328,13 @@ func (s *RunStore) Cancel(ctx context.Context, id RunID) (Run, error) {
 		if err != nil {
 			return err
 		}
-		if state.status == StatusCancelled {
+		switch state.status {
+		case StatusCancelled:
 			return nil
+		case StatusValidating:
+			return stageTransition(ctx, tx, id, moveStopTest, runChange{literals: fencedOff})
 		}
-		if err := stageTransition(ctx, tx, id, moveCancel, runChange{}); err != nil {
+		if err := stageTransition(ctx, tx, id, moveCancel, runChange{literals: fencedOff}); err != nil {
 			return err
 		}
 		return releaseSource(ctx, tx, id)
@@ -314,16 +373,19 @@ func (e *SupersededError) Unwrap() error { return apperrors.ErrConflict }
 const nameIndex = "import_run_one_active_per_source_name"
 
 // execHoldingName runs one status write under a savepoint. A write the name
-// index refuses then answers SourceBusyError naming the holder.
+// index or the per-agent index refuses then answers the run that holds it.
 func execHoldingName(ctx context.Context, tx pgx.Tx, id RunID, sql string, args ...any) error {
 	savepoint, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("opening a savepoint: %w", err)
 	}
 	_, err = savepoint.Exec(ctx, sql, args...)
-	if constraint, unique := storekit.UniqueViolation(err); unique && constraint == nameIndex {
+	if constraint, unique := storekit.UniqueViolation(err); unique && (constraint == nameIndex || constraint == agentTestIndex) {
 		if err := savepoint.Rollback(ctx); err != nil {
 			return fmt.Errorf("rolling back to the savepoint: %w", err)
+		}
+		if constraint == agentTestIndex {
+			return agentTestHolder(ctx, tx, id)
 		}
 		return nameHolder(ctx, tx, id)
 	}
@@ -384,8 +446,9 @@ func supersedeName(ctx context.Context, tx pgx.Tx, id RunID, sourceName, cause s
 	}
 	for _, old := range replaced {
 		if err := stageTransition(ctx, tx, old, moveSupersede, runChange{
-			values: []runValue{{"superseded_by", id}, {"error", cause}},
-			after:  map[string]any{"superseded_by": id},
+			values:   []runValue{{"superseded_by", id}, {"error", cause}},
+			literals: fencedOff,
+			after:    map[string]any{"superseded_by": id},
 		}); err != nil {
 			return err
 		}

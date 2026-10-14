@@ -20,7 +20,7 @@ import {
   isVersionSkewOf,
   problemMessageOf,
   unwrap,
-} from "./common";
+} from "../lib/problem";
 import { type CreateField, CreateRecordModal } from "./create";
 import { EditAction } from "./edit";
 

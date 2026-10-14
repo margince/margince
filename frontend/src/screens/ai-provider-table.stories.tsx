@@ -3,11 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
 import { Panel } from "../design-system/panel";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import type { ProviderUsage } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 const key = (
   provider: string,

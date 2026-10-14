@@ -4,8 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { Employers } from "./contactemployers";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import "./contact360.css";
 
 // The dialog is opened the way a reader opens it — through the employment

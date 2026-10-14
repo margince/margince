@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LinkedInImportCard } from "./linkedin-import";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // LinkedInImportCard stories for the fe-uat render gate. The card is a personal
 // surface — it reads /me/linkedin-account and writes the caller's own row — so

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { routeHash } from "../app/router";
+import { routeHash } from "../lib/router";
 import {
   currentParams,
   replaceDial,
   type UrlParams,
   useUrlParams,
-} from "../app/urlstate";
+} from "../lib/urlstate";
 import { settingsHref } from "./settingsrouting";
 
 /**
@@ -67,9 +67,9 @@ export type LinkedCase =
  * moves has to leave the URL describing what is on screen, or the link the
  * officer copies out is not the case they are looking at.
  *
- * Opening a row REPLACES the history entry rather than pushing one, the same
- * choice app/urlstate.ts makes for every other dial: a reader who opened four
- * cases in a row still has one Back out of the queue.
+ * Opening a row replaces the history entry rather than pushing one, as
+ * lib/urlstate.ts does for every other dial. A reader who opened four cases in
+ * a row still has one Back out of the queue.
  */
 export function useLinkedCase(
   loadedIds: readonly string[],
@@ -127,9 +127,9 @@ export function useLinkedCase(
     loadMore();
   });
 
-  // Read outside the render rather than from the snapshot above: two toggles
-  // in one handler would both build on a stale copy and the second would
-  // discard the first, which is what app/urlstate.ts says about every dial.
+  // Read outside the render rather than from the snapshot above. Two toggles
+  // in one handler would both build on a stale copy, and the second would
+  // discard the first. lib/urlstate.ts says the same about every dial.
   const toggle = useCallback((id: string) => {
     replaceDial(
       CASE_PARAM,

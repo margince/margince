@@ -8084,13 +8084,15 @@ paths:
       tags: [Import]
       operationId: createImportRun
       security: [{bearerAuth: []}]
-      summary: Create an import run from an uploaded source and a column mapping, and dry-run it.
+      summary: Create an import run from an uploaded source and a column mapping, and start its test run.
       description: |-
         Takes the connector, the `source_ref` from
-        `uploadImportSource`, and the mapping the human settled on, and runs the
-        validation pass — which writes **no** domain rows (AC-M5). The run
-        arrives at `awaiting_approval` carrying the report
-        `getImportRunReport` reads.
+        `uploadImportSource`, and the mapping the human settled on, and queues
+        the test run, which writes **no** domain rows (AC-M5). The call answers
+        at once with the run at `validating`. The worker then reads the file
+        and moves the run to `awaiting_approval` carrying the report
+        `getImportRunReport` reads, or back to `pending` with the reason in
+        `error` when the test stopped on the file or ran past its time.
 
         Needs the passport permission Change records.
 
@@ -8102,7 +8104,7 @@ paths:
             schema: {$ref: '#/components/schemas/CreateImportRunRequest'}
       responses:
         '202':
-          description: 'The run, validated and awaiting a human (dry run complete, zero rows written).'
+          description: 'The run at `validating`: its test run is queued, and zero rows are written.'
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ImportRun'}
@@ -14712,7 +14714,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
     StageEvidenceAuthorSide:
       type: string
       description: |-
@@ -14765,7 +14767,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     TransitionPolicyList:
       type: object
       required: [data, automation_enabled]

@@ -14,12 +14,13 @@
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { entityTimelineKeys } from "./activitykeys";
+import { entityTimelineKeys } from "../lib/activitykeys";
+import { problemMessageOf } from "../lib/problem";
+import { navigate } from "../lib/router";
 import {
   AUDIENCE_CHOICES,
   AUDIENCE_HINT,
@@ -28,7 +29,6 @@ import {
   useAudienceCandidates,
 } from "./audiencemembers";
 import { useMessageAudience } from "./audienceservice";
-import { problemMessageOf } from "./common";
 // Reply and Relink stay in compose.tsx for now: they are the composer's own
 // verbs, and moving them too would make a behaviour-preserving extraction into
 // a much larger diff. What moved here is the cluster and the two audience

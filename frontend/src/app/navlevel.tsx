@@ -16,6 +16,7 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { navigate, type Route, routeHash } from "../lib/router";
 import {
   currentClaim,
   entryLabel,
@@ -28,7 +29,6 @@ import {
   navLevelRoute,
   railTrail,
 } from "./nav";
-import { navigate, type Route, routeHash } from "./router";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two

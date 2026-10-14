@@ -8,8 +8,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { useDrawsImportRun } from "../lib/import-onscreen";
 import { CaptureChip } from "./capture-chip";
-import { useDrawsImportRun } from "./import-onscreen";
 
 // The chip is the import's gauge, bottom-centre of the content: present for
 // exactly as long as mail is arriving, carrying the server's own counts, and

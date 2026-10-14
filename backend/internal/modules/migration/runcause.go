@@ -6,6 +6,8 @@ package migration
 import (
 	"context"
 	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The sentences a stopped run carries. The error that stopped it can hold a
@@ -13,6 +15,9 @@ import (
 const (
 	CauseStopped    = "the import stopped on an error; approve it again to continue from its checkpoint"
 	CauseOverBudget = "the import ran past its time budget; approve it again to continue from its checkpoint"
+	// CauseValidateOverBudget is a test run that read past its time budget; it
+	// imported nothing, and a smaller file tests within it.
+	CauseValidateOverBudget = "the test run took too long and imported nothing; split the file into smaller ones and test again"
 	// CauseValidationStopped is matched, never written: a legacy row carries it
 	// for a test run that stopped. The backfill and the sweep cancel such a run.
 	CauseValidationStopped = "the test run stopped on an error; upload the file again to start a new import"
@@ -28,13 +33,56 @@ const (
 	// CauseTestRunStopped is a draft whose test run lost its process; the
 	// choices are kept, so the way on is to test again.
 	CauseTestRunStopped = "the test run stopped before it finished and imported nothing; run the test again"
+	// CausePermission is an attempt whose principal lost the access it was
+	// queued with: a seat gone or read-only, a passport revoked, a grant taken.
+	CausePermission = "whoever started this no longer has the access it needs; someone who does must start it again"
+	// CauseStorageUnavailable is a commit on a worker that stores no files, so
+	// it cannot read the upload.
+	CauseStorageUnavailable = "the server running this import has no file storage, so it cannot read the upload; approve it again once storage is configured"
+	// CauseTestStorageUnavailable is a test run on a worker that stores no
+	// files. The draft keeps its choices, so the way on is to test again.
+	CauseTestStorageUnavailable = "the server running this test has no file storage, so it cannot read the upload; run the test again once storage is configured"
 	// CauseDraftExpired is a draft or report left untouched past its time to live.
 	CauseDraftExpired = "this import was left unfinished too long, so it was closed and its file deleted"
 )
 
-func stopCause(cause error) string {
-	if errors.Is(cause, context.DeadlineExceeded) {
+// ErrStopRecorded marks the error of a walk whose run already records why it
+// stopped, so its job only logs it.
+var ErrStopRecorded = errors.New("the import run records why it stopped")
+
+// stopRecorded is a walk's error once its run recorded the stop.
+type stopRecorded struct{ cause error }
+
+func (s stopRecorded) Error() string   { return s.cause.Error() }
+func (s stopRecorded) Unwrap() []error { return []error{s.cause, ErrStopRecorded} }
+
+// RunStop stops an attempt with the sentence its run carries.
+type RunStop struct {
+	Cause string
+	Err   error
+}
+
+func (s RunStop) Error() string { return s.Err.Error() }
+func (s RunStop) Unwrap() error { return s.Err }
+
+// StopCause is the one sentence a run carries for the error that stopped it,
+// whichever of the walk or its job records the stop. A test run imported
+// nothing, so its sentences send the importer back to the test, not to approve.
+func StopCause(status string, err error) string {
+	var stop RunStop
+	aTest := status == StatusValidating
+	switch {
+	case errors.As(err, &stop):
+		return stop.Cause
+	case errors.Is(err, context.DeadlineExceeded) && aTest:
+		return CauseValidateOverBudget
+	case errors.Is(err, context.DeadlineExceeded):
 		return CauseOverBudget
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return CausePermission
+	case aTest:
+		return CauseTestRunStopped
+	default:
+		return CauseStopped
 	}
-	return CauseStopped
 }

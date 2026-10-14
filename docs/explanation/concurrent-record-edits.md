@@ -16,7 +16,7 @@ project. On a contact it is the full name and the name parts.
 
 ## One shared function
 
-[`saveIndependentEdit`](../../frontend/src/screens/independentedit.ts) checks
+[`saveIndependentEdit`](../../frontend/src/lib/independentedit.ts) checks
 three versions of a record. The first is the original, read when editing
 started. The second is the changes the user sent, and the third is the newest
 record on the server. The same function serves all four record types, including

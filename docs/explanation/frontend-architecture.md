@@ -52,8 +52,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
 ```text
  src/design-system/     tokens.css → brand.css → base.css
                         → atoms → trust → the Core primitive → composed
- src/app/               shell = sidebar + top bar + page title, hash router,
-                        ⌘K palette, agent dock, theme, capability, banners
+ src/app/               shell = sidebar + top bar + page title,
+                        ⌘K palette, agent dock, banners
+ src/lib/               shared code that draws nothing: hash router, URL
+                        state, theme, capability, problem decoding, session
  src/screens/           one file per surface (a directory when the surface
                         is a state machine)
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
@@ -73,7 +75,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree.
+  tree. No file in `design-system/` imports `app/` or `screens/`: a part that needs
+  a feature, such as the record page's mail drawer, lives in `screens/`.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -81,10 +84,12 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   what both of them know about a page before it renders.
 
   Then come `nav.ts`
-  (the list of places that decides), `router.tsx` (hash routing) and
-  `palette.tsx` (`⌘K`). After them are `agentrail.tsx` (the agent, at the end
-  of the rail), `theme.ts` and `capability.ts`. Last are the advisories the
-  shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
+  (the list of places that decides) and `palette.tsx` (`⌘K`). After them is
+  `agentrail.tsx` (the agent, at the end of the rail). Last are the advisories
+  the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
+- **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
+  `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
+  decoding and the session. `lib/` never imports `app/` or `screens/`.
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
   `screens/onboarding-conversation/`. There the conversation machine, each
@@ -224,7 +229,7 @@ app panel styled from those tokens is styled, in error, as the public web site.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
-lives in `src/app/theme.ts` and in no other file. A stated choice
+lives in `src/lib/theme.ts` and in no other file. A stated choice
 (`margince.theme` in `localStorage`, `light` or `dark`) wins; otherwise the OS
 `prefers-color-scheme` decides.
 
@@ -343,7 +348,7 @@ even if the test tree breaks.
 | Contract type drift | `make frontend-check` | `pnpm gen:api` changes `src/api/schema.d.ts` or `public-events.ts` |
 | Lint | `pnpm lint` (Biome) | style and lint findings over `src` and `index.html` |
 | Design test | `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
-| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/app/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
+| Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/src/app/serviceworker-registrar.test.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `design-system/stylesheetnamespace.test.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
 | Timeline rows | `design-system/timelinerows.test.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
@@ -352,7 +357,7 @@ even if the test tree breaks.
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no story beside it, a changed story the build does not register, or a render that fails when run with no screen. It is **outside** `make check`: it is the UAT lane for the frontend alone, and it writes its result to `.tmp/fe-uat/manifest.json` |
 | Screen checks | `make frontend-e2e` → `frontend/e2e/` | Playwright cases named for their AC, axe at WCAG 2.2 AA, and the `390px` `no-horizontal-scroll` sweep. The speed budget is the one in `make bench-mobile`: a `p95` over many runs, because one clock reading in a shared lane measures the machine it runs on |
 
-`craft static`, in the push hook and in CI, reads only the comment lines a
+`craft static`, in `make check` and in CI, reads only the comment lines a
 change adds to a `frontend/` file. The frontend lane is separate from the Go
 merge gate and needs Node and pnpm. Run `make check-fe` (or
 `make frontend-check`) before pushing a frontend change.
@@ -365,7 +370,7 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | what a route renders | `src/App.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
-| light and dark themes | `src/app/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
+| light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
 | a staging or approval surface | `src/design-system/trust.tsx` and `src/screens/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
@@ -379,14 +384,14 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 |---|---|
 | The API seam and the generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
 | Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
-| Registering the service worker, install state / the worker and its offline page | `frontend/src/app/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
+| Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the sign-in gate, the onboarding gate | `frontend/src/App.tsx` |
 | The shell, sidebar, page title | `frontend/src/app/{shell.tsx,shell.css}` |
 | Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
 | The rail list, the badge set, the phone set, the set with no rail | `frontend/src/app/nav.ts` |
-| The hash router | `frontend/src/app/router.tsx` |
+| The hash router | `frontend/src/lib/router.tsx` |
 | The `⌘K` palette, the agent in the rail | `frontend/src/app/{palette.tsx,agentrail.tsx}` |
-| How the theme resolves and is stored | `frontend/src/app/theme.ts` |
+| How the theme resolves and is stored | `frontend/src/lib/theme.ts` |
 | Tokens (the source) / derived roles / plain controls | `frontend/src/design-system/{tokens.css,brand.css,base.css}` |
 | Small parts, trust parts, composed surfaces | `frontend/src/design-system/{atoms,trust,composed}.tsx` |
 | The evidence mark | `frontend/src/design-system/evidencemark.tsx` |

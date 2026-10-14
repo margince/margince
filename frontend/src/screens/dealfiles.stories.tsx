@@ -8,8 +8,12 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+} from "../testing/story-utils";
 import { DealFiles, dealDocumentsKey } from "./dealfiles";
-import { installFetchStub, jsonResponse, type RouteMap } from "./story-utils";
 
 // The deal's Files area with both kinds of row — an upload and a captured
 // email attachment — the empty state, and a hide with its Undo and its

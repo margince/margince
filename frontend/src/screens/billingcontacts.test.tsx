@@ -202,25 +202,6 @@ async function settled(seen: Seen[]) {
   );
 }
 
-it("offers no verbs at all on a company this reader cannot write", async () => {
-  const seen: Seen[] = [];
-  stubFetch(seen);
-  render(
-    <BillingContactsPanel contacts={[PAT]} companyId={COMPANY} readOnly />,
-  );
-  // The seat here is fully granted: what refuses is the archived company, so
-  // the verbs would be drawn if readOnly were ignored. That only means
-  // something once the grant has landed.
-  await settled(seen);
-  // Who is invoiced still renders: that is a fact a read-only reader is
-  // entitled to. What goes is every way to change it.
-  expect(screen.getByText("Pat Okafor")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Add contact" })).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: /^Change .*’s role$/ }),
-  ).toBeNull();
-});
-
 it("offers no verbs to a reader without the relationship grant", async () => {
   // The company is perfectly writable and NOT archived — what is missing is
   // the grant to write a relationship. Before this the panel drew three

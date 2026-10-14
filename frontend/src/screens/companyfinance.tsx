@@ -1,7 +1,6 @@
 import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Sparkline } from "../design-system/readings";
@@ -9,10 +8,12 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { problemCodeOf } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
 import { BillingContactsPanel } from "./billingcontacts";
-import { problemCodeOf, useFinanceSummary } from "./common";
 import { RecentInvoices } from "./financeinvoices";
 import { OverdueLead } from "./financeoverdue";
+import { useFinanceSummary } from "./financesummary";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -93,13 +94,8 @@ export function hasFinance(lifecycle?: string): boolean {
 export function CompanyFinanceCard({
   companyId,
   lifecycle,
-  readOnly = false,
 }: Readonly<{
   companyId: string;
-  // The company's own write refusal, threaded from the record page. Only the
-  // billing-contacts panel reads it: every other reading on this card comes
-  // from an accounting source nobody edits here.
-  readOnly?: boolean;
   // The account's lifecycle. A target, a prospect or an opportunity has never
   // been invoiced, so the card is ABSENT for them rather than empty (FIN-AC-3)
   // — an empty finance card on a company we have never billed is a question
@@ -196,7 +192,6 @@ export function CompanyFinanceCard({
       <BillingContactsPanel
         contacts={summary.billing_contacts}
         companyId={companyId}
-        readOnly={readOnly}
       />
     </div>
   );

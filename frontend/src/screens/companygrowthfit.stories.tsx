@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { GrowthFitPanel } from "./companygrowthfit";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // GrowthFitPanel answers what this company is worth to US, not what it is,
 // and the band never renders alone (see the docblock in companygrowthfit.tsx):

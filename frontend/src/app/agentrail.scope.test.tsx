@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
-import { meFixture } from "./mefixture";
 
 // AC-shell-8, on the surface that carries it now.
 //

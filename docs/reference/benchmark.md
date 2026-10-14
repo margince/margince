@@ -38,21 +38,21 @@ How a case is chosen and added: [design-a-bench-case.md](../how-to/design-a-benc
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | Opening the app | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| The Worklist | 🟡 About 5.3 seconds | 🟡 About 7.2 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). |
-| Home | 🟡 About 5.2 seconds | 🟡 About 4.6 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). |
+| The Worklist | 🟡 About 1.6 seconds | 🟡 About 1.3 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). |
+| Home | 🟢 Under a second | 🟢 Under a second | Fast. |
 
 The first open after a restart is slower, because nothing is warmed up yet:
 
-- The Worklist for a rep, first open after a restart: about 5.6 seconds.
-- Search for a rep, first open after a restart: about 4.5 seconds.
+- The Worklist for a rep, first open after a restart: about 3.8 seconds.
+- Search for a rep, first open after a restart: under a second.
 
 ## How quickly do I find a customer?
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| Typing a name in the search box | 🟡 About 1.7 seconds | 🟡 About 3 seconds | Slower than we promise: we are working on it ([#7037](https://github.com/margince/margince/issues/7037)). |
-| Typing the first few letters | 🟡 About 5.1 seconds | 🟡 About 5.2 seconds | Slower than we promise: we are working on it ([#7037](https://github.com/margince/margince/issues/7037)). |
-| The full search results | 🔴 About 3.7 seconds | 🔴 About 1.2 seconds | Too slow, and nobody is working on it yet. |
+| Typing a name in the search box | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| Typing the first few letters | 🟢 Under a second | 🟢 Under a second | Fast. |
+| The full search results | 🟢 Under a quarter of a second | 🟢 Under a second | Fast. |
 | Search, then open the company | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 ## How quickly do I find a deal?
@@ -74,7 +74,7 @@ The first open after a restart is slower, because nothing is warmed up yet:
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| The analytics screen | 🟢 Under a quarter of a second | 🟢 Under a second | Fast. |
+| The analytics screen | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 ## What happens when the whole team starts at 9:00?
 

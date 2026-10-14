@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components, operations } from "../api/schema";
-import { useCan } from "../app/capability";
 import { EmptyState, SegmentedControl } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { Heading } from "../design-system/heading";
@@ -17,8 +16,9 @@ import {
   usePlural,
   useT,
 } from "../i18n";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
 import { callsHrefFor } from "./aicalls";
-import { unwrap } from "./common";
 import "./ai-settings.css";
 
 // What a provider, a tier or a host actually did, read from the call record

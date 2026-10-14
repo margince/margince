@@ -3,11 +3,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWriteRecord } from "../app/capability";
 import { Badge, Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { problemMessageOf } from "./common";
+import { useCanWriteRecord } from "../lib/capability";
+import { problemMessageOf } from "../lib/problem";
 import {
   useCompanyFieldPatch,
   useCompanyReadOnlyReason,

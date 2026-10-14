@@ -5,13 +5,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { BuyerBoard } from "./buyerroomboard";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { BuyerBoard } from "./buyerroomboard";
 // The buyer page's own sheet: `.buyer-doc-actions` is reached BY CLASS from
 // this file, and the module graph of a story here stops short of buyerroom.tsx
 // which loads it.

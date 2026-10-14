@@ -20,7 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 )
 
-const frontendAttachmentUpload = "../frontend/src/screens/attachmentupload.ts"
+const frontendAttachmentUpload = "../frontend/src/lib/attachmentupload.ts"
 
 // tsAttachmentList is the array literal's body; tsExtension one quoted entry in it.
 var (

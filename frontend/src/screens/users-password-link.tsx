@@ -7,7 +7,7 @@ import { Heading } from "../design-system/heading";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { problemMessage } from "./common";
+import { problemMessage } from "../lib/problem";
 import "./users-admin.css";
 
 // The admin-issued set-password link (ADR-0061 Amendment 1). On an installation

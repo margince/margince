@@ -7,8 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
-import { navigate, parseHash, useRoute } from "../app/router";
+import { navigate, parseHash, useRoute } from "../lib/router";
+import { meFixture } from "../testing/mefixture";
 import { ImportCard } from "./import";
 import {
   dryRun,

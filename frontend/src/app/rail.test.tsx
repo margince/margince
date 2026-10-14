@@ -12,7 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { navigate, parseHash, type Route } from "./router";
+import { navigate, parseHash, type Route } from "../lib/router";
 import { Shell, WorkspaceRail } from "./shell";
 import {
   fixtureSection,

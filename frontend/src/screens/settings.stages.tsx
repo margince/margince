@@ -11,7 +11,6 @@
 import { ArrowDown, Lock } from "lucide-react";
 import { useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useCanWrite } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
 import { CellStack } from "../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
@@ -23,6 +22,7 @@ import { foldForMatch } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type PluralTranslator, useLocale, usePlural, useT } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { useCanWrite } from "../lib/capability";
 import {
   CriterionCreateDialog,
   StageExitCriteria,

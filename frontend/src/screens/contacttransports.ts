@@ -16,6 +16,8 @@ import { useProviderLabel } from "./channelproviders";
 // transport the record does not carry.
 
 type Contact360 = components["schemas"]["Contact360"];
+// An archived contact's page holds only the row: the server refuses its 360.
+export type TransportSource = Pick<Contact360, "contact" | "activities">;
 
 export type Transport = {
   // `email` or a channel_provider id. The two live in one namespace because the
@@ -43,7 +45,7 @@ export type Transport = {
 // says there is something to continue. A transport with one and not the other
 // would be a choice that fails at the send.
 export function transportsFor(
-  view: Contact360,
+  view: TransportSource,
   providerLabel: (provider: string) => string,
   t: ReturnType<typeof useT>,
 ): Transport[] {
@@ -141,7 +143,7 @@ export function transportForActivity(
 // Both readers need the transport directory and the reader's own language to
 // name a provider, and both would otherwise reach for the two hooks themselves:
 // one place to forget one of them is enough.
-export function useTransports(view: Contact360): Transport[] {
+export function useTransports(view: TransportSource): Transport[] {
   const t = useT();
   const providerLabel = useProviderLabel();
   return transportsFor(view, providerLabel, t);

@@ -6,7 +6,7 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, problemMessageOf } from "./common";
+import { problemCodeOf, problemMessageOf } from "../lib/problem";
 
 // The task sheet's timeout control and the two ways a read or a save of the
 // task's settings can fail.

@@ -4,8 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { announceAddressChanged } from "../app/router";
 import { en } from "../i18n/en";
+import { announceAddressChanged } from "../lib/router";
+import { removeStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import {
   leadRow,
   meetingRow,
@@ -15,12 +22,6 @@ import {
   waitingEmailRow,
 } from "./brief.fixtures";
 import { BriefQueue } from "./brief.queue";
-import {
-  installFetchStub,
-  jsonResponse,
-  meRoute,
-  StoryProviders,
-} from "./story-utils";
 
 function QueueFrame({ day }: Readonly<{ day?: Worklist }>) {
   useEffect(() => {
@@ -84,6 +85,9 @@ const meta: Meta<typeof BriefQueue> = {
   title: "Shell/Home/Work queue",
   component: BriefQueue,
   render: () => <QueueFrame />,
+  // The drawer's size is remembered by the browser, so every frame starts from
+  // the default unless it says otherwise.
+  beforeEach: () => removeStored(STORAGE_KEYS.worklistDrawerWide),
 };
 export default meta;
 type Story = StoryObj<typeof BriefQueue>;
@@ -137,6 +141,45 @@ export const AFullDay: Story = {
 export const AFullDayInDark: Story = {
   ...AFullDay,
   globals: { theme: "dark" },
+};
+
+/**
+ * The same day with the drawer expanded to the window, as remembered. What to
+ * check: each row's verbs are one line beside the work, and Collapse sits
+ * beside the X. The first row's menu opens above the drawer.
+ */
+export const AFullDayExpanded: Story = {
+  beforeEach: () => writeStored(STORAGE_KEYS.worklistDrawerWide, "1"),
+  render: () => <QueueFrame day={aLeadsDay()} />,
+  play: async () => {
+    const drawer = await within(document.body).findByRole("dialog", {
+      name: en["brief.queue.title"],
+    });
+    await expect(drawer).toHaveClass("modal-drawer-window");
+    await expect(
+      within(drawer).getByRole("button", { name: en["common.collapse"] }),
+    ).toBeInTheDocument();
+    const named = en["worklist.rowMenu"];
+    const lead = named.slice(0, named.indexOf("{title}"));
+    const [menu] = await within(drawer).findAllByRole("button", {
+      name: (name) => name.startsWith(lead),
+    });
+    if (!menu) throw new Error("the queue shows no row menu");
+    await userEvent.click(menu);
+    // The panel is portalled out of the drawer, so the layer on top at its
+    // centre decides whether a reader can press it.
+    const snooze = await within(document.body).findByRole("button", {
+      name: en["worklist.disposition.verb.snooze"],
+    });
+    const panel = snooze.closest(".overflow-menu-items");
+    const box = panel?.getBoundingClientRect();
+    if (!panel || !box) throw new Error("the menu drew no panel");
+    const top = document.elementFromPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    );
+    await expect(panel.contains(top)).toBe(true);
+  },
 };
 
 /** A lead's day: every scope on offer and enough rows that the queue is a list

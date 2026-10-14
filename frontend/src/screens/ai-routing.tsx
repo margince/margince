@@ -2,14 +2,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan, useCanWrite } from "../app/capability";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate, QueryStates } from "../design-system/querystates";
 import { stable } from "../format/collate";
 import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { useCan, useCanWrite } from "../lib/capability";
+import { problemMessageOf, throwProblem } from "../lib/problem";
+import { useMe } from "../lib/session";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
@@ -29,13 +32,6 @@ import { type Lane, TiersTable } from "./ai-routing-lane";
 import { ROUTING_KEY, type RoutingRead, useRouting } from "./ai-routing-query";
 import { type SliceValue, sliceOf } from "./ai-routing-slice";
 import { PanelTitle, TermLegend } from "./ai-terms";
-import {
-  problemMessageOf,
-  QueryGate,
-  QueryStates,
-  throwProblem,
-  useMe,
-} from "./common";
 import { SETUP_PROVIDERS } from "./setup-providers";
 import "./ai-settings.css";
 

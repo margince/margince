@@ -3,26 +3,24 @@
 
 package compose
 
-// The pass that settles every import run nothing else will move. A commit
-// whose process stopped is marked failed, so approve resumes it from its
-// checkpoint. A test run whose process stopped returns to draft. A draft left
-// untouched past its time to live is cancelled. A run that will never read its
-// file again releases it, so the stored-object reaper deletes the bytes. An
-// undoing run is never touched, because undo already resumes it.
+// The pass that settles every import run nothing else will move. A stale or
+// lost attempt of a test run, a commit or an undo is queued again. A commit old
+// code started fails once idle, so approve resumes it. Test runs old code
+// started and idle drafts are closed, and finished runs release their file.
+// River's tables are never read.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,14 +28,6 @@ import (
 // staleImportCause is the error a swept run carries; GET shows it beside the
 // checkpoint approve resumes from.
 const staleImportCause = "the import stopped because the server restarted; approve it again to continue from its checkpoint"
-
-// staleValidationAfter is when a test run is past saving. Its request ends at
-// the response deadline, so twice that leaves the request time to record it.
-const staleValidationAfter = 2 * httpserver.ResponseDeadline
-
-// importDraftTTL is how long a draft or a report keeps its uploaded file
-// while nobody touches it.
-const importDraftTTL = 7 * 24 * time.Hour
 
 // ImportRunSweepArgs carries nothing: the pass reads which runs are stale.
 type ImportRunSweepArgs struct{}
@@ -59,11 +49,14 @@ type importSweepRule struct {
 }
 
 var importSweepRules = []importSweepRule{
-	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
-		return runs.FailStaleRunning(ctx, importCommitTimeout, staleImportCause)
+	{"stale_attempts_resumed", func(ctx context.Context, runs *migration.RunStore) (int, error) {
+		return runs.ResumeStaleAttempts(ctx, importStaleAfter, importMaxResumes, requeueImportAttempt)
 	}},
-	{"test_runs_returned", func(ctx context.Context, runs *migration.RunStore) (int, error) {
-		return runs.ReturnStaleTestRuns(ctx, staleValidationAfter)
+	{"lost_jobs_requeued", func(ctx context.Context, runs *migration.RunStore) (int, error) {
+		return runs.RequeueLostJobs(ctx, importQueuedReinsertAfter, requeueImportAttempt)
+	}},
+	{"failed_commits", func(ctx context.Context, runs *migration.RunStore) (int, error) {
+		return runs.FailStaleRunning(ctx, importLegacyIdleAfter, staleImportCause)
 	}},
 	{"stopped_test_runs_cancelled", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.CancelStoppedTestRuns(ctx)
@@ -74,6 +67,35 @@ var importSweepRules = []importSweepRule{
 	{"sources_released", func(ctx context.Context, runs *migration.RunStore) (int, error) {
 		return runs.ReleaseFinishedSources(ctx)
 	}},
+}
+
+// requeueImportAttempt inserts the job of the run's current attempt through
+// the River client working the sweep, and answers whether River inserted it.
+func requeueImportAttempt(ctx context.Context, tx pgx.Tx, run migration.Run) (bool, error) {
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	if err != nil {
+		return false, fmt.Errorf("the sweep runs outside a River job: %w", err)
+	}
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return false, errors.New("the sweep's context binds no workspace")
+	}
+	var args importJobArgs
+	switch run.Status {
+	case migration.StatusRunning:
+		args = ImportCommitArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	case migration.StatusUndoing:
+		args = ImportUndoArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	case migration.StatusValidating:
+		args = ImportValidateArgs{Workspace: ws, RunID: run.ID, Attempt: run.JobAttempt}
+	default:
+		return false, fmt.Errorf("import run %s is %s, which no job works", run.ID, run.Status)
+	}
+	res, err := client.InsertTx(ctx, tx, args, args.insertOpts())
+	if err != nil {
+		return false, fmt.Errorf("inserting %s for import run %s: %w", args.Kind(), run.ID, err)
+	}
+	return !res.UniqueSkippedAsDuplicate, nil
 }
 
 // Work runs every rule even when one fails, so one broken rule cannot keep

@@ -53,7 +53,7 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
 		Description:   forecastReadingsCopy.render(),
 		Instead:       forecastReadingsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
@@ -156,7 +156,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
 		Description:   forecastMovementCopy.render(),
 		Instead:       forecastMovementCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},

@@ -2,9 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { useCanWrite } from "../app/capability";
-import type { EntityKind } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
 import {
   Button,
   Checkbox,
@@ -24,6 +21,12 @@ import { useSinglePress } from "../design-system/presslatch";
 import { Select } from "../design-system/select";
 import { calendarDay } from "../format/calendarday";
 import { useT } from "../i18n";
+import { loggedActivityKeys } from "../lib/activitykeys";
+import { useCanWrite } from "../lib/capability";
+import type { EntityKind } from "../lib/entity";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useMe } from "../lib/session";
 import {
   type ActivityDraft,
   activityRequestBody,
@@ -32,9 +35,7 @@ import {
   NO_ATTENDEES,
 } from "./activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
-import { loggedActivityKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
-import { unwrap, useMe } from "./common";
 import "./logactivity.css";
 import { MeetingAttendeeFields } from "./meetingattendees";
 

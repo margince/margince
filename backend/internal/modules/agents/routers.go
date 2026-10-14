@@ -10,4 +10,20 @@ func RegisterRouters(r *Registry) {
 	r.Register(changeLeadState{})
 	r.Register(describeVocabulary{})
 	r.Register(readInputChecks{})
+	r.Register(readForecast{})
+	registerWhereServed(r, readDirectory{})
+	registerWhereServed(r, draftOutbound{})
+	registerWhereServed(r, readProject{})
+	registerWhereServed(r, resolveDuplicates{})
+}
+
+// registerWhereServed registers a router whose targets come from seams a
+// composition may leave out, and only where every target was registered.
+func registerWhereServed(r *Registry, rt router) {
+	for _, target := range rt.routeTargets() {
+		if _, served := r.Spec(target); !served {
+			return
+		}
+	}
+	r.Register(rt)
 }

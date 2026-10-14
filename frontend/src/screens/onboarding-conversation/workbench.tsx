@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useCan } from "../../app/capability";
 import { AiRuntimeChip } from "../../design-system/airuntimechip";
 import type { MarginceCoreState } from "../../design-system/margince-core";
 import {
@@ -11,7 +10,8 @@ import {
   type StageProgress,
 } from "../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { throwProblem, unwrap } from "../common";
+import { useCan } from "../../lib/capability";
+import { throwProblem, unwrap } from "../../lib/problem";
 import { loadWizardState } from "../onboarding";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";

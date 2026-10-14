@@ -97,8 +97,8 @@ func TestATemplateSignsAPlainSendInMarkupAndText(t *testing.T) {
 		t.Fatalf("save template: %v", err)
 	}
 	logoKey := "logos/" + ids.NewV7().String() + ".png"
-	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, source, captured_by)
-		VALUES ($1, 'Company A', true, $2, 'manual', 'human:x')`, ids.NewV7(), logoKey)
+	e.WsExec(t, `INSERT INTO company (id, display_name, is_anchor, logo_object_key, logo_origin, source, captured_by)
+		VALUES ($1, 'Company A', true, $2, 'upload', 'manual', 'human:x')`, ids.NewV7(), logoKey)
 	signatures := contacts.NewStore(InstallationDB(e.Pool))
 	title, phone := "Head of Sales", "+49 30 1234"
 	if _, err := signatures.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{

@@ -3,19 +3,22 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { operations } from "../api/schema";
 import { THEME_LABEL_KEYS } from "../app/account";
-import { useCanWrite } from "../app/capability";
-import { navigateReplacing, type Route } from "../app/router";
-import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../app/theme";
 import { Avatar, Button, Disclosure, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { navigateReplacing, type Route } from "../lib/router";
+import { useLogout, useMe } from "../lib/session";
+import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { AgentConnectionsCard } from "./agent-token-settings";
 import { AiBudgetCard } from "./ai-admin";
@@ -37,13 +40,6 @@ import {
   MailSyncCard,
   WebsiteReadingCard,
 } from "./capture-settings";
-import {
-  problemMessageOf,
-  QueryGate,
-  unwrap,
-  useLogout,
-  useMe,
-} from "./common";
 import { CompanyContextCard } from "./company-context";
 import { ConnectedAgentsCard } from "./connected-agents";
 import { ConnectorsCard } from "./connectors";
@@ -640,11 +636,11 @@ function AccountCard() {
 /**
  * The appearance choice, in Settings as well as in the account menu.
  *
- * ONE state, two faces: both read `useThemeChoice` and write `setThemeChoice`
- * from app/theme.ts, so changing it in either place moves the other. The menu
- * keeps its shortcut — appearance is the setting a reader changes most often and
- * from wherever they are standing — and this is where somebody who came to
- * Settings looking for it finds it.
+ * One state, two faces. Both read `useThemeChoice` and write `setThemeChoice`
+ * from lib/theme.ts, so changing it in either place moves the other. The menu
+ * keeps its shortcut, because appearance is the setting a reader changes most
+ * often and from anywhere. This is where somebody who came to Settings looking
+ * for it finds it.
  */
 function AppearanceSettingRow() {
   const t = useT();

@@ -1,6 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { problemCode, problemDetails } from "./problembody";
+import { problemCode, problemDetails } from "../lib/problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
 

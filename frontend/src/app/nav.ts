@@ -10,11 +10,11 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { EXTENSION_SCREEN } from "../lib/extensions";
+import type { Route, Screen } from "../lib/router";
 import { opensAFocusedFiltersPage } from "../screens/filtersaddress";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
-import { type EntityKind, SCREEN_ENTITY } from "./entity";
-import { EXTENSION_SCREEN } from "./extensions";
-import type { Route, Screen } from "./router";
 import {
   type NavLevelEntry,
   type NavSection,

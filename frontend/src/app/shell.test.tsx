@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { parseHash, type Route } from "./router";
+import { parseHash, type Route } from "../lib/router";
 import { PageTitle, Shell } from "./shell";
 import {
   fixtureSection,

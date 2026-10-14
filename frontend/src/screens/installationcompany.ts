@@ -4,8 +4,9 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useHoldsAdminRole } from "../app/capability";
-import { throwProblem, useMe } from "./common";
+import { useHoldsAdminRole } from "../lib/capability";
+import { throwProblem } from "../lib/problem";
+import { useMe } from "../lib/session";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 

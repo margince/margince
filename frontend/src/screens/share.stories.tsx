@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ShareScreen } from "./share";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // ShareScreen (AS-3/4/5) — record-level manual grants (A52/ADR-0039):
 // empty roster (nothing to grant to yet), a roster that failed to load, a

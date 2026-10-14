@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type GrantSpec, meFixture } from "../app/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ModelPricesCard } from "./ai-price-sync";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The Model prices card: where prices come from, whether they sync daily, and
 // what the last sync did for each vendor that had something to say.

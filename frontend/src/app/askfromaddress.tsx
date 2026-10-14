@@ -4,7 +4,7 @@ import {
   ASK_QUESTION_PARAM,
   closeAsk,
   useUrlParams,
-} from "./urlstate";
+} from "../lib/urlstate";
 
 // The Ask dialog, opened by the ADDRESS rather than by a screen.
 //

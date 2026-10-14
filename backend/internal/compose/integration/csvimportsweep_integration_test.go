@@ -8,12 +8,13 @@ package integration
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // backdateImportRun makes a run look as if its process stopped writing to it
@@ -33,45 +34,50 @@ func sweepImportRuns(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-func TestTheSweepFailsARunWhoseProcessStoppedAndApproveResumesIt(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, nil); status != http.StatusAccepted {
-		t.Fatalf("approve → %d, want 202", status)
+func TestALegacyRunningRunIsNeverRequeued(t *testing.T) {
+	e := setupImportApp(t)
+	commit := compose.ImportCommitArgs{}.Kind()
+	runID := approvedButUnworked(t, e)
+	killJobs(t, e, commit, runID)
+	claimThenFallSilent(t, e, runID, 0)
+	// Old code approved a run a new worker had validated, so the status it
+	// entered is not the one its attempt was queued for.
+	if _, err := e.Owner.Exec(t.Context(),
+		`UPDATE import_run SET job_status = 'validating' WHERE id = $1`, runID); err != nil {
+		t.Fatalf("making the run legacy: %v", err)
 	}
+	legacy := readLease(t, e, runID)
 
 	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "running" {
-		t.Fatalf("a run inside its budget was swept: %q", polled.Status)
+	if polled := readRun(t, e, runID); polled.Status != "running" {
+		t.Fatalf("a legacy run inside its idle window was swept: %q", polled.Status)
+	}
+	if got := readLease(t, e, runID); got.attempt != legacy.attempt || got.resumes != 0 {
+		t.Fatalf("the sweep moved a legacy run to attempt %d with %d resumes; it must never re-queue one",
+			got.attempt, got.resumes)
 	}
 
-	backdateImportRun(t, e, run.ID)
+	backdateImportRun(t, e, runID)
 	sweepImportRuns(t, e)
-	var failed struct {
-		Status string `json:"status"`
-		Error  string `json:"error"`
+	if polled := readRun(t, e, runID); polled.Status != "failed" || !strings.Contains(polled.Error, "server restarted") {
+		t.Fatalf("after the sweep: %q %q, want failed saying the server restarted", polled.Status, polled.Error)
 	}
-	e.Call(t, http.MethodGet, "/v1/imports/"+run.ID, nil, nil, &failed)
-	if failed.Status != "failed" || !strings.Contains(failed.Error, "server restarted") {
-		t.Fatalf("after the sweep: %q %q, want failed saying the server restarted", failed.Status, failed.Error)
+	if jobs := jobsOf(t, e, commit, runID); !slices.Equal(jobs, []attemptJob{{legacy.attempt, "running"}}) {
+		t.Fatalf("the legacy run's jobs are %v, want no new one", jobs)
 	}
 
-	runner.inline = true
-	approveAndRead(t, e, run.ID)
+	approveAndRead(t, e, runID)
 	if n := leadCount(t, e); n != 3 {
 		t.Fatalf("%d leads after the resumed commit, want 3", n)
 	}
 }
 
 func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
-	runner.inline = true
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
 
-	runner.inline = false
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo → %d, want 202", status)
 	}
@@ -82,30 +88,40 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 	}
 }
 
-func TestAStaleLegacyTestRunReturnsToDraft(t *testing.T) {
-	e, _ := setupImportAppHeld(t)
+func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	// The run's test already ran; put it back as a test whose job was queued and
+	// then lost before any worker claimed it.
+	if _, err := e.Owner.Exec(t.Context(), `
+		UPDATE import_run SET status = 'validating', job_status = 'validating', claimed_attempt = NULL,
+		       report = NULL, updated_at = now() WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("queueing the test again: %v", err)
+	}
+	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM river_job WHERE kind = $1`,
+		compose.ImportValidateArgs{}.Kind()); err != nil {
+		t.Fatalf("losing the queued job: %v", err)
+	}
+
+	sweepImportRuns(t, e)
+	if worked := importjobtest.WorkQueued(t, e, compose.ImportValidateArgs{}.Kind()); len(worked) != 0 {
+		t.Fatalf("the sweep queued a job for a run that was queued moments ago: %d", len(worked))
+	}
+
 	if _, err := e.Owner.Exec(t.Context(),
-		`UPDATE import_run SET status = 'validating', updated_at = now() WHERE id = $1`, run.ID); err != nil {
-		t.Fatalf("putting the run back in validating: %v", err)
+		`UPDATE import_run SET updated_at = now() - interval '3 minutes' WHERE id = $1`, run.ID); err != nil {
+		t.Fatalf("backdating the run: %v", err)
 	}
-
 	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "validating" {
-		t.Fatalf("a test run its request may still be working was swept: %q", polled.Status)
-	}
-
-	backdateImportRun(t, e, run.ID)
-	sweepImportRuns(t, e)
-	if polled := readRun(t, e, run.ID); polled.Status != "pending" || polled.Error != migration.CauseTestRunStopped {
-		t.Fatalf("after the sweep: %q %q, want a draft saying the test run stopped", polled.Status, polled.Error)
+	importjobtest.Drain(t, e)
+	if got := readRun(t, e, run.ID); got.Status != "awaiting_approval" {
+		t.Fatalf("after the sweep and a worker: %q, want awaiting_approval", got.Status)
 	}
 }
 
 func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
-	e, runner := setupImportAppHeld(t)
-	runner.inline = true
+	e := setupImportApp(t)
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	run, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	approveAndRead(t, e, run.ID)
@@ -132,7 +148,7 @@ func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
 	if polled := readRun(t, e, run.ID); polled.Status != "complete" {
 		t.Fatalf("releasing the source moved the run to %q, want it complete", polled.Status)
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, nil); status != http.StatusAccepted {
+	if status := importCall(t, e, run.ID, "undo", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("undo of a released run → %d, want 202: undo reads the map, never the file", status)
 	}
 	if polled := readRun(t, e, run.ID); polled.Status != "undone" {

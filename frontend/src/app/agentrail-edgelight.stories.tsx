@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useEffect } from "react";
-import { StoryProviders } from "../screens/story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { setEdgeLightShown } from "./agent-edge-preference";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 // The row draws itself as the agent panel's foot (`.arfoot`), and that rule

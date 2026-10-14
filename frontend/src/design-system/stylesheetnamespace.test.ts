@@ -44,13 +44,13 @@ const namespaces = [
   { prefix: "oauthconsent-", home: "screens/oauthconsent.css" },
   { prefix: "offers-", home: "screens/offers.css" },
   { prefix: "partnercommissions-", home: "screens/partnercommissions.css" },
-  { prefix: "querygate-", home: "screens/common.css" },
+  { prefix: "querygate-", home: "design-system/querystates.css" },
   { prefix: "relationshiprows-", home: "screens/relationshiprows.css" },
   { prefix: "relationships-", home: "screens/relationships.css" },
   { prefix: "repeatablerowsfield-", home: "screens/repeatablerowsfield.css" },
   { prefix: "scheduledsends-", home: "screens/scheduledsends.css" },
   { prefix: "storyhost-", home: "mcp-apps/story-hosts.css" },
-  { prefix: "transcript-", home: "screens/transcriptread.css" },
+  { prefix: "transcript-", home: "design-system/transcriptread.css" },
 ];
 
 const homeSheet = (home: string) => `src/${home}`;

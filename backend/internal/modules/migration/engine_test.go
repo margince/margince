@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,6 +44,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 	})
 	s := NewRunStore(nil)
 	runID := RunID(ids.NewV7())
+	lease := Lease{Run: runID, Status: StatusRunning, Attempt: 1}
 
 	for _, entry := range []struct {
 		name string
@@ -53,17 +56,6 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
 		{"Latest", func() error { _, err := s.Latest(ctx, connectorSalesforce); return err }},
-		{"LookupIdentity", func() error {
-			_, _, err := s.LookupIdentity(ctx, "legacy_crm", "contact", "1")
-			return err
-		}},
-		{"RecordIdentity", func() error {
-			return s.RecordIdentity(ctx, runID, "legacy_crm", "contact", "1", ids.NewV7())
-		}},
-		{"RecordIdentities", func() error {
-			return s.RecordIdentities(ctx, runID, "legacy_crm", "contact",
-				[]IdentityPair{{ExternalID: "1", NativeID: ids.NewV7()}})
-		}},
 		{"Resume", func() error { return s.Resume(ctx, runID) }},
 		{"RecordImportSourceIntent", func() error {
 			return s.RecordImportSourceIntent(ctx, "ws/import/x")
@@ -73,15 +65,14 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			return err
 		}},
 		{"RunOfSource", func() error { _, err := s.RunOfSource(ctx, "x"); return err }},
-		{"AwaitApproval", func() error { return s.AwaitApproval(ctx, runID, Report{}) }},
-		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0); return err }},
-		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0); return err }},
+		{"Approve", func() error { _, err := s.Approve(ctx, runID, 0, queueNothing); return err }},
+		{"ResumeApproved", func() error { _, err := s.ResumeApproved(ctx, runID, 0, queueNothing); return err }},
 		{"GetStaged", func() error { _, err := s.GetStaged(ctx, runID); return err }},
 		{"ListStaged", func() error { _, _, err := s.ListStaged(ctx, "", 20); return err }},
 		{"RecordIdentityTx", func() error {
 			// The borrowed transaction is never reached: the grant is taken
 			// first, which is the whole claim. A nil tx proves it.
-			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7())
+			return s.RecordIdentityTx(ctx, nil, runID, "legacy_crm", "contact", "1", ids.NewV7(), OriginCreated)
 		}},
 		{"BindingsOf", func() error {
 			_, err := s.BindingsOf(ctx, "legacy_crm", "contact")
@@ -91,23 +82,31 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 			_, _, err := s.LookupBinding(ctx, "legacy_crm", "contact", "1")
 			return err
 		}},
-		{"Undo", func() error { _, err := s.Undo(ctx, runID, nil); return err }},
-		{"ClaimUndo", func() error { return s.ClaimUndo(ctx, runID) }},
-		{"FailRunning", func() error { return s.FailRunning(ctx, runID, "stopped") }},
+		{"ClaimUndo", func() error { _, err := s.ClaimUndo(ctx, runID, queueNothing); return err }},
 		{"FailStaleRunning", func() error { _, err := s.FailStaleRunning(ctx, time.Minute, "stopped"); return err }},
-		{"ReturnStaleTestRuns", func() error { _, err := s.ReturnStaleTestRuns(ctx, time.Minute); return err }},
 		{"CancelStoppedTestRuns", func() error { _, err := s.CancelStoppedTestRuns(ctx); return err }},
 		{"CancelIdleDrafts", func() error { _, err := s.CancelIdleDrafts(ctx, time.Minute); return err }},
 		{"ReleaseFinishedSources", func() error { _, err := s.ReleaseFinishedSources(ctx); return err }},
+		{"ResumeStaleAttempts", func() error { _, err := s.ResumeStaleAttempts(ctx, time.Minute, 1, requeueNothing); return err }},
+		{"RequeueLostJobs", func() error { _, err := s.RequeueLostJobs(ctx, time.Minute, requeueNothing); return err }},
 		{"CreateDraftRun", func() error {
 			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},
-		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1); return err }},
-		{"ReturnToDraft", func() error { return s.ReturnToDraft(ctx, runID, "refused") }},
+		{"QueueValidation", func() error { _, _, err := s.QueueValidation(ctx, runID, 1, RunMapping{}, queueNothing); return err }},
 		{"Cancel", func() error { _, err := s.Cancel(ctx, runID); return err }},
 		{"DiscardOwnDraft", func() error { return s.DiscardOwnDraft(ctx, "ws/import/x") }},
+		{"Claim", func() error { _, err := s.Claim(ctx, lease); return err }},
+		{"Yield", func() error { return s.Yield(ctx, lease) }},
+		{"Heartbeat", func() error { return s.Heartbeat(ctx, lease) }},
+		{"FlushTestProgress", func() error { return s.FlushTestProgress(ctx, lease, Progress{}, PhaseReading, "") }},
+		{"FinishValidation", func() error { return s.FinishValidation(ctx, lease, Report{}) }},
+		{"RefuseValidation", func() error { return s.RefuseValidation(ctx, lease, CauseStopped) }},
+		{"Flush", func() error { return s.Flush(ctx, lease, Flush{}) }},
+		{"FailLease", func() error { return s.FailLease(ctx, lease, CauseStopped) }},
+		{"LockRunWrites", func() error { _, err := s.LockRunWrites(ctx, runID); return err }},
+		{"UndoSlice", func() error { _, err := s.UndoSlice(ctx, lease, nil, Budget{}); return err }},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			if err := entry.call(); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -122,11 +121,16 @@ type fakeSource struct {
 	objects map[string][]Row
 	order   []string
 	assocs  []Assoc
+	// counted is how many times the source was counted.
+	counted int
+	// reading, when set, runs as each page is read: the time a read takes.
+	reading func()
 }
 
 func (f *fakeSource) Objects() []string { return f.order }
 
 func (f *fakeSource) Counts(context.Context) (map[string]int, error) {
+	f.counted++
 	c := make(map[string]int, len(f.objects))
 	for k, rows := range f.objects {
 		c[k] = len(rows)
@@ -135,6 +139,9 @@ func (f *fakeSource) Counts(context.Context) (map[string]int, error) {
 }
 
 func (f *fakeSource) Rows(_ context.Context, object string, offset, limit int) ([]Row, error) {
+	if f.reading != nil {
+		f.reading()
+	}
 	rows := f.objects[object]
 	if offset >= len(rows) {
 		return nil, nil
@@ -226,7 +233,16 @@ func (w *fakeWriters) Associate(_ context.Context, a Assoc) (AssocResult, error)
 // fakeRuns is the in-memory run record — the loop's checkpoint/resume
 // contract is provable without Postgres (the SQL RunStore has its own
 // integration coverage).
-type fakeRuns struct{ run Run }
+type fakeRuns struct {
+	run Run
+	// checkpoints records the cursors the loop advanced to, in order.
+	checkpoints []int
+}
+
+// queueNothing stands in for the job queue, which lives in compose.
+func queueNothing(context.Context, pgx.Tx, Run) error { return nil }
+
+func requeueNothing(context.Context, pgx.Tx, Run) (bool, error) { return false, nil }
 
 func newFakeRuns() *fakeRuns {
 	return &fakeRuns{run: Run{Status: StatusRunning}}
@@ -242,6 +258,7 @@ func (r *fakeRuns) advanceCheckpoint(_ context.Context, _ RunID, checkpoint int)
 		return fmt.Errorf("checkpoint %d is behind %d: %w", checkpoint, r.run.Checkpoint, apperrors.ErrConflict)
 	}
 	r.run.Checkpoint = checkpoint
+	r.checkpoints = append(r.checkpoints, checkpoint)
 	return nil
 }
 
@@ -655,16 +672,18 @@ func TestTheRepairRunsEvenWhenNoCheckpointWasEverRecorded(t *testing.T) {
 // ungranted human, which is what this table proves.
 func TestEveryRunStoreEntryPointIsGateChecked(t *testing.T) {
 	checked := map[string]bool{
-		"Create": true, "Get": true, "Latest": true, "LookupIdentity": true,
-		"RecordIdentity": true, "RecordIdentities": true, "Resume": true,
-		"RunOfSource": true, "DiscardOwnDraft": true, "AwaitApproval": true, "Approve": true,
+		"Create": true, "Get": true, "Latest": true, "Resume": true,
+		"RunOfSource": true, "DiscardOwnDraft": true, "Approve": true,
 		"ResumeApproved": true, "GetStaged": true, "ListStaged": true,
-		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true, "Undo": true,
+		"RecordIdentityTx": true, "LookupBinding": true, "BindingsOf": true,
 		"RecordImportSourceIntent": true, "UnreferencedImportKeys": true,
-		"ClaimUndo": true, "FailRunning": true, "FailStaleRunning": true,
-		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true, "ReturnToDraft": true,
-		"Cancel": true, "ReturnStaleTestRuns": true, "CancelStoppedTestRuns": true,
+		"ClaimUndo": true, "FailStaleRunning": true,
+		"CreateDraftRun": true, "UpdateDraft": true, "QueueValidation": true,
+		"Cancel": true, "CancelStoppedTestRuns": true,
 		"CancelIdleDrafts": true, "ReleaseFinishedSources": true,
+		"ResumeStaleAttempts": true, "RequeueLostJobs": true,
+		"Claim": true, "Yield": true, "Heartbeat": true, "Flush": true,
+		"FlushTestProgress": true, "FinishValidation": true, "RefuseValidation": true, "FailLease": true, "LockRunWrites": true, "UndoSlice": true,
 	}
 	rt := reflect.TypeFor[*RunStore]()
 	for method := range rt.Methods() {
@@ -727,5 +746,22 @@ func TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce(t *testing.T) {
 	if predicted != 2 {
 		t.Errorf("the prediction now reads %d; the dry run predicted two and no attempt may add to it, "+
 			"or an approval turns a file's duplicates into twice as many", predicted)
+	}
+}
+
+// The flip has no lease: its checkpoint advances after every landed row, and
+// its edges are never checkpointed, because the link phase runs whole.
+func TestTheFlipStillAdvancesPerRow(t *testing.T) {
+	runs := newFakeRuns()
+	e := &Engine{runs: runs, w: newFakeWriters()}
+
+	if _, err := e.Run(context.Background(), RunID{}, twoObjectSource()); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if want := []int{1, 2, 3, 4, 5}; !reflect.DeepEqual(runs.checkpoints, want) {
+		t.Errorf("the flip advanced its checkpoint to %v, want %v: one write per row, none per edge", runs.checkpoints, want)
+	}
+	if runs.run.Status != StatusComplete {
+		t.Errorf("the flip ended %s, want complete", runs.run.Status)
 	}
 }

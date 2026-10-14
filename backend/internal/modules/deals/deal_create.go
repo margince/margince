@@ -271,6 +271,9 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 	if err := ensureOpenBirthStage(ctx, tx, in.StageID, in.PipelineID); err != nil {
 		return in, err
 	}
+	if err := refuseBirthPastLegalGate(ctx, tx, in.StageID); err != nil {
+		return in, err
+	}
 
 	// INV-CLOSE-PAST (formulas §11): deals are born open, and an open
 	// deal never claims a past close date — reject at source rather

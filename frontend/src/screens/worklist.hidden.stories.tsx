@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "storybook/test";
-import { StoryProviders } from "./story-utils";
+import { StoryProviders } from "../testing/story-utils";
 import { HiddenFigures } from "./worklist.hidden";
 
 // The guardrail's readings — see worklist.hidden.tsx for why they sit behind a

@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LinkedInReachCard } from "./linkedin-reach";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // LinkedInReachCard stories for the fe-uat render gate. The three cases that
 // read differently are the three the card exists to keep apart: accounts the

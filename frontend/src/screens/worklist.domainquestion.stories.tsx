@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import type { WorklistItem } from "./worklist.queries";
 // The row's own line. `.worklist-row-acts` carries the trailing alignment and

@@ -3,8 +3,8 @@
 
 package migration
 
-// A commit and an undo run detached from the request that started them. These
-// transitions keep such a run movable when its work dies. A failed run is
+// A commit and an undo run in the worker, apart from the request that started
+// them. These transitions keep such a run movable when its work dies. A failed run is
 // resumable by approve, and an undoing run by undo.
 //
 // Only `running` is ever moved to `failed` here. An `undoing` run is already
@@ -23,32 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// FailRunning records why a running run's work stopped, when the engine could
-// not record it itself. A run in any other state is left as it is.
-func (s *RunStore) FailRunning(ctx context.Context, id RunID, cause string) error {
-	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE import_run SET status = $2, error = $3, updated_at = now()
-			 WHERE id = $1 AND status = $4`, id, StatusFailed, cause, StatusRunning)
-		if err != nil {
-			return fmt.Errorf("failing import run %s: %w", id, err)
-		}
-		if tag.RowsAffected() == 0 {
-			return nil
-		}
-		_, err = storekit.Audit(ctx, tx, "update", ImportRunObject, id,
-			map[string]any{auditFieldStatus: StatusRunning}, map[string]any{auditFieldStatus: StatusFailed})
-		return err
-	})
-}
-
-// FailStaleRunning fails every running import whose last checkpoint is older
-// than idle, and answers how many. updated_at moves on every checkpoint, so a
-// run that has not moved for that long has no process left working it. The
-// cutoff is taken on the database clock that wrote updated_at.
+// FailStaleRunning fails every running import old code started whose last
+// checkpoint is older than idle, and answers how many. A run a queued job works
+// is the sweep's resume rules' to settle, so this one never touches it.
 func (s *RunStore) FailStaleRunning(ctx context.Context, idle time.Duration, cause string) (int, error) {
 	return s.failStale(ctx, StatusRunning, idle, cause)
 }
@@ -62,6 +39,7 @@ func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duratio
 		rows, err := tx.Query(ctx, `
 			UPDATE import_run SET status = $1, error = $2, updated_at = now()
 			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
+			   AND `+legacyRow+`
 			RETURNING id`, StatusFailed, cause, from, ConnectorCSV, idle.Seconds())
 		if err != nil {
 			return fmt.Errorf("failing stale %s import runs: %w", from, err)
@@ -82,18 +60,17 @@ func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duratio
 	return failed, err
 }
 
-// ClaimUndo moves a complete run to undoing, or confirms one already undoing,
-// so the caller can answer before the reversal runs. It refuses while another
-// undo of the run holds the claim, as Undo does.
-func (s *RunStore) ClaimUndo(ctx context.Context, id RunID) error {
+// ClaimUndo moves a complete run to undoing, or opens a new attempt of one
+// already undoing, and queues that attempt's job in the same transaction. It
+// refuses while a slice of the run holds its write lock.
+func (s *RunStore) ClaimUndo(ctx context.Context, id RunID, enqueue Enqueue) (Run, error) {
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionUpdate); err != nil {
-		return err
+		return Run{}, err
 	}
-	release, err := s.lockUndo(ctx, id)
+	release, err := s.acquireRunWrites(ctx, id)
 	if err != nil {
-		return err
+		return Run{}, err
 	}
 	defer release()
-	_, _, err = s.beginUndo(ctx, id)
-	return err
+	return s.beginUndo(ctx, id, enqueue)
 }

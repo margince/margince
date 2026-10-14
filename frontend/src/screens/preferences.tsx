@@ -8,7 +8,7 @@ import { SaveBar } from "../design-system/savebar";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
-import { problemMessageOf, throwProblem, unwrap } from "./common";
+import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { PreferenceRow } from "./preferencerow";
 import {
   type Draft,

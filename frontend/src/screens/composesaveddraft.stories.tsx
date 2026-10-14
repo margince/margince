@@ -5,14 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { ComposeModal } from "./compose";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { ComposeModal } from "./compose";
 
 // The rep's own unsent message as the composer holds it: put back when the
 // composer opens, saved beside Send, and refused when another window moved it.

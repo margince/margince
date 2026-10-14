@@ -1,22 +1,22 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../api/schema";
-import { useRecordZone } from "../app/recordzone";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { Avatar, Badge, Button } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import type { RecordContact } from "../design-system/participants";
+import { groupChronology } from "../design-system/timelinegroups";
 import {
   formatDayMonth,
   formatNumber,
   formatTimeOfDay,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useRecordZone } from "../lib/recordzone";
 import { ChannelReplyAction } from "./compose";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
-import { groupChronology } from "./timelinegroups";
 import { openContactTab } from "./worklist.return";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).

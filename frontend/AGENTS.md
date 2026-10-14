@@ -150,6 +150,8 @@ What the gates cover, and what they do not:
 
 - `make fe-bundle` builds the catalog in CI and is a check that must pass. So a story that fails to
   compile, or fails to register, is found every time.
+- `make fe-uat ARGS="--all-stories"` renders every story the build registers, whatever the diff.
+  `scheduled.yml` runs it on `main` daily and files an issue when a story fails there.
 - `make fe-uat` is the render gate for what a change touches. It fails on a render error, on a
   changed component with no story, and on a changed story the build does not register. Two things
   limit it. It is a lane that need not pass, and `ARGS="--allow-missing"` turns the missing-story

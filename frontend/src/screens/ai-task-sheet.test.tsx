@@ -7,7 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
+import { meFixture } from "../testing/mefixture";
 import { feature } from "./ai-admin.testkit";
 import { jsonResponse, render } from "./ai-routing.testkit";
 import { overrideOf, TaskSheet } from "./ai-task-sheet";

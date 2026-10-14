@@ -511,3 +511,13 @@ cases:
       statement: >-
         The same file carries the contract it is paper for, so finance finds it
         from the contract, and the answer says so.
+  case60_send_one_draft_one:
+    1:
+      name: A reply goes on the thread it answers
+      statement: >-
+        The answer to Jonas is sent as a reply on his recorded mail thread, not
+        as a new conversation beside it.
+    2:
+      name: The mail the user wants to read first stays a draft
+      statement: >-
+        Omar's first email is drafted, and no send ever names him.

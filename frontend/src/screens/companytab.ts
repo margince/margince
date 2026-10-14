@@ -1,4 +1,6 @@
-import type { Route } from "../app/router";
+import { useEffect } from "react";
+import { navigateReplacing, type Route } from "../lib/router";
+import { keptWorklistReturn } from "./worklist.return";
 
 // The account record's tabs, and the ONE way to address one.
 //
@@ -41,4 +43,29 @@ export type CompanyTab = (typeof COMPANY_TABS)[number];
 /** companyTabRoute addresses one tab of one account. */
 export function companyTabRoute(id: string, tab: CompanyTab): Route {
   return { screen: "companies", id, id2: tab };
+}
+
+// The tabs an archived account cannot answer: the server refuses its roster,
+// deals, tasks and money.
+export const REFUSED_WHEN_ARCHIVED: readonly CompanyTab[] = [
+  "contacts",
+  "deals",
+  "tasks",
+  "finance",
+];
+
+// A link to a tab an archived account cannot answer opens its Overview, and the
+// address is replaced so it names the tab on screen.
+export function useShownCompanyTab(
+  id: string,
+  archived: boolean,
+  addressed: CompanyTab,
+): CompanyTab {
+  const refused = archived && REFUSED_WHEN_ARCHIVED.includes(addressed);
+  useEffect(() => {
+    if (refused) {
+      navigateReplacing(companyTabRoute(id, "overview"), keptWorklistReturn());
+    }
+  }, [refused, id]);
+  return refused ? "overview" : addressed;
 }

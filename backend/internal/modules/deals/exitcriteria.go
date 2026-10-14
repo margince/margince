@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // criterionEntity is the audit and event entity name for a criterion row.
@@ -126,6 +127,11 @@ func (s *Store) CreateStageExitCriterion(
 		if err := refuseTakenCriterionKey(ctx, tx, in.StageID, in.Key); err != nil {
 			return err
 		}
+		if kind == CriterionLegalReviewed {
+			if err := ensureLegalReviewOn(ctx, tx); err != nil {
+				return err
+			}
+		}
 		position, err := nextCriterionPosition(ctx, tx, in.StageID)
 		if err != nil {
 			return err
@@ -200,6 +206,15 @@ func (s *Store) UpdateStageExitCriterion(
 		if in.IfVersion != nil && *in.IfVersion != criterionVersion(current) {
 			return apperrors.ErrVersionSkew
 		}
+		if err := refuseKindChangeAcrossLegalReview(current, in.Kind); err != nil {
+			return err
+		}
+		if CriterionKind(current.Kind) == CriterionLegalReviewed && current.Required &&
+			in.Required != nil && !*in.Required {
+			if err := requireAdminToWeakenLegalGate(ctx); err != nil {
+				return err
+			}
+		}
 		if patch := criterionUpdatePatch(current, in); !patch.Empty() {
 			if err := writeCriterionUpdate(ctx, tx, lock, stageID, id, patch); err != nil {
 				return err
@@ -252,6 +267,11 @@ func (s *Store) ArchiveStageExitCriterion(
 		}
 		if ifVersion != nil && *ifVersion != criterionVersion(current) {
 			return apperrors.ErrVersionSkew
+		}
+		if CriterionKind(current.Kind) == CriterionLegalReviewed {
+			if err := requireAdminToWeakenLegalGate(ctx); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE stage_exit_criterion
@@ -335,4 +355,21 @@ func pipelineOfStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID) (ids.P
 		return pipelineID, fmt.Errorf("read the stage's pipeline: %w", err)
 	}
 	return pipelineID, nil
+}
+
+// refuseKindChangeAcrossLegalReview keeps a criterion from turning into, or
+// out of, legal_reviewed. Evidence recorded under the old kind would then
+// settle the new one: an activity would stand in for legal's approval.
+func refuseKindChangeAcrossLegalReview(current crmcontracts.StageExitCriterion, next *string) error {
+	if next == nil {
+		return nil
+	}
+	was := CriterionKind(current.Kind) == CriterionLegalReviewed
+	if was == (CriterionKind(*next) == CriterionLegalReviewed) {
+		return nil
+	}
+	return &values.ParseError{
+		Field: criterionKindField, Code: "legal_review_kind_is_fixed",
+		Message: "a legal review criterion keeps its kind: archive it and add a new criterion instead",
+	}
 }

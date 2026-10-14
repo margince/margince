@@ -5,9 +5,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
-import { ENTITY } from "../app/entity";
-import { useRecordZone } from "../app/recordzone";
-import { navigate, routeHash } from "../app/router";
 import {
   groupSearchHits,
   SEARCH_FILTER_KEY,
@@ -19,18 +16,26 @@ import {
   searchHitHasCard,
   searchHitRoute,
 } from "../app/searchkinds";
-import { useUrlParams } from "../app/urlstate";
 import { Badge, Button, EmptyState, SearchField } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { FilterPills } from "../design-system/filterpills";
-import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  LoadMoreButton,
+  QueryGate,
+  QueryStates,
+} from "../design-system/querystates";
 import { RecordCard } from "../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
-import { LoadMoreButton, QueryGate, QueryStates, unwrap } from "./common";
+import { ENTITY } from "../lib/entity";
+import { useOpenEmail } from "../lib/openemail";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { navigate, routeHash } from "../lib/router";
+import { useUrlParams } from "../lib/urlstate";
 import { companyTabRoute } from "./companytab";
-import { useOpenEmail } from "./openemail";
+import { OpenEmailDrawer } from "./openemaildrawer";
 import "./search.css";
 
 type SearchResult = components["schemas"]["SearchResult"];

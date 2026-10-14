@@ -198,3 +198,26 @@ describe("a record imported from somewhere else", () => {
     expect(screen.queryByText(/Typed by/)).toBeNull();
   });
 });
+
+// A company an import wrote has the importing administrator's seat in
+// captured_by. Without its own arm the strip tells that administrator they
+// typed the whole file.
+describe("a company an import wrote", () => {
+  it("an imported company is labelled imported, not typed by you", async () => {
+    stub([{ id: "u-reader", display_name: "The Reader" }]);
+    renderInApp(
+      <CompanyIdentityFacts
+        company={{
+          ...COMPANY,
+          captured_by: "human:u-reader",
+          source: "mirror:csv:pipedrive-export:company:co-12",
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(provenanceText()).toBe("Imported from pipedrive-export"),
+    );
+    expect(screen.queryByText(/Typed by/)).toBeNull();
+  });
+});

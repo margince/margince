@@ -12,20 +12,20 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { GrantSpec } from "../app/mefixture";
 import { en } from "../i18n/en";
-import { AutomationsAdmin } from "./automations";
-import {
-  AUTOMATION_CATALOG,
-  configuredAutomations,
-} from "./automations.fixtures";
+import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AutomationsAdmin } from "./automations";
+import {
+  AUTOMATION_CATALOG,
+  configuredAutomations,
+} from "./automations.fixtures";
 
 const OPERATOR: GrantSpec = {
   automation: ["create", "read", "update", "delete"],

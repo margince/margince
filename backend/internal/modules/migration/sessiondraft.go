@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -250,6 +251,46 @@ func (p DraftPatch) applyTo(mapping RunMapping, before, after map[string]any) Ru
 	patchField("on_broken_link", p.OnBrokenLink, &mapping.OnBrokenLink, before, after)
 	patchField("context_tag", p.ContextTag, &mapping.ContextTag, before, after)
 	return mapping
+}
+
+// fillDefaults adds to c each choice the stored mapping leaves to a default,
+// as derived holds it. The filled value is what the empty choice meant, so it
+// is audited but spends no version: a client's version still names the run.
+func (c *runChange) fillDefaults(stored []byte, derived RunMapping) error {
+	var mapping RunMapping
+	if err := json.Unmarshal(stored, &mapping); err != nil {
+		return fmt.Errorf("reading the mapping of an import run: %w", err)
+	}
+	fillDefault("source_key", derived.SourceKey, &mapping.SourceKey, c.before, c.after)
+	fillDefault("on_duplicate", derived.OnDuplicate, &mapping.OnDuplicate, c.before, c.after)
+	fillDefault("on_broken_link", derived.OnBrokenLink, &mapping.OnBrokenLink, c.before, c.after)
+	keyOf := make(map[string]string, len(derived.Parts))
+	for _, part := range derived.Parts {
+		keyOf[part.File] = part.SourceKey
+	}
+	parts := slices.Clone(mapping.Parts)
+	for i := range parts {
+		if parts[i].SourceKey == "" {
+			parts[i].SourceKey = keyOf[parts[i].File]
+		}
+	}
+	patchField("parts", &parts, &mapping.Parts, c.before, c.after)
+	if len(c.after) == 0 {
+		return nil
+	}
+	encoded, err := json.Marshal(mapping)
+	if err != nil {
+		return fmt.Errorf("encoding the import mapping: %w", err)
+	}
+	c.values = append(c.values, runValue{"mapping", encoded})
+	return nil
+}
+
+// fillDefault sets an empty choice to its derived value.
+func fillDefault(name, value string, field *string, before, after map[string]any) {
+	if *field == "" {
+		patchField(name, &value, field, before, after)
+	}
 }
 
 func patchField[T any](name string, patch *T, field *T, before, after map[string]any) {

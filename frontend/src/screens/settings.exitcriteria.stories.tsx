@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { StageExitCriteria } from "./settings.exitcriteria";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { StageExitCriteria } from "./settings.exitcriteria";
 
 // What a stage asks for before a deal may leave it, as the pipelines card draws
 // it inside one stage's row. Two states are worth a picture: the standing

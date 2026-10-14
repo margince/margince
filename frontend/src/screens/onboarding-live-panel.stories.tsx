@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { StoryProviders } from "../testing/story-utils";
 import { CoverageCard } from "./onboarding-live-panel";
-import { StoryProviders } from "./story-utils";
 import "./onboarding-live-panel.css";
 
 // The coverage card, which is the one card in the dossier stack whose whole job
@@ -69,7 +69,7 @@ export const StoppedEarly: Story = {
     // Collapsed is the default, and the header carries the count that makes
     // that safe — so the story that is about the ROWS has to open it.
     await userEvent.click(
-      await canvas.findByRole("button", { name: /What I read/ }),
+      await canvas.findByRole("button", { name: /Pages read and skipped/ }),
     );
     await canvas.findByText(/400 pages/);
   },

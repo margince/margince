@@ -3,8 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LeadManualSignals } from "./leadsignals";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The human half of the lead score: three plain questions a rep can answer in
 // one pass, and the provenance the wire still needs behind "More".

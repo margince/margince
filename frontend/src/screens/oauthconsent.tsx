@@ -5,12 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { navigate } from "../app/router";
 import { Button, Card, Checkbox, EmptyState } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
+import { QueryGate } from "../design-system/querystates";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { QueryGate, unwrap, useMe } from "./common";
+import { unwrap } from "../lib/problem";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
 import "./oauthconsent.css";
 
 // The human hands an agent their own authority here — the one screen where

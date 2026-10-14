@@ -14,7 +14,8 @@ import { type Handler, type MockRoute, page, reply } from "./server";
 
 // The import screens' calls: the hub's list, and one CSV taken from upload to
 // an approved run. Every write answers the run moved, so each screen of the
-// wizard renders, and the run is remembered between calls.
+// wizard renders, and the run is remembered between calls. A test starts as the
+// server answers it: 202 `validating`, and a later read finds it tested.
 
 const draftId = "019ff-run-draft";
 
@@ -85,11 +86,31 @@ function moveTo(next: ImportRun): Handler {
   };
 }
 
+const validating: ImportRun = { ...tested, status: "validating" };
+
+// The test runs in the worker, so the write answers 202 with the run
+// `validating`. The first read after it still finds that, and the next one
+// finds the run tested.
+function startTest(version: number): Handler {
+  return ({ json }) => {
+    current = { ...validating, version };
+    return json(current, 202);
+  };
+}
+
+const readRun: Handler = ({ json }) => {
+  const seen = current;
+  if (seen.status === "validating") {
+    current = { ...tested, version: seen.version };
+  }
+  return json(seen, 200);
+};
+
 export const importRoutes: readonly MockRoute[] = [
   { method: "GET", path: "/imports/format", handle: reply(formatFixture) },
   { method: "GET", path: "/imports", handle: reply(page(listed)) },
   { method: "POST", path: "/imports/sources", handle: reply(profile) },
-  { method: "POST", path: "/imports", handle: moveTo(tested) },
+  { method: "POST", path: "/imports", handle: startTest(tested.version) },
   {
     method: "GET",
     path: /^\/imports\/[^/]+\/report$/,
@@ -103,7 +124,7 @@ export const importRoutes: readonly MockRoute[] = [
   {
     method: "POST",
     path: /^\/imports\/[^/]+\/validate$/,
-    handle: moveTo({ ...tested, version: 4 }),
+    handle: startTest(4),
   },
   {
     method: "POST",
@@ -120,5 +141,5 @@ export const importRoutes: readonly MockRoute[] = [
     path: /^\/imports\/[^/]+\/undo$/,
     handle: moveTo({ ...tested, status: "undoing", source_released: true }),
   },
-  { method: "GET", path: RUN, handle: ({ json }) => json(current, 200) },
+  { method: "GET", path: RUN, handle: readRun },
 ];

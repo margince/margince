@@ -13,8 +13,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { VatMark } from "./companyvatmark";
 
 // What this mark must get right is not the layout but the DISTINCTIONS: a

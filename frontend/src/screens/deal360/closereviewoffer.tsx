@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
-import { useCanWrite } from "../../app/capability";
 import type { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import {
   type ReviewTemplate,
   templateForOutcome,

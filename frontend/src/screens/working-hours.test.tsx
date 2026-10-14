@@ -10,8 +10,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { meFixture } from "../app/mefixture";
 import { type Locale, LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { WorkingHoursCard } from "./working-hours";
 
 // Settings → Meetings → when you are bookable. The reader's own setting, so no

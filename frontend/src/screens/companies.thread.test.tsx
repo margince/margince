@@ -12,10 +12,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { RecordZoneProvider } from "../app/recordzone";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { formatDateTime } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { RecordZoneProvider } from "../lib/recordzone";
 import { CompanyScreen } from "./companies";
 import {
   company,

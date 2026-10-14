@@ -122,12 +122,12 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      # The SBOM pipeline pins its SPDX validator to linux/amd64 (its
-      # dependency wheel hashes resolve for that platform), which this arm64
-      # runner can only execute emulated.
+      # The SBOM pipeline pins its Python steps, the SPDX validator and the
+      # lockfile census, to linux/amd64 (their dependency wheel hashes resolve
+      # for that platform), which this arm64 runner can only execute emulated.
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       # Fresh SBOMs at the release commit, through the full pinned pipeline
-      # (generate, normalize, supplement, parity, validate). The dist service
+      # (generate, normalize, supplement, parity, census, validate). The dist service
       # verifies that the SBOMs attest the bytes of every file the patch
       # produces; both are derived from the same commit, so they agree by
       # construction — the committed sboms/ may lag the tree and must not be

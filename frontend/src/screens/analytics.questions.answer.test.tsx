@@ -5,6 +5,7 @@
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProblemError } from "../lib/problem";
 import {
   AnswerTable,
   type ExplainSource,
@@ -24,7 +25,6 @@ import type {
   AnalyticsQuery,
 } from "./analytics.questions.vocab";
 import { render } from "./analytics.testkit";
-import { ProblemError } from "./common";
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {

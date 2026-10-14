@@ -6,7 +6,8 @@ import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { greetingNameOf } from "../format/greetingname";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap, useMe } from "./common";
+import { problemMessageOf, unwrap } from "../lib/problem";
+import { useMe } from "../lib/session";
 
 // The two names on the Account card: the one colleagues see you by and the one
 // they greet you by. Both are the caller's own and read back from `/me`.

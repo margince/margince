@@ -10,7 +10,6 @@
 // column, a total or a forecast.
 
 import { type ReactNode, useId, useState } from "react";
-import { useCanWrite } from "../app/capability";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
@@ -28,8 +27,9 @@ import {
 } from "../design-system/trust";
 import { formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
+import { problemCodeOf } from "../lib/problem";
 import { useAssignableUserOptions } from "./assigneepicker";
-import { problemCodeOf } from "./common";
 import {
   type AcceptDealSuggestionBody,
   type DealSuggestion,

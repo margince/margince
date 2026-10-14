@@ -196,21 +196,46 @@ func (r Report) mergedWith(next Report) Report {
 	if next.Associations == 0 && len(next.AssociationsSkipped) == 0 && r.Walks() > 1 {
 		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
 	}
-	out := Report{
+	return Report{
 		Associations:        associations,
 		AssociationsSkipped: append([]SkippedAssoc(nil), associationsSkipped...),
 		Imported:            r.Imported + next.Imported,
 		Attempts:            r.Walks() + next.Walks(),
+		Objects:             foldObjects(r.Objects, next.Objects),
 	}
+}
+
+// withLeg folds one leg of a sliced commit into the stored report. Legs cover
+// disjoint stretches of one walk, so every count adds, edges included. A leg
+// that starts the walk drops the edge count the test run predicted, which the
+// commit's own edges replace. The caller counts the walks.
+func (r Report) withLeg(leg Report, startsWalk bool) Report {
+	out := Report{
+		Associations:        r.Associations + leg.Associations,
+		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), leg.AssociationsSkipped...),
+		Imported:            r.Imported + leg.Imported,
+		Attempts:            r.Attempts,
+		Objects:             foldObjects(r.Objects, leg.Objects),
+	}
+	if startsWalk {
+		out.Associations = leg.Associations
+		out.AssociationsSkipped = append([]SkippedAssoc(nil), leg.AssociationsSkipped...)
+	}
+	return out
+}
+
+// foldObjects folds per-object entries by class, earlier first.
+func foldObjects(earlier, later []ObjectReport) []ObjectReport {
+	var out []ObjectReport
 	at := map[string]int{}
-	for _, or := range append(append([]ObjectReport(nil), r.Objects...), next.Objects...) {
+	for _, or := range append(append([]ObjectReport(nil), earlier...), later...) {
 		i, seen := at[or.Object]
 		if !seen {
-			at[or.Object] = len(out.Objects)
-			out.Objects = append(out.Objects, or)
+			at[or.Object] = len(out)
+			out = append(out, or)
 			continue
 		}
-		into := &out.Objects[i]
+		into := &out[i]
 		into.Created += or.Created
 		into.Updated += or.Updated
 		into.Unchanged += or.Unchanged

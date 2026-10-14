@@ -18,6 +18,21 @@ import {
 } from "./import.testkit";
 import { handOverUpload } from "./importflow";
 
+// The ids each `GET /users/names` request carried, in the order sent.
+function namesAskedFor(): string[][] {
+  return vi
+    .mocked(fetch)
+    .mock.calls.map(
+      ([input]) =>
+        new URL(
+          String(input instanceof Request ? input.url : input),
+          "https://test.local",
+        ),
+    )
+    .filter((url) => url.pathname.endsWith("/users/names"))
+    .map((url) => url.searchParams.getAll("id"));
+}
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -87,13 +102,29 @@ describe("the data import hub", () => {
           ],
         }),
       "GET /users/names": () =>
-        jsonResponse({ data: [{ id: run.captured_by, display_name: "Ada" }] }),
+        jsonResponse({ data: [{ id: "u-ada", display_name: "Ada" }] }),
     });
     render(<ImportCard />);
     const row = (await screen.findAllByRole("row"))[1];
     expect(await within(row).findByText("2 files · by Ada")).toBeVisible();
     expect(within(row).getByText("1,203")).toBeVisible();
     expect(within(row).getByText("Complete")).toBeVisible();
+    // The run carries the principal, `human:<uuid>`; the names endpoint takes
+    // the seat id alone and refuses the prefixed form.
+    expect(namesAskedFor()).toEqual([["u-ada"]]);
+  });
+
+  it("asks no seat name for a run an agent started", async () => {
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [{ ...run, file_name: "crm.csv", captured_by: "agent:pp-1" }],
+        }),
+    });
+    render(<ImportCard />);
+    const row = (await screen.findAllByRole("row"))[1];
+    expect(within(row).getByText("crm.csv")).toBeVisible();
+    expect(namesAskedFor()).toEqual([]);
   });
 
   it("reads the import order from the format", async () => {

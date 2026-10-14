@@ -5,6 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ListsSection } from "./companyraillists";
 import {
   LIVE_ID,
@@ -17,7 +22,6 @@ import {
   shortlist,
 } from "./lists.fixtures";
 import { RecordListsPanel } from "./recordlists";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The lists one record is on, on its own page, and the check that says why it
 // is not on a Live List.

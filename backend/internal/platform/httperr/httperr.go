@@ -278,11 +278,16 @@ var transientCodes = map[string]struct{}{
 	schemaChangedCode:            {},
 	writeContentionCode:          {},
 	SourceBusyCode:               {},
+	AgentBusyCode:                {},
 }
 
 // SourceBusyCode refuses an import test while another run of the same source
 // name is writing. It clears when that write ends.
 const SourceBusyCode = "import_source_busy"
+
+// AgentBusyCode refuses an agent's second import test while its first is still
+// running. It clears when that test ends.
+const AgentBusyCode = "import_agent_busy"
 
 // Transient reports whether repeating the same call unchanged could succeed
 // later. Every other classified fault is settled: something must change (the

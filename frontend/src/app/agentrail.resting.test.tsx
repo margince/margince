@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LOCALES, LocaleProvider, translate, translatePlural } from "../i18n";
 import { en, type MessageKey } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 import { TIPS } from "./agentrail-copy";
 import {
@@ -19,7 +20,6 @@ import {
   useRestingLine,
 } from "./agentrail-resting";
 import { plain, type SpokenLine, spokenText } from "./ai-activity-speak";
-import { meFixture } from "./mefixture";
 
 // What the rail says when nothing is happening, which is most of the day.
 //

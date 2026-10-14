@@ -4,7 +4,6 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { useCan, useCanUpsert } from "../app/capability";
 import { Badge, Button, Modal } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
@@ -15,6 +14,7 @@ import { formatDate } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan, useCanUpsert } from "../lib/capability";
 import { borrowedRows, useAiModelCatalogue } from "./ai-models";
 import { usePriceSync } from "./ai-price-sync";
 import {

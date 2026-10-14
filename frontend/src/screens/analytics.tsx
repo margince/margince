@@ -3,14 +3,13 @@ import { Info } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useCan } from "../app/capability";
-import { useRoute } from "../app/router";
 import { Button, EmptyState, StatCard } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
 import { FilterBar } from "../design-system/filterbar";
 import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
+import { QueryGate } from "../design-system/querystates";
 import { RecordTabs } from "../design-system/recordtabs";
 import { StatStrip } from "../design-system/statstrip";
 import { rowsState, SurfaceState } from "../design-system/surfacestate";
@@ -22,6 +21,9 @@ import {
 } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan } from "../lib/capability";
+import { unwrap } from "../lib/problem";
+import { useRoute } from "../lib/router";
 import {
   openAnalyticsSection,
   SECTIONS,
@@ -63,7 +65,6 @@ import { QuestionsView } from "./analytics.questions";
 import { FORECAST_CATEGORIES } from "./analytics.questions.values";
 import { ENTITY_LABEL_KEY } from "./analytics.questions.vocab";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { QueryGate, unwrap } from "./common";
 import { dealsFilteredBy } from "./dealsaddress";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
@@ -339,22 +340,19 @@ function ForecastStrip({
   const t = useT();
   return (
     <>
-      {/* How to read the second figure in every slot, as the panel's one
-          descriptive line: a notice box inside the panel was a pane inside a
-          pane, and it outweighed the readings it was only explaining. */}
-      <Popover onHover label={t("analytics.weighted")}>
+      {/* How to read every slot's second figure, as an aside: a notice box
+          here was a pane inside a pane that outweighed the readings. */}
+      <Popover
+        onHover
+        className="evmark-trigger t-caption analytics-strip-aside"
+        label={t("analytics.weighted")}
+      >
         <p>{t("analytics.forecastBanner")}</p>
       </Popover>
-      {/* ONE strip, because there is now one denomination. A plate of ruled
-          slots claims its figures are ONE comparison, and a strip per currency
-          — the only honest way to show native sums, since adding euros to dong
-          is the unit-less total data-semantics §1 r4 forbids — had a manager
-          comparing commit against best case inside each currency and never
-          across the business, which is the question they actually have.
-
-          The slots stay slots rather than becoming a bar list: every category
-          carries TWO figures, the raw total and the probability-weighted one
-          beneath it, and a ranked bar carries a single amount per row. */}
+      {/* One strip, because there is one denomination. A strip per currency
+          had a manager comparing commit against best case inside each currency
+          and never across the business. Slots rather than a bar list, because
+          each category carries two figures and a ranked bar carries one. */}
       <StatStrip>
         {[...FORECAST_CATEGORIES, ...uncategorisedSlot(rows)].map(
           (category) => {

@@ -6,9 +6,9 @@ import { isField, isPrimitiveField, keyIs } from "./dialogfields";
 import {
   attr,
   boxProps,
-  capped,
   childrenHosts,
   childrenSlot,
+  contextOf,
   cross,
   defOf,
   descendants,
@@ -142,17 +142,10 @@ function ancestry(g: Gate, v: View, n: ts.Node): Chain[] {
   let chains: Chain[] = [[]];
   for (let s = parentOf(v, n); s; s = parentOf(s.v, s.at)) {
     const p = s.at;
-    const boxes = boxesAt(g, p);
-    chains = capped(
-      chains.flatMap((c) => boxes.map((b) => [...c, ...b])),
-      p,
-    );
+    chains = cross(chains, contextOf(g.owners, boxesAt(g, p)), p);
     if (isDialog(g, p)) return chains;
   }
-  return capped(
-    chains.flatMap((c) => g.outer.map((o) => [...c, ...o])),
-    n,
-  );
+  return cross(chains, g.outer, n);
 }
 
 const subset = (need: Set<string>, cls: string[]) =>

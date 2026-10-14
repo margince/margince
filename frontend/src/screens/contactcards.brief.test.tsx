@@ -3,8 +3,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { ContactBriefCard } from "./contactbrief";
-import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactBrief = components["schemas"]["ContactBrief"];

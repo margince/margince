@@ -3,7 +3,6 @@ import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { backStaysInApp, navigate } from "../app/router";
 import { ActionRow } from "../design-system/actionrow";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -12,9 +11,12 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
+import { problemCodeOf, throwProblem } from "../lib/problem";
+import { backStaysInApp, navigate } from "../lib/router";
 import { BookingFooter } from "./booking-common";
 import {
   DeliveryCard,
@@ -23,7 +25,6 @@ import {
   openCalendarLabel,
 } from "./booking-meeting-parts";
 import { BookingReschedule } from "./booking-reschedule";
-import { problemCodeOf, QueryGate, throwProblem } from "./common";
 import {
   meetingInvitationKey,
   useMeetingInvitation,

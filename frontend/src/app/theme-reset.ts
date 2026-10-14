@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
-import { setThemeChoice } from "./theme";
+import { setThemeChoice } from "../lib/theme";
 
 /**
  * Put the theme back to what a first-time visitor meets: no choice recorded,

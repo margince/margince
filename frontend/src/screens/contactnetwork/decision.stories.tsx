@@ -3,9 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { meFixture } from "../../app/mefixture";
+import { meFixture } from "../../testing/mefixture";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../../testing/story-utils";
 import type { IntroRequest } from "../introrequests";
-import { installFetchStub, meRoute, StoryProviders } from "../story-utils";
 import { DecisionStrip } from "./decision";
 import "../contactnetwork.css";
 

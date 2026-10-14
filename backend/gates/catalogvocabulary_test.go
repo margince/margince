@@ -65,11 +65,6 @@ var otherSenses = gatekit.Waive(map[string]string{
 	"account_notice": "a communication_context: a notice about the customer's ACCOUNT WITH US — their subscription, their billing " +
 		"relationship — which is a consent category in the published enum and not the CRM record type. Renaming it would " +
 		"change what a sender is claiming about a message",
-	// One entry per STRING, not per occurrence: forecast_movement's description
-	// says it three times — what the buckets account FOR, that they are a
-	// complete account OF the change, and that subtracting two readings gives a
-	// number with no account of where it went. They are one sense between them.
-	"named causes that account for the whole difference": "the ordinary verb, and the ordinary noun twice beside it",
 })
 
 func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {

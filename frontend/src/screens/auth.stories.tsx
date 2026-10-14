@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { Locale } from "../i18n";
-import { AuthScreen, AvailabilityScreen } from "./auth";
-import { AuthExperience } from "./auth-core";
-import { ProviderButtons } from "./auth-providers";
 import {
   installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
-} from "./story-utils";
+} from "../testing/story-utils";
+import { AuthScreen, AvailabilityScreen } from "./auth";
+import { AuthExperience } from "./auth-core";
+import { ProviderButtons } from "./auth-providers";
 
 /**
  * The unauthenticated surface, whole (ADR-0076).
@@ -239,12 +239,10 @@ export const Phone: Story = {
 /**
  * The surface with the theme pinned dark, rather than left to the toolbar.
  *
- * Pinned because dark mode HERE is new: the theme used to be owned by the
- * authenticated chrome, so every unauthenticated surface rendered with no
- * `data-theme` at all and a reader whose OS is dark got the light sign-in page
- * however carefully the dark tokens were authored (`app/theme.ts`). It is
- * resolved and applied before React mounts now, which makes this rendering the
- * product's rather than a hypothetical.
+ * Pinned because the unauthenticated surfaces also take the dark theme. The
+ * theme (`lib/theme.ts`) is resolved and applied before React mounts, not by
+ * the authenticated chrome. So a reader whose OS is dark gets a dark sign-in
+ * page, and this rendering is the product's rather than a hypothetical.
  *
  * The Core is the part worth looking at: its halo, caustic and glass washes are
  * plain alpha over the page rather than a blend mode, because an additive glow

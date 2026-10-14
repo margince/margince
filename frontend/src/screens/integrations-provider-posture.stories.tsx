@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../app/mefixture";
 import { SettingList } from "../design-system/settingrow";
+import { meFixture } from "../testing/mefixture";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
 import { LookupPostureRow } from "./integrations-provider-posture";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The installation's automatic-lookup switch on its own, in the states the
 // provider card draws it in: writable, read-only, and a posture that could not

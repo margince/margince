@@ -83,15 +83,18 @@ measures the real default.
   refuses one. That test is a vitest gate over the TypeScript AST, and `make native-controls` runs
   it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
-  [its README](src/design-system/README.md) before you build a control.
-- `src/app/`: the shell, the top bar, `nav.ts` and `theme.ts`. The shell is a labeled sidebar that
+  [its README](src/design-system/README.md) before you build a control. It never imports `app/` or
+  `screens/`.
+- `src/lib/`: shared code that draws nothing: the hash router, URL state, `theme.ts`, `capability.ts`,
+  how a server problem reads, and the session. `theme.ts` resolves and applies `light` or `dark` before React
+  mounts, so a screen before sign-in can be dark at all.
+- `src/app/`: the shell, the top bar and `nav.ts`. The shell is a labeled sidebar that
   folds down to the standard rail, and it keeps that choice. At phone width the same markup is a
   bottom bar with a More menu for the rest.
 
   `nav.ts` holds the standard nav items in groups. A label
   is for display and never a route ID: `deals` shows as Pipeline, `inbox` as Approvals, `ai` as Ask
-  Margince. `theme.ts` resolves and applies `light` or `dark` before React mounts, so a screen before
-  sign-in can be dark at all. Also here: the hash router and the `⌘K` palette. The agent
+  Margince. Also here: the `⌘K` palette. The agent
   section at the foot of the rail is here too (`agentrail.tsx`): the one AI control in
   the frame of the app. See
   [docs/explanation/frontend-architecture.md](../docs/explanation/frontend-architecture.md).
@@ -123,7 +126,7 @@ measures the real default.
    (checked by a walk of the TS AST).
 5. No emoji in source strings: Lucide only. The 🟢/🟡 autonomy meanings render through the `.dot`
    token component.
-6. One service worker ships, and only `src/app/pwa.ts` registers it. From Cache Storage it answers only
+6. One service worker ships, and only `src/lib/pwa.ts` registers it. From Cache Storage it answers only
    two things. One is the offline page, for a page load the network could not make. The other is that
    page's own script ([pwa.md](../docs/explanation/pwa.md)).
 7. WCAG 2.2 AA (axe) in the `e2e` lane. The budget for how fast it feels is not here.
