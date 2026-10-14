@@ -6014,6 +6014,8 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.cancelFailed": "The import was not canceled",
+  "import.conflictDismiss": "Dismiss",
   "import.conflictOtherTab":
     "This import was changed in another tab. Your screen now shows the saved choices.",
   "import.superseded": "A newer test run replaced this import",

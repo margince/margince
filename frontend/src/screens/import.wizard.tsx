@@ -117,9 +117,14 @@ export function ImportWizard({
       />
       {wizard.conflict ? (
         <Callout
-          tone="warning"
+          tone="danger"
           kind="outcome"
           title={t("import.conflictOtherTab")}
+          actions={
+            <Button variant="ghost" onClick={wizard.dismissConflict}>
+              {t("import.conflictDismiss")}
+            </Button>
+          }
         />
       ) : null}
       <Panel

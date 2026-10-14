@@ -175,6 +175,13 @@ describe("the wizard is the run", () => {
       ).length;
     await clearFullName(user);
     expect(await screen.findByText(/changed in another tab/)).toBeVisible();
+    expect(
+      screen
+        .getAllByRole("alert")
+        .some((one) => /another tab/.test(one.textContent ?? "")),
+    ).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText(/changed in another tab/)).toBeNull();
     await waitFor(() => {
       reads = vi
         .mocked(fetch)
@@ -220,5 +227,42 @@ describe("the wizard is the run", () => {
       expect(sent.map((s) => s.path)).toContain(`POST ${RUN}/cancel`),
     );
     await waitFor(() => expect(globalThis.location.hash).not.toContain("run="));
+  });
+
+  it("a refused Cancel says so and stays on the draft", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      [`POST ${RUN}/cancel`]: () =>
+        jsonResponse({ status: 403, code: "permission_denied" }, 403),
+    });
+    globalThis.location.hash = RUN_PAGE;
+    render(<ImportCard subpage="run" />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByText("The import was not canceled"),
+    ).toBeVisible();
+    expect(globalThis.location.hash).toContain("run=");
+  });
+
+  it("Cancel of a draft another tab is testing stops that test and stays", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      [`POST ${RUN}/cancel`]: () => jsonResponse({ ...run, status: "pending" }),
+    });
+    globalThis.location.hash = RUN_PAGE;
+    render(<ImportCard subpage="run" />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\na@x.test\n"], "leads.csv"),
+    );
+    await user.click(await screen.findByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain(`POST ${RUN}/cancel`),
+    );
+    expect(globalThis.location.hash).toContain("run=");
   });
 });

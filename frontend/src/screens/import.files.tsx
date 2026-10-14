@@ -9,6 +9,7 @@ import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { ImportContextTag } from "./import.contexttag";
+import { ImportRefusal } from "./import.notices";
 import type { WizardFile } from "./importflow";
 import type { ImportFormat, ImportObject, ImportProfile } from "./importtypes";
 import { isImportObject } from "./importtypes";
@@ -152,6 +153,12 @@ export function FilesStep({
         value={wizard.contextTagID}
         onChange={wizard.setContextTagID}
       />
+      {wizard.cancelling.error ? (
+        <ImportRefusal
+          title={t("import.cancelFailed")}
+          error={wizard.cancelling.error}
+        />
+      ) : null}
       <div className="import__actions">
         <Button
           variant="ghost"

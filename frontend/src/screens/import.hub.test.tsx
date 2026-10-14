@@ -103,6 +103,26 @@ describe("the data import hub", () => {
     );
   });
 
+  it("says when a draft could not be canceled", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+          ],
+        }),
+      "POST /imports/r3/cancel": () =>
+        jsonResponse({ status: 403, code: "permission_denied" }, 403),
+    });
+    render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByText("The import was not canceled"),
+    ).toBeVisible();
+  });
+
   it("names who ran an import and how many files and rows it took", async () => {
     stubRoutes({
       "GET /imports": () =>

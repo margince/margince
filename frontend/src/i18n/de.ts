@@ -5867,6 +5867,8 @@ export const de = {
   "import.closed.stopped":
     "Dieser Import wurde angehalten, bevor etwas importiert wurde.",
   "import.closed.upload": "Datei hochladen",
+  "import.cancelFailed": "Der Import wurde nicht abgebrochen",
+  "import.conflictDismiss": "Verstanden",
   "import.conflictOtherTab":
     "Dieser Import wurde in einem anderen Tab geändert. Der Bildschirm zeigt jetzt die gespeicherten Auswahlen.",
   "import.superseded": "Ein neuerer Testlauf hat diesen Import ersetzt",

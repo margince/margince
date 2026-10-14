@@ -18,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { navigate, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
-import { UndoConfirm } from "./import.notices";
+import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
@@ -205,6 +205,12 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   return (
     <Panel title={t("import.recent.title")}>
       <PanelBody>
+        {cancel.error ? (
+          <ImportRefusal
+            title={t("import.cancelFailed")}
+            error={cancel.error}
+          />
+        ) : null}
         <QueryStates query={recent} pendingLabel={t("common.loading")}>
           {runs.length === 0 ? (
             <EmptyState>{t("import.recent.empty")}</EmptyState>

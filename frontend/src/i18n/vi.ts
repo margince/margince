@@ -5741,6 +5741,8 @@ export const vi = {
   "import.closed.stopped":
     "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
   "import.closed.upload": "Tải tệp lên",
+  "import.cancelFailed": "Chưa hủy được lần nhập này",
+  "import.conflictDismiss": "Đã hiểu",
   "import.conflictOtherTab":
     "Lần nhập này đã được đổi ở một tab khác. Màn hình giờ hiện các lựa chọn đã lưu.",
   "import.superseded": "Một lần chạy thử mới hơn đã thay thế lần nhập này",

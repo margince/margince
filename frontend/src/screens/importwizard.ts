@@ -240,6 +240,7 @@ export function useImportWizard() {
     },
     saveFailure: writes.failure,
     conflict: writes.conflict,
+    dismissConflict: writes.clearConflict,
     approve,
     undo,
     // The files and the map open again while the run is a draft whose file
@@ -263,7 +264,10 @@ export function useImportWizard() {
     cancel: () => {
       if (runId === null) return;
       cancelRun.mutate(runId, {
-        onSuccess: () => {
+        // Cancelling a draft another tab is testing only stops that test and
+        // leaves the draft, so the page stays on it until it is cancelled.
+        onSuccess: (stopped) => {
+          if (stopped.status !== "cancelled") return;
           reset();
           navigate(settingsHref("import"));
         },
