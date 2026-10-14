@@ -167,9 +167,8 @@ export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
 }
 
-// A 403 is the server disagreeing with the capability snapshot the UI renders
-// from (grants changed under a live session, or the account is now confined),
-// so the snapshot is re-asked rather than left until the tab next takes focus.
+// A 403 means the session snapshot is stale: grants changed, or the account is
+// now confined. So /me is asked again at once, not at the next focus.
 export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
   return {
     onResponse({ request, response }) {
