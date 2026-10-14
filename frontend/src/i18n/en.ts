@@ -2541,6 +2541,8 @@ export const en = {
   "co.suggest.basedOn": "Based on",
   "co.cite.open": "Open record",
   "co.suggest.dismiss": "Not now",
+  "record.setAside.done": "Set aside. It comes back when something changes.",
+  "record.setAside.restored": "Back on the card.",
   "co.suggest.byline": "Margince suggests",
   "co.suggest.dismissFailed": "Suggestion was not dismissed. Retry.",
   // Said plainly, because the reader's next move depends on it: a step they
@@ -6019,6 +6021,14 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.cancelFailed": "The import was not canceled",
+  "import.conflictDismiss": "Dismiss",
+  "import.conflictOtherTab":
+    "This import was changed in another tab. Your screen now shows the saved choices.",
+  "import.superseded": "A newer test run replaced this import",
+  "import.supersededOpen": "Open the newer test run",
+  "import.draft.continue": "Continue",
+  "import.draft.cancel": "Cancel",
   "import.sourceBusy":
     "Another import of this source name is still writing. Wait for it to finish, then test again.",
   "import.sourceBusyOpen": "Open that import",
@@ -6100,6 +6110,33 @@ export const en = {
   "import.progress.running": "In progress",
   "import.progress.done": "Done",
   "import.progress.rows": "{type}: {done} of {total} rows",
+  "import.progress.working": "Working…",
+  "import.progress.queued": "Waiting to start",
+  "import.progress.records": "your records",
+  "import.progress.links": "Links",
+  "import.progress.overall": "All files",
+  "import.progress.total": "{done} of {total} rows",
+  "import.progress.rate": "{rate} rows/s",
+  "import.progress.elapsed": "{span} elapsed",
+  "import.progress.etaObject": "about {minutes} min left in {type}",
+  "import.progress.etaRun": "about {minutes} min left",
+  "import.progress.counts": "Rows so far",
+  "import.progress.count.created": "New",
+  "import.progress.count.updated": "Updated",
+  "import.progress.count.unchanged": "Same",
+  "import.progress.count.skipped": "Skipped",
+  "import.progress.count.problems": "Problems",
+  "import.progress.stalled.working": "Still working on it",
+  "import.progress.stalled.server": "Waiting for the server",
+  "import.progress.stalled.body":
+    "No progress for {span}. This page keeps checking and tells you when it moves.",
+  "import.phase.reading": "Reading the file",
+  "import.phase.checking": "Checking {type}",
+  "import.phase.creating_tags": "Creating tags",
+  "import.phase.importing": "Importing {type}",
+  "import.phase.linking": "Linking records",
+  "import.phase.undoing": "Undoing {type}",
+  "import.phase.finishing": "Finishing up",
   "import.progress.leave":
     "You can leave this page. The import keeps going, and Recent imports shows when it is done.",
   "import.result.detail": "{created} created · {updated} updated",
@@ -6137,6 +6174,121 @@ export const en = {
   "import.test.row": "Row {line}",
   "import.test.rowColumn": "Row {line} · {column}",
   "import.test.wholeFile": "Whole file",
+  "import.reason.link_row_not_imported":
+    "This row will not be imported, so there is nobody to link to {name}.",
+  "import.reason.link_contact_not_imported":
+    "The contact “{from}” was not imported, so there was nobody to link to “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "A CSV import has no {from} → {to} link, so it was not applied.",
+  "import.reason.undo_grant_lost":
+    "Your permissions no longer cover this record.",
+  "import.reason.undo_not_visible": "This record is no longer visible to you.",
+  "import.reason.undo_rule_protects":
+    "The record refused the undo because a business rule protects it.",
+  "import.reason.undo_failed": "The record could not be undone.",
+  "import.reason.author_too_long": "Author is longer than {max} characters.",
+  "import.reason.cannot_create":
+    "You cannot create {plural}, so the {plural} file is skipped.",
+  "import.reason.cannot_create_tags":
+    "You cannot create tags, so a tag new to the CRM is not added.",
+  "import.reason.cannot_edit":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped.",
+  "import.reason.cannot_edit_and_tag":
+    "You cannot edit {plural}, so a row that changes one already in the CRM is skipped and no tag is added to one.",
+  "import.reason.cannot_read_tags":
+    "You cannot read tags, so the tags column is not imported.",
+  "import.reason.cannot_write_type":
+    "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_duplicate_found":
+    "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
+  "import.reason.company_duplicate_skipped":
+    "A company of this name is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.company_name_empty":
+    "The mapped display_name is empty, so the row names no company.",
+  "import.reason.contact_duplicate_found":
+    "Someone matching this row is already in the CRM. A row naming an address already held is refused, and a near match creates and files the pair for review.",
+  "import.reason.contact_duplicate_skipped":
+    "Someone matching this row is already in the CRM, and this run was asked to skip duplicates.",
+  "import.reason.contact_email_held":
+    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
+  "import.reason.contact_unnamed":
+    "The row carries neither a name nor an email, so it names no contact.",
+  "import.reason.currency_unset":
+    "“{value}” cannot be read: this currency field has no currency set.",
+  "import.reason.description_too_long":
+    "The description is {length} characters. A company description holds at most {max}.",
+  "import.reason.domain_held":
+    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
+  "import.reason.duplicate_email":
+    "This email address already belongs to another contact.",
+  "import.reason.employer_column_empty":
+    "The company column is empty, so the row names no employer.",
+  "import.reason.employer_column_empty_dropped":
+    "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_not_found":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+  "import.reason.employer_not_found_dropped":
+    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+  "import.reason.empty_payload": "The row has no fields.",
+  "import.reason.field_inactive":
+    "“{value}” cannot be written: this field is no longer active.",
+  "import.reason.id_not_a_company_id":
+    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
+  "import.reason.id_not_visible":
+    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.id_on_non_company":
+    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
+  "import.reason.link_ambiguous":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
+  "import.reason.link_ambiguous_dropped":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_not_found":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
+  "import.reason.link_not_found_dropped":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.linkedin_held":
+    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
+  "import.reason.natural_key_taken": "A record with this key already exists.",
+  "import.reason.not_a_date":
+    "“{value}” is not a date. Write it as YYYY-MM-DD.",
+  "import.reason.not_a_domain":
+    "“{value}” is not a domain that can be written.",
+  "import.reason.not_a_number": "“{value}” is not a number.",
+  "import.reason.not_an_amount":
+    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+  "import.reason.not_an_email":
+    "“{value}” is not an email address that can be written.",
+  "import.reason.not_yes_no": "“{value}” is not yes or no.",
+  "import.reason.option_not_allowed":
+    "“{value}” is not one of this field’s allowed values.",
+  "import.reason.option_not_in_list":
+    "“{value}” is not one of the allowed values: {options}.",
+  "import.reason.options_need_semicolons":
+    "“{value}”: separate several values with semicolons.",
+  "import.reason.owner_refused":
+    "You cannot make this user an owner, so you become the owner of their rows.",
+  "import.reason.owner_unknown":
+    "No user has this email, so you become the owner.",
+  "import.reason.phone_needs_country":
+    "“{value}” needs its country code, like +49 30 1234567.",
+  "import.reason.record_archived":
+    "This row’s record was archived, so it is not updated. Restore the record to update it.",
+  "import.reason.ref_taken_by_another_company":
+    "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
+  "import.reason.row_key_empty":
+    "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
+  "import.reason.row_key_repeated":
+    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+  "import.reason.size_band_invalid":
+    "Size_band “{value}” is not one of {allowed}.",
+  "import.reason.tag_created":
+    "No tag had this name, so the import created it.",
+  "import.reason.tag_name_invalid":
+    "The tag “{name}” cannot be created: its name {detail}.",
+  "import.reason.tag_new":
+    "No tag has this name yet, so the import creates it.",
+  "import.reason.value_refused": "“{value}” was refused: {detail}",
+  "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
   "import.problem.invalid_value": "Invalid value",

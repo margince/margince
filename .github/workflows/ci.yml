@@ -452,7 +452,16 @@ jobs:
           # declaration and the gate enforces again — it goes inert on its own
           # rather than waiting for somebody to remember to delete this line.
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
-        run: make check-backend
+        # pipefail, because the default shell lacks it and tee would turn a red
+        # gate green.
+        run: |
+          set -o pipefail
+          make check-backend 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # Here and not in check-backend: only a CI runner's timings are steady
+      # enough to hold a package to a budget.
+      - name: Unit-test time budget per package
+        working-directory: .
+        run: make test-budget LOG="$RUNNER_TEMP/check-backend.log"
       # The launcher's own coverage profile, from the lane `make check-backend`
       # just ran. It is a SECOND run of that module's suite — under a second
       # and about a hundred tests — rather than a flag on the gate itself,

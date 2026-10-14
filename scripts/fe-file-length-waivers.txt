@@ -44,7 +44,7 @@
 1903 frontend/src/screens/contactpage.stories.tsx
 1122 frontend/src/screens/analytics.tsx
 1453 frontend/src/design-system/atoms.tsx
-1536 frontend/src/screens/company360.tsx
+1521 frontend/src/screens/company360.tsx
 1581 frontend/src/design-system/composed.tsx
 1509 frontend/src/screens/leads.tsx
 2215 frontend/src/screens/company360.test.tsx
@@ -75,7 +75,7 @@
 661 frontend/src/screens/record360/citations.tsx
 530 frontend/src/screens/contractform.tsx
 651 frontend/src/format/format.ts
-734 frontend/src/screens/companytoday.tsx
+727 frontend/src/screens/companytoday.tsx
 708 frontend/src/screens/installation-settings.tsx
 531 frontend/src/screens/extension-access.tsx
 774 frontend/src/screens/onboarding-conversation/connect-scene.tsx

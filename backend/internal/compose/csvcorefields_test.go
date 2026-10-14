@@ -20,7 +20,7 @@ func TestAPhoneAndALinkedInURLAreCheckedAndCarriedInTheStoresSpelling(t *testing
 	}{
 		{migration.ObjectContact, fieldPhone, "+49 30 1234567", "+49301234567", ""},
 		{migration.ObjectLead, fieldPhone, "0049 30 1234567", "+49301234567", ""},
-		{migration.ObjectContact, fieldPhone, "030 1234567", nil, `"030 1234567" needs its country code, like +49 30 1234567`},
+		{migration.ObjectContact, fieldPhone, "030 1234567", nil, `“030 1234567” needs its country code, like +49 30 1234567`},
 		{migration.ObjectContact, fieldPhone, "+49 30 1", nil, "not an E.164 number"},
 		{migration.ObjectContact, fieldLinkedIn, "http://www.linkedin.com/in/ada/?trk=x", "https://www.linkedin.com/in/ada", ""},
 		{migration.ObjectContact, fieldLinkedIn, "https://example.com/in/ada", nil, "linkedin.com"},

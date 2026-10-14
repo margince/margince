@@ -18,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { navigate, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { ImportDropzone } from "./import.files";
-import { UndoConfirm } from "./import.notices";
+import { ImportRefusal, UndoConfirm } from "./import.notices";
 import { IMPORT_TEMPLATE_HREF, TemplatePreview } from "./import.template";
 import { ImportWizardPage } from "./import.wizard";
 import { runHref } from "./importaddress";
@@ -27,8 +27,8 @@ import {
   useImportFormat,
   useLandedRecords,
   useRecentImports,
+  useStopImportTest,
   useUndoImport,
-  wroteNothing,
 } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
 import {
@@ -190,9 +190,11 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recent = useRecentImports();
-  const runs = (recent.data ?? []).filter((one) => !wroteNothing(one.status));
+  const recent = useRecentImports("history");
+  const drafts = useRecentImports("drafts");
+  const runs = [...(drafts.data ?? []), ...(recent.data ?? [])];
   useLandedRecords(runs.map((one) => one.status));
+  const cancel = useStopImportTest();
   const names = useMemberNames(runs.flatMap((one) => starterOf(one) ?? []));
   const undo = useUndoImport();
   const [undoing, setUndoing] = useState<string | null>(null);
@@ -203,6 +205,12 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
   return (
     <Panel title={t("import.recent.title")}>
       <PanelBody>
+        {cancel.error ? (
+          <ImportRefusal
+            title={t("import.cancelFailed")}
+            error={cancel.error}
+          />
+        ) : null}
         <QueryStates query={recent} pendingLabel={t("common.loading")}>
           {runs.length === 0 ? (
             <EmptyState>{t("import.recent.empty")}</EmptyState>
@@ -240,6 +248,14 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                             ? t("import.recent.filesBy", { files, name: by })
                             : files}
                         </div>
+                        {one.superseded_by ? (
+                          <a
+                            className="t-caption"
+                            href={runHref(one.superseded_by)}
+                          >
+                            {t("import.superseded")}
+                          </a>
+                        ) : null}
                       </>
                     );
                   },
@@ -263,8 +279,26 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                   key: "actions",
                   header: t("import.recent.col.actions"),
                   headerHidden: true,
-                  render: (one) =>
-                    one.status === "complete" ? (
+                  render: (one) => {
+                    if (one.status === "pending") {
+                      return (
+                        <div className="cell-actions">
+                          <a className="link-button" href={runHref(one.id)}>
+                            {t("import.draft.continue")}
+                          </a>
+                          <Button
+                            variant="ghost"
+                            pending={
+                              cancel.isPending && cancel.variables === one.id
+                            }
+                            onClick={() => cancel.mutate(one.id)}
+                          >
+                            {t("import.draft.cancel")}
+                          </Button>
+                        </div>
+                      );
+                    }
+                    return one.status === "complete" ? (
                       <div className="cell-actions">
                         <Button
                           variant="ghost"
@@ -273,7 +307,8 @@ function RecentImports({ format }: Readonly<{ format?: ImportFormat }>) {
                           {t("import.recent.undo")}
                         </Button>
                       </div>
-                    ) : null,
+                    ) : null;
+                  },
                 },
               ]}
             />

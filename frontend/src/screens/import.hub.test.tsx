@@ -17,6 +17,7 @@ import {
   stubRoutes,
 } from "./import.testkit";
 import { handOverUpload } from "./importflow";
+import { IMPORT_POLL_MS } from "./importrun";
 
 // The ids each `GET /users/names` request carried, in the order sent.
 function namesAskedFor(): string[][] {
@@ -66,23 +67,60 @@ describe("the data import hub", () => {
     expect(within(rows[2]).queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
-  it("the hub lists no draft or cancelled run", async () => {
-    stubRoutes({
+  it("lists a draft to continue or cancel, and leaves a replaced test out of the history", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
       "GET /imports": () =>
         jsonResponse({
           data: [
             { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
-            { ...run, id: "r2", file_name: "gone.csv", status: "cancelled" },
+            {
+              ...run,
+              id: "r2",
+              file_name: "gone.csv",
+              status: "cancelled",
+              superseded_by: "r9",
+            },
             { ...run, id: "r1", file_name: "leads.csv", status: "complete" },
           ],
         }),
     });
     render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getByText("Draft")).toBeVisible();
     expect(
-      await screen.findByRole("link", { name: "leads.csv" }),
-    ).toBeVisible();
-    expect(screen.queryByText("draft.csv")).toBeNull();
+      within(rows[1]).getByRole("link", { name: "Continue" }),
+    ).toHaveAttribute("href", expect.stringContaining("run=r3"));
     expect(screen.queryByText("gone.csv")).toBeNull();
+    // Each list is asked for on its own. A draft or a replaced test then
+    // cannot push a finished import out of the one page of history.
+    const asked = sent.filter((s) => s.path === "GET /imports").length;
+    expect(asked).toBeGreaterThanOrEqual(2);
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(sent.map((s) => s.path)).toContain("POST /imports/r3/cancel"),
+    );
+  });
+
+  it("says when a draft could not be canceled", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "GET /imports": () =>
+        jsonResponse({
+          data: [
+            { ...run, id: "r3", file_name: "draft.csv", status: "pending" },
+          ],
+        }),
+      "POST /imports/r3/cancel": () =>
+        jsonResponse({ status: 403, code: "permission_denied" }, 403),
+    });
+    render(<ImportCard />);
+    const rows = await screen.findAllByRole("row");
+    await user.click(within(rows[1]).getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByText("The import was not canceled"),
+    ).toBeVisible();
   });
 
   it("names who ran an import and how many files and rows it took", async () => {
@@ -191,7 +229,7 @@ describe("the data import hub", () => {
         invalidated.mock.calls.filter((call) => call[0] === undefined).length;
       expect(everything()).toBe(0);
       status = "undone";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       await waitFor(() => expect(everything()).toBe(1));
     } finally {
       vi.useRealTimers();

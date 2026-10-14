@@ -3,7 +3,10 @@
 
 package migration
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
 // An attempt that never reached the association phase does not get to report
 // that the run linked nothing.
@@ -103,7 +106,7 @@ func TestARowsProblemReachesItsSkipOrItsWarning(t *testing.T) {
 		t.Fatalf("report = %+v, want one created row carrying one warning", or)
 	}
 	want := SkippedRow{ExternalID: "P-1", Line: 2, Column: "company", Kind: ProblemDroppedLink, Value: "CO-404", Reason: "no company"}
-	if or.Warnings[0] != want {
+	if !reflect.DeepEqual(or.Warnings[0], want) {
 		t.Fatalf("warning = %+v, want %+v", or.Warnings[0], want)
 	}
 

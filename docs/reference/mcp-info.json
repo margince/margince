@@ -10,15 +10,15 @@
   "totals": {
     "tools": 56,
     "resources": 9,
-    "tool_catalog_bytes": 179445,
+    "tool_catalog_bytes": 179677,
     "resource_catalog_bytes": 3560,
-    "approx_wire_tokens_total": 45751,
+    "approx_wire_tokens_total": 45809,
     "largest_tool_bytes": 9227,
     "largest_tool": "prep_for_meeting",
     "tool_catalog_composition": {
       "description_bytes": 49596,
       "input_schema_bytes": 53866,
-      "output_schema_bytes": 62244,
+      "output_schema_bytes": 62476,
       "description_plus_input_schema_bytes": 103462
     }
   },
@@ -5729,7 +5729,16 @@
                           "line": {
                             "type": "integer"
                           },
+                          "params": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "type": "object"
+                          },
                           "reason": {
+                            "type": "string"
+                          },
+                          "reason_code": {
                             "type": "string"
                           },
                           "value": {
@@ -5757,7 +5766,16 @@
                               "from": {
                                 "type": "string"
                               },
+                              "params": {
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "type": "object"
+                              },
                               "reason": {
+                                "type": "string"
+                              },
+                              "reason_code": {
                                 "type": "string"
                               },
                               "to": {
@@ -5861,6 +5879,9 @@
                                 "type": "string"
                               },
                               "reason": {
+                                "type": "string"
+                              },
+                              "reason_code": {
                                 "type": "string"
                               }
                             },

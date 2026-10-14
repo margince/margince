@@ -194,10 +194,24 @@ func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
 	return run, nil
 }
 
+// RunView narrows a run list to one of the two things the Data import page
+// shows. Drafts and abandoned runs then cannot push a finished import out of
+// one page.
+type RunView string
+
+const (
+	// ViewAll lists every run.
+	ViewAll RunView = ""
+	// ViewHistory lists the runs that wrote, are writing or failed.
+	ViewHistory RunView = "history"
+	// ViewDrafts lists the runs still waiting for a test.
+	ViewDrafts RunView = "drafts"
+)
+
 // ListStaged reads one page of CSV runs, newest first, each as GetStaged reads
 // one. The flip's own runs are left out: they carry no mapping this surface
 // describes. An empty cursor starts at the newest run.
-func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]Run, storekit.Page, error) {
+func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, view RunView) ([]Run, storekit.Page, error) {
 	// The exported name, not the alias: the grant-reachability census resolves
 	// only a literal-valued constant.
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
@@ -206,6 +220,12 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV))
+	switch view {
+	case ViewHistory:
+		where += storekit.SQLf(` AND status NOT IN ($%d, $%d)`, arg(StatusPending), arg(StatusCancelled))
+	case ViewDrafts:
+		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
+	}
 	if cursor != "" {
 		after, err := storekit.DecodeCursor(cursor)
 		if err != nil {
@@ -251,7 +271,8 @@ const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at
 			mapping, report, undo_report, error, captured_by,
 			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
 			source_released_at IS NOT NULL, job_attempt, actor, attempt_correlation_id,
-			coalesce(phase, ''), progress`
+			coalesce(phase, ''), coalesce(phase_object, ''), progress,
+			started_at, finished_at, progress_at, heartbeat_at, now()`
 
 func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 	var (
@@ -267,7 +288,8 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
 		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
 		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
-		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &progress,
+		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &run.PhaseObject, &progress,
+		&run.StartedAt, &run.FinishedAt, &run.ProgressAt, &run.HeartbeatAt, &run.ReadAt,
 	}
 	if withProfile {
 		dest = append(dest, &run.Profile)

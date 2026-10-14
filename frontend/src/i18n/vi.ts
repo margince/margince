@@ -2438,6 +2438,8 @@ export const vi = {
   "co.suggest.basedOn": "Dựa trên",
   "co.cite.open": "Mở hồ sơ",
   "co.suggest.dismiss": "Để sau",
+  "record.setAside.done": "Đã để sau. Mục này sẽ quay lại khi có thay đổi.",
+  "record.setAside.restored": "Đã trở lại thẻ.",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed": "Không thể bỏ qua gợi ý. Thử lại.",
   "co.suggest.addTaskFailed": "Không thể lưu bước tiếp theo. Thử lại.",
@@ -5746,6 +5748,14 @@ export const vi = {
   "import.closed.stopped":
     "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
   "import.closed.upload": "Tải tệp lên",
+  "import.cancelFailed": "Chưa hủy được lần nhập này",
+  "import.conflictDismiss": "Đã hiểu",
+  "import.conflictOtherTab":
+    "Lần nhập này đã được đổi ở một tab khác. Màn hình giờ hiện các lựa chọn đã lưu.",
+  "import.superseded": "Một lần chạy thử mới hơn đã thay thế lần nhập này",
+  "import.supersededOpen": "Mở lần chạy thử mới hơn",
+  "import.draft.continue": "Tiếp tục",
+  "import.draft.cancel": "Hủy",
   "import.sourceBusy":
     "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi chạy thử lại.",
   "import.sourceBusyOpen": "Mở lần nhập đó",
@@ -5826,6 +5836,33 @@ export const vi = {
   "import.progress.running": "Đang chạy",
   "import.progress.done": "Xong",
   "import.progress.rows": "{type}: {done} trên {total} dòng",
+  "import.progress.working": "Đang xử lý…",
+  "import.progress.queued": "Đang chờ bắt đầu",
+  "import.progress.records": "các bản ghi",
+  "import.progress.links": "Liên kết",
+  "import.progress.overall": "Tất cả tệp",
+  "import.progress.total": "{done} trên {total} dòng",
+  "import.progress.rate": "{rate} dòng/giây",
+  "import.progress.elapsed": "đã qua {span}",
+  "import.progress.etaObject": "còn khoảng {minutes} phút cho {type}",
+  "import.progress.etaRun": "còn khoảng {minutes} phút",
+  "import.progress.counts": "Số dòng đến lúc này",
+  "import.progress.count.created": "Mới",
+  "import.progress.count.updated": "Đã cập nhật",
+  "import.progress.count.unchanged": "Giữ nguyên",
+  "import.progress.count.skipped": "Đã bỏ qua",
+  "import.progress.count.problems": "Vấn đề",
+  "import.progress.stalled.working": "Vẫn đang xử lý",
+  "import.progress.stalled.server": "Đang chờ máy chủ",
+  "import.progress.stalled.body":
+    "Đã {span} chưa có tiến triển. Trang này vẫn kiểm tra và sẽ báo khi có chuyển động.",
+  "import.phase.reading": "Đang đọc tệp",
+  "import.phase.checking": "Đang kiểm tra {type}",
+  "import.phase.creating_tags": "Đang tạo thẻ",
+  "import.phase.importing": "Đang nhập {type}",
+  "import.phase.linking": "Đang liên kết các bản ghi",
+  "import.phase.undoing": "Đang hoàn tác {type}",
+  "import.phase.finishing": "Đang hoàn tất",
   "import.progress.leave":
     "Bạn có thể rời trang này. Lần nhập vẫn tiếp tục, và mục Lần nhập gần đây cho biết khi nào xong.",
   "import.result.detail": "{created} tạo mới · {updated} cập nhật",
@@ -5866,6 +5903,120 @@ export const vi = {
   "import.test.row": "Dòng {line}",
   "import.test.rowColumn": "Dòng {line} · {column}",
   "import.test.wholeFile": "Toàn bộ tệp",
+  "import.reason.link_row_not_imported":
+    "Hàng này sẽ không được nhập nên không có ai để liên kết với {name}.",
+  "import.reason.link_contact_not_imported":
+    "Liên hệ “{from}” chưa được nhập nên không có ai để liên kết với “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "Nhập CSV không có liên kết {from} → {to} nên liên kết này không được áp dụng.",
+  "import.reason.undo_grant_lost":
+    "Quyền của bạn không còn bao gồm bản ghi này.",
+  "import.reason.undo_not_visible": "Bạn không còn thấy bản ghi này.",
+  "import.reason.undo_rule_protects":
+    "Bản ghi từ chối hoàn tác vì có một quy tắc nghiệp vụ bảo vệ nó.",
+  "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
+  "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
+  "import.reason.cannot_create":
+    "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
+  "import.reason.cannot_create_tags":
+    "Bạn không có quyền tạo thẻ nên thẻ mới đối với CRM không được thêm.",
+  "import.reason.cannot_edit":
+    "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua.",
+  "import.reason.cannot_edit_and_tag":
+    "Bạn không có quyền sửa {plural} nên hàng làm thay đổi bản ghi đã có trong CRM bị bỏ qua và không thẻ nào được thêm vào.",
+  "import.reason.cannot_read_tags":
+    "Bạn không có quyền đọc thẻ nên cột thẻ không được nhập.",
+  "import.reason.cannot_write_type":
+    "Không thể ghi “{value}” vào trường kiểu {type}.",
+  "import.reason.company_duplicate_found":
+    "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
+  "import.reason.company_duplicate_skipped":
+    "Đã có công ty cùng tên trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
+  "import.reason.company_name_empty":
+    "Tên hiển thị đã ánh xạ để trống nên hàng không xác định được công ty nào.",
+  "import.reason.contact_duplicate_found":
+    "Đã có liên hệ khớp với hàng này trong CRM. Hàng có địa chỉ đã tồn tại bị từ chối, còn hàng gần giống sẽ được tạo và đưa cặp này vào hàng đợi xem xét.",
+  "import.reason.contact_duplicate_skipped":
+    "Đã có liên hệ khớp với hàng này trong CRM và lần nhập này được yêu cầu bỏ qua bản trùng.",
+  "import.reason.contact_email_held":
+    "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+  "import.reason.contact_unnamed":
+    "Hàng không có tên lẫn email nên không xác định được liên hệ nào.",
+  "import.reason.currency_unset":
+    "Không đọc được “{value}”: trường tiền tệ này chưa đặt đơn vị tiền.",
+  "import.reason.description_too_long":
+    "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
+  "import.reason.domain_held":
+    "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
+  "import.reason.duplicate_email":
+    "Địa chỉ email này đã thuộc về một liên hệ khác.",
+  "import.reason.employer_column_empty":
+    "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
+  "import.reason.employer_column_empty_dropped":
+    "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_not_found":
+    "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này.",
+  "import.reason.employer_not_found_dropped":
+    "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.empty_payload": "Hàng không có trường nào.",
+  "import.reason.field_inactive":
+    "Không thể ghi “{value}”: trường này không còn hoạt động.",
+  "import.reason.id_not_a_company_id":
+    "“{value}” không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
+  "import.reason.id_not_visible":
+    "Không có công ty nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+  "import.reason.id_on_non_company":
+    "Chỉ hàng công ty mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
+  "import.reason.link_ambiguous":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
+  "import.reason.link_ambiguous_dropped":
+    "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.link_not_found":
+    "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince.",
+  "import.reason.link_not_found_dropped":
+    "Không có công ty nào với “{ref}” trong tệp này, trong lần nhập trước hoặc trong Margince. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.linkedin_held":
+    "URL LinkedIn này đã thuộc về một bản ghi khác trong CRM nên hàng không thể dùng nó.",
+  "import.reason.natural_key_taken": "Đã có một bản ghi dùng khóa này.",
+  "import.reason.not_a_date":
+    "“{value}” không phải ngày. Hãy viết dạng YYYY-MM-DD.",
+  "import.reason.not_a_domain": "“{value}” không phải tên miền có thể ghi.",
+  "import.reason.not_a_number": "“{value}” không phải là số.",
+  "import.reason.not_an_amount":
+    "“{value}” không phải số tiền bằng {currency}. Hãy viết như 12000.50.",
+  "import.reason.not_an_email":
+    "“{value}” không phải địa chỉ email có thể ghi.",
+  "import.reason.not_yes_no": "“{value}” không phải có hoặc không.",
+  "import.reason.option_not_allowed":
+    "“{value}” không thuộc các giá trị được phép của trường này.",
+  "import.reason.option_not_in_list":
+    "“{value}” không thuộc các giá trị được phép: {options}.",
+  "import.reason.options_need_semicolons":
+    "“{value}”: hãy phân tách nhiều giá trị bằng dấu chấm phẩy.",
+  "import.reason.owner_refused":
+    "Bạn không thể đặt thành viên này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
+  "import.reason.owner_unknown":
+    "Không có thành viên nào có email này nên bạn trở thành chủ sở hữu.",
+  "import.reason.phone_needs_country":
+    "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
+  "import.reason.record_archived":
+    "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
+  "import.reason.ref_taken_by_another_company":
+    "Tham chiếu “{ref}” đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
+  "import.reason.row_key_empty":
+    "Cột “{column}” để trống nên không nhận diện được hàng này khi nhập lại hoặc hoàn tác.",
+  "import.reason.row_key_repeated":
+    "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
+  "import.reason.size_band_invalid":
+    "Nhóm quy mô “{value}” không thuộc: {allowed}.",
+  "import.reason.tag_created":
+    "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
+  "import.reason.tag_name_invalid":
+    "Không thể tạo thẻ “{name}”. Lý do: {detail}",
+  "import.reason.tag_new":
+    "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
+  "import.reason.value_refused": "“{value}” bị từ chối: {detail}",
+  "import.reason.value_unreadable": "Không đọc được “{value}”.",
   "import.problem.broken_link": "Liên kết hỏng",
   "import.problem.dropped_link": "Liên kết bị bỏ",
   "import.problem.invalid_value": "Giá trị không hợp lệ",
