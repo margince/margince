@@ -342,7 +342,7 @@ export const de = {
   "scheduling.deliveryUnknown":
     "Der Server hat keine Einladung zurückgegeben. Frage bei der organisierenden Person nach, bevor du es erneut versuchst.",
   "scheduling.personalGuest":
-    "Diese Einladung richtet sich an den Empfänger des Links. Für die Besprechung wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
+    "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für die Besprechung wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
   "scheduling.proposalGreeting": "Hallo,",
   "scheduling.proposalChoose":
     "Wähle hier eine Zeit oder finde einen anderen Termin:",
@@ -683,11 +683,11 @@ export const de = {
   "brief.readings.unpricedCount_one": "1 Deal ohne Preis · nicht enthalten",
   "brief.readings.unpricedCount_other":
     "{count} Deals ohne Preis · nicht enthalten",
-  "brief.coverage.source.generic": "Weitere Arbeit",
+  "brief.coverage.source.generic": "Sonstige Einträge",
   "brief.coverage.source.weekly_commitment": "Wöchentliche Zusagen",
   "brief.coverage.source.awaiting_reply": "Folgeaufgaben",
   "brief.coverage.source.meeting_follow_up": "Folgemaßnahmen von Terminen",
-  "brief.coverage.source.batch": "Gruppierte Arbeit",
+  "brief.coverage.source.batch": "Gebündelte Einträge",
   "brief.coverage.source.introduction_request": "Vorstellungsanfragen",
   "brief.coverage.source.automation_run": "Fehlgeschlagene Automatisierungen",
   "brief.coverage.source.undelivered": "Nicht gesendete E-Mails",
@@ -815,9 +815,9 @@ export const de = {
     "Unvollständige Abdeckung. Diese Zahlen betreffen die unten gezählten Mitglieder.",
   "teamweekly.headline.unmeasured":
     "Für diese Woche liegen keine Snapshots der Mitglieder vor. Die Leistung wird nicht gemessen.",
-  "worklist.lead.noTarget": "keine Zielzeit für die Antwort festgelegt",
+  "worklist.lead.noTarget": "ohne Zielzeit",
   "worklist.lead.lastTouch": "letzte Aktivität {date}",
-  "worklist.deal.omitted": "in der Prognose ausgelassen",
+  "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",
   "brief.readings.riskBasis":
@@ -2913,7 +2913,7 @@ export const de = {
   "co.recent.kind.task": "Aufgabe",
   "co.recent.kind.message": "Nachricht",
   "co.recent.dir.theyWrote": "die Gegenseite hat geschrieben",
-  "co.recent.dir.weSent": "dein Team hat gesendet",
+  "co.recent.dir.weSent": "dein Team hat geschrieben",
   "co.recent.dir.theyCalled": "die Gegenseite hat angerufen",
   "co.recent.dir.weCalled": "dein Team hat angerufen",
   "co.recent.dir.both": "beide Seiten",
@@ -3159,7 +3159,7 @@ export const de = {
     "Einen Grund mit diesem Namen gibt es schon. Wähle einen anderen Namen.",
   "followUpSettings.title": "Nachfassen",
   "followUpSettings.sub":
-    "Wann eine Nachricht an einen Kunden als Nachfass-Erinnerung auf der Home-Seite des sendenden Teammitglieds erscheint.",
+    "Wann eine Nachricht an einen Kontakt als Nachfass-Erinnerung auf der Home-Seite des sendenden Teammitglieds erscheint.",
   "followUpSettings.days": "Erinnern nach (Tagen)",
   "followUpSettings.daysHint":
     "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor das sendende Teammitglied ans Nachfassen erinnert wird, 1 bis 30.",
@@ -6249,7 +6249,7 @@ export const de = {
   "captureHealth.col.runsEvery": "Intervall",
   "captureHealth.col.processed": "Verarbeitet",
   "captureHealth.col.state": "Status",
-  "captureHealth.col.owner": "Inhaber des Postfachs",
+  "captureHealth.col.owner": "Postfach",
   "captureHealth.col.contacts": "Wartende Kontakte",
   "captureHealth.col.threads": "Wartende Threads",
   "captureHealth.col.oldestWait": "Längste Wartezeit",
@@ -7013,7 +7013,7 @@ export const de = {
   "ob.s4.microsoftHint":
     "Liest deine E-Mails und kann aus dem Postfach senden. Beides erlaubst du auf der Seite von Microsoft und kannst die Verbindung jederzeit trennen.",
   "ob.s4.microsoftUnverified":
-    "Möglicherweise erscheint ein Hinweis „Nicht verifizierte App“. Der Hinweis bezieht sich auf diese selbst gehostete Installation, nicht auf einen Dritten.",
+    "Möglicherweise erscheint ein Hinweis „Nicht verifizierte App“. Der Hinweis bezieht sich auf diese selbst gehostete Installation, nicht auf einen Drittanbieter.",
   "ob.s4.microsoftFailed": "Microsoft-Verbindung nicht abgeschlossen",
   "ob.s4.connectOkTitle": "Postfach verbunden",
   "ob.s4.connectOkBody":
@@ -13677,7 +13677,7 @@ export const de = {
   "projectFiling.refusal.not_filed":
     "Es gibt nichts rückgängig zu machen, da diese Aktivität nicht wegen einer Projektablage aufbewahrt wird.",
   "projectFiling.refusal.other_basis_remains":
-    "Diese Aktivität bleibt zur Aufbewahrung gekennzeichnet, da sie aus einem anderen Grund weiterhin als Geschäftskorrespondenz gilt, etwa durch einen gewonnenen Deal, ein gesendetes Angebot oder eine Festlegung durch den Verantwortlichen.",
+    "Diese Aktivität bleibt zur Aufbewahrung gekennzeichnet, da sie aus einem anderen Grund weiterhin als Geschäftskorrespondenz gilt, etwa durch einen gewonnenen Deal, ein gesendetes Angebot oder eine Festlegung durch die verantwortliche Stelle.",
   "projectFiling.refusal.restricted":
     "Für diese Aktivität hat bereits eine gesetzliche Sperre begonnen. Eine begonnene Sperre wird nie verkürzt.",
   "projectFiling.refusal.qualifying_deal":

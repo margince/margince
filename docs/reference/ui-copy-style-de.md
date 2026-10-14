@@ -216,9 +216,10 @@ the English opens lowercase ("Über Partner" for "via partner").
   Ansprechperson is the author's to judge.
 - **No Gendersternchen, colon, underscore, Binnen-I or slash form**: never
   Nutzer\*innen, Nutzer:innen, NutzerInnen or Nutzer/-innen.
-- **Kunde** is acceptable where it means the customer company or the customer
-  side of a contract. A human waiting for an answer is a Kontakt: "Kontakt
-  wartet".
+- **Kunde**, Interessent, Anbieter and Partner are acceptable where they mean
+  a company or the customer side of a contract. Absender is acceptable for the
+  sending identity of a mail, which may be a role mailbox or a tool. A human
+  waiting for an answer is a Kontakt: "Kontakt wartet".
 
 ## Anglicisms
 
@@ -272,7 +273,7 @@ gives, because it is ordinary German in another sense.
 | Concept | German | Never |
 |---|---|---|
 | The tenant and the company record | Unternehmen | `Firma`, `Firmen`, `Workspace`, `Arbeitsbereich`, `Account`, `Accounts`, `Mandant` (the Entra label keeps it), Konto for the tenant (an external account is a Konto, one user's is the Nutzerkonto), and the retired company nouns in [record-vocabulary.md](record-vocabulary.md) |
-| A human record | Kontakt | Ansprechpartner as the record noun, and the retired record nouns in [record-vocabulary.md](record-vocabulary.md) |
+| A human record | Kontakt | `Ansprechpartner`, and the retired record nouns in [record-vocabulary.md](record-vocabulary.md) |
 | Sales object | Deal, Deals; Chance only as the lifecycle stage of a company | `Opportunity`, `Opportunities`, `Verkaufschance`, `Verkaufschancen`, Geschäft for a deal |
 | Ordered stages | Pipeline | `Trichter`, `Funnel` |
 | A pipeline step | Phase (Deal-Phase, Pipeline-Phase) | Stufe for a pipeline step (Modellstufe is another concept) |
@@ -285,17 +286,17 @@ gives, because it is ordinary German in another sense.
 | A classifier's result | Ergebnis, Prüfung | `Urteil`, `Urteile`, `Verdikt` |
 | A read result | Befund, Befunde | Fund, Funde |
 | Something a party said they would do | Zusage | `Versprechen` |
-| Ownership of a deal | zuständig (label "Zuständig", "Neue Zuständigkeit") | `Owner`, `Besitzer`, Inhaber for ownership |
+| Ownership of a deal | zuständig (label "Zuständig", "Neue Zuständigkeit") | `Owner`, `Besitzer`, `Inhaber` |
 | Legal hold | Legal Hold | `Aufbewahrungssperre` |
 | Buying committee | Buying Center | `Einkaufskomitee`, `Kaufgremium` |
 | The legal entity behind an installation | Rechtsträger | rechtliche Einheit, juristische Person |
 | The running Margince system | Installation | `Deployment`, `Instanz`, Bereitstellung for the running system |
 | Administrator | Admin, Admins | `Administrator`, `Administratoren`, `Verwalter` |
-| Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), Systemadministrator and other gendered singulars |
-| Somebody with a seat in this installation | Mitglied, Mitglieder ("Mitglied einladen"); the account object is the Nutzerkonto | Person for a member |
+| Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), `Systemadministrator` and other gendered singulars |
+| Somebody with a seat in this installation | Mitglied, Mitglieder ("Mitglied einladen"); the account object is the Nutzerkonto | Person for a member; `Kollege`, `Kollegin`, `Kollegen` for a teammate (Teammitglied) |
 | Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwendern` |
 | Staff | Mitarbeitende, Vertriebsmitarbeitende; a headcount is the Beschäftigtenzahl | `Mitarbeiter`, `Mitarbeitern`, `Vertriebsmitarbeiter` |
-| A message's recipients | Empfangende; one address is the Empfangsadresse; one human on a human-sense key is "die empfangende Person" | Empfänger |
+| A message's recipients | Empfangende; one address is the Empfangsadresse; one human on a human-sense key is "die empfangende Person" | `Empfänger`, `Empfängern` |
 | Agent credential | Passport | Token or Schlüssel for a Passport (API-Schlüssel, Signaturschlüssel and Clientschlüssel name other credentials) |
 | A webhook's secret | Signaturschlüssel, in every value of one dialog | Schlüssel alone |
 | Mail or calendar link | Connector; a user links their own accounts with "Konten verknüpfen" | Integration for a Connector |
@@ -322,7 +323,7 @@ gives, because it is ordinary German in another sense.
 | The in-app Home area | Home (nav label, title); "die Home-Seite" in running text | Startseite for the in-app page (a public website keeps its Startseite) |
 | An AI routing lane | Lane, Lanes (die Lane) | Strecke |
 | A saved report snapshot | Snapshot, Snapshots (der Snapshot) | Stand for a snapshot ("Stand {when}" for "as of" stays) |
-| The host of a booked meeting | die organisierende Person; the label "Organisiert von" | Ansprechperson, einladende Person, Gastgeber for the host |
+| The host of a booked meeting | die organisierende Person; the label "Organisiert von" | Ansprechperson, einladende Person for the host; `Gastgeber` |
 | A kind of email or item | Typ ("E-Mail-Typ") | Art for a kind of email or item |
 | A source no human runs | automatisiert ("eine automatisierte Quelle") | automatisch for a source |
 | A record named in running text | Eintrag ("Partnereintrag"); Datensatz stays the record noun in labels | Datensatz where it reads technical in a sentence, judged per key |
