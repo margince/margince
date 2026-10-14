@@ -8002,6 +8002,9 @@ export const vi = {
   "mfa.copyCodes": "Sao chép mã",
   "mfa.copyCodesFailed":
     "Không thể sao chép. Chọn các mã ở trên rồi tự sao chép.",
+  "mfa.keepCodes": "Lưu các mã rồi chọn Xong.",
+  "mfa.onElsewhere":
+    "Đăng nhập hai bước đã bật ở phiên khác. Nhập mã để gỡ bỏ.",
   "mfa.done": "Xong",
   "mfa.cancel": "Hủy",
   "mfa.removeTitle": "Gỡ đăng nhập hai bước?",

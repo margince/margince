@@ -14,7 +14,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf, unwrap } from "../lib/problem";
 import { enteredCode, MfaCodeField } from "./mfacode";
-import "./mfacard.css";
+import "./mfasetup.css";
 
 export type TotpEnrolment = components["schemas"]["TotpEnrolment"];
 
@@ -66,18 +66,22 @@ function QrCode({ value, label }: Readonly<{ value: string; label: string }>) {
   );
 }
 
-function SecretKey({ secret }: Readonly<{ secret: string }>) {
-  const t = useT();
-  const copy = useClipboardCopy(secret, {
-    copy: t("mfa.copyKey"),
-    copied: t("mfa.copied"),
-    remedy: t("mfa.copyKeyFailed"),
-  });
+function CopyRow({
+  text,
+  label,
+  labels,
+  testId,
+}: Readonly<{
+  text: string;
+  label: string;
+  labels: Parameters<typeof useClipboardCopy>[1];
+  testId?: string;
+}>) {
+  const copy = useClipboardCopy(text, labels);
   return (
     <>
-      <p>{t("mfa.secretHint")}</p>
       <div className="mfa-copy-row">
-        <CopyableText text={secret} label={t("mfa.secretLabel")} />
+        <CopyableText text={text} label={label} testId={testId} />
         <Button onClick={copy.copy}>{copy.label}</Button>
       </div>
       {copy.notice}
@@ -85,14 +89,26 @@ function SecretKey({ secret }: Readonly<{ secret: string }>) {
   );
 }
 
+function SecretKey({ secret }: Readonly<{ secret: string }>) {
+  const t = useT();
+  return (
+    <>
+      <p>{t("mfa.secretHint")}</p>
+      <CopyRow
+        text={secret}
+        label={t("mfa.secretLabel")}
+        labels={{
+          copy: t("mfa.copyKey"),
+          copied: t("mfa.copied"),
+          remedy: t("mfa.copyKeyFailed"),
+        }}
+      />
+    </>
+  );
+}
+
 function RecoveryCodes({ codes }: Readonly<{ codes: readonly string[] }>) {
   const t = useT();
-  const text = codes.join("\n");
-  const copy = useClipboardCopy(text, {
-    copy: t("mfa.copyCodes"),
-    copied: t("mfa.copied"),
-    remedy: t("mfa.copyCodesFailed"),
-  });
   return (
     <div className="form-stack">
       <Callout kind="outcome" tone="success" title={t("mfa.onTitle")}>
@@ -101,15 +117,16 @@ function RecoveryCodes({ codes }: Readonly<{ codes: readonly string[] }>) {
       <Callout kind="standing" tone="warning" title={t("mfa.saveCodesTitle")}>
         {t("mfa.saveCodes")}
       </Callout>
-      <div className="mfa-copy-row">
-        <CopyableText
-          text={text}
-          label={t("mfa.codesLabel")}
-          testId="mfa-recovery-codes"
-        />
-        <Button onClick={copy.copy}>{copy.label}</Button>
-      </div>
-      {copy.notice}
+      <CopyRow
+        text={codes.join("\n")}
+        label={t("mfa.codesLabel")}
+        testId="mfa-recovery-codes"
+        labels={{
+          copy: t("mfa.copyCodes"),
+          copied: t("mfa.copied"),
+          remedy: t("mfa.copyCodesFailed"),
+        }}
+      />
     </div>
   );
 }
@@ -188,14 +205,19 @@ export function MfaSetupModal({
     setCode("");
     onClose();
   };
+  // A pending confirm still enrols on the server, and its codes exist nowhere else.
+  const dismiss = () => {
+    if (!confirm.isPending && !codes) close();
+  };
 
   return (
     <Modal
       open={open}
-      onClose={close}
+      onClose={dismiss}
       labelledBy={titleId}
       intent="form"
       closeDisabled={confirm.isPending}
+      closeReason={codes ? t("mfa.keepCodes") : undefined}
     >
       <Heading size="large" className="t-h3 modal-title" id={titleId}>
         {t("mfa.setupTitle")}

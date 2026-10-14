@@ -8341,6 +8341,9 @@ export const en = {
   "mfa.copyCodes": "Copy codes",
   "mfa.copyCodesFailed":
     "Copy failed. Select the codes above and copy them manually.",
+  "mfa.keepCodes": "Save the codes, then choose Done.",
+  "mfa.onElsewhere":
+    "Two-step sign-in was turned on in another session. Enter a code to remove it.",
   "mfa.done": "Done",
   "mfa.cancel": "Cancel",
   "mfa.removeTitle": "Remove two-step sign-in?",

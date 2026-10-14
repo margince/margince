@@ -322,6 +322,8 @@ export function SignInMethodsCard() {
   const [confirmingMfa, setConfirmingMfa] = useState(false);
   // Asked only while the confirm is open: it decides one line of that dialog.
   const ownMfa = useMyMfa(confirmingMfa);
+  // An answer that failed is no proof the admin holds a factor, so it warns.
+  const selfLockedOut = !ownMfa.isPending && ownMfa.data?.confirmed !== true;
 
   return (
     <>
@@ -435,6 +437,7 @@ export function SignInMethodsCard() {
         title={t("signInMethods.requireMfaConfirmTitle")}
         confirmLabel={t("signInMethods.requireMfa")}
         pending={save.isPending}
+        confirmDisabled={ownMfa.isPending}
         error={save.error ? problemMessageOf(save.error, t) : null}
         onConfirm={() =>
           save.mutate(
@@ -444,9 +447,7 @@ export function SignInMethodsCard() {
         }
       >
         <p>{t("signInMethods.requireMfaConfirmBody")}</p>
-        {ownMfa.data?.confirmed === false && (
-          <p>{t("signInMethods.requireMfaConfirmSelf")}</p>
-        )}
+        {selfLockedOut && <p>{t("signInMethods.requireMfaConfirmSelf")}</p>}
       </ConfirmModal>
       {settings.data && (
         <GroupRoleGrants

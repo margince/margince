@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -10,7 +10,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import { type MfaStatus, MY_MFA_KEY, useMyMfa } from "./mfa.queries";
@@ -47,23 +47,34 @@ function useRowValue(status: ReturnType<typeof useMyMfa>) {
   return t(mfa.enrolled ? "mfa.pending" : "mfa.off");
 }
 
+function removalFailure(
+  error: unknown,
+  confirmedElsewhere: boolean,
+  t: Translator,
+): string | null {
+  if (confirmedElsewhere) return t("mfa.onElsewhere");
+  return error ? mfaFailureMessage(error, t) : null;
+}
+
 function RemoveModal({
   open,
   mfa,
   onClose,
   onRemoved,
+  onStale,
 }: Readonly<{
   open: boolean;
   mfa: MfaStatus | undefined;
   onClose: () => void;
   onRemoved: (removal: Removal) => void;
+  onStale: () => void;
 }>) {
   const t = useT();
-  const formId = useId();
   const [code, setCode] = useState("");
   const unfinished = mfa?.confirmed !== true;
   const entered = enteredCode(code);
   const remove = useMutation({
+    gcTime: 0,
     mutationFn: async (removal: Removal) => {
       const result = await api.DELETE("/me/mfa", {
         body: { code: removal.code },
@@ -74,12 +85,16 @@ function RemoveModal({
     },
     onSuccess: (refusal, removal) => {
       if (refusal === "wrong-code") setCode("");
+      // An unfinished setup needs no code, so a refusal means it was confirmed elsewhere.
+      if (refusal && removal.unfinished) onStale();
       if (refusal) return;
       setCode("");
       onRemoved(removal);
     },
   });
-  const refused = refusalCopy(remove.data);
+  const confirmedElsewhere =
+    remove.data === "wrong-code" && remove.variables?.unfinished === true;
+  const refused = confirmedElsewhere ? null : refusalCopy(remove.data);
   const submit = () => {
     if (remove.isPending || (!unfinished && entered === "")) return;
     remove.mutate({ code: unfinished ? "" : entered, unfinished });
@@ -99,13 +114,12 @@ function RemoveModal({
       confirmVariant="danger"
       confirmDisabled={!remove.isPending && !unfinished && entered === ""}
       pending={remove.isPending}
-      error={remove.isError ? mfaFailureMessage(remove.error, t) : null}
+      error={removalFailure(remove.error, confirmedElsewhere, t)}
       onConfirm={submit}
     >
       <p>{t(unfinished ? "mfa.discardBody" : "mfa.removeBody")}</p>
       {!unfinished && (
         <form
-          id={formId}
           onSubmit={(event) => {
             event.preventDefault();
             submit();
@@ -205,6 +219,7 @@ export function MfaSettingRow() {
         open={removeOpen}
         mfa={mfa}
         onClose={() => setRemoveOpen(false)}
+        onStale={() => void refresh()}
         onRemoved={(removal) => {
           setRemoveOpen(false);
           setOutcome(removal.unfinished ? "mfa.discarded" : "mfa.removed");

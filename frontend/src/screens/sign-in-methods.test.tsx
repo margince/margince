@@ -44,17 +44,22 @@ function mount(
   providers: { key: string; label: string; enabled: boolean }[],
   groupRoleMap: Record<string, string> = {},
   allow: GrantSpec = fullSignInGrants,
-  mfa: { required?: boolean; ownConfirmed?: boolean } = {},
+  mfa: {
+    required?: boolean;
+    ownConfirmed?: boolean;
+    ownAnswer?: Promise<Response>;
+  } = {},
 ) {
   const calls: unknown[] = [];
   const refusing = { writes: false, reads: false };
-  const asked = { ownMfa: 0 };
   const fetchMock = vi.fn(async (request: Request) => {
     if (request.url.endsWith("/v1/me")) {
       return jsonResponse(meFixture({ allow }));
     }
     if (request.url.endsWith("/v1/me/mfa")) {
-      asked.ownMfa += 1;
+      if (mfa.ownAnswer) {
+        return mfa.ownAnswer;
+      }
       const confirmed = mfa.ownConfirmed ?? true;
       return jsonResponse({
         enrolled: confirmed,
@@ -91,7 +96,7 @@ function mount(
     </QueryClientProvider>
   );
   render(<SignInMethodsCard />, { wrapper: Wrap });
-  return { calls, refusing, qc, asked };
+  return { calls, refusing, qc };
 }
 
 describe("the sign-in methods card", () => {
@@ -177,20 +182,29 @@ describe("the sign-in methods card", () => {
 describe("the second-factor requirement", () => {
   const requireSwitch = () =>
     screen.findByRole("switch", { name: /require second factor/i });
+  const confirmButton = (dialog: HTMLElement) =>
+    within(dialog).getByRole("button", { name: /require second factor/i });
+  // Settled means the confirm is live: it is held while the admin's own factor
+  // is still being asked for.
+  const settledDialog = async () => {
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(confirmButton(dialog).hasAttribute("disabled")).toBe(false),
+    );
+    return dialog;
+  };
 
   it("asks before requiring a second factor, then saves it", async () => {
     const { calls } = mount([]);
     const user = userEvent.setup();
     await user.click(await requireSwitch());
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await settledDialog();
     expect(
       within(dialog).getByText(/cannot use margince until they have one/i),
     ).toBeTruthy();
     expect(calls).toEqual([]);
-    await user.click(
-      within(dialog).getByRole("button", { name: /require second factor/i }),
-    );
+    await user.click(confirmButton(dialog));
     await waitFor(() => expect(calls).toEqual([{ require_mfa: true }]));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
@@ -216,15 +230,52 @@ describe("the second-factor requirement", () => {
   });
 
   it("leaves the self warning out for an admin who holds a factor", async () => {
-    const { asked } = mount([], {}, fullSignInGrants, { ownConfirmed: true });
+    mount([], {}, fullSignInGrants, { ownConfirmed: true });
     const user = userEvent.setup();
     await user.click(await requireSwitch());
-    const dialog = await screen.findByRole("dialog");
-    await waitFor(() => expect(asked.ownMfa).toBe(1));
-    await within(dialog).findByText(/cannot use margince until they have one/i);
+    const dialog = await settledDialog();
     expect(
       within(dialog).queryByText(/you have not set up an authenticator/i),
     ).toBeNull();
+  });
+
+  it("holds the confirm while the admin's own factor is unknown", async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const ownAnswer = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const { calls } = mount([], {}, fullSignInGrants, { ownAnswer });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await screen.findByRole("dialog");
+
+    expect(confirmButton(dialog).hasAttribute("disabled")).toBe(true);
+    await user.click(confirmButton(dialog));
+    expect(calls).toEqual([]);
+
+    answer(
+      jsonResponse({
+        enrolled: true,
+        confirmed: true,
+        recovery_codes_left: 10,
+      }),
+    );
+    await settledDialog();
+  });
+
+  // A failed read is no proof the admin holds a factor.
+  it("warns the admin when their own factor cannot be read", async () => {
+    mount([], {}, fullSignInGrants, {
+      ownAnswer: Promise.resolve(
+        jsonResponse({ title: "Unavailable", status: 503 }, 503),
+      ),
+    });
+    const user = userEvent.setup();
+    await user.click(await requireSwitch());
+    const dialog = await settledDialog();
+    expect(
+      within(dialog).getByText(/you have not set up an authenticator/i),
+    ).toBeTruthy();
   });
 
   it("turns the requirement off without asking", async () => {

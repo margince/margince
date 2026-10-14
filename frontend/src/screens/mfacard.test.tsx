@@ -40,7 +40,7 @@ function problem(status: number, code?: string) {
   return json({ title: "Refused", status, code }, status);
 }
 
-type Answer = (body: unknown) => Response;
+type Answer = (body: unknown) => Response | Promise<Response>;
 
 // One route table per test: GET /me/mfa answers `status`, and each write
 // answers from its queue, so a test states the server's replies in order.
@@ -83,6 +83,12 @@ function mount() {
   return client;
 }
 
+const ENROL: Answer = () =>
+  json({
+    secret: SECRET,
+    otpauth_uri: `otpauth://totp/Margince:a%40b.test?secret=${SECRET}`,
+  });
+
 const codeField = () => screen.getByRole("textbox", { name: /code/i });
 
 afterEach(() => {
@@ -94,13 +100,7 @@ describe("the two-step sign-in row", () => {
   it("sets up an authenticator, refuses a wrong code, then shows the recovery codes once", async () => {
     const user = userEvent.setup();
     const server = serve(OFF, {
-      "POST /v1/me/mfa/totp": [
-        () =>
-          json({
-            secret: SECRET,
-            otpauth_uri: `otpauth://totp/Margince:a%40b.test?secret=${SECRET}`,
-          }),
-      ],
+      "POST /v1/me/mfa/totp": [ENROL],
       "POST /v1/me/mfa/totp/confirm": [
         () => problem(401),
         () => {
@@ -193,7 +193,7 @@ describe("the two-step sign-in row", () => {
     expect(screen.queryByRole("button", { name: "Set up" })).toBeNull();
   });
 
-  it("removes the factor with a code the server checks", async () => {
+  it("removes the factor with a code the server checks, submitted with Enter", async () => {
     const user = userEvent.setup();
     const server = serve(ON, {
       "DELETE /v1/me/mfa": [
@@ -206,11 +206,8 @@ describe("the two-step sign-in row", () => {
     mount();
 
     await user.click(await screen.findByRole("button", { name: "Remove" }));
-    const dialog = await screen.findByRole("dialog");
-    await user.type(codeField(), " 654 321 ");
-    await user.click(
-      within(dialog).getByRole("button", { name: "Remove two-step sign-in" }),
-    );
+    await screen.findByRole("dialog");
+    await user.type(codeField(), " 654 321 {Enter}");
 
     expect(
       await screen.findByText("Two-step sign-in removed"),
@@ -276,5 +273,100 @@ describe("the two-step sign-in row", () => {
     expect(server.sent).toEqual([
       { route: "DELETE /v1/me/mfa", body: { code: "" } },
     ]);
+  });
+  it("keeps the recovery codes on screen until Done", async () => {
+    const user = userEvent.setup();
+    serve(OFF, {
+      "POST /v1/me/mfa/totp": [ENROL],
+      "POST /v1/me/mfa/totp/confirm": [() => json({ recovery_codes: CODES })],
+    });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Set up" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      await within(dialog).findByRole("textbox", {
+        name: /code from the app/i,
+      }),
+      "123456{Enter}",
+    );
+    await within(dialog).findByRole("textbox", { name: "Recovery codes" });
+
+    await user.keyboard("{Escape}");
+    await user.click(within(dialog).getByRole("button", { name: /close/i }));
+    const overlay = dialog.parentElement;
+    if (overlay) await user.click(overlay);
+    expect(screen.getByRole("dialog")).toHaveTextContent(CODES[0]);
+    expect(
+      within(dialog).getByText("Save the codes, then choose Done."),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("does not let a dismissal drop a confirm that is still on its way", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => undefined;
+    serve(OFF, {
+      "POST /v1/me/mfa/totp": [ENROL],
+      "POST /v1/me/mfa/totp/confirm": [
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
+      ],
+    });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Set up" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      await within(dialog).findByRole("textbox", {
+        name: /code from the app/i,
+      }),
+      "123456{Enter}",
+    );
+    await user.keyboard("{Escape}");
+    const overlay = dialog.parentElement;
+    if (overlay) await user.click(overlay);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    answer(json({ recovery_codes: CODES }));
+    expect(
+      await within(dialog).findByRole("textbox", { name: "Recovery codes" }),
+    ).toHaveTextContent(CODES[1]);
+  });
+
+  it("says so when an unfinished setup was confirmed in another session", async () => {
+    const user = userEvent.setup();
+    const server = serve(
+      { enrolled: true, confirmed: false, recovery_codes_left: 0 },
+      {
+        "DELETE /v1/me/mfa": [
+          () => {
+            server.status = ON;
+            return problem(401);
+          },
+        ],
+      },
+    );
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Remove" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Discard setup" }),
+    );
+
+    expect(
+      await within(dialog).findByText(/turned on in another session/i),
+    ).toBeInTheDocument();
+    expect(
+      await within(dialog).findByRole("textbox", { name: /^code/i }),
+    ).toHaveValue("");
+    expect(
+      await screen.findByText("On · 10 recovery codes left"),
+    ).toBeInTheDocument();
   });
 });

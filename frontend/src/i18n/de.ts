@@ -8176,6 +8176,9 @@ export const de = {
   "mfa.copyCodes": "Codes kopieren",
   "mfa.copyCodesFailed":
     "Kopieren fehlgeschlagen. Markiere die Codes oben und kopiere sie von Hand.",
+  "mfa.keepCodes": "Sichere die Codes und wähle dann Fertig.",
+  "mfa.onElsewhere":
+    "Die zweistufige Anmeldung wurde in einer anderen Sitzung eingeschaltet. Gib einen Code ein, um sie zu entfernen.",
   "mfa.done": "Fertig",
   "mfa.cancel": "Abbrechen",
   "mfa.removeTitle": "Zweistufige Anmeldung entfernen?",
