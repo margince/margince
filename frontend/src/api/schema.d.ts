@@ -12808,8 +12808,9 @@ export interface paths {
          *     An assignee-scoped list would leave a card nobody could find the moment the colleague it named
          *     went on leave.
          *
-         *     Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-         *     caller to discover it.
+         *     Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+         *     waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+         *     stranded the oldest reviews, which are the ones a reviewer most needs.
          */
         get: operations["listCommunicationReviews"];
         put?: never;
@@ -39283,6 +39284,11 @@ export interface components {
         CommunicationReviewList: {
             data: components["schemas"]["CommunicationReview"][];
             /**
+             * @description Where this page was cut. `total` beside it is the same count this object may carry, kept
+             *     at the top level because it shipped there: a client reading it keeps working.
+             */
+            page: components["schemas"]["PageInfo"];
+            /**
              * @description How many are waiting in total. A page at its limit has more behind it, and this is how
              *     the caller knows rather than by discovering it.
              */
@@ -64951,6 +64957,17 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;

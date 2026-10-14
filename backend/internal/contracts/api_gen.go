@@ -28201,6 +28201,10 @@ type CommunicationReviewState string
 type CommunicationReviewList struct {
 	Data []CommunicationReview `json:"data"`
 
+	// Page Where this page was cut. `total` beside it is the same count this object may carry, kept
+	// at the top level because it shipped there: a client reading it keeps working.
+	Page PageInfo `json:"page"`
+
 	// Total How many are waiting in total. A page at its limit has more behind it, and this is how
 	// the caller knows rather than by discovering it.
 	Total int `json:"total"`
@@ -51781,6 +51785,16 @@ type ListOpenCommitmentsParams struct {
 // ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
 type ListCommunicationReviewsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListCompaniesParams defines parameters for ListCompanies.
@@ -84339,6 +84353,19 @@ func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWrite
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}

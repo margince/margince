@@ -18718,13 +18718,15 @@ paths:
         An assignee-scoped list would leave a card nobody could find the moment the colleague it named
         went on leave.
 
-        Bounded. A list at its limit has more behind it, and `total` says so rather than leaving the
-        caller to discover it.
+        Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
+        waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
+        stranded the oldest reviews, which are the ones a reviewer most needs.
       parameters:
         - name: limit
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 100, default: 100 }
+        - $ref: '#/components/parameters/Cursor'
       responses:
         '200':
           description: What is waiting.
@@ -53385,11 +53387,17 @@ components:
     CommunicationReviewList:
       type: object
       description: A page of refused sends waiting for a decision.
-      required: [data, total]
+      required: [data, page, total]
       properties:
         data:
           type: array
           items: { $ref: '#/components/schemas/CommunicationReview' }
+        page:
+          allOf:
+            - $ref: '#/components/schemas/PageInfo'
+          description: |
+            Where this page was cut. `total` beside it is the same count this object may carry, kept
+            at the top level because it shipped there: a client reading it keeps working.
         total:
           type: integer
           description: |

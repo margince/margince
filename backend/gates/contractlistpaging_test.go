@@ -64,9 +64,6 @@ var boundedButWhole = gatekit.Waive(map[string]string{
 	"searchContext (/context-search)": "a ranking, served by search_context itself: `limit` cuts " +
 		"an ordering by relevance, not a match set, and the answer's `coverage` never claims " +
 		"complete_exact. A question with a whole answer belongs to POST /workspace-queries",
-	"listCommunicationReviews (/communication-reviews)": "a reviewer's queue with the defect this " +
-		"gate was written for, unfixed: oldest first, bounded at 100, no cursor. Fixing it here " +
-		"would multiply a paging change across a module this one does not touch; issue 5730",
 })
 
 // listPagingHolds is the census.
