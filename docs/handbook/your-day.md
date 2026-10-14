@@ -76,6 +76,12 @@ a customer**, press **More actions** at the end of the row.
    customer**.
 4. Press **Undo** in the note if you picked wrong.
 
+Every kind of row offers **Done**: a follow-up, a meeting, a deal at risk, a system or delivery
+problem. A row with no **Done** says why, such as "you can read this but not change it".
+
+To clear several rows at once, tick them, or press **Select all**, then press **Mark done**. One
+**Undo** brings them all back.
+
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
 out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
@@ -290,6 +296,10 @@ Taking an item off the Worklist uses four choices, and they reach different numb
 
 **Done** is for a message you handled another way: by phone, in a meeting, or with no reply
 owed. It does not count as a reply sent.
+
+On any other row, **Done** says "Marked done for you. It comes back if something new happens on
+it." A deal comes back after new activity or once its close date passes. A system or delivery row
+comes back when it fails again.
 
 **Not mine** shows only on a row someone else owns, or nobody owns. Point at it to read what it
 does. The record keeps its owner, and nobody is told.

@@ -21,6 +21,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { useFoldedViewport } from "../lib/viewport";
+import { useMarkRowsDone } from "./worklist.donequeries";
 import {
   type ReopenCondition,
   useClearDisposition,
@@ -103,6 +104,7 @@ export function usePutDown(item: WorklistItem) {
   const toast = useToast();
   const set = useSetDisposition();
   const clear = useClearDisposition();
+  const done = useMarkRowsDone();
   const offered = knownDispositions(item.dispositions);
   // The answer the last press sent. Read only through `writing` below, which is
   // why nothing clears it: an answer that is not in flight is not consulted,
@@ -136,6 +138,43 @@ export function usePutDown(item: WorklistItem) {
     const days = typeof until === "number" ? until : undefined;
     writeIsOut.current = true;
     setPressed({ disposition, until });
+    // Done goes to the Worklist's own endpoint on every row, so a row that is
+    // not a message takes it too. The other judgements are a message's own.
+    const handled = disposition === "handled";
+    const row = { source: item.source, row_id: item.id };
+    // A failed undo needs saying: the toast is gone once Undo is pressed, so
+    // silence would leave the row hidden with no way back.
+    const undoFailed = {
+      onError: () =>
+        toast.show(t("worklist.disposition.undoFailed"), { tone: "danger" }),
+    };
+    const settled = {
+      onSuccess: () =>
+        toast.show(doneText(disposition, until, item.source, t, locale), {
+          action: {
+            kind: "undo",
+            label: t("worklist.disposition.undo"),
+            onAct: () =>
+              handled
+                ? done.mutate({ rows: [row], reopen: true }, undoFailed)
+                : clear.mutate(
+                    { activityId: item.id, scope: undoScope(disposition) },
+                    undoFailed,
+                  ),
+          },
+        }),
+      onError: () =>
+        toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
+      // Settled either way, so a refusal releases the row rather than leaving
+      // it unanswerable until the reader reloads.
+      onSettled: () => {
+        writeIsOut.current = false;
+      },
+    };
+    if (handled) {
+      done.mutate({ rows: [row] }, settled);
+      return;
+    }
     set.mutate(
       {
         activityId: item.id,
@@ -149,34 +188,7 @@ export function usePutDown(item: WorklistItem) {
               }
           : {}),
       },
-      {
-        onSuccess: () =>
-          toast.show(doneText(disposition, until, t, locale), {
-            action: {
-              kind: "undo",
-              label: t("worklist.disposition.undo"),
-              // A failed undo needs saying: the toast is gone once Undo is
-              // pressed, so silence would leave the row hidden with no way back.
-              onAct: () =>
-                clear.mutate(
-                  { activityId: item.id, scope: undoScope(disposition) },
-                  {
-                    onError: () =>
-                      toast.show(t("worklist.disposition.undoFailed"), {
-                        tone: "danger",
-                      }),
-                  },
-                ),
-            },
-          }),
-        onError: () =>
-          toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
-        // Settled either way, so a refusal releases the row rather than leaving
-        // it unanswerable until the reader reloads.
-        onSettled: () => {
-          writeIsOut.current = false;
-        },
-      },
+      settled,
     );
   };
   return {
@@ -185,7 +197,7 @@ export function usePutDown(item: WorklistItem) {
     // The answer whose write is out, or nothing while none is. Not a bare
     // boolean: every control in the band reads the same value, and what each
     // one needs to know is whether the write out is ITS OWN.
-    writing: set.isPending ? pressed : undefined,
+    writing: set.isPending || done.isPending ? pressed : undefined,
     t,
     locale,
   };
@@ -413,9 +425,15 @@ export function swipeActions(
 function doneText(
   disposition: WorklistDisposition,
   until: SnoozeSpan | SnoozeEvent | undefined,
+  source: WorklistItem["source"],
   t: T,
   locale: Locale,
 ): string {
+  // Only a waiting message comes back when they write again. Any other row
+  // comes back when something new happens on what it is about.
+  if (disposition === "handled" && source !== "customer_waiting") {
+    return t("worklist.disposition.done.handledRow");
+  }
   if (disposition !== "snooze") {
     return t(`worklist.disposition.done.${disposition}` as const);
   }

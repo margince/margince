@@ -3866,6 +3866,8 @@ export const en = {
   "worklist.bulk.selectAll_other": "Select all {count} items shown",
   "worklist.bulk.clear": "Clear selection",
   "worklist.bulk.markDone": "Mark done",
+  "worklist.bulk.doneCount_one": "Marked {count} item done for you.",
+  "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
   "deal.offers": "Offers",
   "deal.newOffer": "New offer",
@@ -12665,6 +12667,8 @@ export const en = {
     "Back on your list when they reply.",
   "worklist.disposition.done.handled":
     "Marked done for you. It comes back if they write again.",
+  "worklist.disposition.done.handledRow":
+    "Marked done for you. It comes back if something new happens on it.",
   "worklist.disposition.done.not_mine":
     "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
@@ -12915,6 +12919,7 @@ export const en = {
   "worklist.because.no_reply_history": "no reply history",
   "worklist.because.asks_nothing": "asks for nothing",
   "worklist.because.addressed_elsewhere": "addressed to a colleague",
+  "worklist.because.read_only": "you can read this but not change it",
   "worklist.above.pin": "Ranked above the next item because you pinned it.",
   "worklist.above.level":
     "Ranked above the next item because it is more urgent.",

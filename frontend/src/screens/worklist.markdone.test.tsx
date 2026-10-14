@@ -37,8 +37,9 @@ function colleaguesRow(): WorklistItem {
 
 async function sentBody(
   fetch: ReturnType<typeof vi.fn>,
+  call = 0,
 ): Promise<Record<string, unknown>> {
-  const [input] = fetch.mock.calls[0] ?? [];
+  const [input] = fetch.mock.calls[call] ?? [];
   expect(input, "nothing was sent").toBeInstanceOf(Request);
   return JSON.parse(await (input as Request).clone().text()) as Record<
     string,
@@ -46,7 +47,12 @@ async function sentBody(
   >;
 }
 
-function draw() {
+function sentTo(fetch: ReturnType<typeof vi.fn>, call = 0): string {
+  const [input] = fetch.mock.calls[call] ?? [];
+  return `${(input as Request).method} ${new URL((input as Request).url).pathname}`;
+}
+
+function draw(item: WorklistItem = colleaguesRow()) {
   const fetch = vi.fn(
     async () =>
       new Response("{}", {
@@ -62,12 +68,7 @@ function draw() {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <RowActs
-            item={colleaguesRow()}
-            title={TITLE}
-            href={undefined}
-            owner=""
-          />
+          <RowActs item={item} title={TITLE} href={undefined} owner="" />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -103,13 +104,47 @@ describe("Done on a waiting row", () => {
 
     await user.click(done);
 
-    expect(await sentBody(fetch)).toEqual({ disposition: "handled" });
+    expect(sentTo(fetch)).toBe("PUT /v1/worklist/done");
+    expect(await sentBody(fetch)).toEqual({
+      rows: [{ source: "customer_waiting", row_id: colleaguesRow().id }],
+    });
     expect(
       await screen.findByText(en["worklist.disposition.done.handled"]),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["worklist.disposition.undo"] }),
     ).toBeTruthy();
+  });
+
+  // Every other row takes the same Done, says it comes back when something new
+  // happens, and its Undo takes it back through the same endpoint.
+  it("takes a deal at risk off the list and undoes it", async () => {
+    const user = userEvent.setup();
+    const deal: WorklistItem = {
+      ...colleaguesRow(),
+      id: "01a05500-0000-7000-8000-0000000000d1",
+      source: "deal_at_risk",
+      category: "deals_at_risk",
+      dispositions: ["handled"],
+    };
+    const fetch = draw(deal);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    );
+    expect(sentTo(fetch)).toBe("PUT /v1/worklist/done");
+    expect(
+      await screen.findByText(en["worklist.disposition.done.handledRow"]),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.disposition.undo"] }),
+    );
+    expect(sentTo(fetch, 1)).toBe("POST /v1/worklist/done/undo");
+    expect(await sentBody(fetch, 1)).toEqual({
+      rows: [{ source: "deal_at_risk", row_id: deal.id }],
+    });
   });
 
   it("leads the forward swipe", () => {

@@ -19662,6 +19662,7 @@ const (
 	WorklistReasonKindPinned             WorklistReasonKind = "pinned"
 	WorklistReasonKindPromised           WorklistReasonKind = "promised"
 	WorklistReasonKindQuietDays          WorklistReasonKind = "quiet_days"
+	WorklistReasonKindReadOnly           WorklistReasonKind = "read_only"
 	WorklistReasonKindRepeatedFailure    WorklistReasonKind = "repeated_failure"
 	WorklistReasonKindResponseDueSoon    WorklistReasonKind = "response_due_soon"
 	WorklistReasonKindResponseOverdue    WorklistReasonKind = "response_overdue"
@@ -19734,6 +19735,8 @@ func (e WorklistReasonKind) Valid() bool {
 	case WorklistReasonKindPromised:
 		return true
 	case WorklistReasonKindQuietDays:
+		return true
+	case WorklistReasonKindReadOnly:
 		return true
 	case WorklistReasonKindRepeatedFailure:
 		return true
@@ -26169,6 +26172,11 @@ type AttentionItem struct {
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
+
+	// SubjectMovedAt When something last happened on the item's subject, where its lane knows and
+	// `occurred_at` does not say it: a deal's last activity, a connection's last good
+	// sync. A Worklist row marked done comes back once this passes the press.
+	SubjectMovedAt *time.Time `json:"subject_moved_at,omitempty"`
 
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
@@ -50477,6 +50485,12 @@ type WorklistDealVerdictSource string
 // judgement the deal card owns.
 type WorklistDealVerdictStanding string
 
+// WorklistDoneRequest defines model for WorklistDoneRequest.
+type WorklistDoneRequest struct {
+	// Rows The rows, each named by its lane and its id, as a pin names one.
+	Rows []WorklistPinRequest `json:"rows"`
+}
+
 // WorklistFocus Up to six actionable priorities from the scoped day, selected before filtering
 // or pagination and ordered by the queue's server ranking. Routine maintenance
 // and future tasks do not fill spare places. Pins remain explicit choices.
@@ -50683,8 +50697,12 @@ type WorklistItem struct {
 	// rule, and a client guessing it draws a verb that 404s or hides one the rep
 	// is entitled to.
 	//
-	// Absent or empty means the row cannot be set aside — most sources answer
-	// through the surface that owns them and leave nothing to dispose of here.
+	// `handled` is Done: nothing more to do here, take it off my list. It posts to
+	// `/worklist/done` on every row that carries it. Only a waiting message offers
+	// the other three, which post to `/activities/{id}/disposition`.
+	//
+	// Absent or empty means the row leaves through its own verb in `actions`, or,
+	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
 	// DueAt When this is due, or when the meeting starts.
@@ -51261,7 +51279,7 @@ type WorklistReadings struct {
 // product ships three languages and a sentence composed here would reach a German
 // reader in English.
 type WorklistReason struct {
-	// Kind Which fact this is. The client writes the phrase.
+	// Kind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
 	Kind WorklistReasonKind `json:"kind"`
 
 	// Value A typed comparator value — a date, an amount, a count of days, or nothing. Typed
@@ -51270,7 +51288,7 @@ type WorklistReason struct {
 	Value *WorklistValue `json:"value,omitempty"`
 }
 
-// WorklistReasonKind Which fact this is. The client writes the phrase.
+// WorklistReasonKind Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
 type WorklistReasonKind string
 
 // WorklistSourceUnavailable A source that did not contribute, and why. `withheld` means the caller may not
@@ -58804,6 +58822,12 @@ type SetWeeklyPlanCommitmentStateJSONRequestBody SetWeeklyPlanCommitmentStateJSO
 
 // SetWeeklyPlanContractJSONRequestBody defines body for SetWeeklyPlanContract for application/json ContentType.
 type SetWeeklyPlanContractJSONRequestBody SetWeeklyPlanContractJSONBody
+
+// MarkWorklistRowsDoneJSONRequestBody defines body for MarkWorklistRowsDone for application/json ContentType.
+type MarkWorklistRowsDoneJSONRequestBody = WorklistDoneRequest
+
+// ReopenWorklistRowsJSONRequestBody defines body for ReopenWorklistRows for application/json ContentType.
+type ReopenWorklistRowsJSONRequestBody = WorklistDoneRequest
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
@@ -71828,6 +71852,12 @@ type ServerInterface interface {
 	// The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 	// (GET /worklist)
 	GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams)
+	// Take rows off your own Worklist, because there is nothing more to do there.
+	// (PUT /worklist/done)
+	MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request)
+	// Put rows back on your own Worklist — the undo behind Done.
+	// (POST /worklist/done/undo)
+	ReopenWorklistRows(w http.ResponseWriter, r *http.Request)
 	// What is going wrong on this lead's team, and what it was judged against.
 	// (GET /worklist/exceptions)
 	GetTeamExceptions(w http.ResponseWriter, r *http.Request)
@@ -76838,6 +76868,18 @@ func (_ Unimplemented) GetActingIdentity(w http.ResponseWriter, r *http.Request)
 // The rep's day as ONE ranked queue — every actionable item, ordered by what to do next.
 // (GET /worklist)
 func (_ Unimplemented) GetWorklist(w http.ResponseWriter, r *http.Request, params GetWorklistParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take rows off your own Worklist, because there is nothing more to do there.
+// (PUT /worklist/done)
+func (_ Unimplemented) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put rows back on your own Worklist — the undo behind Done.
+// (POST /worklist/done/undo)
+func (_ Unimplemented) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112369,6 +112411,46 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// MarkWorklistRowsDone operation middleware
+func (siw *ServerInterfaceWrapper) MarkWorklistRowsDone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkWorklistRowsDone(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenWorklistRows operation middleware
+func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenWorklistRows(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTeamExceptions operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 
@@ -115235,6 +115317,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist", wrapper.GetWorklist)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/worklist/done", wrapper.MarkWorklistRowsDone)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/worklist/done/undo", wrapper.ReopenWorklistRows)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/exceptions", wrapper.GetTeamExceptions)

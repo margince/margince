@@ -3750,6 +3750,8 @@ export const vi = {
   "worklist.bulk.selectAll_other": "Chọn {count} việc đang hiển thị",
   "worklist.bulk.clear": "Bỏ chọn",
   "worklist.bulk.markDone": "Đánh dấu xong",
+  "worklist.bulk.doneCount_one": "Đã đánh dấu xong {count} việc cho bạn.",
+  "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
@@ -12289,6 +12291,8 @@ export const vi = {
     "Sẽ quay lại danh sách khi họ trả lời.",
   "worklist.disposition.done.handled":
     "Đã đánh dấu xong cho bạn. Việc này sẽ quay lại nếu họ viết tiếp.",
+  "worklist.disposition.done.handledRow":
+    "Đã đánh dấu xong cho bạn. Việc này sẽ quay lại nếu có điều gì mới.",
   "worklist.disposition.done.not_mine":
     "Đã gỡ khỏi danh sách của bạn. Việc này sẽ quay lại nếu bản ghi đổi người phụ trách.",
   "worklist.disposition.done.not_sales": "Đã gỡ khỏi mọi danh sách.",
@@ -12542,6 +12546,7 @@ export const vi = {
   "worklist.because.no_reply_history": "chưa có lịch sử trả lời",
   "worklist.because.asks_nothing": "không yêu cầu gì",
   "worklist.because.addressed_elsewhere": "gửi cho đồng nghiệp",
+  "worklist.because.read_only": "bạn có thể xem nhưng không thể thay đổi",
   "worklist.above.pin": "Xếp trên việc kế tiếp vì bạn đã ghim.",
   "worklist.above.level": "Xếp trên việc kế tiếp vì khẩn cấp hơn.",
   "worklist.above.deadline": "Xếp trên việc kế tiếp, xét theo ngày.",

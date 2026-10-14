@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 310 |
-| Columns | 3669 |
-| Foreign keys | 513 |
+| Tables | 311 |
+| Columns | 3674 |
+| Foreign keys | 514 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 134 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 25 | 135 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 60 | 35 |
@@ -88,7 +88,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 26 |
+| [activities](activities.md) | 27 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -162,7 +162,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 25 | 134 |
+| [`app_user`](identity.md#app_user) | identity | 25 | 135 |
 | [`approval`](approvals.md#approval) | approvals | 30 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -435,6 +435,7 @@ erDiagram
 | [`weekly_review_scorecard`](compose.md#weekly_review_scorecard) | compose | 25 | 0 |
 | [`withdrawal_credential`](consent.md#withdrawal_credential) | consent | 12 | 0 |
 | [`workflow_run`](automation.md#workflow_run) | automation | 10 | 0 |
+| [`worklist_done`](activities.md#worklist_done) | activities | 5 | 0 |
 | [`worklist_pin`](activities.md#worklist_pin) | activities | 5 | 0 |
 | [`worklist_snapshot`](compose.md#worklist_snapshot) | compose | 8 | 0 |
 | [`workspace`](identity.md#workspace) | identity | 4 | 0 |

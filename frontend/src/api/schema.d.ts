@@ -10703,6 +10703,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Take rows off your own Worklist, because there is nothing more to do there.
+         * @description Done on any row that offers `handled` in its `dispositions`. One row, or every row a
+         *     reader ticked: the batch lands whole or not at all, and one call to
+         *     `/worklist/done/undo` with the same rows reverses it.
+         *
+         *     PER READER. A row the caller marks done leaves the caller's list and nobody else's.
+         *
+         *     A row comes back on its own when something new happens on its subject. A message,
+         *     an unanswered message of the caller's own and a meeting follow-up keep their Done
+         *     on the activity, so the next message or meeting is new work. Every other row
+         *     returns once it reports an event on its subject after the press: a new failure on
+         *     a health row, a connection that synced again, new activity or a passed close date
+         *     on a deal at risk.
+         *
+         *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
+         *     every lane's own grant and row scope. Any other row answers 404, the same as one
+         *     that does not exist, and nothing in the batch is written. A source whose rows never
+         *     offer Done answers 422. A row named twice is written once.
+         */
+        put: operations["markWorklistRowsDone"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/done/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put rows back on your own Worklist — the undo behind Done.
+         * @description Clears what THIS reader marked done. Idempotent: a row nobody marked done is the
+         *     same success, because the reader's goal state already holds. A POST rather than a
+         *     DELETE, because the batch travels in a body.
+         */
+        post: operations["reopenWorklistRows"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/team": {
         parameters: {
             query?: never;
@@ -32297,6 +32355,10 @@ export interface components {
              */
             row_id: string;
         };
+        WorklistDoneRequest: {
+            /** @description The rows, each named by its lane and its id, as a pin names one. */
+            rows: components["schemas"]["WorklistPinRequest"][];
+        };
         DismissRelationshipNudgeRequest: {
             /**
              * @description How long the contact stays off the lane, counted from now. A COUNT rather than
@@ -43757,6 +43819,13 @@ export interface components {
              */
             occurred_at?: string;
             /**
+             * Format: date-time
+             * @description When something last happened on the item's subject, where its lane knows and
+             *     `occurred_at` does not say it: a deal's last activity, a connection's last good
+             *     sync. A Worklist row marked done comes back once this passes the press.
+             */
+            subject_moved_at?: string;
+            /**
              * @description The way back from work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
              */
@@ -45241,8 +45310,12 @@ export interface components {
              *     rule, and a client guessing it draws a verb that 404s or hides one the rep
              *     is entitled to.
              *
-             *     Absent or empty means the row cannot be set aside — most sources answer
-             *     through the surface that owns them and leave nothing to dispose of here.
+             *     `handled` is Done: nothing more to do here, take it off my list. It posts to
+             *     `/worklist/done` on every row that carries it. Only a waiting message offers
+             *     the other three, which post to `/activities/{id}/disposition`.
+             *
+             *     Absent or empty means the row leaves through its own verb in `actions`, or,
+             *     where it has none, a reason in `because` says why.
              */
             dispositions?: ("handled" | "snooze" | "not_mine" | "not_sales")[];
             /**
@@ -45613,10 +45686,10 @@ export interface components {
          */
         WorklistReason: {
             /**
-             * @description Which fact this is. The client writes the phrase.
+             * @description Which fact this is. The client writes the phrase. `read_only` says why a row offers no way off the list: the reader may read its record and not change it.
              * @enum {string}
              */
-            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file";
+            kind: "pinned" | "buyer_wrote_last" | "waiting_days" | "overdue" | "due_today" | "closing_soon" | "expected_revenue" | "material" | "below_material" | "quiet_days" | "no_champion" | "champion_unknown" | "promised" | "approved_and_failed" | "blocks_customer_work" | "routine" | "repeated_failure" | "legal_deadline" | "opened_overdue" | "earlier_requests" | "first_asked" | "no_next_step" | "meeting_soon" | "meeting_booked" | "meeting_unprepared" | "response_overdue" | "response_due_soon" | "unassigned" | "stale" | "no_reply_history" | "asks_nothing" | "addressed_elsewhere" | "outcome_unrecorded" | "you_wrote_last" | "no_reply_days" | "met_days_ago" | "nothing_sent_since" | "no_attendee_on_file" | "read_only";
             value?: components["schemas"]["WorklistValue"];
         };
         /**
@@ -63558,6 +63631,58 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    markWorklistRowsDone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistDoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Off the list, or was already. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reopenWorklistRows: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorklistDoneRequest"];
+            };
+        };
+        responses: {
+            /** @description Back on the list, or was never off it. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

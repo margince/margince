@@ -3826,6 +3826,8 @@ export const de = {
     "Alle {count} angezeigten Einträge auswählen",
   "worklist.bulk.clear": "Auswahl aufheben",
   "worklist.bulk.markDone": "Als erledigt markieren",
+  "worklist.bulk.doneCount_one": "{count} Eintrag für dich erledigt.",
+  "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
@@ -12580,6 +12582,8 @@ export const de = {
     "Wieder auf deiner Liste, sobald eine Antwort kommt.",
   "worklist.disposition.done.handled":
     "Für dich erledigt. Bei einer neuen Nachricht kommt der Eintrag zurück.",
+  "worklist.disposition.done.handledRow":
+    "Für dich erledigt. Wenn sich daran etwas Neues tut, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_mine":
     "Von deiner Liste entfernt. Wechselt die Zuständigkeit, kommt der Eintrag zurück.",
   "worklist.disposition.done.not_sales": "Von allen Listen entfernt.",
@@ -12836,6 +12840,7 @@ export const de = {
   "worklist.because.no_reply_history": "keine bisherigen Antworten",
   "worklist.because.asks_nothing": "fordert nichts an",
   "worklist.because.addressed_elsewhere": "an jemand anderen im Team gerichtet",
+  "worklist.because.read_only": "du kannst das lesen, aber nicht ändern",
   "worklist.above.pin":
     "Steht über dem nächsten Eintrag, da du diesen Eintrag angeheftet hast.",
   "worklist.above.level":

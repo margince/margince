@@ -58,6 +58,7 @@ export const KNOWN_REASONS = {
   met_days_ago: true,
   nothing_sent_since: true,
   no_attendee_on_file: true,
+  read_only: true,
 } as const;
 
 export type KnownReason = keyof typeof KNOWN_REASONS;

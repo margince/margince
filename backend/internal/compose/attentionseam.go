@@ -259,6 +259,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// it was written and nothing could set it, so the one control that says
 		// "I know, and I want this first anyway" did not exist.
 		WithPins(attentionPins{pool: pool, store: activities.NewStore(db)}).
+		WithDone(attentionPins{pool: pool, store: activities.NewStore(db)}).
 		// One reader's walk, held still while they page it. Without it the
 		// cursor is an offset into a ranking rebuilt on every read, so the
 		// count above the queue climbs as work arrives behind somebody who is

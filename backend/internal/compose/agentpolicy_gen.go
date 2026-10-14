@@ -805,6 +805,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/webhook-subscriptions/{id}/rotate-secret":                     {Op: "rotateWebhookSecret", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/commitments":                                     {Op: "addWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/current":                                         {Op: "startWeeklyPlan", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/worklist/done/undo":                                           {Op: "reopenWorklistRows", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/workspace-queries":                                            {Op: "queryWorkspace", Access: "tool", Tool: "query_workspace", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"PUT /v1/activities/{id}/disposition":                                   {Op: "setActivityDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/budget":                                                     {Op: "replaceAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -855,5 +856,6 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/weekly-plans/commitments/{id}/response":                        {Op: "answerWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/state":                           {Op: "setWeeklyPlanCommitmentState", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/current/contract":                                 {Op: "setWeeklyPlanContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/worklist/done":                                                 {Op: "markWorklistRowsDone", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/worklist/pins":                                                 {Op: "pinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 }
