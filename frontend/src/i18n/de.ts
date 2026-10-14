@@ -5965,7 +5965,7 @@ export const de = {
   "import.progress.total": "{done} von {total} Zeilen",
   "import.progress.rate": "{rate} Zeilen/s",
   "import.progress.elapsed": "{span} vergangen",
-  "import.progress.etaObject": "noch etwa {minutes} Min. bei {type}",
+  "import.progress.etaObject": "noch etwa {minutes} Min. für {type}",
   "import.progress.etaRun": "noch etwa {minutes} Min.",
   "import.progress.counts": "Bisherige Zeilen",
   "import.progress.count.created": "Neu",
@@ -6025,6 +6025,20 @@ export const de = {
   "import.test.row": "Zeile {line}",
   "import.test.rowColumn": "Zeile {line} · {column}",
   "import.test.wholeFile": "Ganze Datei",
+  "import.reason.link_row_not_imported":
+    "Diese Zeile wird nicht importiert, daher gibt es niemanden, der mit {name} verknüpft werden könnte.",
+  "import.reason.link_contact_not_imported":
+    "Der Kontakt „{from}“ wurde nicht importiert, daher gab es niemanden, der mit „{name}“ verknüpft werden konnte.",
+  "import.reason.link_edge_unsupported":
+    "Ein CSV-Import kennt keine Verknüpfung {from} → {to}; sie wurde nicht angewendet.",
+  "import.reason.undo_grant_lost":
+    "Deine Berechtigungen decken diesen Datensatz nicht mehr ab.",
+  "import.reason.undo_not_visible":
+    "Dieser Datensatz ist für dich nicht mehr sichtbar.",
+  "import.reason.undo_rule_protects":
+    "Der Datensatz hat die Rücknahme abgelehnt, weil eine Geschäftsregel ihn schützt.",
+  "import.reason.undo_failed":
+    "Der Datensatz konnte nicht zurückgenommen werden.",
   "import.reason.author_too_long": "Der Autor ist länger als {max} Zeichen.",
   "import.reason.cannot_create":
     "Du darfst keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
@@ -6037,7 +6051,7 @@ export const de = {
   "import.reason.cannot_read_tags":
     "Du darfst Tags nicht lesen, daher wird die Tag-Spalte nicht importiert.",
   "import.reason.cannot_write_type":
-    "„{value}“ kann nicht in ein Feld vom Typ {type} geschrieben werden.",
+    "„{value}“ kann nicht in ein Feld vom Typ „{type}“ geschrieben werden.",
   "import.reason.company_duplicate_found":
     "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile legt ein zweites an und stellt das Paar zur Prüfung bereit.",
   "import.reason.company_duplicate_skipped":
@@ -6124,7 +6138,7 @@ export const de = {
   "import.reason.tag_created":
     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
   "import.reason.tag_name_invalid":
-    "Der Tag „{name}“ kann nicht angelegt werden: Sein Name {detail}.",
+    "Der Tag „{name}“ kann nicht angelegt werden. Grund: {detail}",
   "import.reason.tag_new":
     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
   "import.reason.value_refused": "„{value}“ wurde abgelehnt: {detail}",

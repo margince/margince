@@ -66,11 +66,8 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 	}
 	for _, edge := range edges {
 		if willNotLand[edge.FromID] {
-			report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
-				From:   edge.FromType + "/" + edge.FromID,
-				To:     edge.ToType + "/" + edge.ToID,
-				Reason: "this row will not be imported, so there is nobody to link to " + edge.ToID,
-			})
+			report.AssociationsSkipped = append(report.AssociationsSkipped,
+				skippedAssocFor(edge, migration.Why(migration.ReasonLinkRowNotImported, "name", edge.ToID)))
 			continue
 		}
 		why, err := writers.predictLink(ctx, edge)
@@ -81,13 +78,17 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 			report.Associations++
 			continue
 		}
-		report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
-			From:   edge.FromType + "/" + edge.FromID,
-			To:     edge.ToType + "/" + edge.ToID,
-			Reason: why.English(),
-		})
+		report.AssociationsSkipped = append(report.AssociationsSkipped, skippedAssocFor(edge, why))
 	}
 	return report, nil
+}
+
+// skippedAssocFor is the report's line for an edge left unapplied for why.
+func skippedAssocFor(edge migration.Assoc, why migration.Reason) migration.SkippedAssoc {
+	return migration.SkippedAssoc{
+		From: edge.FromType + "/" + edge.FromID, To: edge.ToType + "/" + edge.ToID,
+		Reason: why.English(), Code: why.Code, Params: why.Params,
+	}
 }
 
 // predictLink answers why an edge will not find its company, or the zero

@@ -5894,6 +5894,18 @@ export const vi = {
   "import.test.row": "Dòng {line}",
   "import.test.rowColumn": "Dòng {line} · {column}",
   "import.test.wholeFile": "Toàn bộ tệp",
+  "import.reason.link_row_not_imported":
+    "Hàng này sẽ không được nhập nên không có ai để liên kết với {name}.",
+  "import.reason.link_contact_not_imported":
+    "Liên hệ “{from}” chưa được nhập nên không có ai để liên kết với “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "Nhập CSV không có liên kết {from} → {to} nên liên kết này không được áp dụng.",
+  "import.reason.undo_grant_lost":
+    "Quyền của bạn không còn bao gồm bản ghi này.",
+  "import.reason.undo_not_visible": "Bạn không còn thấy bản ghi này.",
+  "import.reason.undo_rule_protects":
+    "Bản ghi từ chối hoàn tác vì có một quy tắc nghiệp vụ bảo vệ nó.",
+  "import.reason.undo_failed": "Không thể hoàn tác bản ghi này.",
   "import.reason.author_too_long": "Tác giả dài hơn {max} ký tự.",
   "import.reason.cannot_create":
     "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
@@ -5991,7 +6003,7 @@ export const vi = {
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
-    "Không thể tạo thẻ “{name}”: tên của nó {detail}.",
+    "Không thể tạo thẻ “{name}”. Lý do: {detail}",
   "import.reason.tag_new":
     "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
   "import.reason.value_refused": "“{value}” bị từ chối: {detail}",

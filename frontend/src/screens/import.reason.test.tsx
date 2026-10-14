@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import type { Locale } from "../i18n/locale";
+import { UndoErrors } from "./import.notices";
 import { ProblemTable, problemsHref } from "./import.testrun";
 import type { ImportRowIssue } from "./importtypes";
 
@@ -42,6 +43,37 @@ describe("a problem's reason", () => {
   it("reads the server's sentence when a value the code names is missing", () => {
     show(<ProblemTable issues={[{ ...coded, params: {} }]} />, "de");
     expect(screen.getByText(coded.reason)).toBeVisible();
+  });
+
+  it("reads the server's sentence, not the key, for a code this bundle does not know", () => {
+    const unknown = { ...coded, reason_code: "a_newer_code" } as ImportRowIssue;
+    show(<ProblemTable issues={[unknown]} />, "de");
+    expect(screen.getByText(coded.reason)).toBeVisible();
+    expect(screen.queryByText(/import\.reason\./)).toBeNull();
+  });
+
+  it("names a type in the reader's language, not in the server's English", () => {
+    const refused: ImportRowIssue = {
+      ...coded,
+      kind: "permission",
+      reason: "You cannot create contacts, so the contacts file is skipped",
+      reason_code: "cannot_create",
+      params: { plural: "contacts" },
+    };
+    show(<ProblemTable issues={[refused]} />, "de");
+    expect(screen.getByText(/vom Typ Kontakte anlegen/)).toBeVisible();
+  });
+
+  it("says an undo refusal from its code", () => {
+    const row = {
+      object: "contact" as const,
+      id: "c-1",
+      reason: "the record is no longer visible to this caller",
+      reason_code: "undo_not_visible" as const,
+    };
+    show(<UndoErrors rows={[row]} />, "de");
+    expect(screen.getByText(/nicht mehr sichtbar/)).toBeVisible();
+    expect(screen.queryByText(row.reason)).toBeNull();
   });
 
   it("asks the server for problems.csv in the reader's language", () => {

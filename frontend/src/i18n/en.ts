@@ -6165,6 +6165,18 @@ export const en = {
   "import.test.row": "Row {line}",
   "import.test.rowColumn": "Row {line} · {column}",
   "import.test.wholeFile": "Whole file",
+  "import.reason.link_row_not_imported":
+    "This row will not be imported, so there is nobody to link to {name}.",
+  "import.reason.link_contact_not_imported":
+    "The contact “{from}” was not imported, so there was nobody to link to “{name}”.",
+  "import.reason.link_edge_unsupported":
+    "A CSV import has no {from} → {to} link, so it was not applied.",
+  "import.reason.undo_grant_lost":
+    "Your permissions no longer cover this record.",
+  "import.reason.undo_not_visible": "This record is no longer visible to you.",
+  "import.reason.undo_rule_protects":
+    "The record refused the undo because a business rule protects it.",
+  "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",

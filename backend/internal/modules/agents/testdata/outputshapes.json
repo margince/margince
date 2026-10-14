@@ -7703,7 +7703,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -7807,6 +7816,9 @@
                           "type": "string"
                         },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },
@@ -9073,7 +9085,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -9177,6 +9198,9 @@
                           "type": "string"
                         },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },

@@ -10472,8 +10472,11 @@ const (
 	ImportReasonCodeIdOnNonCompany             ImportReasonCode = "id_on_non_company"
 	ImportReasonCodeLinkAmbiguous              ImportReasonCode = "link_ambiguous"
 	ImportReasonCodeLinkAmbiguousDropped       ImportReasonCode = "link_ambiguous_dropped"
+	ImportReasonCodeLinkContactNotImported     ImportReasonCode = "link_contact_not_imported"
+	ImportReasonCodeLinkEdgeUnsupported        ImportReasonCode = "link_edge_unsupported"
 	ImportReasonCodeLinkNotFound               ImportReasonCode = "link_not_found"
 	ImportReasonCodeLinkNotFoundDropped        ImportReasonCode = "link_not_found_dropped"
+	ImportReasonCodeLinkRowNotImported         ImportReasonCode = "link_row_not_imported"
 	ImportReasonCodeLinkedinHeld               ImportReasonCode = "linkedin_held"
 	ImportReasonCodeNaturalKeyTaken            ImportReasonCode = "natural_key_taken"
 	ImportReasonCodeNotADate                   ImportReasonCode = "not_a_date"
@@ -10496,6 +10499,10 @@ const (
 	ImportReasonCodeTagCreated                 ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid             ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                     ImportReasonCode = "tag_new"
+	ImportReasonCodeUndoFailed                 ImportReasonCode = "undo_failed"
+	ImportReasonCodeUndoGrantLost              ImportReasonCode = "undo_grant_lost"
+	ImportReasonCodeUndoNotVisible             ImportReasonCode = "undo_not_visible"
+	ImportReasonCodeUndoRuleProtects           ImportReasonCode = "undo_rule_protects"
 	ImportReasonCodeValueRefused               ImportReasonCode = "value_refused"
 	ImportReasonCodeValueUnreadable            ImportReasonCode = "value_unreadable"
 )
@@ -10561,9 +10568,15 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeLinkAmbiguousDropped:
 		return true
+	case ImportReasonCodeLinkContactNotImported:
+		return true
+	case ImportReasonCodeLinkEdgeUnsupported:
+		return true
 	case ImportReasonCodeLinkNotFound:
 		return true
 	case ImportReasonCodeLinkNotFoundDropped:
+		return true
+	case ImportReasonCodeLinkRowNotImported:
 		return true
 	case ImportReasonCodeLinkedinHeld:
 		return true
@@ -10608,6 +10621,14 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeTagNameInvalid:
 		return true
 	case ImportReasonCodeTagNew:
+		return true
+	case ImportReasonCodeUndoFailed:
+		return true
+	case ImportReasonCodeUndoGrantLost:
+		return true
+	case ImportReasonCodeUndoNotVisible:
+		return true
+	case ImportReasonCodeUndoRuleProtects:
 		return true
 	case ImportReasonCodeValueRefused:
 		return true
@@ -37478,6 +37499,9 @@ type ImportUndoReport struct {
 
 		// Reason What kept it from reversing, in terms the operator can act on — never a database or driver message.
 		Reason string `json:"reason"`
+
+		// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+		ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 	} `json:"errored"`
 
 	// Kept Import-created rows a human edited since import, therefore left in place (A93).
@@ -37537,8 +37561,14 @@ type ImportUnresolvedLink struct {
 	// From The record the link starts at, by the key the file identified it with.
 	From string `json:"from"`
 
+	// Params The values `reason_code`'s sentence names. Absent on a report stored before codes.
+	Params *map[string]string `json:"params,omitempty"`
+
 	// Reason Why it was not applied, in the words of the contact who made the file.
 	Reason string `json:"reason"`
+
+	// ReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
+	ReasonCode *ImportReasonCode `json:"reason_code,omitempty"`
 
 	// To What the file named as the other end — a company name, not an id, because no id was found.
 	To string `json:"to"`

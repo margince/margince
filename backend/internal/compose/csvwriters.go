@@ -178,10 +178,7 @@ func (w *csvWriters) Associate(ctx context.Context, a migration.Assoc) (migratio
 	if a.FromType == migration.ObjectContact && a.ToType == migration.AssocTargetCompanyRef {
 		return w.linkCompanyRef(ctx, a)
 	}
-	return migration.AssocResult{
-		Applied: false,
-		Reason:  fmt.Sprintf("a delimited import carries no %s→%s edge; it was not applied", a.FromType, a.ToType),
-	}, nil
+	return notLinkedFor(migration.Why(migration.ReasonLinkEdgeUnsupported, "from", a.FromType, "to", a.ToType)), nil
 }
 
 // Ensure lands one row: created the first time, updated when the file has

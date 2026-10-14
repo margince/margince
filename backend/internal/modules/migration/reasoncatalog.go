@@ -66,6 +66,13 @@ const (
 	ReasonEmployerColumnEmptyDropped ReasonCode = "employer_column_empty_dropped"
 	ReasonEmployerNotFoundDropped    ReasonCode = "employer_not_found_dropped"
 	ReasonAuthorTooLong              ReasonCode = "author_too_long"
+	ReasonLinkRowNotImported         ReasonCode = "link_row_not_imported"
+	ReasonLinkContactNotImported     ReasonCode = "link_contact_not_imported"
+	ReasonLinkEdgeUnsupported        ReasonCode = "link_edge_unsupported"
+	ReasonUndoGrantLost              ReasonCode = "undo_grant_lost"
+	ReasonUndoNotVisible             ReasonCode = "undo_not_visible"
+	ReasonUndoRuleProtects           ReasonCode = "undo_rule_protects"
+	ReasonUndoFailed                 ReasonCode = "undo_failed"
 )
 
 // reasonEntry is one code: the names its sentence fills in, and the sentence per language.
@@ -369,5 +376,40 @@ var reasonCatalog = map[ReasonCode]reasonEntry{
 		textlang.English:    "author is longer than {max} characters",
 		textlang.German:     "Der Verfasser ist länger als {max} Zeichen.",
 		textlang.Vietnamese: "Tác giả dài hơn {max} ký tự.",
+	}},
+	ReasonLinkRowNotImported: {params: []string{paramName}, text: map[textlang.Lang]string{
+		textlang.English:    "this row will not be imported, so there is nobody to link to {name}",
+		textlang.German:     "Diese Zeile wird nicht importiert, daher gibt es niemanden, der mit {name} verknüpft werden könnte.",
+		textlang.Vietnamese: "Hàng này sẽ không được nhập nên không có ai để liên kết với {name}.",
+	}},
+	ReasonLinkContactNotImported: {params: []string{"from", paramName}, text: map[textlang.Lang]string{
+		textlang.English:    "the contact identified by {from:q} was not imported, so there was nobody to link to {name:q}",
+		textlang.German:     "Der Kontakt {from:q} wurde nicht importiert, daher gab es niemanden, der mit {name:q} verknüpft werden konnte.",
+		textlang.Vietnamese: "Liên hệ {from:q} chưa được nhập nên không có ai để liên kết với {name:q}.",
+	}},
+	ReasonLinkEdgeUnsupported: {params: []string{"from", "to"}, text: map[textlang.Lang]string{
+		textlang.English:    "a delimited import carries no {from}→{to} edge; it was not applied",
+		textlang.German:     "Ein CSV-Import kennt keine Verknüpfung {from}→{to}; sie wurde nicht angewendet.",
+		textlang.Vietnamese: "Nhập từ tệp CSV không có liên kết {from}→{to}; liên kết này không được áp dụng.",
+	}},
+	ReasonUndoGrantLost: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "the caller's grant no longer covers this record",
+		textlang.German:     "Die Berechtigung des Aufrufers deckt diesen Datensatz nicht mehr ab.",
+		textlang.Vietnamese: "Quyền của người thực hiện không còn bao gồm bản ghi này.",
+	}},
+	ReasonUndoNotVisible: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "the record is no longer visible to this caller",
+		textlang.German:     "Der Datensatz ist für diesen Aufrufer nicht mehr sichtbar.",
+		textlang.Vietnamese: "Người thực hiện không còn thấy bản ghi này.",
+	}},
+	ReasonUndoRuleProtects: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "the record refused the reversal (a business rule protects it)",
+		textlang.German:     "Der Datensatz hat die Rücknahme abgelehnt (eine Geschäftsregel schützt ihn).",
+		textlang.Vietnamese: "Bản ghi từ chối việc hoàn tác (một quy tắc nghiệp vụ bảo vệ nó).",
+	}},
+	ReasonUndoFailed: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "the record could not be reversed",
+		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
+		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
 }

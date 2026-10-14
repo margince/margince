@@ -54,56 +54,102 @@ func TestReasonCodesMatchTheContractEnum(t *testing.T) {
 	}
 }
 
+// The types whose literals carry a sentence, each with the key that says the
+// same cause as a code. A literal that sets the sentence and not the code is a
+// reason a screen can only show in English.
+//
+// ImportIgnoredEntry is left out on purpose: its Reason is itself the closed
+// enum (not_yet_importable, unknown_name) the screen words, with no sentence
+// beside it.
+var reasonSentenceKeys = map[string][2]string{
+	"SkippedRow":           {"Reason", "Code"},
+	"SkippedAssoc":         {"Reason", "Code"},
+	"ErroredRow":           {"Reason", "Code"},
+	"AssocResult":          {"Reason", "Why"},
+	"EnsureResult":         {"SkipReason", "SkipWhy"},
+	"ImportRowIssue":       {"Reason", "ReasonCode"},
+	"ImportUnresolvedLink": {"Reason", "ReasonCode"},
+}
+
+// typeNameOf is the name a composite literal's type is written with, whether
+// qualified (migration.SkippedRow) or bare inside its own package.
+func typeNameOf(expr ast.Expr) string {
+	switch typed := expr.(type) {
+	case *ast.SelectorExpr:
+		return typed.Sel.Name
+	case *ast.Ident:
+		return typed.Name
+	}
+	return ""
+}
+
+func reasonField(name string) bool { return name == "Reason" || name == "SkipReason" }
+
+// writesImportReasons is whether a file is one of the import's own: the rest
+// of the compose package words reasons for other features.
+func writesImportReasons(path string) bool {
+	return strings.Contains(path, "modules/migration") || strings.HasPrefix(filepath.Base(path), "csv")
+}
+
 // Every place that words a refusal sets the code with it, so a screen never
 // meets a skip it can only show in English. The census reads the writers' own
-// source: a literal that sets the sentence and not the code fails here.
+// source in both packages that write reasons, as literals and as assignments to
+// a field, and fails when it sees too few of any type to be the whole walk.
 func TestEveryReasonWriterSetsACode(t *testing.T) {
-	files, err := filepath.Glob("*.go")
-	if err != nil || len(files) < 100 {
-		t.Fatalf("found %d source files (%v), want the whole package", len(files), err)
-	}
-	var literals, coded int
+	seen := map[string]int{}
+	var assigned []string
 	fset := token.NewFileSet()
-	for _, name := range files {
-		if strings.HasSuffix(name, "_test.go") || strings.HasSuffix(name, "_gen.go") {
-			continue
+	for _, dir := range []string{".", "../modules/migration"} {
+		files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+		if err != nil || len(files) < 20 {
+			t.Fatalf("found %d source files in %s (%v), want the whole package", len(files), dir, err)
 		}
-		file, err := parser.ParseFile(fset, name, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", name, err)
+		for _, name := range files {
+			if strings.HasSuffix(name, "_test.go") || strings.HasSuffix(name, "_gen.go") {
+				continue
+			}
+			file, err := parser.ParseFile(fset, name, nil, 0)
+			if err != nil {
+				t.Fatalf("parsing %s: %v", name, err)
+			}
+			ast.Inspect(file, func(n ast.Node) bool {
+				switch node := n.(type) {
+				case *ast.CompositeLit:
+					typeName := typeNameOf(node.Type)
+					pair, watched := reasonSentenceKeys[typeName]
+					if !watched {
+						return true
+					}
+					seen[typeName]++
+					keys := literalKeys(node)
+					if keys[pair[0]] && !keys[pair[1]] {
+						t.Errorf("%s: a %s sets %s without %s", fset.Position(node.Pos()), typeName, pair[0], pair[1])
+					}
+				case *ast.AssignStmt:
+					for _, lhs := range node.Lhs {
+						if sel, ok := lhs.(*ast.SelectorExpr); ok && reasonField(sel.Sel.Name) && writesImportReasons(name) {
+							assigned = append(assigned, fset.Position(node.Pos()).String())
+						}
+					}
+				}
+				return true
+			})
 		}
-		ast.Inspect(file, func(n ast.Node) bool {
-			lit, ok := n.(*ast.CompositeLit)
-			if !ok {
-				return true
-			}
-			sel, ok := lit.Type.(*ast.SelectorExpr)
-			if !ok {
-				return true
-			}
-			keys := literalKeys(lit)
-			switch sel.Sel.Name {
-			case "SkippedRow":
-				literals++
-				if keys["Reason"] && !keys["Code"] {
-					t.Errorf("%s: a SkippedRow sets Reason without Code; build it with .Because(why)", fset.Position(lit.Pos()))
-				}
-				if keys["Code"] {
-					coded++
-				}
-			case "EnsureResult":
-				if keys["SkipReason"] && !keys["SkipWhy"] {
-					t.Errorf("%s: an EnsureResult sets SkipReason without SkipWhy; use skippedFor", fset.Position(lit.Pos()))
-				}
-			}
-			return true
-		})
 	}
-	if literals < 8 {
-		t.Fatalf("census saw %d SkippedRow literals, want at least 8: the walk is short", literals)
+	for typeName, floor := range map[string]int{
+		"SkippedRow": 8, "SkippedAssoc": 2, "ErroredRow": 1, "AssocResult": 1, "EnsureResult": 1,
+		"ImportRowIssue": 1, "ImportUnresolvedLink": 1,
+	} {
+		if seen[typeName] < floor {
+			t.Errorf("census saw %d %s literals, want at least %d: the walk is short", seen[typeName], typeName, floor)
+		}
 	}
-	if coded < 1 {
-		t.Fatal("census saw no SkippedRow literal that sets its code")
+	// Assignments to a sentence field are the writers a literal census cannot
+	// see. The three read here each move the code with the sentence:
+	// SkippedRow.Because, skippedWithProblem and reportTagsCreated. A fourth
+	// fails until it is read.
+	if len(assigned) != 3 {
+		t.Errorf("census saw assignments to a Reason field at %v, want the 3 read in this test", assigned)
 	}
 }
 
@@ -205,5 +251,25 @@ func TestElapsedStopsWhereTheRunStoppedMoving(t *testing.T) {
 		if out.FinishedAt != nil {
 			t.Errorf("%s run: finished_at = %v, want none", status, out.FinishedAt)
 		}
+	}
+}
+
+func TestAnUnresolvedLinkAndAnUndoRefusalCarryTheirCodes(t *testing.T) {
+	why := migration.Why(migration.ReasonLinkRowNotImported, "name", "Acme")
+	rep := &migration.Report{AssociationsSkipped: []migration.SkippedAssoc{
+		skippedAssocFor(migration.Assoc{FromType: "contact", FromID: "c1", ToType: "company_name", ToID: "Acme"}, why),
+	}}
+	links := linksOf(rep, false)
+	got := (*links.Unresolved)[0]
+	if got.ReasonCode == nil || string(*got.ReasonCode) != string(migration.ReasonLinkRowNotImported) ||
+		(*got.Params)["name"] != "Acme" || got.Reason != why.English() {
+		t.Errorf("unresolved link = %+v, want its code, values and english sentence", got)
+	}
+
+	undo := toContractUndoReport(migration.RunID{}, migration.StatusUndone, migration.UndoReport{
+		Errored: []migration.ErroredRow{{Object: "contact", Reason: "x", Code: migration.ReasonUndoFailed}},
+	})
+	if c := undo.Errored[0].ReasonCode; c == nil || string(*c) != string(migration.ReasonUndoFailed) {
+		t.Errorf("undo errored code = %v, want %s", c, migration.ReasonUndoFailed)
 	}
 }

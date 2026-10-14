@@ -101,8 +101,10 @@ type EnsureResult struct {
 // for, is DISCLOSED here rather than vanishing into a bare nil.
 type AssocResult struct {
 	Applied bool
-	// Reason explains a non-applied edge; empty when Applied.
+	// Reason explains a non-applied edge; empty when Applied. Why is the same
+	// cause as a code, which a screen says in the reader's language.
 	Reason string
+	Why    Reason
 }
 
 // Writers is the native-record seam: compose implements it over the

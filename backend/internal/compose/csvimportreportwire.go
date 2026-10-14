@@ -213,6 +213,7 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	for _, s := range rep.AssociationsSkipped {
 		unresolved = append(unresolved, crmcontracts.ImportUnresolvedLink{
 			From: s.From, To: s.To, Reason: s.Reason,
+			ReasonCode: reasonCodeOrAbsent(s.Code), Params: paramsOrAbsent(s.Params),
 		})
 	}
 	links.Unresolved = &unresolved
@@ -339,6 +340,15 @@ func kindOrAbsent(kind string) *crmcontracts.ImportProblemKind {
 // report stored before the line was carried.
 var disclosedLine = regexp.MustCompile(`^line ([0-9]+)$`)
 
+// undoErroredRow is the generated ImportUndoReport.Errored item, named once so
+// the slice and its literals cannot drift from it.
+type undoErroredRow = struct {
+	Id         openapi_types.UUID             `json:"id"` //nolint:staticcheck // matches the generated item shape
+	Object     crmcontracts.ImportObject      `json:"object"`
+	Reason     string                         `json:"reason"`
+	ReasonCode *crmcontracts.ImportReasonCode `json:"reason_code,omitempty"`
+}
+
 // toContractUndoReport renders the reversal outcome (IEM-WIRE-9).
 func toContractUndoReport(id migration.RunID, status string, rep migration.UndoReport) *crmcontracts.ImportUndoReport {
 	kept := make([]struct {
@@ -351,17 +361,12 @@ func toContractUndoReport(id migration.RunID, status string, rep migration.UndoR
 			Object crmcontracts.ImportObject `json:"object"`
 		}{Id: openapi_types.UUID(k.ID), Object: crmcontracts.ImportObject(k.Object)})
 	}
-	errored := make([]struct {
-		Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-		Object crmcontracts.ImportObject `json:"object"`
-		Reason string                    `json:"reason"`
-	}, 0, len(rep.Errored))
+	errored := make([]undoErroredRow, 0, len(rep.Errored))
 	for _, e := range rep.Errored {
-		errored = append(errored, struct {
-			Id     openapi_types.UUID        `json:"id"` //nolint:staticcheck // matches the generated ImportUndoReport.Errored item shape
-			Object crmcontracts.ImportObject `json:"object"`
-			Reason string                    `json:"reason"`
-		}{Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object), Reason: e.Reason})
+		errored = append(errored, undoErroredRow{
+			Id: openapi_types.UUID(e.ID), Object: crmcontracts.ImportObject(e.Object),
+			Reason: e.Reason, ReasonCode: reasonCodeOrAbsent(e.Code),
+		})
 	}
 	out := &crmcontracts.ImportUndoReport{
 		RunId:         openapi_types.UUID(id),

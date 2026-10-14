@@ -23804,7 +23804,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code.
          * @enum {string}
          */
-        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_read_tags" | "cannot_write_type" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_unnamed" | "currency_unset" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_not_found" | "link_not_found_dropped" | "linkedin_held" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "tag_created" | "tag_name_invalid" | "tag_new" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_read_tags" | "cannot_write_type" | "company_duplicate_found" | "company_duplicate_skipped" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_unnamed" | "currency_unset" | "description_too_long" | "domain_held" | "duplicate_email" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "linkedin_held" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "size_band_invalid" | "tag_created" | "tag_name_invalid" | "tag_new" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -23959,6 +23959,11 @@ export interface components {
             to: string;
             /** @description Why it was not applied, in the words of the contact who made the file. */
             reason: string;
+            reason_code?: components["schemas"]["ImportReasonCode"];
+            /** @description The values `reason_code`'s sentence names. Absent on a report stored before codes. */
+            params?: {
+                [key: string]: string;
+            };
         };
         /** @description What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something. */
         ImportRunDisposition: {
@@ -24170,6 +24175,7 @@ export interface components {
                 id: string;
                 /** @description What kept it from reversing, in terms the operator can act on — never a database or driver message. */
                 reason: string;
+                reason_code?: components["schemas"]["ImportReasonCode"];
             }[];
         };
         ImportRun: {

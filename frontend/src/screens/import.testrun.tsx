@@ -14,6 +14,7 @@ import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
 import { hasProgress, ImportProgressPanel } from "./import.progress";
+import { reasonText } from "./importreason";
 import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
@@ -31,17 +32,6 @@ import type { ImportWizardState } from "./importwizard";
  */
 export function problemsHref(id: string, lang: Locale): string {
   return `/v1/imports/${encodeURIComponent(id)}/problems.csv?lang=${lang}`;
-}
-
-// A problem in the reader's language: the sentence of its code, filled with the
-// values the server names. Three cases read as the English sentence the server
-// wrote. A report written before codes existed. A code this bundle does not
-// know. A value the server did not send.
-function reasonOf(issue: ImportRowIssue, t: ReturnType<typeof useT>): string {
-  const { reason_code: code, params } = issue;
-  if (code === undefined) return issue.reason;
-  const sentence = t(`import.reason.${code}`, params ?? {});
-  return /\{\w+\}/.test(sentence) ? issue.reason : sentence;
 }
 
 const PROBLEM_TONE = {
@@ -315,7 +305,9 @@ export function ProblemTable({
                   {t(`import.problem.${issue.kind}`)}
                 </Badge>
               ) : null}
-              <div className="t-sub">{reasonOf(issue, t)}</div>
+              <div className="t-sub">
+                {reasonText(t, issue.reason, issue.reason_code, issue.params)}
+              </div>
             </>
           ),
         },

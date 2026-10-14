@@ -43,16 +43,18 @@ func TestReversalRefusalReasonNamesEachSentinelAndFallsBackHonestly(t *testing.T
 	for _, tc := range []struct {
 		name string
 		err  error
+		code ReasonCode
 		want string
 	}{
-		{"permission denied", apperrors.ErrPermissionDenied, "the caller's grant no longer covers this record"},
-		{"not found", apperrors.ErrNotFound, "the record is no longer visible to this caller"},
-		{"conflict", apperrors.ErrConflict, "the record refused the reversal (a business rule protects it)"},
-		{"unclassified", errors.New("boom"), "the record could not be reversed"},
+		{"permission denied", apperrors.ErrPermissionDenied, ReasonUndoGrantLost, "the caller's grant no longer covers this record"},
+		{"not found", apperrors.ErrNotFound, ReasonUndoNotVisible, "the record is no longer visible to this caller"},
+		{"conflict", apperrors.ErrConflict, ReasonUndoRuleProtects, "the record refused the reversal (a business rule protects it)"},
+		{"unclassified", errors.New("boom"), ReasonUndoFailed, "the record could not be reversed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := reversalRefusalReason(tc.err); got != tc.want {
-				t.Errorf("reversalRefusalReason(%v) = %q, want %q", tc.err, got, tc.want)
+			got := reversalRefusalReason(tc.err)
+			if got.Code != tc.code || got.English() != tc.want {
+				t.Errorf("reversalRefusalReason(%v) = %s %q, want %s %q", tc.err, got.Code, got.English(), tc.code, tc.want)
 			}
 		})
 	}

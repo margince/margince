@@ -39,6 +39,11 @@ func skippedFor(why migration.Reason) migration.EnsureResult {
 	return migration.EnsureResult{Skipped: true, SkipReason: why.English(), SkipWhy: why}
 }
 
+// notLinkedFor is the result of an edge left unapplied for why.
+func notLinkedFor(why migration.Reason) migration.AssocResult {
+	return migration.AssocResult{Reason: why.English(), Why: why}
+}
+
 // skippedWithProblem is skippedFor for a refusal that is also a report issue.
 func skippedWithProblem(problem *migration.SkippedRow) migration.EnsureResult {
 	res := skippedFor(problem.Why())

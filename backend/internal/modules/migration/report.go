@@ -143,6 +143,10 @@ type SkippedAssoc struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Reason string `json:"reason"`
+	// Code and Params say the reason in the reader's language; a report stored
+	// before they existed has only Reason.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.

@@ -215,15 +215,18 @@ func (r *linkResolver) estateEmployer(ctx context.Context, key string) (employer
 // resolveEmployer, exactly once per distinct name thanks to the cached index.
 func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	contactID, missing, err := w.landedContact(ctx, a)
-	if err != nil || missing != "" {
-		return migration.AssocResult{Reason: missing}, err
+	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if missing.Code != "" {
+		return notLinkedFor(missing), nil
 	}
 	resolved, err := w.resolveEmployer(ctx, a.ToID)
 	if err != nil {
 		return migration.AssocResult{}, err
 	}
 	if !resolved.found {
-		return migration.AssocResult{Reason: resolved.why.English()}, nil
+		return notLinkedFor(resolved.why), nil
 	}
 	return w.writeEmployment(ctx, contactID, resolved.id, w.provenanceOf(a.FromID+"→"+a.ToID))
 }
@@ -232,34 +235,36 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 // one link resolver, so it finds what the row check found.
 func (w *csvWriters) linkCompanyRef(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	contactID, missing, err := w.landedContact(ctx, a)
-	if err != nil || missing != "" {
-		return migration.AssocResult{Reason: missing}, err
+	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if missing.Code != "" {
+		return notLinkedFor(missing), nil
 	}
 	answer, err := w.links.resolveCompany(ctx, a.ToID)
 	if err != nil {
 		return migration.AssocResult{}, err
 	}
 	if !answer.Found {
-		return migration.AssocResult{Reason: answer.Why.English()}, nil
+		return notLinkedFor(answer.Why), nil
 	}
 	return w.writeEmployment(ctx, contactID, ids.From[ids.CompanyKind](answer.ID), w.provenanceOf(a.FromID+"→"+a.ToID))
 }
 
 // landedContact is the contact an edge starts at, or why there is none: the
 // row was refused, skipped, or not yet committed.
-func (w *csvWriters) landedContact(ctx context.Context, a migration.Assoc) (ids.UUID, string, error) {
+func (w *csvWriters) landedContact(ctx context.Context, a migration.Assoc) (ids.UUID, migration.Reason, error) {
 	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
 	if errors.Is(err, errBoundRecordArchived) {
 		found, err = false, nil
 	}
 	if err != nil {
-		return ids.UUID{}, "", err
+		return ids.UUID{}, migration.Reason{}, err
 	}
 	if !found {
-		return ids.UUID{}, fmt.Sprintf(
-			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID), nil
+		return ids.UUID{}, migration.Why(migration.ReasonLinkContactNotImported, "from", a.FromID, "name", a.ToID), nil
 	}
-	return contactID, "", nil
+	return contactID, migration.Reason{}, nil
 }
 
 // writeEmployment writes one contact→company employment edge. Any error but a
