@@ -1,10 +1,79 @@
-/* Roles and permissions: the role list and the role open beneath it. Structure
-   only; every colour reads a design token and every gap the --space-* scale. */
+/* Every colour reads a design token and every gap the --space-* scale. */
 
-.roles-stack {
+.roles-drawer-sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-2);
+}
+
+.roles-drawer-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.roles-drawer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.roles-drawer-body {
+  container: roles-drawer / inline-size;
+}
+
+.roles-detail {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.roles-detail > p {
+  margin: 0;
+}
+
+/* The pinned first column matches the drawer's ground, not the page's, and
+   starts on the line the labels above it start on. */
+.roles-drawer-body .table-scroll-sticky > table > * > tr > :first-child {
+  padding-inline-start: 0;
+  background: var(--bgElevated);
+}
+
+/* A phone sheet fits all four verbs beside the names when the cells give up
+   their side padding, so no column hides past the edge. */
+@container roles-drawer (width < 36rem) {
+  .roles-drawer-body .grant-matrix > * > tr > :first-child {
+    padding-inline-end: var(--space-2);
+  }
+
+  .roles-drawer-body .grant-matrix > * > tr > :not(:first-child) {
+    padding-inline: var(--space-1);
+  }
+
+  .roles-drawer-body .grant-row-head {
+    min-inline-size: 6.5rem;
+  }
+}
+
+/* Where the grid fits, its header stays in view. A box that scrolls sideways
+   would hold the header to itself, so here the box lets the grid out. */
+@container roles-drawer (width >= 21rem) {
+  .roles-drawer-body .table-scroll:has(> .grant-matrix) {
+    overflow: visible;
+  }
+
+  .roles-drawer-body .grant-matrix > thead > tr > th {
+    position: sticky;
+    /* Up through the body's top padding, so no row shows above the header. */
+    top: calc(var(--space-5) * -1);
+    z-index: 2;
+    background: var(--bgElevated);
+    /* A collapsed border stays with the table, so the rule rides the cell. */
+    box-shadow: inset 0 -1px var(--borderStrong);
+  }
 }
 
 /* The three row scopes, each a radio over its one-line explanation. */

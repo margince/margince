@@ -12,8 +12,8 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The role list with one role open beneath it: its name, whose records it
-// reaches, the object grid with an extension section, and the preview.
+// The role list, and one role open in its drawer. The drawer holds its name,
+// whose records it reaches, the object grid and the preview.
 
 const ALL = { read: true, create: true, update: true, delete: true };
 const READ = { read: true, create: false, update: false, delete: false };
@@ -129,7 +129,7 @@ function story(
   };
 }
 
-// Opens the custom role, so the detail is what the frame shows.
+// Opens the custom role, so its drawer is what the frame shows.
 async function openFieldSales({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) {
@@ -137,14 +137,21 @@ async function openFieldSales({
   await userEvent.click(
     await canvas.findByRole("button", { name: "Field sales" }),
   );
+  await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+    name: "Field sales",
+  });
 }
 
-const meta: Meta<typeof RolesSettings> = {
+const meta = {
   title: "Settings/People/Roles and permissions/Roles",
   component: RolesSettings,
-};
+  // The open role rides the address, and every story shares one frame.
+  beforeEach: () => {
+    globalThis.history.replaceState(null, "", "#/settings/roles");
+  },
+} satisfies Meta<typeof RolesSettings>;
 export default meta;
-type Story = StoryObj<typeof RolesSettings>;
+type Story = StoryObj<typeof meta>;
 
 export const RoleList: Story = { render: story(ROLE_ADMIN, ["admin"]) };
 
@@ -168,6 +175,23 @@ export const ReadOnly: Story = {
   render: story({ role_admin: ["read"] }, ["ops"]),
 };
 
+// A link that names a role opens its drawer on arrival.
+export const OpenFromLink: Story = {
+  beforeEach: () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "#/settings/roles?role=custom_field_sales",
+    );
+  },
+  render: story(ROLE_ADMIN, ["admin"]),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: "Field sales",
+    });
+  },
+};
+
 export const NewRoleDialog: Story = {
   render: story(ROLE_ADMIN, ["admin"]),
   play: async ({ canvasElement }) => {
@@ -175,7 +199,7 @@ export const NewRoleDialog: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "New role" }),
     );
-    await within(document.body).findByRole("dialog");
+    await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
 };
 
@@ -197,8 +221,17 @@ export const WithoutMemberCounts: Story = {
 };
 
 // On a phone the name keeps the width and the count stands over the badge.
+export const PhoneList: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(ROLE_ADMIN, ["admin"], MORE_ROLES),
+};
+
+// On a phone the drawer is a full-screen sheet, and the grid scrolls sideways
+// inside it under the pinned object names.
 export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: openFieldSales,
   render: story(ROLE_ADMIN, ["admin"], MORE_ROLES),
 };

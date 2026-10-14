@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Button, Disclosure, Radio } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { useState } from "react";
+import { Disclosure, Radio } from "../design-system/atoms";
 import { NamePrompt } from "../design-system/nameprompt";
-import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { ExtensionUnit } from "./extensions.queries";
@@ -15,17 +13,13 @@ import {
   type Role,
   type RowScope,
   roleLabel,
-  roleRefusalOf,
   useMoveRole,
   useSetRoleGrant,
   useUpdateRole,
 } from "./roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 
-// One role, open beneath the list: its name, whose records it reaches, what it
-// may do with each object, what a member holding it would see, and the verb
-// that takes it out of use. Every control writes as it is used, carrying the
-// version the reader was looking at.
+// Every control writes as it is used, with the version the reader saw.
 
 const SCOPES: readonly RowScope[] = ["own", "team", "all"];
 
@@ -57,81 +51,56 @@ export function grantObjects(
   };
 }
 
+/** The three writes a role takes, and whether one of them is out. */
+export function useRoleWrites() {
+  const update = useUpdateRole();
+  const setGrant = useSetRoleGrant();
+  const move = useMoveRole();
+  return {
+    update,
+    setGrant,
+    move,
+    failure: [update, setGrant, move].find((write) => write.isError),
+    // Every write carries the role's one version. A second write sent before
+    // the first answers is refused as a concurrent edit. So one goes at a time,
+    // with the version the last one returned.
+    busy: update.isPending || setGrant.isPending || move.isPending,
+  };
+}
+
+export type RoleWrites = ReturnType<typeof useRoleWrites>;
+
 export function RoleDetail({
   role,
   directory,
   units,
   canUpdate,
-  canMove,
-  canRestore,
   canWiden,
+  writes,
 }: Readonly<{
   role: Role;
   directory: readonly Role[];
   units: readonly ExtensionUnit[];
   canUpdate: boolean;
-  canMove: boolean;
-  canRestore: boolean;
   /** Whether this reader may turn a right on or widen the row scope. */
   canWiden: boolean;
+  writes: RoleWrites;
 }>) {
   const t = useT();
-  const toast = useToast();
   const name = roleLabel(t)(role.key, role.name);
   const archived = Boolean(role.archived_at);
   // An archived role is not editable server-side: it answers as unknown until
   // it is restored, so its controls are read-only here.
   const editable = canUpdate && !archived;
-  const update = useUpdateRole();
-  const setGrant = useSetRoleGrant();
-  const move = useMoveRole();
-  const failure = [update, setGrant, move].find((write) => write.isError);
-  // Every write on a role carries the role's one version, so a second write
-  // sent before the first answers would be refused as a concurrent edit. One
-  // write at a time: the next is sent with the version the last one returned.
-  const busy = update.isPending || setGrant.isPending || move.isPending;
+  const { update, setGrant, busy } = writes;
   const objects = grantObjects(directory, units);
-  const moveVerb = moveOf(role, canMove, canRestore);
+  // The preview is a server read, asked for once the reader opens it.
+  const [previewAsked, setPreviewAsked] = useState(false);
 
   return (
-    <Panel
-      title={name}
-      actions={
-        moveVerb && (
-          <MoveAction
-            to={moveVerb}
-            pending={busy}
-            onMove={(to) =>
-              move.mutate(
-                { roleKey: role.key, to },
-                {
-                  onSuccess: () =>
-                    toast.show(
-                      t(
-                        to === "archive"
-                          ? "roles.archivedToast"
-                          : "roles.restoredToast",
-                        { name },
-                      ),
-                    ),
-                },
-              )
-            }
-          />
-        )
-      }
-    >
-      <PanelBody>
-        <PanelIntro>
-          {archived ? t("roles.archivedNote") : t("roles.detailSub")}
-        </PanelIntro>
-        {failure && (
-          <Callout tone="danger" kind="outcome" title={t("roles.notSaved")}>
-            {roleRefusalOf(failure.error, t)}
-          </Callout>
-        )}
-      </PanelBody>
-      <SettingList bleed="settings">
+    <div className="roles-detail">
+      <p>{archived ? t("roles.archivedNote") : t("roles.detailSub")}</p>
+      <SettingList>
         <SettingRow
           label={t("roles.nameLabel")}
           value={name}
@@ -189,42 +158,19 @@ export function RoleDetail({
           />
         )}
         {!archived && (
-          <Disclosure summary={t("roles.preview")}>
-            <AccessPreviewPanel role={role.key} teamIds={[]} />
+          <Disclosure
+            summary={t("roles.preview")}
+            onToggle={(open) => {
+              if (open) setPreviewAsked(true);
+            }}
+          >
+            {previewAsked && (
+              <AccessPreviewPanel role={role.key} teamIds={[]} />
+            )}
           </Disclosure>
         )}
       </SettingList>
-    </Panel>
-  );
-}
-
-// The verb that takes a role out of use or brings it back. A built-in role is
-// never archived, so it is offered nothing.
-function moveOf(
-  role: Role,
-  canMove: boolean,
-  canRestore: boolean,
-): "archive" | "restore" | null {
-  if (role.archived_at) {
-    return canRestore ? "restore" : null;
-  }
-  return role.is_system || !canMove ? null : "archive";
-}
-
-function MoveAction({
-  to,
-  pending,
-  onMove,
-}: Readonly<{
-  to: "archive" | "restore";
-  pending: boolean;
-  onMove: (to: "archive" | "restore") => void;
-}>) {
-  const t = useT();
-  return (
-    <Button disabled={pending} onClick={() => onMove(to)}>
-      {t(to === "archive" ? "roles.archive" : "roles.restore")}
-    </Button>
+    </div>
   );
 }
 
