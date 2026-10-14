@@ -25,10 +25,3 @@
 .knowledge-detail .table-scroll > .table > tbody > tr {
   padding-inline-start: 0;
 }
-/* Not left to `.table`: its last-row rule is a descendant selector, so the
-   outer table's open detail row strips every rule from the table inside it. */
-@container table-fold (width >= 36rem) {
-  .knowledge-detail .table > tbody > tr:not(:last-child) > td {
-    border-bottom: 1px solid var(--borderSubtle);
-  }
-}

@@ -323,7 +323,6 @@ demote
 density
 deny
 depend
-derivation
 derive
 descending
 describe

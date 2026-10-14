@@ -6192,8 +6192,7 @@ export const vi = {
   "privacy.corrections": "Yêu cầu chỉnh sửa",
   "privacy.correctionsSub":
     "Người liên hệ đã nhập các nội dung này qua liên kết được gửi cho họ qua email. Chưa có nội dung nào làm thay đổi hồ sơ; yêu cầu sửa chỉ là yêu cầu cho đến khi được chấp nhận.",
-  "privacy.correctionsEmpty":
-    "Không có yêu cầu sửa nào đang chờ. Người liên hệ gửi yêu cầu qua liên kết nhận được trong email.",
+  "privacy.correctionsEmpty": "Không có yêu cầu sửa nào đang chờ.",
   "privacy.correctionContact": "Liên hệ",
   "privacy.correctionChange": "Nội dung cần sửa",
   "privacy.correctionReceived": "Ngày nhận",
@@ -6388,7 +6387,6 @@ export const vi = {
   "privacy.kindRectify": "Chỉnh sửa",
   "privacy.kindErasure": "Xóa",
   "privacy.purpose": "Mục đích",
-  "privacy.purposeDoiColumn": "Xác nhận",
   "privacy.purposeDoiBadge": "Xác nhận kép",
   "privacy.purposesLoading": "Đang tải mục đích…",
   "privacy.purposesEmpty": "Chưa có mục đích nào.",
@@ -6442,7 +6440,6 @@ export const vi = {
     "Gỡ lưu trữ pháp lý sẽ XÓA mục này, không đưa mục này trở lại sử dụng. Yêu cầu xóa mà nghĩa vụ này đã tạm hoãn vẫn còn mở, nên gỡ lưu trữ pháp lý sẽ hoàn tất yêu cầu đó. Không thể hoàn tác.",
   "restricted.release.confirm": "Gỡ lưu trữ pháp lý và xóa",
   "restricted.pin.action": "Ghim một mục",
-  "restricted.pin.submit": "Ghim",
   "restricted.pin.idHint":
     "Dành cho thư từ mà quy tắc tự động không nhận ra, ví dụ thư nhà cung cấp và thư mua hàng thuộc §257 HGB nhưng không có deal ở đây. Mã của mục có trong nhật ký hoạt động.",
   "restricted.pin.idMalformed":
@@ -6465,7 +6462,7 @@ export const vi = {
   "retention.editScope": "Sửa {scope}",
   "retention.retainOnly": "Chế độ chỉ lưu trữ",
   "retention.retainOnlyHelp":
-    "Khi bật, bản cài đặt này không hủy gì: không ẩn danh hóa và không xóa, bất kể chính sách bên dưới quy định gì. Tác vụ chuyển vào kho lưu trữ vẫn chạy; hồ sơ trong kho lưu trữ được giữ lại, không bị hủy.",
+    "Khi bật, không chính sách nào ẩn danh hóa hay xóa dữ liệu. Tác vụ chuyển vào kho lưu trữ vẫn chạy.",
   "retention.adminOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới thay đổi được cài đặt lưu trữ.",
   "retention.withheld":
@@ -6482,7 +6479,6 @@ export const vi = {
   "retention.lawfulBasisHint":
     "Không bắt buộc. Cơ sở theo Điều 6 mà thời hạn này dựa vào, dành cho kiểm toán viên đọc chính sách.",
   "retention.enabled": "Đang bật",
-  "retention.edit": "Sửa",
   "retention.save": "Lưu chính sách",
   "retention.delete": "Xóa chính sách",
   "retention.deleteTitle": "Xóa chính sách lưu trữ?",
@@ -8722,6 +8718,12 @@ export const vi = {
   "privacy.dueRule": "Quy tắc thời hạn",
   "privacy.dueRuleUnknown": "Nhập tay trước khi thời hạn được tính tự động",
   "privacy.dueOverridden": "Đặt sớm hơn quy tắc",
+  "privacy.requestsPanel": "Yêu cầu",
+  "privacy.lanesLabel": "Danh sách yêu cầu",
+  "privacy.laneRequests": "Quyền riêng tư",
+  "privacy.laneCorrections": "Chỉnh sửa",
+  "privacy.laneRestricted": "Bị giữ",
+  "privacy.requestsEmpty": "Chưa có yêu cầu nào về quyền riêng tư.",
   "settings.tab.integrations": "Tích hợp",
   "settings.tab.capture": "Quy tắc thu thập",
   "settings.tab.knowledge": "Tài liệu",
@@ -8780,6 +8782,9 @@ export const vi = {
   "knowledge.col.added": "Ngày thêm",
   "knowledge.col.status": "Trạng thái",
   "knowledge.col.actions": "Thao tác",
+  "knowledge.col.documents": "Tài liệu",
+  "knowledge.col.searchable": "Tìm kiếm được",
+  "knowledge.col.detail": "Chi tiết",
   "knowledge.passageCount_one": "{count} đoạn",
   "knowledge.passageCount_other": "{count} đoạn",
   "knowledge.addedOn": "thêm ngày {date}",
@@ -8817,8 +8822,8 @@ export const vi = {
   "knowledge.new.topic": "Phạm vi của bộ tài liệu",
   "knowledge.new.topicHint":
     "Một câu. Câu này hiển thị cho bất kỳ ai có câu hỏi nằm ngoài phạm vi của bộ này.",
-  "knowledge.new.submit": "Tạo bộ",
-  "knowledge.new.failed": "Không thể tạo bộ tài liệu. Thử lại.",
+  "knowledge.searchable": "Tìm kiếm được",
+  "knowledge.reindexingBadge": "Đang lập lại chỉ mục",
   "settings.tab.privacy": "Quyền riêng tư và lưu trữ",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "verdictPass.subject.senders": "Người gửi",
@@ -9365,8 +9370,6 @@ export const vi = {
     "Vai trò quản trị luôn giữ quyền quản lý thành viên, vai trò và nhóm, để công ty luôn có thể được quản trị.",
   "roles.refusal.nameTaken": "Đã có vai trò khác mang tên này. Chọn tên khác.",
   "extAccess.title": "Tiện ích và quyền truy cập",
-  "extAccess.sub":
-    "Mỗi đơn vị tiện ích bổ sung gì cho bản cài đặt này, và vai trò nào được dùng. Chỉ dành cho quản trị viên.",
   "extAccess.adminOnly":
     "Trang này cần quyền đọc tiện ích mở rộng và vai trò của bản cài đặt. Vai trò hiện tại thiếu một hoặc cả hai quyền.",
   "extAccess.readOnly":
@@ -9398,6 +9401,7 @@ export const vi = {
   "extAccess.grantFailed": "Không thể thay đổi quyền",
   "extAccess.nobodyReads":
     "Không vai trò nào có quyền đọc {object}, nên mọi thành viên sẽ thấy màn hình trống ở tiện ích này. Cấp quyền đọc cho ít nhất một vai trò bên dưới.",
+  "extAccess.matrixName": "Quyền của các vai trò với {unit}",
   "users.empty": "Chưa có người dùng nào.",
   "users.adminOnly": "Vai trò hiện tại không có quyền quản lý người dùng.",
   "users.inviteTitle": "Mời người dùng",
@@ -10526,7 +10530,7 @@ export const vi = {
     "Đăng ký gửi đi, nhận HTTP POST có chữ ký cho các sự kiện đã chọn.",
   "webhooks.new": "Đăng ký mới",
   "webhooks.notConfigured":
-    "Webhook gửi đi chưa được bật trên bản cài đặt này. Cấu hình khóa ký trước.",
+    "Webhook chưa được bật trên bản cài đặt này cho đến khi cấu hình khóa ký.",
   "webhooks.state.active": "Đang hoạt động",
   "webhooks.state.paused": "Đã tạm dừng",
   "webhooks.updated": "Đã cập nhật {date}",
@@ -11195,9 +11199,7 @@ export const vi = {
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
-    "Mỗi liên hệ được tra cứu một lần cho các thông tin mà kết nối này chọn và nhà cung cấp không tính phí, thường là liên kết hồ sơ nghề nghiệp, vai trò và nơi làm việc hiện tại, và lịch sử công tác. Địa chỉ email và số di động không bao giờ được mua theo cách này; các thông tin này tốn credit và vẫn được quyết định riêng cho từng liên hệ.",
-  "provider.automaticLookupJurisdiction":
-    "Tắt mục này nếu liên hệ trong CRM thuộc phạm vi một đạo luật cấm mua bán dữ liệu cá nhân, như luật Việt Nam. Nút trên từng liên hệ vẫn hoạt động, nên quyết định vẫn thuộc về người đưa ra quyết định đó.",
+    "Liên hệ mới được bổ sung các thông tin miễn phí từ nhà cung cấp, như vai trò và lịch sử công tác. Tắt mục này nếu luật cấm mua bán dữ liệu cá nhân.",
   "provider.buyable": "Cho phép mua {category}",
   "provider.buyableWriteFailed": "Không thể đổi hạng mục",
   "provider.postureReadFailed": "Không rõ cài đặt hiện tại",
@@ -11286,10 +11288,6 @@ export const vi = {
   "provider.profile.buy_other": "Mua {category} · {credits} credit",
   "provider.profile.buyRebuys":
     "Giá đã bao gồm mua lại {categories}: nhà cung cấp yêu cầu mục đó cho lần tìm kiếm này và tính phí mọi thông tin trả về.",
-  "provider.freeTier.hint":
-    "Hồ sơ LinkedIn, vai trò hiện tại và lịch sử công tác không tốn credit. Giữ bật để mọi liên hệ mới tự động có các thông tin này.",
-  "provider.pricedTier.hint":
-    "Không bao giờ mua tự động. Mua cho từng liên hệ một, giá hiện trên nút.",
   "provider.profile.receiptAt": "Tra cứu ngày {at}.",
   "provider.profile.receipt":
     "Tra cứu ngày {at} · trả về {answered} trên {asked} thông tin.",

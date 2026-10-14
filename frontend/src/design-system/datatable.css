@@ -2,7 +2,7 @@
    alone; the `.table` skin around it is shared with hand-drawn tables and stays
    in atoms.css. This selector outranks that sheet's `cursor: default` on
    specificity, so which of the two loads last decides nothing. */
-.table tbody tr.rowlink {
+.table > tbody > tr.rowlink {
   cursor: pointer;
 }
 

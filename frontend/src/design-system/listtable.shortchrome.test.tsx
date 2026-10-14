@@ -27,7 +27,8 @@ const columns: readonly ListColumn<Row>[] = [
 function Short({
   rows,
   search = "",
-}: Readonly<{ rows: Row[]; search?: string }>) {
+  archivable = true,
+}: Readonly<{ rows: Row[]; search?: string; archivable?: boolean }>) {
   return (
     <ListTable
       rows={rows}
@@ -36,7 +37,9 @@ function Short({
       unit="rows"
       hideShortChrome
       search={{ value: search, onChange: () => undefined }}
-      archived={{ checked: false, onChange: () => undefined }}
+      archived={
+        archivable ? { checked: false, onChange: () => undefined } : undefined
+      }
     />
   );
 }
@@ -47,8 +50,22 @@ describe("a short list that hides its chrome", () => {
     expect(screen.getByText("Row 3")).toBeTruthy();
     expect(screen.queryByText(/1 to 3 of 3 rows/)).toBeNull();
     expect(screen.queryByRole("searchbox")).toBeNull();
-    expect(screen.queryByRole("checkbox", { name: /archived/i })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Pages" })).toBeNull();
+  });
+
+  // The rows in hand never include archived ones, so a list of only archived
+  // records would read as empty with no way in.
+  it("keeps the archived switch while it hides the other dials", () => {
+    render(<Short rows={[]} />);
+    expect(
+      screen.getByRole("checkbox", { name: "Show archived" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("draws no switch for a list that offers no archiving", () => {
+    render(<Short rows={testRows(3)} archivable={false} />);
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 
   it("says it is empty in one line, with no table of headings", () => {

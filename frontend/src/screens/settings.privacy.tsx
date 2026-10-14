@@ -38,7 +38,7 @@ const LANES = ["requests", "corrections", "restricted"] as const;
 type Lane = (typeof LANES)[number];
 
 /**
- * The work a person asked for, one list at a time: formal requests, informal
+ * The work a contact asked for, one list at a time: formal requests, informal
  * corrections, and the records an erasure could not destroy. One officer, so
  * one panel.
  */

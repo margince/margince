@@ -291,10 +291,12 @@ describe("no product surface renders a browser-drawn dropdown", () => {
     ).toBeGreaterThan(0);
     // Every unit that HAS a frontend layer contributes to it, so a walk that
     // silently stopped at one of them is a failure rather than a smaller number.
+    // A layer is its package.json, as gen-composition reads it: a unit may ship
+    // only its copy (frontend/i18n), which holds no source to walk.
     const unitsWithLayers = readdirSync(extensionsDir, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => join(extensionsDir, e.name, "frontend"))
-      .filter((layer) => existsSync(layer));
+      .filter((layer) => existsSync(join(layer, "package.json")));
     for (const layer of unitsWithLayers) {
       expect(
         layers.some((f) => f.startsWith(`${layer}/`)),

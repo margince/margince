@@ -6470,8 +6470,7 @@ export const en = {
   "privacy.corrections": "Correction requests",
   "privacy.correctionsSub":
     "Contacts entered these through the link they were emailed. None has changed the record yet; a correction is a request until someone accepts it.",
-  "privacy.correctionsEmpty":
-    "No corrections waiting. A contact sends one through the link they were emailed.",
+  "privacy.correctionsEmpty": "No corrections waiting.",
   "privacy.correctionContact": "Contact",
   "privacy.correctionChange": "Requested change",
   "privacy.correctionReceived": "Received",
@@ -6661,7 +6660,6 @@ export const en = {
   "privacy.kindRectify": "Correction",
   "privacy.kindErasure": "Erasure",
   "privacy.purpose": "Purpose",
-  "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
@@ -6715,7 +6713,6 @@ export const en = {
     "Releasing ERASES the record; it does not return it to use. The erasure request this obligation suspended is still open, so releasing completes it. This cannot be undone.",
   "restricted.release.confirm": "Release and erase",
   "restricted.pin.action": "Pin a record",
-  "restricted.pin.submit": "Pin",
   "restricted.pin.idHint":
     "For correspondence the automatic rule cannot recognize, such as supplier and purchasing mail under §257 HGB with no deal here. The record ID is on its audit entry.",
   "restricted.pin.idMalformed":
@@ -6738,7 +6735,7 @@ export const en = {
   "retention.editScope": "Edit {scope}",
   "retention.retainOnly": "Retain-only mode",
   "retention.retainOnlyHelp":
-    "While on, this installation destroys nothing: no anonymizing and no erasing, whatever a policy below says. Archiving still runs; an archived record is kept, not destroyed.",
+    "While on, no policy anonymizes or erases anything. Archiving still runs.",
   "retention.adminOnly":
     "Only an administrator or operations user can change retention.",
   "retention.withheld":
@@ -6755,7 +6752,6 @@ export const en = {
   "retention.lawfulBasisHint":
     "Optional. The Art. 6 basis this window relies on, for auditors reading the policy.",
   "retention.enabled": "Enabled",
-  "retention.edit": "Edit",
   "retention.save": "Save policy",
   "retention.delete": "Delete policy",
   "retention.deleteTitle": "Delete retention policy?",
@@ -9062,6 +9058,12 @@ export const en = {
   "privacy.dueRule": "Deadline rule",
   "privacy.dueRuleUnknown": "Typed by hand before deadlines were worked out",
   "privacy.dueOverridden": "Set earlier than the rule gives",
+  "privacy.requestsPanel": "Requests",
+  "privacy.lanesLabel": "Request lists",
+  "privacy.laneRequests": "Privacy",
+  "privacy.laneCorrections": "Corrections",
+  "privacy.laneRestricted": "Held",
+  "privacy.requestsEmpty": "No privacy requests yet.",
   "settings.tab.integrations": "Integrations",
   "settings.tab.capture": "Capture rules",
   "settings.tab.knowledge": "Knowledge",
@@ -9121,6 +9123,9 @@ export const en = {
   "knowledge.col.added": "Added",
   "knowledge.col.status": "Status",
   "knowledge.col.actions": "Actions",
+  "knowledge.col.documents": "Documents",
+  "knowledge.col.searchable": "Searchable",
+  "knowledge.col.detail": "Detail",
   "knowledge.passageCount_one": "{count} passage",
   "knowledge.passageCount_other": "{count} passages",
   "knowledge.addedOn": "added {date}",
@@ -9159,8 +9164,8 @@ export const en = {
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
-  "knowledge.new.submit": "Create set",
-  "knowledge.new.failed": "The set was not created. Retry.",
+  "knowledge.searchable": "Searchable",
+  "knowledge.reindexingBadge": "Reindexing",
   "settings.tab.privacy": "Privacy and retention",
   "settings.tab.capture-activity": "Capture activity",
   "verdictPass.subject.senders": "Senders",
@@ -9701,15 +9706,13 @@ export const en = {
   "roles.refusal.nameTaken":
     "Another role already has this name. Choose a different one.",
   "extAccess.title": "Extensions and access",
-  "extAccess.sub":
-    "What each extension unit adds to this installation, and which roles may use it. Administrators only.",
   "extAccess.adminOnly":
     "This page requires permission to read installation extensions and roles. Your role lacks one or both.",
   "extAccess.readOnly":
     "Your role can read this page. Changing a grant requires a full seat.",
   "extAccess.empty": "No extension units are installed.",
   "extAccess.version": "Version {version}",
-  "extAccess.openUnit": "Open {name} page",
+  "extAccess.openUnit": "Go to {name}",
   "extAccess.noPage":
     "{name} is installed on the API, but this app build has no page for it. The app is probably older than the server.",
   "extAccess.brings.heading": "What this unit adds",
@@ -9734,6 +9737,7 @@ export const en = {
   "extAccess.grantFailed": "Grant not changed",
   "extAccess.nobodyReads":
     "No role has read access to {object}, so every member sees an empty screen for this extension. Grant read to at least one role below.",
+  "extAccess.matrixName": "Role access to {unit}",
   "users.empty": "No users yet.",
   "users.adminOnly": "Your role cannot manage users.",
   "users.inviteTitle": "Invite user",
@@ -10856,7 +10860,7 @@ export const en = {
     "Outbound subscriptions that receive signed HTTP POSTs for chosen events.",
   "webhooks.new": "New subscription",
   "webhooks.notConfigured":
-    "Outbound webhooks are not enabled on this installation. Configure a signing key first.",
+    "Webhooks are not enabled on this installation until a signing key is configured.",
   "webhooks.state.active": "Active",
   "webhooks.state.paused": "Paused",
   "webhooks.updated": "Updated {date}",
@@ -11559,9 +11563,7 @@ export const en = {
   "provider.deleteDataConfirm.typed": "Enter the provider name to confirm",
   "provider.automaticLookup": "Look up contacts automatically",
   "provider.automaticLookupHint":
-    "Each contact is looked up once for the details this connection selects that the provider charges nothing for, typically the professional profile link, current role and employer, and work history. Email addresses and mobile numbers are never bought this way; they cost credits and remain a per-contact decision.",
-  "provider.automaticLookupJurisdiction":
-    "Switch this off if the contacts in your CRM fall under a law that forbids trading personal data, such as Vietnam’s. The button on each contact still works, so the decision stays with the person making it.",
+    "New contacts get the details the provider gives for free, such as role and work history. Switch this off where the law forbids trading personal data.",
   "provider.buyable": "Allow buying {category}",
   "provider.buyableWriteFailed": "Category not changed",
   "provider.postureReadFailed": "Current setting unknown",
@@ -11658,10 +11660,6 @@ export const en = {
   "provider.profile.buy_other": "Buy {category} · {credits} credits",
   "provider.profile.buyRebuys":
     "The price includes the {categories} again: the provider requires it for this search and charges for everything it returns.",
-  "provider.freeTier.hint":
-    "LinkedIn profile, current role and work history cost no credits. Leave this on so every new contact gets them automatically.",
-  "provider.pricedTier.hint":
-    "Never bought automatically. Bought one contact at a time, with the price on the button.",
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · {answered} of {asked} details returned.",

@@ -28,10 +28,16 @@ import {
   type ColumnLayout,
   type ColumnResize,
   floorStyle,
+  useColumnDisplay,
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
-import { PAGE_SIZES, pagerSlots, usePaging } from "./listtable.paging";
+import {
+  fitsOnePage,
+  PAGE_SIZES,
+  pagerSlots,
+  usePaging,
+} from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -377,7 +383,7 @@ export function ListTable<Row>({
    * No count line, dials or pager while every row fits the smallest page size
    * and nothing narrows the list. No rows then reads as one empty line, not a
    * table of headings. A longer or narrowed list keeps them all, so a dial the
-   * reader set can always be undone.
+   * reader set can always be undone. The archived switch always stays.
    */
   hideShortChrome?: boolean;
   /**
@@ -611,32 +617,6 @@ export function ListTable<Row>({
       )}
     </ListSurface>
   );
-}
-
-/**
- * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
- */
-function useColumnDisplay<Row>(columns: readonly ListColumn<Row>[]) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(
-    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
-  );
-  const [dense, setDense] = useState(false);
-  return {
-    hidden,
-    onToggleColumn: (key: string) =>
-      setHidden((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        return next;
-      }),
-    dense,
-    onDense: () => setDense(!dense),
-  };
 }
 
 /**
@@ -1105,14 +1085,6 @@ function DisplayMenu<Row>({
       </Menu>
     </span>
   );
-}
-
-function fitsOnePage(
-  rows: readonly unknown[],
-  total: number | undefined,
-  hasMore: boolean,
-): boolean {
-  return !hasMore && (total ?? rows.length) <= PAGE_SIZES[0];
 }
 
 /**

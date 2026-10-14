@@ -155,7 +155,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A human being in a sentence about contacts rather than about the record.
     "deals.winReasonVerbal",
     "privacy.inboxAdminOnly",
-    "provider.automaticLookupJurisdiction",
   ],
   de: [
     // The meeting host is a human, not the CRM contact record type.
@@ -495,11 +494,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "notice.ruleHint.art13",
     "privacy.assignee",
     "privacy.correctionNote",
-    "privacy.correctionsEmpty",
     "privacy.correctionsSub",
     "project.ownerKeep",
     "project.stakeholders.empty",
-    "provider.automaticLookupJurisdiction",
     "role.rep",
     "room.card.lastSeen",
     // "người mua" — the BUYER who walks into the room: a human being from

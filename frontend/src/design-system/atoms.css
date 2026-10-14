@@ -36,15 +36,16 @@
    their own sheets (`.provider-spend-table`, and now `.ext-matrix` and
    `.import__table`); this is the same obligation derived from the component
    instead of maintained as a list of the tables somebody remembered. `th` as
-   well as `td`, because a table with row headers puts one in the last row. */
-.table tbody tr:last-child td,
-.table tbody tr:last-child th {
+   well as `td`, because a table with row headers puts one in the last row.
+   Child combinators, so a table nested in the last row keeps its own rules. */
+.table > tbody > tr:last-child > td,
+.table > tbody > tr:last-child > th {
   border-bottom: 0;
 }
-.table tbody tr {
+.table > tbody > tr {
   cursor: default;
 }
-.table tbody tr:hover td {
+.table > tbody > tr:hover > td {
   background: var(--bgHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
@@ -1847,10 +1848,17 @@ span.error-line {
 [data-density="compact"] .stat-card-label {
   flex-wrap: wrap;
   row-gap: 0;
+  /* Two lines held for every name, so the figures of a row stay level beside
+     a name that wraps. */
+  min-block-size: 2lh;
 }
+/* A compact tile is too narrow for some names on one line, and a name cut to
+   "No contact…" no longer says which reading it is. */
 [data-density="compact"] .stat-card-label-text {
   flex-shrink: 0;
   max-inline-size: 100%;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 [data-density="compact"] .stat-card-value {
   font: var(--fontHeadingSmall);
@@ -2223,7 +2231,7 @@ span.error-line {
 /* The two chip-shaped links, and the disclosure and table rows beside them. All
    four changed colour on hover in a single frame. */
 .disclosure-summary,
-.table tbody tr td {
+.table > tbody > tr > td {
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);

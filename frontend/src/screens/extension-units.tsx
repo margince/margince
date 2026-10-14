@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Blocks, ChevronRight } from "lucide-react";
-import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
 import {
@@ -12,6 +11,7 @@ import {
   unitsForSecretScope,
   unitTitle,
 } from "../lib/extensions";
+import { unitLabel } from "./extension-access";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -75,7 +75,7 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const t = useT();
   const { locale } = useLocale();
   const { name } = unit;
-  const title = unitTitle(unit, locale);
+  const title = unitLabel(name, unitTitle(unit, locale));
   return (
     <PanelRow interactive record className="extunits-row">
       <a
@@ -85,7 +85,7 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
         aria-label={t("extUnits.openNamed", { name: title })}
       >
         <Blocks className="extunits-mark" aria-hidden />
-        <KeyedName name={title} code={name} />
+        <span>{title}</span>
         <ChevronRight className="extunits-go" aria-hidden />
       </a>
     </PanelRow>

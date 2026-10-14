@@ -337,6 +337,6 @@ the team** releases one.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Email sharing** is in Settings → Capture rules,
+contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
 for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
 together with whose capture activity you can see.

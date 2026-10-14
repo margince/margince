@@ -547,13 +547,18 @@ export const ShortListKeepsVerb: Story = {
   },
 };
 
-// No rows reads as one line, not as a table of headings over nothing.
+// No rows reads as one line, not as a table of headings over nothing. The
+// archived switch stays, since archived rows may be all the list holds.
 export const ShortListEmpty: Story = {
   render: () => <Surface rows={[]} hideShortChrome noAction />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("No companies yet.")).toBeVisible();
     await expect(canvas.queryByRole("columnheader")).toBeNull();
+    await expect(
+      canvas.getByRole("checkbox", { name: "Show archived" }),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("searchbox")).toBeNull();
   },
 };
 

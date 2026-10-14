@@ -19,9 +19,11 @@ import { Button, Checkbox, OverflowMenu, Radio } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { ChipValueList } from "./listfiltervalues";
 import {
+  type FilterRowSegment,
   type ListChip,
   type ListView,
   nextSortValue,
+  openRowSegment,
   type SortControl,
   type SortOption,
   sortDirection,
@@ -95,7 +97,8 @@ export function ListSurface({
   title?: ReactNode;
   /**
    * No count and no toolbar, for a list with nothing to narrow. The header row
-   * stays only for a title, views or a verb.
+   * stays only for a title, views or a verb. The archived switch stays: the
+   * rows in hand never include archived ones, so it is their only way in.
    */
   bare?: boolean;
   views?: readonly ListView[];
@@ -211,6 +214,11 @@ export function ListSurface({
           openMenu={openMenu}
           setOpenMenu={setOpenMenu}
         />
+      )}
+      {bare && archived && (
+        <div className="lt-tools">
+          <ArchivedSwitch archived={archived} />
+        </div>
       )}
 
       {children}
@@ -481,30 +489,6 @@ function FilterConditionMenu({
       </Menu>
     </span>
   );
-}
-
-/** Which segment of a filter row currently owns the one open popover. */
-type FilterRowSegment = "cond" | "value" | "menu";
-
-function isFilterRowSegment(value: string): value is FilterRowSegment {
-  return value === "cond" || value === "value" || value === "menu";
-}
-
-/**
- * Reads which segment (if any) of one row's own popover the toolbar's single
- * `openMenu` key names — a plain string key rather than per-row state, so
- * the existing one-menu-open-at-a-time behaviour covers filter rows too.
- */
-function openRowSegment(
-  openMenu: string | null,
-  key: string,
-): FilterRowSegment | null {
-  const prefix = `row:${key}:`;
-  if (!openMenu?.startsWith(prefix)) {
-    return null;
-  }
-  const segment = openMenu.slice(prefix.length);
-  return isFilterRowSegment(segment) ? segment : null;
 }
 
 /**
@@ -1043,13 +1027,7 @@ function Toolbar({
         />
       )}
 
-      {archived && (
-        <Checkbox
-          checked={archived.checked}
-          label={t("list.showArchived")}
-          onChange={(event) => archived.onChange(event.target.checked)}
-        />
-      )}
+      {archived && <ArchivedSwitch archived={archived} />}
 
       <span className="lt-spacer" />
 
@@ -1063,5 +1041,20 @@ function Toolbar({
 
       {saveView}
     </div>
+  );
+}
+
+function ArchivedSwitch({
+  archived,
+}: Readonly<{
+  archived: { checked: boolean; onChange: (next: boolean) => void };
+}>) {
+  const t = useT();
+  return (
+    <Checkbox
+      checked={archived.checked}
+      label={t("list.showArchived")}
+      onChange={(event) => archived.onChange(event.target.checked)}
+    />
   );
 }

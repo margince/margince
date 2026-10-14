@@ -15,7 +15,7 @@ import {
   QueryStates,
 } from "../design-system/querystates";
 import { INTL_LOCALE } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useCan, useCanMutate } from "../lib/capability";
 import {
   composedScreens,
@@ -251,7 +251,7 @@ function UnitCard({
   const unread = unit.rbac_objects.filter((object) =>
     roles.every((role) => !grantOf(role, object).read),
   );
-  const title = unitLabel(unit.name, locale);
+  const title = unitLabel(unit.name, extensionTitle(unit.name, locale));
   return (
     <Panel
       className="ext-unit"
@@ -348,9 +348,8 @@ export function objectLabel(unit: string, object: string): string {
 }
 
 // A unit's own title where its copy carries one, else its key read the same way.
-function unitLabel(unit: string, locale: Locale): string {
-  const title = extensionTitle(unit, locale);
-  return title === unit ? readableKey(unit) : title;
+export function unitLabel(name: string, title: string): string {
+  return title === name ? readableKey(name) : title;
 }
 
 function readableKey(key: string): string {

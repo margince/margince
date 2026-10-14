@@ -6329,8 +6329,7 @@ export const de = {
   "privacy.corrections": "Korrekturanfragen",
   "privacy.correctionsSub":
     "Kontakte haben diese über den Link eingegeben, den sie per E-Mail erhalten haben. Keine davon hat den Datensatz bisher geändert; eine Korrektur bleibt eine Anfrage, bis jemand sie annimmt.",
-  "privacy.correctionsEmpty":
-    "Keine Korrekturen offen. Ein Kontakt sendet sie über den Link, den er per E-Mail erhalten hat.",
+  "privacy.correctionsEmpty": "Keine Korrekturen offen.",
   "privacy.correctionContact": "Kontakt",
   "privacy.correctionChange": "Gewünschte Änderung",
   "privacy.correctionReceived": "Eingegangen",
@@ -6529,7 +6528,6 @@ export const de = {
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
   "privacy.purpose": "Zweck",
-  "privacy.purposeDoiColumn": "Opt-in",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
   "privacy.purposesEmpty": "Noch keine Zwecke angelegt.",
@@ -6583,7 +6581,6 @@ export const de = {
     "Das Aufheben LÖSCHT den Datensatz; es gibt ihn nicht zur Nutzung zurück. Die Löschanfrage, die durch diese Pflicht ausgesetzt wurde, ist noch offen, deshalb schließt das Aufheben sie ab. Das lässt sich nicht rückgängig machen.",
   "restricted.release.confirm": "Aufheben und löschen",
   "restricted.pin.action": "Datensatz festsetzen",
-  "restricted.pin.submit": "Festsetzen",
   "restricted.pin.idHint":
     "Für Korrespondenz, die die automatische Regel nicht erkennen kann, zum Beispiel Lieferanten- und Einkaufspost nach § 257 HGB ohne Deal in diesem System. Die Datensatz-ID steht im Audit-Eintrag des Datensatzes.",
   "restricted.pin.idMalformed":
@@ -6606,7 +6603,7 @@ export const de = {
   "retention.editScope": "{scope} bearbeiten",
   "retention.retainOnly": "Nur-Aufbewahren-Modus",
   "retention.retainOnlyHelp":
-    "Solange er aktiv ist, vernichtet diese Installation nichts: kein Anonymisieren und kein Löschen, unabhängig davon, was eine Regel unten vorsieht. Archivieren läuft weiter; ein archivierter Datensatz bleibt erhalten und wird nicht vernichtet.",
+    "Solange er aktiv ist, anonymisiert oder löscht keine Regel etwas. Archivieren läuft weiter.",
   "retention.adminOnly":
     "Nur Admins und Operations können die Aufbewahrung ändern.",
   "retention.withheld":
@@ -6623,7 +6620,6 @@ export const de = {
   "retention.lawfulBasisHint":
     "Optional. Die Rechtsgrundlage nach Art. 6, auf die sich diese Frist stützt, für Personen, die die Regel prüfen.",
   "retention.enabled": "Aktiv",
-  "retention.edit": "Bearbeiten",
   "retention.save": "Regel speichern",
   "retention.delete": "Regel löschen",
   "retention.deleteTitle": "Aufbewahrungsregel löschen?",
@@ -8911,6 +8907,12 @@ export const de = {
   "privacy.dueRuleUnknown":
     "Von Hand eingetragen, bevor Fristen berechnet wurden",
   "privacy.dueOverridden": "Früher gesetzt als die Regel vorgibt",
+  "privacy.requestsPanel": "Anfragen",
+  "privacy.lanesLabel": "Anfragelisten",
+  "privacy.laneRequests": "Datenschutz",
+  "privacy.laneCorrections": "Korrekturen",
+  "privacy.laneRestricted": "Gesperrt",
+  "privacy.requestsEmpty": "Noch keine Datenschutzanfragen.",
   "settings.tab.integrations": "Anbindungen",
   "settings.tab.capture": "Erfassungsregeln",
   "settings.tab.knowledge": "Wissen",
@@ -8973,6 +8975,9 @@ export const de = {
   "knowledge.col.added": "Hinzugefügt",
   "knowledge.col.status": "Status",
   "knowledge.col.actions": "Aktionen",
+  "knowledge.col.documents": "Dokumente",
+  "knowledge.col.searchable": "Durchsuchbar",
+  "knowledge.col.detail": "Details",
   "knowledge.passageCount_one": "{count} Textstelle",
   "knowledge.passageCount_other": "{count} Textstellen",
   "knowledge.addedOn": "hinzugefügt am {date}",
@@ -9012,9 +9017,8 @@ export const de = {
   "knowledge.new.topic": "Was diese Sammlung abdeckt",
   "knowledge.new.topicHint":
     "Ein Satz. Er wird allen gezeigt, deren Frage diese Sammlung nicht abdeckt.",
-  "knowledge.new.submit": "Sammlung anlegen",
-  "knowledge.new.failed":
-    "Die Sammlung wurde nicht angelegt. Versuche es erneut.",
+  "knowledge.searchable": "Durchsuchbar",
+  "knowledge.reindexingBadge": "Wird neu indexiert",
   "settings.tab.privacy": "Datenschutz und Aufbewahrung",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "verdictPass.subject.senders": "Absender",
@@ -9573,8 +9577,6 @@ export const de = {
   "roles.refusal.nameTaken":
     "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
   "extAccess.title": "Erweiterungen und Zugriff",
-  "extAccess.sub":
-    "Was jede Erweiterungseinheit dieser Installation hinzufügt und welche Rollen sie nutzen dürfen. Nur für Admins.",
   "extAccess.adminOnly":
     "Diese Seite erfordert die Berechtigung, Erweiterungen und Rollen der Installation zu lesen. Deiner Rolle fehlt eine davon oder beide.",
   "extAccess.readOnly":
@@ -9606,6 +9608,7 @@ export const de = {
   "extAccess.grantFailed": "Berechtigung nicht geändert",
   "extAccess.nobodyReads":
     "Keine Rolle hat Lesezugriff auf {object}, daher sieht jedes Mitglied für diese Erweiterung eine leere Ansicht. Vergib unten mindestens einer Rolle das Leserecht.",
+  "extAccess.matrixName": "Rollenzugriff auf {unit}",
   "users.empty": "Noch keine Mitglieder.",
   "users.adminOnly": "Deine Rolle darf keine Mitglieder verwalten.",
   "users.inviteTitle": "Mitglied einladen",
@@ -10749,7 +10752,7 @@ export const de = {
     "Ausgehende Abonnements, die für ausgewählte Ereignisse signierte HTTP-POSTs erhalten.",
   "webhooks.new": "Neues Abonnement",
   "webhooks.notConfigured":
-    "Ausgehende Webhooks sind in dieser Installation nicht aktiviert. Konfiguriere zuerst einen Signaturschlüssel.",
+    "Webhooks sind in dieser Installation erst aktiv, wenn ein Signaturschlüssel konfiguriert ist.",
   "webhooks.state.active": "Aktiv",
   "webhooks.state.paused": "Pausiert",
   "webhooks.updated": "Aktualisiert am {date}",
@@ -11449,9 +11452,7 @@ export const de = {
     "Zum Bestätigen den Namen des Anbieters eingeben",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
   "provider.automaticLookupHint":
-    "Jeder Kontakt wird einmal nach den Angaben nachgeschlagen, die diese Verbindung auswählt und für die der Anbieter nichts berechnet, in der Regel Link zum beruflichen Profil, aktuelle Rolle und Arbeitgeber sowie Werdegang. E-Mail-Adressen und Mobilnummern werden so nie gekauft; sie kosten Credits und bleiben eine Entscheidung pro Kontakt.",
-  "provider.automaticLookupJurisdiction":
-    "Schalte das aus, wenn die Kontakte in deinem CRM einem Recht unterliegen, das den Handel mit personenbezogenen Daten verbietet, etwa dem vietnamesischen. Die Schaltfläche an jedem Kontakt funktioniert weiterhin, damit die Entscheidung bei denen bleibt, die sie treffen.",
+    "Neue Kontakte erhalten die Angaben, die der Anbieter kostenlos liefert, etwa Rolle und Werdegang. Schalte das aus, wo das Recht den Handel mit personenbezogenen Daten verbietet.",
   "provider.buyable": "Kaufen erlauben: {category}",
   "provider.buyableWriteFailed": "Kategorie nicht geändert",
   "provider.postureReadFailed": "Aktuelle Einstellung unbekannt",
@@ -11542,10 +11543,6 @@ export const de = {
   "provider.profile.buy_other": "{category} kaufen · {credits} Credits",
   "provider.profile.buyRebuys":
     "Der Preis enthält erneut: {categories}. Der Anbieter verlangt das für diese Suche und berechnet alles, was er zurückliefert.",
-  "provider.freeTier.hint":
-    "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Lass das eingeschaltet, damit jeder neue Kontakt sie automatisch erhält.",
-  "provider.pricedTier.hint":
-    "Wird nie automatisch gekauft, sondern einzeln pro Kontakt, mit dem Preis auf der Schaltfläche.",
   "provider.profile.receiptAt": "Abgefragt am {at}.",
   "provider.profile.receipt":
     "Abgefragt am {at} · {answered} von {asked} Angaben geliefert.",
