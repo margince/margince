@@ -35,8 +35,8 @@ TEST_CAP="${FE_TEST_FILE_LINE_CAP:-1000}"
 # would be a real failure. The defaults are the product's.
 ROOT="${FE_FILE_LENGTH_ROOT:-frontend/src}"
 # The build scripts take the same ceilings as the screens they build. They are
-# read by the same people, and a gate reading only the screens let one of them
-# reach a thousand lines unremarked.
+# read by the same colleagues, and a gate reading only the screens let one of
+# them reach a thousand lines unremarked.
 SCRIPTS_ROOT="${FE_FILE_LENGTH_SCRIPTS_ROOT:-frontend/scripts}"
 WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
 
@@ -44,7 +44,7 @@ WAIVERS="${FE_FILE_LENGTH_WAIVERS:-scripts/fe-file-length-waivers.txt}"
 # a directory that is not there, and nothing is what a clean census looks like:
 # a renamed tree would report PASS over the half it could still see.
 for root in "$ROOT" "$SCRIPTS_ROOT"; do
-  if [ ! -d "$root" ]; then
+  if [[ ! -d "$root" ]]; then
     echo "FAIL: fe-file-length — $root is not a directory, so this census would read short" >&2
     exit 1
   fi

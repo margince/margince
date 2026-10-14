@@ -29,7 +29,7 @@ set -e
 # without the gate's own summary line is the gate broken rather than a tree
 # over the cap, and freezing a ledger from that report would write nothing and
 # call it a baseline.
-if [ "$status" -ne 0 ] && ! grep -q "^FAIL: fe-file-length" <<<"$report"; then
+if [[ "$status" -ne 0 ]] && ! grep -q "^FAIL: fe-file-length" <<<"$report"; then
   echo "$report" >&2
   echo "seed-fe-file-length-waivers: the gate did not run, so there is no baseline to freeze" >&2
   exit 1
