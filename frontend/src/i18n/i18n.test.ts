@@ -85,6 +85,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Temporary, with the badge that renders it: app/betabadge.tsx names this
   // entry among the things its deletion takes.
   "shell.beta",
+  // "Core" is the product's name for the shared codebase, which every catalog
+  // already uses as a term of art (ob.core.*).
+  "shell.coreVersion",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.

@@ -271,7 +271,9 @@ var maskGate = objectGate{
 
 // predicateMaskedAmountReads: the statement names an amount column but no
 // figure reaches a reader who could be masked.
-var predicateMaskedAmountReads = gatekit.Waive(map[string]string{})
+var predicateMaskedAmountReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/legalreviewterms.go:readReviewTerms": "the deal's amount and currency, hashed with the current offer into the fingerprint a legal approval is bound to. Only the SHA-256 leaves the function; the stage gate compares two of them and neither reaches a reader",
+})
 
 // lifecycleMaskedAmountReads: the read runs as PrincipalSystem, which
 // auth.Unbounded answers for outright — a mask asked there would be inert, and

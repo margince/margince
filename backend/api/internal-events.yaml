@@ -282,6 +282,42 @@ components:
         A rep dismissed a suggestion for the whole workspace. The company is
         suggested again only on evidence newer than the dismissal.
       additionalProperties: false
+    InternalEventLegalReviewRequested:
+      type: object
+      x-event-type: legal_review.requested
+      x-entity-type: ""
+      description: >-
+        A deal's side asked legal to review the deal. Entity-less, which keeps
+        it off the subscribable set: the review's note and pack are for holders
+        of the legal_review grant, and no webhook consumer can be held to that.
+        The deal and the review stay on the audit row the emit points at.
+      required:
+        - has_note
+      properties:
+        has_note:
+          type: boolean
+          description: Whether the request carries a note for legal.
+      additionalProperties: false
+    InternalEventLegalReviewDecided:
+      type: object
+      x-event-type: legal_review.decided
+      x-entity-type: ""
+      description: >-
+        Legal answered a request. An approval has already settled the deal's
+        legal_reviewed criteria in the same transaction, so no consumer has to.
+      required:
+        - outcome
+      properties:
+        outcome:
+          type: string
+          description: approved or changes_needed.
+      additionalProperties: false
+    InternalEventLegalReviewWithdrawn:
+      type: object
+      x-event-type: legal_review.withdrawn
+      x-entity-type: ""
+      description: The deal's side took back an open request.
+      additionalProperties: false
     InternalEventTagSuggestionCreated:
       type: object
       x-event-type: tag_suggestion.created

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PassportSelect, ScopeChips, scopeChipLabel } from "./passportselect";
 import { pickOption } from "./select-testing";
 
@@ -11,7 +11,10 @@ import { pickOption } from "./select-testing";
 // empty choice gated by `allowEmpty`, the chosen id reported back, and every
 // scope the passport carries actually reaching the DOM.
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const OPTIONS = [
   { id: "p1", label: "night agent", scopes: ["read", "write"] },
@@ -63,6 +66,13 @@ describe("ScopeChips", () => {
     expect(read.textContent).toBe("Read records");
     expect(write.textContent).toBe("Change records");
     expect(write.className).toBe(read.className);
+  });
+
+  it("draws a scope granted twice as one chip", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<ScopeChips labels={["Read records", "Read records"]} />);
+    expect(screen.getAllByText("Read records")).toHaveLength(1);
+    expect(logged).not.toHaveBeenCalled();
   });
 });
 

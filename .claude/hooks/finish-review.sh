@@ -2,10 +2,10 @@
 # End-of-work review orchestration (Stop hook).
 #
 # Fires when the agent finishes a turn. If — and only if — THIS SESSION edited
-# backend Go code, it drives the pre-push review flow:
+# backend Go code, it drives the end-of-work review flow:
 #
-#   1. `craft static` ALWAYS (the deterministic ADR-0045 gate, same diff-scoped
-#      contract as .githooks/pre-push). Non-zero exit = BLOCKER finding → the
+#   1. `craft static` ALWAYS (the deterministic ADR-0045 gate, on the files
+#      this session changed). Non-zero exit = BLOCKER finding → the
 #      hook blocks the stop and asks the agent to fix, and loops until green.
 #      This is cheap and deterministic, so it runs on every changed set.
 #   2. The two review subagents run ONCE PER BRANCH, and only on a COMPLETE PR —

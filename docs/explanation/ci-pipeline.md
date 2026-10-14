@@ -432,8 +432,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 ### Why some jobs are shaped as they are
 
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
-- **`craftsmanship` runs after `deterministic-gates`**, so a red build is never judged on how the code
-  reads.
+- **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
+  not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
   and the shard profiles cannot reach them.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws

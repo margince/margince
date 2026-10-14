@@ -14714,7 +14714,7 @@ components:
     StageEvidenceSource:
       type: string
       description: What kind of record the observation was read from.
-      enum: [activity, contract]
+      enum: [activity, contract, legal_review]
     StageEvidenceAuthorSide:
       type: string
       description: |-
@@ -14767,7 +14767,7 @@ components:
         decides which evidence sources may satisfy it. `buyer_confirmed`,
         `event_held`, `document_signed` and `terms_accepted` each name something the
         BUYER did, so a seller's own message can never settle one.
-      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom]
+      enum: [buyer_confirmed, event_held, document_signed, role_identified, terms_accepted, custom, legal_reviewed]
     TransitionPolicyList:
       type: object
       required: [data, automation_enabled]

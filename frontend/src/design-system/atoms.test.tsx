@@ -713,3 +713,55 @@ it("stretches the door over the card and rings the card it opens", () => {
   expect(door).toMatch(/outline:\s*var\(--focus-ring-forced\)/);
   expect(door).not.toMatch(/outline:\s*var\(--focus-ring\)/);
 });
+
+// A menu inside a dialog stands above it. The panel is portalled out of the
+// dialog its trigger is in, so on the page's menu layer the dialog's own scrim
+// would cover it.
+function zIndexOf(css: string, selector: string): number {
+  const z = /z-index:\s*(\d+)/.exec(declarations(css, selector))?.[1];
+  if (z === undefined) throw new Error(`${selector} declares no z-index`);
+  return Number(z);
+}
+
+it("draws a menu opened inside a dialog on the layer above that dialog", async () => {
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={() => {}} labelledBy="q" intent="drawer">
+      <Heading size="large" id="q">
+        Worklist
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Snooze</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+
+  const panel = screen.getByRole("button", { name: "Snooze" }).parentElement;
+  expect(panel?.getAttribute("data-layer")).toBe("dialog");
+});
+
+it("keeps a menu outside any dialog on the page's layer", async () => {
+  const user = userEvent.setup();
+  render(
+    <OverflowMenu label="More actions">
+      <button type="button">Archive</button>
+    </OverflowMenu>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+
+  const panel = screen.getByRole("button", { name: "Archive" }).parentElement;
+  expect(panel?.hasAttribute("data-layer")).toBe(false);
+});
+
+it("puts that layer above a dialog's overlay, and under a later dialog", () => {
+  const css = readFileSync(join(here, "atoms.css"), "utf8");
+  const overlay = zIndexOf(css, ".overlay");
+
+  expect(zIndexOf(css, ".overflow-menu-items")).toBeLessThan(overlay);
+  const inDialog = '.overflow-menu-items[data-layer="dialog"]';
+  expect(zIndexOf(css, inDialog)).toBeGreaterThan(overlay);
+  expect(zIndexOf(css, `${inDialog}:has(~ .overlay)`)).toBeLessThan(overlay);
+});

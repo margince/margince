@@ -17,13 +17,14 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
-  DispositionVerbs,
   PutDownByThumb,
   SNOOZE_DAYS,
   SNOOZE_SPANS,
   SWIPE_SIDES,
 } from "./worklist.dispositions";
 import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
+import { RowActs } from "./worklist.rowverbs";
+import { rowMenuName } from "./worklist.testkit";
 
 // How a row is put down when there is no width for the verbs.
 //
@@ -38,6 +39,9 @@ import type { WorklistDisposition, WorklistItem } from "./worklist.queries";
 // unreachable while the suite stays green.
 const EVERY_JUDGEMENT = Object.keys(SWIPE_SIDES) as WorklistDisposition[];
 
+const TITLE = "Anna Weber is waiting";
+const MENU = rowMenuName(TITLE);
+
 function row(dispositions: readonly WorklistDisposition[]): WorklistItem {
   return {
     id: "01a05500-0000-7000-8000-0000000000a1",
@@ -45,7 +49,7 @@ function row(dispositions: readonly WorklistDisposition[]): WorklistItem {
     category: "customer_waiting",
     level: 1,
     consequence: "buyer_waits",
-    title: "Anna Weber is waiting",
+    title: TITLE,
     because: [],
     actions: [],
     dispositions: [...dispositions],
@@ -75,8 +79,8 @@ function rowUnderTest(dispositions: readonly WorklistDisposition[]) {
       <LocaleProvider initial="en">
         <ToastProvider>
           <PutDownByThumb item={item}>
-            <p>Anna Weber is waiting</p>
-            <DispositionVerbs item={item} />
+            <p>{TITLE}</p>
+            <RowActs item={item} title={TITLE} href={undefined} owner="" />
           </PutDownByThumb>
           <ToastRegion />
         </ToastProvider>
@@ -106,8 +110,8 @@ function draw(dispositions: readonly WorklistDisposition[]) {
               and the verbs are drawn inside it, which is what puts the swipe on
               the row rather than on one control in it. */}
           <PutDownByThumb item={item}>
-            <p>Anna Weber is waiting</p>
-            <DispositionVerbs item={item} />
+            <p>{TITLE}</p>
+            <RowActs item={item} title={TITLE} href={undefined} owner="" />
           </PutDownByThumb>
           <ToastRegion />
         </ToastProvider>
@@ -141,8 +145,8 @@ function drawRows(count: number) {
             const item = { ...row(EVERY_JUDGEMENT), id: `row-${at}` };
             return (
               <PutDownByThumb key={item.id} item={item}>
-                <p>{item.title}</p>
-                <DispositionVerbs item={item} />
+                <p>{TITLE}</p>
+                <RowActs item={item} title={TITLE} href={undefined} owner="" />
               </PutDownByThumb>
             );
           })}
@@ -185,10 +189,16 @@ const FORWARD: [number, number] = [0, 90];
 const BACK: [number, number] = [90, 0];
 
 describe("putting a row down below the fold", () => {
-  it("draws the verbs as buttons where there is width for them", () => {
+  // Where there is width, Done is a button and the rest are lines of the row's
+  // menu, and no gesture wraps the row.
+  it("draws the verbs as controls where there is width for them", () => {
     atWidth(false);
     draw(EVERY_JUDGEMENT);
 
+    expect(
+      screen.getByRole("button", { name: verb("handled") }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: MENU }));
     for (const disposition of EVERY_JUDGEMENT) {
       expect(
         screen.getByRole("button", { name: verb(disposition) }),
@@ -261,10 +271,8 @@ describe("putting a row down below the fold", () => {
   });
 
   // THE KEYBOARD PATH. A swipe is not a control a keyboard, a switch or a
-  // screen reader can operate, so a fold that left the gesture as the only
-  // route would take the three judgements away from every reader who does not
-  // point. The menu is one tab stop carrying all three — not the 44px band
-  // back, which is the height the fold removed.
+  // screen reader can operate. The row's menu is one tab stop carrying every
+  // judgement, without bringing back the 44px band the fold removed.
   it("offers every judgement to a keyboard below the fold", async () => {
     const user = userEvent.setup();
     atWidth(true);
@@ -277,7 +285,7 @@ describe("putting a row down below the fold", () => {
     // on is the gap this closes, not a fix for it.
     await user.tab();
     const trigger = screen.getAllByRole("button", {
-      name: en["worklist.disposition.menu"],
+      name: MENU,
     })[0];
     expect(document.activeElement).toBe(trigger);
 
@@ -291,13 +299,17 @@ describe("putting a row down below the fold", () => {
       name: verb(EVERY_JUDGEMENT[0]),
     });
     expect(document.activeElement).toBe(first);
+    const panel = first.parentElement;
 
-    // And Tab walks the rest of them rather than leaving for the page.
+    // And Tab walks the rest of them, among the menu's other lines, rather
+    // than leaving for the page.
     for (const disposition of EVERY_JUDGEMENT.slice(1)) {
-      await user.tab();
-      expect(document.activeElement).toBe(
-        screen.getByRole("button", { name: verb(disposition) }),
-      );
+      const line = screen.getByRole("button", { name: verb(disposition) });
+      for (let step = 0; document.activeElement !== line; step++) {
+        expect(step, `tabbing never reached ${disposition}`).toBeLessThan(12);
+        await user.tab();
+        expect(panel?.contains(document.activeElement)).toBe(true);
+      }
     }
   });
 
@@ -329,9 +341,7 @@ describe("putting a row down below the fold", () => {
     );
 
     // The menu's own item now reads that write as in flight.
-    await user.click(
-      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
-    );
+    await user.click(screen.getByRole("button", { name: MENU }));
     await waitFor(() => {
       const items = screen.getAllByRole("button", { name: verb("handled") });
       expect(
@@ -379,9 +389,7 @@ describe("putting a row down below the fold", () => {
     // The row still reports the first answer as the one in flight. Done is
     // the busy control. The judgement whose confirm was refused stands down
     // rather than claiming a write of its own.
-    await user.click(
-      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
-    );
+    await user.click(screen.getByRole("button", { name: MENU }));
     expect(
       screen
         .getByRole("button", { name: verb("handled") })
@@ -406,9 +414,7 @@ describe("putting a row down below the fold", () => {
     atWidth(true);
     const fetchSpy = draw(EVERY_JUDGEMENT);
 
-    await user.click(
-      screen.getByRole("button", { name: en["worklist.disposition.menu"] }),
-    );
+    await user.click(screen.getByRole("button", { name: MENU }));
 
     // The whole span vocabulary, derived rather than named here: a census that
     // lists its own subjects proves only that they were listed.

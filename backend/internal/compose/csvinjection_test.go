@@ -51,6 +51,11 @@ func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
 		}
 	}
 
+	// A bare phone number holds no formula a spreadsheet could run, so it exports raw.
+	if got := csvCell("+84901234567"); got != "+84901234567" {
+		t.Errorf("csvCell(%q) = %q, want the bare number", "+84901234567", got)
+	}
+
 	// A typed numeric value is system-rendered, never attacker free text, so a
 	// legitimately negative amount keeps its sign without gaining a quote — the
 	// guard is scoped to the text branches for exactly this reason.
