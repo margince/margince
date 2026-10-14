@@ -75,18 +75,18 @@ func (e *VolumeExceededError) Unwrap() error { return apperrors.ErrBudgetExceede
 // somebody is looking at it would leave a REST caller waiting on an approval
 // that was never created.
 func (e *VolumeExceededError) Error() string {
-	what := "this agent"
+	lead := "this agent"
 	if e.Tool != "" {
-		what = e.Tool
+		lead = e.Tool + ": this agent"
 	}
 	if e.Releasable() {
 		return fmt.Sprintf(
-			"%s: this agent has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
-			what, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+			"%s has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
+			lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
 	}
 	return fmt.Sprintf(
-		"%s: this agent has spent %d of its %d %s for this window, and that limit holds until the window rolls; no approval lifts it",
-		what, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
+		"%s has spent %d of its %d %s for this window, and that limit holds until the window rolls; no approval lifts it",
+		lead, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
 }
 
 // AdmitReplay is the admission a RECORDED answer takes before it is served
