@@ -12,7 +12,7 @@ import { Popover } from "../design-system/popover";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useLists } from "./lists.queries";
+import { useLists } from "../lib/lists.queries";
 import "./automations.datefield.css";
 
 type ListRow = NonNullable<ReturnType<typeof useLists>["data"]>["data"][number];

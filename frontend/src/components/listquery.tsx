@@ -24,14 +24,14 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "../lib/problem";
 import { navigate, type Route, routeHash, useHash } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
+import { withoutStrandedTagMode } from "../lib/tagfilter";
+import { useTagVocabulary } from "../lib/tags.queries";
 import {
   currentParams,
   GLOBAL_DIALS,
   type UrlParams,
   useUrlParams,
 } from "../lib/urlstate";
-import { withoutStrandedTagMode } from "./tagfilter";
-import { useTagVocabulary } from "./tags.queries";
 import "./listquery.css";
 
 // The shared list foundation (P-14): every list screen sends the rich

@@ -7,15 +7,17 @@
 
 import { Pencil } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useGuardedLeave } from "../app/unsaved";
+import { useGuardedLeave } from "../components/unsaved";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useFilterVocabulary } from "../lib/filterdata";
+import { useListsAvailable } from "../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { navigateReplacing } from "../lib/router";
-import { useFilterVocabulary } from "./filterdata";
+import { type Group, type Node, rootGroup } from "../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {
   FilterEditor,
@@ -47,7 +49,6 @@ import {
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
 import { type Reread, useReload } from "./filterview.reload";
-import { useListsAvailable } from "./lists.queries";
 import {
   filterStateFrom,
   filterTreeOf,
@@ -56,7 +57,6 @@ import {
   useSavedView,
   useSaveView,
 } from "./savedviews.queries";
-import { type Group, type Node, rootGroup } from "./segmentpredicate";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
 

@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
+// The installation read every form shares: one query, one key, so the currency
+// this form writes is the same fact the settings screen shows.
+import { useObjectCustomFields } from "../components/customfields.form";
 import { Button, Field, Modal } from "../design-system/atoms";
 import {
   DrawerBody,
@@ -23,9 +26,6 @@ import { paperState, useContractPaper } from "./contractpaper";
 import { contractTermsBody } from "./contracttermsbody";
 import { ContractTermsFields } from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
-// The installation read every form shares: one query, one key, so the currency
-// this form writes is the same fact the settings screen shows.
-import { useObjectCustomFields } from "./customfields.form";
 
 // Recording an agreement.
 //

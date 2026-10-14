@@ -11,7 +11,7 @@ import {
   type ListRecordType,
   useLists,
   useListsAvailable,
-} from "./lists.queries";
+} from "../lib/lists.queries";
 
 export function ShortlistVerb({
   recordType,

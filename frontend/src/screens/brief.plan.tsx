@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { EntityRef } from "../components/entityref";
 import {
   Badge,
   Button,
@@ -21,7 +22,6 @@ import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
-import { EntityRef } from "./entityref";
 import {
   type SettableState,
   useAskForHelp,

@@ -13,8 +13,8 @@ import type { components } from "../api/schema";
 import { isMessageKey, type useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemDetails } from "../lib/problembody";
+import type { FilterOp } from "../lib/segmentpredicate";
 import type { Reference } from "./filterreference";
-import type { FilterOp } from "./segmentpredicate";
 
 export type AnalyticsQuery = components["schemas"]["AnalyticsQuery"];
 export type AnalyticsAnswer = components["schemas"]["AnalyticsAnswer"];

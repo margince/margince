@@ -7,8 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
+import type { FilterVocabulary } from "../lib/filterdata";
 import { meFixture } from "../testing/mefixture";
-import type { FilterVocabulary } from "./filterdata";
 import { FiltersScreen } from "./filters";
 import { GuardedFilters, mountFilters, type Sent } from "./filters.testkit";
 

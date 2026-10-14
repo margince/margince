@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type Dispatch, type SetStateAction, useEffect, useRef } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRoster } from "../components/entityref";
 import { formatDateTime } from "../format/format";
 import { replySubject } from "../format/replysubject";
 import { viewerZone } from "../format/timezone";
@@ -15,7 +16,6 @@ import { recordNamesIn, useCompany360 } from "./company360";
 import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
 import { useRecentConversations, useThreadMessages } from "./composethread";
-import { useRoster } from "./entityref";
 import { stripEveryKeyTag, withSubjectTag } from "./projectrecord";
 
 type Activity = components["schemas"]["Activity"];

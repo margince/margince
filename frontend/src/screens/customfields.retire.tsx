@@ -12,8 +12,8 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { LISTS_KEY } from "../lib/lists.queries";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { LISTS_KEY } from "./lists.queries";
 
 type CustomField = components["schemas"]["CustomField"];
 type LiveLists = components["schemas"]["CustomFieldLiveLists"];

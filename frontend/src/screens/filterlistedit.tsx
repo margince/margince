@@ -7,16 +7,30 @@
 // opening.
 
 import { useState } from "react";
-import { useGuardedLeave } from "../app/unsaved";
+import { useGuardedLeave } from "../components/unsaved";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useFilterVocabulary } from "../lib/filterdata";
+import {
+  type List,
+  useList,
+  useListsAvailable,
+  useUpdateList,
+} from "../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
-import { useFilterVocabulary } from "./filterdata";
+import {
+  decode,
+  encode,
+  type Group,
+  isComplete,
+  type Node,
+  rootGroup,
+} from "../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import { FilterEditor, useRowsFocus } from "./filtereditor";
 import { useFilterExport } from "./filterexport";
@@ -34,21 +48,7 @@ import {
 } from "./filtersaddress";
 import { SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
-import {
-  type List,
-  useList,
-  useListsAvailable,
-  useUpdateList,
-} from "./lists.queries";
 import { useListAudienceLabel } from "./listsharing";
-import {
-  decode,
-  encode,
-  type Group,
-  isComplete,
-  type Node,
-  rootGroup,
-} from "./segmentpredicate";
 import "./filters.css";
 
 /** Whether this reader may change this list's filter here. */

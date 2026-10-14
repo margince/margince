@@ -5,7 +5,7 @@
 // rendering in it, so it reads and tests on its own.
 
 import type { components } from "../api/schema";
-import type { CreateField } from "./create";
+import type { CreateField } from "../components/create";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 

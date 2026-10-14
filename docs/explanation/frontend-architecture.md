@@ -56,6 +56,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
                         ⌘K palette, agent dock, banners
  src/lib/               shared code that draws nothing: hash router, URL
                         state, theme, capability, problem decoding, session
+ src/components/        screen parts many surfaces share: create, edit,
+                        list query, record fields
  src/screens/           one file per surface (a directory when the surface
                         is a state machine)
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
@@ -75,8 +77,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
   once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree. No file in `design-system/` imports `app/` or `screens/`: a part that needs
-  a feature, such as the record page's mail drawer, lives in `screens/`.
+  tree. No file in `design-system/` imports `app/`, `components/` or `screens/`: a part
+  that needs a feature, such as the record page's mail drawer, lives in `screens/`.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -89,7 +91,11 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
   `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
-  decoding and the session. `lib/` never imports `app/` or `screens/`.
+  decoding and the session. `lib/` never imports `app/`, `components/` or `screens/`.
+- **`src/components/`**: the screen parts that many surfaces share. Examples are
+  the create and edit dialogs, the list query and the record fields.
+  A component never imports `app/` or `screens/`. A part used by one surface
+  stays with that surface.
 - **`src/screens/`**: one file per surface. A surface gets a *folder* only
   when it is a state machine and not a page. One has one:
   `screens/onboarding-conversation/`. There the conversation machine, each
@@ -400,6 +406,7 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
 | Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
+| Screen parts many surfaces share | `frontend/src/components/` |
 | Screens | `frontend/src/screens/` (one file per surface; `onboarding-conversation/` is the one state-machine folder) |
 | Catalogs / the edge where values turn into text | `frontend/src/i18n/`, `frontend/src/format/` |
 

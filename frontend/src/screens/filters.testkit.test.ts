@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import { filterView, mountFilters } from "./filters.testkit";
-import { LIVE_ID, liveList } from "./lists.fixtures";
 
 afterEach(() => {
   vi.unstubAllGlobals();

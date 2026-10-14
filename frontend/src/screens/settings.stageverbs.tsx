@@ -9,6 +9,8 @@ import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { type CreateField, CreateRecordModal } from "../components/create";
+import { EditAction } from "../components/edit";
 import { Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useLastSubject } from "../design-system/presence";
@@ -21,8 +23,6 @@ import {
   problemMessageOf,
   unwrap,
 } from "../lib/problem";
-import { type CreateField, CreateRecordModal } from "./create";
-import { EditAction } from "./edit";
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];

@@ -4,14 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { userEvent, within } from "storybook/test";
+import { useFilterPreview, type VocabularyField } from "../lib/filterdata";
+import { newGroup, newLeaf } from "../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { useFilterPreview, type VocabularyField } from "./filterdata";
 import { FilterMatches } from "./filtermatches";
-import { newGroup, newLeaf } from "./segmentpredicate";
 
 // What a filter selects: the count beside the title, and the first page of
 // rows behind it. The states are the ones a count can be in — on its way,

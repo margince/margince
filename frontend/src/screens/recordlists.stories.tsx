@@ -6,12 +6,6 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Panel } from "../design-system/panel";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
-import { ListsSection } from "./companyraillists";
-import {
   LIVE_ID,
   listsMe,
   liveList,
@@ -20,7 +14,13 @@ import {
   notOnLiveWhy,
   SHORTLIST_ID,
   shortlist,
-} from "./lists.fixtures";
+} from "../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { ListsSection } from "./companyraillists";
 import { RecordListsPanel } from "./recordlists";
 
 // The lists one record is on, on its own page, and the check that says why it

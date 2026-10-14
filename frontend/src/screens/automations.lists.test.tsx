@@ -16,12 +16,12 @@ import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
+import { liveList, shortlist } from "../testing/lists.fixtures";
 import { jsonResponse, StoryProviders } from "../testing/story-utils";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationForm } from "./automations.form";
 import { ListParamSelect, RulePausedReason } from "./automations.lists";
 import { paramFields } from "./automations.params";
-import { liveList, shortlist } from "./lists.fixtures";
 
 type Automation = components["schemas"]["Automation"];
 

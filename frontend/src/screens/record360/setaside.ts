@@ -3,7 +3,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useT } from "../../i18n";
-import { useUndoableRemoval } from "../undoableremoval";
+import { useUndoableRemoval } from "../../lib/undoableremoval";
 
 /**
  * The "Not now" every record page's move carries, and the Undo after it.

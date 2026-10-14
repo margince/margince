@@ -1,8 +1,8 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ENTITY_NAME_KEY, fetchEntityName } from "../components/entityref";
 import { unwrap } from "../lib/problem";
-import { ENTITY_NAME_KEY, fetchEntityName } from "./entityref";
 
 type View = components["schemas"]["Contact360"];
 type Employment = components["schemas"]["Contact360Employment"];

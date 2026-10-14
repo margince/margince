@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -27,7 +28,6 @@ import {
 import { navigate, routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
-import { EntityRef } from "../entityref";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
 import { IntroRequestModal, type IntroTarget } from "./introrequest";
 import { ASK_INTRO, introTargetFor, mapModelFromCoverage } from "./mapmodel";

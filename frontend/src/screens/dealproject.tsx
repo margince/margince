@@ -6,6 +6,8 @@ import { Briefcase } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import type { CreateField } from "../components/create";
+import { useEntityName } from "../components/entityref";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { FieldGuard } from "../design-system/rbac";
@@ -16,8 +18,6 @@ import { dealRecordKeys } from "../lib/activitykeys";
 import { ENTITY } from "../lib/entity";
 import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
 import { navigate, routeHash } from "../lib/router";
-import type { CreateField } from "./create";
-import { useEntityName } from "./entityref";
 import type { Project } from "./projects.form";
 
 // Where a deal meets its project: the picker on the deal form (with the

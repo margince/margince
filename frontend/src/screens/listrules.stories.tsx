@@ -6,10 +6,10 @@ import { userEvent, within } from "storybook/test";
 import { OverflowMenu } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { en } from "../i18n/en";
+import type { List } from "../lib/lists.queries";
+import { listsMe, liveList, MEMBER_ID } from "../testing/lists.fixtures";
 import { installFetchStub, StoryProviders } from "../testing/story-utils";
 import { ArchiveListAction } from "./listrules";
-import { listsMe, liveList, MEMBER_ID } from "./lists.fixtures";
-import type { List } from "./lists.queries";
 import { ListSettingsAction } from "./listsettings";
 
 // Archive list, last in the menu beside a list's name and drawn in danger ink.
