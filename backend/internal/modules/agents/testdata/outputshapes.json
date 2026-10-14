@@ -7665,7 +7665,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -8957,6 +8966,12 @@
                 "file": {
                   "type": "string"
                 },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
                 "object": {
                   "type": "string"
                 },
@@ -9020,7 +9035,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
