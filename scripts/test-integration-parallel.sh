@@ -151,10 +151,38 @@ JOBS="${INTEGRATION_JOBS:-$(( $(ncpu) < 8 ? $(ncpu) : 8 ))}"
 # LANE_CONN_BUDGET for the harness.
 declare_lane_budget "$JOBS"
 
+# The coverage flags of a sharded run, one string because run_one reads it in
+# the child shell xargs starts, and an array does not cross that boundary.
+export LANE_COVER_FLAGS="-cover -coverpkg=./... -covermode=atomic"
+
+# Compile the lane once before fanning out, with the flags every package's
+# `go test` uses. Concurrent `go` processes do not share a compile still in
+# flight, so packages starting together on a cold cache each built the same
+# dependencies. It runs beside the template build, which mostly waits on
+# Postgres; `wait` reports its status, so a failure cannot hide behind the `&`.
+prebuild_flags=(-tags=integration)
+if [[ -n "${COVERDIR:-}" ]]; then
+  read -r -a cover_flags <<< "$LANE_COVER_FLAGS"
+  prebuild_flags+=("${cover_flags[@]}")
+fi
+prebuild_log="$(mktemp)"
+( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
+prebuild_pid=$!
+
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
 echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
 build_template
+
+prebuild_started=$SECONDS
+if ! wait "$prebuild_pid"; then
+  cat "$prebuild_log"
+  rm -f "$prebuild_log"
+  echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+  exit 1
+fi
+rm -f "$prebuild_log"
+echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
 
 # Every integration test in this repo lives in the backend module.
 GO_DIRS=(backend)
@@ -468,7 +496,7 @@ run_one() {
   local cover_pre=() cover_post=() run_args=()
   if [[ -n "${COVERDIR:-}" ]]; then
     mkdir -p "$COVERDIR/$idx"
-    cover_pre=(-cover -coverpkg=./... -covermode=atomic)
+    read -r -a cover_pre <<< "$LANE_COVER_FLAGS"
     cover_post=(-args -test.gocoverdir="$COVERDIR/$idx")
   fi
   [[ -n "$runre" ]] && run_args=(-run "$runre")
