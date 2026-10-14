@@ -32,14 +32,13 @@ export function scopeChipLabel(
 }
 
 // A scope chip row: every chip a scope the passport carries, already
-// resolved to its display label by the caller. There is no "granted versus
-// not" distinction to draw — the tool console lists a whole passport's
-// scopes and a connection's own summary is scoped the same way — so a chip
-// means one thing on both surfaces.
+// resolved to its display label by the caller. A chip means one thing on both
+// surfaces: each lists a whole passport's scopes, with no "granted versus not"
+// to draw. The chips are a set: a scope granted twice is still one permission.
 export function ScopeChips({ labels }: Readonly<{ labels: string[] }>) {
   return (
     <>
-      {labels.map((label) => (
+      {[...new Set(labels)].map((label) => (
         <Badge key={label}>{label}</Badge>
       ))}
     </>
