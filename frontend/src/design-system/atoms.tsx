@@ -1174,7 +1174,7 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// Re-exported so call sites keep one import path.
+// Re-exported so call sites that name only `Disclosure` keep one import path.
 export { Disclosure } from "./disclosure";
 export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";

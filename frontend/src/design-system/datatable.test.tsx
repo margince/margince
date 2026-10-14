@@ -262,6 +262,10 @@ it("pads a bleeding table's outer cells to the pane, in a bleeding disclosure to
     const selectors = css.match(rule)?.[1] ?? "";
     expect(selectors).toMatch(/> \.disclosure-body\s+> \.table-scroll/);
   }
+  const spans = css.match(
+    /\.panel\s+> :is\(\.panel-body, \.settinglist-bleed\)\s+> \.disclosure\s+> \.disclosure-body\s+> \.table-scroll \{\s*margin-inline: ([^;]+);/,
+  );
+  expect(spans?.[1]).toBe("calc(-1 * var(--padPanel))");
 });
 
 type DemoMember = { name: string; email: string; role: string; team: string };
@@ -502,11 +506,11 @@ const CALL_COLUMNS: DataTableColumn<Call>[] = [
   { key: "task", header: "Task", render: (call) => call.task },
 ];
 
-const TRACE: DataTableDetail<Call> = {
+const TRACE = {
   header: "Detail",
   toggleLabel: (call) => `Show ${call.task}`,
   render: (call) => <p>{call.trace}</p>,
-};
+} satisfies DataTableDetail<Call>;
 
 function CallLog({
   fold,
@@ -585,7 +589,8 @@ it("opens one row at a time when the detail is single", async () => {
   expect(screen.queryByText("One attempt")).toBeNull();
 });
 
-// happy-dom runs no CSS, so the fold reports a height transition that the test ends.
+// happy-dom runs no CSS, so the test stubs `getAnimations` with a height
+// transition and ends it itself.
 it("keeps a closing detail on screen until its fold has ended", async () => {
   const user = userEvent.setup();
   render(<CallLog />);
@@ -606,38 +611,32 @@ it("keeps a closing detail on screen until its fold has ended", async () => {
   await user.click(screen.getByRole("button", { name: "Show Triage" }));
   expect(screen.getByText("Two attempts")).toBeTruthy();
   expect(fold?.closest("tr")?.hidden).toBe(false);
+  expect(
+    fold?.querySelector(".datatable-detail-body")?.hasAttribute("inert"),
+  ).toBe(true);
   await act(async () => end());
   expect(screen.queryByText("Two attempts")).toBeNull();
   expect(fold?.closest("tr")?.hidden).toBe(true);
 });
 
-it("asks a caller that holds the rows to close the open one before it opens the next", async () => {
-  const user = userEvent.setup();
-  const toggled: string[] = [];
-  const { rerender } = render(
-    <CallLog
-      detail={{
-        ...TRACE,
-        single: true,
-        expanded: new Set(["a"]),
-        onToggle: (key) => toggled.push(key),
-      }}
-    />,
-  );
-  await user.click(screen.getByText("Enrich"));
-  expect(toggled).toEqual(["a", "b"]);
-  rerender(
-    <CallLog
-      detail={{
-        ...TRACE,
-        single: true,
-        expanded: new Set(["a", "b"]),
-        onToggle: (key) => toggled.push(key),
-      }}
-    />,
-  );
-  expect(screen.getByText("Two attempts")).toBeTruthy();
-  expect(screen.getByText("One attempt")).toBeTruthy();
+it("takes single only in a table that holds its own open rows", () => {
+  const held: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+  };
+  // @ts-expect-error a caller that holds the rows decides which stay open
+  const both: DataTableDetail<Call> = {
+    header: "Detail",
+    toggleLabel: (call) => call.task,
+    render: (call) => call.trace,
+    expanded: new Set<string>(),
+    onToggle: () => {},
+    single: true,
+  };
+  expect([held.single, both.single]).toEqual([undefined, true]);
 });
 
 it("gives a row with nothing to open no toggle and no pointer", async () => {

@@ -658,14 +658,16 @@ export const RowDetailSingle: Story = {
     );
   },
 };
-// A detail whose read lands while the row is opening: a short line first, then
-// a caption, a line and a verb. The fold follows the content and never snaps.
+// A detail whose read lands late: while the row opens (the first row), or once
+// it has opened (the second). The fold follows the content and never jumps.
+const LANDS_AFTER: Readonly<Record<string, number>> = { r1: 60, r2: 400 };
+
 function LateCriteria({ run }: Readonly<{ run: DemoRun }>) {
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    const landing = setTimeout(() => setLoaded(true), 60);
+    const landing = setTimeout(() => setLoaded(true), LANDS_AFTER[run.id] ?? 0);
     return () => clearTimeout(landing);
-  }, []);
+  }, [run.id]);
   if (!loaded) {
     return <p className="t-caption">Loading the run…</p>;
   }
@@ -678,6 +680,45 @@ function LateCriteria({ run }: Readonly<{ run: DemoRun }>) {
       </div>
     </div>
   );
+}
+
+type FoldFrame = Readonly<{ height: number; folding: boolean }>;
+
+// Each painted frame of one row's fold. Read after the frame, so a height the
+// fold restores before paint is not counted as drawn.
+function sampleFold(cell: HTMLElement) {
+  const frames: FoldFrame[] = [];
+  let frame = 0;
+  let after: ReturnType<typeof setTimeout> | undefined;
+  const sample = () => {
+    after = setTimeout(() => {
+      const fold = cell.querySelector<HTMLElement>(".datatable-detail-fold");
+      if (fold !== null && !cell.closest("tr")?.hidden) {
+        frames.push({
+          height: fold.getBoundingClientRect().height,
+          folding: fold.hasAttribute("data-folding"),
+        });
+      }
+      frame = requestAnimationFrame(sample);
+    }, 0);
+  };
+  frame = requestAnimationFrame(sample);
+  const stop = () => {
+    cancelAnimationFrame(frame);
+    clearTimeout(after);
+  };
+  return { frames, stop };
+}
+
+// A height that changes between two frames with no fold moving is a jump.
+function jumps(frames: readonly FoldFrame[]): string[] {
+  return frames.slice(1).flatMap((frame, index) => {
+    const before = frames[index] ?? frame;
+    const moved = Math.abs(frame.height - before.height) >= 1;
+    return moved && !frame.folding && !before.folding
+      ? [`${before.height} to ${frame.height}`]
+      : [];
+  });
 }
 
 export const RowDetailLateContent: Story = {
@@ -698,36 +739,29 @@ export const RowDetailLateContent: Story = {
     </Panel>
   ),
   play: async ({ canvasElement }) => {
-    const toggle = await within(canvasElement).findByRole("button", {
-      name: "Show the run of Welcome new leads",
-    });
-    const frames: { height: number; folding: boolean }[] = [];
-    let sampling = true;
-    const sample = () => {
-      const fold = canvasElement.querySelector<HTMLElement>(
-        "tr.datatable-detail:not([hidden]) .datatable-detail-fold",
+    const canvas = within(canvasElement);
+    for (const rule of ["Welcome new leads", "Nudge a quiet deal"]) {
+      const toggle = await canvas.findByRole("button", {
+        name: `Show the run of ${rule}`,
+      });
+      const cell = canvasElement.ownerDocument.getElementById(
+        toggle.getAttribute("aria-controls") ?? "",
       );
-      if (fold !== null) {
-        frames.push({
-          height: fold.getBoundingClientRect().height,
-          folding: fold.hasAttribute("data-folding"),
+      if (cell === null) throw new Error(`${rule} controls no detail`);
+      const { frames, stop } = sampleFold(cell);
+      try {
+        await userEvent.click(toggle);
+        await canvas.findByText(`What ${rule} did`, {}, { timeout: 2000 });
+        const landed = frames.length;
+        await waitFor(() => {
+          expect(frames.length).toBeGreaterThan(landed + 2);
+          expect(frames.at(-1)?.folding).toBe(false);
         });
+      } finally {
+        stop();
       }
-      if (sampling) requestAnimationFrame(sample);
-    };
-    requestAnimationFrame(sample);
-    await userEvent.click(toggle);
-    await within(canvasElement).findByRole("button", { name: "Run again" });
-    await waitFor(() => expect(frames.at(-1)?.folding).toBe(false));
-    sampling = false;
-    const released = frames.findIndex((frame) => !frame.folding);
-    const before = frames[released - 1]?.height ?? 0;
-    const after = frames[released]?.height ?? 0;
-    await expect(Math.abs(after - before)).toBeLessThan(1);
-    for (const [index, frame] of frames.entries()) {
-      await expect(frame.height).toBeGreaterThanOrEqual(
-        (frames[index - 1]?.height ?? 0) - 0.5,
-      );
+      await expect(jumps(frames)).toEqual([]);
+      await expect(frames.slice(1).some((frame) => frame.folding)).toBe(true);
     }
   },
 };

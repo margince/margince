@@ -12,11 +12,38 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Disclosure, DisclosureGroup } from "./disclosure";
+
+// happy-dom toggles a `<details>` while a click passes it, before React's root
+// listener can cancel it. A browser toggles after the dispatch: so does this.
+const ACTIVATION =
+  'a[href], button, label, input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"], summary';
+
+function activate(event: Event) {
+  if (event.defaultPrevented || !(event.target instanceof Element)) return;
+  const summary = event.target.closest(ACTIVATION);
+  const details = summary?.parentElement;
+  if (
+    summary?.localName === "summary" &&
+    details instanceof HTMLDetailsElement
+  ) {
+    details.open = !details.open;
+  }
+}
+
+beforeEach(() => {
+  vi.spyOn(HTMLDetailsElement.prototype, "dispatchEvent").mockImplementation(
+    function (this: HTMLDetailsElement, event: Event) {
+      return HTMLElement.prototype.dispatchEvent.call(this, event);
+    },
+  );
+  window.addEventListener("click", activate);
+});
 
 afterEach(() => {
   cleanup();
+  window.removeEventListener("click", activate);
   vi.restoreAllMocks();
 });
 
@@ -200,12 +227,7 @@ it("lets a caller's forced open win over the group's open section", async () => 
 });
 
 // A stand-in for the browser's height transition, since happy-dom runs no CSS.
-// happy-dom also toggles a `<details>` before React's listener can refuse it.
-// So the summary refuses the native toggle itself, as a browser lets it.
 function holdMotion(element: HTMLDetailsElement) {
-  element
-    .querySelector("summary")
-    ?.addEventListener("click", (event) => event.preventDefault());
   let end = () => {};
   const finished = new Promise<void>((resolve) => {
     end = resolve;
@@ -226,13 +248,17 @@ it("stays open through its close motion and shuts once the motion ends", async (
     </Disclosure>,
   );
   const end = holdMotion(detailsOf("Long read"));
+  const body = () => detailsOf("Long read").querySelector(".disclosure-body");
+  expect(body()?.hasAttribute("inert")).toBe(false);
   fireEvent.click(summaryOf("Long read"));
   expect(summaryOf("Long read").getAttribute("aria-expanded")).toBe("false");
   expect(detailsOf("Long read").open).toBe(true);
   expect(detailsOf("Long read").hasAttribute("data-folding")).toBe(true);
+  expect(body()?.hasAttribute("inert")).toBe(true);
 
   await act(async () => end());
   expect(detailsOf("Long read").open).toBe(false);
+  expect(body()?.hasAttribute("inert")).toBe(false);
   expect(detailsOf("Long read").hasAttribute("data-folding")).toBe(false);
   expect(detailsOf("Long read").style.height).toBe("");
 });
@@ -255,4 +281,175 @@ it("closes the open sibling while the new one opens, in one press", async () => 
   expect(detailsOf("Second").open).toBe(true);
   await act(async () => end());
   expect(detailsOf("First").open).toBe(false);
+});
+
+it("asks nothing of onToggle on mount, and asks on a press", async () => {
+  const user = userEvent.setup();
+  const toggled: boolean[] = [];
+  render(
+    <Disclosure summary="Run" open onToggle={(open) => toggled.push(open)}>
+      <p>Running</p>
+    </Disclosure>,
+  );
+  expect(toggled).toEqual([]);
+  await user.click(summaryOf("Run"));
+  expect(toggled).toEqual([false]);
+});
+
+it("shows a caller's open while the caller holds it, and asks on a press", async () => {
+  const user = userEvent.setup();
+  const asked: boolean[] = [];
+  const { rerender } = render(
+    <Disclosure summary="Words" open={false} onToggle={(o) => asked.push(o)}>
+      <p>Describe the change</p>
+    </Disclosure>,
+  );
+  await user.click(summaryOf("Words"));
+  expect(asked).toEqual([true]);
+  expect(summaryOf("Words").getAttribute("aria-expanded")).toBe("false");
+  expect(detailsOf("Words").open).toBe(false);
+  rerender(
+    <Disclosure summary="Words" open onToggle={(o) => asked.push(o)}>
+      <p>Describe the change</p>
+    </Disclosure>,
+  );
+  expect(detailsOf("Words").open).toBe(true);
+  expect(asked).toEqual([true]);
+});
+
+function HeldBeside() {
+  const [open, setOpen] = useState(true);
+  return (
+    <DisclosureGroup>
+      <Disclosure summary="Held" open={open} onToggle={setOpen}>
+        <p>Held body</p>
+      </Disclosure>
+      <Section name="Free" />
+    </DisclosureGroup>
+  );
+}
+
+it("asks a held section to close when another one in its group opens", async () => {
+  const user = userEvent.setup();
+  render(<HeldBeside />);
+  await user.click(summaryOf("Free"));
+  expect(detailsOf("Held").open).toBe(false);
+  expect(detailsOf("Free").open).toBe(true);
+});
+
+function LateRegistration({ loaded }: Readonly<{ loaded: boolean }>) {
+  return (
+    <DisclosureGroup>
+      {loaded && (
+        <Disclosure summary="Registration" open>
+          <p>Filed in Berlin</p>
+        </Disclosure>
+      )}
+      <Section name="Team" />
+    </DisclosureGroup>
+  );
+}
+
+// A motion that never ends shows whether a section mounted open, then closed.
+it("keeps the section a reader opened when one mounts open later, shut from the start", async () => {
+  const user = userEvent.setup();
+  const { rerender } = render(<LateRegistration loaded={false} />);
+  await user.click(summaryOf("Team"));
+  const motion = {
+    effect: { getComputedTiming: () => ({ iterations: 1 }) },
+    finished: new Promise(() => {}),
+    transitionProperty: "height",
+  };
+  Object.defineProperty(HTMLDetailsElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [motion],
+  });
+  try {
+    rerender(<LateRegistration loaded />);
+  } finally {
+    Reflect.deleteProperty(HTMLDetailsElement.prototype, "getAnimations");
+  }
+  expect(detailsOf("Team").open).toBe(true);
+  expect(detailsOf("Registration").open).toBe(false);
+  expect(detailsOf("Registration").hasAttribute("data-folding")).toBe(false);
+});
+
+it("opens a section mounted open when its group has none open", async () => {
+  const { rerender } = render(<LateRegistration loaded={false} />);
+  rerender(<LateRegistration loaded />);
+  expect(detailsOf("Registration").open).toBe(true);
+  expect(detailsOf("Team").open).toBe(false);
+});
+
+it("leaves the group to the first of two sections mounted open", () => {
+  render(
+    <DisclosureGroup>
+      <Disclosure summary="First" open>
+        <p>One</p>
+      </Disclosure>
+      <Disclosure summary="Second" open>
+        <p>Two</p>
+      </Disclosure>
+    </DisclosureGroup>,
+  );
+  expect(detailsOf("First").open).toBe(true);
+  expect(detailsOf("Second").open).toBe(false);
+});
+
+it("leaves a press on a link in the summary to the link", async () => {
+  const user = userEvent.setup();
+  const followed: boolean[] = [];
+  const record = (event: Event) => followed.push(event.defaultPrevented);
+  window.addEventListener("click", record);
+  render(
+    <Disclosure summary={<a href="#/deals">Deals</a>}>
+      <p>Deal list</p>
+    </Disclosure>,
+  );
+  try {
+    await user.click(screen.getByRole("link", { name: "Deals" }));
+  } finally {
+    window.removeEventListener("click", record);
+  }
+  expect(followed).toEqual([false]);
+  expect(summaryOf("Deals").getAttribute("aria-expanded")).toBe("false");
+  expect(detailsOf("Deals").open).toBe(false);
+});
+
+it("never toggles on a press into a field in the summary", async () => {
+  const user = userEvent.setup();
+  render(
+    <Disclosure summary={<input aria-label="Rename" defaultValue="Rules" />}>
+      <p>Rule body</p>
+    </Disclosure>,
+  );
+  const field = screen.getByLabelText("Rename");
+  await user.click(field);
+  const summary = field.closest("summary");
+  expect(summary?.getAttribute("aria-expanded")).toBe("false");
+  expect(summary?.closest("details")?.open).toBe(false);
+});
+
+it("shows a held section as its caller passes it, even when its group asks it shut", async () => {
+  const user = userEvent.setup();
+  const asked: boolean[] = [];
+  const held = (
+    <Disclosure summary="Held" open onToggle={(open) => asked.push(open)}>
+      <p>Held body</p>
+    </Disclosure>
+  );
+  const { rerender } = render(
+    <DisclosureGroup>
+      <Section name="Free" />
+    </DisclosureGroup>,
+  );
+  await user.click(summaryOf("Free"));
+  rerender(
+    <DisclosureGroup>
+      <Section name="Free" />
+      {held}
+    </DisclosureGroup>,
+  );
+  expect(asked).toEqual([false]);
+  expect(detailsOf("Held").open).toBe(true);
 });

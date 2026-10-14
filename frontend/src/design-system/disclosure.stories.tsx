@@ -7,6 +7,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "./atoms";
 import { Disclosure, DisclosureGroup } from "./disclosure";
+import { Panel, PanelBody, PanelIntro } from "./panel";
 
 const meta = {
   title: "Components/Layout and structure/Disclosure",
@@ -191,6 +192,44 @@ export const WithAction: Story = {
       within(canvasElement).getByRole("button", { name: "Full history" }),
     );
     await expect(summary).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(summary);
+    await expect(summary).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
+// In a pane body the line over a section with a verb runs edge to edge, over
+// the verb too. First in the body, it gives way to the seam above.
+export const WithActionInPanel: Story = {
+  render: () => (
+    <Panel title="Mail">
+      <PanelBody>
+        <Disclosure summary="Thread" action={<Button>Full history</Button>}>
+          <p>Three messages since Monday.</p>
+        </Disclosure>
+      </PanelBody>
+      <PanelBody>
+        <PanelIntro>Mail with this account.</PanelIntro>
+        <Disclosure summary="Drafts" action={<Button>New draft</Button>}>
+          <p>One draft waits.</p>
+        </Disclosure>
+      </PanelBody>
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const pane = canvasElement.querySelector(".panel");
+    const [first, second] = canvasElement.querySelectorAll<HTMLElement>(
+      ".panel-body > .disclosure-wrap",
+    );
+    if (pane === null || first === undefined || second === undefined) {
+      throw new Error("the pane drew no section with a verb");
+    }
+    const edges = pane.getBoundingClientRect();
+    const line = second.getBoundingClientRect();
+    await expect(getComputedStyle(first).borderTopWidth).toBe("0px");
+    await expect(getComputedStyle(second).borderTopWidth).toBe("1px");
+    await expect(Math.round(line.left - edges.left)).toBeLessThanOrEqual(1);
+    await expect(Math.round(edges.right - line.right)).toBeLessThanOrEqual(1);
+    const summary = await summaryNamed(canvasElement, "Drafts");
     await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "true");
   },

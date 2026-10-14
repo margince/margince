@@ -6,10 +6,12 @@ import {
   createContext,
   type MouseEvent,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -30,8 +32,10 @@ export function Disclosure({
   /** A section-level action stays outside summary to avoid nested controls and
    * remains visible while the section is closed. */
   action?: ReactNode;
-  /** Forces it open for a state the reader must not miss; undefined leaves it to the reader. */
+  /** With `onToggle`, the section shows `open` and a press asks `onToggle`. Alone,
+   * a change of `open` opens or shuts it, and the reader may still toggle it. */
   open?: boolean;
+  /** Every change after mount; with `open`, the request for one. */
   onToggle?: (open: boolean) => void;
   className?: string;
   children: ReactNode;
@@ -50,7 +54,7 @@ export function Disclosure({
       onToggle={(event) => {
         // Find-in-page opens a shut section itself; the state follows it.
         if (event.currentTarget.open && !shown) {
-          expanded.set(true);
+          expanded.ask(true);
         }
       }}
     >
@@ -61,16 +65,25 @@ export function Disclosure({
         aria-expanded={expanded.value}
         aria-controls={bodyId}
         onClick={(event) => {
-          if (ownPress(event)) {
-            event.preventDefault();
-            expanded.set(!expanded.value);
+          const press = pressOn(event);
+          if (press === "control") {
+            return;
+          }
+          event.preventDefault();
+          if (press === "summary") {
+            expanded.ask(!expanded.value);
           }
         }}
       >
         <span className="disclosure-label">{summary}</span>
         <ExpanderChevron />
       </summary>
-      <div className="disclosure-body" id={bodyId}>
+      {/* Inert through the close, so Tab and a screen reader agree with the summary. */}
+      <div
+        className="disclosure-body"
+        id={bodyId}
+        inert={shown && !expanded.value}
+      >
         <GroupContext.Provider value={null}>{children}</GroupContext.Provider>
       </div>
     </details>
@@ -86,7 +99,12 @@ export function Disclosure({
   );
 }
 
-type Group = Readonly<{ open: string | null; claim: (id: string) => void }>;
+type Group = Readonly<{
+  open: string | null;
+  /** False when `hint` is set and another section already holds the group. */
+  claim: (id: string, shut: () => void, hint: boolean) => boolean;
+  release: (id: string) => void;
+}>;
 
 const GroupContext = createContext<Group | null>(null);
 
@@ -98,11 +116,34 @@ const GroupContext = createContext<Group | null>(null);
 export function DisclosureGroup({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [open, claim] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const holder = useRef<Readonly<{ id: string; shut: () => void }> | null>(
+    null,
+  );
+  const claim = useCallback((id: string, shut: () => void, hint: boolean) => {
+    const held = holder.current;
+    if (held !== null && held.id !== id) {
+      if (hint) {
+        return false;
+      }
+      held.shut();
+    }
+    holder.current = { id, shut };
+    setOpen(id);
+    return true;
+  }, []);
+  const release = useCallback((id: string) => {
+    if (holder.current?.id === id) {
+      holder.current = null;
+      setOpen(null);
+    }
+  }, []);
+  const group = useMemo(
+    () => ({ open, claim, release }),
+    [open, claim, release],
+  );
   return (
-    <GroupContext.Provider value={{ open, claim }}>
-      {children}
-    </GroupContext.Provider>
+    <GroupContext.Provider value={group}>{children}</GroupContext.Provider>
   );
 }
 
@@ -111,58 +152,73 @@ export function ExpanderChevron() {
   return <ChevronDown aria-hidden="true" className="expander-chevron" />;
 }
 
-// Open from the reader, the caller's `open`, or the group, in that order of
-// arrival. A change of `open` wins over the group: a forced section claims it.
 function useExpanded(
   id: string,
   open: boolean | undefined,
   onToggle: ((open: boolean) => void) | undefined,
 ) {
   const group = useContext(GroupContext);
-  const groupOpen = group?.open ?? null;
-  const [value, setValue] = useState(open ?? false);
+  const controlled = open !== undefined && onToggle !== undefined;
+  // In a group, `open` at mount is a hint: a section already open keeps it.
+  const [own, setOwn] = useState(
+    () => (open ?? false) && (group?.open ?? null) === null,
+  );
   const [given, setGiven] = useState(open);
-  const [heard, setHeard] = useState(groupOpen);
-  let next = value;
-  if (heard !== groupOpen) {
-    setHeard(groupOpen);
-    if (groupOpen !== null && groupOpen !== id) {
-      next = false;
-    }
-  }
   if (given !== open) {
     setGiven(open);
-    next = open ?? false;
+    setOwn(open ?? false);
   }
-  if (next !== value) {
-    setValue(next);
-  }
-  const claim = group?.claim;
+  const value = open !== undefined && onToggle !== undefined ? open : own;
+  const ask = useRef((wanted: boolean) => setOwn(wanted));
   useLayoutEffect(() => {
-    if (value) {
-      claim?.(id);
+    ask.current = open !== undefined && onToggle ? onToggle : setOwn;
+  }, [open, onToggle]);
+  const [initial] = useState(value);
+  const moved = useRef(false);
+  useLayoutEffect(() => {
+    moved.current ||= value !== initial;
+    if (group === null || !value) {
+      return;
     }
-  }, [claim, id, value]);
-  // Every change reaches `onToggle`, the caller's and the group's as well as
-  // the reader's, as the native `toggle` event does.
-  const told = useRef(false);
+    const shut = () => ask.current(false);
+    if (!group.claim(id, shut, !moved.current)) {
+      shut();
+    }
+    return () => group.release(id);
+  }, [group, id, initial, value]);
+  const told = useRef(value);
   useEffect(() => {
-    if (told.current !== value) {
-      told.current = value;
+    if (told.current === value) {
+      return;
+    }
+    told.current = value;
+    if (!controlled) {
       onToggle?.(value);
     }
-  }, [onToggle, value]);
-  return { value, set: setValue };
+  }, [controlled, onToggle, value]);
+  return { value, ask: (wanted: boolean) => ask.current(wanted) };
 }
 
-// A control inside the summary keeps its own press.
-function ownPress(event: MouseEvent<HTMLElement>): boolean {
+// A control with its own activation keeps the press. A field takes none, as a
+// summary toggling under a caret would.
+const ACTIVATES =
+  'a[href], button, label, input[type="checkbox"], input[type="radio"], input[type="button"], input[type="submit"], [role="button"]';
+const FIELD = "input, select, textarea";
+
+function pressOn(
+  event: MouseEvent<HTMLElement>,
+): "summary" | "control" | "field" {
   const target = event.target;
   if (!(target instanceof Element)) {
-    return true;
+    return "summary";
   }
-  const control = target.closest("a, button, input, select, textarea, label");
-  return control === null || !event.currentTarget.contains(control);
+  const summary = event.currentTarget;
+  const within = (found: Element | null) =>
+    found !== null && found !== summary && summary.contains(found);
+  if (within(target.closest(ACTIVATES))) {
+    return "control";
+  }
+  return within(target.closest(FIELD)) ? "field" : "summary";
 }
 
 const disclosureEnds: FoldEnds = (box) => {

@@ -76,7 +76,7 @@
   padding-block: 0;
 }
 .datatable-detail-body {
-  padding-block-end: 10px;
+  padding-block-end: var(--tableCellPadBlock);
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
