@@ -4,8 +4,10 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { api } from "./api/client";
 import { pickOption } from "./design-system/select-testing";
 import { LocaleProvider } from "./i18n";
+import { sessionRefusalWatch } from "./lib/session";
 import {
   memoryStorage,
   sessionOnlyFetch,
@@ -764,5 +766,74 @@ describe("password-reset deep link", () => {
     expect(
       await screen.findByRole("navigation", { name: "Primary navigation" }),
     ).toBeTruthy();
+  });
+});
+
+describe("a session confined while it is open", () => {
+  it("swaps the open account page for the setup once /me answers the factor requirement", async () => {
+    let confined = false;
+    let meReads = 0;
+    const refusal = () =>
+      new Response(JSON.stringify({ code: "mfa_enrolment_required" }), {
+        status: 403,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    const ok = (body: unknown) =>
+      new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const path = new URL(
+          String(input instanceof Request ? input.url : input),
+          "http://localhost",
+        ).pathname;
+        if (path === "/v1/me") {
+          meReads += 1;
+          return confined ? refusal() : ok(meFixture());
+        }
+        if (path === "/v1/me/mfa") {
+          return ok({
+            enrolled: false,
+            confirmed: false,
+            recovery_codes_left: 0,
+          });
+        }
+        if (confined) return refusal();
+        if (path === "/v1/company") {
+          return ok({ company_id: "o1", display_name: "Acme" });
+        }
+        return ok({ data: [], page: {} });
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const watch = sessionRefusalWatch(client);
+    api.use(watch);
+    window.location.hash = "#/settings/account";
+    try {
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <App />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await screen.findByText("Two-step sign-in");
+      const readsBefore = meReads;
+
+      confined = true;
+      await client.invalidateQueries({ queryKey: ["me"] });
+
+      expect(
+        await screen.findByRole("heading", { name: "Set up two-step sign-in" }),
+      ).toBeTruthy();
+      expect(meReads - readsBefore).toBe(1);
+    } finally {
+      api.eject(watch);
+    }
   });
 });

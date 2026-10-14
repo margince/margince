@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { Middleware } from "openapi-fetch";
 import { api } from "../api/client";
 import { problemMessage, unwrap } from "./problem";
 import { forgetSeat } from "./storage";
@@ -164,4 +165,26 @@ export function useLogout() {
 // the only claim they can make until the session is known.
 export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
+}
+
+// A 403 is the server disagreeing with the capability snapshot the UI renders
+// from (grants changed under a live session, or the account is now confined),
+// so the snapshot is re-asked rather than left until the tab next takes focus.
+export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
+  return {
+    onResponse({ request, response }) {
+      if (
+        response.status === 403 &&
+        !new URL(request.url).pathname.endsWith("/me")
+      ) {
+        // Exact, and never cancelling: a prefix match re-asks the ["me", …] read
+        // that just 403'd, and a cancel discards the probe's own answer.
+        void queryClient.invalidateQueries(
+          { queryKey: ["me"], exact: true },
+          { cancelRefetch: false },
+        );
+      }
+      return response;
+    },
+  };
 }
