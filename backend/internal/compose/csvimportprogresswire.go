@@ -118,3 +118,12 @@ func paramsOrAbsent(params migration.Params) *map[string]string {
 	out := map[string]string(params)
 	return &out
 }
+
+// savedMappingOf is the part's column mapping as the run holds it, nil when it
+// holds none so the wire omits the field.
+func savedMappingOf(p migration.PartMapping) *map[string]string {
+	if len(p.Fields) == 0 {
+		return nil
+	}
+	return &p.Fields
+}

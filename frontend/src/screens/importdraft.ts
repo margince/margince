@@ -51,6 +51,20 @@ function savedObject(
   return run?.parts?.find((part) => part.file === file.file)?.object;
 }
 
+// The mapping the run saved for a file. It holds only for the type it was
+// saved under, because another type's columns land on other fields.
+function savedMapping(
+  run: ImportRun | undefined,
+  file: WizardFile,
+  zip: boolean,
+  object: ImportObject | undefined,
+): Mapping | undefined {
+  const part = zip
+    ? run?.parts?.find((p) => p.file === file.file)
+    : run?.parts?.[0];
+  return part?.object === object ? part?.mapping : undefined;
+}
+
 /** The run's choices with the reader's edits laid over them. */
 export function choicesOf(
   files: readonly WizardFile[],
@@ -69,6 +83,7 @@ export function choicesOf(
     objects[file.file] = object ?? null;
     mapping[file.file] =
       edits.mapping[file.file] ??
+      savedMapping(run, file, zip, object ?? undefined) ??
       (object ? file.suggested[object] : undefined) ??
       {};
   }

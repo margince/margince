@@ -37083,6 +37083,9 @@ type ImportRunPart struct {
 	// File The ZIP entry, or the uploaded file's name for a single CSV. Empty for a single CSV created without `file_name`.
 	File string `json:"file"`
 
+	// Mapping `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none.
+	Mapping *map[string]string `json:"mapping,omitempty"`
+
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.

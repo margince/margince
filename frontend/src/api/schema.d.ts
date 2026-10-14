@@ -23903,6 +23903,10 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
+            mapping?: {
+                [key: string]: string;
+            };
         };
         ImportRunList: {
             data: components["schemas"]["ImportRun"][];

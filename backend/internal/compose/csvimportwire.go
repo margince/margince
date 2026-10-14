@@ -488,6 +488,7 @@ func applyImportMapping(out *crmcontracts.ImportRun, run migration.Run, m *migra
 	for _, p := range m.PartList() {
 		parts = append(parts, crmcontracts.ImportRunPart{
 			File: p.File, Object: crmcontracts.ImportObject(p.Object), RowCount: rowsOf(run.Report, p.Object),
+			Mapping: savedMappingOf(p),
 		})
 	}
 	out.Parts = &parts
