@@ -47,9 +47,31 @@ func (p AgentAllowancePatch) writes() ([]pendingWrite, error) {
 	return out, nil
 }
 
-// AgentPolicyTx reads the allowances and window plan in one statement. The
-// meter applies its answer to every agent call, and the settings page shows the
-// same answer.
+// agentAllowanceEntries is the order both readers fill allowanceValues in.
+var agentAllowanceEntries = []*settings.Entry[int]{
+	AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
+	AgentWindowHours, AgentWindowNextHours, AgentWindowNextFrom,
+}
+
+// allowanceValues holds the settings in agentAllowanceEntries order.
+type allowanceValues [7]int
+
+// policy is the one reading of the seven values, for the meter and the page alike.
+func (v allowanceValues) policy() agentvolume.Policy {
+	plan := agentvolume.WindowPlan{Length: time.Duration(v[4]) * time.Hour}
+	if v[5] > 0 {
+		plan.Next = time.Duration(v[5]) * time.Hour
+		plan.NextFrom = time.Unix(int64(v[6]), 0).UTC()
+	}
+	return agentvolume.Policy{
+		Limits: agentvolume.Limits{Reads: v[0], Writes: v[1], Egress: v[2], Calls: v[3]},
+		Window: plan,
+	}
+}
+
+// AgentPolicyTx is the machinery read of the allowances, ungated, in one
+// statement: the meter applies its answer to every agent call. A surface that
+// shows the values to a user reads them through readAgentPolicy instead.
 func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 	raw, err := settings.ApplyManyTx(ctx, tx,
 		AgentReadsPerWindow, AgentWritesPerWindow, AgentEgressPerWindow, AgentCallsPerWindow,
@@ -57,45 +79,33 @@ func AgentPolicyTx(ctx context.Context, tx pgx.Tx) (agentvolume.Policy, error) {
 	if err != nil {
 		return agentvolume.Policy{}, err
 	}
-	var reads, writes, egress, calls, hours, nextHours, nextFrom int
-	for _, f := range []struct {
-		into *int
-		key  string
-	}{
-		{&reads, AgentReadsPerWindow.Key()},
-		{&writes, AgentWritesPerWindow.Key()},
-		{&egress, AgentEgressPerWindow.Key()},
-		{&calls, AgentCallsPerWindow.Key()},
-		{&hours, AgentWindowHours.Key()},
-		{&nextHours, AgentWindowNextHours.Key()},
-		{&nextFrom, AgentWindowNextFrom.Key()},
-	} {
-		if err := json.Unmarshal(raw[f.key], f.into); err != nil {
-			return agentvolume.Policy{}, fmt.Errorf("identity: %s does not hold a whole number: %w", f.key, err)
+	var values allowanceValues
+	for i, entry := range agentAllowanceEntries {
+		if err := json.Unmarshal(raw[entry.Key()], &values[i]); err != nil {
+			return agentvolume.Policy{}, fmt.Errorf("identity: %s does not hold a whole number: %w", entry.Key(), err)
 		}
 	}
-	plan := agentvolume.WindowPlan{Length: time.Duration(hours) * time.Hour}
-	if nextHours > 0 {
-		plan.Next = time.Duration(nextHours) * time.Hour
-		plan.NextFrom = time.Unix(int64(nextFrom), 0).UTC()
-	}
-	return agentvolume.Policy{
-		Limits: agentvolume.Limits{Reads: reads, Writes: writes, Egress: egress, Calls: calls},
-		Window: plan,
-	}, nil
+	return values.policy(), nil
 }
 
+// readAgentPolicy reads the allowances for the settings page, each through
+// its read gate.
 func (s *InstallationSettingsStore) readAgentPolicy(ctx context.Context) (agentvolume.Policy, error) {
-	var out agentvolume.Policy
+	var values allowanceValues
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = AgentPolicyTx(ctx, tx)
-		return err
+		for i, entry := range agentAllowanceEntries {
+			value, err := settings.GetTx(ctx, tx, entry)
+			if err != nil {
+				return err
+			}
+			values[i] = value
+		}
+		return nil
 	})
 	if err != nil {
 		return agentvolume.Policy{}, fmt.Errorf("identity: reading the agent allowances: %w", err)
 	}
-	return out, nil
+	return values.policy(), nil
 }
 
 // scheduleAgentWindowTx turns a requested window length into a plan that takes

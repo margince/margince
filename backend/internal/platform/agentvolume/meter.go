@@ -239,9 +239,8 @@ func SubjectOf(passport, connection ids.UUID) string {
 	}
 }
 
-// Bucket is the fixed window this moment falls in under the length in force.
-// It is exported because a release names the window it was granted for. The
-// granting path runs as the human, outside this meter's per-call context.
+// Bucket is the fixed window this moment falls in under the length in force,
+// for a caller that names a window outside a metered call.
 func (m *Meter) Bucket(ctx context.Context) int64 {
 	return m.window(ctx).bucket
 }

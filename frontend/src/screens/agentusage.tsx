@@ -109,21 +109,16 @@ export function AgentUsageCell({
   );
 }
 
-// The "This window" column of a passport list. A row with no usage is a
-// revoked or expired passport, or one whose counters could not be read.
-export function usePassportUsageColumn<
-  Row extends PassportSummary,
->(): DataTableColumn<Row> {
-  const t = useT();
-  return {
-    key: "window",
-    header: t("settings.passportColWindow"),
-    fold: "hide",
-    render: (row) =>
-      row.usage ? (
-        <AgentUsageCell usage={row.usage} state={row.usage.state} />
-      ) : null,
-  };
+// This window's usage under a passport's name: the allowance closest to its
+// limit and the state. A row with no usage is a revoked or expired passport, or
+// one whose counters could not be read. It sits in the name's cell because a
+// passport row has no width left for a column of its own.
+export function PassportUsageLine({
+  passport,
+}: Readonly<{ passport: PassportSummary }>) {
+  return passport.usage ? (
+    <AgentUsageCell usage={passport.usage} state={passport.usage.state} />
+  ) : null;
 }
 
 // Opens a passport row onto all four allowances.

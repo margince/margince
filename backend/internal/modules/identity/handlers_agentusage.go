@@ -4,6 +4,8 @@
 package identity
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -38,6 +40,11 @@ func (h Handlers) ListAgentUsageByUser(w http.ResponseWriter, r *http.Request) {
 	}
 	usage, err := h.passportUsage.Usage(r.Context(), ws, subjects)
 	if err != nil {
+		slog.WarnContext(r.Context(), "agent usage is not answered; the agent counters could not be read", "err", err)
+		if errors.Is(err, agentvolume.ErrUnanswerable) {
+			httperr.ServiceUnavailable(w, r, "This server counts no agent usage, so there is none to show.")
+			return
+		}
 		httperr.ServiceUnavailable(w, r, "The agent counters cannot be read right now. Try again shortly.")
 		return
 	}

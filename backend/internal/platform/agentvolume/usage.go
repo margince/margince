@@ -126,8 +126,10 @@ func (u *Usage) of(c Counter) *CounterUsage {
 		return &u.Writes
 	case Egress:
 		return &u.Egress
-	default:
+	case Calls:
 		return &u.Calls
+	default:
+		panic(fmt.Sprintf("agentvolume: %s is not a counter Usage reports", c))
 	}
 }
 
@@ -148,10 +150,11 @@ func (u Usage) Plus(o Usage) Usage {
 	}
 }
 
+var usageRank = map[UsageState]int{UsageOK: 0, UsageNear: 1, UsageStopped: 2}
+
 // Worst is the more severe of two states.
 func (s UsageState) Worst(o UsageState) UsageState {
-	rank := map[UsageState]int{UsageOK: 0, UsageNear: 1, UsageStopped: 2}
-	if rank[o] > rank[s] {
+	if usageRank[o] > usageRank[s] {
 		return o
 	}
 	return s

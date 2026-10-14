@@ -48,7 +48,7 @@ func (m *Meter) Release(ctx context.Context, ws ids.UUID, subject string, c Coun
 		return false, fmt.Errorf("agentvolume: %s is not a releasable counter", c)
 	}
 	if ws == (ids.UUID{}) || subject == "" {
-		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport", c)
+		return false, fmt.Errorf("agentvolume: releasing %s needs both a workspace and a passport or connection", c)
 	}
 	w := m.window(ctx)
 	if length != w.length {

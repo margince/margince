@@ -64,7 +64,7 @@ func TestAnAgentCannotReadAgentUsage(t *testing.T) {
 		OnBehalfOf: e.admin.UserID.UUID, Permissions: e.admin.Permissions,
 	})
 
-	if _, err := e.svc.AgentUsageHolders(ctx, e.admin); err == nil {
-		t.Fatal("an agent read every user's agent usage")
+	if _, err := e.svc.AgentUsageHolders(ctx, e.admin); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an agent reading agent usage → %v, want permission denied", err)
 	}
 }

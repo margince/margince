@@ -10,14 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 )
 
-// The per-minute bounds of the MCP transport. They guard the server against a
-// flood and do not set what an agent may do. So the build fixes them, and the
-// settings page shows them read-only.
-const (
-	mcpCallsPerMinute       = 240
-	mcpStreamOpensPerMinute = 30
-)
-
 // toAgentAllowances reports the plan as it stands at now. A change that already
 // took over reads as the length in force, not as one still waiting.
 func toAgentAllowances(p agentvolume.Policy, now time.Time) crmcontracts.AgentAllowanceSettings {

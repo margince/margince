@@ -621,7 +621,7 @@ describe("PassportCard: the list", () => {
 });
 
 describe("PassportCard: this window", () => {
-  it("shows the allowance closest to its limit, and every allowance when opened", async () => {
+  it("shows the allowance closest to its limit under the name, and every allowance when opened", async () => {
     vi.stubGlobal(
       "fetch",
       listBackend([{ ...USED, usage: busyUsage }, UNUSED]),
@@ -633,10 +633,10 @@ describe("PassportCard: this window", () => {
     if (!(busy && idle)) {
       throw new Error("the passport rows are not rendered");
     }
-    expect(cellOf(busy, "This window")).toHaveTextContent(
-      "Changes200 of 200Stopped",
-    );
-    expect(cellOf(idle, "This window")).toBeEmptyDOMElement();
+    // Under the name, because the row has no width for a column of its own.
+    expect(cellOf(busy, "Name")).toHaveTextContent("Changes200 of 200Stopped");
+    expect(within(cellOf(busy, "Name")).getAllByRole("meter")).toHaveLength(1);
+    expect(within(cellOf(idle, "Name")).queryByRole("meter")).toBeNull();
 
     await user.click(
       screen.getByRole("button", {

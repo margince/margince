@@ -32,7 +32,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { resetToSignedOut } from "../lib/session";
-import { usePassportUsageColumn, usePassportUsageDetail } from "./agentusage";
+import { PassportUsageLine, usePassportUsageDetail } from "./agentusage";
 import { usePassportRevoke } from "./passport-revoke";
 import { usePassports } from "./passports.queries";
 import { MintedPassport, PassportUses } from "./settings.passportuse";
@@ -148,7 +148,6 @@ function PassportTable({
 }>) {
   const t = useT();
   const dates = usePassportDates();
-  const usageColumn = usePassportUsageColumn<PassportSummary>();
   const usageDetail = usePassportUsageDetail<PassportSummary>(
     (passport) => passport.label,
   );
@@ -159,7 +158,10 @@ function PassportTable({
       grow: true,
       fold: "title",
       render: (passport) => (
-        <PassportName passport={passport} caption={dates.caption(passport)} />
+        <span className="agents-name-usage">
+          <PassportName passport={passport} caption={dates.caption(passport)} />
+          <PassportUsageLine passport={passport} />
+        </span>
       ),
     },
     {
@@ -173,7 +175,6 @@ function PassportTable({
         </span>
       ),
     },
-    usageColumn,
     {
       key: "used",
       header: t("settings.passportColLastUsed"),

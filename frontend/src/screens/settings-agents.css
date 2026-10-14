@@ -37,7 +37,13 @@
   flex-wrap: wrap;
   gap: var(--space-1);
   inline-size: max-content;
-  max-inline-size: 15rem;
+  max-inline-size: 11rem;
+}
+
+/* A passport's name with this window's usage under it. */
+.agents-name-usage {
+  display: grid;
+  gap: var(--space-2);
 }
 
 /* The dates under the name, only once the row has folded and their own

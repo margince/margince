@@ -201,6 +201,14 @@ type mcpLimiters struct {
 	peerCeiling *ratelimit.Limiter // 600/min per (endpoint group, peer) — the shared ceiling no chosen key escapes
 }
 
+// The per-minute bounds of the MCP transport. They guard the server against a
+// flood and do not set what an agent may do. So the build fixes them, and the
+// settings page shows them read-only.
+const (
+	mcpCallsPerMinute       = 240
+	mcpStreamOpensPerMinute = 30
+)
+
 func newMCPLimiters() mcpLimiters { return newMCPLimitersWithClock(time.Now) }
 
 // newMCPLimitersWithClock takes the clock for the same reason

@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Policy is the allowances an installation set and the window they are counted over.
@@ -31,6 +33,9 @@ type policyCache struct {
 	good     bool
 	nextRead time.Time
 	reading  bool
+	// forgotten counts ForgetPolicy calls, so a read that began before one does
+	// not mark its older answer fresh.
+	forgotten int
 }
 
 // policyRetry is how soon a failed read is tried again. It is sooner than a
@@ -61,6 +66,13 @@ func (m *Meter) policy(ctx context.Context) Policy {
 	if m.source == nil {
 		return m.fallback
 	}
+	// A call bound to no workspace cannot read the settings. Asking would count
+	// as a failed read and push every other call onto the defaults.
+	if _, bound := principal.WorkspaceID(ctx); !bound {
+		m.cache.mu.Lock()
+		defer m.cache.mu.Unlock()
+		return m.cache.heldOr(m.fallback)
+	}
 	c := m.cache
 	c.mu.Lock()
 	now := m.now()
@@ -75,19 +87,20 @@ func (m *Meter) policy(ctx context.Context) Policy {
 	if !c.good {
 		defer c.mu.Unlock()
 		p, err := m.source.Policy(ask)
-		return m.record(p, err, now)
+		return m.record(p, err, now, c.forgotten)
 	}
 	c.reading = true
+	began := c.forgotten
 	c.mu.Unlock()
 	p, err := m.source.Policy(ask)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.reading = false
-	return m.record(p, err, now)
+	return m.record(p, err, now, began)
 }
 
 // record stores a read's outcome; the caller holds the cache lock.
-func (m *Meter) record(p Policy, err error, now time.Time) Policy {
+func (m *Meter) record(p Policy, err error, now time.Time, began int) Policy {
 	c := m.cache
 	if err != nil {
 		slog.Warn("agent allowances could not be read; the last known allowances still bind", "err", err)
@@ -99,6 +112,9 @@ func (m *Meter) record(p Policy, err error, now time.Time) Policy {
 		p.Window.Length = m.fallback.Window.Length
 	}
 	c.held, c.good, c.nextRead = p, true, now.Add(PolicyRefresh)
+	if began != c.forgotten {
+		c.nextRead = time.Time{}
+	}
 	return p
 }
 
@@ -112,6 +128,7 @@ func (m *Meter) ForgetPolicy() {
 	m.cache.mu.Lock()
 	defer m.cache.mu.Unlock()
 	m.cache.nextRead = time.Time{}
+	m.cache.forgotten++
 }
 
 func (c *policyCache) heldOr(fallback Policy) Policy {
