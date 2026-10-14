@@ -6061,7 +6061,8 @@ export const de = {
     "Der Datensatz hat die Rücknahme abgelehnt, weil eine Geschäftsregel ihn schützt.",
   "import.reason.undo_failed":
     "Der Datensatz konnte nicht zurückgenommen werden.",
-  "import.reason.author_too_long": "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
+  "import.reason.author_too_long":
+    "Die Angabe, wer den Eintrag erstellt hat, ist länger als {max} Zeichen.",
   "import.reason.cannot_create":
     "Du darfst keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
   "import.reason.cannot_create_tags":
