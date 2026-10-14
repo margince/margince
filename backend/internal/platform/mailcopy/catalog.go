@@ -122,7 +122,7 @@ func morningLines(line writeLine) {
 		"Bắt đầu với:")
 	line(func(c *Copy) *string { return &c.MorningAndMore },
 		"and %d more on Home",
-		"und %d weitere auf der Startseite",
+		"und %d weitere auf der Home-Seite",
 		"và %d mục khác trên Trang chủ")
 	line(func(c *Copy) *string { return &c.MorningQuiet },
 		"Nothing is waiting on you this morning.",
