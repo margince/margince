@@ -220,9 +220,11 @@ describe("the past email service", () => {
     );
     const [start] = requestsTo(calls, "/backfill", "POST");
     expect(await start.clone().json()).toEqual({ window: "12m" });
-    expect(
-      await within(service).findByText("Starting soon"),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(service).getByRole("status").textContent).toBe(
+        "Starting soon",
+      ),
+    );
   });
 
   // A reconnect asked for a wider window than the import that already ran, and
@@ -263,7 +265,7 @@ describe("the past email service", () => {
     );
     const service = await screen.findByTestId("connector-gmail-past-email");
 
-    expect(within(service).getByText("Imported")).toBeInTheDocument();
+    expect(within(service).getByRole("status").textContent).toBe("Imported");
     expect(
       within(service).queryByRole("button", { name: "Start import" }),
     ).toBeNull();
@@ -293,21 +295,37 @@ describe("the past email service", () => {
 });
 
 describe("each service's health", () => {
-  it("puts a reconnect on the service that needs it, and only there", async () => {
+  it("marks the broken service once and puts its reconnect on the account", async () => {
     stubApi();
-    renderAccount([{ ...gmail, status: "reauth_required" }, gcal]);
+    renderAccount([
+      { ...gmail, status: "reauth_required", last_sync_error_class: "auth" },
+      gcal,
+    ]);
     const newMail = await screen.findByTestId("connector-gmail");
     const calendar = screen.getByTestId("connector-gcal");
 
     expect(within(newMail).getByText("Needs reconnect")).toBeInTheDocument();
-    expect(
-      within(newMail).getByRole("button", { name: "Reconnect" }),
-    ).toBeInTheDocument();
     expect(within(calendar).getByText("Up to date")).toBeInTheDocument();
-    expect(
-      within(calendar).queryByRole("button", { name: "Reconnect" }),
-    ).toBeNull();
+    for (const service of [newMail, calendar]) {
+      expect(
+        within(service).queryByRole("button", { name: "Reconnect" }),
+      ).toBeNull();
+    }
+    const reconnect = screen.getByRole("button", { name: "Reconnect" });
+    expect(reconnect).toHaveClass("btn-primary");
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/./, { selector: ".provider-row-reason" }),
+    ).toHaveLength(1);
+  });
+
+  it("offers no reconnect for a failure streak a reconnect would not mend", async () => {
+    stubApi();
+    renderAccount([{ ...gmail, last_sync_error_class: "rate_limited" }, gcal]);
+    await screen.findByTestId("connector-gmail");
+
+    expect(screen.getAllByText("Needs attention")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Reconnect" })).toBeNull();
   });
 
   it("offers the calendar a mailbox-only account is missing", async () => {

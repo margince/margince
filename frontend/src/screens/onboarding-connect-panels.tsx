@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { Button, Disclosure, Field } from "../design-system/atoms";
+import { Button, Disclosure, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import {
   asOAuthConnectProvider,
@@ -103,6 +103,7 @@ export function OAuthReturnPanel({
       <ReturnWarn
         title={t("ob.conv.connect.calendarFailedTitle")}
         body={t(calendarFailureBody(outcome))}
+        tone={outcome === "denied" ? "warning" : "danger"}
       />
     );
   }
@@ -111,17 +112,26 @@ export function OAuthReturnPanel({
     provider !== undefined && returning === null,
   );
   if (failure) {
-    return <ReturnWarn title={t(failure.title)} body={t(failure.body)} />;
+    return (
+      <ReturnWarn
+        title={t(failure.title)}
+        body={t(failure.body)}
+        tone={outcome === "denied" ? "warning" : "danger"}
+      />
+    );
   }
   return <MailboxConfirm mailbox={mailbox} onDone={onDone} />;
 }
 
+/** A leg that did not land. A refusal the reader gave is theirs to answer
+ *  again (amber); anything else broke (red). */
 function ReturnWarn({
   title,
   body,
-}: Readonly<{ title: string; body: string }>) {
+  tone = "danger",
+}: Readonly<{ title: string; body: string; tone?: "warning" | "danger" }>) {
   return (
-    <Callout tone="warning" kind="outcome" title={title}>
+    <Callout tone={tone} kind="outcome" title={title}>
       <p>{body}</p>
     </Callout>
   );
@@ -150,7 +160,7 @@ function MailboxConfirm({
   }
   return (
     <Callout
-      tone="warning"
+      tone="danger"
       kind="outcome"
       title={t("ob.s4.connectConfirmFailed")}
       actions={
@@ -288,9 +298,8 @@ export function ImapConnectPanel({
       <div className="imap-form">
         <Field label={t("ob.s4.imapHost")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               value={host}
               placeholder={t("ob.s4.imapHostPlaceholder")}
               onChange={(e) => setHostVal(e.target.value)}
@@ -299,9 +308,8 @@ export function ImapConnectPanel({
         </Field>
         <Field label={t("ob.s4.imapPort")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               type="number"
               min={1}
               max={65535}
@@ -312,9 +320,8 @@ export function ImapConnectPanel({
         </Field>
         <Field className="full" label={t("ob.s4.imapEmail")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               type="email"
               autoComplete="email"
               value={email}
@@ -324,9 +331,8 @@ export function ImapConnectPanel({
         </Field>
         <Field className="full" label={t("ob.s4.imapPassword")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               type="password"
               autoComplete="off"
               value={password}
@@ -336,9 +342,8 @@ export function ImapConnectPanel({
         </Field>
         <Field label={t("ob.s4.imapMailbox")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               value={mailbox}
               onChange={(e) => setMailbox(e.target.value)}
             />
@@ -346,9 +351,8 @@ export function ImapConnectPanel({
         </Field>
         <Field label={t("ob.s4.imapMax")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               type="number"
               min={1}
               max={200}
@@ -388,18 +392,11 @@ export function ImapConnectPanel({
         </Button>
         <Button
           variant="primary"
-          disabled={!ready || connect.isPending}
+          pending={connect.isPending}
+          disabled={!ready}
           onClick={() => connect.mutate()}
         >
-          {connect.isPending ? (
-            <>
-              <span className="ob-spinner" /> {t("ob.s4.connecting")}
-            </>
-          ) : (
-            <>
-              <Mail aria-hidden /> {t("ob.s4.imapConnect")}
-            </>
-          )}
+          <Mail aria-hidden /> {t("ob.s4.imapConnect")}
         </Button>
       </div>
     </>

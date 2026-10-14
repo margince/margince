@@ -54,7 +54,7 @@ export function DeadWorkCallout({ health }: Readonly<{ health: JobHealth }>) {
         {/* Only when the two differ: "531 recently, 531 this week" is a
               sentence that reads as a second alarm rather than as context. */}
         {dead > recent && (
-          <p className="t-sub">
+          <p className="t-caption">
             {t("jobs.deadTotal", { count: formatNumber(dead, locale) })}
           </p>
         )}

@@ -1246,7 +1246,6 @@ export const vi = {
   "explain.excluded_other":
     "{count} hồ sơ bị loại khỏi con số này và các dòng bên dưới. Một trường của các hồ sơ này bị ẩn với vai trò hiện tại.",
 
-
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deal",
   "board.weighted": "có trọng số {value}",
@@ -2488,6 +2487,7 @@ export const vi = {
   "linkedinImport.whichFile":
     "Trong LinkedIn, mở Settings, rồi Data privacy, rồi Get a copy of your data. Tải lên tệp Connections.csv từ kho lưu trữ LinkedIn gửi qua email cho bạn.",
   "linkedinImport.choose": "Nhập tệp Connections.csv",
+  "linkedinImport.dropHint": "Thả Connections.csv vào đây hoặc chọn tệp",
   "linkedinImport.importLabel": "Cách lấy tệp Connections.csv từ LinkedIn",
   "linkedinImport.noMatchesYet":
     "Chưa có kết quả khớp, điều này bình thường với một công ty mới. Kết nối được đối chiếu với liên hệ khi thư được đọc, và việc đối chiếu chạy lại mỗi giờ.",
@@ -2498,7 +2498,6 @@ export const vi = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "linkedinReach.title": "Mạng lưới LinkedIn",
-  "linkedinReach.readFailed": "Không thể tải phạm vi mạng lưới.",
   "linkedinReach.empty": "Chưa vươn tới công ty nào",
   "linkedinReach.allUnresolved":
     "Mọi kết nối đều làm việc tại công ty chưa có trong CRM. Số kết nối: {unresolved}.",
@@ -3103,7 +3102,7 @@ export const vi = {
   "followUpSettings.daysHint":
     "Số ngày một thư đã gửi có thể chưa được trả lời trước khi người gửi được nhắc liên hệ lại, từ 1 đến 30.",
   "followUpSettings.outOfRange": "Nhập số ngày là số nguyên từ 1 đến 30.",
-  "leadHandling.title": "Quản lý lead",
+  "leadHandling.title": "Phản hồi đầu tiên",
   "leadHandling.sub": "Cách xử lý lead mới.",
   "leadHandling.firstResponse": "Mục tiêu phản hồi đầu tiên",
   "leadHandling.firstResponseHint":
@@ -5333,6 +5332,7 @@ export const vi = {
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ",
   "settings.saved": "Đã lưu",
+  "settings.nameTooLong": "Tối đa {max} ký tự.",
   "settings.signatureFromTemplate": "Mẫu của công ty",
   "settings.signatureTemplateHint":
     "Thư gửi đi dùng mẫu chữ ký của công ty. Mẫu tự điền tên, chức danh và số điện thoại.",
@@ -5368,11 +5368,9 @@ export const vi = {
   "settings.displayName": "Tên hiển thị",
   "settings.displayNameHelp":
     "Hiển thị với đồng nghiệp trên hồ sơ bạn sửa, trong bộ chọn và trong nhật ký hoạt động.",
-  "settings.displayNameSave": "L\u01b0u",
   "settings.greetingName": "Tên gọi",
   "settings.greetingNameHelp":
     "Tên dùng để chào bạn trong bản nháp và lời chào. Nếu để trống, sẽ dùng từ đầu tiên của tên hiển thị.",
-  "settings.greetingNameSave": "Lưu",
   "settings.installApp": "Ứng dụng Margince",
   "settings.installAppHelp":
     "Thêm Margince vào thiết bị này thành ứng dụng có cửa sổ và biểu tượng riêng.",
@@ -6137,8 +6135,8 @@ export const vi = {
   "settings.auditAdminOnly":
     "Vai trò hiện tại không có quyền xem toàn bộ nhật ký hoạt động. Nhật ký ghi lại mọi tác nhân và mọi hồ sơ mà tác nhân đó đã truy cập.",
   "settings.auditFilters": "Bộ lọc",
-  "settings.auditEntries": "Nhật ký hoạt động",
   "settings.auditTrailLabel": "Hành động đã ghi nhận",
+  "settings.auditUnit": "hành động đã ghi",
   "settings.auditActor": "Tác nhân",
   "settings.auditEntity": "Loại đối tượng",
   "settings.auditEntityId": "ID đối tượng",
@@ -6846,7 +6844,6 @@ export const vi = {
     "Có thể xuất hiện thông báo “unverified app”. Thông báo này nói về bản cài đặt tự triển khai này, không phải bên thứ ba.",
   "ob.s4.microsoftFailed": "Không thể hoàn tất kết nối Microsoft",
   "ob.s4.connectVerifying": "Đang xác nhận kết nối…",
-  "ob.s4.connectLive": "Đang hoạt động và thu thập",
   "ob.s4.connectConfirmFailed": "Không thể xác nhận kết nối.",
   "ob.s4.connectRetry": "Kết nối lại trong Cài đặt, mục Kết nối.",
   "ob.s4.connectDenied": "Quyền truy cập bị từ chối. Chưa kết nối gì.",
@@ -7059,7 +7056,6 @@ export const vi = {
   "mailSharing.sharedPosture.warningTitle":
     "Mục này khẳng định có cơ sở pháp lý",
   "mailSharing.saveFailed": "Không thể lưu cài đặt",
-  "mailSharing.save": "Lưu",
   "connectors.originLabel":
     "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
   "connectors.originReachable": "C\u00f3 ph\u1ea3n h\u1ed3i",
@@ -7068,7 +7064,6 @@ export const vi = {
   "connectors.sub":
     "Kết nối tài khoản bạn dùng để làm việc. Email của bạn tự được xếp vào đúng liên hệ và deal, còn lịch đưa các cuộc họp lên hồ sơ và cho liên kết đặt lịch biết giờ rảnh của bạn.",
   "connectors.loading": "Đang tải trình kết nối…",
-  "connectors.loadFailed": "Không thể tải trình kết nối. Tải lại trang.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7216,8 +7211,11 @@ export const vi = {
   "connectors.telegramNotConfigured":
     "Bản cài đặt này chưa cấu hình kênh nhắn tin.",
   "connectors.telegramConnectCta": "Kết nối bot Telegram",
-  "connectors.telegramRosterLabel": "Bot đang chuyển tin nhắn",
-  "connectors.telegramEmpty": "Chưa kết nối bot nào.",
+  "connectors.telegramEmptyTitle": "Chưa kết nối bot nào",
+  "connectors.telegramEmptyNote":
+    "Bot đã kết nối sẽ ghi nhận và gửi tin nhắn Telegram cho toàn công ty.",
+  "connectors.telegramNotConfiguredTitle":
+    "Không khả dụng trên bản cài đặt này",
   "connectors.telegramReadOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể kết nối hoặc đổi bot.",
   "connectors.telegramEditToken": "Thay token",
@@ -7328,7 +7326,6 @@ export const vi = {
   "ob.s4.imapHint":
     "Dùng mật khẩu ứng dụng. Mật khẩu được mã hóa khi lưu và xóa khi ngắt kết nối.",
   "ob.s4.imapConnect": "Kiểm tra và kết nối",
-  "ob.s4.connecting": "Đang kết nối…",
   "ob.s4.accessToggle": "Quyền đã cấp",
   "ob.s4.scope1Lead": "Quyền đọc.",
   "ob.s4.scope1Rest": "Thư tự động trở thành liên hệ, công ty và hoạt động.",
@@ -8747,7 +8744,6 @@ export const vi = {
     "Hiển thị mọi bước xử lý của tin nhắn lúc {at}",
   "captureActivity.emptyFiltered":
     "Không có dòng nào đã tải khớp. Tải thêm để xem phần còn lại của khoảng thời gian.",
-  "captureActivity.loadMore": "Tải thêm",
   "captureActivity.empty": "Không có hoạt động thu thập trong 24 giờ qua.",
   "captureActivity.payloadsOff":
     "Bản cài đặt này không ghi lại người gửi hay tiêu đề tin nhắn, nên các dòng bên dưới chỉ hiển thị kết quả.",
@@ -9341,7 +9337,6 @@ export const vi = {
   "users.createTeam": "Tạo nhóm",
   "users.notArchived": "Không thể chuyển nhóm vào kho lưu trữ",
   "users.teamNotChanged": "Không thể thay đổi thành viên nhóm",
-  "users.inviteFailed": "Không thể gửi lời mời",
   "users.access.title": "Quyền truy cập của người dùng",
   "users.access.identity":
     "Đọc mọi liên hệ, công ty, lead và deal của cả công ty.",
@@ -9365,7 +9360,7 @@ export const vi = {
   "users.access.maskOutside": "trên hồ sơ mà họ không có quyền sửa",
   "users.inviteSub":
     "Thêm người dùng vào bản cài đặt này và chọn vai trò ban đầu.",
-  "users.membersTitle": "Người dùng",
+  "users.membersTitle": "Mọi người",
   "users.col.member": "Tên",
   "users.col.activity": "Hoạt động",
   "users.addedOn": "Đã thêm {date}",
@@ -9638,14 +9633,16 @@ export const vi = {
     "Mọi lượt gọi mô hình: danh tính định tuyến, token, số lần thử lại, nội dung đã ghi.",
   "aicalls.open": "Mở lượt gọi {feature} lúc {when}",
   "aicalls.col.when": "Thời điểm",
+  "aicalls.filtersLabel": "Bộ lọc",
+  "aicalls.unit": "lượt gọi",
   "aicalls.col.feature": "Tính năng",
-  "aicalls.col.task": "Tác vụ",
   "aicalls.col.model": "Mô hình",
   "aicalls.col.tokens": "Token vào / ra",
   "aicalls.col.latency": "Độ trễ",
   "aicalls.col.cost": "Chi phí",
   "aicalls.cost.unpriced": "Chưa có giá",
-  "aicalls.cost.unpricedHint": "Bảng giá không có giá cho một mô hình mà lượt gọi này đã dùng.",
+  "aicalls.cost.unpricedHint":
+    "Bảng giá không có giá cho một mô hình mà lượt gọi này đã dùng.",
   "aicalls.ms": "{value} ms",
   "aicalls.outcome.ok": "Đã trả lời",
   "aicalls.outcome.fallback": "Dự phòng",
@@ -9724,7 +9721,6 @@ export const vi = {
   "aicalls.col.outcome": "Kết quả",
   "aicalls.outcome.retried": "Đã thử lại",
   "aicalls.outcome.failed": "Không thành công",
-  "aicalls.model.afterDecision": "Mô hình quyết định, rồi {tier}",
   "aicalls.filter.servedProvider": "Nhà cung cấp phục vụ",
   "aicalls.sentinel.provider_quota": "Hết hạn mức",
   "aicalls.sentinel.provider_throttled": "Bị giới hạn tốc độ",
@@ -9978,12 +9974,13 @@ export const vi = {
   "signInMethods.desc.microsoft":
     "Nút Microsoft cho ai có tài khoản công việc trên Microsoft 365.",
   "signInMethods.onScreen": "Có trên màn hình đăng nhập",
-  "signInMethods.offScreen.noApp":
-    "Chưa có trên màn hình đăng nhập: ứng dụng {vendor} chưa được thiết lập.",
-  "signInMethods.offScreen.noDirectory":
-    "Chưa có trên màn hình đăng nhập: ứng dụng Microsoft chưa giới hạn trong thư mục công ty bạn.",
-  "signInMethods.offScreen.unusable":
-    "Không có trên màn hình đăng nhập: hiện không dùng được ứng dụng {vendor}.",
+  "signInMethods.offScreen": "Không có trên màn hình đăng nhập",
+  "signInMethods.offScreenReason.noApp":
+    "Ứng dụng {vendor} chưa được thiết lập.",
+  "signInMethods.offScreenReason.noDirectory":
+    "Ứng dụng Microsoft chưa giới hạn trong thư mục công ty bạn.",
+  "signInMethods.offScreenReason.unusable":
+    "Hiện không dùng được ứng dụng {vendor}.",
   "signInMethods.offScreen.turnedOff": "Đã tắt",
   "signInMethods.noWriteReason":
     "Chỉ quản trị viên hoặc ops mới đổi được phương thức đăng nhập",
@@ -10041,7 +10038,7 @@ export const vi = {
   "connectFlow.stepAccount": "Tài khoản",
   "connectFlow.stepBringIn": "Những gì được đưa vào",
   "connectFlow.stepSignIn": "Đăng nhập",
-  "connectFlow.stepDone": "{step}, đã xong",
+  "connectFlow.permsLabel": "Những gì {vendor} sẽ yêu cầu",
   "connectFlow.where": "Bạn đọc email công việc ở đâu?",
   "connectFlow.google": "Gmail và Google Calendar",
   "connectFlow.microsoft": "Thư và lịch Outlook trên tài khoản công việc",
@@ -10175,12 +10172,6 @@ export const vi = {
     "Bất kỳ máy chủ nào hỗ trợ IMAP. Chỉ có thư: thêm lịch sau trong Cài đặt.",
   "ob.conv.connect.panelTitle": "Kết nối những gì từ {vendor}",
   "ob.conv.connect.servicesLegend": "Kết nối những gì",
-  "ob.conv.connect.serviceMail": "Thư",
-  "ob.conv.connect.serviceCalendar": "Lịch",
-  "ob.conv.connect.mailBrings":
-    "Liên hệ, công ty và lịch sử từ hộp thư đến và thư đã gửi của bạn. Margince chỉ gửi khi bạn gửi, hoặc khi bạn cho phép một agent gửi.",
-  "ob.conv.connect.calendarBrings":
-    "Cuộc họp được gắn vào đúng deal và liên hệ, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "ob.conv.connect.asksTwiceTitle":
     "{vendor} hỏi hai lần, rồi đưa bạn quay lại đây",
   "ob.conv.connect.asksTwiceBody": "Một màn hình cho thư, một cho lịch.",
@@ -10258,7 +10249,6 @@ export const vi = {
   "setup.action.voice": "Thêm mẫu",
   "setup.action.booking": "Bật",
   "settings.home.setup.title": "Thiết lập của bạn",
-  "settings.home.setup.count": "Đã xong {done}/{total}",
   "settings.home.setup.complete": "Đã thiết lập xong",
   "settings.home.setup.show": "Xem các bước",
   "connectors.tile.notSetUp": "Chưa thiết lập",
@@ -10281,7 +10271,6 @@ export const vi = {
   "setup.caption.voice": "Cần 800 từ do bạn viết.",
   "setup.caption.booking": "Khách hàng đặt giờ rảnh của bạn.",
   "setup.caption.bookingNeedsCalendar": "Cần có lịch.",
-  "setup.reminder.waiting": "Đang chờ",
   "setup.reminder.progress": "Tiến độ thiết lập",
   // end polish: setup-popover
   "account.profileCard": "Hồ sơ",
@@ -11546,8 +11535,11 @@ export const vi = {
     "Các lượt tra cứu mới sẽ dừng ngay và khóa sẽ bị hủy. Dữ liệu đã mua vẫn nằm trong hồ sơ; ngắt kết nối không xóa dữ liệu đó.",
   "provider.deleteData": "Xóa dữ liệu đã mua",
   "provider.deleteDataConfirm.title": "Xóa mọi dữ liệu từ nhà cung cấp này?",
-  "provider.deleteDataConfirm.body":
-    "Mọi giá trị do nhà cung cấp này cung cấp sẽ bị gỡ khỏi mọi liên hệ. Lịch sử chi tiêu vẫn còn; dữ liệu thì không. Không thể hoàn tác.",
+  "provider.deleteDataConfirm.impactTitle": "Không thể hoàn tác",
+  "provider.deleteDataConfirm.impact.values":
+    "Mọi giá trị nhà cung cấp này cung cấp sẽ bị xóa khỏi mọi liên hệ.",
+  "provider.deleteDataConfirm.impact.spend":
+    "Hồ sơ chi tiêu vẫn còn; dữ liệu thì không.",
   "provider.deleteDataConfirm.typed": "Nhập tên nhà cung cấp để xác nhận:",
   "provider.automaticLookup": "Tự động tra cứu liên hệ",
   "provider.automaticLookupHint":
@@ -13479,6 +13471,9 @@ export const vi = {
   "scheduling.editLink": "Sửa liên kết",
   "scheduling.createLink": "Tạo liên kết đặt lịch",
   "scheduling.noLinkYet": "Chưa có liên kết đặt lịch.",
+  "scheduling.noLinkYetBody":
+    "Tạo một liên kết để chia sẻ trang cho khách chọn giờ.",
+  "scheduling.calendarSaveFailed": "Chưa lưu lịch",
   "scheduling.replaceAddress": "Thay địa chỉ",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
   "scheduling.personalLinksFoot":
@@ -13621,6 +13616,10 @@ export const vi = {
   "confirmPhrase.matches": "Cụm từ đã khớp",
   "checklist.stepDone": "Đã xong",
   "checklist.stepOpen": "Chưa xong",
+  "checklist.stepWaiting": "Đang chờ",
+  "checklist.count": "Đã xong {done}/{total}",
+  "panelSave.save": "Lưu",
+  "panelSave.discard": "Hủy thay đổi",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",
   "aiFigures.window.7d": "7 ngày",
@@ -13664,7 +13663,6 @@ export const vi = {
   "aiFigures.line.week": "7 ngày: {figures}",
   "aiFigures.line.prefix": "7 ngày: {sentence}",
   "aicalls.filtered": "Đang hiển thị các lượt gọi kết thúc ở {filter}.",
-  "aicalls.filtered.clear": "Hiển thị mọi lượt gọi",
   "aiOpenRouter.title": "Cài đặt OpenRouter",
   "aiOpenRouter.privacyDocs": "Chính sách dữ liệu ↗",
   "aiOpenRouter.routingDocs": "Định tuyến nhà cung cấp ↗",

@@ -9,6 +9,7 @@ import { NAV } from "../app/nav";
 import {
   Avatar,
   Badge,
+  Button,
   Disclosure,
   EmptyState,
   TextInput,
@@ -17,15 +18,19 @@ import { CellStack } from "../design-system/cellstack";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { useSettledValue } from "../design-system/debouncedsearch";
+import { FilterBar } from "../design-system/filterbar";
 import { IconAction } from "../design-system/iconaction";
+import { CountLine } from "../design-system/listsurface";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { SurfaceState } from "../design-system/surfacestate";
+import { openingCase } from "../format/collate";
 import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
 import { formatRelativeTime } from "../format/relativetime";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { ENTITY, isEntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
@@ -58,22 +63,68 @@ export function AuditLogCard() {
   const canSee = useCan("audit_log", "read");
   const [filters, setFilters] = useState<AuditLogFilters>(UNFILTERED_AUDIT_LOG);
   const asked = useSettledValue(filters);
+  const query = useAuditLog(asked, canSee);
+  const entries = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const clear = () => setFilters(UNFILTERED_AUDIT_LOG);
   return (
-    <Panel title={t("settings.auditEntries")}>
-      <PanelBody>
-        <PanelIntro>{t("settings.auditSub")}</PanelIntro>
-        {canSee && (
-          <Disclosure summary={t("settings.auditFilters")}>
-            <AuditLogFilterFields filters={filters} onChange={setFilters} />
-          </Disclosure>
-        )}
-      </PanelBody>
-      <AuditLogEntries
-        filters={asked}
-        viewer={{ id: user?.id, name: user?.display_name }}
-      />
-    </Panel>
+    <>
+      {canSee && (
+        <FilterBar
+          label={t("settings.auditFilters")}
+          actions={
+            isNarrowed(filters) && (
+              <Button onClick={clear}>{t("table.clearFilters")}</Button>
+            )
+          }
+          caption={
+            query.data && (
+              <CountLine
+                unit={t("settings.auditUnit")}
+                first={1}
+                last={entries.length}
+                total={entries.length}
+                more={query.hasNextPage}
+              />
+            )
+          }
+        >
+          <div className="auditlog-filters">
+            <Disclosure summary={t("settings.auditFilters")}>
+              <AuditLogFilterFields filters={filters} onChange={setFilters} />
+            </Disclosure>
+          </div>
+        </FilterBar>
+      )}
+      {/* Named for what it holds: the page header already says "Audit log". */}
+      <Panel title={t("settings.auditTrailLabel")}>
+        <PanelBody>
+          <PanelIntro>{t("settings.auditSub")}</PanelIntro>
+        </PanelBody>
+        <AuditLogEntries
+          query={query}
+          canSee={canSee}
+          narrowed={isNarrowed(asked)}
+          onClear={clear}
+          viewer={{ id: user?.id, name: user?.display_name }}
+        />
+      </Panel>
+    </>
   );
+}
+
+function useAuditLog(filters: AuditLogFilters, enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: ["audit-log", filters],
+    enabled,
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/audit-log", {
+          params: { query: auditLogQueryParams(filters, pageParam) },
+        }),
+      ),
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
+  });
 }
 
 function AuditLogFilterFields({
@@ -108,32 +159,34 @@ function AuditLogFilterFields({
 }
 
 function AuditLogEntries({
-  filters,
+  query,
+  canSee,
+  narrowed,
+  onClear,
   viewer,
-}: Readonly<{ filters: AuditLogFilters; viewer: Viewer }>) {
+}: Readonly<{
+  query: ReturnType<typeof useAuditLog>;
+  canSee: boolean;
+  narrowed: boolean;
+  onClear: () => void;
+  viewer: Viewer;
+}>) {
   const t = useT();
-  // Withheld, not absent: a missing trail would read as nothing having happened.
-  const canSee = useCan("audit_log", "read");
-  const query = useInfiniteQuery({
-    queryKey: ["audit-log", filters],
-    enabled: canSee,
-    initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/audit-log", {
-          params: { query: auditLogQueryParams(filters, pageParam) },
-        }),
-      );
-    },
-    getNextPageParam: (last) => last.page.next_cursor ?? null,
-  });
   const entries: AuditLogEntry[] =
     query.data?.pages.flatMap((page) => page.data) ?? [];
 
+  // Withheld, not absent: a missing trail would read as nothing having happened.
   if (!canSee) {
     return (
       <PanelBody>
-        <EmptyState>{t("settings.auditAdminOnly")}</EmptyState>
+        <SurfaceState
+          state="withheld"
+          emptyLabel={t("common.empty")}
+          loadingLabel={t("settings.auditLoading")}
+          detail={{ withheldReason: t("settings.auditAdminOnly") }}
+        >
+          {null}
+        </SurfaceState>
       </PanelBody>
     );
   }
@@ -153,9 +206,18 @@ function AuditLogEntries({
   if (entries.length === 0) {
     return (
       <PanelBody>
-        <EmptyState>
-          {isNarrowed(filters) ? t("settings.auditNoMatch") : t("common.empty")}
-        </EmptyState>
+        {narrowed ? (
+          <EmptyState
+            title={t("settings.auditNoMatch")}
+            action={
+              <Button onClick={onClear}>{t("table.clearFilters")}</Button>
+            }
+          >
+            {null}
+          </EmptyState>
+        ) : (
+          <EmptyState>{t("common.empty")}</EmptyState>
+        )}
       </PanelBody>
     );
   }
@@ -171,11 +233,18 @@ function AuditLogEntries({
   );
 }
 
+// The wire's action and entity tokens, written as words that start a label:
+// "create" reads as a stray code where "Create" reads as the verb.
+function tokenLabel(token: string, locale: Locale): string {
+  return openingCase(humanizeToken(token), locale);
+}
+
 function AuditLogTable({
   entries,
   viewer,
 }: Readonly<{ entries: readonly AuditLogEntry[]; viewer: Viewer }>) {
   const t = useT();
+  const { locale } = useLocale();
   const now = useNow(RELATIVE_TICK_MS);
   const columns: DataTableColumn<AuditLogEntry>[] = [
     {
@@ -193,7 +262,7 @@ function AuditLogTable({
       header: t("settings.auditAction"),
       render: (entry) => (
         <Badge tone={ACTION_TONE[entry.action] ?? "default"}>
-          {humanizeToken(entry.action)}
+          {tokenLabel(entry.action, locale)}
         </Badge>
       ),
     },
@@ -319,19 +388,28 @@ function entityIcon(entityType: string) {
   return NAV_ICON.get(ENTITY[entityType].route("").screen) ?? Box;
 }
 
+// The kind on one line and the record on the next, so the short id and its
+// copy verb start at one x in every row rather than after a chip of any width.
 function AuditTarget({ entry }: Readonly<{ entry: AuditLogEntry }>) {
+  const { locale } = useLocale();
   const label = entry.entity_label?.trim();
   return (
-    <div className="auditlog-target-cell">
-      <Chip dense icon={entityIcon(entry.entity_type)}>
-        {humanizeToken(entry.entity_type)}
-      </Chip>
-      {label && isEntityKind(entry.entity_type) && (
-        <EntityRef kind={entry.entity_type} id={entry.entity_id} name={label} />
-      )}
-      {label && !isEntityKind(entry.entity_type) && <span>{label}</span>}
-      {!label && <ShortId id={entry.entity_id} />}
-    </div>
+    <span className="auditlog-target-cell">
+      <CellStack>
+        <Chip dense icon={entityIcon(entry.entity_type)}>
+          {tokenLabel(entry.entity_type, locale)}
+        </Chip>
+        {label && isEntityKind(entry.entity_type) && (
+          <EntityRef
+            kind={entry.entity_type}
+            id={entry.entity_id}
+            name={label}
+          />
+        )}
+        {label && !isEntityKind(entry.entity_type) && <span>{label}</span>}
+        {!label && <ShortId id={entry.entity_id} />}
+      </CellStack>
+    </span>
   );
 }
 

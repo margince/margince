@@ -192,7 +192,7 @@ export function fiscalYearStartSummary(
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return String(month);
   }
-  return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
+  return `${monthName(month, locale)} (${fiscalYearLabel(month, exampleYear)})`;
 }
 
 // A frozen currency is frozen for an admin too, so the lock reason replaces the

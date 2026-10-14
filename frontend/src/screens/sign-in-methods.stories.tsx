@@ -51,14 +51,22 @@ function Served({
   providers,
   onScreen,
   apps = "stored",
+  refuseWrites = false,
   children,
 }: Readonly<{
   providers: Provider[];
   onScreen: string[];
   apps?: "stored" | "none";
+  refuseWrites?: boolean;
   children: ReactNode;
 }>) {
   installFetchStub({
+    ...(refuseWrites
+      ? {
+          "PATCH /installation/settings": () =>
+            jsonResponse({ title: "Unavailable", status: 503 }, 503),
+        }
+      : {}),
     "GET /installation/authentication-policy": () =>
       jsonResponse({
         sign_in_providers: providers,
@@ -124,6 +132,28 @@ export const ProviderTurnedOff: Story = {
       <SignInMethodsCard />
     </Served>
   ),
+};
+
+/** A refused switch-on, said once under the rows by the card's notices. */
+export const RefusedSave: Story = {
+  render: () => (
+    <Served
+      providers={[{ ...GOOGLE, enabled: false }, MICROSOFT]}
+      onScreen={["microsoft"]}
+      refuseWrites
+    >
+      <SignInMethodsCard />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    await user.click(
+      await within(canvasElement).findByRole("switch", {
+        name: "Continue with Google",
+      }),
+    );
+    await within(canvasElement).findByText("Change not saved");
+  },
 };
 
 /** Turning a provider off asks for the typed phrase first. */

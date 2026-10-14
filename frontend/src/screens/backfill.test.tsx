@@ -561,7 +561,7 @@ describe("honest capability and staleness", () => {
       />,
     );
 
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("meter")).toBeNull();
     // The absolute counts stay: scanned and captured, both past the bound.
     expect(screen.getAllByText(/900/).length).toBeGreaterThan(0);
   });
@@ -582,8 +582,10 @@ describe("honest capability and staleness", () => {
     // window, so what is left is the handful that arrived during the import —
     // and withholding the bar there would say the run's progress is unknowable
     // when it is nearly finished.
-    const bar = screen.getByRole("progressbar");
-    expect(bar.getAttribute("aria-valuenow")).toBe("100");
+    const bar = screen.getByRole("meter");
+    expect(bar.getAttribute("aria-valuenow")).toBe(
+      bar.getAttribute("aria-valuemax"),
+    );
   });
 
   it("does not animate a running run whose updated_at is stale", () => {
@@ -600,7 +602,7 @@ describe("honest capability and staleness", () => {
     );
 
     expect(screen.getByText(/no progress for/i)).toBeTruthy();
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("meter")).toBeNull();
   });
 
   it("shows absolute counts and no percentage when estimated_messages is null", () => {
@@ -618,7 +620,7 @@ describe("honest capability and staleness", () => {
 
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.queryByText(/%/)).toBeNull();
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByRole("meter")).toBeNull();
   });
 
   it("explains a refused narrowing instead of failing generically", async () => {

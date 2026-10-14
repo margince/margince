@@ -21,7 +21,7 @@ export function MeetingSetupCard({
   const t = useT();
   const calendar = useCalendarConnect();
   return (
-    <Panel title={t("scheduling.setup.title")} tone="accent">
+    <Panel title={t("scheduling.setup.title")}>
       <PanelBody>
         <PanelIntro>{t("scheduling.setup.intro")}</PanelIntro>
         <Checklist>

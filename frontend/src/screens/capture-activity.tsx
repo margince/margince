@@ -19,7 +19,7 @@ import {
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
-import { QueryGate } from "../design-system/querystates";
+import { LoadMoreButton, QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
@@ -205,16 +205,8 @@ function CaptureActivityWindow({
         <CaptureLog
           pages={loaded.pages}
           filter={filter}
-          more={
-            query.hasNextPage && (
-              <Button
-                disabled={query.isFetchingNextPage}
-                onClick={() => void query.fetchNextPage()}
-              >
-                {t("captureActivity.loadMore")}
-              </Button>
-            )
-          }
+          more={query.hasNextPage && <LoadMoreButton query={query} />}
+          onClear={() => setFilter(null)}
           onOpen={setOpenTrace}
         />
       )}
@@ -246,12 +238,14 @@ function CaptureLog({
   pages,
   filter,
   more,
+  onClear,
   onOpen,
 }: Readonly<{
   pages: CaptureActivity[];
   filter: Outcome | null;
   /** Outside the rows, so a filter matching nothing loaded can still page on. */
   more: ReactNode;
+  onClear: () => void;
   onOpen: (entry: TraceEntry) => void;
 }>) {
   const t = useT();
@@ -270,31 +264,40 @@ function CaptureLog({
           {!first.payload_capture_enabled && (
             // Said once, about the installation: per row it would read as a
             // fact about that one message.
-            <p className="capture-activity__note t-sub">
+            <p className="capture-activity__note t-caption">
               {t("captureActivity.payloadsOff")}
             </p>
           )}
           {filter && (
             // Both numbers: the funnel counts the window and this filters what
             // is loaded, so a bare "12" under a tile reading 26 looks wrong.
-            <p className="t-sub" aria-live="polite">
-              {t("captureActivity.filtered", {
-                shown: formatNumber(shown.length, locale),
-                total: formatNumber(first.funnel[filter] ?? 0, locale),
-                outcome: t(`captureActivity.outcome.${filter}`),
-              })}
-            </p>
-          )}
-          {shown.length === 0 && (
-            // A filter that matched nothing loaded is not an empty window.
-            <EmptyState>
-              {t(
-                filter
-                  ? "captureActivity.emptyFiltered"
-                  : "captureActivity.empty",
+            <div className="capture-activity__countline">
+              <p className="t-caption" role="status">
+                {t("captureActivity.filtered", {
+                  shown: formatNumber(shown.length, locale),
+                  total: formatNumber(first.funnel[filter] ?? 0, locale),
+                  outcome: t(`captureActivity.outcome.${filter}`),
+                })}
+              </p>
+              {shown.length > 0 && (
+                <Button onClick={onClear}>{t("table.clearFilters")}</Button>
               )}
-            </EmptyState>
+            </div>
           )}
+          {shown.length === 0 &&
+            (filter ? (
+              // A filter that matched nothing loaded is not an empty window.
+              <EmptyState
+                title={t("captureActivity.emptyFiltered")}
+                action={
+                  <Button onClick={onClear}>{t("table.clearFilters")}</Button>
+                }
+              >
+                {null}
+              </EmptyState>
+            ) : (
+              <EmptyState>{t("captureActivity.empty")}</EmptyState>
+            ))}
         </PanelBody>
       )}
       {shown.length > 0 && (

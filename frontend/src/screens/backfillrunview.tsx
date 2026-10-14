@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Building2, CircleCheck, History, Mail, Users } from "lucide-react";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
-import { CountUp } from "../design-system/countup";
+import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import { Heading } from "../design-system/heading";
+import { Panel, PanelBody } from "../design-system/panel";
+import { Meter } from "../design-system/readings";
+import { StatCard } from "../design-system/statcard";
+import { StatStrip } from "../design-system/statstrip";
+import { StatusBadge } from "../design-system/statusbadge";
 import { formatDuration, formatNumber, formatPercent } from "../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { progressFraction } from "../lib/capture-progress";
 import { isLiveRun } from "./backfill-run";
@@ -19,14 +21,14 @@ import "./backfill.css";
 // has read.
 //
 // Split from the setup panel beside it because the two answer different
-// questions. That panel is the consent surface — a window, its scope, and the
+// questions. That panel is the consent surface: a window, its scope, and the
 // verb that spends; this one only ever reports what the server's own row
 // already says, and every number in it is a persisted count.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
 // A run whose updated_at hasn't moved in this long is honestly "stuck", not
-// "in progress" — the contract's own doc comment on BackfillStatus.updated_at
+// "in progress": the contract's own doc comment on BackfillStatus.updated_at
 // calls this out ("a killed worker leaves this honest"). Long enough that
 // ordinary poll jitter or a slow provider batch never false-positives, short
 // enough that a genuinely dead worker surfaces within a couple of polls of
@@ -34,7 +36,7 @@ type BackfillStatus = components["schemas"]["BackfillStatus"];
 const STALE_AFTER_MS = 3 * 60_000;
 
 // A live run whose updated_at hasn't moved past STALE_AFTER_MS is honestly
-// "stuck", not "in progress" — the contract's own doc comment on
+// "stuck", not "in progress": the contract's own doc comment on
 // BackfillStatus.updated_at calls this out ("a killed worker leaves this
 // honest"). A done/error/cancelled run's updated_at is its finish stamp, not
 // a staleness signal, so this only applies to a live one.
@@ -51,55 +53,16 @@ function staleness(
   };
 }
 
-// The three headline figures of a capture run — captured mail and the two
-// record kinds it grows. Each is a live persisted-row count. While the run is
-// still reading, the figure is a `CountUp`: a number still being earned climbs
-// to where the poll put it instead of jumping there. Once the run has settled
-// it is the plain number, because a figure the server has finished with has
-// nothing left to count towards.
+// The three headline figures of a capture run: captured mail and the two
+// record kinds it grows, each a persisted-row count.
 const CAPTURE_STATS: {
   key: "captured" | "contacts_created" | "companies_created";
   label: MessageKey;
-  icon: typeof Mail;
 }[] = [
-  { key: "captured", label: "backfill.statEmails", icon: Mail },
-  { key: "contacts_created", label: "backfill.statContacts", icon: Users },
-  {
-    key: "companies_created",
-    label: "backfill.statCompanies",
-    icon: Building2,
-  },
+  { key: "captured", label: "backfill.statEmails" },
+  { key: "contacts_created", label: "backfill.statContacts" },
+  { key: "companies_created", label: "backfill.statCompanies" },
 ];
-
-function CaptureStat({
-  value,
-  label,
-  icon: Icon,
-  locale,
-  counting,
-}: {
-  value: number;
-  label: string;
-  icon: typeof Mail;
-  locale: Locale;
-  counting: boolean;
-}) {
-  return (
-    <div className="capture-stat">
-      <span className="capture-stat-glyph" aria-hidden>
-        <Icon />
-      </span>
-      <b className="capture-stat-value t-display">
-        {counting ? (
-          <CountUp value={value} locale={locale} />
-        ) : (
-          formatNumber(value, locale)
-        )}
-      </b>
-      <span className="capture-stat-label">{label}</span>
-    </div>
-  );
-}
 
 /** What a run row says about itself, read the one way every surface that
  *  draws an import reads it: this hero, and the Past email service on a
@@ -130,8 +93,7 @@ export function runReading(run: BackfillStatus) {
     live,
     stale,
     agoMs,
-    // Indigo is a claim about who is doing the work, so a queued run that has
-    // not started and a stalled one both stay on plain ground.
+    // A queued run that has not started and a stalled one are not reading.
     reading: run.state === "running" && !stale,
     fraction,
   };
@@ -171,53 +133,59 @@ export function RunView({
   const counts = run.counts;
   const { scanned, failed, live, stale, agoMs, reading, fraction } =
     runReading(run);
-  const done = run.state === "done";
   // A run that stopped on an error and kept its place is offered as one to
   // continue, with starting over as the second choice.
   const resumable = canResume(run) && onResume !== undefined;
-  const heroClass = ["capture-hero", done && "done", reading && "reading"]
-    .filter(Boolean)
-    .join(" ");
 
   return (
-    <div className={heroClass}>
-      <RunHead state={run.state} reading={reading} />
-      <div className="capture-stats">
-        {CAPTURE_STATS.map((stat) => (
-          <CaptureStat
-            key={stat.key}
-            value={counts?.[stat.key] ?? 0}
-            label={t(stat.label)}
-            icon={stat.icon}
-            locale={locale}
-            counting={reading}
-          />
-        ))}
-      </div>
-      <RunProgress
-        scanned={scanned}
-        fraction={fraction}
-        staleForMs={stale ? agoMs : null}
-      />
-      <RunNotes
-        run={run}
-        scanned={scanned}
-        failed={failed}
-        resumable={resumable}
-      />
-      <RunFoot
-        live={live}
-        resumable={resumable}
-        cancelling={cancelling}
-        resuming={resuming}
-        onCancel={onCancel}
-        onResume={onResume}
-        onRestart={onRestart}
-      />
-      {resumable && resumeError && <ErrorLine>{resumeError}</ErrorLine>}
-      {live && cancelError && <ErrorLine>{cancelError}</ErrorLine>}
-      {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
-    </div>
+    <Panel
+      title={t(stateTitle(run.state))}
+      titleLevel={3}
+      titleAction={
+        reading ? (
+          <StatusBadge kind="neutral" live label={t("backfill.readingBadge")} />
+        ) : undefined
+      }
+      actions={
+        <RunFoot
+          live={live}
+          resumable={resumable}
+          cancelling={cancelling}
+          resuming={resuming}
+          onCancel={onCancel}
+          onResume={onResume}
+          onRestart={onRestart}
+        />
+      }
+    >
+      <PanelBody className="form-stack">
+        <StatStrip density="compact">
+          {CAPTURE_STATS.map((stat) => (
+            <StatCard
+              key={stat.key}
+              label={t(stat.label)}
+              value={formatNumber(counts?.[stat.key] ?? 0, locale)}
+              narrow="row"
+            />
+          ))}
+        </StatStrip>
+        <RunProgress
+          scanned={scanned}
+          estimated={run.estimated_messages ?? null}
+          fraction={fraction}
+          staleForMs={stale ? agoMs : null}
+        />
+        <RunNotes
+          run={run}
+          scanned={scanned}
+          failed={failed}
+          resumable={resumable}
+        />
+        {resumable && resumeError && <ErrorLine>{resumeError}</ErrorLine>}
+        {live && cancelError && <ErrorLine>{cancelError}</ErrorLine>}
+        {run.state === "cancelled" && <p>{t("backfill.cancelledNote")}</p>}
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -284,7 +252,7 @@ function RunFoot({
 }) {
   const t = useT();
   return (
-    <div className="backfill-foot">
+    <>
       {live && (
         <Button disabled={cancelling} onClick={onCancel}>
           {t("backfill.cancel")}
@@ -305,53 +273,22 @@ function RunFoot({
           {t(resumable ? "backfill.startOverCta" : "backfill.restart")}
         </Button>
       )}
-    </div>
-  );
-}
-
-// The state's glyph on its disc, the title, and — only while the machine is
-// reading — the pill that says so in words, because the indigo the card wears
-// then is a claim about who is doing the work and colour is never the only
-// signal.
-function RunHead({
-  state,
-  reading,
-}: {
-  state: BackfillStatus["state"];
-  reading: boolean;
-}) {
-  const t = useT();
-  return (
-    <div className="capture-head" aria-live="polite">
-      <span className="capture-mark" aria-hidden>
-        {state === "done" ? (
-          <CircleCheck />
-        ) : (
-          <History className={reading ? "spin-slow" : ""} />
-        )}
-      </span>
-      <Heading size="medium" className="backfill-h">
-        {t(stateTitle(state))}
-      </Heading>
-      {reading && (
-        <span className="capture-head-tag">
-          <Badge tone="ai">{t("backfill.readingBadge")}</Badge>
-        </span>
-      )}
-    </div>
+    </>
   );
 }
 
 // Either the bar or the staleness note over the scanned line, never both: a run
 // that is not moving forward does not get to keep the bar that implies
-// otherwise. The percentage rides the line only when the bar is drawn — the two
+// otherwise. The percentage rides the line only when the bar is drawn: the two
 // state one number twice, in a shape and in words.
 function RunProgress({
   scanned,
+  estimated,
   fraction,
   staleForMs,
 }: {
   scanned: number;
+  estimated: number | null;
   fraction: number | null;
   // How long a live run has gone without moving, or null while it moves.
   staleForMs: number | null;
@@ -368,42 +305,25 @@ function RunProgress({
           })}
         </p>
       )}
-      {fraction !== null && <RunBar fraction={fraction} />}
+      {fraction !== null && estimated !== null && (
+        // A non-null fraction has a positive estimate under it; an overrun
+        // exact estimate draws as full.
+        <Meter
+          value={Math.min(scanned, estimated)}
+          max={estimated}
+          label={t("backfill.progressLabel")}
+          flat
+        />
+      )}
       <p className="t-caption capture-scanned" aria-live="polite">
         <span>
           {plural("backfill.countScanned", scanned, {
             count: formatNumber(scanned, locale),
           })}
         </span>
-        {fraction !== null && (
-          <span className="capture-pct">{formatPercent(fraction, locale)}</span>
-        )}
+        {fraction !== null && <span>{formatPercent(fraction, locale)}</span>}
       </p>
     </>
-  );
-}
-
-// The bar draws the fraction the line under it states in words, and exposes
-// the same number to assistive tech through the progressbar role rather than
-// through a native `<progress>`, whose track and fill are the browser's colours
-// and the one thing on this card no token could reach.
-function RunBar({ fraction }: { fraction: number }) {
-  const t = useT();
-  const percent = Math.round(fraction * 100);
-  return (
-    <div
-      className="capture-bar"
-      role="progressbar"
-      aria-label={t("backfill.progressLabel")}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-    >
-      <span
-        className="capture-bar-fill"
-        style={{ inlineSize: `${percent}%` }}
-      />
-    </div>
   );
 }
 

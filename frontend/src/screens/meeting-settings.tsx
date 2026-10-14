@@ -90,7 +90,7 @@ function MeetingCards({ profile }: Readonly<{ profile: Profile }>) {
           hasLink={!!profile.slug}
         />
       )}
-      <BookingLinksCard profile={profile} lead={!setup} />
+      <BookingLinksCard profile={profile} />
       <MeetingCalendarCard profile={profile} />
       <AvailabilityCard
         profile={profile}

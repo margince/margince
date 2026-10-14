@@ -118,6 +118,31 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   await waitFor(() => expect(written).toEqual([{ granted: false }]));
 });
 
+it("says a refused flip once for the card, and the switch returns to the stored answer", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          { spec: "morning_brief", state: "granted", credential_usable: true },
+        ],
+      }),
+    "PUT /me/agent-grants/morning_brief": () =>
+      jsonResponse(
+        { title: "Unprocessable", detail: "the credential store refused" },
+        422,
+      ),
+  });
+  render(<OvernightGrantCard />);
+
+  const toggle = await screen.findByTestId("overnight-grant-toggle");
+  await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+  await userEvent.click(toggle);
+  expect(
+    await screen.findByText(en["overnightGrant.writeFailedTitle"]),
+  ).toBeTruthy();
+  await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+});
+
 it("tells the rep the agent outgrew their authority, not that it lapsed", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>

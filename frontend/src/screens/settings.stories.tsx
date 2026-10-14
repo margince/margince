@@ -5,14 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../design-system/select-testing";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { SettingsScreen, settingsAddress } from "./settings";
+import { SettingsScreen } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
-import {
-  installFetchStub,
-  jsonResponse,
-  type RouteMap,
-  StoryProviders,
-} from "./story-utils";
+import { me, settingsPage } from "./settingspage.storykit";
+import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and
@@ -22,17 +18,6 @@ import {
 // ask for, and SettingsScreen shows the access boundary for anything else. So a
 // story about such an entry has to name its grants: `me({...})` builds the /me
 // body that opens the entry the story is capturing.
-
-const me =
-  (allow: GrantSpec = {}) =>
-  () =>
-    jsonResponse({
-      ...meFixture({ roles: ["admin"], allow }),
-      // The BARE user id, the way /me reports it. The audit fixture spells the
-      // same actor the way the wire does ("human:u-mor"), so the trail reads
-      // "You" for the viewer's own entry — ActorTag owns that difference.
-      user: { ...meFixture().user, id: "u-mor", email: "ada@acme.test" },
-    });
 
 const passports = () =>
   jsonResponse({
@@ -96,44 +81,6 @@ const connectorOn = () =>
 const connectorOff = () =>
   jsonResponse({ title: "no MCP connector on this installation" }, 404);
 
-// The Account tab's bookability card indexes its own answer, so a tab story
-// that leaves this endpoint unrouted takes the WHOLE SCREEN down: the fallback
-// empty page carries no `working_hours`, the card reads `start_time` off
-// undefined and throws mid-render. Routed here rather than per story for the
-// reason settings.testkit.tsx gives about its own fakes — an endpoint added to
-// one of them alone leaves the others failing in exactly that way, nowhere near
-// the cause. The shape is restated rather than shared with that testkit because
-// the testkit is built on `vi`, which no Storybook build has.
-//
-// The zone comes from the identity fixture rather than being typed again here.
-// A story that named one would be a second author of the reader's clock, and
-// `format/timezone.ts` is the module that owns naming zones.
-const WORKING_HOURS: RouteMap = {
-  "GET /me/working-hours": () =>
-    jsonResponse({
-      chosen: false,
-      working_hours: {
-        start_time: "09:00",
-        end_time: "17:00",
-        days: [1, 2, 3, 4, 5],
-        timezone: meFixture().user.timezone,
-      },
-    }),
-};
-
-function tab(tabId: string, routes: RouteMap) {
-  return () => {
-    // The story's own routes last, so a story about this card can still say
-    // something different from the default.
-    installFetchStub({ ...WORKING_HOURS, ...routes });
-    return (
-      <StoryProviders>
-        <SettingsScreen route={settingsAddress(tabId)} />
-      </StoryProviders>
-    );
-  };
-}
-
 const meta: Meta<typeof SettingsScreen> = {
   title: "Settings/Settings screen",
   component: SettingsScreen,
@@ -146,21 +93,20 @@ type Story = StoryObj<typeof SettingsScreen>;
 // Sign-in (password, sign out), Language, This browser (appearance, install) and
 // the scheduled emails, every row naming on the left and control on the right.
 export const AccountTab: Story = {
-  render: tab("account", { "GET /me": me() }),
+  ...settingsPage("account", { "GET /me": me() }),
 };
 
 // And in dark, because the identity block above a ruled list, the hairline
 // between two decisions and the avatar's tint all move between themes.
 export const AccountTabDark: Story = {
-  globals: { theme: "dark" },
-  render: tab("account", { "GET /me": me() }),
+  ...settingsPage("account", { "GET /me": me() }, { theme: "dark" }),
 };
 
 // Language belongs to the contact, not to the sidebar. The play() opens the
 // listbox so the capture carries the options rather than only the control's
 // closed face.
 export const AccountPreferences: Story = {
-  render: tab("account", { "GET /me": me() }),
+  ...settingsPage("account", { "GET /me": me() }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -174,7 +120,7 @@ export const AccountPreferences: Story = {
 // currently says and the verb opens the form — which is the state this captures.
 export const AccountSignatureDialog: Story = {
   name: "Account — edit signature",
-  render: tab("account", {
+  ...settingsPage("account", {
     "GET /me": me(),
     "GET /me/email-signature": () =>
       jsonResponse({ body: "Marek Janetzke\nGradion · +49 40 123456" }),
@@ -199,23 +145,21 @@ const agentsTabRoutes = {
 };
 
 export const AgentsTab: Story = {
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes),
 };
 
 // Dark, because the whole page is now hairlines between rows and chips against a
 // card ground — both derived values that move with the theme, and the interval
 // between two cards is only legible if the rule between two rows is.
 export const AgentsTabDark: Story = {
-  globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes, { theme: "dark" }),
 };
 
 // At 390px. The code example wraps inside the card instead of widening it.
 export const AgentsTabPhone: Story = {
   name: "Your agents — phone",
-  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes, { viewport: "phone" }),
 };
 
 // The connector switched off: the guide has no commands to print, so its one row
@@ -223,7 +167,7 @@ export const AgentsTabPhone: Story = {
 // it used to render as a bold line and a paragraph flush against the disclosure.
 export const AgentsConnectorOff: Story = {
   name: "Your agents — MCP connector off",
-  render: tab("agents", {
+  ...settingsPage("agents", {
     ...agentsTabRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
@@ -232,7 +176,7 @@ export const AgentsConnectorOff: Story = {
 // The row's menu opens the revoke confirm, left open here so the guarded
 // state is what the render gate captures.
 export const PassportRevokeConfirm: Story = {
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -249,7 +193,7 @@ export const PassportRevokeConfirm: Story = {
 // token is then shown once.
 export const PassportMintDialog: Story = {
   name: "Mint a passport",
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -292,14 +236,13 @@ const mintPassport = async ({
 
 export const PassportMinted: Story = {
   name: "Mint a passport — minted",
-  render: tab("agents", mintedRoutes),
+  ...settingsPage("agents", mintedRoutes),
   play: mintPassport,
 };
 
 export const PassportMintedDark: Story = {
   name: "Mint a passport — minted, dark",
-  globals: { theme: "dark" },
-  render: tab("agents", mintedRoutes),
+  ...settingsPage("agents", mintedRoutes, { theme: "dark" }),
   play: mintPassport,
 };
 
@@ -308,8 +251,7 @@ export const PassportMintedDark: Story = {
 // tokens that move between themes.
 export const PassportMintDialogDark: Story = {
   name: "Mint a passport — dark",
-  globals: { theme: "dark" },
-  render: tab("agents", agentsTabRoutes),
+  ...settingsPage("agents", agentsTabRoutes, { theme: "dark" }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -339,13 +281,12 @@ const selectScoutPassport = async ({
 };
 
 export const AgentToolConsole: Story = {
-  render: tab("agents", toolConsoleRoutes),
+  ...settingsPage("agents", toolConsoleRoutes),
   play: selectScoutPassport,
 };
 
 export const AgentToolConsoleDark: Story = {
-  globals: { theme: "dark" },
-  render: tab("agents", toolConsoleRoutes),
+  ...settingsPage("agents", toolConsoleRoutes, { theme: "dark" }),
   play: selectScoutPassport,
 };
 
@@ -360,7 +301,7 @@ export const AgentToolConsoleDark: Story = {
 // green while the picture was of the wrong page. The writes stay so the builder
 // and the row actions render.
 export const DataModelTab: Story = {
-  render: tab("data-model", {
+  ...settingsPage("data-model", {
     "GET /me": me({ custom_field: ["read", "create", "update"] }),
   }),
 };
@@ -373,7 +314,7 @@ export const PrivacyTab: Story = {
   // Without the pair `SettingsScreen` answers the address with the access
   // boundary, and the story captures the refusal under the name of a page it
   // never rendered — the failure the comment two stories up describes.
-  render: tab("privacy", {
+  ...settingsPage("privacy", {
     "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
   }),
 };
@@ -382,11 +323,8 @@ const privacyRoutes = {
   "GET /me": me({ contact: ["read"], consent_config: ["read"] }),
 };
 
-// A whole settings PAGE at 390px, which is the thing only this file can show —
-// every other story in the settings tree renders one card with nothing above or
-// below it. `layout: "fullscreen"` because SettingsScreen brings `.wrap`, which
-// carries production's own gutter; the canvas frame would add a second one and
-// make this a 326px phone instead of a 390px one.
+// A whole settings page at 390px. The harness frames it fullscreen because
+// SettingsScreen brings `.wrap` and its gutter; a canvas frame would add a second.
 //
 // What it watches is the seam BETWEEN cards rather than any one card's insides:
 // three panels stack here, each with a title and an action button on the same
@@ -395,10 +333,8 @@ const privacyRoutes = {
 // split and the stack's own rhythm have to hold at once — and where the DSR facet
 // control runs out of width first.
 export const PrivacyTabPhone: Story = {
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: tab("privacy", privacyRoutes),
+  ...settingsPage("privacy", privacyRoutes, { viewport: "phone" }),
 };
 
 // The Maintenance entry's danger zone: the ONE control on this screen that
@@ -408,7 +344,7 @@ export const PrivacyTabPhone: Story = {
 // gate: an action-only surface holds no fact a reader could misread as "zero".
 export const MaintenanceDangerZone: Story = {
   name: "Maintenance — danger zone",
-  render: tab("maintenance", {
+  ...settingsPage("maintenance", {
     "GET /me": () =>
       jsonResponse({
         ...meFixture({

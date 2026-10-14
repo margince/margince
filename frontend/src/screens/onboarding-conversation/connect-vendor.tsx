@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, Check, Mail } from "lucide-react";
+import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Badge, Button, Disclosure } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -22,6 +22,8 @@ import {
   notConfiguredProvider,
   useConnectAccount,
 } from "../connect-account";
+import type { Service } from "../connect-flow-draft";
+import { serviceChoices } from "../connect-services";
 import {
   ImapConnectPanel,
   markOAuthAttempt,
@@ -57,9 +59,9 @@ const VENDOR_COPY: Readonly<
 /**
  * Where the reader's work account lives. `notes` replaces a choice's own line
  * with what the roster says about it (connected, refused), and a choice with a
- * note in `refused` cannot be picked. A `waiting` account is badged as such,
- * and while one is, the accounts open now say that too, so the way round it
- * is visible before anything is picked.
+ * note in `refused` cannot be picked. While an account waits on an
+ * administrator, each description says which wait and which are open now, in
+ * words, so the way round it is visible before anything is picked.
  */
 export function VendorChoice({
   value,
@@ -79,32 +81,28 @@ export function VendorChoice({
   const t = useT();
   // The reader who can register the app is the administrator being waited on.
   const holder = useCanWrite("capture_settings", "update");
-  function standing(key: MailProvider) {
+  function standing(key: MailProvider): string | null {
     if (waiting.has(key)) {
-      return (
-        <Badge tone="warning">
-          {t(
-            holder
-              ? "oauthApps.statusNeedsSetup"
-              : "ob.conv.connect.waitingAdmin",
-          )}
-        </Badge>
+      return t(
+        holder ? "oauthApps.statusNeedsSetup" : "ob.conv.connect.waitingAdmin",
       );
     }
     if (waiting.size > 0 && !refused.has(key)) {
-      return <Badge tone="success">{t("ob.conv.connect.availableNow")}</Badge>;
+      return t("ob.conv.connect.availableNow");
     }
     return null;
   }
   const choices: Choice<MailProvider>[] = MAIL_PROVIDERS.map((key) => {
-    const badge = standing(key);
+    const words = standing(key);
     return {
       value: key,
       label: t(VENDOR_COPY[key].label),
       description: (
         <>
           {notes.get(key) ?? t(VENDOR_COPY[key].desc)}
-          {badge && <span className="ob-connect-standing">{badge}</span>}
+          {words !== null && (
+            <span className="ob-connect-standing">{words}</span>
+          )}
         </>
       ),
       mark: <ProviderMark providerKey={key} />,
@@ -156,8 +154,6 @@ export function VendorAsk({
   return <OAuthAsk vendor={vendor} onPendingChange={onPendingChange} />;
 }
 
-type Service = "mail" | "calendar";
-
 const OAUTH_COPY: Readonly<
   Record<AccountVendor, { unverified: MessageKey; failed: MessageKey }>
 > = {
@@ -187,7 +183,7 @@ function connectLabel(services: readonly Service[]): MessageKey | null {
 /** The consent the ticks ask for. Mail leads and the calendar rides as its
  *  `also_connect`; a calendar alone is its own single consent. No import
  *  window: onboarding asks how far back once the mailbox is live. */
-function connectInput(
+export function connectInput(
   vendor: AccountVendor,
   services: readonly Service[],
 ): ConnectAccountInput {
@@ -225,20 +221,7 @@ function OAuthAsk({
   const both = services.length === 2;
   const label = connectLabel(services);
   const unwired = notConfiguredProvider(connect.data);
-  const choices: Choice<Service>[] = [
-    {
-      value: "mail",
-      label: t("ob.conv.connect.serviceMail"),
-      description: t("ob.conv.connect.mailBrings"),
-      mark: <Mail />,
-    },
-    {
-      value: "calendar",
-      label: t("ob.conv.connect.serviceCalendar"),
-      description: t("ob.conv.connect.calendarBrings"),
-      mark: <CalendarDays />,
-    },
-  ];
+  const choices = serviceChoices(t, { account: vendor });
   return (
     <Panel
       title={t("ob.conv.connect.panelTitle", { vendor: name })}
@@ -285,7 +268,7 @@ function OAuthAsk({
           </Callout>
           {connect.isError && (
             <Callout
-              tone="warning"
+              tone="danger"
               kind="outcome"
               title={t(OAUTH_COPY[vendor].failed)}
             >
@@ -299,10 +282,10 @@ function OAuthAsk({
               title={t("connectors.providerNotConfigured", { provider: name })}
             />
           )}
+          {/* In the ask's own body: a second body would draw its seam right
+              above the fold's own rule. */}
+          <ConnectingMeans />
         </div>
-      </PanelBody>
-      <PanelBody>
-        <ConnectingMeans />
       </PanelBody>
     </Panel>
   );

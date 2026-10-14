@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import type { StatusKind } from "../design-system/statusbadge";
 import { formatAiRunCost } from "../format/aicost";
 import type { Locale, useT } from "../i18n";
 
@@ -30,12 +31,12 @@ export function ladderAttempts(call: AiCallSummary): number {
     : call.calls_attempted;
 }
 
-export const OUTCOME_TONE = {
-  answered: "success",
-  fallback: "warning",
-  declined: "default",
-  failed: "danger",
-} as const satisfies Record<CallOutcome, string>;
+export const OUTCOME_KIND: Readonly<Record<CallOutcome, StatusKind>> = {
+  answered: "done",
+  fallback: "attention",
+  declined: "neutral",
+  failed: "failure",
+};
 
 /**
  * What the call cost, as the usage page prices it. An unpriced call says so in

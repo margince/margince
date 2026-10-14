@@ -61,6 +61,12 @@ with some of the tone, plus a line in the tone; `primary` has a fill with all of
 Sparkles. No `uppercase`, no click; `badge-spelling.test.ts` fails a badge built by hand or a new
 look for one.
 
+**A status is one `StatusBadge`**: green done, grey neutral (waiting, invited, results like Lost; running
+adds `live`), amber someone must act, red something broke. `info` and `accent` never mean a status.
+
+**A settings `Panel` has no `tone`** and at most one primary. A card with several fields ends in
+`PanelSave`; a `Switch` alone writes when you turn it.
+
 ### Indigo is a claim about the source
 
 Indigo (`--ai*`) means an agent is its source. Never use it for looks. `--orbAmber` / `--orbRed`

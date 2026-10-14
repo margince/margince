@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -17,8 +18,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function showing(account: Record<string, unknown>) {
+function showing(
+  account: Record<string, unknown>,
+  extra: Record<string, () => Response> = {},
+) {
   installFetchStub({
+    ...extra,
     "GET /me": () => jsonResponse(meFixture()),
     "GET /me/linkedin-account": () =>
       jsonResponse({ connected: false, connections: 0, ...account }),
@@ -74,4 +79,32 @@ it("keeps the way to the right file one click away", async () => {
 
   const summary = await screen.findByText(en["linkedinImport.importLabel"]);
   expect(summary.closest("details")).not.toBeNull();
+});
+
+it("imports a dropped export and reports its counts under the row", async () => {
+  showing(
+    { profile_url: "" },
+    {
+      "POST /me/linkedin-connections": () =>
+        jsonResponse({
+          rows: 4120,
+          imported: 4108,
+          skipped: 12,
+          confirmed: 37,
+          suggested: 214,
+        }),
+    },
+  );
+
+  await userEvent.upload(
+    await screen.findByLabelText(en["linkedinImport.choose"]),
+    new File(["First Name,Last Name\n"], "Connections.csv", {
+      type: "text/csv",
+    }),
+  );
+
+  const result = await screen.findByTestId("linkedin-import-result");
+  expect(result.textContent).toContain("4,108");
+  // Skipped rows are shown, never folded into a success.
+  expect(screen.getByText(en["linkedinImport.skipped"])).toBeTruthy();
 });

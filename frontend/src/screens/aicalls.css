@@ -1,93 +1,23 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* Settings, AI call log: the dials, the trace table and the call drawer. */
+/* Settings, AI call log: the trace table and the call drawer. */
 
-/* The search over the full width, then the four pickers in one row that folds
-   to two on a phone, where each still holds its longest label. */
-.aicalls-toolbar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.aicalls-dials {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-@media (max-width: 720px) {
-  .aicalls-dials {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.aicalls-countline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.aicalls-time {
+/* A time and a price are short and read as one token each. */
+.aicalls-nowrap {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-/* A broker's model id is one unbreakable string, and it is what would widen the
- * table past its card. */
-.aicalls-model {
+/* A broker's model id and an unknown error key are unbroken strings, and they
+   are what would widen the table past its card. */
+.aicalls-model,
+.aicalls-outcome {
   overflow-wrap: anywhere;
 }
-/* Seven columns share the settings column, so inner cells give up a third of
-   their padding; the outer ones keep the pane's. */
-.aicalls-card > .table-scroll > .table > * > tr > :is(th, td) {
-  padding-inline: var(--space-2);
-}
 
-/* Folded, every call keeps one shape: how long ago and the model on line two,
-   the figures on line three. The exact moment stays in the time's title. */
-@container table-fold (width < 36rem) {
-  .aicalls-card .aicalls-time {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .aicalls-card td:has(> .aicalls-model-line) {
-    flex: 1 1 0%;
-  }
-  .aicalls-card td:is(:has(> time), :has(> .aicalls-model-line)) {
-    align-self: baseline;
-  }
-  /* One run of text, so a long rung wraps under the model, not past it. */
-  .aicalls-model-line > .cell-stack {
-    display: inline;
-  }
-  .aicalls-model-line > .cell-stack > * {
-    margin-inline-end: var(--space-2);
-  }
-  .aicalls-card td:has(> .aicalls-figure) {
-    order: 5;
-  }
-  .aicalls-card tr:not(.datatable-detail)::before {
-    content: "";
-    flex-basis: 100%;
-    order: 4;
-  }
-}
-
-.aicalls-feature {
-  max-width: 100%;
-  text-align: start;
-}
-
-/* The drawer. */
-.aicalls-drawer-head {
+/* The drawer: the call's badges and time on one line, prev/next at its end. */
+.aicalls-drawer-meta {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -96,7 +26,7 @@
 
 .aicalls-drawer-nav {
   display: inline-flex;
-  gap: var(--space-1);
+  gap: var(--gapActions);
   margin-inline-start: auto;
 }
 

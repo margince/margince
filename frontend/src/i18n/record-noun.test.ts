@@ -114,6 +114,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.subject",
     "signInMethods.sub",
     "users.deactivateAgentConfirmBody",
+    "users.membersTitle",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
@@ -204,6 +205,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.subject",
     "signInMethods.sub",
     "users.deactivateConfirmBody",
+    "users.membersTitle",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",

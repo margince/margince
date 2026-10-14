@@ -153,25 +153,23 @@ describe("the sign-in methods card", () => {
     });
     expect(await screen.findAllByText("On the sign-in screen")).toHaveLength(1);
     expect(
-      await screen.findByText(
-        "Not on the sign-in screen: the Microsoft app cannot be used right now.",
-      ),
+      await screen.findByText("The Microsoft app cannot be used right now."),
     ).toBeTruthy();
+    expect(screen.getAllByText("Not on the sign-in screen")).toHaveLength(1);
   });
 
   it("says a chosen provider is missing because its app is not set up", async () => {
     mount([GOOGLE], { apps: "none" });
     expect(
-      await screen.findByText(
-        "Not on the sign-in screen yet: the Google app is not set up.",
-      ),
+      await screen.findByText("The Google app is not set up."),
     ).toBeTruthy();
+    expect(screen.getByText("Not on the sign-in screen")).toBeTruthy();
   });
 
   it("says a Microsoft app with no directory keeps its button off the screen", async () => {
     mount([MICROSOFT], { apps: "environment" });
     expect(
-      await screen.findByText(/the Microsoft app is not limited to your/),
+      await screen.findByText(/Microsoft app is not limited to your/),
     ).toBeTruthy();
   });
 

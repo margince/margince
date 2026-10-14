@@ -9,28 +9,6 @@
   outline: none;
 }
 
-/* A card's save band: the sentence that qualifies the save on the leading
-   edge, the button on the trailing one. */
-.meeting-card-save {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-.meeting-card-save > .btn {
-  margin-inline-start: auto;
-}
-
-/* The drawer's foot holds only its two verbs, on the trailing edge. */
-.meeting-drawer-actions {
-  margin-inline-start: auto;
-}
-
-.meeting-subhead {
-  margin-block-end: var(--space-2);
-}
-
 /* A rule's preset list and, once Other is picked, the number under it. */
 .meeting-rule {
   display: flex;
@@ -39,17 +17,15 @@
   min-width: 12rem;
 }
 
-/* The link cell: the meeting name over its address, which may truncate. */
+/* The link's address on one line: Copy carries the whole of it. The cap keeps
+   a long address from widening the table past its panel. */
 .meeting-link-url {
-  overflow-wrap: anywhere;
-}
-
-.meeting-link-empty {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  display: block;
+  min-width: 0;
+  max-inline-size: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The address with its Replace verb on one line, as the field it is. */
@@ -76,22 +52,18 @@
     grid-template-columns: 1fr;
   }
 }
+.meeting-preview-figure {
+  margin: 0;
+}
 .meeting-preview {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgCard);
 }
 .meeting-preview-brand {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding-block-end: var(--space-3);
-  border-block-end: 1px solid var(--borderSubtle);
   font-weight: var(--fontWeightMedium);
 }
 .meeting-preview-brand .company-logo {

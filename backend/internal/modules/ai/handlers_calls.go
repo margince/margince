@@ -28,12 +28,12 @@ func (h Handlers) ListAiCalls(
 	r *http.Request,
 	params crmcontracts.ListAiCallsParams,
 ) {
-	filter, err := callFilterOf(params)
+	read, err := callListOf(params)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	page, err := h.calls.ListCalls(r.Context(), params.Cursor, params.Limit, filter)
+	page, err := h.calls.ListCalls(r.Context(), read.cursor, read.limit, read.filter)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -56,9 +56,16 @@ func (h Handlers) ListAiCalls(
 	httperr.WriteJSON(w, http.StatusOK, response)
 }
 
-// callFilterOf checks what the generated binding cannot: an outcome off the
+// callListRead is one /ai/calls read: the page asked for and what narrows it.
+type callListRead struct {
+	cursor *string
+	limit  *int
+	filter CallListFilter
+}
+
+// callListOf checks what the generated binding cannot: an outcome off the
 // enum and a window that ends before it starts, which would match nothing.
-func callFilterOf(params crmcontracts.ListAiCallsParams) (CallListFilter, error) {
+func callListOf(params crmcontracts.ListAiCallsParams) (callListRead, error) {
 	filter := CallListFilter{
 		Task: deref(params.Task), Provider: deref(params.Provider), Model: deref(params.Model),
 		ServedProvider: deref(params.ServedProvider), Tier: deref(params.Tier),
@@ -66,15 +73,15 @@ func callFilterOf(params crmcontracts.ListAiCallsParams) (CallListFilter, error)
 	}
 	if params.Outcome != nil {
 		if !params.Outcome.Valid() {
-			return CallListFilter{}, httperr.Validation("outcome", "invalid_parameter",
+			return callListRead{}, httperr.Validation("outcome", "invalid_parameter",
 				"outcome must be one of answered, fallback, declined, failed")
 		}
 		filter.Outcome = string(*params.Outcome)
 	}
 	if filter.From != nil && filter.To != nil && !filter.To.After(*filter.From) {
-		return CallListFilter{}, httperr.Validation("to", "invalid_parameter", "to must be after from")
+		return callListRead{}, httperr.Validation("to", "invalid_parameter", "to must be after from")
 	}
-	return filter, nil
+	return callListRead{cursor: params.Cursor, limit: params.Limit, filter: filter}, nil
 }
 
 // GetAiCall implements (GET /ai/calls/{id}).

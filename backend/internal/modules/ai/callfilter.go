@@ -76,8 +76,10 @@ func callOutcomeSQL(declined, served int) string {
 func (f CallListFilter) where(query *callQuery) string {
 	clauses := []string{"c.is_terminal"}
 	for _, equal := range []struct{ column, value string }{
-		{"c.task", f.Task}, {"c.provider", f.Provider},
-		{"c.served_provider", f.ServedProvider}, {"c.tier", f.Tier},
+		{"c.task", f.Task},
+		{"c.provider", f.Provider},
+		{"c.served_provider", f.ServedProvider},
+		{"c.tier", f.Tier},
 	} {
 		if equal.value != "" {
 			clauses = append(clauses, storekit.SQLf("%s = $%d", equal.column, query.arg(equal.value)))

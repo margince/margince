@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { JobHealthCard } from "./jobhealth";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -68,12 +68,23 @@ const UNVETTED_FAILURE = {
   reason: "the job failed for a reason it could not classify",
 };
 
-// Every story serves /me too: the card gates its own fetch on the admin role,
+// The seeded matrix gives `job_health:read` to admin and ops only, so a story's
+// grant follows its roles and Withheld really draws the withheld state.
+const READS_JOB_HEALTH = ["admin", "ops"];
+
+function grantFor(roles: string[]): GrantSpec {
+  return roles.some((role) => READS_JOB_HEALTH.includes(role))
+    ? { job_health: ["read"] }
+    : {};
+}
+
+// Every story serves /me too: the card gates its own fetch on `job_health:read`,
 // so a story without a principal would only ever render the withheld state.
 function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
   return () => {
     installFetchStub({
-      "GET /me": () => jsonResponse(meFixture({ roles })),
+      "GET /me": () =>
+        jsonResponse(meFixture({ roles, allow: grantFor(roles) })),
       "GET /admin/job-health": () => jsonResponse(health),
     });
     return (
@@ -139,7 +150,7 @@ export const Idle: Story = {
   }),
 };
 
-export const Withheld: Story = { render: story(HEALTHY, ["ops"]) };
+export const Withheld: Story = { render: story(HEALTHY, ["rep"]) };
 
 // Dead work in dark, which is the only story that has every tone on screen at
 // once: the danger Callout an operator must not scroll past, the danger `dead`

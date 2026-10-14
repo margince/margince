@@ -153,7 +153,7 @@ export function PasswordSettingRow({
         </Callout>
       )}
       <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("password.title")}
         </Heading>
         {/* A real form, so Enter in any of the three fields submits it. */}

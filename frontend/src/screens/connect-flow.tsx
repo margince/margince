@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, type LucideIcon, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { ActionRow } from "../design-system/actionrow";
 import { Button, Field, Modal } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { type Choice, ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { ProviderMark } from "../design-system/provider-mark";
 import { Select } from "../design-system/select";
+import { ServiceList, ServiceRow } from "../design-system/servicerow";
 import { ACCOUNT_NAME, type AccountVendor } from "../format/connectorprovider";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -30,12 +32,10 @@ import {
   type FlowAccount,
   type ImportPick,
   openServices,
-  providerFor,
   type Service,
   type Step,
 } from "./connect-flow-draft";
-import { StepTrail } from "./connect-flow-trail";
-import "./connect-flow.css";
+import { SERVICE_ICON, serviceChoices } from "./connect-services";
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 
@@ -175,6 +175,29 @@ export function ConnectFlow({
   );
 }
 
+const STEP_LABELS: readonly MessageKey[] = [
+  "connectFlow.stepAccount",
+  "connectFlow.stepBringIn",
+  "connectFlow.stepSignIn",
+];
+
+/** Where the reader is in the three steps. A trail rather than a control: the
+ *  steps are walked with Back and Continue, so none of it is pressable. */
+function StepTrail({ step }: Readonly<{ step: Step }>) {
+  const t = useT();
+  return (
+    <Checklist variant="inline" label={t("connectFlow.progress")}>
+      {STEP_LABELS.map((key, index) => {
+        const number = index + 1;
+        let state: "done" | "current" | "open" = "open";
+        if (number < step) state = "done";
+        else if (number === step) state = "current";
+        return <ChecklistStep key={key} state={state} title={t(key)} />;
+      })}
+    </Checklist>
+  );
+}
+
 /** The dialog names the account once it is chosen, and the vendor whose
  *  sign-in comes next on the last step. */
 function flowTitle(draft: Draft, t: ReturnType<typeof useT>): string {
@@ -281,31 +304,7 @@ function BringInStep({
 }>) {
   const t = useT();
   const imap = account === "imap";
-  const has = (service: Service) => {
-    const provider = providerFor(account, service);
-    return provider !== null && connected.includes(provider);
-  };
-  const describe = (service: Service, help: MessageKey) =>
-    has(service) ? t("connectFlow.alreadyConnected") : t(help);
-  const choices: Choice<Service>[] = [
-    {
-      value: "mail",
-      label: t("connectFlow.mail"),
-      description: describe(
-        "mail",
-        imap ? "connectFlow.mailHelpImap" : "connectFlow.mailHelp",
-      ),
-      disabled: has("mail"),
-    },
-    {
-      value: "calendar",
-      label: t("connectFlow.calendar"),
-      description: imap
-        ? t("connectFlow.calendarImap")
-        : describe("calendar", "connectFlow.calendarHelp"),
-      disabled: imap || has("calendar"),
-    },
-  ];
+  const choices = serviceChoices(t, { account, connected });
   const mail = draft.services.includes("mail");
   return (
     <>
@@ -390,19 +389,16 @@ function ImportPicker({
 const PERMISSIONS = [
   {
     service: "mail",
-    icon: Mail,
     name: "connectFlow.permMail",
     purpose: "connectFlow.permMailFor",
   },
   {
     service: "calendar",
-    icon: CalendarDays,
     name: "connectFlow.permCalendar",
     purpose: "connectFlow.permCalendarFor",
   },
 ] as const satisfies readonly Readonly<{
   service: Service;
-  icon: LucideIcon;
   name: MessageKey;
   purpose: MessageKey;
 }>[];
@@ -435,25 +431,25 @@ function SignInStep({
   return (
     <>
       <p>{t("connectFlow.handoff", { vendor: vendorName })}</p>
-      <ul className="connect-flow-perms">
+      <ServiceList label={t("connectFlow.permsLabel", { vendor: vendorName })}>
         {PERMISSIONS.filter((perm) => services.includes(perm.service)).map(
-          ({ service, icon: Icon, name, purpose }) => (
-            <li key={service}>
-              <Icon aria-hidden="true" />
-              <span>
-                <strong>{t(name)}</strong>
-                <span className="t-caption">{t(purpose)}</span>
-              </span>
-            </li>
+          ({ service, name, purpose }) => (
+            <ServiceRow
+              key={service}
+              icon={SERVICE_ICON[service]}
+              name={t(name)}
+              caption={t(purpose)}
+            />
           ),
         )}
-      </ul>
+      </ServiceList>
       {both && (
         <Callout title={t("connectFlow.asksTwice", { vendor: vendorName })} />
       )}
       <p className="t-caption">{t(after)}</p>
       {notConfiguredProvider(connect.data) && (
         <Callout
+          tone="warning"
           kind="outcome"
           title={t("connectors.providerNotConfigured", {
             provider: vendorName,

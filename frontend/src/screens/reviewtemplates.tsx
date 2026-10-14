@@ -2,14 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
 import {
   Panel,
   PanelBody,
   PanelGroupHead,
   PanelIntro,
 } from "../design-system/panel";
-import { SurfaceState } from "../design-system/surfacestate";
+import { QueryStates } from "../design-system/querystates";
+import { StatusBadge } from "../design-system/statusbadge";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
@@ -31,21 +32,17 @@ import "./reviewtemplates.css";
  */
 export function ReviewTemplatesCard() {
   const t = useT();
-  const { data, isPending, isError } = useReviewTemplates();
-  const templates = data ?? [];
+  const query = useReviewTemplates();
+  const templates = query.data ?? [];
   const canEdit = useCanWrite("custom_field", "update");
   const [editing, setEditing] = useState<ReviewTemplate | null>(null);
-  if (isPending || isError || templates.length === 0) {
+  if (!query.isSuccess || templates.length === 0) {
     return (
       <Panel title={t("reviewTemplates.title")}>
         <PanelBody>
-          <SurfaceState
-            state={isPending ? "loading" : isError ? "failed" : "empty"}
-            emptyLabel={t("reviewTemplates.empty")}
-            loadingLabel={t("reviewTemplates.title")}
-          >
-            {null}
-          </SurfaceState>
+          <QueryStates query={query} pendingLabel={t("reviewTemplates.title")}>
+            <EmptyState>{t("reviewTemplates.empty")}</EmptyState>
+          </QueryStates>
         </PanelBody>
       </Panel>
     );
@@ -87,13 +84,15 @@ function TemplateGroup({
         id={headId}
         action={
           <span className="reviewtemplate-head-end">
-            <Badge tone={template.outcome === "won" ? "success" : "danger"}>
-              {t(
+            {/* Lost is a result, not a fault, so it stays grey. */}
+            <StatusBadge
+              kind={template.outcome === "won" ? "done" : "neutral"}
+              label={t(
                 template.outcome === "won"
                   ? "outcomeReview.outcomeWon"
                   : "outcomeReview.outcomeLost",
               )}
-            </Badge>
+            />
             {/* Retired templates stay listed. An old review names the template it
                 came from, so a reader who finds that name here learns it is no
                 longer offered rather than meeting a name the product denies. */}

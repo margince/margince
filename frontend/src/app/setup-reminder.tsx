@@ -6,8 +6,10 @@ import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { Heading } from "../design-system/heading";
 import { Popover } from "../design-system/popover";
 import { Meter } from "../design-system/readings";
+import { StatusBadge } from "../design-system/statusbadge";
 import { accountNameOf } from "../format/connectorprovider";
-import { type Translator, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { navigate } from "../lib/router";
 import { useSettingsReach } from "../screens/settingsnav";
@@ -80,50 +82,60 @@ function useCaption(): (step: SetupStep) => string {
 /** The steps as the reminder and the settings home both draw them. */
 export function SetupSteps({
   steps,
-}: Readonly<{ steps: readonly SetupStep[] }>) {
+  count,
+}: Readonly<{
+  steps: readonly SetupStep[];
+  count?: Readonly<{ done: number; total: number }>;
+}>) {
   const t = useT();
   const caption = useCaption();
   return (
-    <Checklist>
-      {steps.map((step) => (
-        <ChecklistStep
-          key={step.id}
-          state={step.state}
-          title={t(TITLE[step.id])}
-          caption={caption(step)}
-          action={<StepAction step={step} />}
-        />
-      ))}
+    <Checklist count={count}>
+      {steps.map((step) => {
+        const title = t(TITLE[step.id]);
+        // A blocked step waits on somebody else: the caption names who.
+        if (
+          step.state === "waiting" ||
+          (step.blocked && step.state !== "done")
+        ) {
+          return (
+            <ChecklistStep
+              key={step.id}
+              state="waiting"
+              title={title}
+              caption={caption(step)}
+            />
+          );
+        }
+        return (
+          <ChecklistStep
+            key={step.id}
+            state={step.state}
+            title={title}
+            caption={caption(step)}
+            action={<StepAction step={step} />}
+          />
+        );
+      })}
     </Checklist>
   );
 }
 
-// Every outcome sits in one cell of one width, so the rows line up; the mark's
-// ring says which step is next, never a louder button.
 function StepAction({ step }: Readonly<{ step: SetupStep }>) {
   const t = useT();
-  return <span className="setup-step-action">{stepActionOf(step, t)}</span>;
-}
-
-function stepActionOf(step: SetupStep, t: Translator) {
   if (step.state === "done") {
     // The step title already carries the state as a word for a screen reader.
     return (
       <span aria-hidden="true">
-        <Badge tone="success">{t("checklist.stepDone")}</Badge>
-      </span>
-    );
-  }
-  if (step.blocked) {
-    // The caption names what it waits on; this only holds the cell.
-    return (
-      <span className="setup-step-waiting" aria-hidden="true">
-        {t("setup.reminder.waiting")}
+        <StatusBadge kind="done" label={t("checklist.stepDone")} />
       </span>
     );
   }
   return (
-    <Button onClick={() => navigate(settingsHref(step.page))}>
+    <Button
+      variant={step.state === "current" ? "primary" : undefined}
+      onClick={() => navigate(settingsHref(step.page))}
+    >
       {t(
         step.reason === "needsReconnect"
           ? "connectors.reconnect"
@@ -144,6 +156,7 @@ export function SetupReminder({
   onHide: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const setup = useSetupChecklist(useSettingsReach());
   if (
     !setup.settled ||
@@ -153,19 +166,22 @@ export function SetupReminder({
   ) {
     return null;
   }
-  const count = { done: String(setup.done), total: String(setup.total) };
   return (
     <Popover
       className="setup-reminder"
+      variant="ghost"
+      width="wide"
       label={
         <>
-          <span className="setup-reminder-dot" aria-hidden="true" />
           <span className="setup-reminder-word">
             {t("setup.reminder.trigger")}
           </span>
-          <span className="setup-reminder-count">
-            {t("setup.reminder.count", count)}
-          </span>
+          <Badge>
+            {t("setup.reminder.count", {
+              done: formatNumber(setup.done, locale),
+              total: formatNumber(setup.total, locale),
+            })}
+          </Badge>
         </>
       }
     >
@@ -173,18 +189,16 @@ export function SetupReminder({
         <Heading size="xsmall" as="h2" className="setup-reminder-title">
           {t("setup.reminder.title")}
         </Heading>
-        <div className="setup-reminder-progress">
-          <Meter
-            value={setup.done}
-            max={setup.total}
-            label={t("setup.reminder.progress")}
-            dense
-          />
-          <span className="t-caption">
-            {t("settings.home.setup.count", count)}
-          </span>
-        </div>
-        <SetupSteps steps={setup.steps} />
+        <Meter
+          value={setup.done}
+          max={setup.total}
+          label={t("setup.reminder.progress")}
+          dense
+        />
+        <SetupSteps
+          steps={setup.steps}
+          count={{ done: setup.done, total: setup.total }}
+        />
         <div className="setup-reminder-foot">
           <Button
             variant="link"

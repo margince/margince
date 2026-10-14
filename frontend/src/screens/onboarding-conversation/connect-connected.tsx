@@ -1,33 +1,36 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { StageActions } from "../../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../../design-system/panel";
-import {
-  ProviderList,
-  ProviderRow,
-  type ProviderRowTone,
-} from "../../design-system/providerrow";
+import { ProviderMark } from "../../design-system/provider-mark";
+import { ProviderRow } from "../../design-system/providerrow";
+import { ServiceList, ServiceRow } from "../../design-system/servicerow";
+import { statusTone } from "../../design-system/statusbadge";
 import {
   ACCOUNT_NAME,
+  type AccountVendor,
   type ConnectionAccount,
-  VENDOR_SERVICES,
   vendorOf,
 } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { IMPORT_WINDOW_LABELS } from "../../mail-history/window-picker";
 import { notConfiguredProvider, useConnectAccount } from "../connect-account";
+import type { Service } from "../connect-flow-draft";
 import { ConnectPostureStep } from "../connect-posture";
+import { SERVICE_ICON } from "../connect-services";
 import {
+  accountHealth,
   healthBadge,
-  missingCalendarWriteGrant,
-  serviceHealth,
+  needsReconnect,
+  serviceBadge,
+  serviceReason,
 } from "../connector-status";
 import {
   type BackreadChoice,
@@ -36,10 +39,11 @@ import {
   useOnboardingBackread,
 } from "../onboarding-backread";
 import { markOAuthAttempt } from "../onboarding-connect-panels";
+import { connectInput } from "./connect-vendor";
 
 // The connect step once a mailbox is live: what is connected, who may read it,
-// how far back to import, and the way on. The footer owns the import's start,
-// so the page carries one primary in every state.
+// how far back to import, and the way on. The footer owns the import's start;
+// the account's own primary is a Reconnect, only while a grant is stale.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
@@ -139,8 +143,12 @@ function ImportThenWayOn({
   );
 }
 
-/** The account and one row per service it brings in. A Google or Microsoft
- *  account without its calendar offers that calendar alone, landing back here. */
+/**
+ * The account as one row, the way Connections draws it: its health, why it
+ * needs someone, and one primary Reconnect when a grant must be asked again.
+ * Its services hang under it; a vendor account without its calendar offers
+ * that calendar alone, landing back here.
+ */
 function AccountPanel({
   account,
   onBusyChange,
@@ -153,125 +161,182 @@ function AccountPanel({
   const connect = useConnectAccount({
     onRedirect: (input) => markOAuthAttempt(input.provider),
   });
-  const unwired = notConfiguredProvider(connect.data);
   const name = t(ACCOUNT_NAME[account.key]);
-  const calendar = account.calendar;
-  const calendarHealth =
-    calendar === null ? "not_connected" : serviceHealth(calendar);
-  // A read-only grant cannot add bookings: Connections and Meetings ask for a
-  // reconnect there too, so onboarding never shows it as plain Connected.
-  const readOnly = calendar !== null && missingCalendarWriteGrant(calendar);
-  const asksCalendar =
-    readOnly ||
-    calendarHealth === "not_connected" ||
-    calendarHealth === "needs_reconnect";
-  const calendarStatus: Readonly<{ tone: ProviderRowTone; label: string }> =
-    readOnly
-      ? { tone: "warning", label: t("scheduling.readOnlyBadge") }
-      : {
-          tone: healthBadge(calendarHealth).tone,
-          label: t(healthBadge(calendarHealth).label),
-        };
-  let calendarFacts: string | undefined;
-  if (readOnly) calendarFacts = t("scheduling.readOnlyCalendar");
-  else if (calendarHealth === "not_connected")
-    calendarFacts = t("ob.conv.connect.calendarNotConnected");
+  const health = healthBadge(accountHealth(account));
+  const live = liveServices(account);
+  const reasonKey =
+    live.map(([, row]) => serviceReason(row)).find((key) => key !== null) ??
+    null;
+  const stale = live
+    .filter(([, row]) => needsReconnect(row))
+    .map(([service]) => service);
   useEffect(() => {
     onBusyChange(connect.isPending);
   }, [connect.isPending, onBusyChange]);
 
   return (
-    <Panel
-      tone="success"
-      title={t("ob.conv.connect.connectedTitle", { vendor: name })}
-    >
+    <Panel title={t("ob.conv.connect.connectedTitle", { vendor: name })}>
       <PanelBody>
-        <ProviderList>
-          {account.mail !== null && (
-            <ServiceRow
-              icon={<Mail />}
-              name={t("ob.conv.connect.serviceMail")}
-              row={account.mail}
-              facts={t("ob.s4.connectLive")}
-            />
-          )}
-          {vendor !== null &&
-            (calendar !== null && !asksCalendar ? (
-              <ServiceRow
-                icon={<CalendarDays />}
-                name={t("ob.conv.connect.serviceCalendar")}
-                row={calendar}
-                facts={t("ob.conv.connect.calendarBrings")}
-              />
-            ) : (
-              <ProviderRow
-                mark={<CalendarDays />}
-                name={t("ob.conv.connect.serviceCalendar")}
-                status={calendarStatus}
-                facts={calendarFacts}
-                action={
-                  <Button
-                    pending={connect.isPending}
-                    // The calendar leg alone: the mailbox is already live, and
-                    // the import stays the footer's choice.
-                    onClick={() =>
-                      connect.mutate({
-                        provider: VENDOR_SERVICES[vendor].calendar,
-                        returnTo: "onboarding",
-                      })
-                    }
-                  >
-                    {t(
-                      calendarHealth === "not_connected"
-                        ? "ob.conv.connect.connectCalendar"
-                        : "connectors.reconnect",
-                    )}
-                  </Button>
-                }
-              />
-            ))}
-        </ProviderList>
-        {connect.isError && (
-          <Callout
-            tone="warning"
-            kind="outcome"
-            title={t("ob.conv.connect.calendarFailedTitle")}
-          >
-            {problemMessageOf(connect.error, t)}
-          </Callout>
-        )}
-        {unwired && (
-          <Callout
-            tone="warning"
-            kind="outcome"
-            title={t("connectors.providerNotConfigured", { provider: name })}
+        <ProviderRow
+          mark={vendor ? <ProviderMark providerKey={vendor} /> : <Mail />}
+          name={name}
+          headingLevel="h3"
+          status={{
+            tone: health.tone,
+            label: t(health.label),
+            live: health.live,
+          }}
+          account={
+            account.mail?.account_label ??
+            account.calendar?.account_label ??
+            undefined
+          }
+          reason={reasonKey ? t(reasonKey) : undefined}
+          action={
+            vendor !== null && stale.length > 0 ? (
+              <Button
+                variant="primary"
+                pending={connect.isPending}
+                onClick={() => connect.mutate(connectInput(vendor, stale))}
+              >
+                {t("connectors.reconnect")}
+              </Button>
+            ) : undefined
+          }
+        >
+          <AccountServiceRows
+            account={account}
+            vendor={vendor}
+            label={t("connectors.svc.list", { account: name })}
+            pending={connect.isPending}
+            // The calendar leg alone: the mailbox is already live, and the
+            // import stays the footer's choice.
+            onConnectCalendar={(v) =>
+              connect.mutate(connectInput(v, ["calendar"]))
+            }
           />
-        )}
+        </ProviderRow>
+        <CalendarAskOutcome connect={connect} name={name} />
       </PanelBody>
     </Panel>
   );
 }
 
-function ServiceRow({
-  icon,
+/** What a calendar ask came back with, when it did not leave the page. */
+function CalendarAskOutcome({
+  connect,
   name,
-  row,
-  facts,
+}: Readonly<{ connect: ReturnType<typeof useConnectAccount>; name: string }>) {
+  const t = useT();
+  return (
+    <>
+      {connect.isError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("ob.conv.connect.calendarFailedTitle")}
+        >
+          {problemMessageOf(connect.error, t)}
+        </Callout>
+      )}
+      {notConfiguredProvider(connect.data) && (
+        <Callout
+          tone="warning"
+          kind="outcome"
+          title={t("connectors.providerNotConfigured", { provider: name })}
+        />
+      )}
+    </>
+  );
+}
+
+/** The account's services that are not disconnected, by what they are. */
+function liveServices(
+  account: ConnectionAccount,
+): (readonly [Service, CaptureConnection])[] {
+  const rows: (readonly [Service, CaptureConnection])[] = [];
+  if (account.mail && account.mail.status !== "disconnected") {
+    rows.push(["mail", account.mail]);
+  }
+  if (account.calendar && account.calendar.status !== "disconnected") {
+    rows.push(["calendar", account.calendar]);
+  }
+  return rows;
+}
+
+/**
+ * What the account brings in, one line each. Past email is left out: onboarding
+ * asks for it in its own import panel below, where Connections lists it here.
+ */
+function AccountServiceRows({
+  account,
+  vendor,
+  label,
+  pending,
+  onConnectCalendar,
 }: Readonly<{
-  icon: ReactNode;
-  name: string;
-  row: CaptureConnection;
-  facts: string;
+  account: ConnectionAccount;
+  vendor: AccountVendor | null;
+  label: string;
+  pending: boolean;
+  onConnectCalendar: (vendor: AccountVendor) => void;
 }>) {
   const t = useT();
-  const badge = healthBadge(serviceHealth(row));
+  const { mail, calendar } = account;
+  const calendarLive = calendar !== null && calendar.status !== "disconnected";
   return (
-    <ProviderRow
-      mark={icon}
-      name={name}
-      status={{ tone: badge.tone, label: t(badge.label) }}
-      account={row.account_label ?? undefined}
-      facts={facts}
+    <ServiceList label={label}>
+      {mail && (
+        <ConnectedService
+          row={mail}
+          service="mail"
+          caption={t("connectors.svc.newMailDesc")}
+        />
+      )}
+      {vendor !== null && calendarLive && (
+        <ConnectedService
+          row={calendar}
+          service="calendar"
+          caption={t("connectors.svc.calendarDesc")}
+        />
+      )}
+      {vendor !== null && !calendarLive && (
+        <ServiceRow
+          icon={SERVICE_ICON.calendar}
+          name={t("connectors.svc.calendar")}
+          caption={t("ob.conv.connect.calendarNotConnected")}
+          status={{
+            tone: statusTone("neutral"),
+            label: t("connectors.health.notConnected"),
+          }}
+          action={
+            <Button pending={pending} onClick={() => onConnectCalendar(vendor)}>
+              {t("ob.conv.connect.connectCalendar")}
+            </Button>
+          }
+        />
+      )}
+    </ServiceList>
+  );
+}
+
+function ConnectedService({
+  row,
+  service,
+  caption,
+}: Readonly<{ row: CaptureConnection; service: Service; caption: string }>) {
+  const t = useT();
+  const badge = serviceBadge(row);
+  return (
+    <ServiceRow
+      icon={SERVICE_ICON[service]}
+      name={t(
+        service === "mail"
+          ? "connectors.svc.newMail"
+          : "connectors.svc.calendar",
+      )}
+      caption={caption}
+      status={{ tone: badge.tone, label: t(badge.label), live: badge.live }}
     />
   );
 }

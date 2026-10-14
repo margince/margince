@@ -27,7 +27,12 @@ function served(map: Record<string, string>, canManage = true) {
   });
   return (
     <StoryProviders>
-      <GroupRoleGrants initial={map} canManage={canManage} />
+      <GroupRoleGrants
+        initial={map}
+        canManage={canManage}
+        // The card that holds the editor says a refusal; see Sign-in methods.
+        onRefusal={() => undefined}
+      />
     </StoryProviders>
   );
 }

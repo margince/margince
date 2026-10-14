@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { MailSharingCard } from "./mail-sharing";
 import {
   installFetchStub,
@@ -10,16 +11,36 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The workspace mail-sharing posture. ON is the quiet default; OFF is loud on
-// purpose — the danger callout under the switch is the state worth a picture,
-// because it is the one screen that says out loud what turning sharing off
-// costs.
-function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
+// The workspace mail-sharing posture. ON is the quiet default; a posture with a
+// cost (sharing off, or seats allowed to share) states it under the switches.
+// Each switch writes on flip, so the only other state is a refused write.
+function story(
+  mail_sharing: boolean,
+  allow: Parameters<typeof meRoute>[0],
+  shared_posture_allowed = false,
+  refuse = false,
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /capture/settings": () =>
-        jsonResponse({ auto_enrich: true, mail_sharing }),
+        jsonResponse({
+          auto_enrich: true,
+          mail_sharing,
+          shared_posture_allowed,
+        }),
+      ...(refuse
+        ? {
+            "PATCH /capture/settings": () =>
+              jsonResponse(
+                {
+                  title: "Forbidden",
+                  detail: "The posture could not be saved.",
+                },
+                403,
+              ),
+          }
+        : {}),
     });
     return (
       <StoryProviders>
@@ -46,3 +67,20 @@ export const SharingOn: Story = { render: story(true, MANAGER) };
 export const SharingOff: Story = { render: story(false, MANAGER) };
 
 export const CannotChange: Story = { render: story(true, READER) };
+
+// Seats may put their mailbox in the shared posture: the works-council warning
+// stands under the switches for as long as that is allowed.
+export const SharedPostureAllowed: Story = {
+  render: story(true, MANAGER, true),
+};
+
+// A flip the server refused: one notice for the card, and the switch shows the
+// stored posture again.
+export const SaveRefused: Story = {
+  render: story(true, MANAGER, false, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("mail-sharing-toggle"));
+    await canvas.findByText("Setting not saved");
+  },
+};

@@ -320,6 +320,25 @@ describe("the connected-inboxes card", () => {
     expect(screen.getByRole("button", { name: /Reconnect/ })).toBeTruthy();
   });
 
+  it("keeps one primary Reconnect when two accounts need one", async () => {
+    stubApi([
+      gmailStale,
+      {
+        ...gmailStale,
+        id: "018f3a1b-0000-7000-8000-0000000000cb",
+        provider: "graph",
+        scopes: [],
+      },
+    ]);
+    render(<ConnectorsCard />);
+    await screen.findByRole("heading", { name: "Microsoft 365" });
+    const [first, second] = screen.getAllByRole("button", {
+      name: "Reconnect",
+    });
+    expect(first).toHaveClass("btn-primary");
+    expect(second).not.toHaveClass("btn-primary");
+  });
+
   it("says a Gmail mailbox cannot send before the rep discovers it at send time", async () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
@@ -357,7 +376,7 @@ describe("the connected-inboxes card", () => {
     render(<ConnectorsCard />);
     // The card's own claim as the heading, the server's cause under it: both,
     // because the heading alone says nothing about why.
-    expect(await screen.findByText(/Could not load connectors/)).toBeTruthy();
+    expect(await screen.findByText(/Could not load this view/)).toBeTruthy();
     expect(await screen.findByText(/boom/)).toBeTruthy();
   });
 

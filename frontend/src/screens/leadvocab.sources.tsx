@@ -32,6 +32,7 @@ import { useSinglePress } from "../design-system/presslatch";
 import { QueryStates } from "../design-system/querystates";
 import { Select } from "../design-system/select";
 import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import {
   type PluralTranslator,
@@ -303,7 +304,7 @@ function DiscoveredSources({
     <>
       <PanelGroupHead title={t("leadSources.discovered")} level="h3" />
       <PanelBody>
-        <p className="t-caption">{t("leadSources.discoveredSub")}</p>
+        <PanelIntro>{t("leadSources.discoveredSub")}</PanelIntro>
       </PanelBody>
       <DataTable
         bleed
@@ -331,6 +332,7 @@ export function LeadSourcesCard() {
   const [renaming, setRenaming] = useState<LeadSource | null>(null);
   const [removing, setRemoving] = useState<LeadSource | null>(null);
   const removal = useRemovalFocus();
+  const toast = useToast();
   const failure = [adopt, update].find((m) => m.isError);
   const administered = rowsOf(query.data?.data);
   const discovered = rowsOf(query.data?.discovered);
@@ -339,7 +341,11 @@ export function LeadSourcesCard() {
     plural,
     locale,
     grants: { canEdit, canRemove },
-    onUpdate: (patch) => update.mutate(patch),
+    // A row's controls write the moment they change, so each write confirms itself.
+    onUpdate: (patch) =>
+      update.mutate(patch, {
+        onSuccess: () => toast.show(t("settings.saved")),
+      }),
     onRename: (source) => {
       rename.reset();
       setRenaming(source);

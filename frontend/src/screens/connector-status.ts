@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import type { ProviderRowTone } from "../design-system/providerrow";
+import {
+  statusTone as kindTone,
+  type StatusKind,
+} from "../design-system/statusbadge";
 import type { ConnectionAccount } from "../format/connectorprovider";
 import type { MessageKey } from "../i18n/en";
 
@@ -158,19 +161,61 @@ export type ConnectorHealth =
   | "needs_attention"
   | "not_connected";
 
-type HealthBadge = Readonly<{ tone: ProviderRowTone; label: MessageKey }>;
+type HealthBadge = Readonly<{
+  tone: ReturnType<typeof kindTone>;
+  label: MessageKey;
+  live?: boolean;
+}>;
+
+function badgeOf(kind: StatusKind, label: MessageKey, live?: boolean) {
+  return { tone: kindTone(kind), label, live };
+}
 
 const HEALTH_BADGE: Readonly<Record<ConnectorHealth, HealthBadge>> = {
-  connected: { tone: "success", label: "connectors.health.connected" },
-  syncing: { tone: "info", label: "connectors.health.syncing" },
-  up_to_date: { tone: "success", label: "connectors.health.upToDate" },
-  needs_reconnect: { tone: "warning", label: "connectors.health.reconnect" },
-  needs_attention: { tone: "warning", label: "connectors.health.attention" },
-  not_connected: { tone: "default", label: "connectors.health.notConnected" },
+  connected: badgeOf("done", "connectors.health.connected"),
+  syncing: badgeOf("neutral", "connectors.health.syncing", true),
+  up_to_date: badgeOf("done", "connectors.health.upToDate"),
+  needs_reconnect: badgeOf("attention", "connectors.health.reconnect"),
+  needs_attention: badgeOf("attention", "connectors.health.attention"),
+  not_connected: badgeOf("neutral", "connectors.health.notConnected"),
 };
 
 export function healthBadge(health: ConnectorHealth): HealthBadge {
   return HEALTH_BADGE[health];
+}
+
+/** Whether a service needs its owner's consent again: the vendor refused the
+ *  grant, or the grant is too narrow to send or to book. */
+export function needsReconnect(service: CaptureConnection): boolean {
+  return (
+    service.status === "reauth_required" ||
+    missingSendGrant(service) ||
+    missingCalendarWriteGrant(service)
+  );
+}
+
+/** One service's badge. A grant too narrow to send or to book is named by
+ *  what it cannot do, so the row needs no second badge to say it. */
+export function serviceBadge(service: CaptureConnection): HealthBadge {
+  const health = serviceHealth(service);
+  if (health === "up_to_date" && missingSendGrant(service)) {
+    return badgeOf("attention", "connectors.cannotSend");
+  }
+  if (health === "up_to_date" && missingCalendarWriteGrant(service)) {
+    return badgeOf("attention", "scheduling.readOnlyBadge");
+  }
+  return healthBadge(health);
+}
+
+/** The one sentence that says why a service is not up to date, or null. */
+export function serviceReason(service: CaptureConnection): MessageKey | null {
+  const health = serviceHealth(service);
+  if (health === "needs_reconnect" || health === "needs_attention") {
+    return errorClassKey(service.last_sync_error_class);
+  }
+  if (missingSendGrant(service)) return "connectors.reconnectToSend";
+  if (missingCalendarWriteGrant(service)) return "scheduling.readOnlyCalendar";
+  return null;
 }
 
 type ServiceFacts = Pick<CaptureConnection, "status" | "last_sync_error_class">;

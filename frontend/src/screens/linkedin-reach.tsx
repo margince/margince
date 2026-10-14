@@ -4,15 +4,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { EmptyState, Skeleton } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { EmptyState } from "../design-system/atoms";
 import { DataTable } from "../design-system/datatable";
+import { PanelBody } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
 import { RowOpen } from "../design-system/rowopen";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
-import "./linkedin-reach.css";
 
 // Which accounts a member's imported network reaches: the answer the whole
 // import is for, and the half that has content on a one-member workspace.
@@ -71,45 +71,43 @@ function reachCaveat(
 }
 
 /** Which companies on file this member's imported network reaches, as one
- * part of the LinkedIn network panel. */
+ * part of the LinkedIn network panel. It stands straight in the `Panel`, so the
+ * table can bleed to the pane's edges. */
 export function LinkedInReachSection() {
   const t = useT();
-  const { locale } = useLocale();
   const query = useLinkedInReach();
-  if (query.isPending) {
-    return <Skeleton width="70%" />;
-  }
-  // A failed read is not an empty one: "no companies reached" over the
-  // server's refusal would look exactly like a network that reaches nobody.
-  if (query.isError) {
-    return (
-      <Callout
-        kind="outcome"
-        tone="danger"
-        title={t("linkedinReach.readFailed")}
-      >
-        {problemMessageOf(query.error, t)}
-      </Callout>
-    );
-  }
-  const accounts = query.data.accounts;
-  const caveat = reachCaveat(t, locale, query.data, accounts.length);
+  return (
+    <QueryGate query={query} pendingLabel={t("linkedinReach.title")}>
+      {(reach) => <ReachBody reach={reach} />}
+    </QueryGate>
+  );
+}
+
+function ReachBody({ reach }: Readonly<{ reach: LinkedInReach }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const accounts = reach.accounts;
+  const caveat = reachCaveat(t, locale, reach, accounts.length);
   if (accounts.length === 0) {
     // A fresh workspace that imported thousands and matched nothing should see
     // the thousands, so the unresolved count replaces the generic sentence.
     return (
-      <EmptyState title={t("linkedinReach.empty")}>
-        {caveat ?? t("linkedinReach.emptyBody")}
-      </EmptyState>
+      <PanelBody>
+        <EmptyState title={t("linkedinReach.empty")}>
+          {caveat ?? t("linkedinReach.emptyBody")}
+        </EmptyState>
+      </PanelBody>
     );
   }
   return (
-    <div className="li-reach" data-testid="linkedin-reach-table">
+    <>
       {/* Above the figures, not a footnote: a truncated list read as the whole
           network understates reach. */}
-      <p className="t-sub">{caveat}</p>
+      <PanelBody>
+        <p className="t-caption">{caveat}</p>
+      </PanelBody>
       <ReachTable accounts={accounts} />
-    </div>
+    </>
   );
 }
 
@@ -128,6 +126,7 @@ function ReachTable({
     });
   return (
     <DataTable
+      bleed
       fold
       label={t("linkedinReach.accountsLabel")}
       rows={[...accounts]}

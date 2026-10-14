@@ -379,9 +379,9 @@ describe("the app setup drawer", () => {
     });
     const id = await screen.findByLabelText<HTMLInputElement>("Client ID");
     await waitFor(() => expect(id.value).toBe(ENTRA_ID));
-    expect(screen.getByLabelText<HTMLInputElement>("Directory (tenant) ID").value).toBe(
-      DIRECTORY,
-    );
+    expect(
+      screen.getByLabelText<HTMLInputElement>("Directory (tenant) ID").value,
+    ).toBe(DIRECTORY);
     await user.type(screen.getByLabelText("Client secret"), "rotated");
     await user.click(
       screen.getByRole("button", { name: "Save Microsoft app" }),
@@ -435,8 +435,9 @@ describe("the app setup drawer", () => {
     const { calls } = mount(pinnedMicrosoft(), "microsoft", {
       view: "drawer",
     });
-    const directory =
-      await screen.findByLabelText<HTMLInputElement>("Directory (tenant) ID");
+    const directory = await screen.findByLabelText<HTMLInputElement>(
+      "Directory (tenant) ID",
+    );
     await waitFor(() => expect(directory.value).toBe(DIRECTORY));
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.clear(directory);

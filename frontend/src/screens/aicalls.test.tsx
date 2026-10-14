@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../design-system/clipboard-testing";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
@@ -328,14 +329,15 @@ async function openCall(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("dialog");
 }
 
-it("reads each call in words: the task, an outcome, and its figures", async () => {
+it("reads each call in five columns: when, feature, model, outcome and cost", async () => {
   mount();
   const row = await screen.findByTestId(`call-${summary.id}`);
   expect(within(row).getByText("Message classification")).toBeTruthy();
   expect(row.textContent).toContain("Failed");
-  expect(row.textContent).toContain("100 / 20");
-  expect(row.textContent).toContain("900 ms");
   expect(row.textContent).toContain("$0.0043");
+  // Tokens and latency are the drawer's, so the row fits the settings column.
+  expect(row.textContent).not.toContain("100 / 20");
+  expect(row.textContent).not.toContain("900 ms");
   // A code this screen has no words for keeps its key, under its badge.
   expect(within(row).getByText("provider_unavailable")).toBeTruthy();
 });
@@ -350,9 +352,7 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
   // Nothing is inserted under the row: the detail lives beside the table.
   expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
   expect(within(drawer).getByText("Message classification")).toBeTruthy();
-  expect(
-    await within(drawer).findByText(/Answer before|retry on 5xx/i),
-  ).toBeTruthy();
+  expect(await within(drawer).findByText(/retry.on.5xx/i)).toBeTruthy();
   expect(within(drawer).getByText("Request payload")).toBeTruthy();
   expect(
     within(drawer).getByText("Export certification scenario"),
@@ -360,6 +360,13 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
 
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+it("puts focus on the drawer itself when a call opens, not on a stepping arrow", async () => {
+  const user = userEvent.setup();
+  mount();
+  const drawer = await openCall(user);
+  await waitFor(() => expect(document.activeElement).toBe(drawer));
 });
 
 it("copies a payload and says Copied on that block alone", async () => {
@@ -467,7 +474,12 @@ it("asks the server for the outcome and search picked, and clears both", async (
   const searched = askedQueries().filter((q) => q.has("q"));
   expect(searched.map((q) => q.get("q"))).toEqual(["quota"]);
 
-  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  // The bar and the empty answer both offer the way back; they do one thing.
+  await user.click(
+    within(screen.getByRole("group")).getByRole("button", {
+      name: "Clear filters",
+    }),
+  );
   expect(await screen.findByTestId(`call-${summary.id}`)).toBeTruthy();
   expect(globalThis.location.hash).not.toContain("outcome");
   expect(
@@ -530,15 +542,19 @@ it("names the decision lane in words, never as the rung key", async () => {
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
-// The terminal row of a fallback is the completion, so the row reads the
+// The terminal row of a fallback is the completion, so the drawer reads the
 // logical call's flag rather than its own kind: a decision model that was asked
-// and overruled shows on the row before it is opened.
-it("marks a call the decision model fell back from on its row", async () => {
+// and overruled is marked in the drawer head.
+it("marks a call the decision model fell back from, and never as a retry", async () => {
+  const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
   const row = await screen.findByTestId(`call-${summary.id}`);
-  expect(row.textContent).toContain("Decision model, then Everyday cloud");
   // The fall back is a second model asked, not a retry of the first.
   expect(row.textContent).not.toContain("Retried");
+  const drawer = await openCall(user);
+  expect(
+    within(drawer).getAllByText(en["aicalls.badge.decision"]).length,
+  ).toBeGreaterThan(0);
 });
 
 it("draws no outcome badge on a first-try answer, and no decision mark", async () => {
@@ -592,9 +608,10 @@ it("narrows the trace to where a figure's calls ended, and lets the reader clear
   globalThis.location.hash =
     "#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras";
   mount();
+  // Named in the filter bar's caption, beside the count of what it let through.
   expect(
     await screen.findByText(
-      "Showing calls that ended on Provider: OpenAI-compatible · Served by: Cerebras.",
+      /^Showing calls that ended on Provider: OpenAI-compatible · Served by: Cerebras\./,
     ),
   ).toBeTruthy();
   expect(
@@ -605,7 +622,7 @@ it("narrows the trace to where a figure's calls ended, and lets the reader clear
     ),
   ).toBe(true);
 
-  await user.click(screen.getByRole("button", { name: "Show all calls" }));
+  await user.click(screen.getByRole("button", { name: "Clear filters" }));
   expect(globalThis.location.hash).toBe("#/settings/model-calls");
   globalThis.location.hash = "";
 });
@@ -708,7 +725,12 @@ it("says a filtered feature has no calls, rather than that nothing was ever call
     await screen.findByText("No calls recorded for this feature yet."),
   ).toBeTruthy();
   expect(screen.queryByText("No AI calls recorded yet.")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  // The bar and the empty answer both offer the way back; they do one thing.
+  await user.click(
+    within(screen.getByRole("group")).getByRole("button", {
+      name: "Clear filters",
+    }),
+  );
   expect(globalThis.location.hash).not.toContain("account_scan");
   globalThis.location.hash = "";
 });

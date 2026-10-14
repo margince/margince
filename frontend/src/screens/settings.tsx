@@ -587,12 +587,8 @@ function ResetDataCard() {
   }
 
   return (
-    <Panel
-      title={t("settings.dangerZone")}
-      // The one card that announces its own danger: the red border is what
-      // separates a destructive surface from the ordinary settings around it.
-      className="settings-danger"
-    >
+    // A neutral panel: the danger is the danger Button and the typed confirm.
+    <Panel title={t("settings.dangerZone")}>
       <PanelBody className="form-stack">
         <PanelIntro>{t("settings.dangerZoneSub")}</PanelIntro>
       </PanelBody>
@@ -610,21 +606,24 @@ function ResetDataCard() {
         />
       </SettingList>
       {summary && (
-        <PanelBody>
-          <p className="t-caption settings-danger-result" role="status">
-            {t("settings.resetDataResult", {
+        <PanelBody className="form-stack">
+          <Callout
+            tone="success"
+            kind="outcome"
+            title={t("settings.resetDataResult", {
               tables: formatNumber(summary.tables_cleared, locale),
               jobs: formatNumber(summary.jobs_deleted, locale),
               streams: formatNumber(summary.streams_purged, locale),
               keys: formatNumber(summary.cache_keys_deleted, locale),
               objects: formatNumber(summary.objects_deleted, locale),
             })}
-          </p>
+          />
           {summary.drain_timed_out && (
-            // ds:ignore a warning in --warningText, not a refusal
-            <p className="settings-danger-warning" role="alert">
-              {t("settings.resetDataDrainWarning")}
-            </p>
+            <Callout
+              tone="warning"
+              live="alert"
+              title={t("settings.resetDataDrainWarning")}
+            />
           )}
         </PanelBody>
       )}

@@ -3,8 +3,9 @@
 
 import { CalendarDays, Mail, Send } from "lucide-react";
 import { Button, Card } from "../design-system/atoms";
+import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { ProviderMark } from "../design-system/provider-mark";
-import { ProviderRow } from "../design-system/providerrow";
+import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { Chip } from "../design-system/readings";
 import { ACCOUNT_NAME, type AccountVendor } from "../format/connectorprovider";
 import { useT } from "../i18n";
@@ -12,7 +13,6 @@ import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { type Availability, accountUnwired } from "./connect-flow-draft";
-import { ConnectStrip } from "./connect-flow-trail";
 import { settingsHref } from "./settingsrouting";
 import "./connection-empty.css";
 
@@ -27,18 +27,43 @@ const VENDOR_SERVICES_LINE: Record<AccountVendor, MessageKey> = {
   microsoft: "connectors.tile.microsoft",
 };
 
+const STRIP_LABELS: readonly MessageKey[] = [
+  "connectors.strip.pick",
+  "connectors.strip.tick",
+  "connectors.strip.signIn",
+];
+
+/** What connecting will ask, before anything is asked: the dialog's steps,
+ *  none started, and under them what happens without the reader. */
+function ConnectStrip() {
+  const t = useT();
+  return (
+    <div className="connection-steps">
+      <Checklist variant="inline" label={t("connectors.strip.label")}>
+        {STRIP_LABELS.map((key) => (
+          <ChecklistStep key={key} state="open" title={t(key)} />
+        ))}
+      </Checklist>
+      <p className="t-caption">{t("connectors.strip.syncs")}</p>
+    </div>
+  );
+}
+
 /** One vendor as a card of what it brings in. A vendor this installation has
  *  not wired keeps its tile, says so in its head, and names who turns it on. */
 function VendorTile({
   vendor,
   unwired,
   canSetUp,
+  lead,
   onConnect,
 }: Readonly<{
   vendor: AccountVendor;
   unwired: boolean;
   /** Whether this reader can register the company app that wires it. */
   canSetUp: boolean;
+  /** The panel's one primary: the first tile a reader can connect. */
+  lead: boolean;
   onConnect: () => void;
 }>) {
   const t = useT();
@@ -72,7 +97,11 @@ function VendorTile({
       {unwired ? (
         <UnwiredFoot vendor={name} canSetUp={canSetUp} />
       ) : (
-        <Button className="connection-tile-action" onClick={onConnect}>
+        <Button
+          variant={lead ? "primary" : "ghost"}
+          className="connection-tile-action"
+          onClick={onConnect}
+        >
           {t("connectors.connectVendor", { vendor: name })}
         </Button>
       )}
@@ -81,7 +110,7 @@ function VendorTile({
 }
 
 /** Where a Connect would stand on a vendor nobody can connect yet: who turns
- *  it on, and for that person the way to the page where they do. */
+ *  it on, and for whoever can, the way to the page where they do. */
 function UnwiredFoot({
   vendor,
   canSetUp,
@@ -96,17 +125,15 @@ function UnwiredFoot({
     );
   }
   return (
-    <>
-      <p className="connection-tile-note">
-        {t("connectors.tile.registerApp", { vendor })}
-      </p>
+    <p className="connection-tile-note">
+      {t("connectors.tile.registerApp", { vendor })}{" "}
       <a
-        className="btn btn-ghost connection-tile-action"
+        className="link-button"
         href={routeHash(settingsHref("authentication"))}
       >
         {t("connectors.tile.openPage", { page })}
       </a>
-    </>
+    </p>
   );
 }
 
@@ -124,11 +151,10 @@ export function ConnectTiles({
   // The grant the company-app endpoints enforce, as Sign-in and apps asks it.
   const canSetUp = useCanWrite("capture_settings", "update");
   const imapUnwired = accountUnwired("imap", availability);
+  const lead = VENDORS.find((vendor) => !accountUnwired(vendor, availability));
   return (
     <>
-      <div className="connection-steps">
-        <ConnectStrip />
-      </div>
+      <ConnectStrip />
       <ul className="connection-tiles">
         {VENDORS.map((vendor) => (
           <VendorTile
@@ -136,6 +162,7 @@ export function ConnectTiles({
             vendor={vendor}
             unwired={accountUnwired(vendor, availability)}
             canSetUp={canSetUp}
+            lead={vendor === lead}
             onConnect={() => onPick(vendor)}
           />
         ))}
@@ -143,17 +170,19 @@ export function ConnectTiles({
       {/* Secondary on purpose: another host brings mail alone, so it is the
           way in for the reader the two tiles do not fit. */}
       {!imapUnwired && (
-        <div className="connection-imap-row">
-          <ProviderRow
-            mark={<Mail />}
-            name={t("connectFlow.otherHost")}
-            facts={t("connectors.imapRow.note")}
-            action={
-              <Button onClick={onImap}>
-                {t("connectors.imapRow.connect")}
-              </Button>
-            }
-          />
+        <div className="connection-imap">
+          <ProviderList>
+            <ProviderRow
+              mark={<Mail />}
+              name={t("connectFlow.otherHost")}
+              facts={t("connectors.imapRow.note")}
+              action={
+                <Button onClick={onImap}>
+                  {t("connectors.imapRow.connect")}
+                </Button>
+              }
+            />
+          </ProviderList>
         </div>
       )}
     </>

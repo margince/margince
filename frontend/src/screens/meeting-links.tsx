@@ -4,7 +4,7 @@
 import { Copy } from "lucide-react";
 import { useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { Button, EmptyState, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CellStack } from "../design-system/cellstack";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
@@ -12,8 +12,10 @@ import { DataTable } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatusBadge, type StatusKind } from "../design-system/statusbadge";
 import { Switch } from "../design-system/switch";
-import { type Translator, usePlural, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { navigate } from "../lib/router";
 import {
@@ -36,7 +38,6 @@ import "./meeting-cards.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type CaptureConnection = components["schemas"]["CaptureConnection"];
-type Tone = "success" | "warning" | "default";
 
 // Why Accept bookings cannot be turned on yet. Turning it off is never refused:
 // pausing is the way out of every broken state below.
@@ -52,14 +53,7 @@ const ENABLE_REFUSAL: Partial<Record<CalendarStanding, MessageKey>> = {
  * verbs on it. One row today, because a host has one booking page; the table
  * is the shape several links will grow into.
  */
-export function BookingLinksCard({
-  profile,
-  lead,
-}: Readonly<{
-  profile: Profile;
-  /** The page's one accent panel, unless the setup card above already is. */
-  lead: boolean;
-}>) {
+export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const { standing, connection } = useCalendarStanding(profile);
   const attention = needsAttention(profile, standing);
@@ -68,19 +62,17 @@ export function BookingLinksCard({
   const [replacing, setReplacing] = useState(false);
   const toHours = useRef(false);
   const refusal = profile.enabled ? undefined : ENABLE_REFUSAL[standing];
-  let status: Readonly<{ tone: Tone; key: MessageKey }> = {
-    tone: "default",
+  let status: Readonly<{ kind: StatusKind; key: MessageKey }> = {
+    kind: "neutral",
     key: "scheduling.status.paused",
   };
   if (attention)
-    status = { tone: "warning", key: "scheduling.status.attention" };
-  else if (profile.enabled)
-    status = { tone: "success", key: "scheduling.active" };
+    status = { kind: "attention", key: "scheduling.status.attention" };
+  else if (profile.enabled) status = { kind: "done", key: "scheduling.active" };
   return (
     <Panel
       title={t("scheduling.linksTitle")}
-      tone={lead ? "accent" : undefined}
-      titleAction={<Badge tone={status.tone}>{t(status.key)}</Badge>}
+      titleAction={<StatusBadge kind={status.kind} label={t(status.key)} />}
       footer={
         <span className="t-caption">{t("scheduling.personalLinksFoot")}</span>
       }
@@ -115,6 +107,8 @@ export function BookingLinksCard({
       </PanelBody>
       {profile.slug ? (
         <DataTable
+          bleed
+          fold
           label={t("scheduling.linksTitle")}
           rows={[profile]}
           rowKey={(row) => row.slug ?? ""}
@@ -123,6 +117,7 @@ export function BookingLinksCard({
               key: "link",
               header: t("scheduling.col.link"),
               grow: true,
+              fold: "title",
               render: (row) => <LinkCell profile={row} />,
             },
             {
@@ -145,7 +140,9 @@ export function BookingLinksCard({
             {
               key: "actions",
               header: t("scheduling.col.actions"),
+              headerHidden: true,
               align: "end",
+              fold: "trail",
               render: (row) => (
                 <LinkActions
                   profile={row}
@@ -160,15 +157,21 @@ export function BookingLinksCard({
           ]}
         />
       ) : (
-        <PanelBody className="meeting-link-empty">
-          <p>{t("scheduling.noLinkYet")}</p>
-          <Button
-            variant="primary"
-            pending={write.isPending}
-            onClick={() => write.mutate({ enabled: false })}
+        <PanelBody>
+          <EmptyState
+            title={t("scheduling.noLinkYet")}
+            action={
+              <Button
+                variant="primary"
+                pending={write.isPending}
+                onClick={() => write.mutate({ enabled: false })}
+              >
+                {t("scheduling.createLink")}
+              </Button>
+            }
           >
-            {t("scheduling.createLink")}
-          </Button>
+            {t("scheduling.noLinkYetBody")}
+          </EmptyState>
         </PanelBody>
       )}
       <MeetingLinkDrawer
@@ -218,7 +221,10 @@ function LinkCell({ profile }: Readonly<{ profile: Profile }>) {
 
 function LengthCell({ minutes }: Readonly<{ minutes: number }>) {
   const plural = usePlural();
-  return plural("scheduling.minutes", minutes, { count: String(minutes) });
+  const { locale } = useLocale();
+  return plural("scheduling.minutes", minutes, {
+    count: formatNumber(minutes, locale),
+  });
 }
 
 function RowStatus({
@@ -227,11 +233,13 @@ function RowStatus({
 }: Readonly<{ profile: Profile; attention: boolean }>) {
   const t = useT();
   if (attention)
-    return <Badge tone="warning">{t("scheduling.row.noInvitations")}</Badge>;
+    return (
+      <StatusBadge kind="attention" label={t("scheduling.row.noInvitations")} />
+    );
   return profile.enabled ? (
-    <Badge tone="success">{t("scheduling.row.live")}</Badge>
+    <StatusBadge kind="done" label={t("scheduling.row.live")} />
   ) : (
-    <Badge>{t("scheduling.status.paused")}</Badge>
+    <StatusBadge kind="neutral" label={t("scheduling.status.paused")} />
   );
 }
 

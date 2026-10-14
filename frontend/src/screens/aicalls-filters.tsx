@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Field, SearchField } from "../design-system/atoms";
+import { FilterBar } from "../design-system/filterbar";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
@@ -105,6 +107,8 @@ export function CallFiltersBar({
   search,
   onSearch,
   onChange,
+  actions,
+  caption,
 }: Readonly<{
   tasks: readonly TaskOption[];
   models: readonly string[];
@@ -112,11 +116,19 @@ export function CallFiltersBar({
   search: string;
   onSearch: (search: string) => void;
   onChange: (filters: CallFilters) => void;
+  /** Clear, once a dial is set. */
+  actions?: ReactNode;
+  /** What the dials selected: the count, and any figure the trace is cut to. */
+  caption?: ReactNode;
 }>) {
   const t = useT();
   return (
-    <div className="aicalls-toolbar">
-      <Field label={t("aicalls.filter.search")} labelHidden>
+    <FilterBar
+      label={t("aicalls.filtersLabel")}
+      actions={actions}
+      caption={caption}
+    >
+      <Field label={t("aicalls.filter.search")}>
         {(control) => (
           <SearchField
             {...control}
@@ -126,79 +138,77 @@ export function CallFiltersBar({
           />
         )}
       </Field>
-      <div className="aicalls-dials">
-        <Field label={t("aicalls.col.feature")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={filters.task}
-              onChange={(task) => onChange({ ...filters, task })}
-              // "All features" is a real option, so a reader who narrowed to one
-              // can come back. A task with no name of its own shows its key.
-              options={[
-                { value: "", label: t("aicalls.filter.all") },
-                ...tasks.map((option) => ({
-                  value: option.task,
-                  label: option.display_name ?? option.task,
-                })),
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("aicalls.filter.window")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={filters.window}
-              onChange={(value) =>
-                onChange({
-                  ...filters,
-                  window: isWindow(value) ? value : "any",
-                })
-              }
-              options={[
-                { value: "any", label: t("aicalls.window.any") },
-                { value: "hour", label: t("aicalls.window.hour") },
-                { value: "day", label: t("aicalls.window.day") },
-                { value: "week", label: t("aicalls.window.week") },
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("aicalls.col.outcome")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={filters.outcome}
-              onChange={(value) =>
-                onChange({ ...filters, outcome: isOutcome(value) ? value : "" })
-              }
-              options={[
-                { value: "", label: t("aicalls.filter.anyOutcome") },
-                ...CALL_OUTCOMES.map((value) => ({
-                  value,
-                  label: outcomeLabel(value, t),
-                })),
-              ]}
-            />
-          )}
-        </Field>
-        <Field label={t("aicalls.col.model")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={filters.model}
-              onChange={(model) => onChange({ ...filters, model })}
-              options={[
-                { value: "", label: t("aicalls.filter.anyModel") },
-                ...[...models]
-                  .sort(stable)
-                  .map((value) => ({ value, label: value })),
-              ]}
-            />
-          )}
-        </Field>
-      </div>
-    </div>
+      <Field label={t("aicalls.col.feature")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filters.task}
+            onChange={(task) => onChange({ ...filters, task })}
+            // "All features" is a real option, so a reader who narrowed to one
+            // can come back. A task with no name of its own shows its key.
+            options={[
+              { value: "", label: t("aicalls.filter.all") },
+              ...tasks.map((option) => ({
+                value: option.task,
+                label: option.display_name ?? option.task,
+              })),
+            ]}
+          />
+        )}
+      </Field>
+      <Field label={t("aicalls.filter.window")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filters.window}
+            onChange={(value) =>
+              onChange({
+                ...filters,
+                window: isWindow(value) ? value : "any",
+              })
+            }
+            options={[
+              { value: "any", label: t("aicalls.window.any") },
+              { value: "hour", label: t("aicalls.window.hour") },
+              { value: "day", label: t("aicalls.window.day") },
+              { value: "week", label: t("aicalls.window.week") },
+            ]}
+          />
+        )}
+      </Field>
+      <Field label={t("aicalls.col.outcome")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filters.outcome}
+            onChange={(value) =>
+              onChange({ ...filters, outcome: isOutcome(value) ? value : "" })
+            }
+            options={[
+              { value: "", label: t("aicalls.filter.anyOutcome") },
+              ...CALL_OUTCOMES.map((value) => ({
+                value,
+                label: outcomeLabel(value, t),
+              })),
+            ]}
+          />
+        )}
+      </Field>
+      <Field label={t("aicalls.col.model")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filters.model}
+            onChange={(model) => onChange({ ...filters, model })}
+            options={[
+              { value: "", label: t("aicalls.filter.anyModel") },
+              ...[...models]
+                .sort(stable)
+                .map((value) => ({ value, label: value })),
+            ]}
+          />
+        )}
+      </Field>
+    </FilterBar>
   );
 }

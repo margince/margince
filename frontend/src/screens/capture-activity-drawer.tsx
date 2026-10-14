@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Modal, Skeleton } from "../design-system/atoms";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { EmailReference } from "../design-system/emailreference";
 import { Heading } from "../design-system/heading";
 import { PipelineLadder } from "../design-system/pipelineladder";
@@ -23,7 +24,7 @@ type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 // checking this rung against the row they clicked, and the list behind it is
 // the thing they are comparing against.
 //
-// The ladder itself holds no knowledge of the pipeline — it walks whatever the
+// The ladder itself holds no knowledge of the pipeline: it walks whatever the
 // server sends. So a stage added later appears here with no change to this file
 // and no frontend release, which is the whole reason the surface is shaped this
 // way rather than as a fixed set of fields.
@@ -71,12 +72,25 @@ export function CaptureActivityDrawer({
       onClose={onClose}
       labelledBy="capture-pipeline-title"
       intent="drawer"
+      // Focus the drawer itself, so nothing inside it is drawn as chosen on open.
+      initialFocusTo={() =>
+        document
+          .getElementById("capture-pipeline-title")
+          ?.closest<HTMLElement>("[role=dialog]") ?? null
+      }
     >
-      <Heading size="large" id="capture-pipeline-title" className="modal-title">
-        {t("pipeline.title")}
-      </Heading>
-      <p className="capture-activity__drawer-sub t-sub">{t("pipeline.sub")}</p>
-      {/* WHICH message this ladder is about, named the way every other citation
+      <DrawerHead>
+        <Heading
+          size="large"
+          id="capture-pipeline-title"
+          className="t-h2 modal-title"
+        >
+          {t("pipeline.title")}
+        </Heading>
+        <p className="t-caption">{t("pipeline.sub")}</p>
+      </DrawerHead>
+      <DrawerBody>
+        {/* WHICH message this ladder is about, named the way every other citation
           of a message in the product names one. The reader arrived here from a
           row that showed a sender and a subject in the trace's own layout; this
           is the same fact, drawn once, and it opens.
@@ -85,49 +99,50 @@ export function CaptureActivityDrawer({
           row exists AND this caller may read it, so an entry whose message
           moved out of their scope names itself and offers nothing to press,
           rather than handing back a link that proves the row exists. */}
-      {message && (
-        <p className="capture-activity__drawer-message">
-          <EmailReference
-            subject={message.subject}
-            occurredAt={formatDateTime(
-              message.occurred_at,
-              locale,
-              viewerZone(),
+        {message && (
+          <p className="capture-activity__drawer-message">
+            <EmailReference
+              subject={message.subject}
+              occurredAt={formatDateTime(
+                message.occurred_at,
+                locale,
+                viewerZone(),
+              )}
+              onOpen={openerFor(message, onOpenEmail)}
+            />
+          </p>
+        )}
+        {trace.isPending ? (
+          <Skeleton width="100%" height={240} />
+        ) : trace.data ? (
+          <>
+            {trace.data.connector && (
+              <p className="capture-activity__drawer-transport t-caption">
+                {t("pipeline.transport")}{" "}
+                <strong>{providerLabel(trace.data.connector)}</strong>
+              </p>
             )}
-            onOpen={openerFor(message, onOpenEmail)}
-          />
-        </p>
-      )}
-      {trace.isPending ? (
-        <Skeleton width="100%" height={240} />
-      ) : trace.data ? (
-        <>
-          {trace.data.connector && (
-            <p className="capture-activity__drawer-transport t-sub">
-              {t("pipeline.transport")}{" "}
-              <strong>{providerLabel(trace.data.connector)}</strong>
-            </p>
-          )}
-          <PipelineLadder
-            stages={trace.data.stages}
-            payloadsEnabled={trace.data.payload_capture_enabled}
-          />
-        </>
-      ) : (
-        // `unavailable` rather than `empty`: the ladder always has a rung per
-        // registered stage, so nothing here means the read failed — and drawing
-        // that as "there are none" would state a fact about the pipeline that
-        // we do not have. emptyLabel is required by the component and unused by
-        // this state; it names what there would be none OF, if the state were
-        // ever `empty`.
-        <SurfaceState
-          loadingLabel={t("pipeline.title")}
-          state="unavailable"
-          emptyLabel={t("pipeline.unavailable")}
-        >
-          {null}
-        </SurfaceState>
-      )}
+            <PipelineLadder
+              stages={trace.data.stages}
+              payloadsEnabled={trace.data.payload_capture_enabled}
+            />
+          </>
+        ) : (
+          // `unavailable` rather than `empty`: the ladder always has a rung per
+          // registered stage, so nothing here means the read failed, and drawing
+          // that as "there are none" would state a fact about the pipeline that
+          // we do not have. emptyLabel is required by the component and unused by
+          // this state; it names what there would be none OF, if the state were
+          // ever `empty`.
+          <SurfaceState
+            loadingLabel={t("pipeline.title")}
+            state="unavailable"
+            emptyLabel={t("pipeline.unavailable")}
+          >
+            {null}
+          </SurfaceState>
+        )}
+      </DrawerBody>
     </Modal>
   );
 }

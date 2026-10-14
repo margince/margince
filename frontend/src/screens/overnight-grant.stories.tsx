@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { SettingList } from "../design-system/settingrow";
 import { OvernightGrantCard, OvernightGrantChoice } from "./overnight-grant";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
@@ -131,6 +132,30 @@ export const SettingsNeedsWiderAuthority: Story = {
         <OvernightGrantCard />
       </StoryProviders>
     );
+  },
+};
+
+/** A flip the server refused: said once for the card, under the row. */
+export const SettingsWriteRefused: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me/agent-grants": () => grantsResponse("granted"),
+      "PUT /me/agent-grants/morning_brief": () =>
+        jsonResponse(
+          { title: "Unprocessable", detail: "The change could not be saved." },
+          422,
+        ),
+    });
+    return (
+      <StoryProviders>
+        <OvernightGrantCard />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByTestId("overnight-grant-toggle"));
+    await canvas.findByText("Change was not saved");
   },
 };
 

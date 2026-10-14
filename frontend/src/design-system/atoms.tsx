@@ -372,10 +372,11 @@ function ButtonSentences({
  * says how something is GOING and this says how long it has been here, which is
  * why it is a word of its own rather than a borrowed `accent`.
  *
- * `info` is the QUIET verdict, and it is what a row reaches for while a job is
- * still writing it — queued, syncing, in progress — and for a status that only
- * reports. It is not `accent`: accent is the brand asking for a press, and a
- * status wearing it told a reader the row was the page's next move.
+ * `info` is the quiet blue and never a status: a status is one of the four
+ * kinds of `StatusBadge` (green done, grey neutral including running with a
+ * live dot, amber attention, red failure). It is not `accent`: accent is the
+ * brand asking for a press, and a status wearing it told a reader the row was
+ * the page's next move.
  */
 export const BADGE_TONES = [
   "default",

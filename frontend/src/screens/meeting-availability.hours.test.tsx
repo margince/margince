@@ -121,8 +121,10 @@ describe("AvailabilityCard, hours only", () => {
     vi.stubGlobal("fetch", backendFor(true).fetchMock);
     render(<AvailabilityCard hoursOnly />);
 
-    await screen.findByRole("button", { name: /save/i });
+    await screen.findByLabelText("Saturday");
     expect(screen.queryByText(/Not set yet/i)).toBeNull();
+    // A saved card with nothing changed has nothing to commit.
+    expect(screen.queryByRole("button", { name: /save/i })).toBeNull();
   });
 
   it("writes the days ascending, whatever order they were ticked in", async () => {

@@ -33,13 +33,21 @@ function telegramStory(
   channels: unknown[] | null,
   stub: (routes: RouteMap) => void = stubAsBotManager,
 ) {
+  return routeStory(
+    () =>
+      channels === null
+        ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
+        : jsonResponse({ data: channels }),
+    stub,
+  );
+}
+
+function routeStory(
+  answer: RouteMap[string],
+  stub: (routes: RouteMap) => void = stubAsBotManager,
+) {
   return () => {
-    stub({
-      "GET /channel-connections": () =>
-        channels === null
-          ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
-          : jsonResponse({ data: channels }),
-    });
+    stub({ "GET /channel-connections": answer });
     return (
       <StoryProviders>
         <TelegramConnectorsPanel />
@@ -105,4 +113,14 @@ export const TelegramReadOnly: Story = {
 export const TelegramDark: Story = {
   globals: { theme: "dark" },
   render: telegramStory([salesBot]),
+};
+
+// The read still in flight: the panel's own skeleton under its intro.
+export const TelegramLoading: Story = {
+  render: routeStory(() => new Promise(() => {})),
+};
+
+// The read refused: the shared failure plate with its retry, not a callout.
+export const TelegramLoadFailed: Story = {
+  render: routeStory(() => jsonResponse({ code: "internal" }, 500)),
 };

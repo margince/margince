@@ -41,7 +41,7 @@ func TestTheCallFilterRefusesWhatWouldMatchNothing(t *testing.T) {
 		"a window ending at its start": {From: &from, To: &from},
 	}
 	for name, params := range cases {
-		_, err := callFilterOf(params)
+		_, err := callListOf(params)
 		var detailed *httperr.DetailedError
 		if !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
 			t.Errorf("%s: want a 422, got %v", name, err)
@@ -49,14 +49,17 @@ func TestTheCallFilterRefusesWhatWouldMatchNothing(t *testing.T) {
 	}
 }
 
-func TestTheCallFilterCarriesEveryParameter(t *testing.T) {
-	from, to := time.Now().Add(-time.Hour), time.Now()
+func TestTheCallReadCarriesEveryParameter(t *testing.T) {
+	to := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	from := to.Add(-time.Hour)
 	task, model, q := "enrich", "gpt", "quota"
 	provider, servedProvider, tier := "gemini", "Cerebras", "cheap_cloud"
 	outcome := crmcontracts.AiCallOutcomeFailed
-	filter, err := callFilterOf(crmcontracts.ListAiCallsParams{
+	cursor, limit := "page-two", 5
+	read, err := callListOf(crmcontracts.ListAiCallsParams{
 		Task: &task, Model: &model, Q: &q, Outcome: &outcome, From: &from, To: &to,
 		Provider: &provider, ServedProvider: &servedProvider, Tier: &tier,
+		Cursor: &cursor, Limit: &limit,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,8 +68,11 @@ func TestTheCallFilterCarriesEveryParameter(t *testing.T) {
 		Task: task, Model: model, Query: q, Outcome: "failed", From: &from, To: &to,
 		Provider: provider, ServedProvider: servedProvider, Tier: tier,
 	}
-	if filter != want {
-		t.Errorf("filter %+v, want %+v", filter, want)
+	if read.filter != want {
+		t.Errorf("filter %+v, want %+v", read.filter, want)
+	}
+	if read.cursor == nil || *read.cursor != cursor || read.limit == nil || *read.limit != limit {
+		t.Errorf("page %v/%v, want cursor %q and limit %d", read.cursor, read.limit, cursor, limit)
 	}
 }
 

@@ -621,7 +621,6 @@ function CompanyFactsCard({
   const confirmed = company.data?.fields?.length ?? 0;
   return (
     <Panel
-      tone="accent"
       title={
         <>
           <Sparkles aria-hidden size={16} />
@@ -702,9 +701,7 @@ function CompanyFactsCard({
                   refusal stays in the dialog beside the fields it refused. */}
               {saved && (
                 <PanelBody>
-                  <div className="settings-panel-commit">
-                    <SavedNotice />
-                  </div>
+                  <SavedNotice />
                 </PanelBody>
               )}
             </>
@@ -791,12 +788,10 @@ function CompanySourceCard({
       </SettingList>
       {failure !== null && (
         <PanelBody>
-          <div className="settings-panel-commit">
-            <WriteRefused
-              titleKey="settings.companyRefreshFailed"
-              message={failure}
-            />
-          </div>
+          <WriteRefused
+            titleKey="settings.companyRefreshFailed"
+            message={failure}
+          />
         </PanelBody>
       )}
     </Panel>

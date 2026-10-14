@@ -1,19 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleAlert, CircleCheck, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   ConfirmPhraseBox,
   phraseMatches,
 } from "../design-system/confirmphrase";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { providerBrandName } from "../design-system/provider-mark";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatusBadge } from "../design-system/statusbadge";
 import { Switch } from "../design-system/switch";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
@@ -26,6 +27,7 @@ import {
   useOAuthApp,
   type Vendor,
 } from "./oauth-app";
+import type { Refusal } from "./sign-in-group-roles";
 import { GroupRoleGrants } from "./sign-in-group-roles";
 import "./sign-in-methods.css";
 
@@ -93,20 +95,17 @@ export function SignInMethodsCard() {
   const save = useSetEnabledProviders();
   // The provider whose switch-off waits on the typed confirmation.
   const [turningOff, setTurningOff] = useState<SignInProvider | null>(null);
+  const [grantsRefused, setGrantsRefused] = useState<Refusal>();
+  // The switch-off's refusal is said inside its dialog while that is open.
+  const refused =
+    save.error && turningOff === null
+      ? { title: t("signInMethods.saveFailed"), error: save.error }
+      : grantsRefused;
 
   return (
     <Panel title={t("signInMethods.title")}>
       <PanelBody>
         <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
-        {settings.isSuccess && save.error && turningOff === null && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("signInMethods.saveFailed")}
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        )}
       </PanelBody>
       <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
         {(current) => {
@@ -178,8 +177,10 @@ export function SignInMethodsCard() {
                   // Defaulted for the reason `sign_in_providers` is.
                   initial={current.oidc_group_role_map ?? {}}
                   canManage={canManageGrants}
+                  onRefusal={setGrantsRefused}
                 />
               </PanelBody>
+              <PanelNotices refused={refused} />
               {turningOff !== null && (
                 <TurnOffConfirm
                   provider={turningOff}
@@ -214,16 +215,18 @@ function ScreenLine({
   const t = useT();
   if (onScreen) {
     return (
-      <span className="signinmethods-line signinmethods-line-on">
-        <CircleCheck size={14} aria-hidden="true" />
-        {t("signInMethods.onScreen")}
+      <span className="signinmethods-status">
+        <StatusBadge kind="done" label={t("signInMethods.onScreen")} />
       </span>
     );
   }
   if (!provider.enabled) {
     return (
-      <span className="signinmethods-line">
-        {t("signInMethods.offScreen.turnedOff")}
+      <span className="signinmethods-status">
+        <StatusBadge
+          kind="neutral"
+          label={t("signInMethods.offScreen.turnedOff")}
+        />
       </span>
     );
   }
@@ -231,7 +234,9 @@ function ScreenLine({
     <VendorMissingLine vendor={provider.key} />
   ) : (
     <MissingLine
-      text={t("signInMethods.offScreen.unusable", { vendor: provider.label })}
+      reason={t("signInMethods.offScreenReason.unusable", {
+        vendor: provider.label,
+      })}
     />
   );
 }
@@ -248,25 +253,28 @@ function VendorMissingLine({ vendor }: Readonly<{ vendor: Vendor }>) {
   if (app.source === "none") {
     return (
       <MissingLine
-        text={t("signInMethods.offScreen.noApp", { vendor: name })}
+        reason={t("signInMethods.offScreenReason.noApp", { vendor: name })}
       />
     );
   }
   if (vendor === "microsoft" && !app.tenant) {
-    return <MissingLine text={t("signInMethods.offScreen.noDirectory")} />;
+    return (
+      <MissingLine reason={t("signInMethods.offScreenReason.noDirectory")} />
+    );
   }
   return (
     <MissingLine
-      text={t("signInMethods.offScreen.unusable", { vendor: name })}
+      reason={t("signInMethods.offScreenReason.unusable", { vendor: name })}
     />
   );
 }
 
-function MissingLine({ text }: Readonly<{ text: string }>) {
+function MissingLine({ reason }: Readonly<{ reason: string }>) {
+  const t = useT();
   return (
-    <span className="signinmethods-line signinmethods-line-missing">
-      <CircleAlert size={14} aria-hidden="true" />
-      {text}
+    <span className="signinmethods-status">
+      <StatusBadge kind="attention" label={t("signInMethods.offScreen")} />
+      <span>{reason}</span>
     </span>
   );
 }

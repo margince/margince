@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Checkbox, Disclosure } from "../design-system/atoms";
+import { Button, Checkbox, Disclosure } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
 import { Select } from "../design-system/select";
@@ -16,7 +16,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "../lib/problem";
-import { routeHash } from "../lib/router";
+import { navigate } from "../lib/router";
 import { useCaptureSettings } from "./capture-settings";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
 import { useHeldThreads } from "./held-threads";
@@ -118,13 +118,13 @@ function HeldPointerRow() {
       label={t("connectors.heldPointer.label")}
       description={description}
       control={
-        <a
-          className="btn btn-ghost"
-          href={routeHash(settingsHref("capture-activity"))}
+        <Button
+          variant="link"
+          onClick={() => navigate(settingsHref("capture-activity"))}
         >
           {t("connectors.heldPointer.review")}
           <ArrowRight aria-hidden="true" />
-        </a>
+        </Button>
       }
     />
   );

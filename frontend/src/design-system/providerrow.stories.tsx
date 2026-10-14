@@ -3,13 +3,17 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Calendar, Mail, Server } from "lucide-react";
+import { useState } from "react";
 import { Button, Card, OverflowMenu } from "./atoms";
 import { ProviderMark } from "./provider-mark";
 import { ProviderList, ProviderRow } from "./providerrow";
 import { Chip, Meter } from "./readings";
+import { SettingList, SettingRow } from "./settingrow";
+import { Switch } from "./switch";
 
 // One row per connected account, in each state a connection can be in. The
-// last two stories put every state in one list, in each theme.
+// last stories put every state in one list, in each theme. Syncing is grey
+// with a live dot: blue never says status.
 
 const meta: Meta<typeof ProviderRow> = {
   title: "Components/Layout and structure/Provider row",
@@ -51,7 +55,7 @@ const syncing = (
   <ProviderRow
     mark={<ProviderMark providerKey="google" />}
     name="Google"
-    status={{ tone: "info", label: "Syncing", live: true }}
+    status={{ tone: "default", label: "Syncing", live: true }}
     account="admin@demo.test"
     facts={
       <>
@@ -87,7 +91,8 @@ const needsAttention = (
     name="Microsoft 365"
     status={{ tone: "warning", label: "Needs attention" }}
     account="admin@demo.test"
-    facts="Microsoft stopped accepting the sign-in on 2 October."
+    facts={services}
+    reason="Microsoft stopped accepting the sign-in on 2 October."
     action={<Button variant="primary">Reconnect</Button>}
     menu={menu}
   />
@@ -99,7 +104,8 @@ const failed = (
     name="Google"
     status={{ tone: "danger", label: "Failed" }}
     account="admin@demo.test"
-    facts="The last three syncs could not reach Google."
+    facts={services}
+    reason="The last three syncs could not reach Google."
     action={<Button>Try again</Button>}
     menu={menu}
   />
@@ -142,6 +148,85 @@ export const AsHeading: Story = {
         Mail and Calendar, both read every few minutes.
       </p>
     </ProviderRow>
+  ),
+};
+
+// What a connected account carries under it: the services it reads, then the
+// settings that belong to this account alone, both on the text column.
+function NestedSections() {
+  const [calendar, setCalendar] = useState(true);
+  return (
+    <ProviderRow
+      mark={<ProviderMark providerKey="google" />}
+      name="Google"
+      headingLevel="h3"
+      status={{ tone: "success", label: "Connected" }}
+      account="admin@demo.test"
+      menu={menu}
+    >
+      <ProviderList headingLevel="h4">
+        <ProviderRow
+          mark={<Mail aria-hidden="true" />}
+          name="Mail"
+          status={{ tone: "success", label: "Connected" }}
+          facts="Synced 4 minutes ago"
+        />
+        <ProviderRow
+          mark={<Calendar aria-hidden="true" />}
+          name="Calendar"
+          status={{ tone: "default", label: "Syncing", live: true }}
+          facts="Reading the last 90 days"
+        />
+      </ProviderList>
+      <SettingList>
+        <SettingRow
+          label="Log meetings from this calendar"
+          description="Meetings with a customer land on their timeline."
+          control={
+            <Switch
+              label="Log meetings from this calendar"
+              labelHidden
+              checked={calendar}
+              onChange={setCalendar}
+            />
+          }
+        />
+      </SettingList>
+    </ProviderRow>
+  );
+}
+export const WithNestedSections: Story = { render: () => <NestedSections /> };
+
+// A connect tile: the row alone in a Card, which pads it, so the row drops its
+// own block padding.
+export const InTile: Story = {
+  render: () => (
+    <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+      <Card as="li">
+        <ProviderRow
+          mark={<ProviderMark providerKey="google" />}
+          name="Google"
+          headingLevel="h3"
+          facts="Mail and Calendar"
+          action={<Button variant="primary">Connect</Button>}
+        />
+      </Card>
+    </ul>
+  ),
+};
+
+// Inside a ProviderList every name is an h3 under the card's h2, with no prop
+// on the rows. A list one level deeper says `headingLevel="h4"` once, as
+// WithNestedSections does.
+export const InList: Story = {
+  render: () => (
+    <Card title="Mail and calendar">
+      <ProviderList>
+        {connected}
+        {needsAttention}
+        {notConnected}
+      </ProviderList>
+    </Card>
   ),
 };
 

@@ -269,7 +269,7 @@ it("returns focus to the add verb once the last address is gone", async () => {
   });
 
   await user.click(await removeVerb());
-  expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
+  expect(await screen.findByText(en["ownerIdentities.empty"])).toBeTruthy();
   const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
   await waitFor(() => expect(document.activeElement).toBe(add));
 });

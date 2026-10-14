@@ -44,11 +44,22 @@ func recordLogical(ctx context.Context, t *testing.T, meter *CallMeter, attempts
 	}
 }
 
+// databaseNow is the clock ai_call.occurred_at is stamped with, so a rate or a
+// report window dated from it meets the seeded rows however the lane moved time.
+func (e *rateEnv) databaseNow(ctx context.Context, t *testing.T) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := e.owner.QueryRow(ctx, `SELECT now()`).Scan(&at); err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	return at.UTC()
+}
+
 // seedTrace writes one call per outcome bucket plus one the price sheet cannot
 // price. Only the answered call reports a served model.
 func seedTrace(ctx context.Context, t *testing.T, env *rateEnv, meter *CallMeter) {
 	t.Helper()
-	today := time.Now().UTC().Truncate(24 * time.Hour)
+	today := env.databaseNow(ctx, t).Truncate(24 * time.Hour)
 	env.insertRate(ctx, t, ModelRate{
 		Provider: providerOpenAICompatible, ModelID: tracePricedModel,
 		InputPerMTokMicroUSD: 2_000_000, OutputPerMTokMicroUSD: 8_000_000,
@@ -70,7 +81,7 @@ func seedTrace(ctx context.Context, t *testing.T, env *rateEnv, meter *CallMeter
 	recordLogical(ctx, t, meter, traceCall("", 10, 10, traceUnpricedModel))
 }
 
-func listTrace(t *testing.T, store *CallReadStore, reader context.Context, filter CallListFilter) []CallSummary {
+func listTrace(reader context.Context, t *testing.T, store *CallReadStore, filter CallListFilter) []CallSummary {
 	t.Helper()
 	page, err := store.ListCalls(reader, nil, nil, filter)
 	if err != nil {
@@ -96,9 +107,9 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 		"failed":   0,
 	}
 	for outcome, want := range wantCost {
-		got := listTrace(t, store, reader, CallListFilter{Outcome: outcome, Model: tracePricedModel})
+		got := listTrace(reader, t, store, CallListFilter{Outcome: outcome, Model: tracePricedModel})
 		if outcome == "answered" {
-			got = listTrace(t, store, reader, CallListFilter{Outcome: outcome, Model: traceServedModel})
+			got = listTrace(reader, t, store, CallListFilter{Outcome: outcome, Model: traceServedModel})
 		}
 		if len(got) != 1 {
 			t.Fatalf("outcome %s: %d calls, want exactly the one seeded", outcome, len(got))
@@ -111,20 +122,20 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 		}
 	}
 
-	unpriced := listTrace(t, store, reader, CallListFilter{Model: traceUnpricedModel})
+	unpriced := listTrace(reader, t, store, CallListFilter{Model: traceUnpricedModel})
 	if len(unpriced) != 1 || unpriced[0].CostMicroUSD != nil {
 		t.Fatalf("a call with no rate must carry no cost, never a 0: %+v", unpriced)
 	}
 
 	// The per-call costs are the usage report's own numbers: they sum to it.
-	all := listTrace(t, store, reader, CallListFilter{})
+	all := listTrace(reader, t, store, CallListFilter{})
 	var listed int64
 	for _, call := range all {
 		if call.CostMicroUSD != nil {
 			listed += *call.CostMicroUSD
 		}
 	}
-	now := time.Now().UTC()
+	now := env.databaseNow(ctx, t)
 	report, err := NewRateStore(db).CostReport(ctx, now.Add(-time.Hour), now.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("cost report: %v", err)
@@ -146,7 +157,7 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	seedTrace(ctx, t, env, NewCallMeter(db))
 	store, reader := NewCallReadStore(db), diagnosticsReader(ws)
 
-	all := listTrace(t, store, reader, CallListFilter{})
+	all := listTrace(reader, t, store, CallListFilter{})
 	if len(all) != 5 {
 		t.Fatalf("trace lists %d terminal calls, want the 5 seeded", len(all))
 	}
@@ -170,7 +181,7 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 		"task that ran nothing":        {CallListFilter{Task: string(TaskEnrich)}, 0},
 	}
 	for name, tc := range cases {
-		if got := listTrace(t, store, reader, tc.filter); len(got) != tc.want {
+		if got := listTrace(reader, t, store, tc.filter); len(got) != tc.want {
 			t.Errorf("%s: %d calls, want %d", name, len(got), tc.want)
 		}
 	}
@@ -180,10 +191,10 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	if !oldest.Before(newest) {
 		t.Fatalf("seeded calls share one instant (%s); the window cannot be told apart", oldest)
 	}
-	if got := listTrace(t, store, reader, CallListFilter{From: &newest}); len(got) == 0 || got[0].ID != all[0].ID {
+	if got := listTrace(reader, t, store, CallListFilter{From: &newest}); len(got) == 0 || got[0].ID != all[0].ID {
 		t.Errorf("from the newest instant lists %d calls, want it first", len(got))
 	}
-	if got := listTrace(t, store, reader, CallListFilter{To: &newest}); len(got) != len(all)-countAt(all, newest) {
+	if got := listTrace(reader, t, store, CallListFilter{To: &newest}); len(got) != len(all)-countAt(all, newest) {
 		t.Errorf("to is exclusive: %d calls before the newest, want %d", len(got), len(all)-countAt(all, newest))
 	}
 }

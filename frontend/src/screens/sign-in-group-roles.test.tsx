@@ -29,14 +29,21 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function mount(initial: Record<string, string>, canManage = true) {
+function mount(
+  initial: Record<string, string>,
+  canManage = true,
+  refuseWrites = false,
+) {
   const calls: unknown[] = [];
+  const onRefusal = vi.fn();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
       if (request.method === "PATCH") {
         calls.push(JSON.parse(await request.text()));
-        return new Response(null, { status: 204 });
+        return refuseWrites
+          ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+          : new Response(null, { status: 204 });
       }
       return jsonResponse({ roles: SEEDED_ASSIGNABLE_ROLES });
     }),
@@ -47,10 +54,15 @@ function mount(initial: Record<string, string>, canManage = true) {
       <LocaleProvider initial="en">{children}</LocaleProvider>
     </QueryClientProvider>
   );
-  render(<GroupRoleGrants initial={initial} canManage={canManage} />, {
-    wrapper: Wrap,
-  });
-  return { calls };
+  render(
+    <GroupRoleGrants
+      initial={initial}
+      canManage={canManage}
+      onRefusal={onRefusal}
+    />,
+    { wrapper: Wrap },
+  );
+  return { calls, onRefusal };
 }
 
 // The editor sits behind a closed disclosure; a test opens it as a reader does.
@@ -202,6 +214,19 @@ describe("the group roles editor", () => {
       ]),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  // The card says a refused write once, so the editor hands it up.
+  it("hands a refused save to the card that holds it", async () => {
+    const user = userEvent.setup();
+    const { onRefusal } = mount({ sales: "rep" }, true, true);
+    await open(user);
+    await user.click(screen.getByRole("button", { name: "Save group roles" }));
+    await waitFor(() =>
+      expect(onRefusal).toHaveBeenLastCalledWith(
+        expect.objectContaining({ title: "Change not saved" }),
+      ),
+    );
   });
 
   it("carries the grant-only warning where the map is edited", async () => {

@@ -7,6 +7,7 @@ import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
@@ -36,6 +37,7 @@ export function LeadHandlingCard() {
   const canEdit = useCanWrite("custom_field", "update");
   const query = useLeadSettings();
   const update = useUpdateLeadSettings();
+  const toast = useToast();
   return (
     <Panel title={t("leadHandling.title")}>
       <PanelBody>
@@ -61,7 +63,10 @@ export function LeadHandlingCard() {
                   reason={canEdit ? undefined : t("leadSources.readOnly")}
                   testId="lead-first-response-switch"
                   onChange={(next) =>
-                    update.mutate({ first_response_enabled: next })
+                    update.mutate(
+                      { first_response_enabled: next },
+                      { onSuccess: () => toast.show(t("settings.saved")) },
+                    )
                   }
                 />
               )}

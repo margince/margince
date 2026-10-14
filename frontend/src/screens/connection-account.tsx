@@ -40,12 +40,14 @@ import {
   accountHealth,
   healthBadge,
   missingSendGrant,
+  needsReconnect,
+  serviceReason,
 } from "./connector-status";
 
 // One account on Connections: Google, Microsoft 365, an IMAP mailbox or the
-// test mailbox. Its row says how the account is doing as a whole; the services
-// under it (new mail, past email, the calendar) each say how they are doing and
-// carry their own verb, and the overflow holds the verbs about the account.
+// test mailbox. Its row says how the account is doing as a whole, and when a
+// service broke, why in one line and the Reconnect that mends it. The services
+// under it each carry one badge; the overflow holds the other account verbs.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
@@ -84,6 +86,24 @@ function servicesOf(account: ConnectionAccount): Service[] {
   return services;
 }
 
+/** The services the account still holds, broken or not. */
+function liveServices(account: ConnectionAccount): CaptureConnection[] {
+  return [account.mail, account.calendar].filter(
+    (service): service is CaptureConnection =>
+      service !== null && service.status !== "disconnected",
+  );
+}
+
+/** Why the account needs someone, in its first broken service's words, and
+ *  whether a new consent mends it. The test mailbox has no consent to ask for. */
+function accountAlert(account: ConnectionAccount) {
+  const held = liveServices(account);
+  return {
+    reasonKey: held.map(serviceReason).find((key) => key !== null) ?? null,
+    offerReconnect: account.key !== "test_mailbox" && held.some(needsReconnect),
+  };
+}
+
 /** The account's connected services, split into the mailbox the settings
  *  block is about and the services without mail beside it. */
 function settingsSplit(account: ConnectionAccount) {
@@ -97,25 +117,22 @@ function settingsSplit(account: ConnectionAccount) {
   };
 }
 
-export function ConnectionAccountRow({
-  account,
-  heldWindow,
-  onImapReconnect,
-}: Readonly<{
-  account: ConnectionAccount;
-  /** A past-email window asked for at connect and held for the reader. */
-  heldWindow: ImportWindow | null;
-  onImapReconnect: () => void;
-}>) {
-  const t = useT();
-  const { mail, calendar } = account;
-  const vendor = vendorOfAccount(account);
-  const name = t(ACCOUNT_NAME[account.key]);
-  const label = mail?.account_label ?? calendar?.account_label ?? undefined;
+/** Whether the account's row offers Reconnect as its visible verb. */
+export function offersReconnect(account: ConnectionAccount): boolean {
+  return accountAlert(account).offerReconnect;
+}
+
+/** The account's connect, reconnect and service-change verbs, and the dialogs
+ *  they open. */
+function useAccountActions(
+  account: ConnectionAccount,
+  onImapReconnect: () => void,
+) {
   const connect = useConnectAccount();
   const [bringsInOpen, setBringsInOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [stop, setStop] = useState<PendingStop | null>(null);
+  const vendor = vendorOfAccount(account);
   const present = servicesOf(account);
 
   const reconnect = (provider: Provider) => {
@@ -130,7 +147,7 @@ export function ConnectionAccountRow({
   const reconnectAccount = () => {
     const input = vendor ? connectInputFor(vendor, present, "none") : null;
     if (input) connect.mutate(input);
-    else if (mail) reconnect(mail.provider);
+    else if (account.mail) reconnect(account.mail.provider);
   };
   const changeServices = (change: BringsInChange) => {
     const added =
@@ -144,31 +161,73 @@ export function ConnectionAccountRow({
       connect.mutate(added);
     }
   };
+  return {
+    connect,
+    reconnect,
+    reconnectAccount,
+    changeServices,
+    bringsIn: { open: bringsInOpen, set: setBringsInOpen },
+    importing: { open: importOpen, set: setImportOpen },
+    stop: { pending: stop, set: setStop },
+    stopAll: () => setStop({ services: present, afterwards: null }),
+  };
+}
+
+type AccountActions = ReturnType<typeof useAccountActions>;
+
+export function ConnectionAccountRow({
+  account,
+  heldWindow,
+  onImapReconnect,
+  reconnectPrimary = true,
+}: Readonly<{
+  account: ConnectionAccount;
+  /** A past-email window asked for at connect and held for the reader. */
+  heldWindow: ImportWindow | null;
+  onImapReconnect: () => void;
+  /** False for every broken account after the first in one panel, so the
+   *  panel keeps one primary verb. */
+  reconnectPrimary?: boolean;
+}>) {
+  const t = useT();
+  const { mail, calendar } = account;
+  const vendor = vendorOfAccount(account);
+  const name = t(ACCOUNT_NAME[account.key]);
+  const label = mail?.account_label ?? calendar?.account_label ?? undefined;
+  const actions = useAccountActions(account, onImapReconnect);
+  const { connect } = actions;
   const health = healthBadge(accountHealth(account));
-  const connectPendingFor = connect.isPending
-    ? connect.variables?.provider
-    : undefined;
+  const { reasonKey, offerReconnect } = accountAlert(account);
 
   return (
     <ProviderRow
       mark={vendor ? <ProviderMark providerKey={vendor} /> : <Mail />}
       name={name}
       headingLevel="h3"
-      status={{
-        tone: health.tone,
-        label: t(health.label),
-        live: health.label === "connectors.health.syncing",
-      }}
+      status={{ tone: health.tone, label: t(health.label), live: health.live }}
       account={label}
       facts={<AccountFacts account={account} />}
+      reason={reasonKey ? t(reasonKey) : undefined}
+      action={
+        offerReconnect ? (
+          <Button
+            variant={reconnectPrimary ? "primary" : undefined}
+            pending={connect.isPending}
+            onClick={actions.reconnectAccount}
+          >
+            {t("connectors.reconnect")}
+          </Button>
+        ) : undefined
+      }
       menu={
         <AccountMenu
           account={account}
           name={name}
-          onBringsIn={() => setBringsInOpen(true)}
-          onImport={() => setImportOpen(true)}
-          onReconnect={reconnectAccount}
-          onDisconnect={() => setStop({ services: present, afterwards: null })}
+          reconnectInMenu={!offerReconnect}
+          onBringsIn={() => actions.bringsIn.set(true)}
+          onImport={() => actions.importing.set(true)}
+          onReconnect={actions.reconnectAccount}
+          onDisconnect={actions.stopAll}
         />
       }
     >
@@ -177,49 +236,81 @@ export function ConnectionAccountRow({
         vendor={vendor}
         label={t("connectors.svc.list", { account: name })}
         heldWindow={heldWindow}
-        connectPendingFor={connectPendingFor}
-        onReconnect={reconnect}
-        onImport={() => setImportOpen(true)}
+        connectPendingFor={
+          connect.isPending ? connect.variables?.provider : undefined
+        }
+        onConnect={actions.reconnect}
+        onImport={() => actions.importing.set(true)}
       />
-      {!bringsInOpen && <ConnectRefusal connect={connect} name={name} />}
+      {!actions.bringsIn.open && (
+        <ConnectRefusal connect={connect} name={name} />
+      )}
       <AccountSettings
         {...settingsSplit(account)}
         accountName={label ?? name}
       />
+      <AccountDialogs
+        account={account}
+        title={label ?? name}
+        vendorName={name}
+        actions={actions}
+      />
+    </ProviderRow>
+  );
+}
+
+/** The dialogs an account's verbs open: import older mail, change what it
+ *  brings in, and the one disconnect confirm. */
+function AccountDialogs({
+  account,
+  title,
+  vendorName,
+  actions,
+}: Readonly<{
+  account: ConnectionAccount;
+  title: string;
+  vendorName: string;
+  actions: AccountActions;
+}>) {
+  const { connect, bringsIn, importing, stop } = actions;
+  const vendor = vendorOfAccount(account);
+  const mail = account.mail;
+  return (
+    <>
       {vendor && mail && (
         <ImportPastEmailDialog
           provider={mail.provider}
           initial={mail.backfill}
-          open={importOpen}
-          onClose={() => setImportOpen(false)}
+          open={importing.open}
+          onClose={() => importing.set(false)}
         />
       )}
       {vendor && (
         <BringsInDialog
-          open={bringsInOpen}
+          open={bringsIn.open}
           onClose={() => {
             connect.reset();
-            setBringsInOpen(false);
+            bringsIn.set(false);
           }}
-          accountName={label ?? name}
-          vendorName={name}
-          present={present}
+          accountName={title}
+          vendorName={vendorName}
+          present={servicesOf(account)}
           pending={connect.isPending}
           error={connect.error}
-          onSave={changeServices}
+          onSave={actions.changeServices}
         />
       )}
       <StopConfirm
         account={account}
-        title={label ?? name}
-        stop={stop}
-        onClose={() => setStop(null)}
+        title={title}
+        stop={stop.pending}
+        onClose={() => stop.set(null)}
         onStopped={(afterwards) => {
-          setStop(null);
+          stop.set(null);
           if (afterwards) connect.mutate(afterwards);
         }}
       />
-    </ProviderRow>
+    </>
   );
 }
 
@@ -227,6 +318,7 @@ export function ConnectionAccountRow({
 function AccountMenu({
   account,
   name,
+  reconnectInMenu,
   onBringsIn,
   onImport,
   onReconnect,
@@ -234,6 +326,8 @@ function AccountMenu({
 }: Readonly<{
   account: ConnectionAccount;
   name: string;
+  /** False while Reconnect is the row's visible verb, so it is not offered twice. */
+  reconnectInMenu: boolean;
   onBringsIn: () => void;
   onImport: () => void;
   onReconnect: () => void;
@@ -250,7 +344,7 @@ function AccountMenu({
       {vendor && mail && !isLiveRun(mail.backfill?.state) && (
         <Button onClick={onImport}>{t("connectors.menu.importOlder")}</Button>
       )}
-      {account.key !== "test_mailbox" && (
+      {account.key !== "test_mailbox" && reconnectInMenu && (
         <Button onClick={onReconnect}>{t("connectors.reconnect")}</Button>
       )}
       <Button variant="danger" onClick={onDisconnect}>

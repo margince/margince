@@ -2,11 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Sparkles, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
+import { ActionRow } from "../design-system/actionrow";
 import {
+  Badge,
   Button,
+  Card,
+  Checkbox,
   Field,
   Modal,
   Textarea,
@@ -22,7 +26,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { IconAction } from "../design-system/iconaction";
 import { Select } from "../design-system/select";
-import { Switch } from "../design-system/switch";
+import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
 import {
@@ -96,12 +100,7 @@ export function ReviewTemplateEditor({
   const dirty =
     JSON.stringify(questions) !== JSON.stringify(template.questions);
   return (
-    <Modal
-      open
-      onClose={onClose}
-      labelledBy={titleId}
-      intent="drawer"
-    >
+    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {template.label}
@@ -155,40 +154,77 @@ export function ReviewTemplateEditor({
         </Button>
         <ErrorLine error={save.error} />
       </DrawerBody>
-      <DrawerFoot className="rt-foot">
+      <EditorFoot
+        questions={questions}
+        dirty={dirty}
+        invalid={invalid}
+        pending={save.isPending}
+        onCancel={onClose}
+        onSave={() =>
+          save.mutate({
+            id: template.id,
+            version: template.version,
+            questions: questions.map(trimmedChoices),
+          })
+        }
+      />
+    </Modal>
+  );
+}
+
+// A list question sends its non-blank choices; a free-text one sends none.
+function trimmedChoices(question: ReviewQuestion): ReviewQuestion {
+  return {
+    ...question,
+    options:
+      question.type === "multiselect"
+        ? question.options?.map((option) => option.trim()).filter(Boolean)
+        : undefined,
+  };
+}
+
+// The drawer's verbs, laid out like PanelSave: the count and the unsaved
+// caption lead, Cancel beside them, the one primary Save at the end.
+function EditorFoot({
+  questions,
+  dirty,
+  invalid,
+  pending,
+  onCancel,
+  onSave,
+}: Readonly<{
+  questions: readonly ReviewQuestion[];
+  dirty: boolean;
+  invalid: boolean;
+  pending: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}>) {
+  const t = useT();
+  return (
+    <DrawerFoot>
+      <ActionRow
+        className="rt-foot"
+        primary={
+          <Button
+            variant="primary"
+            pending={pending}
+            disabled={invalid}
+            onClick={onSave}
+          >
+            {t("reviewTemplates.saveQuestions")}
+          </Button>
+        }
+      >
         <ReviewTemplateSummary questions={questions} />
         {dirty && (
           <span className="t-caption">{t("reviewTemplates.unsaved")}</span>
         )}
-        <span className="rt-foot-actions">
-          <Button variant="ghost" disabled={save.isPending} onClick={onClose}>
-            {t("deals.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            pending={save.isPending}
-            disabled={invalid}
-            onClick={() =>
-              save.mutate({
-                id: template.id,
-                version: template.version,
-                questions: questions.map((q) => ({
-                  ...q,
-                  options:
-                    q.type === "multiselect"
-                      ? q.options
-                          ?.map((option) => option.trim())
-                          .filter(Boolean)
-                      : undefined,
-                })),
-              })
-            }
-          >
-            {t("reviewTemplates.saveQuestions")}
-          </Button>
-        </span>
-      </DrawerFoot>
-    </Modal>
+        <Button variant="ghost" disabled={pending} onClick={onCancel}>
+          {t("deals.cancel")}
+        </Button>
+      </ActionRow>
+    </DrawerFoot>
   );
 }
 
@@ -212,9 +248,9 @@ function QuestionCard({
   const t = useT();
   const n = { n: String(index + 1) };
   return (
-    <li className="rt-q">
+    <Card as="li" inset className="rt-q">
       <span className="t-label rt-q-num" aria-hidden="true">
-        {index + 1}
+        {ordinalNumber(index + 1)}
       </span>
       <div className="form-stack">
         <Field label={t("reviewTemplates.question")} required>
@@ -228,9 +264,10 @@ function QuestionCard({
           )}
         </Field>
         {index === 0 && (
-          <span className="t-caption rt-prefill">
-            <Sparkles aria-hidden="true" />
-            {t("reviewTemplates.prefilled")}
+          <span>
+            <Badge tone="ai" wrap>
+              {t("reviewTemplates.prefilled")}
+            </Badge>
           </span>
         )}
         <div className="rt-q-opts">
@@ -256,11 +293,12 @@ function QuestionCard({
               />
             )}
           </Field>
-          <Switch
+          {/* Staged with the drawer's Save, so a box rather than a switch. */}
+          <Checkbox
             label={t("reviewTemplates.requiredBadge")}
             checked={question.required}
             disabled={disabled}
-            onChange={(required) => onChange({ required })}
+            onChange={(event) => onChange({ required: event.target.checked })}
           />
         </div>
         {question.type === "multiselect" && (
@@ -307,6 +345,6 @@ function QuestionCard({
           onClick={onRemove}
         />
       </div>
-    </li>
+    </Card>
   );
 }

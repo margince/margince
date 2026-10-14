@@ -6,81 +6,37 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useUnsavedGuard } from "../app/unsaved";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Field,
-  TextInput,
-} from "../design-system/atoms";
+import { EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
-import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
+import { PanelSave } from "../design-system/panelsave";
 import { QueryGate } from "../design-system/querystates";
-import { Select } from "../design-system/select";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatusBadge } from "../design-system/statusbadge";
 import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useToast } from "../design-system/toast";
-import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, usePlural, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "../lib/problem";
-import { amountLabel } from "./meeting-phrases";
+import { unwrap } from "../lib/problem";
+import {
+  BookingRules,
+  changedRules,
+  inRange,
+  RULES,
+  type RuleField,
+  type Rules,
+} from "./meeting-availability-rules";
 import { putSchedulingChanges } from "./scheduling-profile-query";
 import { dayLabelKey, narrowing, useWorkingHours, WEEK } from "./working-hours";
 import "./meeting-cards.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type WorkingHours = components["schemas"]["WorkingHours"];
-type RuleField = "notice_minutes" | "buffer_minutes" | "horizon_days";
-type Rules = Readonly<Record<RuleField, number>>;
 
 /** The card's id, so the link drawer's Change hours can bring it into view. */
 export const AVAILABILITY_ID = "meeting-availability";
-
-type RuleSpec = Readonly<{
-  field: RuleField;
-  label: MessageKey;
-  help: MessageKey;
-  presets: readonly number[];
-  min: number;
-  max: number;
-  unit: "minutes" | "days";
-}>;
-
-// Bounds are the contract's (SchedulingProfile in crm.yaml); the presets are
-// the answers most hosts give, with Other for the rest.
-const RULES: readonly RuleSpec[] = [
-  {
-    field: "notice_minutes",
-    label: "scheduling.noticeRow",
-    help: "scheduling.noticeRowHelp",
-    presets: [0, 60, 120, 240, 480, 1440, 2880, 10080],
-    min: 0,
-    max: 10080,
-    unit: "minutes",
-  },
-  {
-    field: "buffer_minutes",
-    label: "scheduling.bufferRow",
-    help: "scheduling.bufferRowHelp",
-    presets: [0, 5, 10, 15, 30, 60],
-    min: 0,
-    max: 120,
-    unit: "minutes",
-  },
-  {
-    field: "horizon_days",
-    label: "scheduling.horizonRow",
-    help: "scheduling.horizonRowHelp",
-    presets: [7, 14, 30, 60, 90],
-    min: 1,
-    max: 90,
-    unit: "days",
-  },
-];
 
 /**
  * Working days and hours, and with the booking grant the rules a guest books
@@ -137,23 +93,14 @@ function sortedHours(hours: WorkingHours): WorkingHours {
   return { ...hours, days: [...hours.days].sort((a, b) => a - b) };
 }
 
-type Draft = Readonly<{
-  hours: WorkingHours | null;
-  rules: Partial<Rules>;
-}>;
+type Draft = Readonly<{ hours: WorkingHours | null; rules: Partial<Rules> }>;
 
-function AvailabilityForm({
-  chosen,
-  hours,
-  rules,
-  attention,
-}: Readonly<{
-  chosen: boolean;
-  hours: WorkingHours;
-  rules: Rules | null;
-  attention: boolean;
-}>) {
-  const t = useT();
+// The card's drafts against what was last saved, and the one write for both.
+function useAvailabilityDraft(
+  chosen: boolean,
+  hours: WorkingHours,
+  rules: Rules | null,
+) {
   const [savedHours, setSavedHours] = useState(sortedHours(hours));
   const [draftHours, setDraftHours] = useState(sortedHours(hours));
   const [savedRules, setSavedRules] = useState(rules);
@@ -186,11 +133,59 @@ function AvailabilityForm({
   const dirty = hoursDirty || Object.keys(ruleChanges).length > 0;
   useUnsavedGuard(dirty);
   const submit = () => {
+    // PanelSave has no refused state yet; the Other field already says why.
+    if (invalid) return;
     // Never-saved hours are saved as offered: accepting the defaults is an answer.
     const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;
     setNarrowed(nextHours !== null && narrowing(savedHours, nextHours));
     save.mutate({ hours: nextHours, rules: ruleChanges });
   };
+  const discard = () => {
+    save.reset();
+    setDraftHours(savedHours);
+    setDraftRules(savedRules);
+    setOther({});
+  };
+  const pickPreset = (field: RuleField, value: number) => {
+    const { [field]: _picked, ...kept } = other;
+    setOther(kept);
+    if (next) setDraftRules({ ...next, [field]: value });
+  };
+  // Which write failed: hours go first, so a refusal with hours in it is theirs.
+  const refusedKey: MessageKey =
+    hoursDirty || !chosen
+      ? "workingHours.saveFailed"
+      : "scheduling.rulesSaveFailed";
+  return {
+    draftHours,
+    setDraftHours,
+    next,
+    other,
+    setOther,
+    pickPreset,
+    refusedKey,
+    dirty,
+    narrowed,
+    save,
+    submit,
+    discard,
+  };
+}
+
+function AvailabilityForm({
+  chosen,
+  hours,
+  rules,
+  attention,
+}: Readonly<{
+  chosen: boolean;
+  hours: WorkingHours;
+  rules: Rules | null;
+  attention: boolean;
+}>) {
+  const t = useT();
+  const draft = useAvailabilityDraft(chosen, hours, rules);
+  const { next, other, save } = draft;
   let foot: MessageKey | null = null;
   if (rules)
     foot = attention ? "scheduling.rulesFootAttention" : "scheduling.rulesFoot";
@@ -198,171 +193,58 @@ function AvailabilityForm({
     <Panel
       title={t("scheduling.whenTitle")}
       titleAction={
-        chosen ? undefined : <Badge>{t("workingHours.unsetTitle")}</Badge>
+        chosen ? undefined : (
+          <StatusBadge kind="neutral" label={t("workingHours.unsetTitle")} />
+        )
       }
       actions={
-        <div className="meeting-card-save">
-          {foot && <span className="t-caption">{t(foot)}</span>}
-          <Button
-            variant="primary"
-            disabled={(chosen && !dirty) || invalid}
-            pending={save.isPending}
-            onClick={submit}
-          >
-            {t(rules ? "scheduling.saveAvailability" : "workingHours.save")}
-          </Button>
-        </div>
+        // Never-chosen hours are an answer waiting to be saved as offered.
+        <PanelSave
+          dirty={draft.dirty || !chosen}
+          pending={save.isPending}
+          saveLabel={t(
+            rules ? "scheduling.saveAvailability" : "workingHours.save",
+          )}
+          onSave={draft.submit}
+          onDiscard={draft.discard}
+        />
       }
+      footer={foot && <span className="t-caption">{t(foot)}</span>}
     >
       <PanelBody className="form-stack">
         <HoursFields
           chosen={chosen}
-          value={draftHours}
-          onChange={setDraftHours}
+          value={draft.draftHours}
+          onChange={draft.setDraftHours}
         />
       </PanelBody>
       {next && (
-        <PanelBody>
-          <Heading as="h3" size="xsmall" className="meeting-subhead">
-            {t("scheduling.bookingRules")}
-          </Heading>
-          <SettingList>
-            {RULES.map((spec) => (
-              <RuleRow
-                key={spec.field}
-                spec={spec}
-                value={next[spec.field]}
-                other={other[spec.field]}
-                onPreset={(value) => {
-                  setOther(
-                    Object.fromEntries(
-                      Object.entries(other).filter(
-                        ([field]) => field !== spec.field,
-                      ),
-                    ),
-                  );
-                  setDraftRules({ ...next, [spec.field]: value });
-                }}
-                onOther={(text) => setOther({ ...other, [spec.field]: text })}
-              />
-            ))}
-          </SettingList>
-        </PanelBody>
+        <BookingRules
+          rules={next}
+          other={other}
+          onPreset={draft.pickPreset}
+          onOther={(field, text) => draft.setOther({ ...other, [field]: text })}
+        />
       )}
-      <PanelBody>
-        {/* After the save, never before: it says what the change will do. */}
-        {narrowed && save.isSuccess && (
+      {/* After the save, never before: it says what the change will do. */}
+      {draft.narrowed && save.isSuccess && (
+        <PanelBody>
           <Callout kind="outcome" title={t("workingHours.narrowedTitle")}>
             {t("workingHours.narrowed")}
           </Callout>
-        )}
-        {save.isError && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t(
-              hoursDirty || !chosen
-                ? "workingHours.saveFailed"
-                : "scheduling.rulesSaveFailed",
-            )}
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function inRange(spec: RuleSpec, value: number): boolean {
-  return Number.isInteger(value) && value >= spec.min && value <= spec.max;
-}
-
-function changedRules(saved: Rules | null, next: Rules | null): Partial<Rules> {
-  if (!saved || !next) return {};
-  return Object.fromEntries(
-    RULES.map((spec) => spec.field)
-      .filter((field) => saved[field] !== next[field])
-      .map((field) => [field, next[field]]),
-  );
-}
-
-function RuleRow({
-  spec,
-  value,
-  other,
-  onPreset,
-  onOther,
-}: Readonly<{
-  spec: RuleSpec;
-  value: number;
-  other: string | undefined;
-  onPreset: (value: number) => void;
-  onOther: (text: string) => void;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  // A saved value off the presets stays a choice of its own, so opening the
-  // list never silently offers to change it.
-  const amounts = [...new Set([...spec.presets, value])]
-    .filter((amount) => Number.isInteger(amount))
-    .sort((a, b) => a - b);
-  const valid = inRange(spec, value);
-  return (
-    <SettingRow
-      label={t(spec.label)}
-      description={t(spec.help)}
-      control={(control) => (
-        <div className="meeting-rule">
-          <Select
-            {...control}
-            value={other === undefined ? String(value) : "other"}
-            options={[
-              ...amounts.map((amount) => ({
-                value: String(amount),
-                label: amountLabel(t, plural, locale, amount, spec.unit),
-              })),
-              { value: "other", label: t("scheduling.ruleOther") },
-            ]}
-            onChange={(picked) =>
-              picked === "other"
-                ? onOther(String(value))
-                : onPreset(Number(picked))
-            }
-          />
-          {other !== undefined && (
-            <Field
-              label={t(
-                spec.unit === "days"
-                  ? "scheduling.ruleDays"
-                  : "scheduling.ruleMinutes",
-              )}
-              error={
-                valid
-                  ? undefined
-                  : t("scheduling.ruleInvalid", {
-                      min: formatNumber(spec.min, locale),
-                      max: formatNumber(spec.max, locale),
-                    })
-              }
-            >
-              {(field) => (
-                <TextInput
-                  {...field}
-                  type="number"
-                  inputMode="numeric"
-                  min={spec.min}
-                  max={spec.max}
-                  value={other}
-                  onChange={(event) => onOther(event.target.value)}
-                />
-              )}
-            </Field>
-          )}
-        </div>
+        </PanelBody>
       )}
-    />
+      <PanelNotices
+        refused={
+          save.isError
+            ? {
+                title: t(draft.refusedKey),
+                error: save.error,
+              }
+            : undefined
+        }
+      />
+    </Panel>
   );
 }
 

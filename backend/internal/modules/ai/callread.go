@@ -164,12 +164,14 @@ type callSummaryScan struct {
 
 func (target *callSummaryScan) dest() []any {
 	summary := target.summary
-	return []any{&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
+	return []any{
+		&summary.ID, &summary.OccurredAt, &summary.Task, &summary.Kind, &summary.Tier,
 		&summary.Provider, &summary.ModelID, &summary.ServedModel, &summary.Attempt,
 		&summary.TokensIn, &summary.TokensOut, &summary.ReasoningTokens,
 		&summary.CachedTokens, &summary.LatencyMS, &summary.CacheHit, &summary.Degraded,
 		&summary.ErrorSentinel, &summary.HasPayload, &summary.DecisionAttempted,
-		&summary.Outcome, &target.cost, &target.unpriced}
+		&summary.Outcome, &target.cost, &target.unpriced,
+	}
 }
 
 func (target *callSummaryScan) finish() {

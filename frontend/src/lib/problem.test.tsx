@@ -352,16 +352,16 @@ describe("problemMessageOf", () => {
       problemMessageOf(
         new Error("Failed to fetch"),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
-    ).toBe(t("connectors.loadFailed"));
+    ).toBe(t("settings.saveFailed"));
     // A server problem still speaks for itself. The fallback is for the case
     // where there is nothing to say, not a way to overwrite the server.
     expect(
       problemMessageOf(
         new ProblemError({ detail: "budget exhausted" }),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
     ).toBe("budget exhausted");
   });
@@ -402,7 +402,7 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
       problemMessageOf(
         refused("unreachable", "DELETE"),
         t,
-        t("connectors.loadFailed"),
+        t("settings.saveFailed"),
       ),
     ).toBe(t("connectivity.uncertain.unreachable"));
   });
@@ -412,12 +412,8 @@ describe("problemMessageOf, for a request that never reached Margince", () => {
       t("common.errorNoCause"),
     );
     expect(
-      problemMessageOf(
-        refused("offline", "GET"),
-        t,
-        t("connectors.loadFailed"),
-      ),
-    ).toBe(t("connectors.loadFailed"));
+      problemMessageOf(refused("offline", "GET"), t, t("settings.saveFailed")),
+    ).toBe(t("settings.saveFailed"));
   });
 });
 

@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Field } from "../design-system/atoms";
+import { Field, PendingBody } from "../design-system/atoms";
 import { DateInput, type ISODate } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
+import { FactList } from "../design-system/factlist";
 import { formatDate } from "../format/format";
 import { ruleText } from "../format/jurisdiction";
 import { endOfDayInZone, startOfDayInZone } from "../format/timezone";
@@ -131,23 +132,24 @@ export function DsrDeadlineFields({
           />
         )}
       </Field>
-      <div className="field">
-        <span className="t-label">{t("privacy.deadline.computed")}</span>
-        {computed ? (
-          <>
-            <strong>{formatDate(computed.due_at, locale, zone)}</strong>
-            <p className="t-caption">
-              {t("privacy.deadline.computedHint", {
+      {computed ? (
+        <FactList
+          facts={[
+            {
+              key: "computed",
+              term: t("privacy.deadline.computed"),
+              value: formatDate(computed.due_at, locale, zone),
+              note: t("privacy.deadline.computedHint", {
                 rule: ruleText(computed.rule, t),
-              })}
-            </p>
-          </>
-        ) : query.isPending ? (
-          <p className="t-caption">{t("privacy.deadline.loading")}</p>
-        ) : (
-          <ErrorLine error={query.error} />
-        )}
-      </div>
+              }),
+            },
+          ]}
+        />
+      ) : query.isPending ? (
+        <PendingBody label={t("privacy.deadline.loading")} lines={1} visible />
+      ) : (
+        <ErrorLine error={query.error} />
+      )}
       <Field
         label={t("privacy.earlierDue")}
         hint={tooLate ? undefined : t("privacy.earlierDueHint")}

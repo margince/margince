@@ -1,58 +1,10 @@
 /* Connected inboxes and the workspace's messaging bot (Settings, Connections).
-   The rows themselves belong to the design system (ProviderRow, SettingRow);
-   what is left here is what is specific to a CONNECTION: the services an
-   account brings in, and its settings. The empty card's tiles live in
+   The rows themselves belong to the design system (ProviderRow, ServiceRow,
+   SettingRow); what is left here is what is specific to a CONNECTION: an
+   import's progress, and the account's settings. The empty card's tiles live in
    connection-empty.css. */
 
-/* What an account brings in: one line per service under the account's row,
-   icon, sentence and verbs on the same three columns for every service. */
-.connection-services {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-control);
-}
-.connection-service {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: var(--space-3);
-  padding: var(--space-3);
-}
-.connection-service + .connection-service {
-  border-top: 1px solid var(--borderSubtle);
-}
-/* As tall as the name's line, so the glyph centres on it without an offset. */
-.connection-service-icon {
-  width: 18px;
-  height: 1.25rem;
-  color: var(--textSecondary);
-}
-.connection-service-main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.connection-service-name {
-  font: var(--fontBody);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
-}
-.connection-service-desc {
-  font: var(--fontBodySmall);
-  color: var(--textSecondary);
-}
-.connection-service-side {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
+/* What a service reports under its caption: an import's progress and counts. */
 .connection-service-progress {
   display: flex;
   flex-direction: column;
@@ -70,17 +22,6 @@
   color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
 }
-.connection-service-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  width: fit-content;
-  font: var(--fontBodySmall);
-}
-.connection-service-link svg {
-  width: 14px;
-  height: 14px;
-}
 .connection-service-held {
   margin-top: var(--space-2);
 }
@@ -92,16 +33,4 @@
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-4);
-}
-
-/* Narrow: the verbs drop under the sentence rather than squeezing it. */
-@media (max-width: 640px) {
-  .connection-service {
-    grid-template-columns: 18px minmax(0, 1fr);
-  }
-  .connection-service-side {
-    grid-column: 2;
-    justify-content: flex-start;
-    margin-top: var(--space-2);
-  }
 }

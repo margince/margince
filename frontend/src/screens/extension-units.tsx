@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Blocks, ChevronRight } from "lucide-react";
 import { KeyedName } from "../design-system/keyedname";
 import { Panel, PanelBody, PanelIntro, PanelRow } from "../design-system/panel";
+import { RowOpen } from "../design-system/rowopen";
 import { useLocale, useT } from "../i18n";
 import {
   EXTENSION_SCREEN,
@@ -12,6 +12,7 @@ import {
   unitsForSecretScope,
   unitTitle,
 } from "../lib/extensions";
+import { navigate } from "../lib/router";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -36,8 +37,8 @@ import "./extension-units.css";
 // no gate of their own — the rail rows they replace had none either, and a
 // unit's screen refuses independently on the object it declares.
 //
-// A unit is one row whose only verb is to go there, so the whole row is the
-// link. Its own screen configures it.
+// A unit is one row whose only verb is to go there, so a press on the row opens
+// it and the row's chevron is the keyboard path. Its own screen configures it.
 
 /**
  * The units whose credential lives in `scope`, or nothing at all.
@@ -50,15 +51,25 @@ import "./extension-units.css";
 export function ExtensionUnitsCard({
   scope,
 }: Readonly<{ scope: UnitSecretScope }>) {
-  const t = useT();
   const units = unitsForSecretScope(scope);
   if (units.length === 0) {
     return null;
   }
+  return <ExtensionUnitsPanel scope={scope} units={units} />;
+}
+
+/** The card itself, for the units the registry offered; stories pass their own. */
+export function ExtensionUnitsPanel({
+  scope,
+  units,
+}: Readonly<{
+  scope: UnitSecretScope;
+  units: readonly ExtensionDescriptor[];
+}>) {
+  const t = useT();
   return (
     // Panel, not Card: every other card on the two pages this lands on is one,
-    // and two card primitives on one settings tab is how the page grows two
-    // header bands that disagree about their own height.
+    // and two card primitives on one tab grow header bands that disagree.
     <Panel title={t(`extUnits.${scope}.title`)}>
       <PanelBody>
         <PanelIntro>{t(`extUnits.${scope}.sub`)}</PanelIntro>
@@ -76,18 +87,13 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const { locale } = useLocale();
   const { name } = unit;
   const title = unitTitle(unit, locale);
+  const open = () => navigate({ screen: EXTENSION_SCREEN, id: name });
   return (
-    <PanelRow interactive record className="extunits-row">
-      <a
-        className="extunits-row-press"
-        data-testid={`ext-unit-${name}`}
-        href={`#/${EXTENSION_SCREEN}/${name}`}
-        aria-label={t("extUnits.openNamed", { name: title })}
-      >
-        <Blocks className="extunits-mark" aria-hidden />
+    <PanelRow record onOpen={open} className="extunits-row">
+      <span className="extunits-name" data-testid={`ext-unit-${name}`}>
         <KeyedName name={title} code={name} />
-        <ChevronRight className="extunits-go" aria-hidden />
-      </a>
+      </span>
+      <RowOpen label={t("extUnits.openNamed", { name: title })} onOpen={open} />
     </PanelRow>
   );
 }

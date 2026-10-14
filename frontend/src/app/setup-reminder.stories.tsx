@@ -11,8 +11,8 @@ import {
 } from "../screens/story-utils";
 import { TopBar } from "./topbar";
 
-// The top bar's "Finish setup" chip and the checklist behind it, served the
-// reads a reader who connected Gmail and skipped the calendar would see.
+// The top bar's "Finish setup" trigger and the checklist behind it. The default
+// world: Gmail connected, the calendar skipped, so booking waits on it.
 
 const gmail = {
   id: "00000000-0000-4000-8000-000000000011",
@@ -22,21 +22,30 @@ const gmail = {
   account_label: "ada@example.test",
 };
 
-function reminder() {
+type World = Readonly<{
+  rows?: readonly object[];
+  reason?: string;
+  finished?: boolean;
+}>;
+
+function reminder(world: World = {}) {
   stubWithSession(
     {
       "GET /connectors": () =>
         jsonResponse({
-          data: [gmail],
+          data: world.rows ?? [gmail],
           providers: ["gmail", "graph", "imap"].map((provider) => ({
             provider,
-            reason: "ready",
+            reason: world.reason ?? "ready",
           })),
         }),
-      "GET /voice-profiles": () => jsonResponse({ data: [] }),
+      "GET /voice-profiles": () =>
+        jsonResponse({
+          data: world.finished ? [{ profile_version: 2 }] : [],
+        }),
       "GET /scheduling/profile": () =>
         jsonResponse({
-          enabled: false,
+          enabled: world.finished ?? false,
           provider: "",
           calendar_id: "",
           duration_minutes: 30,
@@ -66,7 +75,7 @@ function reminder() {
 
 const meta = {
   title: "Shell/Setup reminder",
-  render: reminder,
+  render: () => reminder(),
 } satisfies Meta;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -84,4 +93,47 @@ export const OpenDark: Story = { play: openPanel, globals: { theme: "dark" } };
 export const Phone: Story = {
   play: openPanel,
   globals: { viewport: { value: "phone" } },
+};
+
+// No company app yet: mail waits on an administrator, so no step offers a verb.
+export const Blocked: Story = {
+  render: () => reminder({ rows: [], reason: "app_missing" }),
+  play: openPanel,
+};
+
+// An expired calendar: the current step's one primary verb is Reconnect.
+export const NeedsReconnect: Story = {
+  render: () =>
+    reminder({
+      rows: [
+        gmail,
+        {
+          ...gmail,
+          id: "00000000-0000-4000-8000-000000000012",
+          provider: "gcal",
+          status: "reauth_required",
+        },
+      ],
+    }),
+  play: openPanel,
+};
+
+// The default world opened: booking shows the grey Waiting badge.
+export const Waiting: Story = { play: openPanel };
+
+// Every step done: the reminder stands down and the bar carries no trigger.
+export const AllDone: Story = {
+  render: () =>
+    reminder({
+      rows: [
+        gmail,
+        {
+          ...gmail,
+          id: "00000000-0000-4000-8000-000000000012",
+          provider: "gcal",
+          scopes: ["https://www.googleapis.com/auth/calendar.events"],
+        },
+      ],
+      finished: true,
+    }),
 };

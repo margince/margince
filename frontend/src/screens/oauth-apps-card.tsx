@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, Info, LogIn, Mail } from "lucide-react";
+import { CalendarDays, LogIn, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button, OverflowMenu } from "../design-system/atoms";
+import { Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Panel, PanelBody } from "../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
-import {
-  ProviderList,
-  ProviderRow,
-  type ProviderRowTone,
-} from "../design-system/providerrow";
+import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
+import {
+  StatusBadge,
+  type StatusKind,
+  statusTone,
+} from "../design-system/statusbadge";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { useCompanyPhrase } from "./company-phrase";
@@ -43,15 +44,14 @@ const rowCopy = {
   },
 } as const;
 
+// An app the installation supplies works as well as a stored one; the label,
+// not the colour, says where it came from.
 const SOURCE_STATUS: Readonly<
-  Record<
-    AppSource,
-    { tone: ProviderRowTone; label: `oauthApp.status.${AppSource}` }
-  >
+  Record<AppSource, { kind: StatusKind; label: `oauthApp.status.${AppSource}` }>
 > = {
-  none: { tone: "default", label: "oauthApp.status.none" },
-  stored: { tone: "success", label: "oauthApp.status.stored" },
-  environment: { tone: "info", label: "oauthApp.status.environment" },
+  none: { kind: "neutral", label: "oauthApp.status.none" },
+  stored: { kind: "done", label: "oauthApp.status.stored" },
+  environment: { kind: "done", label: "oauthApp.status.environment" },
 };
 
 /**
@@ -78,9 +78,12 @@ export function OAuthAppsCard() {
       titleAction={
         both &&
         (neither ? (
-          <Badge tone="warning">{t("oauthApps.statusNeedsSetup")}</Badge>
+          <StatusBadge
+            kind="attention"
+            label={t("oauthApps.statusNeedsSetup")}
+          />
         ) : (
-          <Badge tone="success">{t("oauthApps.statusReady")}</Badge>
+          <StatusBadge kind="done" label={t("oauthApps.statusReady")} />
         ))
       }
     >
@@ -95,7 +98,7 @@ export function OAuthAppsCard() {
           </Callout>
         )}
         {both && !neither && (
-          <p className="t-body">{t("oauthApps.readyIntro", { company })}</p>
+          <PanelIntro>{t("oauthApps.readyIntro", { company })}</PanelIntro>
         )}
         {!canManage && (
           <p className="t-caption" id={reasonId}>
@@ -112,10 +115,7 @@ export function OAuthAppsCard() {
             refusedBy={canManage ? undefined : reasonId}
           />
         </ProviderList>
-        <p className="t-caption oauthapp-foot">
-          <Info size={14} aria-hidden="true" />
-          {t("oauthApps.imapNote")}
-        </p>
+        <p className="t-caption">{t("oauthApps.imapNote")}</p>
       </PanelBody>
     </Panel>
   );
@@ -174,7 +174,7 @@ function AppRow({
             name={name}
             headingLevel="h3"
             status={{
-              tone: SOURCE_STATUS[status.source].tone,
+              tone: statusTone(SOURCE_STATUS[status.source].kind),
               label: t(SOURCE_STATUS[status.source].label),
             }}
             account={
@@ -183,11 +183,11 @@ function AppRow({
                 : t(CLIENT_LINE[status.source], { clientId: status.client_id })
             }
             facts={<AppFacts provider={provider} tenant={status.tenant} />}
+            // Google and Microsoft are equal choices: neither verb is primary.
             action={
               status.source === "stored" ? undefined : (
                 <Button
                   id={actionId}
-                  variant={status.source === "none" ? "primary" : undefined}
                   reasonId={refusedBy}
                   onClick={() => setOpened("setup")}
                 >

@@ -147,4 +147,22 @@ describe("outcome review questions", () => {
     await screen.findByRole("list", { name: "Win review" });
     expect(screen.queryByRole("button", { name: "Edit questions" })).toBeNull();
   });
+
+  it("draws a won outcome green and a lost one grey, never red", async () => {
+    served(EDITOR);
+    render(<ReviewTemplatesCard />);
+
+    const lossHead = await screen.findByRole("heading", {
+      name: "Loss review",
+    });
+    const lost = within(
+      lossHead.closest<HTMLElement>(".panel-grouphead") ?? document.body,
+    ).getByText("Lost");
+    expect(lost.closest(".badge")?.className).not.toMatch(/badge-danger/);
+    const winHead = screen.getByRole("heading", { name: "Win review" });
+    const won = within(
+      winHead.closest<HTMLElement>(".panel-grouphead") ?? document.body,
+    ).getByText("Won");
+    expect(won.closest(".badge")?.className).toMatch(/badge-success/);
+  });
 });

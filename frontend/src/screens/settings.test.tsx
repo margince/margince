@@ -42,13 +42,22 @@ import { settingsHref } from "./settingsrouting";
 
 type MeResponse = components["schemas"]["MeResponse"];
 
-/** The Save beside one name field: the Account card carries one per row. */
-function saveBeside(field: HTMLElement): HTMLElement {
-  const control = field.closest(".settingrow-control");
-  if (!(control instanceof HTMLElement)) {
-    throw new Error("the field is not inside a setting row");
+// The Profile card's foot Save, which exists only while a name differs from
+// what was saved.
+function profileSave(): HTMLElement | null {
+  const card = screen
+    .getByRole("heading", { name: "Profile" })
+    .closest("section");
+  if (!(card instanceof HTMLElement)) {
+    throw new Error("the Profile card is not a section");
   }
-  return within(control).getByRole("button", { name: "Save" });
+  return within(card).queryByRole("button", { name: "Save" });
+}
+
+function pressProfileSave(): HTMLElement {
+  const save = profileSave();
+  if (save === null) throw new Error("the Profile card offers no Save");
+  return save;
 }
 
 beforeEach(() => {
@@ -293,7 +302,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "  Ada Lovelace  ");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
 
     // Trimmed on the way out, so a trailing space is not a change the server
     // has to refuse. Asserted through the WIRE, because a row that renders the
@@ -305,7 +314,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     });
   });
 
-  it("shows a refused name as the field's own error, still described by its help", async () => {
+  it("shows a refused name once for the card, keeping the draft", async () => {
     const user = userEvent.setup();
     const backend = settingsBackend();
     vi.stubGlobal(
@@ -336,37 +345,50 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "Ada Lovelace");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
 
-    const refusal = await screen.findByRole("alert");
-    expect(refusal).toHaveTextContent("Display name is too long.");
-    expect(refusal).toHaveClass("field-error");
-    expect(field).toHaveAttribute("aria-invalid", "true");
-    const describedBy = field.getAttribute("aria-describedby")?.split(" ");
-    expect(describedBy).toContain(refusal.id);
-    expect(describedBy).toHaveLength(2);
+    expect(await screen.findByText("Change not saved")).toBeTruthy();
+    expect(screen.getByText("Display name is too long.")).toBeTruthy();
     expect(field).toHaveValue("Ada Lovelace");
+    expect(profileSave()).not.toBeNull();
   });
 
-  // The control for the case above: Save is withheld until the name actually
-  // moves. Without it, a row that always enabled Save would pass the case above
-  // and quietly write on every render.
-  it("offers no save until the name changes", async () => {
+  // Save and Discard exist only while a name differs from what was saved, and
+  // Discard puts the saved name back.
+  it("offers Save and Discard only while a name changed", async () => {
     const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Display name" });
-    const save = saveBeside(field);
-    expect(save).toHaveProperty("disabled", true);
+    if (!(field instanceof HTMLInputElement)) throw new Error("not an input");
+    const stored = field.value;
+    expect(profileSave()).toBeNull();
 
-    // A name of only whitespace is not a name, so it does not enable it either.
+    await user.type(field, "x");
+    expect(profileSave()).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    expect(field).toHaveValue(stored);
+    expect(profileSave()).toBeNull();
+  });
+
+  // A name of only whitespace is not a name: the field says so, and Save sends
+  // nothing.
+  it("refuses an empty display name on the field, sending nothing", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "   ");
-    expect(saveBeside(field)).toHaveProperty("disabled", true);
-
-    await user.type(field, "Ada");
-    expect(saveBeside(field)).toHaveProperty("disabled", false);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    await user.click(pressProfileSave());
+    expect(sent).toHaveLength(0);
   });
 
   // The greeting name: what a colleague's drafted greeting opens with. Empty
@@ -403,9 +425,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Greeting name" });
-    expect(saveBeside(field)).toHaveProperty("disabled", true);
+    expect(profileSave()).toBeNull();
     await user.type(field, "  Ada  ");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ greeting_name: "Ada" });
   });
@@ -418,7 +440,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = await screen.findByDisplayValue("Sofia");
 
     await user.clear(field);
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ greeting_name: null });
   });
@@ -688,7 +710,9 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Consent purposes" }),
     ).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Recorded actions" }),
+    ).toBeNull();
     cleanup();
 
     // ...and the trail, on the address it moved to: its filters — in a
@@ -705,10 +729,10 @@ describe("SettingsScreen restructured pages", () => {
     );
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
+      await screen.findByRole("heading", { name: "Recorded actions" }),
     ).toBeTruthy();
     expect(screen.getByLabelText("Actor").closest("details")).not.toBeNull();
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Update")).toBeTruthy();
   });
 
   // The WRITE opens it, editor included. The page absorbed a route that nothing
@@ -753,12 +777,12 @@ describe("SettingsScreen restructured pages", () => {
     vi.stubGlobal("fetch", backend);
     renderSettings("audit");
     expect(
-      await screen.findByRole("heading", { name: "Audit log" }),
+      await screen.findByRole("heading", { name: "Recorded actions" }),
     ).toBeTruthy();
     // Reached the wire rather than merely rendering a shell: the card's fetch is
     // `enabled` on the same grant, so an entry it served is what says the read
     // was honoured end to end.
-    expect(await screen.findByText("update")).toBeTruthy();
+    expect(await screen.findByText("Update")).toBeTruthy();
   });
 
   // The other half, and the reason opening the page is not the whole answer: a

@@ -1,26 +1,32 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { type BADGE_TONES, Badge } from "./atoms";
 import { Heading } from "./heading";
 import "./providerrow.css";
 
 /**
- * The states a connection can be in, as Badge tones. `ai`, `accent` and
- * `discovery` are left out because none of them is a verdict on a connection.
- * The caller supplies the words: Not connected is `default`, Syncing `info`,
- * Connected `success`, Needs attention `warning`, Failed `danger`.
+ * The states a connection can be in, as Badge tones. `ai`, `accent`, `info`
+ * and `discovery` are left out because blue and violet never mean a status.
+ * The caller supplies the words: Not connected is `default`, Syncing `default`
+ * with `live`, Connected `success`, Needs attention `warning`, Failed `danger`.
  */
 export const PROVIDER_ROW_TONES = [
   "default",
-  "info",
   "success",
   "warning",
   "danger",
 ] as const satisfies readonly (typeof BADGE_TONES)[number][];
 
 export type ProviderRowTone = (typeof PROVIDER_ROW_TONES)[number];
+
+type ProviderHeadingLevel = "h3" | "h4";
+
+// Unset outside a ProviderList, so a lone row stays out of the outline.
+const ListHeadingLevel = createContext<ProviderHeadingLevel | undefined>(
+  undefined,
+);
 
 /**
  * One connected account: the vendor's mark, its name with a status, the account
@@ -40,6 +46,7 @@ export function ProviderRow({
   status,
   account,
   facts,
+  reason,
   action,
   menu,
   children,
@@ -47,13 +54,18 @@ export function ProviderRow({
   /** A ProviderMark, or a lucide glyph for a source with no brand mark. */
   mark: ReactNode;
   name: string;
-  /** Makes the name a heading, for a row that opens a section of its own. */
-  headingLevel?: "h3" | "h4";
+  /** Makes the name a heading; inside a ProviderList it is one already. */
+  headingLevel?: ProviderHeadingLevel;
   status?: Readonly<{ tone: ProviderRowTone; label: string; live?: boolean }>;
   /** The address or account the connection reads, truncated on one line. */
   account?: ReactNode;
   /** One wrapping line of chips and quiet facts such as the last sync. */
   facts?: ReactNode;
+  /**
+   * Why the row needs someone, in one caption line under the facts. The only
+   * place an unreachable account explains itself; its verb is `action`.
+   */
+  reason?: ReactNode;
   /** The one visible verb: Connect, Reconnect, Set up. */
   action?: ReactNode;
   /** An OverflowMenu holding every other verb, in words. */
@@ -61,6 +73,7 @@ export function ProviderRow({
   /** Whatever hangs under the row, aligned to its text column. */
   children?: ReactNode;
 }>) {
+  const listLevel = useContext(ListHeadingLevel);
   const hasActions = action !== undefined || menu !== undefined;
   return (
     <div className="provider-row">
@@ -71,7 +84,7 @@ export function ProviderRow({
         <div className="provider-row-head">
           {/* One look for the name whether or not it is a heading, so a list
               that mixes the two still reads as one list. */}
-          <Heading size="xsmall" as={headingLevel ?? "span"}>
+          <Heading size="xsmall" as={headingLevel ?? listLevel ?? "span"}>
             {name}
           </Heading>
           {status !== undefined && (
@@ -85,6 +98,9 @@ export function ProviderRow({
         )}
         {facts !== undefined && (
           <div className="provider-row-facts">{facts}</div>
+        )}
+        {reason !== undefined && (
+          <p className="provider-row-reason t-caption">{reason}</p>
         )}
       </div>
       {hasActions && (
@@ -100,7 +116,18 @@ export function ProviderRow({
   );
 }
 
-/** Rows of ProviderRow, with the hairline between them owned here, as SettingList does. */
-export function ProviderList({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="provider-list">{children}</div>;
+/**
+ * Rows of ProviderRow, with the hairline between them owned here, as SettingList
+ * does. Each name is an `h3`, the level under a panel's title, unless the list
+ * sits one level deeper and says `h4`; a row's own `headingLevel` wins.
+ */
+export function ProviderList({
+  headingLevel = "h3",
+  children,
+}: Readonly<{ headingLevel?: ProviderHeadingLevel; children: ReactNode }>) {
+  return (
+    <ListHeadingLevel.Provider value={headingLevel}>
+      <div className="provider-list">{children}</div>
+    </ListHeadingLevel.Provider>
+  );
 }

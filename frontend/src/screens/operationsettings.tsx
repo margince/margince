@@ -2,15 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList } from "../design-system/settingrow";
 import { formatInterval } from "../format/interval";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
-import { problemMessageOf } from "../lib/problem";
 import { useInstallationSettings } from "../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "./installation-settings";
 
@@ -159,17 +158,13 @@ function OperationsCard({
           </SettingList>
         )}
       </QueryGate>
-      {update.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("operations.updateFailed")}
-          >
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
+      <PanelNotices
+        refused={
+          update.isError
+            ? { title: t("operations.updateFailed"), error: update.error }
+            : undefined
+        }
+      />
     </Panel>
   );
 }

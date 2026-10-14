@@ -38,7 +38,7 @@ func TestTheConnectImportIsWiredWhicheverCaptureOptionRunsFirst(t *testing.T) {
 			for _, opt := range tc.order {
 				opt(&s, nil)
 			}
-			if s.connectorHandlers.importer.estimate == nil || s.connectorHandlers.importer.begin == nil {
+			if s.importer.estimate == nil || s.importer.begin == nil {
 				t.Fatal("the connect callback holds no backfill engine, so an import asked for at connect never starts")
 			}
 		})
@@ -54,7 +54,7 @@ func TestTheConnectImportStaysEmptyWithoutTheBackfillSurface(t *testing.T) {
 		ClientID: "id", ClientSecret: "sec", StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://app",
 	}, CaptureConfig{})(&s, nil)
 
-	if s.connectorHandlers.importer.estimate != nil || s.connectorHandlers.importer.begin != nil {
+	if s.importer.estimate != nil || s.importer.begin != nil {
 		t.Fatal("a role with no backfill queue was handed an import engine it cannot schedule")
 	}
 }

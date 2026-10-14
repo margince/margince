@@ -85,16 +85,20 @@ async function openDetail(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("AuditLogCard", () => {
-  it("puts the filters inside the log's own card, in a disclosure closed on arrival", async () => {
+  it("puts the filters in a bar above the log's card, in a disclosure closed on arrival", async () => {
     vi.stubGlobal("fetch", auditLogBackend());
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
 
-    const card = screen.getByLabelText("Actor").closest("section");
+    const bar = screen.getByRole("group", { name: "Filters" });
+    expect(bar).toContainElement(screen.getByLabelText("Actor"));
+    const card = screen.getByText("Update").closest("section");
+    // Named for what it holds, never the page header's "Audit log" again.
     expect(card).toContainElement(
-      screen.getByRole("heading", { level: 2, name: "Audit log" }),
+      screen.getByRole("heading", { level: 2, name: "Recorded actions" }),
     );
-    expect(card).toContainElement(screen.getByText("update"));
+    expect(screen.queryByRole("heading", { name: "Audit log" })).toBeNull();
+    expect(card).not.toContainElement(bar);
     const disclosure = screen.getByLabelText("Actor").closest("details");
     expect(disclosure).not.toHaveAttribute("open");
     expect(disclosure?.querySelector("summary")).toHaveTextContent("Filters");
@@ -105,7 +109,7 @@ describe("AuditLogCard", () => {
     const backend = auditLogBackend();
     vi.stubGlobal("fetch", backend);
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
     expect(auditLogUrls(backend)[0]).toContain("limit=20");
 
     await user.type(screen.getByLabelText("Actor"), "agent:sdr");
@@ -195,8 +199,8 @@ describe("AuditLogCard", () => {
     const [, row] = within(table).getAllByRole("row");
     const cells = within(row).getAllByRole("cell");
     expect(cells[1]).toHaveTextContent("Anna Weber");
-    expect(cells[2]).toHaveTextContent("create");
-    expect(cells[3]).toHaveTextContent("onboarding wizard state");
+    expect(cells[2]).toHaveTextContent("Create");
+    expect(cells[3]).toHaveTextContent("Onboarding wizard state");
   });
 
   it.each([
@@ -208,10 +212,9 @@ describe("AuditLogCard", () => {
       auditLogBackend({ entries: [{ ...created, action }, auditEntry] }),
     );
     render(<AuditLogCard />);
-    expect((await screen.findByText(action)).closest(".badge")).toHaveClass(
-      tone,
-    );
-    expect(screen.getByText("update").closest(".badge")).toHaveAttribute(
+    const word = action.charAt(0).toUpperCase() + action.slice(1);
+    expect((await screen.findByText(word)).closest(".badge")).toHaveClass(tone);
+    expect(screen.getByText("Update").closest(".badge")).toHaveAttribute(
       "class",
       "badge",
     );
@@ -260,7 +263,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend());
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
     const toggle = screen.getByRole("button", { name: EXPAND_UPDATE });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("qualified")).toBeNull();
@@ -281,7 +284,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [rotated] }));
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
 
     await openDetail(user);
 
@@ -340,7 +343,7 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
     await openDetail(user);
 
     expect(screen.getByText("Before and after")).toBeInTheDocument();
@@ -367,7 +370,7 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("delete");
+    await screen.findByText("Delete");
     await openDetail(user);
     expect(screen.getByText("Removed value")).toBeInTheDocument();
     expect(screen.getByText("Old list")).toBeInTheDocument();
@@ -396,7 +399,7 @@ describe("AuditLogCard", () => {
     );
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
     await openDetail(user);
     const term = screen.getByText("Allowed by");
     expect(term.nextElementSibling).toHaveTextContent(words);
@@ -414,7 +417,7 @@ describe("AuditLogCard", () => {
         auditLogBackend({ entries: [{ ...auditEntry, ...fields }] }),
       );
       render(<AuditLogCard />);
-      await screen.findByText("update");
+      await screen.findByText("Update");
       const name = await screen.findByText(expected);
       expect(name.closest(".auditlog-who")).toHaveTextContent("via an agent");
       expect(name.closest("td")).not.toHaveTextContent(VIEWER_ID);
@@ -444,12 +447,12 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", backend);
     const user = userEvent.setup();
     render(<AuditLogCard />);
-    await screen.findByText("update");
+    await screen.findByText("Update");
 
     await user.click(screen.getByRole("button", { name: "Load more" }));
 
     expect(await screen.findByText("Anna Weber")).toBeInTheDocument();
-    expect(screen.getByText("update")).toBeInTheDocument();
+    expect(screen.getByText("Update")).toBeInTheDocument();
     expect(auditLogUrls(backend).at(-1)).toContain("cursor=c-2");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });

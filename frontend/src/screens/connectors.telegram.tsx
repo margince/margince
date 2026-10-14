@@ -7,11 +7,10 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
-import { SettingList, SettingRow } from "../design-system/settingrow";
+import { QueryStates } from "../design-system/querystates";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import {
@@ -109,32 +108,6 @@ function TelegramConnectionRow({
   );
 }
 
-// Everything the Telegram panel shows INSTEAD of its rows. Split out so the
-// panel function keeps one return and its hooks stay unconditional.
-function TelegramNotice({
-  query,
-}: Readonly<{ query: ReturnType<typeof useChannelConnections> }>) {
-  const t = useT();
-  if (query.isPending) {
-    return <p>{t("connectors.loading")}</p>;
-  }
-  if (query.isError) {
-    return (
-      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
-        {problemMessageOf(query.error, t)}
-      </Callout>
-    );
-  }
-  if (query.data.notConfigured) {
-    return (
-      <EmptyState>
-        <p>{t("connectors.telegramNotConfigured")}</p>
-      </EmptyState>
-    );
-  }
-  return null;
-}
-
 // The workspace's messaging bot, as its own panel.
 //
 // A bot connects for the WHOLE workspace rather than per-user (Task 17,
@@ -219,34 +192,41 @@ export function TelegramConnectorsPanel() {
         {readOnly && (
           <PanelIntro>{t("connectors.telegramReadOnly")}</PanelIntro>
         )}
-        <TelegramNotice query={query} />
-        {live && connections.length === 0 && (
-          // What the card is FOR, in the roster's own place: which bot is
-          // carrying messages. The verb that changes it is in the header.
-          <SettingList>
-            <SettingRow
-              label={t("connectors.telegramRosterLabel")}
-              layout="stack"
-              control={<EmptyState>{t("connectors.telegramEmpty")}</EmptyState>}
-            />
-          </SettingList>
-        )}
-        {live && connections.length > 0 && (
-          <ProviderList>
-            {connections.map((connection) => (
-              <TelegramConnectionRow
-                key={connection.id}
-                connection={connection}
-                onEdit={
-                  canEdit ? () => setEditingConnection(connection) : undefined
-                }
-                onDisconnect={
-                  canDisconnect ? () => setDisconnecting(connection) : undefined
-                }
-              />
-            ))}
-          </ProviderList>
-        )}
+        <QueryStates query={query} pendingLabel={t("connectors.telegramTitle")}>
+          {query.data?.notConfigured && (
+            <EmptyState
+              plate
+              title={t("connectors.telegramNotConfiguredTitle")}
+            >
+              {t("connectors.telegramNotConfigured")}
+            </EmptyState>
+          )}
+          {/* The connect verb is in the header, so the plate only says what a
+              bot here would do. */}
+          {live && connections.length === 0 && (
+            <EmptyState plate title={t("connectors.telegramEmptyTitle")}>
+              {t("connectors.telegramEmptyNote")}
+            </EmptyState>
+          )}
+          {connections.length > 0 && (
+            <ProviderList>
+              {connections.map((connection) => (
+                <TelegramConnectionRow
+                  key={connection.id}
+                  connection={connection}
+                  onEdit={
+                    canEdit ? () => setEditingConnection(connection) : undefined
+                  }
+                  onDisconnect={
+                    canDisconnect
+                      ? () => setDisconnecting(connection)
+                      : undefined
+                  }
+                />
+              ))}
+            </ProviderList>
+          )}
+        </QueryStates>
       </PanelBody>
       <TelegramConnectForm
         // Keyed to the row that opened it, so the form never carries one

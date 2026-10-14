@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import { Button, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { CountLine } from "../design-system/listsurface";
 import {
   Panel,
   PanelBody,
@@ -14,6 +14,7 @@ import {
   QueryGate,
   QueryStates,
 } from "../design-system/querystates";
+import { SurfaceState } from "../design-system/surfacestate";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
@@ -58,8 +59,7 @@ export type CallFilter = Partial<
   Record<CallFilterParam | typeof CALL_TASK_PARAM, string>
 >;
 
-// The figure dials the toolbar has no control for, so they are named in a
-// callout with their own way back.
+// The figure dials the filter bar has no control for, so its caption names them.
 const FIGURE_PARAMS = ["provider", "served_provider", "tier"] as const;
 type FigureParam = (typeof FIGURE_PARAMS)[number];
 type FigureFilter = Partial<Record<FigureParam, string>>;
@@ -197,9 +197,11 @@ function CallTrace({
     return (
       <PanelBody>
         {narrowed ? (
-          <EmptyState>
-            <p>{t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}</p>
-            <Button onClick={onClear}>{t("aicalls.clear")}</Button>
+          <EmptyState
+            title={t(taskOnly ? "aicalls.taskEmpty" : "aicalls.filteredEmpty")}
+            action={<Button onClick={onClear}>{t("aicalls.clear")}</Button>}
+          >
+            {null}
           </EmptyState>
         ) : (
           <EmptyState>{t("aicalls.empty")}</EmptyState>
@@ -209,15 +211,6 @@ function CallTrace({
   }
   return (
     <>
-      {narrowed && (
-        <PanelBody>
-          <div className="aicalls-countline">
-            <Button variant="link" onClick={onClear}>
-              {t("aicalls.clear")}
-            </Button>
-          </div>
-        </PanelBody>
-      )}
       <PanelGroupHead title={t("aicalls.callsLabel")} level="h3" />
       <CallTable calls={rows} onOpen={(call) => setOpenId(call.id)} />
       {query.hasNextPage && (
@@ -297,11 +290,6 @@ export function AiCallsCard() {
     (next: CallFilters) => setParams(withCallFilters(params, next)),
     [params, setParams],
   );
-  const clearFigure = () => {
-    const dials = new Map(params);
-    for (const key of FIGURE_PARAMS) dials.delete(key);
-    setParams(dials);
-  };
   const clearAll = () => {
     const dials = new Map(withCallFilters(params, UNFILTERED_CALLS));
     for (const key of FIGURE_PARAMS) dials.delete(key);
@@ -339,55 +327,76 @@ export function AiCallsCard() {
         <PanelBody>
           <PanelIntro>{t("aicalls.sub")}</PanelIntro>
           <QueryGate query={me} pendingLabel={t("aicalls.title")}>
-            {() => <EmptyState>{t("aicalls.withheld")}</EmptyState>}
+            {() => (
+              <SurfaceState
+                state="withheld"
+                emptyLabel={t("aicalls.empty")}
+                loadingLabel={t("aicalls.title")}
+                detail={{ withheldReason: t("aicalls.withheld") }}
+              >
+                {null}
+              </SurfaceState>
+            )}
           </QueryGate>
         </PanelBody>
       </Panel>
     );
   }
 
-  // No bottom margin of its own: `.settings-stack` owns the gap between cards.
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  // The figure a link cut the trace to has no dial of its own, so the caption
+  // names it and Clear takes it away with the rest.
+  const caption = (
+    <>
+      {hasFigure &&
+        `${t("aicalls.filtered", { filter: figureWords(figure, t) })} `}
+      <CountLine
+        unit={t("aicalls.unit")}
+        first={1}
+        last={rows.length}
+        total={rows.length}
+        more={query.hasNextPage}
+      />
+    </>
+  );
+  // `.settings-stack` owns the gap between the bar and the card.
   return (
-    <Panel title={t("aicalls.title")} className="aicalls-card">
-      <PanelBody>
-        <PanelIntro>{t("aicalls.sub")}</PanelIntro>
-        <CallFiltersBar
-          tasks={tasks}
-          models={models}
-          filters={filters}
-          search={search}
-          onSearch={setSearch}
-          onChange={setFilters}
-        />
-        {hasFigure && (
-          <Callout
-            tone="info"
-            title={t("aicalls.filtered", { filter: figureWords(figure, t) })}
-          >
-            <Button variant="link" onClick={clearFigure}>
-              {t("aicalls.filtered.clear")}
-            </Button>
-          </Callout>
-        )}
-        {query.data === undefined && (
-          <QueryStates
+    <>
+      <CallFiltersBar
+        tasks={tasks}
+        models={models}
+        filters={filters}
+        search={search}
+        onSearch={setSearch}
+        onChange={setFilters}
+        actions={
+          narrowed && <Button onClick={clearAll}>{t("aicalls.clear")}</Button>
+        }
+        caption={query.data === undefined ? undefined : caption}
+      />
+      <Panel title={t("aicalls.title")}>
+        <PanelBody>
+          <PanelIntro>{t("aicalls.sub")}</PanelIntro>
+          {query.data === undefined && (
+            <QueryStates
+              query={query}
+              pendingLabel={t("aicalls.title")}
+              pendingLines={6}
+            >
+              {null}
+            </QueryStates>
+          )}
+        </PanelBody>
+        {query.data !== undefined && (
+          <CallTrace
             query={query}
-            pendingLabel={t("aicalls.title")}
-            pendingLines={6}
-          >
-            {null}
-          </QueryStates>
+            narrowed={narrowed}
+            taskOnly={taskOnly}
+            onClear={clearAll}
+          />
         )}
-      </PanelBody>
-      {query.data !== undefined && (
-        <CallTrace
-          query={query}
-          narrowed={narrowed}
-          taskOnly={taskOnly}
-          onClear={clearAll}
-        />
-      )}
-    </Panel>
+      </Panel>
+    </>
   );
 }
 

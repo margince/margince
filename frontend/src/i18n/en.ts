@@ -1271,7 +1271,6 @@ export const en = {
   "explain.excluded_other":
     "{count} records are left out of this number and the rows below. A field on them is hidden for your role.",
 
-
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
   "board.weighted": "weighted {value}",
@@ -2592,6 +2591,7 @@ export const en = {
   "linkedinImport.whichFile":
     "In LinkedIn, open Settings, then Data privacy, then Get a copy of your data. Upload Connections.csv from the archive LinkedIn emails you.",
   "linkedinImport.choose": "Import Connections.csv",
+  "linkedinImport.dropHint": "Drop Connections.csv here, or choose it",
   "linkedinImport.importLabel": "How to get Connections.csv from LinkedIn",
   "linkedinImport.noMatchesYet":
     "No matches yet, which is normal for a new company. Connections are matched against contacts as mail is read, and matching reruns every hour.",
@@ -2602,7 +2602,6 @@ export const en = {
 
   // The review queue and the reach table (ADR-0078 §2.1b).
   "linkedinReach.title": "LinkedIn network",
-  "linkedinReach.readFailed": "Network reach could not be loaded.",
   "linkedinReach.empty": "No companies reached yet",
   "linkedinReach.allUnresolved":
     "All your connections work at companies not on file yet. Connections: {unresolved}.",
@@ -3219,7 +3218,7 @@ export const en = {
   "followUpSettings.daysHint":
     "Days a sent message can go unanswered before its sender is reminded to follow up, 1 to 30.",
   "followUpSettings.outOfRange": "Enter a whole number of days from 1 to 30.",
-  "leadHandling.title": "Lead handling",
+  "leadHandling.title": "First response",
   "leadHandling.sub": "How new leads are handled.",
   "leadHandling.firstResponse": "First-response target",
   "leadHandling.firstResponseHint":
@@ -5529,6 +5528,7 @@ export const en = {
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
   "settings.saved": "Saved",
+  "settings.nameTooLong": "Use {max} characters or fewer.",
   "settings.signatureFromTemplate": "Company template",
   "settings.signatureTemplateHint":
     "Your company’s signature template signs your mail. It fills in your name, title and phone.",
@@ -5565,11 +5565,9 @@ export const en = {
   "settings.displayName": "Display name",
   "settings.displayNameHelp":
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
-  "settings.displayNameSave": "Save",
   "settings.greetingName": "Greeting name",
   "settings.greetingNameHelp":
     "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
-  "settings.greetingNameSave": "Save",
   "settings.installApp": "Margince app",
   "settings.installAppHelp":
     "Adds Margince to this device as an app with its own window and icon.",
@@ -6417,8 +6415,8 @@ export const en = {
   "settings.auditAdminOnly":
     "Your role cannot read the full audit log. It records every actor and every record they accessed.",
   "settings.auditFilters": "Filters",
-  "settings.auditEntries": "Audit log",
   "settings.auditTrailLabel": "Recorded actions",
+  "settings.auditUnit": "recorded actions",
   "settings.auditActor": "Actor",
   "settings.auditEntity": "Entity type",
   "settings.auditEntityId": "Entity ID",
@@ -7119,7 +7117,6 @@ export const en = {
     "An “unverified app” notice may appear. It refers to this self-hosted installation, not a third party.",
   "ob.s4.microsoftFailed": "Microsoft connection not completed",
   "ob.s4.connectVerifying": "Confirming connection…",
-  "ob.s4.connectLive": "Live and capturing",
   "ob.s4.connectConfirmFailed": "The connection could not be confirmed.",
   "ob.s4.connectRetry": "Connect again in Settings under Connections.",
   "ob.s4.connectDenied": "Access was declined. Nothing was connected.",
@@ -7341,7 +7338,6 @@ export const en = {
   "mailSharing.dangerTitle": "Email sharing is off",
   "mailSharing.sharedPosture.warningTitle": "This asserts a legal basis",
   "mailSharing.saveFailed": "Setting not saved",
-  "mailSharing.save": "Save",
   "connectors.originLabel": "Address used in emailed links",
   "connectors.originReachable": "Reachable",
   "connectors.originUnreachable": "Unreachable",
@@ -7349,7 +7345,6 @@ export const en = {
   "connectors.sub":
     "Connect the account you work in. Your email files itself to the right contacts and deals, and your calendar puts meetings on records and gives your booking link your free times.",
   "connectors.loading": "Loading connectors…",
-  "connectors.loadFailed": "Could not load connectors. Reload the page.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGraph": "Outlook",
@@ -7501,8 +7496,10 @@ export const en = {
   "connectors.telegramNotConfigured":
     "Messaging channels are not configured on this installation.",
   "connectors.telegramConnectCta": "Connect Telegram bot",
-  "connectors.telegramRosterLabel": "Connected bot",
-  "connectors.telegramEmpty": "No bot connected.",
+  "connectors.telegramEmptyTitle": "No bot connected",
+  "connectors.telegramEmptyNote":
+    "A connected bot captures and sends Telegram messages for the whole company.",
+  "connectors.telegramNotConfiguredTitle": "Not available on this installation",
   "connectors.telegramReadOnly":
     "Only an administrator or operations user can connect or change the bot.",
   "connectors.telegramEditToken": "Replace token",
@@ -7613,7 +7610,6 @@ export const en = {
   "ob.s4.imapHint":
     "Use an app password. It is stored encrypted and deleted on disconnect.",
   "ob.s4.imapConnect": "Test and connect",
-  "ob.s4.connecting": "Connecting…",
   "ob.s4.accessToggle": "Access granted",
   "ob.s4.scope1Lead": "Read access.",
   "ob.s4.scope1Rest":
@@ -9087,7 +9083,6 @@ export const en = {
     "Show every processing step for the message at {at}",
   "captureActivity.emptyFiltered":
     "No loaded rows match. Load more to see the rest of the window.",
-  "captureActivity.loadMore": "Load more",
   "captureActivity.empty": "No capture activity in the last 24 hours.",
   "captureActivity.payloadsOff":
     "This installation does not record message senders or subjects, so the rows below show only the result.",
@@ -9675,7 +9670,6 @@ export const en = {
   "users.createTeam": "Create team",
   "users.notArchived": "Team not archived",
   "users.teamNotChanged": "Membership not changed",
-  "users.inviteFailed": "Invitation not sent",
   "users.access.title": "User access",
   "users.access.identity":
     "Reads every contact, company, lead and deal in the company.",
@@ -9699,7 +9693,7 @@ export const en = {
   "users.access.maskOutside": "on records they may not edit",
   "users.inviteSub":
     "Add a user to this installation and choose their starting role.",
-  "users.membersTitle": "Users",
+  "users.membersTitle": "People",
   "users.col.member": "Name",
   "users.col.activity": "Activity",
   "users.addedOn": "Added {date}",
@@ -9966,14 +9960,16 @@ export const en = {
     "Every model call: routing identity, tokens, retries, captured payload.",
   "aicalls.open": "Open the {feature} call from {when}",
   "aicalls.col.when": "When",
+  "aicalls.filtersLabel": "Filters",
+  "aicalls.unit": "calls",
   "aicalls.col.feature": "Feature",
-  "aicalls.col.task": "Task",
   "aicalls.col.model": "Model",
   "aicalls.col.tokens": "Tokens in / out",
   "aicalls.col.latency": "Latency",
   "aicalls.col.cost": "Cost",
   "aicalls.cost.unpriced": "Not priced",
-  "aicalls.cost.unpricedHint": "The price sheet has no rate for a model this call used.",
+  "aicalls.cost.unpricedHint":
+    "The price sheet has no rate for a model this call used.",
   "aicalls.ms": "{value} ms",
   "aicalls.outcome.ok": "Answered",
   "aicalls.outcome.fallback": "Fallback",
@@ -10052,7 +10048,6 @@ export const en = {
   "aicalls.col.outcome": "Outcome",
   "aicalls.outcome.retried": "Retried",
   "aicalls.outcome.failed": "Failed",
-  "aicalls.model.afterDecision": "Decision model, then {tier}",
   "aicalls.filter.servedProvider": "Served by",
   "aicalls.sentinel.provider_quota": "Out of quota",
   "aicalls.sentinel.provider_throttled": "Throttled",
@@ -10303,12 +10298,12 @@ export const en = {
   "signInMethods.desc.microsoft":
     "A Microsoft button for anyone whose work account is on Microsoft 365.",
   "signInMethods.onScreen": "On the sign-in screen",
-  "signInMethods.offScreen.noApp":
-    "Not on the sign-in screen yet: the {vendor} app is not set up.",
-  "signInMethods.offScreen.noDirectory":
-    "Not on the sign-in screen yet: the Microsoft app is not limited to your company directory.",
-  "signInMethods.offScreen.unusable":
-    "Not on the sign-in screen: the {vendor} app cannot be used right now.",
+  "signInMethods.offScreen": "Not on the sign-in screen",
+  "signInMethods.offScreenReason.noApp": "The {vendor} app is not set up.",
+  "signInMethods.offScreenReason.noDirectory":
+    "The Microsoft app is not limited to your company directory.",
+  "signInMethods.offScreenReason.unusable":
+    "The {vendor} app cannot be used right now.",
   "signInMethods.offScreen.turnedOff": "Turned off",
   "signInMethods.noWriteReason":
     "Only an admin or ops can change sign-in methods",
@@ -10365,7 +10360,7 @@ export const en = {
   "connectFlow.stepAccount": "Account",
   "connectFlow.stepBringIn": "What to bring in",
   "connectFlow.stepSignIn": "Sign in",
-  "connectFlow.stepDone": "{step}, done",
+  "connectFlow.permsLabel": "What {vendor} will ask for",
   "connectFlow.where": "Where do you read your work email?",
   "connectFlow.google": "Gmail and Google Calendar",
   "connectFlow.microsoft": "Outlook mail and calendar on a work account",
@@ -10499,13 +10494,7 @@ export const en = {
     "Any host that offers IMAP. Mail only: add a calendar later in Settings.",
   "ob.conv.connect.panelTitle": "What to connect from {vendor}",
   "ob.conv.connect.servicesLegend": "What to connect",
-  "ob.conv.connect.serviceMail": "Mail",
-  "ob.conv.connect.serviceCalendar": "Calendar",
-  "ob.conv.connect.mailBrings":
-    "Contacts, companies and history from your inbox and sent mail. Margince sends only when you send, or when you allow an agent to.",
   // Free times only: what a booking sends attendees is not promised here.
-  "ob.conv.connect.calendarBrings":
-    "Meetings land on the right deals and contacts, and your booking link offers only times you are free.",
   "ob.conv.connect.asksTwiceTitle":
     "{vendor} asks twice, then brings you back here",
   "ob.conv.connect.asksTwiceBody": "One screen for mail, one for calendar.",
@@ -10582,7 +10571,6 @@ export const en = {
   "setup.action.voice": "Add samples",
   "setup.action.booking": "Turn on",
   "settings.home.setup.title": "Your setup",
-  "settings.home.setup.count": "{done} of {total} done",
   "settings.home.setup.complete": "Setup is complete",
   "settings.home.setup.show": "Show steps",
   "connectors.tile.notSetUp": "Not set up",
@@ -10605,7 +10593,6 @@ export const en = {
   "setup.caption.voice": "Needs 800 words you wrote.",
   "setup.caption.booking": "Customers book your free time.",
   "setup.caption.bookingNeedsCalendar": "Needs a calendar.",
-  "setup.reminder.waiting": "Waiting",
   "setup.reminder.progress": "Setup progress",
   // end polish: setup-popover
   "account.profileCard": "Profile",
@@ -11905,8 +11892,11 @@ export const en = {
     "New lookups stop immediately and the key is destroyed. Purchased data stays on your records; disconnecting does not delete it.",
   "provider.deleteData": "Delete purchased data",
   "provider.deleteDataConfirm.title": "Delete all data from this provider?",
-  "provider.deleteDataConfirm.body":
-    "Every value this provider supplied is removed from every contact. Spend records stay; the data does not. This cannot be undone.",
+  "provider.deleteDataConfirm.impactTitle": "This cannot be undone",
+  "provider.deleteDataConfirm.impact.values":
+    "Every value this provider supplied is removed from every contact.",
+  "provider.deleteDataConfirm.impact.spend":
+    "Spend records stay; the data does not.",
   "provider.deleteDataConfirm.typed": "Type the provider name to confirm:",
   "provider.automaticLookup": "Look up contacts automatically",
   "provider.automaticLookupHint":
@@ -13882,6 +13872,9 @@ export const en = {
   "scheduling.editLink": "Edit link",
   "scheduling.createLink": "Create booking link",
   "scheduling.noLinkYet": "No booking link yet.",
+  "scheduling.noLinkYetBody":
+    "Create one to share a page where guests pick a time.",
+  "scheduling.calendarSaveFailed": "Calendar not saved",
   "scheduling.replaceAddress": "Replace address",
   "scheduling.replaceConfirmTitle": "Replace link address?",
   "scheduling.personalLinksFoot":
@@ -14025,6 +14018,10 @@ export const en = {
   "confirmPhrase.matches": "Phrase matches",
   "checklist.stepDone": "Done",
   "checklist.stepOpen": "Still to do",
+  "checklist.stepWaiting": "Waiting",
+  "checklist.count": "{done} of {total} done",
+  "panelSave.save": "Save",
+  "panelSave.discard": "Discard",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",
   "aiFigures.window.7d": "7 d",
@@ -14069,7 +14066,6 @@ export const en = {
   "aiFigures.line.week": "7 d: {figures}",
   "aiFigures.line.prefix": "7 d: {sentence}",
   "aicalls.filtered": "Showing calls that ended on {filter}.",
-  "aicalls.filtered.clear": "Show all calls",
   "aiOpenRouter.title": "OpenRouter settings",
   "aiOpenRouter.privacyDocs": "Data policies ↗",
   "aiOpenRouter.routingDocs": "Provider routing ↗",

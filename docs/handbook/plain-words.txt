@@ -1052,7 +1052,6 @@ say
 scan
 schedule
 scheme
-school
 scope
 score
 scorecard

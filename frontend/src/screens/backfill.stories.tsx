@@ -7,11 +7,11 @@ import type { components } from "../api/schema";
 import { BackfillPanel } from "./backfill";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// BackfillPanel stories for the fe-uat render gate — one per honest branch
+// BackfillPanel stories for the fe-uat render gate: one per honest branch
 // the panel now covers: the ordinary setup/running/done/error/cancelled run
 // (seeded via `initial`, matching how the import dialog on a Connections
 // account mounts this panel off the embedded CaptureConnection.backfill), plus the three added by this
-// change — a provider with no Backfiller, a stalled running run, and a
+// change: a provider with no Backfiller, a stalled running run, and a
 // refused window narrowing.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -96,29 +96,20 @@ export const Running: Story = { render: panelStory("gmail", RUNNING) };
 
 export const Done: Story = { render: panelStory("gmail", DONE) };
 
-// The live run in dark. The card is in the AI family here — an `--aiLight` wash
-// under the head, an `--aiMed` edge, `--aiText` glyphs and a bar filled in
-// `--ai` — and the dark theme lifts `--aiText` while the tint stays at the same
-// alpha, so this is where the title over the wash and the percentage beside the
-// bar have to be checked for contrast rather than assumed from the light run.
+// The live run in dark: neutral Panel, the grey live "Reading" badge, the Meter.
 export const RunningDark: Story = {
   globals: { theme: "dark" },
   render: panelStory("gmail", RUNNING),
 };
 
-// The finished run in dark. `.capture-hero.done` is the one tinted plate in this
-// panel — `--successBg` behind the text with an `--success` border and a
-// `--success` glyph — and "arrival" is the whole message of the state. A tint
-// that composites to the same value as the card leaves a hero saying nothing.
+// The finished run in dark: the same neutral Panel, no tint for "done".
 export const DoneDark: Story = {
   globals: { theme: "dark" },
   render: panelStory("gmail", DONE),
 };
 
-// The live run at 390px. The three stat plates auto-fit at a 150px floor, so at
-// this width they stack to one column and the head's badge wraps under the title
-// — this is where a plate either holds its figure and caption on one line or
-// overflows the card.
+// The live run at 390px: the StatStrip folds its cards to rows, and the badge
+// stays in the panel head.
 export const RunningPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
@@ -191,7 +182,7 @@ export const NullEstimate: Story = {
   }),
 };
 
-// IMAP has no Backfiller — the setup screen's auto-preview hits
+// IMAP has no Backfiller: the setup screen's auto-preview hits
 // connector_unsupported and the panel states the capability gap plainly
 // instead of rendering a window picker that can only fail again.
 export const Unsupported: Story = {
@@ -206,7 +197,7 @@ export const Unsupported: Story = {
 };
 
 // A prior wider run already covers more history than the newly-picked
-// window would — start refuses with window_narrowing, and the panel
+// window would: start refuses with window_narrowing, and the panel
 // explains the widen-only rule rather than a generic failure.
 export const Narrowing: Story = {
   render: panelStory(

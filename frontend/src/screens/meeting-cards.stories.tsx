@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import { bookingFrame } from "./book.storykit";
 import { bookingConnection, bookingProfile } from "./book.testkit";
 import { AvailabilityCard } from "./meeting-availability";
@@ -34,11 +35,36 @@ export const Setup: Story = {
   }),
 };
 export const SetupDark: Story = { ...Setup, globals: { theme: "dark" } };
+export const SetupPhone: Story = {
+  ...Setup,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+const refused = () =>
+  jsonResponse({ title: "Service unavailable", status: 503 }, 503);
+
+/** A connect press the server refused: the reason sits under the steps. */
+export const ConnectRefusal: Story = {
+  render: bookingFrame(() => <MeetingSetupCard hoursChosen={false} hasLink />, {
+    "GET /connectors": () =>
+      jsonResponse({
+        data: [],
+        providers: [{ provider: "gmail", reason: "ready" }],
+      }),
+    "POST /connectors/gcal/connect": refused,
+    "POST /connectors/graphcal/connect": refused,
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /Connect/ }),
+    );
+  },
+};
 
 export const BookingLinks: Story = {
-  render: bookingFrame(() => (
-    <BookingLinksCard profile={bookingProfile} lead />
-  )),
+  render: bookingFrame(() => <BookingLinksCard profile={bookingProfile} />),
 };
 export const BookingLinksDark: Story = {
   ...BookingLinks,
@@ -46,9 +72,14 @@ export const BookingLinksDark: Story = {
 };
 export const BookingLinksNeedsAttention: Story = {
   render: bookingFrame(
-    () => <BookingLinksCard profile={bookingProfile} lead />,
+    () => <BookingLinksCard profile={bookingProfile} />,
     expired,
   ),
+};
+export const BookingLinksPhone: Story = {
+  ...BookingLinks,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 export const BookingLinksNeedsAttentionDark: Story = {
   ...BookingLinksNeedsAttention,
@@ -58,7 +89,6 @@ export const NoLinkYet: Story = {
   render: bookingFrame(() => (
     <BookingLinksCard
       profile={{ ...bookingProfile, slug: undefined, public_url: undefined }}
-      lead={false}
     />
   )),
 };
@@ -84,6 +114,31 @@ export const Availability: Story = {
 export const AvailabilityDark: Story = {
   ...Availability,
   globals: { theme: "dark" },
+};
+/** A ticked day makes the card dirty: Discard and Save appear at its foot. */
+export const AvailabilityDirty: Story = {
+  render: bookingFrame(() => <AvailabilityCard profile={bookingProfile} />),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("checkbox", { name: "Saturday" }),
+    );
+  },
+};
+/** The hours write refused: the card says so once, above its foot. */
+export const AvailabilityRefused: Story = {
+  render: bookingFrame(() => <AvailabilityCard profile={bookingProfile} />, {
+    "PUT /me/working-hours": refused,
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("checkbox", { name: "Saturday" }),
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Save availability" }),
+    );
+  },
 };
 export const HoursOnly: Story = {
   render: bookingFrame(() => <AvailabilityCard hoursOnly />),

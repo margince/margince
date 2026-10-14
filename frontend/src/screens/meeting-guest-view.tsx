@@ -3,18 +3,19 @@
 
 import { Clock, ExternalLink, MapPin, Video } from "lucide-react";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Button, Card } from "../design-system/atoms";
 import { CompanyLogo } from "../design-system/companylogo";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
-import { usePlural, useT } from "../i18n";
+import { isMailbox } from "../format/connectorprovider";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { navigate } from "../lib/router";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "./booking-video";
-import { isMailbox } from "../format/connectorprovider";
 import { useConnectors } from "./connectors";
 import { videoOf } from "./meeting-link-drawer";
 import { usePatchSchedulingProfile } from "./scheduling-profile-query";
@@ -54,7 +55,6 @@ export function GuestViewCard({ profile }: Readonly<{ profile: Profile }>) {
               description={t(companyHelp(profile))}
               control={
                 <Button
-                  variant="link"
                   onClick={() =>
                     navigate({ screen: "settings", id: "company" })
                   }
@@ -74,7 +74,6 @@ export function GuestViewCard({ profile }: Readonly<{ profile: Profile }>) {
               })}
               control={
                 <Button
-                  variant="link"
                   onClick={() =>
                     navigate({ screen: "settings", id: "account" })
                   }
@@ -124,6 +123,7 @@ function companyHelp(profile: Profile): MessageKey {
 function BookingPagePreview({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const company = profile.company_name ?? "";
   const video = videoOf(profile);
   const app =
@@ -131,44 +131,46 @@ function BookingPagePreview({ profile }: Readonly<{ profile: Profile }>) {
       ? VIDEO_APP_NAME[PROVIDER_VIDEO_APP[profile.provider]]
       : null;
   return (
-    <figure className="meeting-preview">
+    <figure className="meeting-preview-figure">
       <figcaption className="sr-only">
         {t("scheduling.previewLabel")}
       </figcaption>
-      {company && (
-        <div className="meeting-preview-brand">
-          {profile.logo_url && (
-            <CompanyLogo
-              name={company}
-              src={profile.logo_url}
-              fallback={company}
-            />
-          )}
-          <span>{company}</span>
-        </div>
-      )}
-      <span className="t-caption">{profile.host_name}</span>
-      <Heading as="span" size="small">
-        {profile.title}
-      </Heading>
-      <span className="meeting-preview-line">
-        <Clock aria-hidden size={14} />
-        {plural("scheduling.minutes", profile.duration_minutes, {
-          count: String(profile.duration_minutes),
-        })}
-      </span>
-      {app && (
+      <Card as="div" inset className="meeting-preview">
+        {company && (
+          <div className="meeting-preview-brand">
+            {profile.logo_url && (
+              <CompanyLogo
+                name={company}
+                src={profile.logo_url}
+                fallback={company}
+              />
+            )}
+            <span>{company}</span>
+          </div>
+        )}
+        <span className="t-caption">{profile.host_name}</span>
+        <Heading as="span" size="small">
+          {profile.title}
+        </Heading>
         <span className="meeting-preview-line">
-          <Video aria-hidden size={14} />
-          {app}
+          <Clock aria-hidden size={14} />
+          {plural("scheduling.minutes", profile.duration_minutes, {
+            count: formatNumber(profile.duration_minutes, locale),
+          })}
         </span>
-      )}
-      {video === "own" && (
-        <span className="meeting-preview-line">
-          <MapPin aria-hidden size={14} />
-          {profile.location}
-        </span>
-      )}
+        {app && (
+          <span className="meeting-preview-line">
+            <Video aria-hidden size={14} />
+            {app}
+          </span>
+        )}
+        {video === "own" && (
+          <span className="meeting-preview-line">
+            <MapPin aria-hidden size={14} />
+            {profile.location}
+          </span>
+        )}
+      </Card>
     </figure>
   );
 }

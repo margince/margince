@@ -1013,9 +1013,14 @@ describe("fulfilling an erasure", () => {
     await userEvent.clear(erasePhraseInput());
     await userEvent.type(erasePhraseInput(), " ERASE ");
     expect(confirm).toBeEnabled();
-    expect(
-      within(screen.getByRole("dialog")).getByRole("status"),
-    ).toHaveTextContent(en["confirmPhrase.matches"]);
+    // The record's drawer stays open under the confirm, so scope to the confirm.
+    const confirmDialog = confirm.closest("[role='dialog']");
+    if (!(confirmDialog instanceof HTMLElement)) {
+      throw new Error("the erase confirm is not inside a dialog");
+    }
+    expect(within(confirmDialog).getByRole("status")).toHaveTextContent(
+      en["confirmPhrase.matches"],
+    );
   });
 
   // Retention wins for the statutory window (Art. 17(3)(b)), so the 409 is a

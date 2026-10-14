@@ -52,36 +52,6 @@
   margin: var(--space-4) 0 0;
 }
 
-/* A notice and the verb that commits an unsaved change, standing below the rows
-   they belong to. It is the card's own band rather than one more row: an unsaved
-   flip is a state of the whole card, and a callout in a row's control column
-   reads as that row's answer. The interval is here because `SettingList` owns
-   the gaps BETWEEN rows and nothing above or below itself. */
-.settings-panel-commit {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-}
-/* Opening a body of its own under a list, the body's padding is the interval. */
-.panel-body > :is(.settings-panel-commit, .settings-danger-result):first-child {
-  margin-top: 0;
-}
-
-/* The one panel that announces its own danger: the red border is what separates
-   a destructive surface from the ordinary settings around it. */
-.settings-danger {
-  border-color: var(--danger);
-}
-.settings-danger-result {
-  margin-top: var(--space-3);
-}
-.settings-danger-warning {
-  margin-top: var(--space-1);
-  color: var(--warningText);
-}
-
 /* The profile block, borrowed from the record page's identity header
    (composed.css `.record-head`): the mark, then the name with its standing
    badges on the same line, then the two meta lines that qualify it. Three loose
@@ -173,47 +143,25 @@
   }
 }
 
-/* The settings home's page rows.
-
-   A row, not a link chip. The home used to render each page as a bare
-   `.link-button` carrying only its name, which made it a second copy of the
-   sidebar — the reader who could not tell two pages apart in the rail could not
-   tell them apart here either. The subtitle and the scope were in the catalog
-   the whole time and were being thrown away, so a row now carries all three:
-   what it is called, whose state it changes, and what it is for. */
-/* Your setup: the count reads as the checklist's caption, one step above it. */
-.settings-home-setup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* The settings home's page rows: the anchor fills its PanelRow, so the whole
+   row is the press target and still opens in a new tab. */
+.panel > .panel-row.settings-home-row {
+  padding: 0;
 }
-.settings-home-setup > p {
-  margin: 0;
-}
-.settings-home-links {
+.settings-home-press {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-.settings-home-row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  border-radius: var(--r-sm);
+  padding: var(--space-3) var(--padPanel);
+  color: inherit;
   text-decoration: none;
 }
-.settings-home-row:hover {
-  background: var(--bgHover);
+.settings-home-press:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
-/* The name and its scope badge on one line, with the row's whole width between
-   them: the badge answers "whose setting is this" for every row in the group, so
-   it belongs at the trailing edge where the answers line up in one column rather
-   than trailing each name at whatever width that name happens to be. Centred
-   rather than baseline-aligned — out at the edge the badge is a pill beside a
-   word rather than a word beside a word, and a baseline hangs its chrome below
-   the line. `flex-wrap` so a long page name in a narrow column drops the badge
-   rather than squeezing the name. */
+/* The scope badge sits at the trailing edge, so the answers line up in one
+   column; it drops under a long name in a narrow column. */
 .settings-home-rowhead {
   display: flex;
   align-items: center;
@@ -221,29 +169,6 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   min-width: 0;
-}
-/* One group's heading inside a panel that holds several. The panel already said
-   whether these are pages the reader can change or only read; this only says
-   which part of the product they belong to. */
-.settings-home-group + .settings-home-group {
-  margin-top: var(--space-4);
-}
-.settings-home-groupname {
-  margin: 0 0 var(--space-2);
-}
-/* A term and its answer, where the answer is a FACT rather than a setting: who
-   the reader is on the settings home, what the mail-sharing rule currently says
-   on their connections page. A definition list because none of it is operable —
-   the way to change any of it is to ask somebody, or to open the page that owns
-   it. */
-.settings-facts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-2) var(--space-4);
-  margin: 0;
-}
-.settings-facts dd {
-  margin: 0;
 }
 .settings-home-roles {
   display: flex;

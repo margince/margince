@@ -52,14 +52,12 @@
   padding: 0;
   list-style: none;
 }
+/* Card inset draws the plate; the grid places number, fields and tools. */
 .rt-q {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: var(--space-3);
   align-items: start;
-  padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
 }
 .rt-q-num {
   padding-top: var(--space-1);
@@ -75,25 +73,7 @@
   display: flex;
   gap: var(--gapActions);
 }
-.rt-prefill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--accentText);
-}
-.rt-prefill > svg {
-  width: var(--space-3);
-  height: var(--space-3);
-}
-
+/* The foot's row spans the drawer foot so Save lands on its end edge. */
 .rt-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-.rt-foot-actions {
-  display: flex;
-  gap: var(--gapActions);
-  margin-left: auto;
+  flex: 1 1 100%;
 }

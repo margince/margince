@@ -92,11 +92,15 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     expect(
       screen.getByRole("combobox", { name: "Import past email" }).textContent,
     ).toContain("6 months");
-    const current = within(screen.getByRole("list", { name: "Steps" }))
-      .getAllByRole("listitem")
-      .find((step) => step.getAttribute("aria-current") === "step");
+    const steps = within(
+      screen.getByRole("list", { name: "Steps" }),
+    ).getAllByRole("listitem");
+    const current = steps.find(
+      (step) => step.getAttribute("aria-current") === "step",
+    );
     expect(current?.textContent).toContain("What to bring in");
-    expect(screen.getByText("Account, done")).toBeTruthy();
+    // The state reaches a screen reader as a word beside the title.
+    expect(steps[0]?.textContent).toBe("Account Done");
   });
 
   it("asks for mail with the calendar chained and the import window", async () => {

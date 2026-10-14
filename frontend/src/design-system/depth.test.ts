@@ -166,11 +166,8 @@ describe("depth", () => {
       // and no token could carry either.
       "src/design-system/margince-core.css: box-shadow: inset 0 -40px 60px -46px var(--coreC1), inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 8%, transparent), 0 0 44px -22px var(--coreC2)",
       "src/design-system/margince-core.css: box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--overlayLight) 6%, transparent), 0 0 12px -7px var(--coreC2)",
-      // The capture mark while the agent is reading: a halo in the same tint as
-      // the mark's fill. That is the state, not an elevation.
-      "src/screens/backfill.css: box-shadow: 0 0 0 4px var(--aiLight)",
-      // The relay step the reader is on, ringed the same way — a position in a
-      // sequence rather than a lift off the page.
+      // The relay step the reader is on, ringed in its own tint: a position in
+      // a sequence rather than a lift off the page.
       "src/screens/contactnetwork.css: box-shadow: 0 0 0 4px var(--accentLight)",
       // The pulse marking the finding a jump just landed on: a ring that holds
       // for a beat and fades, spelled as a box-shadow specifically so it layers

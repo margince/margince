@@ -45,3 +45,7 @@ type Story = StoryObj<typeof meta>;
 /** The drawer: question 1 carries the prefill note; a list question its choices. */
 export const Drawer: Story = {};
 export const DrawerDark: Story = { globals: { theme: "dark" } };
+export const DrawerPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

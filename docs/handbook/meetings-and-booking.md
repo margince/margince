@@ -83,6 +83,6 @@ A guest gives consent to the meeting separately from any marketing consent, and 
 
 ## When the calendar adds no video call
 
-When the **Video call** of your booking link is Google Meet or Microsoft Teams, Margince asks your calendar for the link when the meeting is created. You pick it under **Edit link**. Google Meet needs bookings to land in a Google calendar, and Microsoft Teams in a Microsoft 365 calendar.
+Your booking link can use Google Meet or Microsoft Teams as its **Video call**. Then Margince asks your calendar for the link when the meeting is created. You pick it under **Edit link**. Google Meet needs bookings to land in a Google calendar, and Microsoft Teams in a Microsoft 365 calendar.
 
 The link can take a few seconds to appear. Until then the meeting says "The link appears once the calendar accepts the invitation." If the calendar makes no link, the invitation still goes out. The meeting says "The calendar did not add a video link. Add one in your calendar."

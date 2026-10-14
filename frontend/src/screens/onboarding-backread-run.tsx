@@ -5,6 +5,9 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
+import { Meter } from "../design-system/readings";
+import { StatCard } from "../design-system/statcard";
+import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -86,8 +89,7 @@ export function BackreadRun({
 }
 
 // The progress line, and a bar only when the server gave a denominator to
-// divide by. The counts are stated in text and the bar merely draws them, so it
-// is aria-hidden rather than a second, rounder version of the same number.
+// divide by. The same Meter as the Settings import, so both bars read alike.
 function BackreadProgress({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -114,9 +116,12 @@ function BackreadProgress({ run }: Readonly<{ run: BackfillStatus }>) {
             })}
       </p>
       {hasTotal && (
-        <div className="ob-backread-bar" aria-hidden="true">
-          <span style={{ width: `${Math.min(1, scanned / total) * 100}%` }} />
-        </div>
+        <Meter
+          value={Math.min(scanned, total)}
+          max={total}
+          label={t("backfill.progressLabel")}
+          flat
+        />
       )}
     </div>
   );
@@ -146,16 +151,16 @@ function BackreadTallies({
   }
 
   return (
-    <dl className="ob-backread-tallies">
+    <StatStrip density="compact">
       {present.map((tally) => (
-        <div className="ob-backread-tally" key={tally.key}>
-          <dt className="ob-backread-tally-label">{t(tally.label)}</dt>
-          <dd className="ob-backread-tally-value">
-            {formatNumber(tally.count, locale)}
-          </dd>
-        </div>
+        <StatCard
+          key={tally.key}
+          label={t(tally.label)}
+          value={formatNumber(tally.count, locale)}
+          narrow="row"
+        />
       ))}
-    </dl>
+    </StatStrip>
   );
 }
 

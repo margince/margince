@@ -13,10 +13,9 @@ import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { MailSharingCard, MailSharingPlate } from "./mail-sharing";
 
-// The workspace mail-sharing posture (Settings → Capture rules): every role
-// reads it, only capture_settings:update holders change it, and switching it
-// off is a deliberate act — the danger callout and an explicit Save stand
-// between the flip and the write.
+// The workspace mail-sharing posture (Settings > Capture rules): every role
+// reads it, only capture_settings:update holders change it, each switch writes
+// on flip, and the cost of the posture stays stated beside it.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -33,6 +32,7 @@ function backendFor(
   allow: GrantSpec,
   mailSharing = true,
   sharedAllowed = false,
+  refuse = false,
 ) {
   let sharingState = mailSharing;
   let sharedState = sharedAllowed;
@@ -47,6 +47,12 @@ function backendFor(
       if (req.url.includes("/capture/settings")) {
         if (req.method === "PATCH") {
           capturedPatch = await req.json();
+          if (refuse) {
+            return jsonResponse(
+              { title: "Forbidden", detail: "the posture is locked" },
+              403,
+            );
+          }
           // The card saves its two settings apart, so a PATCH carries one of
           // them and leaves the other where it was.
           const body = capturedPatch as {
@@ -101,7 +107,7 @@ describe("MailSharingCard", () => {
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 
-  it("warns on flip-to-off and PATCHes only when Save is pressed", async () => {
+  it("writes on flip to off and states what the held posture costs", async () => {
     const backend = backendFor(SETTINGS_EDITOR, true);
     vi.stubGlobal("fetch", backend.fetchMock);
     render(<MailSharingCard />);
@@ -111,22 +117,14 @@ describe("MailSharingCard", () => {
     );
     await userEvent.click(toggle);
 
-    // The flip alone writes nothing — the cost is said out loud and the
-    // change waits for an explicit Save.
-    expect(await screen.findByText(/the CRM is hard to use/)).toBeTruthy();
-    expect(backend.getCapturedPatch()).toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(backend.getCapturedPatch()).toEqual({ mail_sharing: false }),
     );
-    // Saved: the shown posture is the stored posture again, so Save retires.
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Save" })).toBeNull(),
-    );
+    expect(await screen.findByText(/the CRM is hard to use/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
   });
 
-  it("saves the shared-posture opt-in on its own, with the works-council warning", async () => {
+  it("writes the shared-posture opt-in on its own, with the works-council warning", async () => {
     const backend = backendFor(SETTINGS_EDITOR, true, false);
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
@@ -141,15 +139,31 @@ describe("MailSharingCard", () => {
     expect(screen.queryByText(/works-council/)).toBeNull();
 
     await user.click(toggle);
-    expect(await screen.findByText(/works-council/)).toBeTruthy();
-
-    await user.click(screen.getAllByRole("button", { name: "Save" })[0]);
-    // The PATCH carries ONLY this setting: saving the opt-in must not also
-    // rewrite the workspace sharing posture the reader did not touch.
+    // The PATCH carries ONLY this setting: the opt-in must not also rewrite
+    // the workspace sharing posture the reader did not touch.
     await waitFor(() =>
       expect(backend.getCapturedPatch()).toEqual({
         shared_posture_allowed: true,
       }),
+    );
+    expect(await screen.findByText(/works-council/)).toBeTruthy();
+  });
+
+  it("says a refused flip once for the card and shows the stored posture again", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(SETTINGS_EDITOR, true, false, true).fetchMock,
+    );
+    render(<MailSharingCard />);
+
+    const toggle = await waitFor(() =>
+      screen.getByTestId<HTMLButtonElement>("mail-sharing-toggle"),
+    );
+    await userEvent.click(toggle);
+
+    expect(await screen.findByText("Setting not saved")).toBeTruthy();
+    await waitFor(() =>
+      expect(toggle.getAttribute("aria-checked")).toBe("true"),
     );
   });
 

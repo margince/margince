@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { formatNumber } from "../format/format";
+import { formatNumber, INTL_LOCALE } from "../format/format";
 import type { Locale, PluralTranslator, Translator } from "../i18n";
 import { dayLabelKey, WEEK } from "./working-hours";
 
@@ -68,5 +68,7 @@ function daysPhrase(
   const last = names.at(-1);
   if (week.length >= 3 && run && first && last)
     return t("scheduling.dayRange", { from: first, until: last });
-  return new Intl.ListFormat(locale, { type: "conjunction" }).format(names);
+  return new Intl.ListFormat(INTL_LOCALE[locale], {
+    type: "conjunction",
+  }).format(names);
 }

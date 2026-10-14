@@ -1,17 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  ArrowRight,
-  CalendarDays,
-  History,
-  type LucideIcon,
-  Mail,
-} from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRight, CalendarDays, History, Mail } from "lucide-react";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
-import { ErrorLine } from "../design-system/errorline";
+import { Button } from "../design-system/atoms";
+import { ServiceList, ServiceRow } from "../design-system/servicerow";
+import { statusTone } from "../design-system/statusbadge";
 import {
   type AccountVendor,
   type ConnectionAccount,
@@ -20,20 +14,15 @@ import {
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { routeHash } from "../lib/router";
+import { navigate } from "../lib/router";
 import type { ImportWindow } from "./connect-account";
 import { usePastEmail } from "./connection-past-email";
-import {
-  errorClassKey,
-  healthBadge,
-  missingCalendarWriteGrant,
-  missingSendGrant,
-  serviceHealth,
-} from "./connector-status";
+import { missingCalendarWriteGrant, serviceBadge } from "./connector-status";
 import { settingsHref } from "./settingsrouting";
 
 // One thing an account brings in (new mail, past email, the calendar) as a
-// line under the account's row: what it is, how it is doing, and its verb.
+// line under the account's row: what it is and how it is doing. A broken
+// service says so with its badge; why, and the Reconnect, are the account's.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
@@ -49,7 +38,7 @@ export function AccountServices({
   label,
   heldWindow,
   connectPendingFor,
-  onReconnect,
+  onConnect,
   onImport,
 }: Readonly<{
   account: ConnectionAccount;
@@ -59,40 +48,65 @@ export function AccountServices({
   heldWindow: ImportWindow | null;
   /** The provider whose consent is on its way, if any. */
   connectPendingFor: Provider | undefined;
-  /** Asks for one provider's consent again, or for the first time. */
-  onReconnect: (provider: Provider) => void;
+  /** Asks for a missing service's consent for the first time. */
+  onConnect: (provider: Provider) => void;
   onImport: () => void;
 }>) {
+  const t = useT();
   const { mail, calendar } = account;
+  const mailProvider = vendor ? VENDOR_SERVICES[vendor].mail : null;
+  const calendarProvider = vendor ? VENDOR_SERVICES[vendor].calendar : null;
   return (
     <ServiceList label={label}>
-      {(mail || vendor) && (
-        <NewMailService
-          mail={mail}
-          pending={mail !== null && connectPendingFor === mail.provider}
-          onReconnect={onReconnect}
-          onConnect={() => vendor && onReconnect(VENDOR_SERVICES[vendor].mail)}
+      {mail && <ConnectedService conn={mail} kind="mail" />}
+      {!mail && mailProvider && (
+        <MissingService
+          kind="mail"
+          connectLabel={t("connectors.connectMail")}
+          pending={connectPendingFor === mailProvider}
+          onConnect={() => onConnect(mailProvider)}
         />
       )}
       {vendor && mail?.can_backfill && (
-        <PastEmailItem
+        <PastEmailService
           mail={mail}
           heldWindow={heldWindow}
           onImport={onImport}
         />
       )}
-      {vendor && (
-        <CalendarService
-          calendar={calendar}
-          pending={connectPendingFor === VENDOR_SERVICES[vendor].calendar}
-          onConnect={() => onReconnect(VENDOR_SERVICES[vendor].calendar)}
+      {calendar && vendor && (
+        <ConnectedService conn={calendar} kind="calendar" />
+      )}
+      {!calendar && calendarProvider && (
+        <MissingService
+          kind="calendar"
+          connectLabel={t("connectors.connectCalendar")}
+          pending={connectPendingFor === calendarProvider}
+          onConnect={() => onConnect(calendarProvider)}
         />
       )}
     </ServiceList>
   );
 }
 
-function PastEmailItem({
+type ServiceKind = "mail" | "calendar";
+
+const SERVICE_ICON = { mail: Mail, calendar: CalendarDays } as const;
+
+function useServiceWords(kind: ServiceKind) {
+  const t = useT();
+  return kind === "mail"
+    ? {
+        name: t("connectors.svc.newMail"),
+        desc: t("connectors.svc.newMailDesc"),
+      }
+    : {
+        name: t("connectors.svc.calendar"),
+        desc: t("connectors.svc.calendarDesc"),
+      };
+}
+
+function PastEmailService({
   mail,
   heldWindow,
   onImport,
@@ -102,60 +116,22 @@ function PastEmailItem({
   onImport: () => void;
 }>) {
   const t = useT();
-  const { name, side, body } = usePastEmail({ mail, heldWindow, onImport });
+  const { name, status, action, body } = usePastEmail({
+    mail,
+    heldWindow,
+    onImport,
+  });
   return (
-    <ServiceItem
+    <ServiceRow
       testId={`connector-${mail.provider}-past-email`}
       icon={History}
       name={name}
-      description={t("connectors.svc.pastEmailDesc")}
-      side={side}
+      caption={t("connectors.svc.pastEmailDesc")}
+      status={status}
+      action={action}
     >
       {body}
-    </ServiceItem>
-  );
-}
-
-function ServiceList({
-  label,
-  children,
-}: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <ul className="connection-services" aria-label={label}>
-      {children}
-    </ul>
-  );
-}
-
-function ServiceItem({
-  testId,
-  icon: Icon,
-  name,
-  description,
-  side,
-  children,
-}: Readonly<{
-  testId: string;
-  icon: LucideIcon;
-  name: string;
-  description: ReactNode;
-  /** The service's status badges and its own verbs. */
-  side?: ReactNode;
-  /** Whatever the service reports beyond its sentence: progress, an error. */
-  children?: ReactNode;
-}>) {
-  return (
-    <li className="connection-service" data-testid={testId}>
-      <Icon className="connection-service-icon" aria-hidden="true" />
-      <div className="connection-service-main">
-        <span className="connection-service-name">{name}</span>
-        <span className="connection-service-desc">{description}</span>
-        {children}
-      </div>
-      {side !== undefined && (
-        <div className="connection-service-side">{side}</div>
-      )}
-    </li>
+    </ServiceRow>
   );
 }
 
@@ -169,176 +145,72 @@ function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
     : t("connectors.neverSynced");
 }
 
-/** A service's own word, and the sentence that says what went wrong. */
-function ServiceHealth({ conn }: Readonly<{ conn: CaptureConnection }>) {
-  const t = useT();
-  const badge = healthBadge(serviceHealth(conn));
-  return <Badge tone={badge.tone}>{t(badge.label)}</Badge>;
-}
-
-function ServiceError({ conn }: Readonly<{ conn: CaptureConnection }>) {
-  const t = useT();
-  const health = serviceHealth(conn);
-  if (health !== "needs_reconnect" && health !== "needs_attention") {
-    return null;
-  }
-  return (
-    <ErrorLine inline standing>
-      {t(errorClassKey(conn.last_sync_error_class))}
-    </ErrorLine>
-  );
-}
-
-function NotConnected({
-  label,
-  pending,
-  onConnect,
-}: Readonly<{ label: string; pending: boolean; onConnect: () => void }>) {
-  const t = useT();
-  return (
-    <>
-      <Badge>{t("connectors.health.notConnected")}</Badge>
-      <Button pending={pending} onClick={onConnect}>
-        {label}
-      </Button>
-    </>
-  );
-}
-
-function NewMailService({
-  mail,
-  pending,
-  onReconnect,
-  onConnect,
-}: Readonly<{
-  mail: CaptureConnection | null;
-  pending: boolean;
-  onReconnect: (provider: Provider) => void;
-  onConnect: () => void;
-}>) {
-  const t = useT();
-  const description = t("connectors.svc.newMailDesc");
-  if (!mail) {
-    return (
-      <ServiceItem
-        testId="connector-mail-missing"
-        icon={Mail}
-        name={t("connectors.svc.newMail")}
-        description={description}
-        side={
-          <NotConnected
-            label={t("connectors.connectMail")}
-            pending={pending}
-            onConnect={onConnect}
-          />
-        }
-      />
-    );
-  }
-  const cannotSend = missingSendGrant(mail);
-  const needsReconnect = mail.status === "reauth_required" || cannotSend;
-  return (
-    <ServiceItem
-      testId={`connector-${mail.provider}`}
-      icon={Mail}
-      name={t("connectors.svc.newMail")}
-      description={
-        <>
-          {description} <LastSynced conn={mail} />
-        </>
-      }
-      side={
-        <>
-          <ServiceHealth conn={mail} />
-          {cannotSend && (
-            <Badge tone="warning">{t("connectors.cannotSend")}</Badge>
-          )}
-          {needsReconnect && (
-            <Button
-              pending={pending}
-              onClick={() => onReconnect(mail.provider)}
-            >
-              {t("connectors.reconnect")}
-            </Button>
-          )}
-        </>
-      }
-    >
-      <ServiceError conn={mail} />
-      {cannotSend && (
-        <span className="t-caption">{t("connectors.reconnectToSend")}</span>
-      )}
-    </ServiceItem>
-  );
-}
-
-function CalendarService({
-  calendar,
+function MissingService({
+  kind,
+  connectLabel,
   pending,
   onConnect,
 }: Readonly<{
-  calendar: CaptureConnection | null;
+  kind: ServiceKind;
+  connectLabel: string;
   pending: boolean;
   onConnect: () => void;
 }>) {
   const t = useT();
-  const description = t("connectors.svc.calendarDesc");
-  if (!calendar) {
-    return (
-      <ServiceItem
-        testId="connector-calendar-missing"
-        icon={CalendarDays}
-        name={t("connectors.svc.calendar")}
-        description={description}
-        side={
-          <NotConnected
-            label={t("connectors.connectCalendar")}
-            pending={pending}
-            onConnect={onConnect}
-          />
-        }
-      />
-    );
-  }
-  const readOnly = missingCalendarWriteGrant(calendar);
-  const needsReconnect = calendar.status === "reauth_required" || readOnly;
+  const words = useServiceWords(kind);
   return (
-    <ServiceItem
-      testId={`connector-${calendar.provider}`}
-      icon={CalendarDays}
-      name={t("connectors.svc.calendar")}
-      description={
+    <ServiceRow
+      testId={`connector-${kind}-missing`}
+      icon={SERVICE_ICON[kind]}
+      name={words.name}
+      caption={words.desc}
+      status={{
+        tone: statusTone("neutral"),
+        label: t("connectors.health.notConnected"),
+      }}
+      action={
+        <Button pending={pending} onClick={onConnect}>
+          {connectLabel}
+        </Button>
+      }
+    />
+  );
+}
+
+// A connected service and its one badge. A calendar that can book links
+// onward to Meetings.
+function ConnectedService({
+  conn,
+  kind,
+}: Readonly<{ conn: CaptureConnection; kind: ServiceKind }>) {
+  const t = useT();
+  const words = useServiceWords(kind);
+  const badge = serviceBadge(conn);
+  const books =
+    kind === "calendar" &&
+    conn.status === "connected" &&
+    !missingCalendarWriteGrant(conn);
+  return (
+    <ServiceRow
+      testId={`connector-${conn.provider}`}
+      icon={SERVICE_ICON[kind]}
+      name={words.name}
+      caption={
         <>
-          {description} <LastSynced conn={calendar} />
+          {words.desc} <LastSynced conn={conn} />
         </>
       }
-      side={
-        <>
-          <ServiceHealth conn={calendar} />
-          {readOnly && (
-            <Badge tone="warning">{t("scheduling.readOnlyBadge")}</Badge>
-          )}
-          {needsReconnect && (
-            <Button pending={pending} onClick={onConnect}>
-              {t("connectors.reconnect")}
-            </Button>
-          )}
-        </>
-      }
+      status={{ tone: badge.tone, label: t(badge.label), live: badge.live }}
     >
-      <ServiceError conn={calendar} />
-      {readOnly && (
-        <span className="t-caption">{t("scheduling.readOnlyCalendar")}</span>
-      )}
-      {calendar.status === "connected" && !readOnly && (
-        <a
-          className="connection-service-link"
-          href={routeHash(settingsHref("meetings"))}
+      {books && (
+        <Button
+          variant="link"
+          onClick={() => navigate(settingsHref("meetings"))}
         >
           {t("connectors.svc.bookingLink")}
           <ArrowRight aria-hidden="true" />
-        </a>
+        </Button>
       )}
-    </ServiceItem>
+    </ServiceRow>
   );
 }

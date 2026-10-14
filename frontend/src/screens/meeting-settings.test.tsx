@@ -127,11 +127,11 @@ it("uses the only connected calendar, saves it with the calendars that block tim
     blocking_calendars: ["personal"],
     enabled: false,
   });
-  await waitFor(() =>
-    expect(screen.queryByRole("button", { name: "Save calendar" })).toBeNull(),
-  );
+  await waitFor(() => {
+    expect(screen.queryByRole("button", { name: "Save calendar" })).toBeNull();
+    expect(screen.getByText("Saved")).toBeTruthy();
+  });
   expect(document.activeElement?.textContent).toBe("Calendar");
-  expect(await screen.findByText("Saved")).toBeTruthy();
   await waitFor(() => expect(accept).toHaveProperty("disabled", false));
   await user.click(accept);
   await waitFor(() => expect(server.profileWrites).toHaveLength(2));
@@ -230,7 +230,9 @@ it("states a read-only calendar's saved choices and reconnects it back to Meetin
       },
     },
   );
-  expect(await screen.findByText("Read-only calendar")).toBeTruthy();
+  expect(
+    (await screen.findAllByText("Needs attention")).length,
+  ).toBeGreaterThan(0);
   expect(screen.getByText(/connected for reading events/)).toBeTruthy();
   expect(screen.getAllByText(/Kept as saved/)).toHaveLength(2);
   expect(
@@ -278,7 +280,7 @@ it("says bookings are live with nothing landing in an expired calendar, and paus
   expect(
     screen.getByText(/Your Google Calendar connection has expired/),
   ).toBeTruthy();
-  expect(screen.getByText("Reconnect needed")).toBeTruthy();
+  expect(screen.getByText(/The connection has expired/)).toBeTruthy();
   expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
   expect(
     await screen.findByText(
@@ -372,9 +374,7 @@ it.each(["10081", "1.5", ""])(
     expect(
       await screen.findByText("Enter a whole number from 0 to 10,080."),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "Save availability" }),
-    ).toHaveProperty("disabled", true);
+    await user.click(screen.getByRole("button", { name: "Save availability" }));
     expect(server.profileWrites).toEqual([]);
   },
 );
@@ -412,8 +412,8 @@ it("saves hours and rules from one Save, with the days in week order", async () 
   expect(server.profileWrites[0]).toMatchObject({ buffer_minutes: 15 });
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Save availability" }),
-    ).toHaveProperty("disabled", true),
+      screen.queryByRole("button", { name: "Save availability" }),
+    ).toBeNull(),
   );
 });
 
@@ -629,8 +629,9 @@ it("gives a member without the booking grant their hours alone", async () => {
     ),
   ).toBeTruthy();
   expect(
-    await screen.findByRole("button", { name: "Save working hours" }),
+    await screen.findByRole("checkbox", { name: "Saturday" }),
   ).toBeTruthy();
+  expect(screen.getByText("When people can book")).toBeTruthy();
   expect(screen.queryByText("Booking rules")).toBeNull();
   expect(screen.queryByText("Booking links")).toBeNull();
   expect(profileReads).toBe(0);

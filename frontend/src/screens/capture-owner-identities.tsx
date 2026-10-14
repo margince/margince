@@ -45,7 +45,7 @@ import "./capture-owner-identities.css";
 //
 // Mail among a contact's own addresses is not correspondence with anybody, so
 // declaring one keeps those messages out of the CRM and stops the address being
-// minted as a contact. Until this card there was no way to say so — the endpoint
+// minted as a contact. Until this card there was no way to say so: the endpoint
 // shipped and nothing reached it.
 //
 // The caller's own only, and that is the point rather than a limitation: a
@@ -223,7 +223,7 @@ const kindLabel: Record<Kind, MessageKey> = {
  *
  * An address somebody typed needs no explanation. One the product LEARNED does:
  * a seat scanning this card would otherwise find an address they never entered
- * and have no way to tell whether they forgot adding it or something else did —
+ * and have no way to tell whether they forgot adding it or something else did,
  * and they are the colleague who decides whether it stays.
  */
 function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
@@ -256,11 +256,7 @@ function IdentityRows({
   if (list.length === 0) {
     // A reading, not a failed read: "I have declared no other addresses" is
     // what a reader opens this card to confirm.
-    return (
-      <EmptyState>
-        <p data-testid="owner-identities-empty">{t("ownerIdentities.empty")}</p>
-      </EmptyState>
-    );
+    return <EmptyState>{t("ownerIdentities.empty")}</EmptyState>;
   }
   return (
     <SettingList bleed="records" testId="owner-identities-list">

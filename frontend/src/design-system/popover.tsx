@@ -56,6 +56,7 @@ export function Popover({
   onOpenChange,
   dialog,
   panelClassName,
+  width = "default",
   children,
 }: Readonly<{
   label: ReactNode;
@@ -106,6 +107,9 @@ export function Popover({
    *  a non-modal dialog and the trigger says it opens one. */
   dialog?: boolean;
   panelClassName?: string;
+  /** `wide` is for a panel of rows that each carry a title and a verb on one
+   *  line; prose asides stay `default`. */
+  width?: "default" | "wide";
   children: ReactNode;
 }>) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -228,7 +232,13 @@ export function Popover({
           <section
             id={panelId}
             ref={panel}
-            className={withClass("popover-panel", panelClassName)}
+            className={withClass(
+              withClass(
+                "popover-panel",
+                width === "wide" ? "popover-panel-wide" : undefined,
+              ),
+              panelClassName,
+            )}
             role={dialog ? "dialog" : undefined}
             aria-labelledby={triggerId}
             {...(onHover ? hover : {})}

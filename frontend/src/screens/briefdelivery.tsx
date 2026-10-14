@@ -10,8 +10,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
+import type { Toast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { unwrap } from "../lib/problem";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 type BriefDelivery = components["schemas"]["BriefDelivery"];
 
@@ -28,7 +29,7 @@ type Choice = (typeof CHOICES)[number];
  * whatever the installation does. Sending is that default, so the control shows
  * it — and touching the control is what turns a default into a decision.
  */
-export function BriefDeliveryRows() {
+export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const settings = useQuery({
@@ -46,8 +47,14 @@ export function BriefDeliveryRows() {
       unwrap(await api.PUT("/me/brief-delivery", { body: patch }));
     },
     onSuccess: () => {
+      toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({
         queryKey: ["me", "brief-delivery"],
+      });
+    },
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t, t("settings.saveFailed")), {
+        tone: "danger",
       });
     },
   });

@@ -11,7 +11,10 @@ import {
   healthBadge,
   isUnhealthy,
   missingSendGrant,
+  needsReconnect,
+  serviceBadge,
   serviceHealth,
+  serviceReason,
   statusLabel,
   statusTone,
 } from "./connector-status";
@@ -165,8 +168,9 @@ describe("healthBadge", () => {
     }
   });
 
-  it("tones a running import info and anything to fix warning", () => {
-    expect(healthBadge("syncing").tone).toBe("info");
+  it("tones a running import grey and live, and anything to fix amber", () => {
+    expect(healthBadge("syncing").tone).toBe("default");
+    expect(healthBadge("syncing").live).toBe(true);
     expect(healthBadge("needs_attention").tone).toBe("warning");
     expect(healthBadge("needs_reconnect").tone).toBe("warning");
     expect(healthBadge("connected").tone).toBe("success");
@@ -257,5 +261,45 @@ describe("accountHealth", () => {
         calendar: null,
       }),
     ).toBe("not_connected");
+  });
+});
+
+describe("a service's one badge and one reason", () => {
+  it("names a grant too narrow to send by what it cannot do", () => {
+    const mail = service("gmail", { scopes: ["read"] });
+    expect(serviceBadge(mail)).toMatchObject({
+      tone: "warning",
+      label: "connectors.cannotSend",
+    });
+    expect(serviceReason(mail)).toBe("connectors.reconnectToSend");
+    expect(needsReconnect(mail)).toBe(true);
+  });
+
+  it("names a calendar it may only read", () => {
+    const calendar = service("gcal", { scopes: ["read"] });
+    expect(serviceBadge(calendar).label).toBe("scheduling.readOnlyBadge");
+    expect(serviceReason(calendar)).toBe("scheduling.readOnlyCalendar");
+  });
+
+  it("lets a refused grant outrank a narrow one, and says why", () => {
+    const mail = service("gmail", {
+      status: "reauth_required",
+      scopes: ["read"],
+      last_sync_error_class: "auth",
+    });
+    expect(serviceBadge(mail).label).toBe("connectors.health.reconnect");
+    expect(serviceReason(mail)).toBe("connectors.errAuth");
+  });
+
+  it("keeps a failure streak off the reconnect, which would not fix it", () => {
+    const mail = service("gmail", { last_sync_error_class: "rate_limited" });
+    expect(serviceBadge(mail).label).toBe("connectors.health.attention");
+    expect(serviceReason(mail)).toBe("connectors.errRateLimited");
+    expect(needsReconnect(mail)).toBe(false);
+  });
+
+  it("has nothing to explain on a healthy service", () => {
+    expect(serviceReason(service("gmail"))).toBeNull();
+    expect(needsReconnect(service("gmail"))).toBe(false);
   });
 });

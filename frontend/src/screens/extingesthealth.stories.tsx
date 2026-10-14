@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
@@ -19,13 +19,23 @@ const meta: Meta<typeof ExtensionIngestHealthCard> = {
 export default meta;
 type Story = StoryObj<typeof ExtensionIngestHealthCard>;
 
+// The seeded matrix gives `job_health:read` to admin and ops only, so a story's
+// grant follows its roles and Withheld really draws the withheld state.
+const READS_JOB_HEALTH = ["admin", "ops"];
+
+function grantFor(roles: string[]): GrantSpec {
+  return roles.some((role) => READS_JOB_HEALTH.includes(role))
+    ? { job_health: ["read"] }
+    : {};
+}
+
 // Every story serves /me too: the card gates its own fetch on the grant, so a
 // story without a principal would only ever render the withheld state.
 function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
   return () => {
     installFetchStub({
       "GET /me": () =>
-        jsonResponse(meFixture({ roles, allow: { job_health: ["read"] } })),
+        jsonResponse(meFixture({ roles, allow: grantFor(roles) })),
       "GET /admin/extension-ingest-health": () => jsonResponse(health),
     });
     return (

@@ -2,25 +2,29 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CalendarClock, Send } from "lucide-react";
-import { useRef, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { Button, OverflowMenu, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
+import { PanelSave } from "../design-system/panelsave";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { MultiSelect, Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { type StatusKind, statusTone } from "../design-system/statusbadge";
 import { useToast } from "../design-system/toast";
+import { vendorOf } from "../format/connectorprovider";
+import { formatNumber } from "../format/format";
 import { formatElapsed, useNow } from "../format/now";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import { navigate } from "../lib/router";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
 import { notConfiguredProvider, useConnectAccount } from "./connect-account";
 import { missingCalendarWriteGrant } from "./connector-status";
-import { vendorOf } from "../format/connectorprovider";
 import { usePatchSchedulingProfile } from "./scheduling-profile-query";
 import "./meeting-cards.css";
 
@@ -56,16 +60,10 @@ export function MeetingCalendarCard({
   profile,
 }: Readonly<{ profile: Profile }>) {
   const t = useT();
-  const [baseline, setBaseline] = useState(profile);
-  const [form, setForm] = useState(profile);
-  const calendar = useMeetingCalendar(
-    { ...form, enabled: profile.enabled },
-    baseline,
-  );
-  const patch = usePatchSchedulingProfile();
-  const toast = useToast();
   const titleRef = useRef<HTMLSpanElement>(null);
-  const { provider, ready, selected, calendars, connections } = calendar;
+  const draft = useCalendarDraft(profile, titleRef);
+  const { calendar, patch } = draft;
+  const { provider, ready, connections } = calendar;
   if (connections.isPending)
     return (
       <Panel title={t("scheduling.calendarTitle")}>
@@ -76,6 +74,60 @@ export function MeetingCalendarCard({
   const connection = calendar.providers.find(
     (item) => item.provider === provider,
   );
+  return (
+    <Panel
+      title={
+        <span ref={titleRef} tabIndex={-1}>
+          {t("scheduling.calendarTitle")}
+        </span>
+      }
+      actions={
+        // A calendar that is not ready cannot be saved, and its row's Reconnect
+        // is then the card's one primary.
+        <PanelSave
+          dirty={draft.dirty && ready}
+          pending={patch.isPending}
+          saveLabel={t("scheduling.saveCalendar")}
+          onSave={draft.save}
+          onDiscard={draft.discard}
+        />
+      }
+    >
+      {connection && (
+        <PanelBody>
+          <ProviderList>
+            <CalendarConnectionRow connection={connection} ready={ready} />
+          </ProviderList>
+        </PanelBody>
+      )}
+      <CalendarFields draft={draft} />
+      <PanelNotices
+        refused={
+          patch.isError
+            ? { title: t("scheduling.calendarSaveFailed"), error: patch.error }
+            : undefined
+        }
+      />
+    </Panel>
+  );
+}
+
+// The card's draft against what was last saved, and the one write for it. The
+// title ref stays with the caller: a draft holding a ref could not be read in render.
+function useCalendarDraft(
+  profile: Profile,
+  titleRef: RefObject<HTMLSpanElement | null>,
+) {
+  const t = useT();
+  const [baseline, setBaseline] = useState(profile);
+  const [form, setForm] = useState(profile);
+  const calendar = useMeetingCalendar(
+    { ...form, enabled: profile.enabled },
+    baseline,
+  );
+  const patch = usePatchSchedulingProfile();
+  const toast = useToast();
+  const { provider, ready, selected, calendars } = calendar;
   const dirty =
     JSON.stringify(calendarFields(form)) !==
       JSON.stringify(calendarFields(baseline)) ||
@@ -83,7 +135,8 @@ export function MeetingCalendarCard({
   const writable =
     ready && !!selected?.writable && !calendars.isFetching && !!provider;
   const save = () => {
-    if (!selected) return;
+    // PanelSave has no refused state yet; the card says why beside the choice.
+    if (!selected || !writable) return;
     patch.mutate(
       {
         provider,
@@ -101,102 +154,91 @@ export function MeetingCalendarCard({
       },
     );
   };
+  const discard = () => {
+    patch.reset();
+    setForm(baseline);
+  };
+  return {
+    baseline,
+    form,
+    setForm,
+    calendar,
+    patch,
+    dirty,
+    save,
+    discard,
+  };
+}
+
+/** Which calendar takes the bookings and which ones block time. */
+function CalendarFields({
+  draft,
+}: Readonly<{ draft: ReturnType<typeof useCalendarDraft> }>) {
+  const t = useT();
+  const { form, setForm, calendar } = draft;
+  const { provider, ready, selected, calendars } = calendar;
   return (
-    <Panel
-      title={
-        <span ref={titleRef} tabIndex={-1}>
-          {t("scheduling.calendarTitle")}
-        </span>
-      }
-      actions={
-        dirty ? (
-          <div className="meeting-card-save">
-            <ErrorLine error={patch.error} />
-            <Button
-              variant="primary"
-              disabled={!writable}
-              pending={patch.isPending}
-              onClick={save}
-            >
-              {t("scheduling.saveCalendar")}
-            </Button>
-          </div>
-        ) : undefined
-      }
-    >
-      {connection && (
-        <PanelBody>
-          <ProviderList>
-            <CalendarConnectionRow connection={connection} ready={ready} />
-          </ProviderList>
-        </PanelBody>
+    <PanelBody>
+      <SettingList>
+        {calendar.providers.length > 1 && (
+          <SettingRow
+            label={t("scheduling.provider")}
+            control={(control) => (
+              <Select
+                {...control}
+                value={provider}
+                options={[
+                  { value: "", label: t("scheduling.chooseProvider") },
+                  ...calendar.providers.map((item) => ({
+                    value: item.provider,
+                    label: calendarName(t, item.provider),
+                  })),
+                ]}
+                onChange={(value) => {
+                  if (value === "" || value === "gcal" || value === "graphcal")
+                    setForm({
+                      ...form,
+                      provider: value,
+                      calendar_id: "primary",
+                      blocking_calendars: [],
+                    });
+                }}
+              />
+            )}
+          />
+        )}
+        {provider !== "" && ready && (
+          <CalendarChoices
+            calendar={calendar}
+            onCalendar={(value) =>
+              setForm({
+                ...form,
+                provider,
+                calendar_id: value,
+                blocking_calendars: calendar.blocking.filter(
+                  (id) => id !== value,
+                ),
+              })
+            }
+            onBlocking={(value) =>
+              setForm({
+                ...form,
+                provider,
+                calendar_id: calendar.calendarID,
+                blocking_calendars: value,
+              })
+            }
+          />
+        )}
+        {provider !== "" && !ready && <KeptChoices profile={draft.baseline} />}
+      </SettingList>
+      {ready && !!calendars.data && !selected && (
+        <ErrorLine>{t("scheduling.missingSavedCalendar")}</ErrorLine>
       )}
-      <PanelBody>
-        <SettingList>
-          {calendar.providers.length > 1 && (
-            <SettingRow
-              label={t("scheduling.provider")}
-              control={(control) => (
-                <Select
-                  {...control}
-                  value={provider}
-                  options={[
-                    { value: "", label: t("scheduling.chooseProvider") },
-                    ...calendar.providers.map((item) => ({
-                      value: item.provider,
-                      label: calendarName(t, item.provider),
-                    })),
-                  ]}
-                  onChange={(value) => {
-                    if (
-                      value === "" ||
-                      value === "gcal" ||
-                      value === "graphcal"
-                    )
-                      setForm({
-                        ...form,
-                        provider: value,
-                        calendar_id: "primary",
-                        blocking_calendars: [],
-                      });
-                  }}
-                />
-              )}
-            />
-          )}
-          {provider !== "" && ready && (
-            <CalendarChoices
-              calendar={calendar}
-              onCalendar={(value) =>
-                setForm({
-                  ...form,
-                  provider,
-                  calendar_id: value,
-                  blocking_calendars: calendar.blocking.filter(
-                    (id) => id !== value,
-                  ),
-                })
-              }
-              onBlocking={(value) =>
-                setForm({
-                  ...form,
-                  provider,
-                  calendar_id: calendar.calendarID,
-                  blocking_calendars: value,
-                })
-              }
-            />
-          )}
-          {provider !== "" && !ready && <KeptChoices profile={baseline} />}
-        </SettingList>
-        {ready && !!calendars.data && !selected && (
-          <ErrorLine>{t("scheduling.missingSavedCalendar")}</ErrorLine>
-        )}
-        {!!form.provider && provider !== form.provider && (
-          <p className="t-caption">{t("scheduling.providerChanged")}</p>
-        )}
-      </PanelBody>
-    </Panel>
+      {!!form.provider && provider !== form.provider && (
+        <p className="t-caption">{t("scheduling.providerChanged")}</p>
+      )}
+    </PanelBody>
   );
 }
 
@@ -205,6 +247,28 @@ function calendarFields(profile: Profile) {
     provider: profile.provider,
     calendar_id: profile.calendar_id,
     blocking_calendars: profile.blocking_calendars ?? [],
+  };
+}
+
+// Expired and read-only are one state to a reader: the reason line says which.
+function calendarRowStanding(connection: CaptureConnection, t: Translator) {
+  const expired = connection.status === "reauth_required";
+  const readOnly = !expired && missingCalendarWriteGrant(connection);
+  const kind: StatusKind =
+    expired || readOnly || connection.status === "error" ? "attention" : "done";
+  let reason: string | undefined;
+  if (expired) reason = t("scheduling.expiredRow");
+  else if (readOnly) reason = t("scheduling.readOnlyCalendar");
+  return {
+    status: {
+      tone: statusTone(kind),
+      label: t(
+        kind === "done"
+          ? "connectors.health.connected"
+          : "connectors.health.attention",
+      ),
+    },
+    reason,
   };
 }
 
@@ -223,16 +287,7 @@ function CalendarConnectionRow({
     : Number.NaN;
   const openConnections = () =>
     navigate({ screen: "settings", id: "connections" });
-  let status: { tone: "success" | "warning"; label: string } = {
-    tone: "success",
-    label: t("connectors.health.connected"),
-  };
-  if (expired)
-    status = { tone: "warning", label: t("scheduling.reconnectNeeded") };
-  else if (readOnly)
-    status = { tone: "warning", label: t("scheduling.readOnlyBadge") };
-  else if (connection.status === "error")
-    status = { tone: "warning", label: t("connectors.health.attention") };
+  const { status, reason } = calendarRowStanding(connection, t);
   const provider = connection.provider;
   return (
     <ProviderRow
@@ -240,10 +295,9 @@ function CalendarConnectionRow({
       name={calendarName(t, provider)}
       status={status}
       account={connection.account_label ?? undefined}
+      reason={reason}
       facts={
-        expired ? (
-          <span>{t("scheduling.expiredRow")}</span>
-        ) : (
+        expired ? undefined : (
           <>
             <Chip icon={CalendarClock} dense>
               {t("scheduling.readsBusy")}
@@ -253,7 +307,6 @@ function CalendarConnectionRow({
                 {t("scheduling.sendsInvites")}
               </Chip>
             )}
-            {readOnly && <span>{t("scheduling.readOnlyCalendar")}</span>}
             {!readOnly && !Number.isNaN(syncedAt) && (
               <span>
                 {t("scheduling.syncedAgo", {
@@ -365,6 +418,7 @@ function CalendarChoices({
 function KeptChoices({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const blocking = profile.blocking_calendars ?? [];
   return (
     <>
@@ -385,7 +439,7 @@ function KeptChoices({ profile }: Readonly<{ profile: Profile }>) {
           blocking.length === 0
             ? t("scheduling.noneChosen")
             : plural("scheduling.calendarCount", blocking.length, {
-                count: String(blocking.length),
+                count: formatNumber(blocking.length, locale),
               })
         }
         control={null}

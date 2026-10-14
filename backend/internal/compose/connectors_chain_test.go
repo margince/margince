@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -42,7 +43,9 @@ func consentState(t *testing.T, h connectorHandlers, authorizeURL string) (conne
 	if err != nil {
 		t.Fatalf("authorize url %q: %v", authorizeURL, err)
 	}
-	st, err := h.signer.verify(u.Query().Get("state"), time.Now())
+	// The handler dated the expiry from its own clock; expiry is
+	// connectorstate_test's subject, so this reads the binding at no instant.
+	st, err := h.signer.verify(u.Query().Get("state"), time.Time{})
 	if err != nil {
 		t.Fatalf("authorize url state does not verify: %v", err)
 	}
@@ -303,7 +306,7 @@ func TestADeclinedMailConsentOffersNoImport(t *testing.T) {
 	state := h.signer.sign(connectState{
 		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", Nonce: "n",
 		ReturnTo: returnToMeetings, WindowMonths: 6,
-	}, time.Now().Add(time.Minute))
+	}, clocktest.Now(t).Add(time.Minute))
 	denied := "access_denied"
 	rec := httptest.NewRecorder()
 
@@ -322,7 +325,7 @@ func TestADeclinedMailConsentNeverAsksForItsCalendar(t *testing.T) {
 	state := h.signer.sign(connectState{
 		Workspace: chainWorkspace, User: chainUser, Provider: "gmail", Nonce: "n",
 		ReturnTo: returnToOnboarding, Then: "gcal",
-	}, time.Now().Add(time.Minute))
+	}, clocktest.Now(t).Add(time.Minute))
 	denied := "access_denied"
 	rec := httptest.NewRecorder()
 

@@ -12,6 +12,11 @@ import {
 import { Callout } from "../design-system/callout";
 import { type Choice, ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
@@ -163,17 +168,15 @@ export function MeetingLinkDrawer({
       open={open}
       onClose={onClose}
       labelledBy={titleId}
-      intent="drawer-reading"
+      intent="drawer"
       returnFocusTo={returnFocusTo}
     >
-      <div className="drawer-head">
-        <div className="meeting-drawer-heading">
-          <Heading size="medium" as="h2" id={titleId}>
-            {t("scheduling.drawerTitle")}
-          </Heading>
-          <p className="t-caption">{t("scheduling.drawerIntro")}</p>
-        </div>
-      </div>
+      <DrawerHead className="meeting-drawer-heading">
+        <Heading size="large" as="h2" className="t-h2" id={titleId}>
+          {t("scheduling.drawerTitle")}
+        </Heading>
+        <p className="t-caption">{t("scheduling.drawerIntro")}</p>
+      </DrawerHead>
       {open && (
         <LinkForm
           profile={profile}
@@ -221,7 +224,7 @@ function LinkForm({
   };
   return (
     <>
-      <div className="drawer-body form-stack">
+      <DrawerBody className="form-stack">
         <Field
           label={t("scheduling.meetingName")}
           hint={t("scheduling.meetingNameHelp")}
@@ -293,22 +296,20 @@ function LinkForm({
           onChangeHours={onChangeHours}
         />
         <ErrorLine error={save.error} />
-      </div>
-      <div className="drawer-foot">
-        <div className="form-actions meeting-drawer-actions">
-          <Button onClick={onClose} disabled={save.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            pending={save.isPending}
-            disabled={!!lengthError || !!locationError || titleMissing}
-            onClick={submit}
-          >
-            {t("scheduling.saveLink")}
-          </Button>
-        </div>
-      </div>
+      </DrawerBody>
+      <DrawerFoot className="actions">
+        <Button onClick={onClose} disabled={save.isPending}>
+          {t("create.cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          pending={save.isPending}
+          disabled={!!lengthError || !!locationError || titleMissing}
+          onClick={submit}
+        >
+          {t("scheduling.saveLink")}
+        </Button>
+      </DrawerFoot>
       <ReplaceAddressConfirm
         open={replacing}
         onClose={() => setReplacing(false)}

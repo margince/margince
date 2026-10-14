@@ -95,7 +95,7 @@ function Calls() {
   const [open, setOpen] = useState<CallSummary | null>(null);
   return (
     <StoryProviders>
-      <Panel title="AI call trace" className="aicalls-card">
+      <Panel title="AI call trace">
         <CallTable calls={CALLS} onOpen={setOpen} />
       </Panel>
       {open && (
@@ -124,17 +124,10 @@ export const OutcomesPhone: Story = {
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     await within(canvasElement).findAllByRole("row");
-    for (const row of canvasElement.querySelectorAll(
-      "tbody tr:not([hidden])",
-    )) {
-      const box = (selector: string) =>
-        row.querySelector(selector)?.closest("td")?.getBoundingClientRect();
-      const model = box(".aicalls-model-line");
-      const figures = box(".aicalls-figure");
-      await expect(figures?.top).toBeGreaterThanOrEqual(model?.bottom ?? 0);
-      const exact = row.querySelector(".aicalls-time")?.getBoundingClientRect();
-      await expect(exact?.width).toBeLessThanOrEqual(1);
-    }
+    const scroller = canvasElement.querySelector(".table-scroll");
+    await expect(scroller?.scrollWidth).toBeLessThanOrEqual(
+      scroller?.clientWidth ?? 0,
+    );
   },
 };
 export const Opened: Story = {

@@ -447,7 +447,7 @@ describe("progress", () => {
 
   it("counts openly, with no percentage, when there is no denominator", async () => {
     installFetchStub({});
-    const { container } = render({
+    render({
       state: "running",
       counts: { messages_scanned: 120 },
     });
@@ -456,7 +456,7 @@ describe("progress", () => {
     expect(screen.queryByText(/of about/)).not.toBeInTheDocument();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
     // No bar either: a bar with no end is a bar that lies about one.
-    expect(container.querySelector(".ob-backread-bar")).toBeNull();
+    expect(screen.queryByRole("meter")).toBeNull();
   });
 });
 

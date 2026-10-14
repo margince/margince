@@ -1,17 +1,5 @@
-/* The setup checklist behind the top bar chip, and its steps wherever they are
-   drawn. Every step ends in one cell of one width and one weight, so the
-   titles line up and the ring on the mark, not a filled button, says which
-   step is next. */
-
-/* Wider than a reading's aside: four steps each carry a title and a verb on
-   one line. Too wide to hang from the chip, so the anchoring always pins it
-   4px off the window's edge; the shift lands its edge on the bar's gutter. */
-.popover-panel:has(> .setup-reminder-panel) {
-  inline-size: min(25rem, calc(100vw - 2 * var(--pageGutter)));
-  max-inline-size: none;
-  padding: var(--space-4);
-  translate: calc(4px - var(--pageGutter)) 0;
-}
+/* The setup checklist behind the top bar's ghost trigger. Width, padding and
+   the steps' action column come from Popover and Checklist. */
 
 .setup-reminder-panel {
   display: flex;
@@ -20,41 +8,6 @@
 }
 .setup-reminder-title {
   margin: 0;
-}
-
-.setup-reminder-progress {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: var(--space-3);
-}
-.setup-reminder-progress > .t-caption {
-  font-variant-numeric: tabular-nums;
-}
-
-.setup-step-action {
-  display: inline-flex;
-  justify-content: flex-end;
-  align-items: center;
-  min-inline-size: 7rem;
-  /* The title's line, as tall as the mark: a word or badge centres on it. */
-  min-block-size: 24px;
-}
-/* A verb is taller than that line; it overhangs both edges evenly. */
-.setup-step-action > .btn {
-  margin-block: calc((24px - var(--controlHeight)) / 2);
-}
-/* A phone column cannot spare the floor: the title would wrap around it. */
-@media (max-width: 700px) {
-  .setup-step-action {
-    min-inline-size: 0;
-  }
-}
-/* A step waiting on somebody else holds the cell, muted, so its row ends
-   where the others do. */
-.setup-step-waiting {
-  color: var(--textSecondary);
-  font: var(--fontBodySmall);
 }
 
 .setup-reminder-foot {

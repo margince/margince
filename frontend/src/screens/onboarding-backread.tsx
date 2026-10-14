@@ -12,6 +12,7 @@ import { problemMessageOf } from "../lib/problem";
 import { ImportWindowPicker } from "../mail-history/window-picker";
 import { type ImportWindow, isLiveRun, useBackfillRun } from "./backfill-run";
 import { BackreadRun } from "./onboarding-backread-run";
+import "./backfill.css";
 import "./onboarding-backread.css";
 
 /**
@@ -218,7 +219,7 @@ function BackreadScope({
         );
 
   return (
-    <div className="ob-backread-scope" aria-live="polite">
+    <div className="backfill-estimate ob-backread-scope" aria-live="polite">
       {counting && <p>{t("ob.backread.estimating")}</p>}
       {preview && (
         <p className="ob-backread-estimate">

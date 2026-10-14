@@ -5,7 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../api/client";
-import { Button, Disclosure, TextInput } from "../design-system/atoms";
+import {
+  Button,
+  Disclosure,
+  EmptyState,
+  TextInput,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
@@ -14,8 +19,10 @@ import {
 } from "../design-system/confirmphrase";
 import { DataTable } from "../design-system/datatable";
 import { IconAction } from "../design-system/iconaction";
+import { PanelIntro } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
-import { usePlural, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
 import { grantsAdminRole } from "../lib/capability";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
@@ -54,6 +61,9 @@ function useSetGroupRoleMap() {
     },
   });
 }
+
+/** A refused write, said once by the card that holds the editor. */
+export type Refusal = Readonly<{ title: string; error: unknown }> | undefined;
 
 // A draft grant row. Keyed by a minted id rather than by the group name,
 // because the group is the thing being typed: keying on it would remount the
@@ -120,9 +130,15 @@ function newAdminGroups(
 export function GroupRoleGrants({
   initial,
   canManage,
-}: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
+  onRefusal,
+}: Readonly<{
+  initial: Record<string, string>;
+  canManage: boolean;
+  onRefusal: (refused: Refusal) => void;
+}>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const stored = Object.keys(initial).length;
   return (
     <Disclosure
@@ -132,12 +148,18 @@ export function GroupRoleGrants({
           <span className="t-caption">
             {stored === 0
               ? t("groupRoles.countNone")
-              : plural("groupRoles.count", stored, { count: String(stored) })}
+              : plural("groupRoles.count", stored, {
+                  count: formatNumber(stored, locale),
+                })}
           </span>
         </>
       }
     >
-      <GrantEditor initial={initial} canManage={canManage} />
+      <GrantEditor
+        initial={initial}
+        canManage={canManage}
+        onRefusal={onRefusal}
+      />
     </Disclosure>
   );
 }
@@ -145,7 +167,12 @@ export function GroupRoleGrants({
 function GrantEditor({
   initial,
   canManage,
-}: Readonly<{ initial: Record<string, string>; canManage: boolean }>) {
+  onRefusal,
+}: Readonly<{
+  initial: Record<string, string>;
+  canManage: boolean;
+  onRefusal: (refused: Refusal) => void;
+}>) {
   const t = useT();
   const save = useSetGroupRoleMap();
   // Asked only of a reader who may write the map: the list is the invite's own
@@ -172,15 +199,21 @@ function GrantEditor({
     );
   function submit() {
     const map = Object.fromEntries(rows.map((row) => [row.group, row.role]));
+    onRefusal(undefined);
     if (newAdminGroups(map, initial).length > 0) {
+      save.reset();
       setConfirming(map);
     } else {
-      save.mutate(map);
+      // The confirm dialog says its own refusal, so only this path reports one.
+      save.mutate(map, {
+        onError: (error) =>
+          onRefusal({ title: t("signInMethods.saveFailed"), error }),
+      });
     }
   }
   return (
     <div className="group-grants">
-      <p className="t-body">{t("groupRoles.sub")}</p>
+      <PanelIntro>{t("groupRoles.sub")}</PanelIntro>
       <Callout
         tone="warning"
         kind="standing"
@@ -189,17 +222,8 @@ function GrantEditor({
         <p>{t("groupRoles.grantOnly")}</p>
         <p>{t("groupRoles.adminGrant")}</p>
       </Callout>
-      {save.error && confirming === null && (
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("signInMethods.saveFailed")}
-        >
-          {problemMessageOf(save.error, t)}
-        </Callout>
-      )}
       {rows.length === 0 ? (
-        <p className="t-caption">{t("groupRoles.empty")}</p>
+        <EmptyState>{t("groupRoles.empty")}</EmptyState>
       ) : (
         <DataTable
           label={t("groupRoles.disclosure")}

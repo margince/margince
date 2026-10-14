@@ -3,11 +3,13 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Meter } from "../design-system/readings";
+import type { ServiceRowTone } from "../design-system/servicerow";
+import { type StatusKind, statusTone } from "../design-system/statusbadge";
 import { formatDuration, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
+import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useDrawsImportRun } from "../lib/import-onscreen";
 import { problemMessageOf } from "../lib/problem";
@@ -36,13 +38,24 @@ const STATS = [
   label: MessageKey;
 }>[];
 
-/** What the Past email service says: its name, its badge and verb, and what
- *  it reports under its sentence. The account's service list draws it. */
+type PastEmailStatus = Readonly<{
+  tone: ServiceRowTone;
+  label: string;
+  live?: boolean;
+}>;
+
+/** What the Past email service says: its name, its one status and verb, and
+ *  what it reports under its sentence. The account's service list draws it. */
 export type PastEmailParts = Readonly<{
   name: string;
-  side: ReactNode;
+  status: PastEmailStatus;
+  action?: ReactNode;
   body?: ReactNode;
 }>;
+
+function pastStatus(kind: StatusKind, label: string, live?: boolean) {
+  return { tone: statusTone(kind), label, live };
+}
 
 export function usePastEmail({
   mail,
@@ -80,27 +93,38 @@ export function usePastEmail({
         window: t(IMPORT_WINDOW_LABELS[window]),
       })
     : t("connectors.svc.pastEmail");
-  const item = (side: ReactNode, body?: ReactNode) => ({ name, side, body });
 
   if (held !== null) {
-    return item(
-      <Badge tone="info">{t("connectors.svc.waiting")}</Badge>,
-      <HeldImport held={held} run={run} importRun={importRun} />,
-    );
+    return {
+      name,
+      status: pastStatus("attention", t("connectors.svc.waiting")),
+      body: <HeldImport held={held} run={run} importRun={importRun} />,
+    };
   }
   if (!run || run.state === "none") {
-    return item(
-      <>
-        <Badge>{t("connectors.svc.notImported")}</Badge>
+    return {
+      name,
+      status: pastStatus("neutral", t("connectors.svc.notImported")),
+      action: (
         <Button onClick={onImport}>{t("connectors.svc.importPast")}</Button>
-      </>,
-    );
+      ),
+    };
   }
-
-  return item(
-    <RunSide run={run} importRun={importRun} />,
-    <RunBody run={run} importRun={importRun} />,
-  );
+  const status = runStatus(run, t);
+  return {
+    name,
+    status,
+    action: <RunVerbs run={run} importRun={importRun} />,
+    body: (
+      <>
+        {/* The state word is announced when it changes; count ticks are not. */}
+        <span role="status" className="sr-only">
+          {status.label}
+        </span>
+        <RunBody run={run} importRun={importRun} />
+      </>
+    ),
+  };
 }
 
 type ImportRun = ReturnType<typeof useBackfillRun>;
@@ -141,32 +165,34 @@ function HeldImport({
   );
 }
 
-// The badge and the verb of a run that has started: Stop while it can move,
-// Continue on one that stopped on an error and kept its place.
-function RunSide({
+// A run that has started, as one status: reading is running work (grey, live),
+// a stall or an error someone must look at is amber.
+function runStatus(run: BackfillStatus, t: Translator): PastEmailStatus {
+  const { live, stale, reading } = runReading(run);
+  if (reading) return pastStatus("neutral", t("backfill.readingBadge"), true);
+  if (live && stale) {
+    return pastStatus("attention", t("connectors.health.attention"));
+  }
+  if (live) return pastStatus("neutral", t("connectors.svc.queued"));
+  if (run.state === "error") {
+    return pastStatus("attention", t("connectors.svc.stopped"));
+  }
+  if (run.state === "cancelled") {
+    return pastStatus("neutral", t("connectors.svc.stopped"));
+  }
+  return pastStatus("done", t("connectors.svc.imported"));
+}
+
+// The verb of a run that has started: Stop while it can move, Continue on one
+// that stopped on an error and kept its place.
+function RunVerbs({
   run,
   importRun,
 }: Readonly<{ run: BackfillStatus; importRun: ImportRun }>) {
   const t = useT();
-  const { live, stale, reading } = runReading(run);
-  let badge = <Badge tone="success">{t("connectors.svc.imported")}</Badge>;
-  if (reading) {
-    badge = <Badge tone="ai">{t("backfill.readingBadge")}</Badge>;
-  } else if (live) {
-    badge = stale ? (
-      <Badge tone="warning">{t("connectors.health.attention")}</Badge>
-    ) : (
-      <Badge tone="info">{t("connectors.svc.queued")}</Badge>
-    );
-  } else if (run.state === "error") {
-    badge = <Badge tone="warning">{t("connectors.svc.stopped")}</Badge>;
-  } else if (run.state === "cancelled") {
-    badge = <Badge>{t("connectors.svc.stopped")}</Badge>;
-  }
+  const { live } = runReading(run);
   return (
     <>
-      {/* The state word is announced when it changes; count ticks are not. */}
-      <span role="status">{badge}</span>
       {live && (
         <Button
           disabled={importRun.cancel.isPending}

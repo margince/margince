@@ -10,13 +10,15 @@ import {
   ConfirmPhraseBox,
   phraseMatches,
 } from "../design-system/confirmphrase";
+import {
+  DrawerBody,
+  DrawerFoot,
+  DrawerHead,
+} from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { OffsiteLink } from "../design-system/offsitelink";
-import {
-  ProviderMark,
-  providerBrandName,
-} from "../design-system/provider-mark";
+import { providerBrandName } from "../design-system/provider-mark";
 import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
@@ -109,22 +111,12 @@ export function OAuthAppDrawer({
       labelledBy={titleId}
       intent="drawer-reading"
     >
-      <div className="drawer-head">
-        {/* The heading leads its band, which is what keeps the dialog's close
-            control clear of the title's last word. */}
-        <div className="oauthapp-drawer-heading">
-          <Heading
-            size="medium"
-            as="h2"
-            id={titleId}
-            className="oauthapp-drawer-title"
-          >
-            <ProviderMark providerKey={provider} />
-            {t(copy.title)}
-          </Heading>
-          <p className="t-caption">{t(copy.intro)}</p>
-        </div>
-      </div>
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {t(copy.title)}
+        </Heading>
+        <p className="t-caption">{t(copy.intro)}</p>
+      </DrawerHead>
       {/* Mounted only while the drawer is, so a typed secret never outlives
           it: closing without saving drops the draft. */}
       <SetupForm
@@ -187,7 +179,7 @@ function SetupForm({
 
   return (
     <>
-      <div className="drawer-body oauthapp-drawer-body">
+      <DrawerBody className="oauthapp-drawer-body">
         <p className="t-body">{t(copy.value, { company })}</p>
         <div className="oauthapp-unlocks">
           <Chip icon={Mail}>{t(copy.unlockMail)}</Chip>
@@ -270,8 +262,8 @@ function SetupForm({
         </Checklist>
         {/* Last in the body, so a refusal lands beside the Save that drew it. */}
         <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
-      </div>
-      <div className="drawer-foot">
+      </DrawerBody>
+      <DrawerFoot>
         <span className="t-caption">{t("oauthApp.drawer.foot")}</span>
         <div className="form-actions">
           <Button onClick={onCancel} disabled={save.isPending}>
@@ -287,7 +279,7 @@ function SetupForm({
             {t(copy.save)}
           </Button>
         </div>
-      </div>
+      </DrawerFoot>
     </>
   );
 }

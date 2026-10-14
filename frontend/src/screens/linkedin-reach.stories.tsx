@@ -3,14 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { within } from "storybook/test";
+import { Panel } from "../design-system/panel";
 import { meFixture } from "../testing/mefixture";
 import { LinkedInReachSection } from "./linkedin-reach";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The reach section of the LinkedIn network panel for the fe-uat render gate:
-// a list that stops short of the whole (so the caveat says where), nothing
-// resolved (the unresolved count replaces the empty sentence), nothing imported,
-// and a failed read, which must not look like an empty network.
+// The reach section, inside the panel it renders in, for the fe-uat render
+// gate: a list that stops short of the whole (so the caveat says where),
+// nothing resolved (the unresolved count replaces the empty sentence), nothing
+// imported, and a failed read, which must not look like an empty network.
 
 function reachStory(body: unknown, status = 200) {
   return () => {
@@ -20,7 +21,9 @@ function reachStory(body: unknown, status = 200) {
     });
     return (
       <StoryProviders>
-        <LinkedInReachSection />
+        <Panel title="LinkedIn network">
+          <LinkedInReachSection />
+        </Panel>
       </StoryProviders>
     );
   };

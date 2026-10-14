@@ -272,7 +272,9 @@ describe("the first-run setup gate", () => {
     await user.type(screen.getByLabelText("Client secret"), "s3cret");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(screen.getByText("Still needed: Directory (tenant) ID")).toBeTruthy();
+    expect(
+      screen.getByText("Still needed: Directory (tenant) ID"),
+    ).toBeTruthy();
     expect(writes.length).toBe(0);
 
     await user.type(

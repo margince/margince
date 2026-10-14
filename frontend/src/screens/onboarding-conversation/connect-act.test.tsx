@@ -209,7 +209,7 @@ it("renders the provider-agnostic return view on OAuth return", async () => {
     {},
   );
   renderConnectAct("ok");
-  expect(await screen.findByText("Live and capturing")).toBeTruthy();
+  expect(await screen.findByText(en["connectors.svc.newMail"])).toBeTruthy();
 });
 
 // The way past a missing mailbox is offered while connecting is still the
@@ -230,7 +230,7 @@ it("stops offering the skip once consent has returned", async () => {
     {},
   );
   renderConnectAct("ok");
-  await screen.findByText("Live and capturing");
+  await screen.findByText(en["connectors.svc.newMail"]);
   expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
 });
 
@@ -375,7 +375,9 @@ it("keeps the accounts disabled during a roster refetch, not just its first load
     }),
   );
   // The re-read roster is what closes the form, onto the live mailbox.
-  expect(await screen.findByText(en["ob.s4.connectLive"])).toBeInTheDocument();
+  expect(
+    await screen.findByText(en["connectors.svc.newMail"]),
+  ).toBeInTheDocument();
   expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
 });
 

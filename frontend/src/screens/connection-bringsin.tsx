@@ -4,11 +4,12 @@
 import { useId, useState } from "react";
 import { ActionRow } from "../design-system/actionrow";
 import { Button, Modal } from "../design-system/atoms";
-import { type Choice, ChoiceList } from "../design-system/choicelist";
+import { ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
 import { Heading } from "../design-system/heading";
 import { useT } from "../i18n";
 import type { Service } from "./connect-flow-draft";
+import { serviceChoices } from "./connect-services";
 
 // "Change what it brings in" for a Google or Microsoft 365 account: the two
 // services ticked as they stand. Ticking one asks the vendor for it; unticking
@@ -58,18 +59,8 @@ export function BringsInDialog({
   const unchanged = change.added.length === 0 && change.removed.length === 0;
   // An addition alone goes straight to the vendor, so the button says where.
   const leaves = change.added.length > 0 && change.removed.length === 0;
-  const choices: Choice<Service>[] = [
-    {
-      value: "mail",
-      label: t("connectFlow.mail"),
-      description: t("connectFlow.mailHelp"),
-    },
-    {
-      value: "calendar",
-      label: t("connectFlow.calendar"),
-      description: t("connectFlow.calendarHelp"),
-    },
-  ];
+  // No roster passed: a service it brings in now is ticked, never refused.
+  const choices = serviceChoices(t);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">

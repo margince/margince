@@ -43,7 +43,7 @@ const targets = new Set(
 );
 
 /** Pages naming a noun past the start of their name, owned by another screen. */
-const ELSEWHERE = new Set(["reporting.filters.tsx"]);
+const ELSEWHERE = new Set(["aicalls-filters.tsx", "reporting.filters.tsx"]);
 
 const lightModules = ["filtersaddress.ts", "savedviews.queries.ts"].map(
   (name) => join(screensDir, name),

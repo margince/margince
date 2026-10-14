@@ -15,13 +15,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function toastSpy() {
+  return { show: vi.fn(() => 0), dismiss: vi.fn() };
+}
+
 describe("the delivery settings", () => {
   it("shows what happens today for a reader who has never chosen", async () => {
     // No stored choice: the endpoint answers an empty object, and today's
     // behaviour for an unchosen setting is that the mail is sent. A blank
     // control would tell the reader nothing about what actually happens.
     stubApi({ "GET /me/brief-delivery": () => jsonResponse({}) });
-    render(<BriefDeliveryRows />);
+    render(<BriefDeliveryRows toast={toastSpy()} />);
 
     const morning = await screen.findByTestId("delivery-morning");
     await waitFor(() =>
@@ -33,7 +37,7 @@ describe("the delivery settings", () => {
 
   // Each control sends only ITSELF. A row that sent the whole form would let a
   // stale render of one dropdown overwrite a choice just made in another.
-  it("sends only the setting that was touched", async () => {
+  it("sends only the setting that was touched, and confirms it with a toast", async () => {
     const calls = stubApi({
       "GET /me/brief-delivery": () =>
         jsonResponse({
@@ -42,7 +46,8 @@ describe("the delivery settings", () => {
         }),
       "PUT /me/brief-delivery": () => jsonResponse({}),
     });
-    render(<BriefDeliveryRows />);
+    const toast = toastSpy();
+    render(<BriefDeliveryRows toast={toast} />);
 
     const weekly = await screen.findByTestId("delivery-weekly");
     const user = userEvent.setup();
@@ -60,5 +65,8 @@ describe("the delivery settings", () => {
       // stale render of that dropdown overwrite a choice made elsewhere.
       expect(saves[0].body).toEqual({ weekly_delivery: "none" });
     });
+    await waitFor(() =>
+      expect(toast.show).toHaveBeenCalledWith(en["settings.saved"]),
+    );
   });
 });

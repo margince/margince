@@ -17,8 +17,9 @@ import "./conversation.css";
 // The connect act's work surface on its own, without the act that owns its
 // state. The act's stories (`Onboarding/Conversation/Connect act`) walk the
 // route and consent outcomes; these hold the ask in view: the account picker,
-// the inline Google ask with mail and calendar both ticked, IMAP's form, and
-// an account whose company app waits on an administrator.
+// the inline Google ask with mail and calendar both ticked, IMAP's form, an
+// account whose company app waits on an administrator, the connected account
+// and a roster read that failed.
 
 const ALL_READY: ProviderAvailability[] = [
   { provider: "gmail", reason: "ready" },
@@ -46,15 +47,38 @@ const READER: GrantSpec = { channel_connection: ["read", "create"] };
 // The grant the app endpoints enforce, so the step offers the form in place.
 const ADMIN: GrantSpec = { ...READER, capture_settings: ["read", "update"] };
 
+// A Google account as the roster reports it once consent has returned.
+const SEND = "https://www.googleapis.com/auth/gmail.send";
+const BOOK = "https://www.googleapis.com/auth/calendar.events";
+const connection = (provider: string, scopes: string[]) => ({
+  id: provider,
+  provider,
+  status: "connected",
+  scopes,
+  account_label: "lars@example.org",
+  backfill: { state: "none" },
+});
+const GOOGLE_LIVE = [
+  connection("gmail", ["read", SEND]),
+  connection("gcal", [BOOK]),
+];
+
 function scene(
   vendor: MailProvider | null,
   providers: ProviderAvailability[] = ALL_READY,
   allow: GrantSpec = READER,
+  roster: () => Response = () => jsonResponse({ data: [], providers }),
 ) {
   return () => {
     installFetchStub({
       "GET /me": meRoute(allow),
-      "GET /connectors": () => jsonResponse({ data: [], providers }),
+      "GET /connectors": roster,
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          estimated_messages: 900,
+          computed_at: "2026-07-31T10:00:00Z",
+        }),
       "GET /installation/oauth-apps/google": () =>
         jsonResponse({
           provider: "google",
@@ -217,4 +241,45 @@ export const LinkedinAsk: Story = {
     );
     await body.findByRole("dialog");
   },
+};
+
+/** The mailbox is live: the account as one row with what it brings in, the
+ *  posture and the import. */
+export const Connected: Story = {
+  render: scene(null, ALL_READY, READER, () =>
+    jsonResponse({ data: GOOGLE_LIVE, providers: ALL_READY }),
+  ),
+};
+
+export const ConnectedDark: Story = {
+  ...Connected,
+  globals: { theme: "dark" },
+};
+
+/** The calendar was granted for reading only: the account needs attention,
+ *  says why once, and offers one primary Reconnect. */
+export const ConnectedNeedsReconnect: Story = {
+  render: scene(null, ALL_READY, READER, () =>
+    jsonResponse({
+      data: [connection("gmail", ["read", SEND]), connection("gcal", ["read"])],
+      providers: ALL_READY,
+    }),
+  ),
+};
+
+/** Mail without its calendar: the calendar line offers its own connect. */
+export const ConnectedCalendarMissing: Story = {
+  render: scene(null, ALL_READY, READER, () =>
+    jsonResponse({
+      data: [connection("gmail", ["read", SEND])],
+      providers: ALL_READY,
+    }),
+  ),
+};
+
+/** The roster read failed: said in red, with the one recovery. */
+export const RosterFailed: Story = {
+  render: scene(null, ALL_READY, READER, () =>
+    jsonResponse({ code: "internal" }, 500),
+  ),
 };

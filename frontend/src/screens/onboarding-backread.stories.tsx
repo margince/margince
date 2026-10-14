@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// The backread step for the fe-uat render gate — one story per honest branch:
+// The backread step for the fe-uat render gate: one story per honest branch:
 // the window pick with its scope, a failed estimate that still allows the read,
 // a run in progress with and without a denominator, the finished read, and the
 // two failure states. Every fixture is a valid BackfillStatus/BackfillPreview,
@@ -146,7 +146,7 @@ export const RunningWithoutDenominator: Story = {
   }),
 };
 
-// Partial counts: the tallies the run reported and no others — an absent count
+// Partial counts: the tallies the run reported and no others: an absent count
 // is a measurement nobody took, not a zero.
 export const PartialCounts: Story = {
   render: backreadStory({

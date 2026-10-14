@@ -21,6 +21,12 @@
   padding: var(--space-3) 0;
 }
 
+/* A row alone in a Card (a connect tile): the card already pads it, so the
+ * row's own block padding would push the mark further from the top than the sides. */
+.card > .provider-row {
+  padding-block: 0;
+}
+
 /* The tile is the row's; the brand mark inside keeps its own geometry and is
  * only sized, through the property provider-mark.css reads. */
 .provider-row-mark {
@@ -67,6 +73,10 @@
   gap: var(--space-2);
   font: var(--fontBodySmall);
   color: var(--textSecondary);
+}
+
+.provider-row-reason {
+  margin: 0;
 }
 
 .provider-row-actions {

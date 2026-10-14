@@ -35,7 +35,9 @@ describe("UsersAdminCard", () => {
     // authenticated principal, and who is on the team is not an admin's private
     // question. So a rep reads the list.
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
-    expect(screen.getByRole("heading", { name: /^Users$/ })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: en["users.membersTitle"] }),
+    ).toBeTruthy();
 
     // No picker, and no menu the verbs would live behind. Nor any role TEXT:
     // this reader is not sent `roles` at all (handlers_roster.go withholds the
@@ -107,9 +109,11 @@ describe("UsersAdminCard", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    expect(screen.getAllByRole("heading", { name: /^Users$/ })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("heading", { name: en["users.membersTitle"] }),
+    ).toHaveLength(1);
     const header = screen
-      .getByRole("heading", { name: /^Users$/ })
+      .getByRole("heading", { name: en["users.membersTitle"] })
       .closest(".panel-head");
     if (!(header instanceof HTMLElement)) {
       throw new Error("the members card has no header band");

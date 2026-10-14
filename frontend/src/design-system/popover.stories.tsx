@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { Badge } from "./atoms";
 import { Popover } from "./popover";
 
 // Popover: a short aside opened beside its trigger, portalled to the body so a
@@ -116,4 +117,38 @@ export const LongPanelScrolls: Story = {
     </Popover>
   ),
   play: openByClick,
+};
+
+// `width="wide"`: a panel of rows that each carry a title and a verb.
+export const Wide: Story = {
+  render: () => (
+    <Popover label="Evidence" variant="ghost" width="wide">
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: openByClick,
+};
+
+// A chip-like trigger: a ghost Button with a count Badge, no pill restyle.
+export const GhostTriggerWithBadge: Story = {
+  render: () => (
+    <Popover
+      label={
+        <>
+          Setup <Badge>2</Badge>
+        </>
+      }
+      variant="ghost"
+      width="wide"
+    >
+      <p>Two steps left.</p>
+    </Popover>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /Setup/ }));
+    await expect(
+      within(document.body).getByText("Two steps left."),
+    ).toBeVisible();
+  },
 };

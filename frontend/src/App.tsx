@@ -16,6 +16,7 @@ import { AuthSplash } from "./app/bootsplash";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import { DateFormatsProvider } from "./app/dateformats";
 import { opensReservedPage } from "./app/nav";
+import { passesOnboardingGate } from "./app/onboarding-gate";
 import {
   CommandPalette,
   useBuiltinCommands,
@@ -646,12 +647,6 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "room",
 ]);
 
-// OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
-const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
-  "onboarding",
-  "oauth-consent",
-]);
-
 export function App() {
   // Ahead of every gate below, since reading the address also takes a one-time
   // credential out of it (lib/router.tsx). A credential must leave the bar
@@ -801,17 +796,18 @@ function AuthedApp({
   // 401 and say nothing about the installation.
   const recordZone = useConfiguredRecordZone(authed);
 
-  // route.screen is a dependency on purpose: the gate must hold on every
-  // navigation, not only on first load — otherwise the palette or a typed hash
-  // walks straight past onboarding. ONBOARDING_GATE_EXEMPT_SCREENS is exempt
+  // The route is a dependency on purpose: the gate must hold on every
+  // navigation, not only on first load: otherwise the palette or a typed hash
+  // walks straight past onboarding. passesOnboardingGate's screens are exempt
   // or this effect would fight its own destination (onboarding) or destroy a
   // request that cannot survive the rewrite (oauth-consent).
+  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
   useEffect(() => {
     if (
       authed &&
       described !== undefined &&
       (!described || progress.unfinished) &&
-      !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
+      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
     ) {
       // Replacing, not pushing: this is a redirect, and the address it sends
       // the reader away from answers by sending them here again. Pushed, Back
@@ -819,7 +815,7 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, described, progress.unfinished, route.screen]);
+  }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const commands = useBuiltinCommands();

@@ -160,6 +160,8 @@ function list(
     allow?: GrantSpec;
     more?: boolean;
     callDetail?: unknown;
+    /** Replaces the trace's answer: a read that never lands, or one that fails. */
+    trace?: () => Response | Promise<Response>;
   }> = {},
 ) {
   const { capture = true, allow = OPERATOR, more = false } = options;
@@ -169,30 +171,38 @@ function list(
     globalThis.location.hash = "";
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
-      "GET /ai/calls": () =>
-        jsonResponse({
-          data,
-          page: more
-            ? { has_more: true, next_cursor: "page-2" }
-            : { has_more: false },
-          payload_capture_enabled: capture,
-          tasks: [
-            "capture_classify",
-            "enrich",
-            "owed_verdict",
-            "weekly_review",
-          ],
-          task_options: [
-            {
-              task: "capture_classify",
-              display_name: "Message classification",
-            },
-            { task: "enrich" },
-            { task: "owed_verdict", display_name: "Unanswered-message triage" },
-            { task: "weekly_review", display_name: "Weekly review narrative" },
-          ],
-          models: ["claude-sonnet", "gemini-2.5-flash"],
-        }),
+      "GET /ai/calls":
+        options.trace ??
+        (() =>
+          jsonResponse({
+            data,
+            page: more
+              ? { has_more: true, next_cursor: "page-2" }
+              : { has_more: false },
+            payload_capture_enabled: capture,
+            tasks: [
+              "capture_classify",
+              "enrich",
+              "owed_verdict",
+              "weekly_review",
+            ],
+            task_options: [
+              {
+                task: "capture_classify",
+                display_name: "Message classification",
+              },
+              { task: "enrich" },
+              {
+                task: "owed_verdict",
+                display_name: "Unanswered-message triage",
+              },
+              {
+                task: "weekly_review",
+                display_name: "Weekly review narrative",
+              },
+            ],
+            models: ["claude-sonnet", "gemini-2.5-flash"],
+          })),
       "GET /ai/calls/call-1": () => jsonResponse(options.callDetail ?? detail),
     });
     return (
@@ -218,6 +228,14 @@ export const ListDark: Story = {
 export const Empty: Story = { render: list([]) };
 export const Withheld: Story = { render: list(calls, { allow: {} }) };
 export const ListPaged: Story = { render: list(calls, { more: true }) };
+export const Loading: Story = {
+  render: list(calls, { trace: () => new Promise<Response>(() => {}) }),
+};
+export const Failed: Story = {
+  render: list(calls, {
+    trace: () => jsonResponse({ title: "Upstream is down", status: 500 }, 500),
+  }),
+};
 
 // The server found nothing for the search, so the answer is about the filters,
 // not the installation, and the way back sits beside it.
@@ -267,13 +285,13 @@ export const ListPhone: Story = {
   render: list(calls),
 };
 
-// A broker's model ids never break on their own, so they wrap anywhere rather
-// than widen the table past its card.
+// The settings column is 720 wide: five columns and a broker's unbroken model
+// ids still fit it, with no sideways scroll and every badge inside the card.
 export const BrokerModelsAtSettingsWidth: Story = {
   render: () => {
     const Card = list(brokered);
     return (
-      <div style={{ maxWidth: 820 }} data-testid="settings-width">
+      <div style={{ maxWidth: 720 }} data-testid="settings-width">
         <Card />
       </div>
     );
@@ -281,9 +299,16 @@ export const BrokerModelsAtSettingsWidth: Story = {
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(/mistral-small-2603/);
     const scroller = canvasElement.querySelector(".table-scroll");
-    expect(scroller?.scrollWidth).toBeLessThanOrEqual(
+    await expect(scroller?.scrollWidth).toBeLessThanOrEqual(
       scroller?.clientWidth ?? 0,
     );
+    const card = canvasElement.querySelector(".panel");
+    const edge = card?.getBoundingClientRect().right ?? 0;
+    for (const badge of canvasElement.querySelectorAll(".panel .badge")) {
+      await expect(badge.getBoundingClientRect().right).toBeLessThanOrEqual(
+        edge,
+      );
+    }
   },
 };
 

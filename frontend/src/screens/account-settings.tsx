@@ -5,31 +5,31 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { THEME_LABEL_KEYS } from "../app/account";
 import { Avatar, Button, SegmentedControl } from "../design-system/atoms";
+import { Heading } from "../design-system/heading";
+import { IdentityFact, IdentityLine } from "../design-system/identityline";
 import { Panel, PanelBody } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
+import { PanelSave } from "../design-system/panelsave";
 import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type Toast, useToast } from "../design-system/toast";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
-import { unwrap } from "../lib/problem";
+import { problemMessageOf, unwrap } from "../lib/problem";
 import { useInstallState } from "../lib/pwa";
 import { useLogout, useMe } from "../lib/session";
 import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
 import { BriefDeliveryRows } from "./briefdelivery";
 import { PasswordSettingRow } from "./passwordcard";
-import {
-  DisplayNameSettingRow,
-  GreetingNameSettingRow,
-} from "./settings-names";
+import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
-import "./account-settings.css";
 
 // The Account page as task cards, each one job a reader comes here to do: how
 // colleagues see you, how you sign in, the language that follows the account,
-// and what this browser alone remembers. Every row keeps the page's one row
-// language, naming on the left and the control on the right.
+// and what this browser alone remembers. Fields commit through the card's
+// PanelSave; a lone choice writes as it changes and toasts.
 export function AccountCard() {
   // The page owns where an announcement lands, not the row that produced it: a
   // toast region between two rows would take the hairline the list draws.
@@ -38,9 +38,9 @@ export function AccountCard() {
     <>
       <ProfilePanel toast={toast} />
       <SignInPanel />
-      <LanguagePanel />
+      <LanguagePanel toast={toast} />
       <BrowserPanel />
-      <ScheduledEmailsPanel />
+      <ScheduledEmailsPanel toast={toast} />
     </>
   );
 }
@@ -48,15 +48,25 @@ export function AccountCard() {
 function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const query = useMe();
+  const names = useAccountNames(toast);
   return (
-    <Panel title={t("account.profileCard")}>
+    <Panel
+      title={t("account.profileCard")}
+      actions={
+        <PanelSave
+          dirty={names.dirty}
+          pending={names.pending}
+          onSave={names.save}
+          onDiscard={names.discard}
+        />
+      }
+    >
       <PanelBody>
         <QueryGate query={query} pendingLabel={t("account.profileCard")}>
           {(me) => (
-            <div className="settings-identity account-identity">
+            <div className="settings-identity">
               {/* Both halves are required on the wire, so `|| ""` is the promise
-                  that a server answering with neither costs an unnamed chip, not
-                  the app shell this block renders inside. */}
+                  that a server answering with neither costs an unnamed chip. */}
               <Avatar
                 size="lg"
                 identity={me.user.id}
@@ -64,30 +74,33 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
               />
               <div className="settings-identity-id">
                 <div className="settings-identity-name">
-                  <strong className="account-identity-name">
+                  <Heading size="medium">
                     {me.user.display_name || me.user.email}
-                  </strong>
+                  </Heading>
                   {me.roles.map((role) => (
                     <RoleBadge key={role} roleKey={role} />
                   ))}
                 </div>
-                {/* The address the session is bound to and the workspace it is
-                    bound to it in, on one line; each its own node so either can
-                    be read or matched alone. */}
-                <span className="t-caption account-identity-meta">
-                  <span>{me.user.email}</span>
-                  <span>{me.workspace_name}</span>
-                </span>
+                <IdentityLine>
+                  <IdentityFact>{me.user.email}</IdentityFact>
+                  <IdentityFact quiet>{me.workspace_name}</IdentityFact>
+                </IdentityLine>
               </div>
             </div>
           )}
         </QueryGate>
       </PanelBody>
       <SettingList bleed="settings">
-        <DisplayNameSettingRow toast={toast} />
-        <GreetingNameSettingRow toast={toast} />
+        <NameSettingRows names={names} />
         <SignatureSettingRow toast={toast} />
       </SettingList>
+      <PanelNotices
+        refused={
+          names.error === undefined
+            ? undefined
+            : { title: t("settings.saveFailed"), error: names.error }
+        }
+      />
     </Panel>
   );
 }
@@ -123,12 +136,12 @@ function SignInPanel() {
   );
 }
 
-function LanguagePanel() {
+function LanguagePanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   return (
     <Panel title={t("account.languageCard")}>
       <SettingList bleed="settings">
-        <LanguageSettingRow />
+        <LanguageSettingRow toast={toast} />
       </SettingList>
     </Panel>
   );
@@ -150,31 +163,37 @@ function BrowserPanel() {
   );
 }
 
-function ScheduledEmailsPanel() {
+function ScheduledEmailsPanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   return (
     <Panel title={t("account.emailsCard")}>
       <SettingList bleed="settings">
-        <BriefDeliveryRows />
+        <BriefDeliveryRows toast={toast} />
       </SettingList>
     </Panel>
   );
 }
 
-function LanguageSettingRow() {
+function LanguageSettingRow({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
   // Written to the seat so it follows this colleague to their next browser;
   // `setLocale` keeps the local copy that renders before the request lands.
   // A failed write does not revert: the page is already in the language asked
-  // for, and the next sign-in re-asks the server.
+  // for, so the toast says only that the account did not keep it.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
       unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
     },
     onSuccess: () => {
+      toast.show(t("settings.saved"));
       void queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t, t("settings.saveFailed")), {
+        tone: "danger",
+      });
     },
   });
   return (

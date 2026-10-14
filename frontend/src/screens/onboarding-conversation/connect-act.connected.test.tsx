@@ -49,15 +49,17 @@ function renderConnectAct(
   return { ...view, dispatch, persist };
 }
 
-// A calendar row carries the write grant bookings need unless a test drops it.
+// A row carries the grant its service needs (sending for the mailbox, writing
+// for the calendar) unless a test drops it.
+const GRANTED: Readonly<Record<string, string[]>> = {
+  gcal: ["https://www.googleapis.com/auth/calendar.events"],
+  gmail: ["read", "https://www.googleapis.com/auth/gmail.send"],
+};
 const row = (provider: string, extra: Record<string, unknown> = {}) => ({
   id: provider,
   provider,
   status: "connected",
-  scopes:
-    provider === "gcal"
-      ? ["https://www.googleapis.com/auth/calendar.events"]
-      : ["read"],
+  scopes: GRANTED[provider] ?? ["read"],
   account_label: "lars@example.org",
   ...extra,
 });
@@ -78,7 +80,7 @@ function stub(routes: RouteMap) {
   stubWithSession(routes, {});
 }
 
-const IMPORT = { name: "Import 6 months and continue" };
+const IMPORT = "Import 6 months and continue";
 
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -101,14 +103,15 @@ describe("a live Google mailbox", () => {
     const { container } = renderConnectAct();
 
     expect(await screen.findByText("Google is connected")).toBeInTheDocument();
-    expect(screen.getAllByText("lars@example.org")).toHaveLength(2);
+    // One account row, the way Connections draws it, not a row per service.
+    expect(screen.getAllByText("lars@example.org")).toHaveLength(1);
     expect(
       screen.getByText(en["ob.conv.connect.importTitle"]),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("radio", { name: /Held until checked/ }),
     ).toBeChecked();
-    await screen.findByRole("button", IMPORT);
+    await screen.findByRole("button", { name: IMPORT });
     expect(container.querySelectorAll(".btn-primary")).toHaveLength(1);
     // The ask is answered: no account picker and no skip beside a mailbox.
     expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
@@ -127,7 +130,7 @@ describe("a live Google mailbox", () => {
     });
     const { dispatch, persist } = renderConnectAct();
 
-    await userEvent.click(await screen.findByRole("button", IMPORT));
+    await userEvent.click(await screen.findByRole("button", { name: IMPORT }));
 
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
@@ -172,7 +175,7 @@ describe("a live Google mailbox", () => {
     });
     const { dispatch } = renderConnectAct();
 
-    await userEvent.click(await screen.findByRole("button", IMPORT));
+    await userEvent.click(await screen.findByRole("button", { name: IMPORT }));
 
     expect(
       await screen.findByText(/The mailbox history import did not start/),
@@ -196,7 +199,7 @@ describe("a live Google mailbox", () => {
       await screen.findByRole("button", { name: "Continue" }),
     );
 
-    expect(screen.queryByRole("button", IMPORT)).toBeNull();
+    expect(screen.queryByRole("button", { name: IMPORT })).toBeNull();
     expect(container.querySelectorAll(".btn-primary")).toHaveLength(1);
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
@@ -246,7 +249,9 @@ describe("a live Google mailbox", () => {
       screen.getByText(en["scheduling.readOnlyCalendar"]),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
-    expect(screen.queryByText(en["ob.conv.connect.calendarBrings"])).toBeNull();
+    expect(
+      screen.getByText(en["connectors.health.attention"]),
+    ).toBeInTheDocument();
   });
 
   // A chained press whose calendar leg was refused lands on the calendar's
@@ -274,7 +279,7 @@ describe("a live Google mailbox", () => {
     expect(
       screen.getByRole("button", { name: "Connect calendar" }),
     ).toBeInTheDocument();
-    await screen.findByRole("button", IMPORT);
+    await screen.findByRole("button", { name: IMPORT });
     expect(container.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
   });
@@ -298,14 +303,14 @@ describe("a live Google mailbox", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole("button", IMPORT)).toBeDisabled(),
+      expect(screen.getByRole("button", { name: IMPORT })).toBeDisabled(),
     );
     expect(
       screen.getByRole("button", { name: "Continue without importing" }),
     ).toBeDisabled();
     deferred.resolve?.(jsonResponse({}));
     await waitFor(() =>
-      expect(screen.getByRole("button", IMPORT)).not.toBeDisabled(),
+      expect(screen.getByRole("button", { name: IMPORT })).not.toBeDisabled(),
     );
   });
 });

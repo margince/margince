@@ -38,6 +38,7 @@ describe("ProviderRow", () => {
       ".badge",
       ".provider-row-account",
       ".provider-row-facts",
+      ".provider-row-reason",
       ".provider-row-actions",
       ".provider-row-body",
     ]) {
@@ -88,6 +89,50 @@ describe("ProviderRow", () => {
 
     rerender(<ProviderRow mark={null} name="Google" />);
     expect(screen.queryByRole("heading")).toBeNull();
+  });
+
+  it("draws the reason as one caption line after the facts", () => {
+    const { container } = render(
+      <ProviderRow
+        mark={null}
+        name="Microsoft 365"
+        status={{ tone: "warning", label: "Needs attention" }}
+        facts="Mail"
+        reason="Microsoft stopped accepting the sign-in."
+        action={<Button variant="primary">Reconnect</Button>}
+      />,
+    );
+
+    const reason = screen.getByText("Microsoft stopped accepting the sign-in.");
+    expect(reason.classList.contains("t-caption")).toBe(true);
+    const facts = container.querySelector(".provider-row-facts") as Node;
+    expect(
+      facts.compareDocumentPosition(reason) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("makes every name in a list an h3 unless the list or the row says otherwise", () => {
+    render(
+      <>
+        <ProviderList>
+          <ProviderRow mark={null} name="Google" />
+          <ProviderRow mark={null} name="Microsoft 365" headingLevel="h4" />
+        </ProviderList>
+        <ProviderList headingLevel="h4">
+          <ProviderRow mark={null} name="Mail" />
+        </ProviderList>
+      </>,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Google" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { level: 4, name: "Microsoft 365" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { level: 4, name: "Mail" }),
+    ).toBeTruthy();
   });
 
   it("draws rows inside one list", () => {

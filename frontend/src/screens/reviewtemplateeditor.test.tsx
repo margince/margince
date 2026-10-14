@@ -140,4 +140,15 @@ describe("editing a review's questions", () => {
         .hasAttribute("disabled"),
     ).toBe(true);
   });
+
+  it("stages Required as a box that rides the drawer's Save", async () => {
+    const onPatch = vi.fn();
+    const { user } = openEditor(template(), onPatch);
+    const [first] = screen.getAllByRole("checkbox", { name: "Required" });
+    if (!first) throw new Error("the drawer shows no Required box");
+    expect(screen.queryByRole("switch")).toBeNull();
+    await user.click(first);
+    expect(onPatch).not.toHaveBeenCalled();
+    expect(screen.getByText("Unsaved changes")).toBeTruthy();
+  });
 });

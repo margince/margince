@@ -102,11 +102,15 @@ const WINDOW = {
   },
 };
 
-function story(body: Record<string, unknown>, allow: GrantSpec = {}) {
+function story(
+  body: Record<string, unknown>,
+  allow: GrantSpec = {},
+  window: () => Response | Promise<Response> = () => jsonResponse(body),
+) {
   return () => {
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
-      "GET /capture/activity": () => jsonResponse(body),
+      "GET /capture/activity": window,
       // The block list is composed on this page, so the story owes it a route
       // — the card is what a reader meets first here, and a story that drew it
       // as a failed read would be showing the wrong page.
@@ -155,6 +159,15 @@ type Story = StoryObj<typeof CaptureActivityTab>;
 // pipeline stored no address and no subject, so every row says so rather than
 // showing an empty cell a reader would take for a message without a subject.
 export const Default: Story = { render: story(WINDOW) };
+
+export const Loading: Story = {
+  render: story(WINDOW, {}, () => new Promise<Response>(() => {})),
+};
+export const Failed: Story = {
+  render: story(WINDOW, {}, () =>
+    jsonResponse({ title: "Upstream is down", status: 500 }, 500),
+  ),
+};
 
 // With capture.trace_payloads on, an operator is diagnosing. The internal drop
 // is the row they turned it on for — it is the only place that content exists.

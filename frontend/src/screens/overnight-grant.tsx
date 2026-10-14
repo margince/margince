@@ -3,17 +3,18 @@
 
 import type { components } from "@composition/schema";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
-import { Badge } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { StatusBadge } from "../design-system/statusbadge";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 import {
   readStored,
   removeStored,
@@ -179,6 +180,21 @@ export function OvernightGrantChoice({
   );
 }
 
+// Lapsed and outgrown differ from a decline (the rep already agreed); each
+// names its cause, since either degrades the 2am run silently.
+function grantStanding(grants: readonly MyAgentGrant[]) {
+  const grant = morningBriefGrant(grants);
+  const granted = grant?.state === "granted";
+  return {
+    granted,
+    lapsed: granted && !grant?.credential_usable,
+    outgrown:
+      granted &&
+      grant?.credential_usable === true &&
+      !grant?.credential_funds_agent,
+  };
+}
+
 /**
  * The settings card: the same question, answered again later.
  *
@@ -201,20 +217,16 @@ export function OvernightGrantCard() {
   return (
     <Panel
       title={t("overnightGrant.title")}
-      titleAction={shownOff ? <Badge>{t("overnightGrant.off")}</Badge> : null}
+      titleAction={
+        shownOff ? (
+          <StatusBadge kind="neutral" label={t("overnightGrant.off")} />
+        ) : null
+      }
     >
       <QueryGate query={query} pendingLabel={t("overnightGrant.title")}>
         {(grants) => {
-          const grant = morningBriefGrant(grants);
-          const granted = grant?.state === "granted";
+          const { granted, lapsed, outgrown } = grantStanding(grants);
           const shown = optimistic ?? granted;
-          // Lapsed and outgrown differ from a decline (the rep already agreed);
-          // each names its cause, since either degrades the 2am run silently.
-          const lapsed = granted && !grant?.credential_usable;
-          const outgrown =
-            granted &&
-            grant?.credential_usable === true &&
-            !grant?.credential_funds_agent;
           return (
             <>
               <SettingList bleed="settings">
@@ -243,14 +255,21 @@ export function OvernightGrantCard() {
                   this page, and reading it back as a fault every visit nags. */}
               {!shown && (
                 <PanelBody>
-                  <p className="t-sub">{t("overnightGrant.offNote")}</p>
+                  <p className="t-caption">{t("overnightGrant.offNote")}</p>
                 </PanelBody>
               )}
-              <GrantNotices
+              <RenewalNotices
                 showRenewal={lapsed && shown}
                 showScopeRenewal={outgrown && shown}
-                error={
-                  save.isError ? problemMessageOf(save.error, t) : undefined
+              />
+              <PanelNotices
+                refused={
+                  save.isError
+                    ? {
+                        title: t("overnightGrant.writeFailedTitle"),
+                        error: save.error,
+                      }
+                    : undefined
                 }
               />
             </>
@@ -261,52 +280,36 @@ export function OvernightGrantCard() {
   );
 }
 
-/** The card's possible notices, kept out of the card so its own body stays the
- * question rather than the answers to it. */
-function GrantNotices({
+/** A yes that no longer does the job, kept out of the card so its own body
+ * stays the question rather than the answers to it. */
+function RenewalNotices({
   showRenewal,
   showScopeRenewal,
-  error,
-}: Readonly<{
-  showRenewal: boolean;
-  showScopeRenewal: boolean;
-  error?: ReactNode;
-}>) {
+}: Readonly<{ showRenewal: boolean; showScopeRenewal: boolean }>) {
   const t = useT();
-  if (!showRenewal && !showScopeRenewal && error === undefined) {
+  if (!showRenewal && !showScopeRenewal) {
     return null;
   }
   return (
-    <PanelBody>
-      <div className="settings-panel-commit">
-        {showRenewal && (
-          <Callout
-            kind="event"
-            tone="warning"
-            title={t("overnightGrant.renewTitle")}
-          >
-            {t("overnightGrant.renew")}
-          </Callout>
-        )}
-        {showScopeRenewal && (
-          <Callout
-            kind="event"
-            tone="warning"
-            title={t("overnightGrant.renewScopeTitle")}
-          >
-            {t("overnightGrant.renewScope")}
-          </Callout>
-        )}
-        {error !== undefined && (
-          <Callout
-            kind="outcome"
-            tone="danger"
-            title={t("overnightGrant.writeFailedTitle")}
-          >
-            {error}
-          </Callout>
-        )}
-      </div>
+    <PanelBody className="panel-notices">
+      {showRenewal && (
+        <Callout
+          kind="event"
+          tone="warning"
+          title={t("overnightGrant.renewTitle")}
+        >
+          {t("overnightGrant.renew")}
+        </Callout>
+      )}
+      {showScopeRenewal && (
+        <Callout
+          kind="event"
+          tone="warning"
+          title={t("overnightGrant.renewScopeTitle")}
+        >
+          {t("overnightGrant.renewScope")}
+        </Callout>
+      )}
     </PanelBody>
   );
 }

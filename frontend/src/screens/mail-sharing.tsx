@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
-import { Badge, Button } from "../design-system/atoms";
+import type { components } from "../api/schema";
+import { Badge } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import {
   Panel,
@@ -10,22 +11,22 @@ import {
   PanelIntro,
   PanelPlate,
 } from "../design-system/panel";
+import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../lib/problem";
+import { throwProblem, unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 
-// The workspace mail-sharing posture: ON by default, captured mail is
-// readable by every colleague who can see the contact — the thing that makes
-// the pipeline shared. Switching it OFF holds every email captured from then
-// on to its participants, which makes shared CRM work hard, so the change is
-// a deliberate act: a switch plus a Save button plus a warning that says the
-// cost out loud, never a silent instant toggle. Every role sees the posture;
-// only admin/ops may change it (same gating as the auto-enrich card).
+// The workspace mail-sharing posture: ON by default, so captured mail is shared
+// with every colleague who can see the contact. Every role reads it; only
+// admin/ops may change it, and each switch writes on flip and toasts.
+
+type CaptureSettingsPatch =
+  components["schemas"]["UpdateCaptureSettingsRequest"];
 
 function useMailSharing() {
   return useQuery({
@@ -40,98 +41,82 @@ function useMailSharing() {
   });
 }
 
-type BandState = Readonly<{
-  notice: ReactNode;
-  error: unknown;
-  dirty: boolean;
-}>;
-
-function bandShows({ notice, error, dirty }: BandState): boolean {
-  return notice !== null || error !== undefined || dirty;
+/**
+ * One switch's write. Each PATCH carries only its own field: the two settings
+ * point in opposite directions, so one write must never also rewrite the other.
+ */
+function usePostureWrite(bodyOf: (next: boolean) => CaptureSettingsPatch) {
+  const t = useT();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const write = useMutation({
+    mutationFn: async (next: boolean) =>
+      unwrap(await api.PATCH("/capture/settings", { body: bodyOf(next) })),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["capture-settings"], data);
+      toast.show(t("settings.saved"));
+    },
+    onSettled: () => setOptimistic(null),
+  });
+  const flip = (next: boolean) => {
+    setOptimistic(next);
+    write.mutate(next);
+  };
+  return { write, optimistic, flip };
 }
 
-/**
- * The band under the rows: what the posture costs, what the write refused, and
- * the verb that commits it.
- *
- * All three belong to the CARD rather than to a row — an unsaved flip is a
- * state of the whole card, and a notice squeezed into a row's right column
- * would read as that switch's own answer. One component because this card
- * carries two of them, and two inline copies of the shape had already begun to
- * disagree about which of their notices interrupts.
- */
-function CommitBand({
-  notice,
-  error,
-  dirty,
+function PostureSwitch({
+  testId,
+  label,
+  description,
+  checked,
+  canManage,
   pending,
-  onSave,
-}: BandState & Readonly<{ pending: boolean; onSave: () => void }>) {
+  onChange,
+}: Readonly<{
+  testId: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  canManage: boolean;
+  pending: boolean;
+  onChange: (next: boolean) => void;
+}>) {
   const t = useT();
-  if (!bandShows({ notice, error, dirty })) return null;
   return (
-    <div className="settings-panel-commit">
-      {notice}
-      {error !== undefined && (
-        <Callout
-          kind="outcome"
-          tone="danger"
-          title={t("mailSharing.saveFailed")}
-        >
-          {problemMessageOf(error, t)}
-        </Callout>
+    <SettingRow
+      label={label}
+      description={description}
+      // Without the row's description, a screen reader never hears what the
+      // switch does.
+      control={(control) => (
+        <Switch
+          describedBy={control["aria-describedby"]}
+          testId={testId}
+          label={label}
+          labelHidden
+          reason={canManage ? undefined : t("captureSettings.adminOnly")}
+          checked={checked}
+          disabled={!canManage}
+          pending={pending}
+          onChange={onChange}
+        />
       )}
-      {dirty && (
-        <Button variant="primary" disabled={pending} onClick={onSave}>
-          {t("mailSharing.save")}
-        </Button>
-      )}
-    </div>
+    />
   );
 }
 
 export function MailSharingCard() {
   const t = useT();
-  const toast = useToast();
   const canManage = useCanWrite("capture_settings", "update");
   const query = useMailSharing();
-  const queryClient = useQueryClient();
-  // null = no unsaved change; the switch renders the stored posture.
-  const [pending, setPending] = useState<boolean | null>(null);
-  // The two settings on this card are saved apart. They point in OPPOSITE
-  // directions — one withholds mail from colleagues, the other permits a seat
-  // to hand it over on arrival — so a single Save button committing both at
-  // once would let a reader flip one while meaning the other.
-  const [pendingShared, setPendingShared] = useState<boolean | null>(null);
-  const save = useMutation({
-    mutationFn: async (mailSharing: boolean) => {
-      return unwrap(
-        await api.PATCH("/capture/settings", {
-          body: { mail_sharing: mailSharing },
-        }),
-      );
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["capture-settings"], data);
-      setPending(null);
-      toast.show(t("settings.saved"));
-    },
-  });
-
-  const saveShared = useMutation({
-    mutationFn: async (allowed: boolean) => {
-      return unwrap(
-        await api.PATCH("/capture/settings", {
-          body: { shared_posture_allowed: allowed },
-        }),
-      );
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["capture-settings"], data);
-      setPendingShared(null);
-      toast.show(t("settings.saved"));
-    },
-  });
+  const sharing = usePostureWrite((next) => ({ mail_sharing: next }));
+  const shared = usePostureWrite((next) => ({ shared_posture_allowed: next }));
+  // One card, one refusal: the switch flipped last is the one the reader means.
+  const refused = [sharing.write, shared.write]
+    .filter((write) => write.isError)
+    .sort((a, b) => b.submittedAt - a.submittedAt)[0];
 
   return (
     <Panel title={t("mailSharing.title")}>
@@ -140,112 +125,78 @@ export function MailSharingCard() {
       </PanelBody>
       <QueryGate query={query} pendingLabel={t("mailSharing.title")}>
         {(settings) => {
-          const shown = pending ?? settings.mail_sharing;
-          const dirty = pending !== null && pending !== settings.mail_sharing;
-          const sharedShown = pendingShared ?? settings.shared_posture_allowed;
-          const sharedDirty =
-            pendingShared !== null &&
-            pendingShared !== settings.shared_posture_allowed;
-          const sharedBand: BandState = {
-            notice: sharedShown ? (
-              <Callout
-                kind="standing"
-                tone="warning"
-                title={t("mailSharing.sharedPosture.warningTitle")}
-              >
-                {t("mailSharing.sharedPosture.warning")}
-              </Callout>
-            ) : null,
-            error: saveShared.isError ? saveShared.error : undefined,
-            dirty: sharedDirty,
-          };
-          const sharingBand: BandState = {
-            notice: shown ? null : (
-              <Callout
-                kind="standing"
-                tone="warning"
-                title={t("mailSharing.dangerTitle")}
-              >
-                {t("mailSharing.danger")}
-              </Callout>
-            ),
-            error: save.isError ? save.error : undefined,
-            dirty,
-          };
+          const sharingOn = sharing.optimistic ?? settings.mail_sharing;
+          const sharedOn = shared.optimistic ?? settings.shared_posture_allowed;
           return (
             <>
               <SettingList bleed="settings">
-                {/* The row draws the naming, so the switch carries the same
-                    words as its hidden label rather than a second heading and
-                    a hint of its own beside them. */}
-                <SettingRow
+                <PostureSwitch
+                  testId="mail-sharing-toggle"
                   label={t("mailSharing.label")}
                   description={t("mailSharing.help")}
-                  // Without the row's description, a screen reader never
-                  // hears what sharing does.
-                  control={(control) => (
-                    <Switch
-                      describedBy={control["aria-describedby"]}
-                      testId="mail-sharing-toggle"
-                      label={t("mailSharing.label")}
-                      labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
-                      checked={shown}
-                      disabled={!canManage || save.isPending}
-                      onChange={(next) => setPending(next)}
-                    />
-                  )}
+                  checked={sharingOn}
+                  canManage={canManage}
+                  pending={sharing.write.isPending}
+                  onChange={sharing.flip}
                 />
-                {/* The one capture setting whose default withholds, so switching
-                    it on is the permissive answer and the warning fires on true. */}
-                <SettingRow
+                {/* The one capture setting whose default withholds, so on is the
+                    permissive answer and its warning fires on true. */}
+                <PostureSwitch
+                  testId="shared-posture-allowed-toggle"
                   label={t("mailSharing.sharedPosture.label")}
                   description={t("mailSharing.sharedPosture.help")}
-                  control={(control) => (
-                    <Switch
-                      describedBy={control["aria-describedby"]}
-                      testId="shared-posture-allowed-toggle"
-                      label={t("mailSharing.sharedPosture.label")}
-                      labelHidden
-                      reason={
-                        canManage ? undefined : t("captureSettings.adminOnly")
-                      }
-                      checked={sharedShown}
-                      disabled={!canManage || saveShared.isPending}
-                      onChange={(next) => setPendingShared(next)}
-                    />
-                  )}
+                  checked={sharedOn}
+                  canManage={canManage}
+                  pending={shared.write.isPending}
+                  onChange={shared.flip}
                 />
               </SettingList>
-              {(bandShows(sharedBand) || bandShows(sharingBand)) && (
-                <PanelBody>
-                  <CommitBand
-                    {...sharedBand}
-                    pending={saveShared.isPending}
-                    onSave={() => {
-                      if (pendingShared !== null) {
-                        saveShared.mutate(pendingShared);
-                      }
-                    }}
-                  />
-                  <CommitBand
-                    {...sharingBand}
-                    pending={save.isPending}
-                    onSave={() => {
-                      if (pending !== null) {
-                        save.mutate(pending);
-                      }
-                    }}
-                  />
-                </PanelBody>
-              )}
+              <PostureCosts sharingOn={sharingOn} sharedOn={sharedOn} />
             </>
           );
         }}
       </QueryGate>
+      <PanelNotices
+        refused={
+          refused === undefined
+            ? undefined
+            : { title: t("mailSharing.saveFailed"), error: refused.error }
+        }
+      />
     </Panel>
+  );
+}
+
+/** What the current posture costs, said for as long as it stands. */
+function PostureCosts({
+  sharingOn,
+  sharedOn,
+}: Readonly<{ sharingOn: boolean; sharedOn: boolean }>) {
+  const t = useT();
+  if (sharingOn && !sharedOn) {
+    return null;
+  }
+  return (
+    <PanelBody className="panel-notices">
+      {sharedOn && (
+        <Callout
+          kind="standing"
+          tone="warning"
+          title={t("mailSharing.sharedPosture.warningTitle")}
+        >
+          {t("mailSharing.sharedPosture.warning")}
+        </Callout>
+      )}
+      {!sharingOn && (
+        <Callout
+          kind="standing"
+          tone="warning"
+          title={t("mailSharing.dangerTitle")}
+        >
+          {t("mailSharing.danger")}
+        </Callout>
+      )}
+    </PanelBody>
   );
 }
 

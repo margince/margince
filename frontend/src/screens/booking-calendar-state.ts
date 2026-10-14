@@ -1,13 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { providerName } from "../format/connectorprovider";
+import { providerName, VENDOR_SERVICES } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
 import { unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { useConnectAccount } from "./connect-account";
 import { missingCalendarWriteGrant } from "./connector-status";
-import { VENDOR_SERVICES } from "../format/connectorprovider";
 import { useConnectors } from "./connectors";
 
 type Profile = components["schemas"]["SchedulingProfile"];

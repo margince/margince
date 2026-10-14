@@ -118,11 +118,8 @@ export const NotEnabledHere: Story = {
   render: story({ ...CAPABILITIES, read_enabled: false }, EDITOR),
 };
 
-// The filled profile in dark, and this is the surface where that is not a
-// formality: the lead card is accent-toned, so its header band and its footer
-// rule are both tints that composite over the panel face. The accent wash, the
-// count in the footer and the dotted evidence marks in the value column are the
-// set to look at, not the text.
+// The filled profile in dark: the count in the footer and the dotted evidence
+// marks in the value column are the set to look at, not the text.
 export const FilledDark: Story = {
   globals: { theme: "dark" },
   render: story(CAPABILITIES, EDITOR),

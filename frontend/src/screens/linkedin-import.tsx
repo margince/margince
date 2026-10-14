@@ -10,14 +10,20 @@ import {
   Disclosure,
   Field,
   Modal,
+  PendingBody,
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { FileDropzone } from "../design-system/filedropzone";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Stack } from "../design-system/stack";
+import { StatCard } from "../design-system/statcard";
+import { StatStrip } from "../design-system/statstrip";
+import { statusTone } from "../design-system/statusbadge";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { postMultipart } from "../lib/multipart";
@@ -27,7 +33,6 @@ import {
   LINKEDIN_ACCOUNT_KEY,
   useSaveLinkedInAccount,
 } from "./onboarding-conversation/use-linkedin-account";
-import "./linkedin-import.css";
 
 // The LinkedIn network (ADR-0078 §2.1b): the member's own Connections.csv
 // export, the profile it is credited to, and the companies it reaches. No app
@@ -218,7 +223,6 @@ export function LinkedInNetworkPanel() {
   const plural = usePlural();
   const { locale } = useLocale();
   const account = useLinkedInAccount();
-  const importer = useImportConnections();
   const held = account.data?.connections;
   return (
     <Panel title={t("linkedinReach.title")}>
@@ -231,30 +235,30 @@ export function LinkedInNetworkPanel() {
               held === undefined
                 ? undefined
                 : held === 0
-                  ? { tone: "default", label: t("linkedinImport.notImported") }
+                  ? {
+                      tone: statusTone("neutral"),
+                      label: t("linkedinImport.notImported"),
+                    }
                   : {
-                      tone: "success",
+                      tone: statusTone("done"),
                       label: plural("linkedinImport.importedCount", held, {
                         count: formatNumber(held, locale),
                       }),
                     }
             }
-            // What happens to the file, said before the member presses: their
+            // What happens to the file, said before the member drops it: their
             // own address book is going into a company system.
-            facts={<span className="t-sub">{t("linkedinImport.sub")}</span>}
-            action={<ConnectionsFilePicker onFile={importer.mutate} />}
+            facts={t("linkedinImport.sub")}
           >
-            {importer.isIdle ? undefined : (
-              <ImportOutcome importer={importer} />
-            )}
+            <ConnectionsImport />
           </ProviderRow>
         </ProviderList>
       </PanelBody>
       <SettingList bleed="settings">
         <LinkedInProfileRow />
       </SettingList>
+      <LinkedInReachSection />
       <PanelBody>
-        <LinkedInReachSection />
         {/* LinkedIn's archive holds a dozen CSVs and the wrong one fails with
             a parse error, so the way to the right file stays one click away. */}
         <Disclosure summary={t("linkedinImport.importLabel")}>
@@ -265,34 +269,25 @@ export function LinkedInNetworkPanel() {
   );
 }
 
-/** The file picker in the row's action slot: a real <label> drives a hidden
- * input, because the input's own button cannot be styled or translated. */
-function ConnectionsFilePicker({
-  onFile,
-}: Readonly<{ onFile: (file: File) => void }>) {
+/** The file, picked or dropped, and what the import made of it, under the row. */
+function ConnectionsImport() {
   const t = useT();
-  const inputId = useId();
-  const [fileName, setFileName] = useState<string | null>(null);
+  const importer = useImportConnections();
+  const [file, setFile] = useState<File | undefined>(undefined);
   return (
-    <div className="li-import-picker">
-      {fileName && <span className="t-sub">{fileName}</span>}
-      <label className="li-import-button" htmlFor={inputId}>
-        {t("linkedinImport.choose")}
-      </label>
-      <input
-        id={inputId}
-        type="file"
+    <Stack>
+      <FileDropzone
+        label={t("linkedinImport.choose")}
+        emptyLabel={t("linkedinImport.dropHint")}
         accept=".csv,text/csv"
-        data-testid="linkedin-import-file"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          setFileName(file?.name ?? null);
-          if (file) {
-            onFile(file);
-          }
+        file={file}
+        onPick={(picked) => {
+          setFile(picked);
+          importer.mutate(picked);
         }}
       />
-    </div>
+      {importer.isIdle ? null : <ImportOutcome importer={importer} />}
+    </Stack>
   );
 }
 
@@ -302,7 +297,7 @@ function ImportOutcome({
 }: Readonly<{ importer: ReturnType<typeof useImportConnections> }>) {
   const t = useT();
   if (importer.isPending) {
-    return <p className="t-sub">{t("linkedinImport.working")}</p>;
+    return <PendingBody visible label={t("linkedinImport.working")} />;
   }
   if (importer.isError) {
     return (
@@ -328,31 +323,31 @@ function ImportResult({ summary }: Readonly<{ summary: ImportSummary }>) {
   const { locale } = useLocale();
   return (
     <>
-      <dl data-testid="linkedin-import-result" className="li-import-result">
-        <div>
-          <dt>{t("linkedinImport.imported")}</dt>
-          <dd>{formatNumber(summary.imported, locale)}</dd>
-        </div>
-        <div>
-          <dt>{t("linkedinImport.confirmed")}</dt>
-          <dd>{formatNumber(summary.confirmed, locale)}</dd>
-        </div>
-        <div>
-          <dt>{t("linkedinImport.suggested")}</dt>
-          <dd>{formatNumber(summary.suggested, locale)}</dd>
-        </div>
+      <StatStrip testId="linkedin-import-result" density="compact">
+        <StatCard
+          label={t("linkedinImport.imported")}
+          value={formatNumber(summary.imported, locale)}
+        />
+        <StatCard
+          label={t("linkedinImport.confirmed")}
+          value={formatNumber(summary.confirmed, locale)}
+        />
+        <StatCard
+          label={t("linkedinImport.suggested")}
+          value={formatNumber(summary.suggested, locale)}
+        />
         {summary.skipped > 0 && (
-          <div>
-            <dt>{t("linkedinImport.skipped")}</dt>
-            <dd>{formatNumber(summary.skipped, locale)}</dd>
-          </div>
+          <StatCard
+            label={t("linkedinImport.skipped")}
+            value={formatNumber(summary.skipped, locale)}
+          />
         )}
-      </dl>
+      </StatStrip>
       {/* Zero matches on a new workspace is expected rather than wrong: the
           contacts an export matches arrive with mail capture over the hours
           after it. Saying so stops it reading as a broken import. */}
       {summary.confirmed + summary.suggested === 0 && summary.imported > 0 && (
-        <p className="t-sub">{t("linkedinImport.noMatchesYet")}</p>
+        <p className="t-caption">{t("linkedinImport.noMatchesYet")}</p>
       )}
     </>
   );

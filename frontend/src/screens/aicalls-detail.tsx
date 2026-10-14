@@ -5,9 +5,12 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, Disclosure, Modal } from "../design-system/atoms";
 import { useClipboardCopy } from "../design-system/clipboardcopy";
+import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
+import { IconAction } from "../design-system/iconaction";
 import { QueryStates } from "../design-system/querystates";
+import { StatusBadge } from "../design-system/statusbadge";
 import {
   formatDateTime,
   formatDecimal,
@@ -29,7 +32,7 @@ import {
   type AiCallSummary,
   costLabel,
   ladderAttempts,
-  OUTCOME_TONE,
+  OUTCOME_KIND,
   outcomeLabel,
   taskName,
 } from "./aicalls-vocab";
@@ -347,80 +350,95 @@ export function CallDrawer({
   const outcome = call.outcome;
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
-      <Heading size="large" id={titleId} className="modal-title">
-        {taskName(call)}
-      </Heading>
-      <div className="aicalls-drawer-head">
-        <Badge tone={OUTCOME_TONE[outcome]}>{outcomeLabel(outcome, t)}</Badge>
-        {call.decision_attempted && (
-          <Badge>{t("aicalls.badge.decision")}</Badge>
-        )}
-        {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
-        {call.degraded && (
-          <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
-        )}
-        <time className="t-caption" dateTime={call.occurred_at}>
-          {formatDateTime(call.occurred_at, locale, viewerZone())}
-        </time>
-        <span className="aicalls-drawer-nav">
-          <Button
-            iconOnly
-            variant="ghost"
-            aria-label={t("aicalls.prev")}
-            disabled={!onPrev}
-            onClick={onPrev}
-          >
-            <ChevronLeft aria-hidden />
-          </Button>
-          <Button
-            iconOnly
-            variant="ghost"
-            aria-label={t("aicalls.next")}
-            disabled={!onNext}
-            onClick={onNext}
-          >
-            <ChevronRight aria-hidden />
-          </Button>
-        </span>
-      </div>
-      <Section title={t("aicalls.detail.call")}>
-        <FactList facts={summaryFacts(call, query.data, t, n, locale)} />
-      </Section>
-      <QueryStates query={query} pendingLabel={t("aicalls.detail.attempts")}>
-        {query.data && (
-          <>
-            <Section title={t("aicalls.detail.attempts")}>
-              <ol className="aicalls-attempts">
-                {query.data.attempts.map((attempt) => (
-                  <AttemptLine key={attempt.attempt} attempt={attempt} />
-                ))}
-              </ol>
-            </Section>
-            {/* The request settings the attempts were configured with, fixed
-                per tier rather than per call. */}
-            {query.data.config?.provider_params &&
-              Object.keys(query.data.config.provider_params).length > 0 && (
-                <Section title={t("aicalls.detail.settings")}>
-                  <pre className="code-block aicalls-code">
-                    {payloadText(query.data.config.provider_params)}
-                  </pre>
-                </Section>
-              )}
-            <Section title={t("aicalls.detail.payload")}>
-              <Payload
-                key={query.data.id}
-                detail={query.data}
-                captureEnabled={captureEnabled}
-                onExport={onExport}
-              />
-            </Section>
-          </>
-        )}
-      </QueryStates>
-      <Disclosure summary={t("aicalls.detail.technical")}>
-        <FactList facts={technicalFacts(call, query.data, t)} />
-      </Disclosure>
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer-reading"
+      // The reader opened a call to read it: focus lands on the drawer itself,
+      // so the first thing drawn as focused is not a stepping arrow.
+      initialFocusTo={() =>
+        document
+          .getElementById(titleId)
+          ?.closest<HTMLElement>("[role=dialog]") ?? null
+      }
+    >
+      <DrawerHead>
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          {taskName(call)}
+        </Heading>
+        <div className="aicalls-drawer-meta">
+          <StatusBadge
+            kind={OUTCOME_KIND[outcome]}
+            label={outcomeLabel(outcome, t)}
+          />
+          {call.decision_attempted && (
+            <Badge>{t("aicalls.badge.decision")}</Badge>
+          )}
+          {call.cache_hit && <Badge>{t("aicalls.badge.cacheHit")}</Badge>}
+          {call.degraded && (
+            <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
+          )}
+          <time className="t-caption" dateTime={call.occurred_at}>
+            {formatDateTime(call.occurred_at, locale, viewerZone())}
+          </time>
+          <span className="aicalls-drawer-nav">
+            <IconAction
+              variant="ghost"
+              label={t("aicalls.prev")}
+              icon={<ChevronLeft aria-hidden />}
+              disabled={!onPrev}
+              onClick={onPrev}
+            />
+            <IconAction
+              variant="ghost"
+              label={t("aicalls.next")}
+              icon={<ChevronRight aria-hidden />}
+              disabled={!onNext}
+              onClick={onNext}
+            />
+          </span>
+        </div>
+      </DrawerHead>
+      <DrawerBody>
+        <Section title={t("aicalls.detail.call")}>
+          <FactList facts={summaryFacts(call, query.data, t, n, locale)} />
+        </Section>
+        <QueryStates query={query} pendingLabel={t("aicalls.detail.attempts")}>
+          {query.data && (
+            <>
+              <Section title={t("aicalls.detail.attempts")}>
+                <ol className="aicalls-attempts">
+                  {query.data.attempts.map((attempt) => (
+                    <AttemptLine key={attempt.attempt} attempt={attempt} />
+                  ))}
+                </ol>
+              </Section>
+              {/* The request settings the attempts were configured with, fixed
+                  per tier rather than per call. */}
+              {query.data.config?.provider_params &&
+                Object.keys(query.data.config.provider_params).length > 0 && (
+                  <Section title={t("aicalls.detail.settings")}>
+                    <pre className="code-block aicalls-code">
+                      {payloadText(query.data.config.provider_params)}
+                    </pre>
+                  </Section>
+                )}
+              <Section title={t("aicalls.detail.payload")}>
+                <Payload
+                  key={query.data.id}
+                  detail={query.data}
+                  captureEnabled={captureEnabled}
+                  onExport={onExport}
+                />
+              </Section>
+            </>
+          )}
+        </QueryStates>
+        <Disclosure summary={t("aicalls.detail.technical")}>
+          <FactList facts={technicalFacts(call, query.data, t)} />
+        </Disclosure>
+      </DrawerBody>
     </Modal>
   );
 }

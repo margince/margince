@@ -3,10 +3,16 @@
 
 import { useId, useState } from "react";
 import { ActionRow } from "../../design-system/actionrow";
-import { Badge, Button, Field, Modal } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Field,
+  Modal,
+  TextInput,
+} from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Row } from "../../design-system/stack";
 import { useT } from "../../i18n";
@@ -40,27 +46,22 @@ export type AlsoWorthDoingProps = Readonly<{
 export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
   const t = useT();
   return (
-    <section className="ob-connect-also">
-      <div className="ob-connect-section-head">
-        <Heading size="medium">{t("ob.conv.connect.alsoTitle")}</Heading>
-        <p className="t-sub">{t("ob.conv.connect.alsoSub")}</p>
-      </div>
-      <Panel>
-        <PanelBody>
-          <SettingList>
-            {/* Asked on the step rather than in the ask, because a real OAuth
+    <Panel title={t("ob.conv.connect.alsoTitle")}>
+      <PanelBody>
+        <PanelIntro>{t("ob.conv.connect.alsoSub")}</PanelIntro>
+        <SettingList>
+          {/* Asked on the step rather than in the ask, because a real OAuth
               allow leaves the page entirely: a switch flipped inside the ask
               would not survive the redirect back. */}
-            <OvernightGrantChoice
-              checked={props.wantsOvernight}
-              onChange={props.onWantsOvernightChange}
-              failed={props.overnightFailed}
-            />
-            <LinkedinRow {...props} />
-          </SettingList>
-        </PanelBody>
-      </Panel>
-    </section>
+          <OvernightGrantChoice
+            checked={props.wantsOvernight}
+            onChange={props.onWantsOvernightChange}
+            failed={props.overnightFailed}
+          />
+          <LinkedinRow {...props} />
+        </SettingList>
+      </PanelBody>
+    </Panel>
   );
 }
 
@@ -116,7 +117,7 @@ function LinkedinRow({
         labelledBy={titleId}
         intent="form"
       >
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("ob.conv.linkedin.dialogHeadline")}
         </Heading>
         <LinkedinPanel
@@ -158,9 +159,8 @@ function LinkedinPanel({
       <div className="form-stack">
         <Field label={t("ob.conv.linkedin.profileLabel")}>
           {(control) => (
-            <input
+            <TextInput
               {...control}
-              className="input"
               type="url"
               inputMode="url"
               placeholder={t("ob.conv.linkedin.profilePlaceholder")}

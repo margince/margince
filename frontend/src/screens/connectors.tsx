@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { ProviderList } from "../design-system/providerrow";
+import { QueryStates } from "../design-system/querystates";
+import { StatusBadge } from "../design-system/statusbadge";
 import {
   type AccountVendor,
   accountsOf,
@@ -20,7 +21,7 @@ import { isImportWindow } from "../mail-history/window-picker";
 import { type ImportWindow, useConnectAccount } from "./connect-account";
 import { ConnectFlow } from "./connect-flow";
 import { canAddAccount, type FlowAccount } from "./connect-flow-draft";
-import { ConnectionAccountRow } from "./connection-account";
+import { ConnectionAccountRow, offersReconnect } from "./connection-account";
 import { ConnectTiles } from "./connection-empty";
 import { OAuthOutcomeNote } from "./connectors.notices";
 import { ImapConnectForm } from "./imap-connect-form";
@@ -103,12 +104,18 @@ function MailRoster({
   landing: Landing;
   onImapReconnect: () => void;
 }>) {
+  const accounts = accountsOf(rows);
+  // One primary per panel: the first broken account keeps a primary Reconnect.
+  const firstBroken = accounts.find(offersReconnect);
   return (
     <ProviderList>
-      {accountsOf(rows).map((account) => (
+      {accounts.map((account) => (
         <ConnectionAccountRow
           key={account.key}
           account={account}
+          reconnectPrimary={
+            firstBroken === undefined || account === firstBroken
+          }
           heldWindow={
             landing.heldVendor !== null && landing.heldVendor === account.key
               ? landing.heldWindow
@@ -152,32 +159,6 @@ function connectionsLanding(route: Route, params: UrlParams): Landing {
   };
 }
 
-// Everything the mail card shows INSTEAD of a roster: the read in flight, the
-// read refused, and a deployment that never wired mail capture.
-function RosterNotice({
-  query,
-}: Readonly<{ query: ReturnType<typeof useConnectors> }>) {
-  const t = useT();
-  if (query.isPending) {
-    return <p>{t("connectors.loading")}</p>;
-  }
-  if (query.isError) {
-    return (
-      <Callout tone="danger" kind="outcome" title={t("connectors.loadFailed")}>
-        {problemMessageOf(query.error, t)}
-      </Callout>
-    );
-  }
-  if (query.data.notConfigured) {
-    return (
-      <EmptyState>
-        <p>{t("connectors.notConfigured")}</p>
-      </EmptyState>
-    );
-  }
-  return null;
-}
-
 // The head says nothing is connected until something is; from then on it
 // carries the create verb, while there is still an account left to add.
 function MailHeadAction({
@@ -187,12 +168,40 @@ function MailHeadAction({
 }: Readonly<{ empty: boolean; offerAdd: boolean; onAdd: () => void }>) {
   const t = useT();
   if (empty) {
-    return <Badge>{t("connectors.health.notConnected")}</Badge>;
+    return (
+      <StatusBadge kind="neutral" label={t("connectors.health.notConnected")} />
+    );
   }
   if (!offerAdd) {
     return null;
   }
   return <Button onClick={onAdd}>{t("connectors.addOpen")}</Button>;
+}
+
+// The OAuth return's note, with its own "Connect calendar"; each account row
+// carries its own connect.
+function LandingOutcome({
+  landing,
+  connections,
+}: Readonly<{
+  landing: Landing;
+  connections: readonly CaptureConnection[] | undefined;
+}>) {
+  const t = useT();
+  const connect = useConnectAccount();
+  return (
+    <OAuthOutcomeNote
+      outcome={landing.outcome}
+      provider={landing.provider}
+      connections={connections}
+      connectCalendar={{
+        onConnect: (calendar) =>
+          connect.mutate({ provider: calendar, returnTo: "settings" }),
+        pending: connect.isPending,
+        error: connect.isError ? problemMessageOf(connect.error, t) : null,
+      }}
+    />
+  );
 }
 
 // The card: the roster of mailboxes this member captures from, the verb
@@ -206,8 +215,6 @@ export function ConnectorsCard() {
   const [params] = useUrlParams();
   const landing = connectionsLanding(useRoute(), params);
   const connectors = useConnectors();
-  // The outcome note's own "Connect calendar"; each account row carries its own.
-  const connect = useConnectAccount();
 
   const notConfigured = connectors.data?.notConfigured ?? false;
   const rows = (connectors.data?.data ?? []).filter(
@@ -225,9 +232,6 @@ export function ConnectorsCard() {
   return (
     <Panel
       title={t("connectors.title")}
-      // Nothing connected is the one move this page asks for, so the empty card
-      // leads; once an account exists the create verb takes the header.
-      tone={empty ? "accent" : undefined}
       titleAction={
         <MailHeadAction
           empty={empty}
@@ -241,32 +245,27 @@ export function ConnectorsCard() {
         {(empty || connectors.isPending) && (
           <PanelIntro>{t("connectors.sub")}</PanelIntro>
         )}
-        <OAuthOutcomeNote
-          outcome={landing.outcome}
-          provider={landing.provider}
-          connections={connectors.data?.data}
-          connectCalendar={{
-            onConnect: (calendar) =>
-              connect.mutate({ provider: calendar, returnTo: "settings" }),
-            pending: connect.isPending,
-            error: connect.isError ? problemMessageOf(connect.error, t) : null,
-          }}
-        />
-        <RosterNotice query={connectors} />
-        {empty && (
-          <ConnectTiles
-            availability={connectors.data?.providers ?? []}
-            onPick={setAdding}
-            onImap={() => setAdding("imap")}
-          />
-        )}
-        {rosterKnown && !empty && (
-          <MailRoster
-            rows={rows}
-            landing={landing}
-            onImapReconnect={() => setImapConnectOpen(true)}
-          />
-        )}
+        <LandingOutcome landing={landing} connections={connectors.data?.data} />
+        <QueryStates query={connectors} pendingLabel={t("connectors.loading")}>
+          {/* A deployment that never wired mail capture: a calm state. */}
+          {notConfigured && (
+            <EmptyState>{t("connectors.notConfigured")}</EmptyState>
+          )}
+          {empty && (
+            <ConnectTiles
+              availability={connectors.data?.providers ?? []}
+              onPick={setAdding}
+              onImap={() => setAdding("imap")}
+            />
+          )}
+          {rosterKnown && !empty && (
+            <MailRoster
+              rows={rows}
+              landing={landing}
+              onImapReconnect={() => setImapConnectOpen(true)}
+            />
+          )}
+        </QueryStates>
       </PanelBody>
       <MailSharingPlate />
       <ConnectFlow

@@ -3,10 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { Button, Card, Disclosure, TextInput } from "./atoms";
+import { Button, Card, Disclosure, SegmentedControl, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
+import { PanelSave } from "./panelsave";
 import { Select } from "./select";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";
@@ -274,4 +275,87 @@ export const BleedAtPhoneWidth: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const DENSITIES = ["compact", "comfortable"] as const;
+type Density = (typeof DENSITIES)[number];
+
+// A short pick among two or three answers sits in the control column and,
+// like a Switch, writes on the pick.
+function DensityRow() {
+  const [density, setDensity] = useState<Density>("comfortable");
+  return (
+    <Panel title="Display">
+      <SettingList bleed="settings">
+        <SettingRow
+          label="Row density"
+          description="How tightly lists pack their rows."
+          control={
+            <SegmentedControl
+              label="Row density"
+              options={DENSITIES}
+              value={density}
+              onChange={setDensity}
+              labels={{ compact: "Compact", comfortable: "Comfortable" }}
+            />
+          }
+        />
+      </SettingList>
+    </Panel>
+  );
+}
+
+export const SegmentedControlControl: Story = {
+  render: () => <DensityRow />,
+};
+
+// Several fields commit together: Discard and Save appear at the card's foot
+// only while a field differs from what was saved.
+function SignatureForm() {
+  const [saved, setSaved] = useState({ title: "Account Executive", phone: "" });
+  const [draft, setDraft] = useState(saved);
+  const dirty = draft.title !== saved.title || draft.phone !== saved.phone;
+  return (
+    <Panel
+      title="Signature"
+      actions={
+        <PanelSave
+          dirty={dirty}
+          onSave={() => setSaved(draft)}
+          onDiscard={() => setDraft(saved)}
+        />
+      }
+    >
+      <SettingList bleed="settings">
+        <SettingRow
+          label="Job title"
+          control={(control) => (
+            <TextInput
+              {...control}
+              className="settingrow-measure"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            />
+          )}
+        />
+        <SettingRow
+          label="Phone"
+          description="Printed under your name in mail you send."
+          control={(control) => (
+            <TextInput
+              {...control}
+              className="settingrow-measure"
+              type="tel"
+              value={draft.phone}
+              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+            />
+          )}
+        />
+      </SettingList>
+    </Panel>
+  );
+}
+
+export const FieldsWithPanelSave: Story = {
+  render: () => <SignatureForm />,
 };

@@ -150,25 +150,24 @@ describe("SetupReminder", () => {
         "Connect your mail Done",
         "Connect your calendar Still to do",
         "Train your writing voice Still to do",
-        "Turn on your booking link Still to do",
+        "Turn on your booking link ",
       ]
     `);
     expect(steps[0].textContent).toContain("ada@example.test, Google");
     expect(steps[1].getAttribute("aria-current")).toBe("step");
     expect(steps[1].textContent).toContain("Skipped during setup.");
-    // The booking link waits on the calendar: it explains and offers no verb,
-    // only a quiet word holding the cell where the others carry theirs.
+    // The booking link waits on the calendar: it explains, wears the grey
+    // Waiting badge and offers no verb.
     expect(steps[3].textContent).toContain("Needs a calendar.");
     expect(within(steps[3]).queryByRole("button")).toBeNull();
-    expect(steps[3].querySelector(".setup-step-action")?.textContent).toBe(
-      "Waiting",
-    );
-    // The open steps' verbs are all one weight: the ring marks the next one.
+    expect(steps[3].querySelector(".badge")?.textContent).toBe("Waiting");
+    // The current step's verb is primary; the other open ones are not.
     expect(
       within(panel)
         .getAllByRole("button", { name: /^Connect|^Add/ })
         .map((verb) => verb.className.includes("btn-primary")),
-    ).toEqual([false, false]);
+    ).toEqual([true, false]);
+    within(panel).getByText("1 of 4 done");
     expect(
       within(panel)
         .getByRole("meter", { name: "Setup progress" })
@@ -205,7 +204,9 @@ describe("SetupReminder", () => {
       screen.getByRole("region", { name: /Finish setup/ }),
     ).getAllByRole("listitem");
     expect(steps[1].textContent).toContain("Expired or cannot add bookings.");
-    expect(within(steps[1]).getByRole("button").textContent).toBe("Reconnect");
+    const reconnect = within(steps[1]).getByRole("button");
+    expect(reconnect.textContent).toBe("Reconnect");
+    expect(reconnect.className).toContain("btn-primary");
   });
 
   it("closes the panel when the route changes under it", async () => {

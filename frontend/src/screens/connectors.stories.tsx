@@ -305,6 +305,18 @@ export const LoadFailed: Story = {
   },
 };
 
+// The roster read in flight: the card holds the room its rows will take.
+export const Loading: Story = {
+  render: () => {
+    stubAsMember({ "GET /connectors": () => new Promise(() => {}) });
+    return (
+      <StoryProviders>
+        <ConnectorsCard />
+      </StoryProviders>
+    );
+  },
+};
+
 // A deployment that never wired mail capture answers 501 code:not_implemented
 // (httperr.NotImplemented) — a calm, documented feature-off state, never an
 // error card.

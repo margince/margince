@@ -5,11 +5,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { meFixture } from "../testing/mefixture";
 import { LinkedInNetworkPanel } from "./linkedin-import";
-import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  type RouteMap,
+  StoryProviders,
+} from "./story-utils";
 
 // The LinkedIn network panel for the fe-uat render gate: the import as a
-// connection row, the profile row, the reach section and the CSV how-to. It is
-// a personal surface, so the stories differ only in what the reads return. The
+// connection row with its drop zone, the profile row, the reach and the
+// how-to. It is a personal surface, so the stories differ only in what the
+// reads and the import return. The
 // profile editor is a Modal in the document body, so its story scopes `play`
 // past `canvasElement`.
 
@@ -43,7 +49,7 @@ const IMPORTED: Account = {
 function panelStory(
   account: Account,
   reach: unknown = NO_REACH,
-  extra: Record<string, () => Response> = {},
+  extra: RouteMap = {},
 ) {
   return () => {
     installFetchStub({
@@ -59,6 +65,15 @@ function panelStory(
       </StoryProviders>
     );
   };
+}
+
+async function dropTheExport(canvasElement: HTMLElement) {
+  await userEvent.upload(
+    await within(canvasElement).findByLabelText("Import Connections.csv"),
+    new File(["First Name,Last Name\n"], "Connections.csv", {
+      type: "text/csv",
+    }),
+  );
 }
 
 const meta: Meta<typeof LinkedInNetworkPanel> = {
@@ -116,14 +131,37 @@ export const ImportSummary: Story = {
       }),
   }),
   play: async ({ canvasElement }) => {
-    const body = within(canvasElement.ownerDocument.body);
-    await userEvent.upload(
-      body.getByTestId("linkedin-import-file"),
-      new File(["First Name,Last Name\n"], "Connections.csv", {
-        type: "text/csv",
-      }),
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByTestId("linkedin-import-result");
+  },
+};
+
+// The export is being read: the wait stands under the row in words.
+export const Importing: Story = {
+  render: panelStory({ profile_url: "" }, NO_REACH, {
+    "POST /me/linkedin-connections": () => new Promise<Response>(() => {}),
+  }),
+  play: async ({ canvasElement }) => {
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByText("Reading export…");
+  },
+};
+
+// The file was refused: the server's reason under the row, the zone still
+// there to pick the right file.
+export const ImportFailed: Story = {
+  render: panelStory({ profile_url: "" }, NO_REACH, {
+    "POST /me/linkedin-connections": () =>
+      jsonResponse(
+        { title: "Unprocessable", detail: "This file is not Connections.csv." },
+        422,
+      ),
+  }),
+  play: async ({ canvasElement }) => {
+    await dropTheExport(canvasElement);
+    await within(canvasElement).findByText(
+      "The export was not imported. Retry.",
     );
-    await body.findByTestId("linkedin-import-result");
   },
 };
 
@@ -132,6 +170,18 @@ export const AccountReadFailed: Story = {
     "GET /me/linkedin-account": () =>
       jsonResponse(
         { title: "Internal Server Error", detail: "the profile store is down" },
+        500,
+      ),
+  }),
+};
+
+// The reach read failed: the panel says so with a retry where the table stands,
+// and the import above it still works.
+export const ReachReadFailed: Story = {
+  render: panelStory(IMPORTED, NO_REACH, {
+    "GET /me/linkedin-reach": () =>
+      jsonResponse(
+        { title: "Internal Server Error", detail: "the reach index is down" },
         500,
       ),
   }),

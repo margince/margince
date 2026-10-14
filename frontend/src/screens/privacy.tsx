@@ -33,6 +33,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { Stack } from "../design-system/stack";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
@@ -196,18 +197,22 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         </Field>
 
         {draft.kind === "erasure" ? (
-          <div className="field">
-            <span className="t-label">{t("privacy.contact")}</span>
-            <RecordPicker
-              label={t("privacy.contact")}
-              searchTargets={searchContactCandidates}
-              selected={draft.contact}
-              onPick={(candidate) =>
-                edit({ contact: candidate, subjectRef: candidate.id })
-              }
-            />
-            <p className="t-caption">{t("privacy.erasureNeedsContact")}</p>
-          </div>
+          <Field
+            label={t("privacy.contact")}
+            hint={t("privacy.erasureNeedsContact")}
+          >
+            {(control) => (
+              <RecordPicker
+                id={control.id}
+                aria-describedby={control["aria-describedby"]}
+                searchTargets={searchContactCandidates}
+                selected={draft.contact}
+                onPick={(candidate) =>
+                  edit({ contact: candidate, subjectRef: candidate.id })
+                }
+              />
+            )}
+          </Field>
         ) : (
           <Field
             label={t("privacy.subjectRef")}
@@ -447,8 +452,8 @@ export function PrivacyInboxCard() {
     >
       <PanelBody>
         <PanelIntro>{t("settings.privacySub")}</PanelIntro>
-        {canSee && (
-          <div className="filter-tabs">
+        <Stack gap="3">
+          {canSee && (
             <SegmentedControl
               options={DSR_STATUS_FACETS}
               value={facet}
@@ -456,10 +461,10 @@ export function PrivacyInboxCard() {
               labels={facetLabels}
               label={t("privacy.facetLabel")}
             />
-          </div>
-        )}
-        <LinkedCaseNotice linked={linked} />
-        {body}
+          )}
+          <LinkedCaseNotice linked={linked} />
+          {body}
+        </Stack>
       </PanelBody>
       <CardBoundary>
         {body === null && (

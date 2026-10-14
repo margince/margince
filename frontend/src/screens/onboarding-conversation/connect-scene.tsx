@@ -1,10 +1,10 @@
-import { Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { type AdminWait, waitsOnAdmin } from "../../app/setup-checklist";
 import { Button } from "../../design-system/atoms";
-import { Heading } from "../../design-system/heading";
+import { Callout } from "../../design-system/callout";
 import { StageActions } from "../../design-system/onboarding-stage";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { providerBrandName } from "../../design-system/provider-mark";
 import {
   type AccountVendor,
@@ -182,20 +182,21 @@ export function ConnectScene({
         />
       ) : (
         <>
-          <div className="ob-connect-section-head">
-            <Heading size="medium">{t("ob.conv.connect.whereTitle")}</Heading>
-            <p className="t-sub">{t("ob.conv.connect.whereHint")}</p>
-          </div>
-          <VendorChoice
-            value={vendor}
-            onChange={onVendorChange}
-            // Held while the roster has not answered: an ask opened against it
-            // could connect a second mailbox the read just has not reported.
-            disabled={!mailRoster.verified || connected !== null || askBusy}
-            notes={notes}
-            refused={refused}
-            waiting={new Set<MailProvider>(waiting.keys())}
-          />
+          <Panel title={t("ob.conv.connect.whereTitle")}>
+            <PanelBody>
+              <PanelIntro>{t("ob.conv.connect.whereHint")}</PanelIntro>
+              <VendorChoice
+                value={vendor}
+                onChange={onVendorChange}
+                // Held while the roster has not answered: an ask opened against
+                // it could connect a second mailbox the read has not reported.
+                disabled={!mailRoster.verified || connected !== null || askBusy}
+                notes={notes}
+                refused={refused}
+                waiting={new Set<MailProvider>(waiting.keys())}
+              />
+            </PanelBody>
+          </Panel>
 
           {waitingOn && (
             <AppWaitingPanel
@@ -328,21 +329,14 @@ function SkipWayOnward({
 function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (
-    <div className="readfail warning ob-conv-rosterfail" role="alert">
-      <span className="rfi">
-        <Circle aria-hidden />
-      </span>
-      <div>
-        <div className="rft">{t("ob.conv.connect.rosterFailedTitle")}</div>
-        <p className="rfp">{t("ob.conv.connect.rosterFailedBody")}</p>
-        <Button
-          variant="ghost"
-          className="ob-conv-rosterfail-retry"
-          onClick={onRetry}
-        >
-          {t("common.retry")}
-        </Button>
-      </div>
-    </div>
+    <Callout
+      tone="danger"
+      kind="event"
+      live="alert"
+      title={t("ob.conv.connect.rosterFailedTitle")}
+      actions={<Button onClick={onRetry}>{t("common.retry")}</Button>}
+    >
+      <p>{t("ob.conv.connect.rosterFailedBody")}</p>
+    </Callout>
   );
 }

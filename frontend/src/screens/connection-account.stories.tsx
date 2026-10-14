@@ -17,8 +17,8 @@ import {
 } from "./story-utils";
 
 // One account on Connections in each state its services can be in: syncing
-// with the import reading, up to date, a service needing a reconnect, a held
-// import waiting for its one press, and a mailbox without its calendar.
+// with the import reading, up to date, a service needing a reconnect, a grant
+// too narrow to send, a held import, and a mailbox without its calendar.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -167,6 +167,31 @@ export const NeedsReconnectDark: Story = {
   ]),
 };
 
+// A mailbox granted before sending shipped: the service names what it cannot
+// do, and the account carries the reason and the one Reconnect.
+const gmailNoSend: CaptureConnection = {
+  ...gmail,
+  scopes: ["https://www.googleapis.com/auth/gmail.readonly"],
+};
+
+export const CannotSend: Story = {
+  render: accountStory([gmailNoSend, gcal]),
+};
+
+export const CannotSendDark: Story = {
+  globals: { theme: "dark" },
+  render: accountStory([gmailNoSend, gcal]),
+};
+
+// A failure streak the sweep has not given up on: amber with its reason, and
+// no Reconnect, because a new consent would not mend it.
+export const SyncTrouble: Story = {
+  render: accountStory([
+    { ...gmail, last_sync_error_class: "rate_limited" },
+    gcal,
+  ]),
+};
+
 // The connect asked for a year and the server held it above its cap: the
 // row counts the year and waits for one press.
 export const HeldImport: Story = {
@@ -234,6 +259,27 @@ export const MenuOpenDark: Story = {
       await canvas.findByRole("button", { name: "More actions for Google" }),
     );
   },
+};
+
+async function openBringsIn(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "More actions for Google" }),
+  );
+  await userEvent.click(
+    await canvas.findByRole("button", { name: "Change what it brings in" }),
+  );
+}
+
+export const BringsInDialog: Story = {
+  render: accountStory([gmail]),
+  play: async ({ canvasElement }) => openBringsIn(canvasElement),
+};
+
+export const BringsInDialogDark: Story = {
+  globals: { theme: "dark" },
+  render: accountStory([gmail]),
+  play: async ({ canvasElement }) => openBringsIn(canvasElement),
 };
 
 export const Phone: Story = {

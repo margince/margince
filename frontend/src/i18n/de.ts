@@ -1274,7 +1274,6 @@ export const de = {
   "explain.excluded_other":
     "Bei {count} Datensätzen ist ein Feld für deine Rolle ausgeblendet, deshalb fehlen sie in dieser Zahl und in den Zeilen darunter.",
 
-
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
   "board.weighted": "gewichtet {value}",
@@ -2537,6 +2536,7 @@ export const de = {
   "linkedinImport.whichFile":
     "Öffne in LinkedIn die Einstellungen, dann Datenschutz, und fordere eine Kopie deiner Daten an. Lade Connections.csv aus dem Archiv hoch, das LinkedIn dir per E-Mail schickt.",
   "linkedinImport.choose": "Connections.csv importieren",
+  "linkedinImport.dropHint": "Connections.csv hier ablegen oder auswählen",
   "linkedinImport.importLabel": "So bekommst du Connections.csv von LinkedIn",
   "linkedinImport.noMatchesYet":
     "Noch keine Treffer, was bei einem neuen Unternehmen normal ist. Verbindungen werden mit Kontakten abgeglichen, sobald E-Mails gelesen werden, und der Abgleich läuft stündlich erneut.",
@@ -2547,8 +2547,6 @@ export const de = {
 
   // Die Prüfliste und die Reichweiten-Tabelle (ADR-0078 §2.1b).
   "linkedinReach.title": "LinkedIn-Netzwerk",
-  "linkedinReach.readFailed":
-    "Die Reichweite im Netzwerk konnte nicht geladen werden.",
   "linkedinReach.empty": "Noch keine Unternehmen erreicht",
   "linkedinReach.allUnresolved":
     "Alle deine Verbindungen arbeiten bei Unternehmen, die noch nicht erfasst sind. Verbindungen: {unresolved}.",
@@ -3162,7 +3160,7 @@ export const de = {
   "followUpSettings.daysHint":
     "So viele Tage darf eine gesendete Nachricht unbeantwortet bleiben, bevor der Absender ans Nachfassen erinnert wird, 1 bis 30.",
   "followUpSettings.outOfRange": "Gib eine ganze Zahl von 1 bis 30 Tagen ein.",
-  "leadHandling.title": "Lead-Bearbeitung",
+  "leadHandling.title": "Erste Reaktion",
   "leadHandling.sub": "Wie neue Leads bearbeitet werden.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
   "leadHandling.firstResponseHint":
@@ -5442,6 +5440,7 @@ export const de = {
   "settings.removedItem": "„{name}“ entfernt",
   "settings.removed": "Entfernt",
   "settings.saved": "Gespeichert",
+  "settings.nameTooLong": "Höchstens {max} Zeichen.",
   "settings.signatureFromTemplate": "Firmenvorlage",
   "settings.signatureTemplateHint":
     "Die Signaturvorlage deines Unternehmens unterschreibt deine E-Mails mit deinem Namen, deiner Position und deiner Telefonnummer.",
@@ -5478,11 +5477,9 @@ export const de = {
   "settings.displayName": "Anzeigename",
   "settings.displayNameHelp":
     "Wird im Team an Datensätzen, die du bearbeitest, in Auswahllisten und im Audit-Log angezeigt.",
-  "settings.displayNameSave": "Speichern",
   "settings.greetingName": "Rufname",
   "settings.greetingNameHelp":
     "Mit diesem Namen wirst du in entworfenen Nachrichten und Begrüßungen angesprochen. Lässt du das Feld leer, gilt das erste Wort deines Anzeigenamens.",
-  "settings.greetingNameSave": "Speichern",
   "settings.installApp": "Margince-App",
   "settings.installAppHelp":
     "Margince wird auf diesem Gerät als App mit eigenem Fenster und Symbol installiert.",
@@ -6273,8 +6270,8 @@ export const de = {
   "settings.auditAdminOnly":
     "Deine Rolle darf das vollständige Audit-Log nicht lesen. Es verzeichnet alle Handelnden und jeden Datensatz, auf den sie zugegriffen haben.",
   "settings.auditFilters": "Filter",
-  "settings.auditEntries": "Audit-Log",
   "settings.auditTrailLabel": "Aufgezeichnete Aktionen",
+  "settings.auditUnit": "protokollierte Aktionen",
   "settings.auditActor": "Ausgeführt von",
   "settings.auditEntity": "Objekttyp",
   "settings.auditEntityId": "Objekt-ID",
@@ -6994,7 +6991,6 @@ export const de = {
     "Möglicherweise erscheint ein Hinweis „Nicht verifizierte App“. Er bezieht sich auf diese selbst gehostete Installation, nicht auf einen Dritten.",
   "ob.s4.microsoftFailed": "Microsoft-Verbindung nicht abgeschlossen",
   "ob.s4.connectVerifying": "Verbindung wird bestätigt…",
-  "ob.s4.connectLive": "Aktiv, Erfassung läuft",
   "ob.s4.connectConfirmFailed": "Die Verbindung konnte nicht bestätigt werden.",
   "ob.s4.connectRetry":
     "Verbinde das Postfach erneut in den Einstellungen unter Verbindungen.",
@@ -7211,7 +7207,6 @@ export const de = {
   "mailSharing.sharedPosture.warningTitle":
     "Damit wird eine Rechtsgrundlage erklärt",
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
-  "mailSharing.save": "Speichern",
   "connectors.originLabel": "Adresse in versendeten Links",
   "connectors.originReachable": "Erreichbar",
   "connectors.originUnreachable": "Nicht erreichbar",
@@ -7219,8 +7214,6 @@ export const de = {
   "connectors.sub":
     "Verbinde das Konto, mit dem du arbeitest. Deine E-Mails landen bei den richtigen Kontakten und Deals, und dein Kalender bringt Termine auf die Datensätze und gibt deinem Buchungslink deine freien Zeiten.",
   "connectors.loading": "Connectors werden geladen…",
-  "connectors.loadFailed":
-    "Connectors konnten nicht geladen werden. Lade die Seite neu.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGraph": "Outlook",
@@ -7372,8 +7365,11 @@ export const de = {
   "connectors.telegramNotConfigured":
     "Nachrichtenkanäle sind in dieser Installation nicht konfiguriert.",
   "connectors.telegramConnectCta": "Telegram-Bot verbinden",
-  "connectors.telegramRosterLabel": "Verbundener Bot",
-  "connectors.telegramEmpty": "Kein Bot verbunden.",
+  "connectors.telegramEmptyTitle": "Kein Bot verbunden",
+  "connectors.telegramEmptyNote":
+    "Ein verbundener Bot erfasst und sendet Telegram-Nachrichten für das ganze Unternehmen.",
+  "connectors.telegramNotConfiguredTitle":
+    "Auf dieser Installation nicht verfügbar",
   "connectors.telegramReadOnly":
     "Nur Admins und Operations können den Bot verbinden oder ändern.",
   "connectors.telegramEditToken": "Token ersetzen",
@@ -7485,7 +7481,6 @@ export const de = {
   "ob.s4.imapHint":
     "Nutze ein App-Passwort. Es wird verschlüsselt gespeichert und beim Trennen gelöscht.",
   "ob.s4.imapConnect": "Testen und verbinden",
-  "ob.s4.connecting": "Wird verbunden…",
   "ob.s4.accessToggle": "Erteilter Zugriff",
   "ob.s4.scope1Lead": "Lesezugriff.",
   "ob.s4.scope1Rest":
@@ -8943,7 +8938,6 @@ export const de = {
     "Alle Verarbeitungsschritte der Nachricht vom {at} anzeigen",
   "captureActivity.emptyFiltered":
     "Keine geladene Zeile passt. Lade mehr, um den Rest des Zeitraums zu sehen.",
-  "captureActivity.loadMore": "Mehr laden",
   "captureActivity.empty":
     "Keine Erfassungsaktivität in den letzten 24 Stunden.",
   "captureActivity.payloadsOff":
@@ -9549,7 +9543,6 @@ export const de = {
   "users.createTeam": "Team anlegen",
   "users.notArchived": "Team nicht archiviert",
   "users.teamNotChanged": "Mitgliedschaft nicht geändert",
-  "users.inviteFailed": "Einladung nicht gesendet",
   "users.access.title": "Zugriff des Mitglieds",
   "users.access.identity":
     "Liest alle Kontakte, Unternehmen, Leads und Deals dieses Unternehmens.",
@@ -9573,7 +9566,7 @@ export const de = {
   "users.access.maskOutside": "bei Datensätzen ohne Bearbeitungsrecht",
   "users.inviteSub":
     "Füge dieser Installation ein Mitglied hinzu und wähle seine Startrolle.",
-  "users.membersTitle": "Mitglieder",
+  "users.membersTitle": "Personen",
   "users.col.member": "Name",
   "users.col.activity": "Aktivität",
   "users.addedOn": "Hinzugefügt am {date}",
@@ -9849,14 +9842,16 @@ export const de = {
     "Jeder Modellaufruf: Routing-Identität, Tokens, Wiederholungen, erfasste Nutzdaten.",
   "aicalls.open": "Aufruf {feature} von {when} öffnen",
   "aicalls.col.when": "Zeitpunkt",
+  "aicalls.filtersLabel": "Filter",
+  "aicalls.unit": "Aufrufe",
   "aicalls.col.feature": "Funktion",
-  "aicalls.col.task": "Aufgabe",
   "aicalls.col.model": "Modell",
   "aicalls.col.tokens": "Tokens ein / aus",
   "aicalls.col.latency": "Latenz",
   "aicalls.col.cost": "Kosten",
   "aicalls.cost.unpriced": "Ohne Preis",
-  "aicalls.cost.unpricedHint": "Die Preisliste hat keinen Preis für ein Modell, das dieser Aufruf genutzt hat.",
+  "aicalls.cost.unpricedHint":
+    "Die Preisliste hat keinen Preis für ein Modell, das dieser Aufruf genutzt hat.",
   "aicalls.ms": "{value} ms",
   "aicalls.outcome.ok": "Beantwortet",
   "aicalls.outcome.fallback": "Ausweichmodell",
@@ -9936,7 +9931,6 @@ export const de = {
   "aicalls.col.outcome": "Ergebnis",
   "aicalls.outcome.retried": "Wiederholt",
   "aicalls.outcome.failed": "Fehlgeschlagen",
-  "aicalls.model.afterDecision": "Entscheidungsmodell, dann {tier}",
   "aicalls.filter.servedProvider": "Ausgeliefert von",
   "aicalls.sentinel.provider_quota": "Kontingent erschöpft",
   "aicalls.sentinel.provider_throttled": "Gedrosselt",
@@ -10193,12 +10187,13 @@ export const de = {
   "signInMethods.desc.microsoft":
     "Eine Microsoft-Schaltfläche für alle, deren Arbeitskonto bei Microsoft 365 liegt.",
   "signInMethods.onScreen": "Auf der Anmeldeseite",
-  "signInMethods.offScreen.noApp":
-    "Noch nicht auf der Anmeldeseite: Die {vendor}-App ist nicht eingerichtet.",
-  "signInMethods.offScreen.noDirectory":
-    "Noch nicht auf der Anmeldeseite: Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
-  "signInMethods.offScreen.unusable":
-    "Nicht auf der Anmeldeseite: Die {vendor}-App kann gerade nicht genutzt werden.",
+  "signInMethods.offScreen": "Nicht auf der Anmeldeseite",
+  "signInMethods.offScreenReason.noApp":
+    "Die {vendor}-App ist nicht eingerichtet.",
+  "signInMethods.offScreenReason.noDirectory":
+    "Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
+  "signInMethods.offScreenReason.unusable":
+    "Die {vendor}-App kann gerade nicht genutzt werden.",
   "signInMethods.offScreen.turnedOff": "Ausgeschaltet",
   "signInMethods.noWriteReason":
     "Nur Admins oder Ops können Anmeldemethoden ändern",
@@ -10257,7 +10252,7 @@ export const de = {
   "connectFlow.stepAccount": "Konto",
   "connectFlow.stepBringIn": "Was übernommen wird",
   "connectFlow.stepSignIn": "Anmelden",
-  "connectFlow.stepDone": "{step}, erledigt",
+  "connectFlow.permsLabel": "Was {vendor} anfragen wird",
   "connectFlow.where": "Wo liest du deine geschäftlichen E-Mails?",
   "connectFlow.google": "Gmail und Google Kalender",
   "connectFlow.microsoft":
@@ -10392,12 +10387,6 @@ export const de = {
     "Jeder Host mit IMAP. Nur E-Mail: Einen Kalender fügst du später in den Einstellungen hinzu.",
   "ob.conv.connect.panelTitle": "Was du von {vendor} verbindest",
   "ob.conv.connect.servicesLegend": "Was du verbindest",
-  "ob.conv.connect.serviceMail": "E-Mail",
-  "ob.conv.connect.serviceCalendar": "Kalender",
-  "ob.conv.connect.mailBrings":
-    "Kontakte, Unternehmen und Verlauf aus deinem Posteingang und deinen gesendeten E-Mails. Margince sendet nur, wenn du sendest oder einem Agenten das Senden erlaubst.",
-  "ob.conv.connect.calendarBrings":
-    "Termine landen bei den richtigen Deals und Kontakten, und dein Buchungslink bietet nur Zeiten an, in denen du frei bist.",
   "ob.conv.connect.asksTwiceTitle":
     "{vendor} fragt zweimal und bringt dich dann hierher zurück",
   "ob.conv.connect.asksTwiceBody":
@@ -10478,7 +10467,6 @@ export const de = {
   "setup.action.voice": "Beispiele hinzufügen",
   "setup.action.booking": "Einschalten",
   "settings.home.setup.title": "Deine Einrichtung",
-  "settings.home.setup.count": "{done} von {total} erledigt",
   "settings.home.setup.complete": "Die Einrichtung ist abgeschlossen",
   "settings.home.setup.show": "Schritte anzeigen",
   "connectors.tile.notSetUp": "Nicht eingerichtet",
@@ -10501,7 +10489,6 @@ export const de = {
   "setup.caption.voice": "Braucht 800 eigene Wörter.",
   "setup.caption.booking": "Kunden buchen deine freie Zeit.",
   "setup.caption.bookingNeedsCalendar": "Braucht einen Kalender.",
-  "setup.reminder.waiting": "Wartet",
   "setup.reminder.progress": "Fortschritt der Einrichtung",
   // end polish: setup-popover
   "account.profileCard": "Profil",
@@ -11805,8 +11792,12 @@ export const de = {
     "Neue Abfragen stoppen sofort, und der Schlüssel wird vernichtet. Gekaufte Daten bleiben an deinen Datensätzen; das Trennen löscht sie nicht.",
   "provider.deleteData": "Gekaufte Daten löschen",
   "provider.deleteDataConfirm.title": "Alle Daten dieses Anbieters löschen?",
-  "provider.deleteDataConfirm.body":
-    "Jeder Wert, den dieser Anbieter geliefert hat, wird von jedem Kontakt entfernt. Die Ausgabenaufzeichnungen bleiben, die Daten nicht. Das lässt sich nicht rückgängig machen.",
+  "provider.deleteDataConfirm.impactTitle":
+    "Das lässt sich nicht rückgängig machen",
+  "provider.deleteDataConfirm.impact.values":
+    "Jeder Wert, den dieser Anbieter geliefert hat, wird von jedem Kontakt entfernt.",
+  "provider.deleteDataConfirm.impact.spend":
+    "Die Ausgabenbelege bleiben, die Daten nicht.",
   "provider.deleteDataConfirm.typed":
     "Gib zur Bestätigung den Namen des Anbieters ein:",
   "provider.automaticLookup": "Kontakte automatisch nachschlagen",
@@ -13776,6 +13767,9 @@ export const de = {
   "scheduling.editLink": "Link bearbeiten",
   "scheduling.createLink": "Buchungslink erstellen",
   "scheduling.noLinkYet": "Noch kein Buchungslink.",
+  "scheduling.noLinkYetBody":
+    "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
+  "scheduling.calendarSaveFailed": "Kalender nicht gespeichert",
   "scheduling.replaceAddress": "Adresse ersetzen",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
@@ -13922,6 +13916,10 @@ export const de = {
   "confirmPhrase.matches": "Satz stimmt überein",
   "checklist.stepDone": "Erledigt",
   "checklist.stepOpen": "Noch offen",
+  "checklist.stepWaiting": "Wartet",
+  "checklist.count": "{done} von {total} erledigt",
+  "panelSave.save": "Speichern",
+  "panelSave.discard": "Verwerfen",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window.24h": "24 Std.",
   "aiFigures.window.7d": "7 T.",
@@ -13967,7 +13965,6 @@ export const de = {
   "aiFigures.line.week": "7 T.: {figures}",
   "aiFigures.line.prefix": "7 T.: {sentence}",
   "aicalls.filtered": "Es werden Aufrufe gezeigt, die bei {filter} endeten.",
-  "aicalls.filtered.clear": "Alle Aufrufe zeigen",
   "aiOpenRouter.title": "OpenRouter-Einstellungen",
   "aiOpenRouter.privacyDocs": "Datenrichtlinien ↗",
   "aiOpenRouter.routingDocs": "Anbieter-Routing ↗",

@@ -12,8 +12,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import type { GrantSpec } from "../testing/mefixture";
 import { LocaleProvider } from "../i18n";
+import type { GrantSpec } from "../testing/mefixture";
 import { ConnectorsCard } from "./connectors";
 import { jsonResponse, stubWithSession } from "./story-utils";
 
