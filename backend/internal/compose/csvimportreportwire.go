@@ -340,8 +340,8 @@ func kindOrAbsent(kind string) *crmcontracts.ImportProblemKind {
 // report stored before the line was carried.
 var disclosedLine = regexp.MustCompile(`^line ([0-9]+)$`)
 
-// undoErroredRow is the generated ImportUndoReport.Errored item, named once so
-// the slice and its literals cannot drift from it.
+// undoErroredRow is the generated ImportUndoReport.Errored item, declared here
+// for the slice and the literals that fill it.
 type undoErroredRow = struct {
 	Id         openapi_types.UUID             `json:"id"` //nolint:staticcheck // matches the generated item shape
 	Object     crmcontracts.ImportObject      `json:"object"`
