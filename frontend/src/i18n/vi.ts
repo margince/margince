@@ -3370,6 +3370,9 @@ export const vi = {
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
+  "deals.lostReasonNeeded": "Nhập lý do thua deal.",
+  "deals.winReasonNeeded": "Chọn cách chốt được deal.",
+  "deals.winDetailNeeded": "Mô tả cách chốt được deal.",
   "deals.closeTasks.legend_one":
     "Xử lý {count} việc còn mở của deal này thế nào?",
   "deals.closeTasks.legend_other":

@@ -3438,6 +3438,9 @@ export const de = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.lostReason": "Verlustgrund",
+  "deals.lostReasonNeeded": "Gib an, warum der Deal verloren ging.",
+  "deals.winReasonNeeded": "Wähle, wie der Deal gewonnen wurde.",
+  "deals.winDetailNeeded": "Beschreibe, wie der Deal gewonnen wurde.",
   "deals.closeTasks.legend_one":
     "Was passiert mit der {count} offenen Aufgabe dieses Deals?",
   "deals.closeTasks.legend_other":
