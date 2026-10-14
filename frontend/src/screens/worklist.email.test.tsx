@@ -20,6 +20,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   day,
+  findRowMenu,
   jsonResponse,
   renderWorklist,
   row,
@@ -206,9 +207,10 @@ describe("a waiting row on the queue", () => {
       expect(screen.getByText("ping about the quote")).toBeTruthy(),
     );
     // Nothing openable: there is no email drawer for a chat, and a control
-    // that answers nothing teaches a rep the product is broken.
+    // that answers nothing teaches a rep the product is broken. The one button
+    // naming the row is its own menu.
     expect(
-      screen.queryByRole("button", { name: /ping about the quote/ }),
-    ).toBeNull();
+      screen.queryAllByRole("button", { name: /ping about the quote/ }),
+    ).toEqual([await findRowMenu()]);
   });
 });

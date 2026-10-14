@@ -1255,6 +1255,8 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
   // The one sentence every copy failure opens with. It is a fact about the
   // BROWSER rather than about the link, the secret or the agenda, so the
   // screens differ only in the way out they offer after it.
@@ -3488,6 +3490,9 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
+  "deals.lostReasonNeeded": "Enter why the deal was lost.",
+  "deals.winReasonNeeded": "Pick how the deal was won.",
+  "deals.winDetailNeeded": "Describe how the deal was won.",
   "deals.closeTasks.legend_one":
     "What happens to the {count} open task on this deal?",
   "deals.closeTasks.legend_other":
@@ -12451,7 +12456,6 @@ export const en = {
   "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
-  "worklist.disposition.snoozeFor": "Snooze duration",
   "worklist.disposition.snoozeUntil.reply": "Until they reply",
   "worklist.disposition.verb.handled": "Done",
   "worklist.disposition.verb.not_mine": "Not mine",
@@ -12468,7 +12472,6 @@ export const en = {
     "Removed from your list. It comes back if the record changes hands.",
   "worklist.disposition.done.not_sales": "Removed from every list.",
   "worklist.disposition.swipeCancel": "Keep",
-  "worklist.disposition.menu": "Remove from list",
   "worklist.disposition.undo": "Undo",
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
@@ -12582,6 +12585,7 @@ export const en = {
   "worklist.board.promises": "Commitments due",
   "worklist.board.truncated":
     "Counts are incomplete. Each figure is a minimum.",
+  "worklist.rowMenu": "More actions for {title}",
   "worklist.readings.label": "Today’s figures",
   "worklist.readings.revenue": "Revenue at risk",
   "worklist.readings.revenue.detail": "Deals drifting today",

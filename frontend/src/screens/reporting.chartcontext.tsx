@@ -1,7 +1,13 @@
 import { Badge } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
-import { formatDateTime } from "../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { formatDateTime, formatNumber } from "../format/format";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import {
   type ReportingChart,
   type ReportingEvaluation,
@@ -38,7 +44,11 @@ export function ChartContext({
             : t("reporting.all_open")}
         </span>
       )}
-      <Popover onHover label={t("reporting.contextDetails")}>
+      <Popover
+        onHover
+        className="evmark-trigger t-caption"
+        label={t("reporting.contextDetails")}
+      >
         <p>
           {evaluation.context.scope.label} · {timezone}
         </p>
@@ -100,6 +110,7 @@ export function ChartContext({
           <p>{chart.coverage.reason}</p>
         )}
       </Popover>
+      {chart.kind === "stage_age" && <SampleDetails chart={chart} />}
       {/* Coverage short of complete is said beside the period, where it
           qualifies the figure; the reason joins the details above. */}
       {chart.coverage.status !== "ok" && (
@@ -113,6 +124,35 @@ export function ChartContext({
         </p>
       )}
     </div>
+  );
+}
+
+// How many deals each stage's durations were read from, beside the chart's
+// other details rather than under the chart it qualifies.
+function SampleDetails({ chart }: Readonly<{ chart: ReportingChart }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <Popover
+      onHover
+      className="evmark-trigger t-caption"
+      label={t("reporting.sampleDetails")}
+    >
+      {chart.points.map((point) => (
+        <p key={point.key} className="t-caption">
+          {point.label} ·{" "}
+          {point.observations == null
+            ? t("reporting.observationsUnavailable")
+            : plural("reporting.observations", point.observations, {
+                count: formatNumber(point.observations, locale),
+              })}
+          {point.value == null
+            ? ` · ${t("reporting.status.insufficient_sample")}`
+            : ""}
+        </p>
+      ))}
+    </Popover>
   );
 }
 

@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { installFetchStub, StoryProviders } from "../testing/story-utils";
-import { ReportingCharts } from "./reporting.charts";
+import { ReportingCharts, wideCharts } from "./reporting.charts";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
@@ -354,4 +354,27 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   expect(
     screen.getByText(/Observations: 2 · Too few observations/),
   ).toBeVisible();
+});
+
+it("spans a half-width chart across its row when no chart can share it", () => {
+  const kinds = forecastEvaluation.charts.map((chart) => chart.kind);
+  expect(kinds).toEqual([
+    "forecast_support",
+    "pipeline_movement",
+    "stage_distribution",
+    "stage_age",
+  ]);
+  // The support chart is followed by the full-width waterfall, so it has no
+  // partner; the two stage charts pair up under it.
+  expect(wideCharts(forecastEvaluation.charts)).toEqual([
+    true,
+    true,
+    false,
+    false,
+  ]);
+  // Three half-width charts: the first two share a row, the third takes one.
+  const halves = forecastEvaluation.charts.filter(
+    (chart) => chart.kind !== "pipeline_movement",
+  );
+  expect(wideCharts(halves)).toEqual([false, false, true]);
 });

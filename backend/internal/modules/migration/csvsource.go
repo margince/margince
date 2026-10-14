@@ -6,7 +6,6 @@ package migration
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
@@ -299,7 +298,7 @@ func (s *CSVSource) Header(ctx context.Context) ([]string, error) {
 // at the first data record, and the header it just read.
 type openFile struct {
 	body    io.ReadCloser
-	records *csv.Reader
+	records recordReader
 	header  []string
 	key     string
 }

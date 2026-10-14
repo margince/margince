@@ -29,6 +29,11 @@ export const STORAGE_KEYS = {
     lifetime: "device",
   },
   edgeLight: { name: "margince.edgeLight", area: "local", lifetime: "device" },
+  worklistDrawerWide: {
+    name: "margince.worklist.drawerWide",
+    area: "local",
+    lifetime: "device",
+  },
   // v2: widths saved under content sizing pin columns wrongly under shares.
   tableWidths: {
     prefix: "margince.table.widths.v2.",

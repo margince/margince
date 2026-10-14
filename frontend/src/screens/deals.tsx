@@ -97,6 +97,7 @@ import {
 } from "./deal360/closereviewoffer";
 import {
   type AdvanceInput,
+  advanceErrorBehind,
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
@@ -2244,7 +2245,7 @@ export function DealsScreen({
           unit: "unit.deals",
         })}
       />
-      <ErrorLine error={advance.error} />
+      <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -3110,7 +3111,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   zone={recordZone}
                   onClose={() => setOpenEmail(null)}
                 />
-                <ErrorLine error={advance.error} />
+                <ErrorLine
+                  error={advanceErrorBehind(advance.error, pending !== null)}
+                />
                 <ConfirmAdvanceModal
                   pending={pending}
                   onClose={() => setPending(null)}

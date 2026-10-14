@@ -8199,6 +8199,9 @@ export interface paths {
          *     the export is then listed on the list as a use. Bulk record read
          *     that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
          *     export writes one `audit_log` entry (who exported what slice, when — P7/P12).
+         *     A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
+         *     with a quote so a spreadsheet does not evaluate it; a bare international phone number
+         *     (`+` and 6 to 15 digits) is left unquoted.
          */
         post: operations["createFilteredExport"];
         delete?: never;
@@ -17151,6 +17154,7 @@ export interface paths {
          *
          *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
          *     opening the file reads them as the text the record holds rather than evaluating them.
+         *     A bare international phone number (`+` and 6 to 15 digits) is left unquoted.
          */
         get: operations["exportForecastShare"];
         put?: never;
@@ -19117,6 +19121,11 @@ export interface paths {
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
          *     are left behind.
+         *
+         *     A cell an export quoted against formula evaluation (a quote before `=`,
+         *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
+         *     quote, here and in the run, so an unedited export imports as the values
+         *     it was written from.
          */
         post: operations["uploadImportSource"];
         delete?: never;
