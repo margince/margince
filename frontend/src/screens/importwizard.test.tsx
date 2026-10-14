@@ -194,6 +194,64 @@ describe("the wizard is the run", () => {
     });
   });
 
+  it("a refused save drops the edits it carried and sends nothing more", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      let refused = false;
+      const sent = stubRoutes({
+        [`PATCH ${RUN}`]: () => {
+          refused = true;
+          return jsonResponse(
+            { status: 409, code: "conflict", detail: "Changed." },
+            409,
+          );
+        },
+      });
+      // The stub serves the draft it was uploaded as; the other tab's save is
+      // what a read answers once this tab's save is refused.
+      const stub = globalThis.fetch;
+      const saved = {
+        ...run,
+        status: "pending",
+        draft_step: "map",
+        version: 4,
+        profile,
+        parts: [
+          {
+            file: "leads.csv",
+            object: "lead",
+            row_count: 4,
+            mapping: { Email: "email", "Full Name": "title" },
+          },
+        ],
+      };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const request = input instanceof Request ? input : null;
+          const read =
+            (request?.method ?? "GET") === "GET" &&
+            request?.url.endsWith(RUN) === true;
+          return refused && read ? jsonResponse(saved) : stub(input, init);
+        }),
+      );
+      await toTheMap(user);
+      await clearFullName(user);
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+      await screen.findByText(/changed in another tab/);
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS * 4);
+      expect(sent.filter((s) => s.method === "PATCH")).toHaveLength(1);
+      await waitFor(() =>
+        expect(
+          screen.getByRole("combobox", { name: "Field for Full Name" }),
+        ).toHaveTextContent(/title/i),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("a superseded run offers the newer one", async () => {
     stubRoutes({
       [`GET ${RUN}`]: () =>

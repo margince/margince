@@ -129,6 +129,15 @@ export function useImportWizard() {
     if (toSave) save(runId, toSave);
   }, [settled, runId, draftOpen, toSave, save]);
 
+  // The refused save's edits are the other tab's loser: the screen shows what
+  // the run holds, and nothing is re-sent over it.
+  const { conflict } = writes;
+  useEffect(() => {
+    if (!conflict) return;
+    latest.current = NO_EDITS;
+    setEditsState(NO_EDITS);
+  }, [conflict]);
+
   const test = useMutation({
     mutationFn: async ({ id, patch }: Test) => {
       const saved = await writes.patch(id, patch);
