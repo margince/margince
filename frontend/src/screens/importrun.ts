@@ -47,7 +47,9 @@ export function wroteNothing(status: ImportRun["status"]): boolean {
   return status === "pending" || status === "cancelled";
 }
 
-const POLL_MS = 2000;
+// A run takes minutes and the server computes its rate and ETA at read, so a
+// faster poll buys no precision.
+export const IMPORT_POLL_MS = 5000;
 
 // The newest runs first, as the server lists them. Polled while one of them is
 // still moving, so the list shows the end of a run the reader walked away from.
@@ -58,11 +60,14 @@ export function useRecentImports() {
       unwrap(await api.GET("/imports", { params: { query: { limit: 20 } } }))
         .data,
     refetchInterval: (query) =>
-      query.state.data?.some((one) => moving(one.status)) ? POLL_MS : false,
+      query.state.data?.some((one) => moving(one.status))
+        ? IMPORT_POLL_MS
+        : false,
   });
 }
 
-// One run, read again every two seconds while it is moving.
+// One run, read again every IMPORT_POLL_MS while it is moving, and when the
+// reader returns to the tab, which is when a run they left has most likely moved.
 export function useImportRun(id: string | null) {
   return useQuery({
     queryKey: [IMPORTS_KEY, "run", id],
@@ -74,7 +79,8 @@ export function useImportRun(id: string | null) {
               await api.GET("/imports/{id}", { params: { path: { id } } }),
             ),
     refetchInterval: (query) =>
-      moving(query.state.data?.status) ? POLL_MS : false,
+      moving(query.state.data?.status) ? IMPORT_POLL_MS : false,
+    refetchOnWindowFocus: "always",
   });
 }
 

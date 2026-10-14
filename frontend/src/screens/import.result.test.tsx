@@ -14,6 +14,7 @@ import {
   run,
   stubRoutes,
 } from "./import.testkit";
+import { IMPORT_POLL_MS } from "./importrun";
 
 afterEach(() => {
   cleanup();
@@ -39,7 +40,7 @@ describe("the import and its result", () => {
       renderAtImport("r1");
       expect(await screen.findByText(/importing/i)).toBeVisible();
       status = "complete";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText("Import complete")).toBeVisible();
     } finally {
       vi.useRealTimers();
@@ -156,7 +157,7 @@ describe("the import and its result", () => {
       );
       expect(await screen.findByText(/Undo is running/)).toBeVisible();
       status = "undone";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText("Import undone")).toBeVisible();
       expect(screen.getByText("Prospects: l-1")).toBeVisible();
     } finally {

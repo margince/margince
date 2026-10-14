@@ -17,6 +17,7 @@ import {
   stubRoutes,
 } from "./import.testkit";
 import { handOverUpload } from "./importflow";
+import { IMPORT_POLL_MS } from "./importrun";
 
 // The ids each `GET /users/names` request carried, in the order sent.
 function namesAskedFor(): string[][] {
@@ -191,7 +192,7 @@ describe("the data import hub", () => {
         invalidated.mock.calls.filter((call) => call[0] === undefined).length;
       expect(everything()).toBe(0);
       status = "undone";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       await waitFor(() => expect(everything()).toBe(1));
     } finally {
       vi.useRealTimers();

@@ -12,13 +12,13 @@ import { problemMessageOf } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { UndoConfirm, UndoErrors } from "./import.notices";
 import { PartCounts, partsOf, problemsHref } from "./import.testrun";
-import type { ImportWizardState } from "./importflow";
 import type {
   ImportFormat,
   ImportReport,
   ImportRun,
   ImportRunPart,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 import { settingsHref } from "./settingsrouting";
 
 type PartProgress = Readonly<{

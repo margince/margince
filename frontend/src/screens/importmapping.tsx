@@ -10,7 +10,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ColumnGuideButton } from "./import.guide";
 import { ImportRefusal } from "./import.notices";
-import type { ImportWizardState, WizardFile } from "./importflow";
+import type { WizardFile } from "./importflow";
 import type {
   ImportColumn,
   ImportFormat,
@@ -18,6 +18,7 @@ import type {
   ImportObject,
 } from "./importtypes";
 import { DONT_IMPORT } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
 // The mapping surface (IEM-AC-OPEN-2): one row per column of the uploaded file,
 // carrying what a human needs to decide where it goes — the name as the file

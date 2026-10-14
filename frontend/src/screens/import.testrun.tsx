@@ -13,7 +13,6 @@ import type { Locale } from "../i18n/locale";
 import { problemMessageOf } from "../lib/problem";
 import { ImportContextTagSummary } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
-import type { ImportWizardState } from "./importflow";
 import { useStopImportTest } from "./importrun";
 import type {
   ImportFormat,
@@ -23,6 +22,7 @@ import type {
   ImportRowIssue,
   ImportRun,
 } from "./importtypes";
+import type { ImportWizardState } from "./importwizard";
 
 /** Where the server builds one run's problems as a spreadsheet. */
 export function problemsHref(id: string): string {

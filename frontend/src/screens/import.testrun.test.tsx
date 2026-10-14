@@ -19,6 +19,7 @@ import {
   run,
   stubRoutes,
 } from "./import.testkit";
+import { IMPORT_POLL_MS } from "./importrun";
 
 afterEach(() => {
   cleanup();
@@ -127,7 +128,7 @@ describe("the test run", () => {
         `GET /imports/${run.id}/report`,
       );
       status = "awaiting_approval";
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(
         await screen.findByRole("button", { name: "Import 4 rows" }),
       ).toBeVisible();
@@ -154,7 +155,7 @@ describe("the test run", () => {
       await renderAtTestRun(user);
       expect(await screen.findByText("Testing your file…")).toBeVisible();
       refused = true;
-      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText(reason)).toBeVisible();
       expect(screen.getByText("Test run stopped")).toBeVisible();
       expect(screen.queryByText("Test run did not start")).toBeNull();
