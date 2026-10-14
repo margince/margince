@@ -29,11 +29,7 @@ func applyProgress(out *crmcontracts.ImportRun, run migration.Run) {
 	out.StartedAt = run.StartedAt
 	out.FinishedAt = finishedAtOf(run)
 	if run.StartedAt != nil {
-		end := run.ReadAt
-		if out.FinishedAt != nil {
-			end = *out.FinishedAt
-		}
-		out.ElapsedSeconds = secondsBetween(*run.StartedAt, end)
+		out.ElapsedSeconds = secondsBetween(*run.StartedAt, elapsedEnd(run, out.FinishedAt))
 	}
 	if !working(run.Status) {
 		return
@@ -47,6 +43,20 @@ func applyProgress(out *crmcontracts.ImportRun, run migration.Run) {
 		rate := float32(est.RowsPerSecond)
 		scope := crmcontracts.ImportRunEtaScope(est.Scope)
 		out.RateRowsPerSecond, out.EtaSecondsLow, out.EtaSecondsHigh, out.EtaScope = &rate, &est.LowSeconds, &est.HighSeconds, &scope
+	}
+}
+
+// elapsedEnd is when the clock stops. Only a run a worker holds is still
+// counting; one that failed or waits on approval stopped at its last change,
+// so a report read a day later does not say the run took a day.
+func elapsedEnd(run migration.Run, finished *time.Time) time.Time {
+	switch {
+	case finished != nil:
+		return *finished
+	case working(run.Status):
+		return run.ReadAt
+	default:
+		return run.UpdatedAt
 	}
 }
 

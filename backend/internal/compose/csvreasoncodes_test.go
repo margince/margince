@@ -188,3 +188,22 @@ func TestImportRunAnswersProgressComputedOnTheDatabaseClock(t *testing.T) {
 			out.ElapsedSeconds, out.RateRowsPerSecond, out.IdleSeconds)
 	}
 }
+
+// A run that stopped moving reads the same elapsed time however long after
+// the stop it is read, whichever final or at-rest status it is in.
+func TestElapsedStopsWhereTheRunStoppedMoving(t *testing.T) {
+	read := time.Date(2026, 3, 2, 11, 0, 0, 0, time.UTC)
+	started := read.Add(-2*time.Hour - 10*time.Minute)
+	stopped := read.Add(-2 * time.Hour)
+	for _, status := range []string{migration.StatusFailed, migration.StatusAwaitingApproval} {
+		run := migration.Run{Status: status, StartedAt: &started, UpdatedAt: stopped, ReadAt: read}
+		var out crmcontracts.ImportRun
+		applyProgress(&out, run)
+		if out.ElapsedSeconds == nil || *out.ElapsedSeconds != 600 {
+			t.Errorf("%s run read two hours later: elapsed = %v, want 600 s", status, out.ElapsedSeconds)
+		}
+		if out.FinishedAt != nil {
+			t.Errorf("%s run: finished_at = %v, want none", status, out.FinishedAt)
+		}
+	}
+}
