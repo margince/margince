@@ -55,7 +55,7 @@ const jobs = (kinds: Kind[], failures = 0): JobHealth => ({
 });
 
 describe("readHealth", () => {
-  const settled = { data: "report", isError: false };
+  const settled = { data: "report", isError: false, errorUpdateCount: 0 };
 
   it("waits for the session before it calls a reading withheld", () => {
     const probe = { canSee: false, probing: true, query: settled };
@@ -76,11 +76,32 @@ describe("readHealth", () => {
     const probe = {
       canSee: true,
       probing: false,
-      query: { data: undefined, isError: true },
+      query: { data: undefined, isError: true, errorUpdateCount: 1 },
     };
     expect(readHealth(probe, words.t, () => fail())).toEqual({
       card: { value: "Could not check", tone: "danger" },
       panel: true,
+    });
+  });
+
+  it("keeps that card while its retry is in flight", () => {
+    const probe = {
+      canSee: true,
+      probing: false,
+      query: { data: undefined, isError: false, errorUpdateCount: 1 },
+    };
+    expect(readHealth(probe, words.t, () => fail()).panel).toBe(true);
+  });
+
+  it("still waits on a first read that has not failed", () => {
+    const probe = {
+      canSee: true,
+      probing: false,
+      query: { data: undefined, isError: false, errorUpdateCount: 0 },
+    };
+    expect(readHealth(probe, words.t, () => fail())).toEqual({
+      card: { value: "Checking…" },
+      panel: false,
     });
   });
 

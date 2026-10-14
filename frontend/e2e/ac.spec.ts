@@ -77,6 +77,9 @@ async function settleAnimations(page: Page) {
       running: document
         .getAnimations()
         .filter((animation) => animation.playState === "running")
+        // A scroll-driven animation follows the scroll position, not the
+        // clock, so axe reads the frame a reader at that position sees.
+        .filter((animation) => animation.timeline instanceof DocumentTimeline)
         .map((animation) => {
           const effect = animation.effect;
           return effect instanceof KeyframeEffect &&

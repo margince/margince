@@ -165,3 +165,31 @@ it("gives a withheld report no slot and keeps its card saying why", async () => 
   // Nothing this reader holds was read, so nothing is dated.
   expect(screen.queryByText(/^As of /)).toBeNull();
 });
+
+it("keeps a failed reading's card in place while it asks again", async () => {
+  stubRoutes();
+  const answered = vi.mocked(fetch).getMockImplementation();
+  const intakeCalls = vi.fn();
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url.includes("/admin/extension-ingest-health")) {
+      intakeCalls();
+      return jsonResponse({ code: "internal", message: "Down." }, 500);
+    }
+    return answered ? answered(input, init) : jsonResponse({});
+  });
+  render(<SystemHealthPage />);
+
+  expect(
+    await within(await strip()).findByText("Could not check"),
+  ).toBeInTheDocument();
+  const card = await screen.findByRole("region", {
+    name: "Refused connector records",
+  });
+  expect(
+    await within(card).findByRole("button", { name: /retry/i }),
+  ).toBeInTheDocument();
+  // The card's mount asks once more. A card that hid during that read would
+  // mount again and ask forever.
+  expect(intakeCalls.mock.calls.length).toBeLessThanOrEqual(2);
+});

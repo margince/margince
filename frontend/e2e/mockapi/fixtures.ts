@@ -933,8 +933,9 @@ export const installationJurisdiction: components["schemas"]["InstallationJurisd
 // A queue with something waiting, a dispatcher beside it, and one dead job.
 // The dead count raises the card's alert, which an all-zero fixture would
 // leave unmeasured.
-export const jobHealth = {
+export const jobHealth: components["schemas"]["JobHealth"] = {
   generated_at: "2026-07-05T06:20:00Z",
+  dead_window_hours: 24,
   kinds: [
     {
       kind: "capture_ingest",
@@ -944,6 +945,7 @@ export const jobHealth = {
       running: 2,
       retrying: 1,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: 195,
     },
     {
@@ -954,6 +956,7 @@ export const jobHealth = {
       running: 0,
       retrying: 0,
       dead: 2,
+      dead_recent: 2,
       oldest_waiting_age_seconds: null,
     },
     {
@@ -964,6 +967,7 @@ export const jobHealth = {
       running: 1,
       retrying: 0,
       dead: 0,
+      dead_recent: 0,
       oldest_waiting_age_seconds: null,
     },
   ],

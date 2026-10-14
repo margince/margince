@@ -38,7 +38,11 @@ export type HealthProbe<Data> = Readonly<{
   canSee: boolean;
   // The session is still loading, so `canSee` is not an answer yet.
   probing: boolean;
-  query: Readonly<{ data: Data | undefined; isError: boolean }>;
+  query: Readonly<{
+    data: Data | undefined;
+    isError: boolean;
+    errorUpdateCount: number;
+  }>;
 }>;
 
 const checking = (t: Translator): HealthReading => ({
@@ -56,7 +60,12 @@ export function readHealth<Data>(
   if (!probe.canSee) {
     return probe.probing ? checking(t) : { card: null, panel: true };
   }
-  if (probe.query.isError) {
+  // Failed until a read lands: a retry puts the query back to pending, and
+  // hiding the card then would remount it and ask again, forever.
+  if (
+    probe.query.isError ||
+    (probe.query.data === undefined && probe.query.errorUpdateCount > 0)
+  ) {
     return {
       card: { value: t("systemHealth.unread"), tone: "danger" },
       panel: true,
