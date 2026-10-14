@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { entries, GERMAN, LETTER } from "../../scripts/lib/german-catalogs";
+import {
+  entries,
+  GERMAN,
+  LETTER,
+  readByAnOutsider,
+} from "../../scripts/lib/german-catalogs";
 
 // The mechanical half of docs/reference/ui-copy-style-de.md, held on every
 // German catalog a bundler ships. Address is address-register.test.ts's. Each
@@ -113,6 +118,7 @@ const RETIRED_WORDS = [
   "Benutzern",
   "Benutzende",
   "Anwender",
+  "Anwenders",
   "Anwendern",
   "Mitarbeiter",
   "Mitarbeitern",
@@ -122,6 +128,27 @@ const RETIRED_WORDS = [
   "Absender",
   "Absenders",
   "Absendern",
+  "Autor",
+  "Autors",
+  "Autoren",
+  "Eigentümer",
+  "Eigentümers",
+  "Eigentümern",
+  "Teilnehmer",
+  "Teilnehmers",
+  "Teilnehmern",
+  "Käufer",
+  "Käufers",
+  "Käufern",
+  "Verkäufer",
+  "Verkäufers",
+  "Verkäufern",
+  "Ersteller",
+  "Erstellers",
+  "Erstellern",
+  "Leser",
+  "Lesers",
+  "Lesern",
   "Deal-Room",
   "Spine",
   "Backread",
@@ -162,7 +189,9 @@ const RETIRED_WORDS = [
   "bezüglich",
   "Bezüglich",
   "mittels",
+  "Mittels",
   "zwecks",
+  "Zwecks",
   "Durchführung",
   "Vornahme",
   "Inanspruchnahme",
@@ -188,17 +217,23 @@ const RETIRED_WORD_KEPT = new Map<string, string>([
 ]);
 
 // Read on the raw value, so a placeholder followed by a space opens a sentence
-// as it does for address-register.test.ts.
-const RECOVERY_BITTE = new RegExp(
-  `(?:^|[.?!:]\\s|\\}\\s)Bitte (?:versuche|lade|wende|versuchen Sie|laden Sie|wenden Sie)(?![${LETTER}])`,
-  "g",
-);
+// as it does for address-register.test.ts. The verb takes the family's address.
+function recoveryBitte(verbs: string): RegExp {
+  return new RegExp(
+    `(?:^|[.?!:]\\s|\\}\\s)Bitte (?:${verbs})(?![${LETTER}])`,
+    "g",
+  );
+}
+const RECOVERY_BITTE_DU = recoveryBitte("versuche|lade|wende");
+const RECOVERY_BITTE_SIE = recoveryBitte("versuchen Sie|laden Sie|wenden Sie");
 
-function misplacedBitte(value: string): boolean {
-  const said = value.match(word("bitte", "gi"))?.length ?? 0;
-  if (said === 0) return false;
-  const placed = value.match(RECOVERY_BITTE)?.length ?? 0;
-  return said > 1 || placed < said || !/\.(?:\s|$)/.test(value);
+function misplacedBitte(recovery: RegExp): (value: string) => boolean {
+  return (value) => {
+    const said = value.match(word("bitte", "gi"))?.length ?? 0;
+    if (said === 0) return false;
+    const placed = value.match(recovery)?.length ?? 0;
+    return said > 1 || placed < said || !/\.(?:\s|$)/.test(value);
+  };
 }
 
 function retiredWordPattern(retired: string): RegExp {
@@ -263,14 +298,23 @@ describe("de copy style", () => {
   });
 
   it("says bitte once, to open a recovery step in a sentence", () => {
-    expect(offenders(misplacedBitte)).toEqual([]);
+    expect(
+      offenders(misplacedBitte(RECOVERY_BITTE_DU), {
+        exempt: readByAnOutsider,
+      }),
+    ).toEqual([]);
+    expect(
+      offenders(misplacedBitte(RECOVERY_BITTE_SIE), {
+        exempt: (key) => !readByAnOutsider(key),
+      }),
+    ).toEqual([]);
   });
 
   // Case-sensitive past the first letter, so the certificate authority "CA."
   // closing a sentence is not read as "ca.".
   it("uses no abbreviation", () => {
     const abbreviation = new RegExp(
-      `(?<![${LETTER}])(?:[zZ]\\.\\s?B\\.|[dD]\\.\\s?h\\.|[uU]sw\\.|[uU]\\.\\s?a\\.|[gG]gf\\.|[bB]zgl\\.|[bB]zw\\.|[iI]nkl\\.|[cC]a\\.)`,
+      `(?<![${LETTER}])(?:[zZ]\\.\\s?B\\.|[dD]\\.\\s?h\\.|[uU]sw\\.|[uU]\\.\\s?a\\.|[gG]gf\\.|[bB]zgl\\.|[bB]zw\\.|[iI]nkl\\.|[cC]a\\.|Tg\\.)`,
     );
     expect(offenders(abbreviation, { text: prose })).toEqual([]);
   });

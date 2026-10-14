@@ -293,7 +293,8 @@ gives, because it is ordinary German in another sense.
 | Administrator | Admin, Admins | `Administrator`, `Administratoren`, `Verwalter` |
 | Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), `Systemadministrator` and other gendered singulars |
 | Somebody with a seat in this installation | Mitglied, Mitglieder ("Mitglied einladen"); the account object is the Nutzerkonto | Person for a member; `Kollege`, `Kollegin`, `Kollegen` for a teammate (Teammitglied) |
-| Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwendern` |
+| Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwenders`, `Anwendern` |
+| A human in a role: author, owner, participant, buyer, seller, creator, reader | Teilnehmende, Lesende, die Käuferseite, Zielgruppen; one human is written around ("wer den Eintrag erstellt hat") | `Autor`, `Autors`, `Autoren`, `Eigentümer`, `Eigentümers`, `Eigentümern`, `Teilnehmer`, `Teilnehmers`, `Teilnehmern`, `Käufer`, `Käufers`, `Käufern`, `Verkäufer`, `Verkäufers`, `Verkäufern`, `Ersteller`, `Erstellers`, `Erstellern`, `Leser`, `Lesers`, `Lesern` |
 | Staff | Mitarbeitende, Vertriebsmitarbeitende; a headcount is the Beschäftigtenzahl | `Mitarbeiter`, `Mitarbeitern`, `Vertriebsmitarbeiter` |
 | A message's recipients | Empfangende; one address is the Empfangsadresse; one human on a human-sense key is "die empfangende Person" | `Empfänger`, `Empfängern` |
 | A message's sender | Absendeadresse, Absendedomain; a human who sent it is "wer die E-Mail gesendet hat", several are Absendende | `Absender`, `Absenders`, `Absendern` |
@@ -328,7 +329,7 @@ gives, because it is ordinary German in another sense.
 | A source no human runs | automatisiert ("eine automatisierte Quelle") | automatisch for a source |
 | A record named in running text | Eintrag ("Partnereintrag"); Datensatz stays the record noun in labels | Datensatz where it reads technical in a sentence, judged per key |
 | A fallback | Fallback | Rückfall, Ausweich- in a compound |
-| An action in running text | Its verb ("konnten nicht erstellt werden") | `erfolgt`, `seitens`, `Seitens`, `hinsichtlich`, `Hinsichtlich`, `bezüglich`, `Bezüglich`, `mittels`, `zwecks`, `Durchführung`, `Vornahme`, `Inanspruchnahme` |
+| An action in running text | Its verb ("konnten nicht erstellt werden") | `erfolgt`, `seitens`, `Seitens`, `hinsichtlich`, `Hinsichtlich`, `bezüglich`, `Bezüglich`, `mittels`, `Mittels`, `zwecks`, `Zwecks`, `Durchführung`, `Vornahme`, `Inanspruchnahme` |
 | Sign in | anmelden, abmelden | `einloggen`, `eingeloggt` |
 | Retry | Erneut versuchen | `Nochmal`, `nochmal` |
 | Upload, download | hochladen, herunterladen | `uploaden`, `downloaden` |
@@ -363,8 +364,8 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Ellipsis | Three dots in a row |
 | Spacing | Two spaces in a row |
 | No exclamation marks | Any `!` |
-| "Bitte" only before a recovery step | "bitte" in any case, unless it opens a sentence straight before versuche, lade or wende (Sie: versuchen Sie, laden Sie, wenden Sie); a second one in a value; one in a value with no sentence period |
-| Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., with or without the inner space |
+| "Bitte" only before a recovery step | Read on the raw value. "bitte" in any case, unless it opens a sentence (at the start, or after a period, question mark, exclamation mark, colon or `}` and a space) straight before versuche, lade or wende, or in the four outsider families before versuchen Sie, laden Sie or wenden Sie; a second one in a value; one in a value with no sentence period |
+| Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., Tg., with or without the inner space |
 | No contractions | ’s or 's straight after a letter |
 | Percent | A digit or a closing `}` followed by `%`, or by an ordinary space and `%` |
 | Inclusive forms | A Gendersternchen, colon, underscore, slash or hyphen before "innen", or a Binnen-I |
@@ -373,8 +374,7 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Retired vocabulary | A word in code format in the Vocabulary table's Never column, as a whole word, case-sensitive, outside the keys it names with a reason |
 
 A last test compares the code-format words of the Never column with the words
-the test retires, and fails a difference in either direction. A word the table
-marks as gated is gated, and the gate retires nothing the table does not mark.
+the test retires, and fails a difference in either direction.
 
 `frontend/src/i18n/address-register.test.ts` holds the address: no Sie, Ihr or
 Ihnen outside the four outsider families, and no capitalised du-pronoun
@@ -388,13 +388,13 @@ a listed key that no longer says it.
 
 None of them can see the rest of this page, which the author and the reviewer
 judge. That covers word order, tone, sentence case, articles, periods, slot
-grammar and the imperative form. It covers idiom, fragment or sentence, the
-failure shape, semicolons, the order of result and reason, and whether a
-"Bitte" follows a system fault. It covers compounds, officialese other than the
-retired words, and claim strength. It covers du where nobody needed
-addressing or beside a neutral value on one surface, and an edge space the
-English value does not have. It covers number format, ranges, spelled dates and
-compact units, and gendered singulars other than the listed nouns. It covers a
-retired word inside a closed compound (Firmenkontingent), the plain words of
-the Never column, mein or mir as the product's voice, and length ceilings and
-message shapes.
+grammar, the imperative form, idiom, fragment or sentence, the failure shape and
+semicolons. It covers the order of result and reason, whether a "Bitte" follows
+a system fault, officialese other than the retired words, and claim strength. It
+covers du where nobody needed addressing or beside a neutral value on one
+surface, an edge space the English value does not have, number format, ranges,
+spelled dates and compact units. No rule matches inside a closed compound, so a
+retired or gendered word there (Firmenkontingent, Käufergruppe) is the
+reviewer's. So are gendered singulars other than the listed nouns, the plain
+words of the Never column, mein or mir as the product's voice, length ceilings
+and message shapes.
