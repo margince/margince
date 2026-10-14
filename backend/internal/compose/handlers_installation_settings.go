@@ -200,7 +200,6 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
 	patch.AgentAllowances = identity.AgentAllowancePatch{
-		ReadsPerWindow:  req.AgentReadsPerWindow,
 		WritesPerWindow: req.AgentWritesPerWindow,
 		EgressPerWindow: req.AgentEgressPerWindow,
 		CallsPerWindow:  req.AgentCallsPerWindow,

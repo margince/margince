@@ -24442,10 +24442,7 @@ paths:
       # queue's MARKS stay human-only below: they are how that human notices
       # what the agent did.
       #
-      # The tool charges one read per item against MCP-SESS-READS. Brief items
-      # are contract types rather than datasource records, so nothing charges
-      # for them by default, and a densely-joined brief metered per call would
-      # be the cheapest bulk read on the surface (A139).
+      # The tool spends one call, like every read.
       x-mcp-tool: { verb: read_brief, tier: auto_execute, scope: read }
       responses:
         '200':
@@ -30149,7 +30146,6 @@ components:
         send_rate_limit: { type: integer, minimum: 1, maximum: 1000, description: 'Set the value `OperationSettings.send_rate_limit` describes.' }
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'Set the value `OperationSettings.send_rate_window_seconds` describes.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'Set the value `OperationSettings.send_max_age_hours` describes.' }
-        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_reads_per_window` describes. Applies within a minute, in the running window.' }
         agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'Set the value `AgentAllowanceSettings.agent_writes_per_window` describes. Applies within a minute, in the running window.' }
         agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'Set the value `AgentAllowanceSettings.agent_egress_per_window` describes. Applies within a minute, in the running window.' }
         agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'Set the value `AgentAllowanceSettings.agent_calls_per_window` describes. Applies within a minute, in the running window.' }
@@ -31588,6 +31584,17 @@ components:
         send_rate_window_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.' }
         send_max_age_hours: { type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.' }
 
+    AgentAllowanceDefaults:
+      type: object
+      additionalProperties: false
+      description: What each agent allowance is before an admin changes it, so a screen never restates them.
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours]
+      properties:
+        agent_writes_per_window: { type: integer }
+        agent_egress_per_window: { type: integer }
+        agent_calls_per_window: { type: integer }
+        agent_window_hours: { type: integer }
+
     AgentAllowanceSettings:
       type: object
       additionalProperties: false
@@ -31595,16 +31602,16 @@ components:
         How much one agent may do in one window. A passport a user minted has its own allowance;
         a connected MCP client has one allowance for all its passports, so a renewed credential
         keeps counting where the last one stopped. An agent that reaches a count is refused on
-        its next call until the window resets or the user who lent it releases more. A change to
+        its next call until the window resets or, for changing calls, the user who lent it releases
+        more. A read changes nothing, so it spends one call and has no allowance of its own. A change to
         a count applies within a minute, in the window that is running: a raised count gives
         headroom within that minute, and a lowered one refuses an agent already past it on its
         next call. The per-minute limits are fixed by the build and shown here read-only.
-      required: [agent_reads_per_window, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, mcp_calls_per_minute, mcp_stream_opens_per_minute]
+      required: [agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, agent_window_hours, agent_window_resets_at, defaults, mcp_calls_per_minute, mcp_stream_opens_per_minute]
       properties:
-        agent_reads_per_window: { type: integer, minimum: 100, maximum: 20000, description: 'How many records one passport or connection may read per window. Default 2000.' }
         agent_writes_per_window: { type: integer, minimum: 10, maximum: 5000, description: 'How many changing calls one passport or connection may make per window. Default 200.' }
         agent_egress_per_window: { type: integer, minimum: 1, maximum: 200, description: 'How many calls that send something out of the workspace one passport or connection may make per window. Default 20.' }
-        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'How many tool calls of any kind one passport or connection may make per window. Default 1000.' }
+        agent_calls_per_window: { type: integer, minimum: 50, maximum: 20000, description: 'How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.' }
         agent_window_hours:
           type: integer
           minimum: 1
@@ -31628,6 +31635,7 @@ components:
             When the saved window length takes over: the next reset of the window in force that
             is at least a minute away. Null when no change is waiting. The first window under the
             new length may be shorter than that length, never longer.
+        defaults: { $ref: '#/components/schemas/AgentAllowanceDefaults' }
         mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
         mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
@@ -56458,10 +56466,9 @@ components:
 
     AgentUsage:
       type: object
-      description: One window's use of the four agent allowances, and when they reset.
-      required: [reads, writes, egress, calls, resets_at, state]
+      description: One window's use of the three agent allowances, and when they reset.
+      required: [writes, egress, calls, resets_at, state]
       properties:
-        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
         writes: { $ref: '#/components/schemas/AgentCounterUsage' }
         egress: { $ref: '#/components/schemas/AgentCounterUsage' }
         calls: { $ref: '#/components/schemas/AgentCounterUsage' }
@@ -56490,12 +56497,11 @@ components:
         One user's agents in the running window. Each count and allowance is the sum over
         their live passports and connections, so a user with two passports has twice the
         allowance. `state` is the worst state of any one of them.
-      required: [user_id, display_name, passport_count, reads, writes, egress, calls, state]
+      required: [user_id, display_name, passport_count, writes, egress, calls, state]
       properties:
         user_id: { type: string, format: uuid }
         display_name: { type: string }
         passport_count: { type: integer, minimum: 1, description: 'Live passports and connections. A connection counts once.' }
-        reads: { $ref: '#/components/schemas/AgentCounterUsage' }
         writes: { $ref: '#/components/schemas/AgentCounterUsage' }
         egress: { $ref: '#/components/schemas/AgentCounterUsage' }
         calls: { $ref: '#/components/schemas/AgentCounterUsage' }
@@ -56519,7 +56525,7 @@ components:
       type: string
       enum: [ok, near, stopped]
       description: |
-        The worst of the four allowances. `stopped` when one is used up, so the next call of
+        The worst of the three allowances. `stopped` when one is used up, so the next call of
         that kind is refused; `near` when one is at 80% or more; `ok` otherwise.
 
     PassportConnection:

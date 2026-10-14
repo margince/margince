@@ -24,12 +24,15 @@ import (
 // token hash never leaves the store — the plaintext existed exactly
 // once, in the mint response.
 type PassportRow struct {
-	ID         ids.PassportID
-	Label      *string
-	Scopes     []string
-	CreatedAt  time.Time
-	ExpiresAt  time.Time
-	RevokedAt  *time.Time
+	ID        ids.PassportID
+	Label     *string
+	Scopes    []string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	RevokedAt *time.Time
+	// LastUsedAt is when a call last authenticated under this passport, or under
+	// any passport of its connection. Nil when none has.
+	LastUsedAt *time.Time
 	Connection *PassportConnectionRow
 }
 
@@ -82,11 +85,14 @@ type PassportConnectionRow struct {
 // a connection is personal — which clients act for this human — and the
 // Settings page that reads it is the human's own.
 const listPassportsSQL = `
-	SELECT id, label, scopes, created_at, expires_at, revoked_at,
+	SELECT id, label, scopes, created_at, expires_at, revoked_at, last_used_at,
 	       grant_id, client_id, client_name, connected_at, renewable
 	FROM (
 		SELECT DISTINCT ON (p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id))
 		       p.id, p.label, p.scopes, p.created_at, p.expires_at, p.revoked_at,
+		       CASE WHEN p.oauth_grant_id IS NULL THEN p.last_used_at
+		            ELSE (SELECT max(sibling.last_used_at) FROM passport sibling
+		                   WHERE sibling.oauth_grant_id = p.oauth_grant_id) END AS last_used_at,
 		       g.id AS grant_id, g.client_id, COALESCE(c.client_name, g.client_id) AS client_name,
 		       g.created_at AS connected_at, g.refresh_allowed AS renewable
 		FROM passport p
@@ -128,7 +134,7 @@ func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow
 				connectedAt *time.Time
 				renewable   *bool
 			)
-			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt,
+			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt, &p.LastUsedAt,
 				&grantID, &clientID, &clientName, &connectedAt, &renewable); err != nil {
 				return err
 			}

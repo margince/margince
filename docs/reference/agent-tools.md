@@ -135,7 +135,7 @@ Sorted by scope, so the read-only tools come first. A 🔀 marks a tool that fro
   looks. A match set cut down per caller would let one payload create a second record for one rep and not for
   another.
 - Every ID it names is read back through the datasource seam before Margince serves it. That read applies object
-  RBAC and row scope, marks the trust tier, and counts the record against the reads counter of the passport.
+  RBAC and row scope, marks the trust tier, and counts the record as served on the answer.
 - A match the caller may not read answers `unresolved`, the same word a real miss gets. So a caller cannot test one
   address at a time for records they may not know exist.
 - An `ambiguous` answer stays `ambiguous` when only one other match is still there. So what the caller cannot see

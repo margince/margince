@@ -14,43 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The brief is charged per RECORD it names, not per item and not per call.
-//
-// Its items are contract types rather than datasource.Records, so they ride no
-// chokepoint and nothing charges for them by default — which is exactly how a
-// densely-joined queue becomes the cheapest bulk read on a surface that charges
-// per record (A139). This is the tool that check exists to catch, so the charge
-// is asserted here rather than assumed.
-func TestTheBriefIsChargedPerItem(t *testing.T) {
-	registry, charger, ctx := chargingRegistry(t, readBrief{read: briefOf(3)})
-
-	if _, err := registry.Invoke(ctx, "read_brief", json.RawMessage(`{}`)); err != nil {
-		t.Fatalf("invoking read_brief: %v", err)
-	}
-
-	// Three deals and the two activity rows each item's ranking cites: a brief
-	// names more than one record per item, and metering only the deals would
-	// hand the rest of the queue over free.
-	if charger.reads() != 9 {
-		t.Errorf("charged %d for 3 items naming 3 deals and 6 activity rows, want 9 — metered per "+
-			"item, the brief is the cheapest bulk read on the surface", charger.reads())
-	}
-}
-
-// An empty queue costs nothing. A charge for an answer carrying no record would
-// spend a caller's window on the absence of one.
-func TestAnEmptyBriefChargesNothing(t *testing.T) {
-	registry, charger, ctx := chargingRegistry(t, readBrief{read: briefOf(0)})
-
-	if _, err := registry.Invoke(ctx, "read_brief", json.RawMessage(`{}`)); err != nil {
-		t.Fatalf("invoking read_brief: %v", err)
-	}
-
-	if charger.reads() != 0 {
-		t.Errorf("charged %d for an empty queue, want 0", charger.reads())
-	}
-}
-
 // The run reaches the caller as the engine reported it: the ranking, the state
 // the human left, and the evidence each item rests on. A tool that dropped the
 // state would have an agent re-raise what a contact already dismissed.

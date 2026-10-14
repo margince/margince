@@ -15,12 +15,17 @@ import (
 func toAgentAllowances(p agentvolume.Policy, now time.Time) crmcontracts.AgentAllowanceSettings {
 	current := p.Window.At(now)
 	out := crmcontracts.AgentAllowanceSettings{
-		AgentReadsPerWindow:     p.Limits.Reads,
-		AgentWritesPerWindow:    p.Limits.Writes,
-		AgentEgressPerWindow:    p.Limits.Egress,
-		AgentCallsPerWindow:     p.Limits.Calls,
-		AgentWindowHours:        int(current.Hours()),
-		AgentWindowResetsAt:     agentvolume.ResetAfter(now, current),
+		AgentWritesPerWindow: p.Limits.Writes,
+		AgentEgressPerWindow: p.Limits.Egress,
+		AgentCallsPerWindow:  p.Limits.Calls,
+		AgentWindowHours:     int(current.Hours()),
+		AgentWindowResetsAt:  agentvolume.ResetAfter(now, current),
+		Defaults: crmcontracts.AgentAllowanceDefaults{
+			AgentWritesPerWindow: agentvolume.DefaultWrites,
+			AgentEgressPerWindow: agentvolume.DefaultEgress,
+			AgentCallsPerWindow:  agentvolume.DefaultCalls,
+			AgentWindowHours:     int(agentvolume.DefaultWindow.Hours()),
+		},
 		McpCallsPerMinute:       mcpCallsPerMinute,
 		McpStreamOpensPerMinute: mcpStreamOpensPerMinute,
 	}

@@ -42,7 +42,7 @@ func patchAllowances(ctx context.Context, t *testing.T, h installationSettingsHa
 	return rec.Code, out.AgentAllowances
 }
 
-const defaultAgentAllowances = `{"agent_reads_per_window":2000,"agent_writes_per_window":200,` +
+const defaultAgentAllowances = `{"agent_writes_per_window":200,` +
 	`"agent_egress_per_window":20,"agent_calls_per_window":1000,"agent_window_hours":24}`
 
 // allowanceHandlers builds the surface on a store whose clock reads now(). It
@@ -65,11 +65,11 @@ func TestAnAdminSavesTheAgentAllowances(t *testing.T) {
 	h := allowanceHandlers(t, e, wallClock(t))
 
 	code, saved := patchAllowances(installationAdminCtx(e), t, h,
-		`{"agent_reads_per_window":500,"agent_writes_per_window":10,"agent_egress_per_window":3,"agent_calls_per_window":60}`)
+		`{"agent_writes_per_window":10,"agent_egress_per_window":3,"agent_calls_per_window":60}`)
 	if code != http.StatusOK {
 		t.Fatalf("saving the allowances → %d", code)
 	}
-	if saved.AgentReadsPerWindow != 500 || saved.AgentWritesPerWindow != 10 ||
+	if saved.AgentWritesPerWindow != 10 ||
 		saved.AgentEgressPerWindow != 3 || saved.AgentCallsPerWindow != 60 {
 		t.Fatalf("the save answered %+v, want the values sent", saved)
 	}
@@ -125,7 +125,6 @@ func TestAnAgentAllowanceOutsideItsRangeIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	h := allowanceHandlers(t, e, wallClock(t))
 	for _, body := range []string{
-		`{"agent_reads_per_window":99}`,
 		`{"agent_writes_per_window":5001}`,
 		`{"agent_egress_per_window":0}`,
 		`{"agent_calls_per_window":49}`,

@@ -62,11 +62,11 @@ func TestUsageReachesTheWireWithItsState(t *testing.T) {
 	resets := time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC)
 	wire := toAgentUsage(agentvolume.Usage{
 		Writes:   agentvolume.CounterUsage{Used: 200, Limit: 200},
-		Reads:    agentvolume.CounterUsage{Used: 10, Limit: 4000, Released: 1},
+		Calls:    agentvolume.CounterUsage{Used: 10, Limit: 4000, Released: 1},
 		ResetsAt: resets,
 	})
 
-	if wire.Writes.Used != 200 || wire.Reads.Released != 1 || wire.Reads.Limit != 4000 || !wire.ResetsAt.Equal(resets) {
+	if wire.Writes.Used != 200 || wire.Calls.Released != 1 || wire.Calls.Limit != 4000 || !wire.ResetsAt.Equal(resets) {
 		t.Errorf("the wire carries %+v", wire)
 	}
 	if wire.State != "stopped" {

@@ -92,7 +92,6 @@ var summaryVerbs = map[string][]string{
 	"annotateNarrative":   nil,
 	"annotateBoth":        {"%d"},
 	"annotateFindings":    {"%d"},
-	"stepUpRecords":       {"%d", "%d", "%s", "%d"},
 	"stepUpChanges":       {"%d", "%d", "%s", "%d"},
 }
 

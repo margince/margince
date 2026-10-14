@@ -11,7 +11,7 @@ import (
 func filledAgentAllowancePatch() AgentAllowancePatch {
 	value := func(n int) *int { return &n }
 	return AgentAllowancePatch{
-		ReadsPerWindow: value(1), WritesPerWindow: value(2), EgressPerWindow: value(3), CallsPerWindow: value(4),
+		WritesPerWindow: value(2), EgressPerWindow: value(3), CallsPerWindow: value(4),
 		WindowHours: value(5),
 	}
 }
@@ -26,7 +26,7 @@ func TestEveryAgentAllowanceCountWritesItsOwnSetting(t *testing.T) {
 		written[write.entry.Key()] = string(write.raw)
 	}
 	for key, want := range map[string]int{
-		AgentReadsPerWindow.Key(): 1, AgentWritesPerWindow.Key(): 2,
+		AgentWritesPerWindow.Key(): 2,
 		AgentEgressPerWindow.Key(): 3, AgentCallsPerWindow.Key(): 4,
 	} {
 		if got := written[key]; got != strconv.Itoa(want) {

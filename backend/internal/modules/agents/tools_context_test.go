@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -128,10 +127,10 @@ func TestAnUnreadableHitIsDroppedAndCounted_ToNobody(t *testing.T) {
 	}
 }
 
-// A withheld hit must not be CHARGED. The bound counts records the agent was
-// given, and charging for one it was refused would both overcount the caller
-// and put a record in the envelope's evidence that the answer does not contain.
-func TestAWithheldHitIsNotChargedAgainstTheReadBound(t *testing.T) {
+// A withheld hit must not be named. Naming one in the evidence would claim a
+// record the answer does not contain and disclose the id of one the caller was
+// refused.
+func TestAWithheldHitIsNotNamedInTheEvidence(t *testing.T) {
 	readable, hidden := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
@@ -146,39 +145,16 @@ func TestAWithheldHitIsNotChargedAgainstTheReadBound(t *testing.T) {
 			{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: readable}},
 		},
 	}}}
-	registry, charger, ctx := chargingRegistry(t, tool)
+	registry, _, ctx := chargingRegistry(t, tool)
 
-	if _, err := registry.Invoke(ctx, "search_context", json.RawMessage(`{"query":"churn after a pilot"}`)); err != nil {
+	out, err := registry.Invoke(ctx, "search_context", json.RawMessage(`{"query":"churn after a pilot"}`))
+	if err != nil {
 		t.Fatalf("invoking search_context: %v", err)
 	}
 
-	if charger.reads() != 1 {
-		t.Errorf("charged %d records for a page of 2 with 1 withheld, want 1", charger.reads())
-	}
-}
-
-// A ranked sweep is a bulk read and is charged per record, which is the
-// property A139 calls load-bearing: metered per CALL, this is the cheapest way
-// to read the workspace.
-func TestASearchIsChargedPerRecord(t *testing.T) {
-	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{}}
-	found := retrieval.Result{SemanticRanking: true}
-	for range 4 {
-		id := ids.NewV7()
-		provider.records[id] = recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
-		found.Hits = append(found.Hits, retrieval.Hit{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: id}})
-	}
-	registry, charger, ctx := chargingRegistry(t, searchContext{p: provider, retriever: fixedRetriever{result: found}})
-
-	if _, err := registry.Invoke(ctx, "search_context", json.RawMessage(`{"query":"anything"}`)); err != nil {
-		t.Fatalf("invoking search_context: %v", err)
-	}
-
-	if charger.reads() != 4 {
-		t.Errorf("charged %d for a 4-record page, want 4 — a page must not cost one", charger.reads())
-	}
-	if charger.times[agentvolume.Reads] != 1 {
-		t.Errorf("the bound was consulted %d times, want one charge for the whole answer", charger.times[agentvolume.Reads])
+	evidence := sealedEnvelope(t, out).Evidence
+	if len(evidence) != 1 || evidence[0].RecordID != readable {
+		t.Errorf("the envelope names %+v, want only the readable hit", evidence)
 	}
 }
 

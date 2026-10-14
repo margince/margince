@@ -204,14 +204,12 @@ func (s *Dispatcher) serveRecorded(ctx context.Context, task Task) map[string]an
 	if *task.ServedRecords == 0 {
 		return taskWire(s.rendered(task), s.now())
 	}
-	proven, err := s.registry.ServeRecorded(ctx, task.Tool, task.Result, *task.ServedRecords)
+	proven, err := s.registry.ServeTaskResult(ctx, task.Tool, task.Result)
 	if err != nil {
-		// WHY it could not be served decides what the agent should do, and the
-		// three causes differ: a record it may no longer read is permanent and
-		// says so, while a read bound it has exhausted clears with the window
-		// and a store that hiccuped clears on the next poll. Telling the last
-		// two "do not repeat the call" would strand a document they could have
-		// had — so only the existence-hiding answer keeps the withheld wording.
+		// The cause decides what the agent should do. A record it may no longer
+		// read is permanent. An exhausted call ceiling clears with the window and
+		// a store hiccup on the next poll. Only the first keeps the withheld
+		// wording, or the others would strand a document the agent could have.
 		s.log.Warn("mcp: a completed task's recorded answer could not be served",
 			"task", task.ID, "tool", task.Tool, "err", err)
 		message := s.explain(task.Tool, err)

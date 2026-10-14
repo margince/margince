@@ -54,6 +54,7 @@ var returningRow = regexp.MustCompile(`(?i)\bRETURNING\b`)
 // right not to look, each saying why. A reason describes the act, not the
 // missing check.
 var declinedWriteIsSilent = gatekit.Waive(map[string]string{
+	"backend/internal/modules/identity/passport.go:touchPassport":                                "stamping last use at most once a minute (last_used_at older than a minute or unset): a call inside the minute finds the stamp fresh and touches nothing, which is the debounce working, and no caller has anything to report either way",
 	"backend/internal/modules/privacy/erasure_untoldlead.go:dropFromSiteRead":                    "removes an untold website lead from the site read that found them. Touching no row is a right answer: the proposal may name a read that has since been deleted with its company, or a contact the dossier no longer lists, and either way nothing of theirs is left there to remove",
 	"backend/internal/modules/activities/audienceretraction.go:RetractDerivedForActivityTx":      "clearing a capture label that may already be absent, under the activity's lock: the retraction is idempotent by design because it runs again whenever a narrowing arrives late",
 	"backend/internal/modules/activities/retentionstampproject.go:StampCorrespondenceForProject": "stamping a retention class once (retention_class IS NULL): an activity already classed keeps the class it was given, because a second project touching the same message must not reclassify it",

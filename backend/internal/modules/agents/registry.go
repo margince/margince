@@ -341,7 +341,7 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// other order would spend the window on a result a marshalling failure was
 	// about to discard.
 	served := facts.servedCount()
-	if err := r.chargeAnswer(ctx, spec, served); err != nil {
+	if err := r.chargeAnswer(ctx, spec); err != nil {
 		return nil, 0, err
 	}
 	return sealed, served, nil
