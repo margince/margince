@@ -110,7 +110,7 @@ export const run = {
   version: 3,
   source_released: false,
   source: "import_api",
-  captured_by: "u-ada",
+  captured_by: "human:u-ada",
   created_at: "2026-08-13T10:00:00Z",
   updated_at: "2026-08-13T10:00:00Z",
 };
